@@ -21,13 +21,11 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     private const CACHE_TTL = 1800;
 
     /**
-     * SeerahEventRepository constructor
-     *
-     * @param SeerahEvent $model
+     * {@inheritdoc}
      */
-    public function __construct(SeerahEvent $model)
+    protected function getModel(): Model
     {
-        parent::__construct($model);
+        return new SeerahEvent();
     }
 
     /**

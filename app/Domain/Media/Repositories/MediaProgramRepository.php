@@ -20,13 +20,11 @@ class MediaProgramRepository extends BaseRepository implements MediaProgramRepos
     private const CACHE_TTL = 1800;
 
     /**
-     * MediaProgramRepository constructor
-     *
-     * @param MediaProgram $model
+     * {@inheritdoc}
      */
-    public function __construct(MediaProgram $model)
+    protected function getModel(): Model
     {
-        parent::__construct($model);
+        return new MediaProgram();
     }
 
     /**
