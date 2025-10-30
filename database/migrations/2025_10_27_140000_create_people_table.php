@@ -21,7 +21,7 @@ return new class extends Migration
             $table->json('title')->nullable(); // {"ar": "النبي", "en": "The Prophet"}
             $table->json('kunya')->nullable(); // Abu/Umm name
             $table->json('laqab')->nullable(); // Honorific title
-            
+
             // Person type
             $table->enum('person_type', [
                 'prophet',
@@ -29,9 +29,9 @@ return new class extends Migration
                 'companion_female',
                 'family',
                 'tribe_leader',
-                'historical_figure'
+                'historical_figure',
             ])->default('historical_figure');
-            
+
             // Biographical information
             $table->json('biography')->nullable(); // Multi-language biography
             $table->string('birth_place')->nullable();
@@ -40,26 +40,26 @@ return new class extends Migration
             $table->string('death_date_hijri')->nullable();
             $table->date('birth_date_gregorian')->nullable();
             $table->date('death_date_gregorian')->nullable();
-            
+
             // Gender
             $table->enum('gender', ['male', 'female'])->default('male');
-            
+
             // Images and media
             $table->string('profile_image')->nullable();
             $table->json('gallery')->nullable();
-            
+
             // Link to Sahaba if this person is a companion
             $table->foreignId('sahaba_id')->nullable()->constrained('sahaba')->onDelete('set null');
-            
+
             // Relations (denormalized for quick access)
             $table->unsignedBigInteger('father_id')->nullable();
             $table->unsignedBigInteger('mother_id')->nullable();
-            
+
             // Metadata
             $table->unsignedBigInteger('views_count')->default(0);
             $table->boolean('is_featured')->default(false);
             $table->integer('generation')->nullable(); // Generation number from Prophet Adam
-            
+
             $table->timestamps();
             $table->softDeletes();
 
@@ -71,7 +71,7 @@ return new class extends Migration
             $table->index('mother_id');
             $table->index('is_featured');
             $table->index('generation');
-            
+
             // Foreign keys
             $table->foreign('father_id')->references('id')->on('people')->onDelete('set null');
             $table->foreign('mother_id')->references('id')->on('people')->onDelete('set null');
@@ -86,4 +86,3 @@ return new class extends Migration
         Schema::dropIfExists('people');
     }
 };
-

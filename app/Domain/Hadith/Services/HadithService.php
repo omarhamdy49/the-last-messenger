@@ -19,20 +19,15 @@ class HadithService extends BaseService
 {
     /**
      * Constructor
-     *
-     * @param HadithRepositoryInterface $repository
      */
     public function __construct(
-        protected HadithRepositoryInterface $repository
+        HadithRepositoryInterface $repository
     ) {
+        $this->repository = $repository;
     }
 
     /**
      * Get hadith by book with pagination
-     *
-     * @param int $bookId
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getHadithByBook(int $bookId, int $perPage = 15): LengthAwarePaginator
     {
@@ -41,10 +36,6 @@ class HadithService extends BaseService
 
     /**
      * Get hadith by chapter
-     *
-     * @param int $chapterId
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getHadithByChapter(int $chapterId, int $perPage = 15): LengthAwarePaginator
     {
@@ -53,10 +44,6 @@ class HadithService extends BaseService
 
     /**
      * Get hadith by authenticity grade
-     *
-     * @param HadithGrade $grade
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getHadithByGrade(HadithGrade $grade, int $perPage = 15): LengthAwarePaginator
     {
@@ -65,9 +52,6 @@ class HadithService extends BaseService
 
     /**
      * Get authentic hadith (sahih)
-     *
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getSahihHadith(int $perPage = 15): LengthAwarePaginator
     {
@@ -76,9 +60,6 @@ class HadithService extends BaseService
 
     /**
      * Get reliable hadith (sahih or hasan)
-     *
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getReliableHadith(int $perPage = 15): LengthAwarePaginator
     {
@@ -87,10 +68,6 @@ class HadithService extends BaseService
 
     /**
      * Search hadith
-     *
-     * @param string $query
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function searchHadith(string $query, int $perPage = 15): LengthAwarePaginator
     {
@@ -100,16 +77,13 @@ class HadithService extends BaseService
     /**
      * Find hadith by book and hadith number
      *
-     * @param int $bookId
-     * @param int $hadithNumber
-     * @return Hadith
      * @throws ResourceNotFoundException
      */
     public function findByBookAndNumber(int $bookId, int $hadithNumber): Hadith
     {
         $hadith = $this->repository->findByBookAndNumber($bookId, $hadithNumber, ['book', 'chapter', 'narrators']);
 
-        if (!$hadith) {
+        if (! $hadith) {
             throw new ResourceNotFoundException('Hadith', "{$bookId}:{$hadithNumber}");
         }
 
@@ -119,15 +93,13 @@ class HadithService extends BaseService
     /**
      * Get hadith with narrator chain
      *
-     * @param int $id
-     * @return Hadith
      * @throws ResourceNotFoundException
      */
     public function getHadithWithNarrators(int $id): Hadith
     {
         $hadith = $this->repository->getWithNarrators($id);
 
-        if (!$hadith) {
+        if (! $hadith) {
             throw new ResourceNotFoundException('Hadith', $id);
         }
 
@@ -140,9 +112,7 @@ class HadithService extends BaseService
     /**
      * Filter hadith with multiple criteria
      *
-     * @param array<string, mixed> $filters
-     * @param int $perPage
-     * @return LengthAwarePaginator
+     * @param  array<string, mixed>  $filters
      */
     public function filterHadith(array $filters, int $perPage = 15): LengthAwarePaginator
     {
@@ -152,8 +122,7 @@ class HadithService extends BaseService
     /**
      * Create new hadith
      *
-     * @param array<string, mixed> $data
-     * @return Hadith
+     * @param  array<string, mixed>  $data
      */
     public function createHadith(array $data): Hadith
     {
@@ -163,9 +132,7 @@ class HadithService extends BaseService
     /**
      * Update hadith
      *
-     * @param int $id
-     * @param array<string, mixed> $data
-     * @return bool
+     * @param  array<string, mixed>  $data
      */
     public function updateHadith(int $id, array $data): bool
     {
@@ -174,9 +141,6 @@ class HadithService extends BaseService
 
     /**
      * Delete hadith
-     *
-     * @param int $id
-     * @return bool
      */
     public function deleteHadith(int $id): bool
     {
@@ -186,14 +150,12 @@ class HadithService extends BaseService
     /**
      * Attach narrators to hadith
      *
-     * @param int $hadithId
-     * @param array<int, int> $narratorPositions [narrator_id => position]
-     * @return void
+     * @param  array<int, int>  $narratorPositions  [narrator_id => position]
      */
     public function attachNarrators(int $hadithId, array $narratorPositions): void
     {
         $hadith = $this->repository->findOrFail($hadithId);
-        
+
         $syncData = [];
         foreach ($narratorPositions as $narratorId => $position) {
             $syncData[$narratorId] = ['position' => $position];
@@ -203,4 +165,3 @@ class HadithService extends BaseService
         $this->repository->clearCache();
     }
 }
-

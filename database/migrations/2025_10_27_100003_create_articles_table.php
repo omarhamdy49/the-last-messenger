@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -49,7 +49,7 @@ return new class extends Migration
             // Create generated columns for the default language (Arabic)
             DB::statement("ALTER TABLE articles ADD COLUMN title_searchable TEXT GENERATED ALWAYS AS (JSON_UNQUOTE(JSON_EXTRACT(title, '$.ar'))) STORED");
             DB::statement("ALTER TABLE articles ADD COLUMN excerpt_searchable TEXT GENERATED ALWAYS AS (JSON_UNQUOTE(JSON_EXTRACT(excerpt, '$.ar'))) STORED");
-            
+
             // Add full-text index on generated columns
             DB::statement('ALTER TABLE articles ADD FULLTEXT fulltext_search (title_searchable, excerpt_searchable)');
         }
@@ -63,4 +63,3 @@ return new class extends Migration
         Schema::dropIfExists('articles');
     }
 };
-

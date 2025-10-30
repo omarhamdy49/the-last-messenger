@@ -21,20 +21,14 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
 
     /**
      * Get model instance
-     *
-     * @return Model
      */
     protected function getModel(): Model
     {
-        return new Sahabi();
+        return new Sahabi;
     }
 
     /**
      * Get companions by status
-     *
-     * @param CompanionStatus|string $status
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getByStatus(CompanionStatus|string $status, int $perPage = 15): LengthAwarePaginator
     {
@@ -47,10 +41,6 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
 
     /**
      * Get companions by tribe
-     *
-     * @param string $tribe
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getByTribe(string $tribe, int $perPage = 15): LengthAwarePaginator
     {
@@ -63,10 +53,6 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
 
     /**
      * Get companions who participated in a battle
-     *
-     * @param string $battle
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getByBattle(string $battle, int $perPage = 15): LengthAwarePaginator
     {
@@ -79,16 +65,13 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
 
     /**
      * Get featured companions
-     *
-     * @param int $limit
-     * @return Collection
      */
     public function getFeatured(int $limit = 10): Collection
     {
         return Cache::remember(
             "sahaba_featured_{$limit}",
             self::CACHE_TTL,
-            fn() => $this->model
+            fn () => $this->model
                 ->featured()
                 ->byImportance()
                 ->with(['article'])
@@ -99,16 +82,13 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
 
     /**
      * Get early Muslims by conversion order
-     *
-     * @param int $limit
-     * @return Collection
      */
     public function getEarlyMuslims(int $limit = 10): Collection
     {
         return Cache::remember(
             "sahaba_early_muslims_{$limit}",
             self::CACHE_TTL,
-            fn() => $this->model
+            fn () => $this->model
                 ->earlyMuslims($limit)
                 ->with(['article'])
                 ->get()
@@ -117,16 +97,13 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
 
     /**
      * Get top hadith narrators
-     *
-     * @param int $limit
-     * @return Collection
      */
     public function getTopNarrators(int $limit = 10): Collection
     {
         return Cache::remember(
             "sahaba_top_narrators_{$limit}",
             self::CACHE_TTL,
-            fn() => $this->model
+            fn () => $this->model
                 ->topNarrators($limit)
                 ->with(['article'])
                 ->get()
@@ -135,10 +112,6 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
 
     /**
      * Search companions
-     *
-     * @param string $query
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function search(string $query, int $perPage = 15): LengthAwarePaginator
     {
@@ -157,11 +130,6 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
 
     /**
      * Find by slug with relations
-     *
-     * @param string $slug
-     * @param array $columns
-     * @param array $relations
-     * @return Model|null
      */
     public function findBySlug(string $slug, array $columns = ['*'], array $relations = []): ?Model
     {
@@ -171,7 +139,7 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
         return Cache::remember(
             "sahabi_slug_{$slug}",
             self::CACHE_TTL,
-            fn() => $this->model
+            fn () => $this->model
                 ->with($relations)
                 ->where('slug', $slug)
                 ->first($columns)
@@ -180,9 +148,6 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
 
     /**
      * Clear cache for companion
-     *
-     * @param int $id
-     * @return void
      */
     public function clearCacheForModel(int $id): void
     {
@@ -195,4 +160,3 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
         }
     }
 }
-

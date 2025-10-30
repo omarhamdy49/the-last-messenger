@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Domain\Shared\Services;
 
 use App\Domain\Shared\Contracts\RepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
  * Base Service Class
@@ -20,8 +20,8 @@ abstract class BaseService
     /**
      * Get all records
      *
-     * @param array<string> $columns
-     * @param array<string> $relations
+     * @param  array<string>  $columns
+     * @param  array<string>  $relations
      * @return Collection<int, Model>
      */
     public function all(array $columns = ['*'], array $relations = []): Collection
@@ -32,10 +32,8 @@ abstract class BaseService
     /**
      * Get paginated records
      *
-     * @param int $perPage
-     * @param array<string> $columns
-     * @param array<string> $relations
-     * @return LengthAwarePaginator
+     * @param  array<string>  $columns
+     * @param  array<string>  $relations
      */
     public function paginate(int $perPage = 15, array $columns = ['*'], array $relations = []): LengthAwarePaginator
     {
@@ -45,9 +43,7 @@ abstract class BaseService
     /**
      * Find record by ID
      *
-     * @param int $id
-     * @param array<string> $relations
-     * @return Model|null
+     * @param  array<string>  $relations
      */
     public function find(int $id, array $relations = []): ?Model
     {
@@ -57,9 +53,8 @@ abstract class BaseService
     /**
      * Find record by ID or fail
      *
-     * @param int $id
-     * @param array<string> $relations
-     * @return Model
+     * @param  array<string>  $relations
+     *
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
      */
     public function findOrFail(int $id, array $relations = []): Model
@@ -70,8 +65,7 @@ abstract class BaseService
     /**
      * Create new record
      *
-     * @param array<string, mixed> $data
-     * @return Model
+     * @param  array<string, mixed>  $data
      */
     public function create(array $data): Model
     {
@@ -81,9 +75,7 @@ abstract class BaseService
     /**
      * Update record
      *
-     * @param int $id
-     * @param array<string, mixed> $data
-     * @return bool
+     * @param  array<string, mixed>  $data
      */
     public function update(int $id, array $data): bool
     {
@@ -92,9 +84,6 @@ abstract class BaseService
 
     /**
      * Delete record
-     *
-     * @param int $id
-     * @return bool
      */
     public function delete(int $id): bool
     {
@@ -104,8 +93,7 @@ abstract class BaseService
     /**
      * Count records
      *
-     * @param array<string, mixed> $conditions
-     * @return int
+     * @param  array<string, mixed>  $conditions
      */
     public function count(array $conditions = []): int
     {
@@ -114,13 +102,9 @@ abstract class BaseService
 
     /**
      * Check if record exists
-     *
-     * @param int $id
-     * @return bool
      */
     public function exists(int $id): bool
     {
         return $this->repository->exists($id);
     }
 }
-

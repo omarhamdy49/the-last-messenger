@@ -8,8 +8,8 @@ use App\Domain\Blog\Repositories\ArticleRepositoryInterface;
 use App\Domain\Blog\Services\ArticleService;
 use App\Exceptions\Domain\ResourceNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
 use Mockery;
+use Tests\TestCase;
 
 class ArticleServiceTest extends TestCase
 {
@@ -40,4 +40,3 @@ class ArticleServiceTest extends TestCase
         $this->markTestSkipped('Requires full implementation');
     }
 }
-

@@ -114,8 +114,6 @@ class SeerahEvent extends Model
 
     /**
      * Get the related article
-     *
-     * @return BelongsTo
      */
     public function article(): BelongsTo
     {
@@ -124,8 +122,6 @@ class SeerahEvent extends Model
 
     /**
      * Get participants in this event
-     *
-     * @return HasMany
      */
     public function participants(): HasMany
     {
@@ -134,8 +130,6 @@ class SeerahEvent extends Model
 
     /**
      * Check if event has location data
-     *
-     * @return bool
      */
     public function hasLocation(): bool
     {
@@ -144,8 +138,6 @@ class SeerahEvent extends Model
 
     /**
      * Get formatted Hijri date
-     *
-     * @return string|null
      */
     public function getFormattedHijriDate(): ?string
     {
@@ -158,8 +150,6 @@ class SeerahEvent extends Model
 
     /**
      * Get formatted Gregorian date
-     *
-     * @return string|null
      */
     public function getFormattedGregorianDate(): ?string
     {
@@ -172,9 +162,6 @@ class SeerahEvent extends Model
 
     /**
      * Increment views count
-     *
-     * @param int $amount
-     * @return void
      */
     public function incrementViews(int $amount = 1): void
     {
@@ -184,34 +171,33 @@ class SeerahEvent extends Model
     /**
      * Scope: Filter by event type
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param EventType|string $type
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByType($query, EventType|string $type)
     {
         $typeValue = $type instanceof EventType ? $type->value : $type;
+
         return $query->where('event_type', $typeValue);
     }
 
     /**
      * Scope: Filter by importance
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param EventImportance|string $importance
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByImportance($query, EventImportance|string $importance)
     {
         $importanceValue = $importance instanceof EventImportance ? $importance->value : $importance;
+
         return $query->where('importance', $importanceValue);
     }
 
     /**
      * Scope: Filter by Hijri year
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $year
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByHijriYear($query, int $year)
@@ -222,8 +208,7 @@ class SeerahEvent extends Model
     /**
      * Scope: Filter by Gregorian year
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $year
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByGregorianYear($query, int $year)
@@ -234,8 +219,7 @@ class SeerahEvent extends Model
     /**
      * Scope: Filter by location
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $location
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByLocation($query, string $location)
@@ -246,7 +230,7 @@ class SeerahEvent extends Model
     /**
      * Scope: Featured events
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeFeatured($query)
@@ -257,8 +241,7 @@ class SeerahEvent extends Model
     /**
      * Scope: Order chronologically (by Hijri date)
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $direction
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeChronological($query, string $direction = 'asc')
@@ -272,7 +255,7 @@ class SeerahEvent extends Model
     /**
      * Scope: Events with location
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithLocation($query)
@@ -281,4 +264,3 @@ class SeerahEvent extends Model
             ->whereNotNull('longitude');
     }
 }
-

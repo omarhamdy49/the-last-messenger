@@ -16,7 +16,6 @@ class SeriesResource extends JsonResource
     /**
      * Transform the resource into an array.
      *
-     * @param Request $request
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
@@ -30,10 +29,9 @@ class SeriesResource extends JsonResource
             'description' => $this->getDescriptionInLanguage($language),
             'thumbnail' => $this->thumbnail,
             'total_articles' => $this->total_articles,
-            
+
             // Relationships
             'articles' => ArticleResource::collection($this->whenLoaded('articles')),
         ];
     }
 }
-

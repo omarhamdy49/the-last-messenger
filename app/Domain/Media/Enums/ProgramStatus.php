@@ -26,8 +26,6 @@ enum ProgramStatus: string
 
     /**
      * Get label for display
-     *
-     * @return string
      */
     public function label(): string
     {
@@ -40,8 +38,6 @@ enum ProgramStatus: string
 
     /**
      * Get Arabic label
-     *
-     * @return string
      */
     public function labelArabic(): string
     {
@@ -54,8 +50,6 @@ enum ProgramStatus: string
 
     /**
      * Get color for UI
-     *
-     * @return string
      */
     public function color(): string
     {
@@ -66,4 +60,3 @@ enum ProgramStatus: string
         };
     }
 }
-

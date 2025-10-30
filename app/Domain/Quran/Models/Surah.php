@@ -97,8 +97,6 @@ class Surah extends Model
 
     /**
      * Get all verses in this surah
-     *
-     * @return HasMany
      */
     public function verses(): HasMany
     {
@@ -107,8 +105,6 @@ class Surah extends Model
 
     /**
      * Check if surah is Makkan
-     *
-     * @return bool
      */
     public function isMakkan(): bool
     {
@@ -117,8 +113,6 @@ class Surah extends Model
 
     /**
      * Check if surah is Madinan
-     *
-     * @return bool
      */
     public function isMadinan(): bool
     {
@@ -127,9 +121,6 @@ class Surah extends Model
 
     /**
      * Get display name
-     *
-     * @param string $language
-     * @return string
      */
     public function getDisplayName(string $language = 'ar'): string
     {
@@ -139,20 +130,20 @@ class Surah extends Model
     /**
      * Scope: Filter by revelation place
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param RevelationPlace|string $place
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByRevelationPlace($query, RevelationPlace|string $place)
     {
         $placeValue = $place instanceof RevelationPlace ? $place->value : $place;
+
         return $query->where('revelation_place', $placeValue);
     }
 
     /**
      * Scope: Order by revelation order
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByRevelationOrder($query)
@@ -163,8 +154,7 @@ class Surah extends Model
     /**
      * Scope: Filter by Juz
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $juz
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByJuz($query, int $juz)
@@ -172,4 +162,3 @@ class Surah extends Model
         return $query->whereJsonContains('juz', (string) $juz);
     }
 }
-

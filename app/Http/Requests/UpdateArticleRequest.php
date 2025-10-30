@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Domain\Blog\Enums\ArticleStatus;
-use Illuminate\Foundation\Http\FormRequest;
+use App\Rules\TranslatableArray;
 use Illuminate\Validation\Rule;
 
 /**
  * Update Article Request
  * Validates article update data
  */
-class UpdateArticleRequest extends FormRequest
+class UpdateArticleRequest extends BaseTranslatableRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -20,6 +20,30 @@ class UpdateArticleRequest extends FormRequest
     public function authorize(): bool
     {
         return true; // Authorization handled by middleware/policy
+    }
+
+    /**
+     * Get translatable field names
+     *
+     * @return array
+     */
+    protected function translatableFields(): array
+    {
+        return [
+            'title' => ['string', 'max:500'],
+            'excerpt' => ['string'],
+            'content' => ['string'],
+        ];
+    }
+
+    /**
+     * Get required translatable field names (empty for update - all optional)
+     *
+     * @return array
+     */
+    protected function requiredTranslatableFields(): array
+    {
+        return [];
     }
 
     /**
@@ -31,34 +55,29 @@ class UpdateArticleRequest extends FormRequest
     {
         $articleId = $this->route('article');
 
-        return [
+        // For update, fields are optional but if provided must be valid
+        $translatableRules = [];
+        foreach ($this->translatableFields() as $field => $extraRules) {
+            if ($this->has($field)) {
+                $translatableRules = array_merge(
+                    $translatableRules,
+                    $this->translatableRules($field, false, $extraRules)
+                );
+            }
+        }
+
+        // Non-translatable field rules
+        $customRules = [
             'slug' => ['sometimes', 'string', 'max:255', Rule::unique('articles', 'slug')->ignore($articleId)],
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
             'series_id' => ['nullable', 'integer', 'exists:series,id'],
-            'title' => ['sometimes', 'array'],
-            'title.ar' => ['sometimes', 'string', 'max:500'],
-            'title.en' => ['nullable', 'string', 'max:500'],
-            'title.fr' => ['nullable', 'string', 'max:500'],
-            'title.tr' => ['nullable', 'string', 'max:500'],
-            'title.ur' => ['nullable', 'string', 'max:500'],
-            'excerpt' => ['sometimes', 'array'],
-            'excerpt.ar' => ['nullable', 'string'],
-            'excerpt.en' => ['nullable', 'string'],
-            'excerpt.fr' => ['nullable', 'string'],
-            'excerpt.tr' => ['nullable', 'string'],
-            'excerpt.ur' => ['nullable', 'string'],
-            'content' => ['sometimes', 'array'],
-            'content.ar' => ['sometimes', 'string'],
-            'content.en' => ['nullable', 'string'],
-            'content.fr' => ['nullable', 'string'],
-            'content.tr' => ['nullable', 'string'],
-            'content.ur' => ['nullable', 'string'],
             'featured_image' => ['nullable', 'string', 'max:500'],
             'status' => ['sometimes', 'string', Rule::in(ArticleStatus::values())],
             'published_at' => ['nullable', 'date'],
             'tags' => ['sometimes', 'array'],
             'tags.*' => ['integer', 'exists:tags,id'],
         ];
+
+        return array_merge($translatableRules, $customRules);
     }
 }
-

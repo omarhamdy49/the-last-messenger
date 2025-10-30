@@ -6,9 +6,9 @@ namespace App\Domain\Blog\Repositories;
 
 use App\Domain\Blog\Models\Article;
 use App\Domain\Shared\Repositories\BaseRepository;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -24,7 +24,7 @@ class ArticleRepository extends BaseRepository implements ArticleRepositoryInter
      */
     protected function getModel(): Model
     {
-        return new Article();
+        return new Article;
     }
 
     /**
@@ -35,7 +35,7 @@ class ArticleRepository extends BaseRepository implements ArticleRepositoryInter
         $query = $this->model->published()
             ->orderByDesc('published_at');
 
-        if (!empty($relations)) {
+        if (! empty($relations)) {
             $query->with($relations);
         }
 
@@ -51,7 +51,7 @@ class ArticleRepository extends BaseRepository implements ArticleRepositoryInter
             ->byCategory($categoryId)
             ->orderByDesc('published_at');
 
-        if (!empty($relations)) {
+        if (! empty($relations)) {
             $query->with($relations);
         }
 
@@ -70,7 +70,7 @@ class ArticleRepository extends BaseRepository implements ArticleRepositoryInter
                 ->bySeries($seriesId)
                 ->orderBy('published_at');
 
-            if (!empty($relations)) {
+            if (! empty($relations)) {
                 $query->with($relations);
             }
 
@@ -88,7 +88,7 @@ class ArticleRepository extends BaseRepository implements ArticleRepositoryInter
         return Cache::remember($cacheKey, $this->cacheTTL, function () use ($limit, $relations) {
             $query = $this->model->featured()->limit($limit);
 
-            if (!empty($relations)) {
+            if (! empty($relations)) {
                 $query->with($relations);
             }
 
@@ -106,7 +106,7 @@ class ArticleRepository extends BaseRepository implements ArticleRepositoryInter
         return Cache::remember($cacheKey, $this->cacheTTL, function () use ($limit, $relations) {
             $query = $this->model->popular($limit);
 
-            if (!empty($relations)) {
+            if (! empty($relations)) {
                 $query->with($relations);
             }
 
@@ -124,7 +124,7 @@ class ArticleRepository extends BaseRepository implements ArticleRepositoryInter
         return Cache::remember($cacheKey, $this->cacheTTL, function () use ($limit, $relations) {
             $query = $this->model->recent($limit);
 
-            if (!empty($relations)) {
+            if (! empty($relations)) {
                 $query->with($relations);
             }
 
@@ -141,7 +141,7 @@ class ArticleRepository extends BaseRepository implements ArticleRepositoryInter
             ->search($query)
             ->orderByDesc('published_at');
 
-        if (!empty($relations)) {
+        if (! empty($relations)) {
             $searchQuery->with($relations);
         }
 
@@ -158,7 +158,7 @@ class ArticleRepository extends BaseRepository implements ArticleRepositoryInter
         return Cache::remember($cacheKey, $this->cacheTTL, function () use ($slug, $relations) {
             $query = $this->model->where('slug', $slug);
 
-            if (!empty($relations)) {
+            if (! empty($relations)) {
                 $query->with($relations);
             }
 
@@ -202,8 +202,7 @@ class ArticleRepository extends BaseRepository implements ArticleRepositoryInter
     /**
      * Get articles with eager loaded relationships (optimized)
      *
-     * @param array<string> $relations
-     * @return Collection
+     * @param  array<string>  $relations
      */
     public function getAllWithRelations(array $relations = []): Collection
     {
@@ -215,10 +214,6 @@ class ArticleRepository extends BaseRepository implements ArticleRepositoryInter
 
     /**
      * Get draft articles for specific user
-     *
-     * @param int $userId
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getDraftsByUser(int $userId, int $perPage = 15): LengthAwarePaginator
     {
@@ -227,5 +222,20 @@ class ArticleRepository extends BaseRepository implements ArticleRepositoryInter
             ->orderByDesc('created_at')
             ->paginate($perPage);
     }
-}
 
+    /**
+     * Count articles by status
+     */
+    public function countByStatus(string $status): int
+    {
+        return $this->model->where('status', $status)->count();
+    }
+
+    /**
+     * Clear cache for all articles
+     */
+    public function clearCache(): void
+    {
+        Cache::tags(['articles'])->flush();
+    }
+}

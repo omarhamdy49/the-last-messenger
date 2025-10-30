@@ -19,7 +19,7 @@ return new class extends Migration
             $table->json('title'); // Multi-language
             $table->json('description'); // Multi-language
             $table->json('content')->nullable(); // Detailed multi-language content
-            
+
             // Date fields (Hijri and Gregorian)
             $table->string('hijri_date')->nullable(); // e.g., "1 Muharram 1 AH"
             $table->integer('hijri_year')->nullable();
@@ -27,7 +27,7 @@ return new class extends Migration
             $table->integer('hijri_day')->nullable();
             $table->date('gregorian_date')->nullable();
             $table->integer('gregorian_year')->nullable();
-            
+
             // Event categorization
             $table->enum('event_type', [
                 'birth',
@@ -38,28 +38,28 @@ return new class extends Migration
                 'treaty',
                 'marriage',
                 'miracle',
-                'other'
+                'other',
             ])->default('other');
-            
+
             $table->enum('importance', ['high', 'medium', 'low'])->default('medium');
-            
+
             // Location (optional)
             $table->string('location')->nullable(); // e.g., "Makkah", "Madinah"
             $table->decimal('latitude', 10, 7)->nullable();
             $table->decimal('longitude', 10, 7)->nullable();
-            
+
             // Media
             $table->string('featured_image')->nullable();
             $table->json('gallery')->nullable(); // Array of image URLs
-            
+
             // Relationships
             $table->foreignId('related_article_id')->nullable()->constrained('articles')->onDelete('set null');
-            
+
             // Metadata
             $table->unsignedBigInteger('views_count')->default(0);
             $table->integer('display_order')->default(0);
             $table->boolean('is_featured')->default(false);
-            
+
             $table->timestamps();
 
             // Indexes
@@ -84,4 +84,3 @@ return new class extends Migration
         Schema::dropIfExists('seerah_events');
     }
 };
-

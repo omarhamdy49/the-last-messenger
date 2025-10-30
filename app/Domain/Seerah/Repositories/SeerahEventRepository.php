@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Seerah\Repositories;
 
-use App\Domain\Shared\Repositories\BaseRepository;
-use App\Domain\Seerah\Enums\EventImportance;
 use App\Domain\Seerah\Enums\EventType;
 use App\Domain\Seerah\Models\SeerahEvent;
+use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -25,15 +24,11 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
      */
     protected function getModel(): Model
     {
-        return new SeerahEvent();
+        return new SeerahEvent;
     }
 
     /**
      * Get events by type
-     *
-     * @param EventType|string $type
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getByType(EventType|string $type, int $perPage = 15): LengthAwarePaginator
     {
@@ -46,10 +41,6 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
 
     /**
      * Get events by Hijri year
-     *
-     * @param int $year
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getByHijriYear(int $year, int $perPage = 15): LengthAwarePaginator
     {
@@ -62,10 +53,6 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
 
     /**
      * Get events by Gregorian year
-     *
-     * @param int $year
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getByGregorianYear(int $year, int $perPage = 15): LengthAwarePaginator
     {
@@ -78,16 +65,13 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
 
     /**
      * Get featured events
-     *
-     * @param int $limit
-     * @return Collection
      */
     public function getFeatured(int $limit = 10): Collection
     {
         return Cache::remember(
             "seerah_featured_{$limit}",
             self::CACHE_TTL,
-            fn() => $this->model
+            fn () => $this->model
                 ->with(['article', 'participants'])
                 ->featured()
                 ->chronological()
@@ -98,15 +82,13 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
 
     /**
      * Get events with location
-     *
-     * @return Collection
      */
     public function getEventsWithLocation(): Collection
     {
         return Cache::remember(
             'seerah_events_with_location',
             self::CACHE_TTL,
-            fn() => $this->model
+            fn () => $this->model
                 ->withLocation()
                 ->chronological()
                 ->get(['id', 'slug', 'title', 'location', 'latitude', 'longitude', 'event_type', 'hijri_year'])
@@ -115,10 +97,6 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
 
     /**
      * Search events
-     *
-     * @param string $query
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function search(string $query, int $perPage = 15): LengthAwarePaginator
     {
@@ -135,9 +113,6 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
 
     /**
      * Get events in chronological order
-     *
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getChronological(int $perPage = 15): LengthAwarePaginator
     {
@@ -149,11 +124,6 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
 
     /**
      * Find by slug with relations
-     *
-     * @param string $slug
-     * @param array $columns
-     * @param array $relations
-     * @return Model|null
      */
     public function findBySlug(string $slug, array $columns = ['*'], array $relations = []): ?Model
     {
@@ -163,7 +133,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
         return Cache::remember(
             "seerah_event_slug_{$slug}",
             self::CACHE_TTL,
-            fn() => $this->model
+            fn () => $this->model
                 ->with($relations)
                 ->where('slug', $slug)
                 ->first($columns)
@@ -172,9 +142,6 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
 
     /**
      * Clear cache for event
-     *
-     * @param int $id
-     * @return void
      */
     public function clearCacheForModel(int $id): void
     {
@@ -186,4 +153,3 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
         }
     }
 }
-

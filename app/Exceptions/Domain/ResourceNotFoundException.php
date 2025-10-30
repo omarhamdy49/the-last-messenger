@@ -17,9 +17,6 @@ class ResourceNotFoundException extends Exception
 
     /**
      * Create a new exception instance
-     *
-     * @param string $resource
-     * @param int|string|null $identifier
      */
     public function __construct(string $resource, int|string|null $identifier = null)
     {
@@ -30,4 +27,3 @@ class ResourceNotFoundException extends Exception
         parent::__construct($message);
     }
 }
-

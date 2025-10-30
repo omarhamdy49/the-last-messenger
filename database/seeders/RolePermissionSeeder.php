@@ -30,38 +30,38 @@ class RolePermissionSeeder extends Seeder
             'edit articles',
             'delete articles',
             'publish articles',
-            
+
             // Hadith permissions
             'view hadith',
             'create hadith',
             'edit hadith',
             'delete hadith',
-            
+
             // Media permissions
             'view programs',
             'create programs',
             'edit programs',
             'delete programs',
-            
+
             // Timeline permissions
             'view timeline',
             'create events',
             'edit events',
             'delete events',
-            
+
             // Genealogy permissions
             'view genealogy',
             'edit genealogy',
-            
+
             // Quran permissions
             'view quran',
             'edit quran',
-            
+
             // User management
             'view users',
             'edit users',
             'delete users',
-            
+
             // System permissions
             'manage settings',
             'view analytics',
@@ -129,4 +129,3 @@ class RolePermissionSeeder extends Seeder
         $this->command->info('Roles and permissions created successfully!');
     }
 }
-

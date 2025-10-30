@@ -22,8 +22,6 @@ class CategoryController extends Controller
      * Display a listing of categories
      *
      * GET /api/categories
-     *
-     * @return JsonResponse
      */
     public function index(): JsonResponse
     {
@@ -39,9 +37,6 @@ class CategoryController extends Controller
      * Display the specified category with articles
      *
      * GET /api/categories/{slug}
-     *
-     * @param string $slug
-     * @return JsonResponse
      */
     public function show(string $slug): JsonResponse
     {
@@ -49,11 +44,10 @@ class CategoryController extends Controller
             ->where('slug', $slug)
             ->first();
 
-        if (!$category) {
+        if (! $category) {
             return $this->notFoundResponse('Category not found');
         }
 
         return $this->successResponse(new CategoryResource($category));
     }
 }
-

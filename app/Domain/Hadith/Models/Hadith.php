@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace App\Domain\Hadith\Models;
 
 use App\Domain\Hadith\Enums\HadithGrade;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Illuminate\Database\Eloquent\Builder;
+use Spatie\Translatable\HasTranslations;
 
 /**
  * Hadith Model
@@ -31,7 +32,7 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class Hadith extends Model
 {
-    use HasFactory;
+    use HasFactory, HasTranslations;
 
     protected $table = 'hadith';
 
@@ -68,9 +69,14 @@ class Hadith extends Model
     }
 
     /**
-     * Get the book this hadith belongs to
+     * Translatable attributes
      *
-     * @return BelongsTo
+     * @var array<string>
+     */
+    public array $translatable = ['translations'];
+
+    /**
+     * Get the book this hadith belongs to
      */
     public function book(): BelongsTo
     {
@@ -79,8 +85,6 @@ class Hadith extends Model
 
     /**
      * Get the chapter this hadith belongs to
-     *
-     * @return BelongsTo
      */
     public function chapter(): BelongsTo
     {
@@ -89,8 +93,6 @@ class Hadith extends Model
 
     /**
      * Get all narrators in the chain
-     *
-     * @return BelongsToMany
      */
     public function narrators(): BelongsToMany
     {
@@ -101,8 +103,6 @@ class Hadith extends Model
 
     /**
      * Get all favorites
-     *
-     * @return MorphMany
      */
     public function favorites(): MorphMany
     {
@@ -111,8 +111,6 @@ class Hadith extends Model
 
     /**
      * Get user interactions
-     *
-     * @return MorphMany
      */
     public function interactions(): MorphMany
     {
@@ -121,10 +119,6 @@ class Hadith extends Model
 
     /**
      * Scope: Filter by book
-     *
-     * @param Builder $query
-     * @param int $bookId
-     * @return Builder
      */
     public function scopeByBook(Builder $query, int $bookId): Builder
     {
@@ -133,10 +127,6 @@ class Hadith extends Model
 
     /**
      * Scope: Filter by chapter
-     *
-     * @param Builder $query
-     * @param int $chapterId
-     * @return Builder
      */
     public function scopeByChapter(Builder $query, int $chapterId): Builder
     {
@@ -145,10 +135,6 @@ class Hadith extends Model
 
     /**
      * Scope: Filter by grade
-     *
-     * @param Builder $query
-     * @param HadithGrade $grade
-     * @return Builder
      */
     public function scopeByGrade(Builder $query, HadithGrade $grade): Builder
     {
@@ -157,9 +143,6 @@ class Hadith extends Model
 
     /**
      * Scope: Authentic hadith only (sahih)
-     *
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeSahih(Builder $query): Builder
     {
@@ -168,9 +151,6 @@ class Hadith extends Model
 
     /**
      * Scope: Reliable hadith (sahih or hasan)
-     *
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeReliable(Builder $query): Builder
     {
@@ -179,28 +159,22 @@ class Hadith extends Model
 
     /**
      * Scope: Full-text search in Arabic text
-     *
-     * @param Builder $query
-     * @param string $search
-     * @return Builder
      */
     public function scopeSearch(Builder $query, string $search): Builder
     {
         if (config('database.default') === 'mysql') {
             return $query->whereRaw(
-                "MATCH(arabic_text) AGAINST(? IN BOOLEAN MODE)",
+                'MATCH(arabic_text) AGAINST(? IN BOOLEAN MODE)',
                 [$search]
             );
         }
-        
+
         // Fallback for SQLite
         return $query->where('arabic_text', 'LIKE', "%{$search}%");
     }
 
     /**
      * Increment views count
-     *
-     * @return void
      */
     public function incrementViews(): void
     {
@@ -209,9 +183,6 @@ class Hadith extends Model
 
     /**
      * Get translation in specified language
-     *
-     * @param string $language
-     * @return string|null
      */
     public function getTranslation(string $language): ?string
     {
@@ -220,8 +191,6 @@ class Hadith extends Model
 
     /**
      * Check if hadith is authentic (sahih)
-     *
-     * @return bool
      */
     public function isAuthentic(): bool
     {
@@ -230,12 +199,9 @@ class Hadith extends Model
 
     /**
      * Check if hadith is reliable (sahih or hasan)
-     *
-     * @return bool
      */
     public function isReliable(): bool
     {
         return $this->grade->isReliable();
     }
 }
-

@@ -6,7 +6,6 @@ namespace Tests\Feature\Api;
 
 use App\Domain\Blog\Models\Article;
 use App\Domain\Blog\Models\Category;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -105,4 +104,3 @@ class ArticleControllerTest extends TestCase
             ]);
     }
 }
-

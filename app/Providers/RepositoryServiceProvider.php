@@ -21,31 +21,31 @@ class RepositoryServiceProvider extends ServiceProvider
     {
         // Blog Module Repositories
         $this->app->bind(ArticleRepositoryInterface::class, ArticleRepository::class);
-        
+
         // Hadith Module Repositories
         $this->app->bind(
             \App\Domain\Hadith\Repositories\HadithRepositoryInterface::class,
             \App\Domain\Hadith\Repositories\HadithRepository::class
         );
-        
+
         // Media Module Repositories
         $this->app->bind(
             \App\Domain\Media\Repositories\MediaProgramRepositoryInterface::class,
             \App\Domain\Media\Repositories\MediaProgramRepository::class
         );
-        
+
         // Seerah Module Repositories
         $this->app->bind(
             \App\Domain\Seerah\Repositories\SeerahEventRepositoryInterface::class,
             \App\Domain\Seerah\Repositories\SeerahEventRepository::class
         );
-        
+
         // Sahaba Module Repositories
         $this->app->bind(
             \App\Domain\Sahaba\Repositories\SahabiRepositoryInterface::class,
             \App\Domain\Sahaba\Repositories\SahabiRepository::class
         );
-        
+
         // Quran Module Repositories
         $this->app->bind(
             \App\Domain\Quran\Repositories\SurahRepositoryInterface::class,
@@ -54,6 +54,18 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(
             \App\Domain\Quran\Repositories\VerseRepositoryInterface::class,
             \App\Domain\Quran\Repositories\VerseRepository::class
+        );
+
+        // Genealogy Module Repositories
+        $this->app->bind(
+            \App\Domain\Genealogy\Repositories\PersonRepositoryInterface::class,
+            \App\Domain\Genealogy\Repositories\PersonRepository::class
+        );
+
+        // Shared/Admin Module Repositories
+        $this->app->bind(
+            \App\Domain\Shared\Repositories\AdminLogRepositoryInterface::class,
+            \App\Domain\Shared\Repositories\AdminLogRepository::class
         );
     }
 
@@ -65,4 +77,3 @@ class RepositoryServiceProvider extends ServiceProvider
         //
     }
 }
-

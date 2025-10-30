@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Domain\Blog\Models;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Illuminate\Database\Eloquent\Builder;
 
 /**
  * User Interaction Model
@@ -55,8 +55,6 @@ class UserInteraction extends Model
 
     /**
      * Get the user
-     *
-     * @return BelongsTo
      */
     public function user(): BelongsTo
     {
@@ -65,8 +63,6 @@ class UserInteraction extends Model
 
     /**
      * Get the interactable item (polymorphic)
-     *
-     * @return MorphTo
      */
     public function interactable(): MorphTo
     {
@@ -75,10 +71,6 @@ class UserInteraction extends Model
 
     /**
      * Scope: Filter by interaction type
-     *
-     * @param Builder $query
-     * @param string $type
-     * @return Builder
      */
     public function scopeOfType(Builder $query, string $type): Builder
     {
@@ -87,9 +79,6 @@ class UserInteraction extends Model
 
     /**
      * Scope: Views only
-     *
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeViews(Builder $query): Builder
     {
@@ -98,9 +87,6 @@ class UserInteraction extends Model
 
     /**
      * Scope: Progress tracking
-     *
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeProgress(Builder $query): Builder
     {
@@ -109,13 +95,9 @@ class UserInteraction extends Model
 
     /**
      * Scope: Completed items
-     *
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeCompleted(Builder $query): Builder
     {
         return $query->where('interaction_type', 'complete');
     }
 }
-

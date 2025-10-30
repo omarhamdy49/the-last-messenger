@@ -17,7 +17,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('person_id')->constrained('people')->onDelete('cascade');
             $table->foreignId('related_person_id')->constrained('people')->onDelete('cascade');
-            
+
             $table->enum('relationship_type', [
                 'father',
                 'mother',
@@ -33,9 +33,9 @@ return new class extends Migration
                 'aunt',
                 'nephew',
                 'niece',
-                'cousin'
+                'cousin',
             ]);
-            
+
             $table->text('notes')->nullable(); // Additional information about the relationship
             $table->timestamps();
 
@@ -55,4 +55,3 @@ return new class extends Migration
         Schema::dropIfExists('relationships');
     }
 };
-

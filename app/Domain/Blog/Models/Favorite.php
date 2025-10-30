@@ -38,8 +38,6 @@ class Favorite extends Model
 
     /**
      * Get the user who favorited
-     *
-     * @return BelongsTo
      */
     public function user(): BelongsTo
     {
@@ -48,12 +46,9 @@ class Favorite extends Model
 
     /**
      * Get the favorable item (polymorphic)
-     *
-     * @return MorphTo
      */
     public function favorable(): MorphTo
     {
         return $this->morphTo();
     }
 }
-

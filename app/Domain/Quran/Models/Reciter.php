@@ -74,9 +74,6 @@ class Reciter extends Model
 
     /**
      * Get display name
-     *
-     * @param string $language
-     * @return string
      */
     public function getDisplayName(string $language = 'ar'): string
     {
@@ -86,7 +83,7 @@ class Reciter extends Model
     /**
      * Scope: Featured reciters
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeFeatured($query)
@@ -97,7 +94,7 @@ class Reciter extends Model
     /**
      * Scope: Order by display order
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeOrdered($query)
@@ -105,4 +102,3 @@ class Reciter extends Model
         return $query->orderBy('display_order');
     }
 }
-

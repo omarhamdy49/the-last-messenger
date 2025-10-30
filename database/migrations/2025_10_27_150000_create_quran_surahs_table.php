@@ -18,26 +18,26 @@ return new class extends Migration
             $table->integer('number')->unique(); // 1-114
             $table->json('name'); // {"ar": "الفاتحة", "en": "Al-Fatihah", "transliteration": "Al-Faatiha"}
             $table->json('meaning')->nullable(); // Meaning of the surah name
-            
+
             // Revelation information
             $table->enum('revelation_place', ['makkah', 'madinah']);
             $table->integer('revelation_order')->nullable(); // Order of revelation (1-114)
-            
+
             // Structure
             $table->integer('verses_count'); // Number of verses (ayahs)
             $table->integer('words_count')->nullable();
             $table->integer('letters_count')->nullable();
-            
+
             // Juz information
             $table->json('juz')->nullable(); // ["1", "2"] if spans multiple juz
-            
+
             // Description
             $table->json('description')->nullable(); // Multi-language description
             $table->json('theme')->nullable(); // Main themes
-            
+
             // Audio
             $table->json('audio_urls')->nullable(); // Multiple reciters
-            
+
             // Metadata
             $table->integer('page_number')->nullable(); // Starting page in Mushaf
             $table->timestamps();
@@ -58,4 +58,3 @@ return new class extends Migration
         Schema::dropIfExists('quran_surahs');
     }
 };
-

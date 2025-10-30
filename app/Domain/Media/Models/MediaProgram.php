@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Translatable\HasTranslations;
 
 /**
@@ -27,9 +29,9 @@ use Spatie\Translatable\HasTranslations;
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  */
-class MediaProgram extends Model
+class MediaProgram extends Model implements HasMedia
 {
-    use HasFactory, HasTranslations;
+    use HasFactory, HasTranslations, InteractsWithMedia;
 
     /**
      * The table associated with the model.
@@ -77,8 +79,6 @@ class MediaProgram extends Model
 
     /**
      * Get the category this program belongs to
-     *
-     * @return BelongsTo
      */
     public function category(): BelongsTo
     {
@@ -87,8 +87,6 @@ class MediaProgram extends Model
 
     /**
      * Get all episodes in this program
-     *
-     * @return HasMany
      */
     public function episodes(): HasMany
     {
@@ -97,8 +95,6 @@ class MediaProgram extends Model
 
     /**
      * Get published episodes
-     *
-     * @return HasMany
      */
     public function publishedEpisodes(): HasMany
     {
@@ -110,8 +106,6 @@ class MediaProgram extends Model
 
     /**
      * Get the latest episode
-     *
-     * @return MediaEpisode|null
      */
     public function latestEpisode(): ?MediaEpisode
     {
@@ -122,9 +116,6 @@ class MediaProgram extends Model
 
     /**
      * Increment total views
-     *
-     * @param int $amount
-     * @return void
      */
     public function incrementViews(int $amount = 1): void
     {
@@ -133,8 +124,6 @@ class MediaProgram extends Model
 
     /**
      * Update episode count
-     *
-     * @return void
      */
     public function updateEpisodeCount(): void
     {
@@ -145,21 +134,20 @@ class MediaProgram extends Model
     /**
      * Scope: Filter by status
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param ProgramStatus|string $status
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByStatus($query, ProgramStatus|string $status)
     {
         $statusValue = $status instanceof ProgramStatus ? $status->value : $status;
+
         return $query->where('status', $statusValue);
     }
 
     /**
      * Scope: Filter by category
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $categoryId
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByCategory($query, int $categoryId)
@@ -170,8 +158,7 @@ class MediaProgram extends Model
     /**
      * Scope: Popular programs
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $limit
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopePopular($query, int $limit = 10)
@@ -182,13 +169,69 @@ class MediaProgram extends Model
     /**
      * Scope: Recent programs
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $limit
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeRecent($query, int $limit = 10)
     {
         return $query->orderByDesc('created_at')->limit($limit);
     }
-}
 
+    /**
+     * Register media collections
+     */
+    public function registerMediaCollections(): void
+    {
+        // Thumbnail collection (single file)
+        $this->addMediaCollection('thumbnail')
+            ->singleFile()
+            ->acceptsMimeTypes(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'])
+            ->maxFilesize(10 * 1024 * 1024) // 10MB
+            ->useDisk('public')
+            ->registerMediaConversions(function () {
+                $this->addMediaConversion('thumb')
+                    ->width(150)
+                    ->height(150)
+                    ->sharpen(10)
+                    ->nonQueued();
+
+                $this->addMediaConversion('medium')
+                    ->width(600)
+                    ->height(400)
+                    ->sharpen(10)
+                    ->nonQueued();
+
+                $this->addMediaConversion('large')
+                    ->width(1200)
+                    ->height(800)
+                    ->sharpen(10)
+                    ->nonQueued();
+            });
+
+        // Banner collection (single file)
+        $this->addMediaCollection('banner')
+            ->singleFile()
+            ->acceptsMimeTypes(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'])
+            ->maxFilesize(10 * 1024 * 1024) // 10MB
+            ->useDisk('public')
+            ->registerMediaConversions(function () {
+                $this->addMediaConversion('thumb')
+                    ->width(150)
+                    ->height(150)
+                    ->sharpen(10)
+                    ->nonQueued();
+
+                $this->addMediaConversion('medium')
+                    ->width(600)
+                    ->height(400)
+                    ->sharpen(10)
+                    ->nonQueued();
+
+                $this->addMediaConversion('large')
+                    ->width(1200)
+                    ->height(800)
+                    ->sharpen(10)
+                    ->nonQueued();
+            });
+    }
+}

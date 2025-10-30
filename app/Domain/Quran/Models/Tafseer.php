@@ -55,8 +55,6 @@ class Tafseer extends Model
 
     /**
      * Get the verse this tafseer belongs to
-     *
-     * @return BelongsTo
      */
     public function verse(): BelongsTo
     {
@@ -66,8 +64,7 @@ class Tafseer extends Model
     /**
      * Scope: Filter by tafseer name
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $name
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByTafseerName($query, string $name)
@@ -78,8 +75,7 @@ class Tafseer extends Model
     /**
      * Scope: Filter by language
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $language
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByLanguage($query, string $language)
@@ -87,4 +83,3 @@ class Tafseer extends Model
         return $query->where('language', $language);
     }
 }
-

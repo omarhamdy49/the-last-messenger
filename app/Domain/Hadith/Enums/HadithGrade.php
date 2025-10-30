@@ -28,8 +28,6 @@ enum HadithGrade: string
 
     /**
      * Get label for display
-     *
-     * @return string
      */
     public function label(): string
     {
@@ -44,8 +42,6 @@ enum HadithGrade: string
 
     /**
      * Get Arabic label
-     *
-     * @return string
      */
     public function labelArabic(): string
     {
@@ -60,12 +56,9 @@ enum HadithGrade: string
 
     /**
      * Check if hadith is reliable (sahih or hasan)
-     *
-     * @return bool
      */
     public function isReliable(): bool
     {
         return in_array($this, [self::SAHIH, self::HASAN]);
     }
 }
-

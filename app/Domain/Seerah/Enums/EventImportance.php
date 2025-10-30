@@ -26,8 +26,6 @@ enum EventImportance: string
 
     /**
      * Get label for display
-     *
-     * @return string
      */
     public function label(): string
     {
@@ -40,8 +38,6 @@ enum EventImportance: string
 
     /**
      * Get Arabic label
-     *
-     * @return string
      */
     public function labelArabic(): string
     {
@@ -54,8 +50,6 @@ enum EventImportance: string
 
     /**
      * Get numeric weight for sorting
-     *
-     * @return int
      */
     public function weight(): int
     {
@@ -66,4 +60,3 @@ enum EventImportance: string
         };
     }
 }
-

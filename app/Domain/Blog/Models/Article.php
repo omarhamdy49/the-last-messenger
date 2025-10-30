@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\Translatable\HasTranslations;
 
 /**
  * Article Model
@@ -40,7 +41,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  */
 class Article extends Model implements HasMedia
 {
-    use HasFactory, SoftDeletes, InteractsWithMedia;
+    use HasFactory, HasTranslations, InteractsWithMedia, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -80,6 +81,13 @@ class Article extends Model implements HasMedia
     }
 
     /**
+     * Translatable attributes
+     *
+     * @var array<string>
+     */
+    public array $translatable = ['title', 'excerpt', 'content'];
+
+    /**
      * Boot the model
      */
     protected static function boot(): void
@@ -94,8 +102,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Get the author of the article
-     *
-     * @return BelongsTo
      */
     public function author(): BelongsTo
     {
@@ -104,8 +110,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Get the category
-     *
-     * @return BelongsTo
      */
     public function category(): BelongsTo
     {
@@ -114,8 +118,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Get the series
-     *
-     * @return BelongsTo
      */
     public function series(): BelongsTo
     {
@@ -124,8 +126,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Get all tags
-     *
-     * @return MorphToMany
      */
     public function tags(): MorphToMany
     {
@@ -134,8 +134,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Get all favorites
-     *
-     * @return MorphMany
      */
     public function favorites(): MorphMany
     {
@@ -144,8 +142,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Get user interactions
-     *
-     * @return MorphMany
      */
     public function interactions(): MorphMany
     {
@@ -154,9 +150,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Scope: Published articles only
-     *
-     * @param Builder $query
-     * @return Builder
      */
     public function scopePublished(Builder $query): Builder
     {
@@ -167,9 +160,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Scope: Featured articles
-     *
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeFeatured(Builder $query): Builder
     {
@@ -180,10 +170,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Scope: Filter by category
-     *
-     * @param Builder $query
-     * @param int $categoryId
-     * @return Builder
      */
     public function scopeByCategory(Builder $query, int $categoryId): Builder
     {
@@ -192,10 +178,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Scope: Filter by series
-     *
-     * @param Builder $query
-     * @param int $seriesId
-     * @return Builder
      */
     public function scopeBySeries(Builder $query, int $seriesId): Builder
     {
@@ -204,10 +186,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Scope: Popular articles (by views)
-     *
-     * @param Builder $query
-     * @param int $limit
-     * @return Builder
      */
     public function scopePopular(Builder $query, int $limit = 10): Builder
     {
@@ -218,10 +196,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Scope: Recent articles
-     *
-     * @param Builder $query
-     * @param int $limit
-     * @return Builder
      */
     public function scopeRecent(Builder $query, int $limit = 10): Builder
     {
@@ -232,23 +206,17 @@ class Article extends Model implements HasMedia
 
     /**
      * Scope: Full-text search
-     *
-     * @param Builder $query
-     * @param string $search
-     * @return Builder
      */
     public function scopeSearch(Builder $query, string $search): Builder
     {
         return $query->whereRaw(
-            "MATCH(title, excerpt) AGAINST(? IN BOOLEAN MODE)",
+            'MATCH(title, excerpt) AGAINST(? IN BOOLEAN MODE)',
             [$search]
         );
     }
 
     /**
      * Increment views count
-     *
-     * @return void
      */
     public function incrementViews(): void
     {
@@ -257,8 +225,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Increment favorites count
-     *
-     * @return void
      */
     public function incrementFavorites(): void
     {
@@ -267,8 +233,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Decrement favorites count
-     *
-     * @return void
      */
     public function decrementFavorites(): void
     {
@@ -277,8 +241,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Check if article is published
-     *
-     * @return bool
      */
     public function isPublished(): bool
     {
@@ -289,8 +251,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Publish the article
-     *
-     * @return bool
      */
     public function publish(): bool
     {
@@ -302,8 +262,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Unpublish the article (set to draft)
-     *
-     * @return bool
      */
     public function unpublish(): bool
     {
@@ -314,8 +272,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Archive the article
-     *
-     * @return bool
      */
     public function archive(): bool
     {
@@ -326,9 +282,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Get title in specified language
-     *
-     * @param string $language
-     * @return string|null
      */
     public function getTitleInLanguage(string $language): ?string
     {
@@ -337,9 +290,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Get excerpt in specified language
-     *
-     * @param string $language
-     * @return string|null
      */
     public function getExcerptInLanguage(string $language): ?string
     {
@@ -348,9 +298,6 @@ class Article extends Model implements HasMedia
 
     /**
      * Get content in specified language
-     *
-     * @param string $language
-     * @return string|null
      */
     public function getContentInLanguage(string $language): ?string
     {
@@ -359,17 +306,58 @@ class Article extends Model implements HasMedia
 
     /**
      * Register media collections
-     *
-     * @return void
      */
     public function registerMediaCollections(): void
     {
-        $this->addMediaCollection('featured')
+        // Featured image collection (single file)
+        $this->addMediaCollection('featured_image')
             ->singleFile()
-            ->useDisk('public');
+            ->acceptsMimeTypes(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'])
+            ->maxFilesize(10 * 1024 * 1024) // 10MB
+            ->useDisk('public')
+            ->registerMediaConversions(function () {
+                $this->addMediaConversion('thumb')
+                    ->width(150)
+                    ->height(150)
+                    ->sharpen(10)
+                    ->nonQueued();
 
+                $this->addMediaConversion('medium')
+                    ->width(600)
+                    ->height(400)
+                    ->sharpen(10)
+                    ->nonQueued();
+
+                $this->addMediaConversion('large')
+                    ->width(1200)
+                    ->height(800)
+                    ->sharpen(10)
+                    ->nonQueued();
+            });
+
+        // Gallery collection (multiple files)
         $this->addMediaCollection('gallery')
-            ->useDisk('public');
+            ->acceptsMimeTypes(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'])
+            ->maxFilesize(10 * 1024 * 1024) // 10MB
+            ->useDisk('public')
+            ->registerMediaConversions(function () {
+                $this->addMediaConversion('thumb')
+                    ->width(150)
+                    ->height(150)
+                    ->sharpen(10)
+                    ->nonQueued();
+
+                $this->addMediaConversion('medium')
+                    ->width(600)
+                    ->height(400)
+                    ->sharpen(10)
+                    ->nonQueued();
+
+                $this->addMediaConversion('large')
+                    ->width(1200)
+                    ->height(800)
+                    ->sharpen(10)
+                    ->nonQueued();
+            });
     }
 }
-

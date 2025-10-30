@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Domain\Hadith\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Builder;
+use Spatie\Translatable\HasTranslations;
 
 /**
  * Hadith Book Model
@@ -25,7 +26,7 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class HadithBook extends Model
 {
-    use HasFactory;
+    use HasFactory, HasTranslations;
 
     protected $table = 'hadith_books';
 
@@ -59,9 +60,14 @@ class HadithBook extends Model
     }
 
     /**
-     * Get all chapters in this book
+     * Translatable attributes
      *
-     * @return HasMany
+     * @var array<string>
+     */
+    public array $translatable = ['name', 'description'];
+
+    /**
+     * Get all chapters in this book
      */
     public function chapters(): HasMany
     {
@@ -70,8 +76,6 @@ class HadithBook extends Model
 
     /**
      * Get all hadith in this book
-     *
-     * @return HasMany
      */
     public function hadiths(): HasMany
     {
@@ -80,9 +84,6 @@ class HadithBook extends Model
 
     /**
      * Scope: Ordered by display order
-     *
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeOrdered(Builder $query): Builder
     {
@@ -91,9 +92,6 @@ class HadithBook extends Model
 
     /**
      * Get name in specified language
-     *
-     * @param string $language
-     * @return string|null
      */
     public function getNameInLanguage(string $language): ?string
     {
@@ -102,9 +100,6 @@ class HadithBook extends Model
 
     /**
      * Get description in specified language
-     *
-     * @param string $language
-     * @return string|null
      */
     public function getDescriptionInLanguage(string $language): ?string
     {
@@ -113,12 +108,9 @@ class HadithBook extends Model
 
     /**
      * Update hadith count
-     *
-     * @return void
      */
     public function updateHadithCount(): void
     {
         $this->update(['total_hadith_count' => $this->hadiths()->count()]);
     }
 }
-

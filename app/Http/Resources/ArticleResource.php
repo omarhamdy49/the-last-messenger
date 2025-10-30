@@ -16,7 +16,6 @@ class ArticleResource extends JsonResource
     /**
      * Transform the resource into an array.
      *
-     * @param Request $request
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
@@ -37,17 +36,16 @@ class ArticleResource extends JsonResource
             'published_at' => $this->published_at?->toISOString(),
             'created_at' => $this->created_at->toISOString(),
             'updated_at' => $this->updated_at->toISOString(),
-            
+
             // Relationships
             'author' => new UserResource($this->whenLoaded('author')),
             'category' => new CategoryResource($this->whenLoaded('category')),
             'series' => new SeriesResource($this->whenLoaded('series')),
             'tags' => TagResource::collection($this->whenLoaded('tags')),
-            
+
             // Computed
             'is_published' => $this->isPublished(),
             'url' => route('articles.show', $this->slug),
         ];
     }
 }
-

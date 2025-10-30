@@ -17,19 +17,13 @@ class SahabiController extends Controller
 
     /**
      * SahabiController constructor
-     *
-     * @param SahabiService $sahabiService
      */
     public function __construct(
         private readonly SahabiService $sahabiService
-    ) {
-    }
+    ) {}
 
     /**
      * Get all companions with pagination
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function index(Request $request): JsonResponse
     {
@@ -43,9 +37,6 @@ class SahabiController extends Controller
 
     /**
      * Get a single companion by slug
-     *
-     * @param string $slug
-     * @return JsonResponse
      */
     public function show(string $slug): JsonResponse
     {
@@ -62,10 +53,6 @@ class SahabiController extends Controller
 
     /**
      * Get companions by status
-     *
-     * @param Request $request
-     * @param string $status
-     * @return JsonResponse
      */
     public function byStatus(Request $request, string $status): JsonResponse
     {
@@ -79,10 +66,6 @@ class SahabiController extends Controller
 
     /**
      * Get companions by tribe
-     *
-     * @param Request $request
-     * @param string $tribe
-     * @return JsonResponse
      */
     public function byTribe(Request $request, string $tribe): JsonResponse
     {
@@ -96,10 +79,6 @@ class SahabiController extends Controller
 
     /**
      * Get companions who participated in a battle
-     *
-     * @param Request $request
-     * @param string $battle
-     * @return JsonResponse
      */
     public function byBattle(Request $request, string $battle): JsonResponse
     {
@@ -113,9 +92,6 @@ class SahabiController extends Controller
 
     /**
      * Get featured companions
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function featured(Request $request): JsonResponse
     {
@@ -129,9 +105,6 @@ class SahabiController extends Controller
 
     /**
      * Get early Muslims by conversion order
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function earlyMuslims(Request $request): JsonResponse
     {
@@ -145,9 +118,6 @@ class SahabiController extends Controller
 
     /**
      * Get top hadith narrators
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function topNarrators(Request $request): JsonResponse
     {
@@ -161,9 +131,6 @@ class SahabiController extends Controller
 
     /**
      * Search companions
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function search(Request $request): JsonResponse
     {
@@ -181,4 +148,3 @@ class SahabiController extends Controller
         );
     }
 }
-

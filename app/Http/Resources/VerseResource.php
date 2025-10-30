@@ -15,7 +15,6 @@ class VerseResource extends JsonResource
     /**
      * Transform the resource into an array.
      *
-     * @param Request $request
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
@@ -27,7 +26,7 @@ class VerseResource extends JsonResource
             'verse_key' => $this->verse_key,
             'reference' => $this->when(
                 $this->relationLoaded('surah'),
-                fn() => $this->getReference()
+                fn () => $this->getReference()
             ),
             'text_uthmani' => $this->text_uthmani,
             'text_simple' => $this->text_simple,
@@ -41,7 +40,7 @@ class VerseResource extends JsonResource
             'is_sajda' => $this->is_sajda,
             'sajda_type' => $this->when(
                 $this->is_sajda && $this->sajda_type,
-                fn() => [
+                fn () => [
                     'value' => $this->sajda_type->value,
                     'label' => $this->sajda_type->label(),
                     'label_ar' => $this->sajda_type->labelArabic(),
@@ -57,4 +56,3 @@ class VerseResource extends JsonResource
         ];
     }
 }
-

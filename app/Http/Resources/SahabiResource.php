@@ -15,7 +15,6 @@ class SahabiResource extends JsonResource
     /**
      * Transform the resource into an array.
      *
-     * @param Request $request
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
@@ -29,7 +28,7 @@ class SahabiResource extends JsonResource
             'laqab' => $this->laqab,
             'display_name' => $this->when(
                 $request->has('lang'),
-                fn() => $this->getDisplayName($request->input('lang', 'ar'))
+                fn () => $this->getDisplayName($request->input('lang', 'ar'))
             ),
             'gender' => $this->gender,
             'status' => $this->status->value,
@@ -62,7 +61,7 @@ class SahabiResource extends JsonResource
             'article' => new ArticleResource($this->whenLoaded('article')),
             'father' => $this->when(
                 $this->relationLoaded('father') && $this->father,
-                fn() => [
+                fn () => [
                     'id' => $this->father->id,
                     'name' => $this->father->name,
                     'slug' => $this->father->slug,
@@ -70,7 +69,7 @@ class SahabiResource extends JsonResource
             ),
             'mother' => $this->when(
                 $this->relationLoaded('mother') && $this->mother,
-                fn() => [
+                fn () => [
                     'id' => $this->mother->id,
                     'name' => $this->mother->name,
                     'slug' => $this->mother->slug,
@@ -81,4 +80,3 @@ class SahabiResource extends JsonResource
         ];
     }
 }
-

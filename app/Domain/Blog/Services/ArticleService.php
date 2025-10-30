@@ -19,19 +19,15 @@ class ArticleService extends BaseService
 {
     /**
      * Constructor
-     *
-     * @param ArticleRepositoryInterface $repository
      */
     public function __construct(
-        protected ArticleRepositoryInterface $repository
+        ArticleRepositoryInterface $repository
     ) {
+        $this->repository = $repository;
     }
 
     /**
      * Get published articles with pagination
-     *
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getPublishedArticles(int $perPage = 15): LengthAwarePaginator
     {
@@ -40,10 +36,6 @@ class ArticleService extends BaseService
 
     /**
      * Get articles by category
-     *
-     * @param int $categoryId
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getArticlesByCategory(int $categoryId, int $perPage = 15): LengthAwarePaginator
     {
@@ -52,9 +44,6 @@ class ArticleService extends BaseService
 
     /**
      * Get articles by series
-     *
-     * @param int $seriesId
-     * @return Collection
      */
     public function getArticlesBySeries(int $seriesId): Collection
     {
@@ -63,9 +52,6 @@ class ArticleService extends BaseService
 
     /**
      * Get featured articles
-     *
-     * @param int $limit
-     * @return Collection
      */
     public function getFeaturedArticles(int $limit = 5): Collection
     {
@@ -74,9 +60,6 @@ class ArticleService extends BaseService
 
     /**
      * Get popular articles
-     *
-     * @param int $limit
-     * @return Collection
      */
     public function getPopularArticles(int $limit = 10): Collection
     {
@@ -85,9 +68,6 @@ class ArticleService extends BaseService
 
     /**
      * Get recent articles
-     *
-     * @param int $limit
-     * @return Collection
      */
     public function getRecentArticles(int $limit = 10): Collection
     {
@@ -96,10 +76,6 @@ class ArticleService extends BaseService
 
     /**
      * Search articles
-     *
-     * @param string $query
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function searchArticles(string $query, int $perPage = 15): LengthAwarePaginator
     {
@@ -109,15 +85,13 @@ class ArticleService extends BaseService
     /**
      * Find article by slug
      *
-     * @param string $slug
-     * @return Article
      * @throws ResourceNotFoundException
      */
     public function findBySlug(string $slug): Article
     {
         $article = $this->repository->findBySlug($slug, ['author', 'category', 'series', 'tags']);
 
-        if (!$article) {
+        if (! $article) {
             throw new ResourceNotFoundException('Article', $slug);
         }
 
@@ -127,14 +101,12 @@ class ArticleService extends BaseService
     /**
      * Get article by slug and increment views
      *
-     * @param string $slug
-     * @return Article
      * @throws ResourceNotFoundException
      */
     public function getArticleBySlug(string $slug): Article
     {
         $article = $this->findBySlug($slug);
-        
+
         // Increment views asynchronously (can be moved to queue later)
         $this->repository->incrementViews($article->id);
 
@@ -144,8 +116,7 @@ class ArticleService extends BaseService
     /**
      * Create new article
      *
-     * @param array<string, mixed> $data
-     * @return Article
+     * @param  array<string, mixed>  $data
      */
     public function createArticle(array $data): Article
     {
@@ -160,9 +131,7 @@ class ArticleService extends BaseService
     /**
      * Update article
      *
-     * @param int $id
-     * @param array<string, mixed> $data
-     * @return bool
+     * @param  array<string, mixed>  $data
      */
     public function updateArticle(int $id, array $data): bool
     {
@@ -176,9 +145,6 @@ class ArticleService extends BaseService
 
     /**
      * Delete article
-     *
-     * @param int $id
-     * @return bool
      */
     public function deleteArticle(int $id): bool
     {
@@ -187,54 +153,41 @@ class ArticleService extends BaseService
 
     /**
      * Publish article
-     *
-     * @param int $id
-     * @return bool
      */
     public function publishArticle(int $id): bool
     {
         $article = $this->repository->findOrFail($id);
-        
+
         return $article->publish();
     }
 
     /**
      * Unpublish article (set to draft)
-     *
-     * @param int $id
-     * @return bool
      */
     public function unpublishArticle(int $id): bool
     {
         $article = $this->repository->findOrFail($id);
-        
+
         return $article->unpublish();
     }
 
     /**
      * Archive article
-     *
-     * @param int $id
-     * @return bool
      */
     public function archiveArticle(int $id): bool
     {
         $article = $this->repository->findOrFail($id);
-        
+
         return $article->archive();
     }
 
     /**
      * Toggle favorite for user
-     *
-     * @param int $articleId
-     * @param int $userId
-     * @return bool
      */
     public function toggleFavorite(int $articleId, int $userId): bool
     {
         $article = $this->repository->findOrFail($articleId);
-        
+
         $favorite = $article->favorites()
             ->where('user_id', $userId)
             ->first();
@@ -242,11 +195,13 @@ class ArticleService extends BaseService
         if ($favorite) {
             $favorite->delete();
             $this->repository->decrementFavorites($articleId);
+
             return false;
         }
 
         $article->favorites()->create(['user_id' => $userId]);
         $this->repository->incrementFavorites($articleId);
+
         return true;
     }
 
@@ -254,13 +209,12 @@ class ArticleService extends BaseService
      * Calculate reading time based on content
      * Assumes average reading speed of 200 words per minute
      *
-     * @param array<string, string> $content
-     * @return int
+     * @param  array<string, string>  $content
      */
     protected function calculateReadingTime(array $content): int
     {
         $wordCount = 0;
-        
+
         foreach ($content as $text) {
             $wordCount += str_word_count(strip_tags($text));
         }
@@ -271,9 +225,7 @@ class ArticleService extends BaseService
     /**
      * Sync tags for article
      *
-     * @param int $articleId
-     * @param array<int> $tagIds
-     * @return void
+     * @param  array<int>  $tagIds
      */
     public function syncTags(int $articleId, array $tagIds): void
     {
@@ -281,5 +233,12 @@ class ArticleService extends BaseService
         $article->tags()->sync($tagIds);
         $this->repository->clearCache();
     }
-}
 
+    /**
+     * Count articles by status
+     */
+    public function countByStatus(string $status): int
+    {
+        return $this->repository->countByStatus($status);
+    }
+}

@@ -26,8 +26,6 @@ enum CategoryType: string
 
     /**
      * Get label for display
-     *
-     * @return string
      */
     public function label(): string
     {
@@ -38,4 +36,3 @@ enum CategoryType: string
         };
     }
 }
-

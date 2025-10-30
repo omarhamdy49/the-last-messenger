@@ -13,7 +13,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 /**
  * User Model
- * 
+ *
  * @property int $id
  * @property string $name
  * @property string $email
@@ -27,7 +27,7 @@ use Spatie\Permission\Traits\HasRoles;
  */
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasApiTokens, HasRoles;
+    use HasApiTokens, HasFactory, HasRoles, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -70,8 +70,6 @@ class User extends Authenticatable
 
     /**
      * Get all favorites for this user (polymorphic relationship)
-     *
-     * @return MorphMany
      */
     public function favorites(): MorphMany
     {
@@ -80,8 +78,6 @@ class User extends Authenticatable
 
     /**
      * Update last login timestamp
-     *
-     * @return void
      */
     public function updateLastLogin(): void
     {
@@ -90,8 +86,6 @@ class User extends Authenticatable
 
     /**
      * Get user's preferred language
-     *
-     * @return string
      */
     public function getPreferredLanguage(): string
     {
@@ -100,10 +94,6 @@ class User extends Authenticatable
 
     /**
      * Set user preference
-     *
-     * @param string $key
-     * @param mixed $value
-     * @return void
      */
     public function setPreference(string $key, mixed $value): void
     {
@@ -114,10 +104,6 @@ class User extends Authenticatable
 
     /**
      * Get user preference
-     *
-     * @param string $key
-     * @param mixed $default
-     * @return mixed
      */
     public function getPreference(string $key, mixed $default = null): mixed
     {

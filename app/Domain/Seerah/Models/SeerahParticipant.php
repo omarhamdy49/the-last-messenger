@@ -8,6 +8,7 @@ use App\Domain\Seerah\Enums\ParticipantRole;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Translatable\HasTranslations;
 
 /**
  * SeerahParticipant Model
@@ -18,13 +19,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $participant_id
  * @property array $name
  * @property ParticipantRole $role
- * @property string|null $description
+ * @property array|null $description
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  */
 class SeerahParticipant extends Model
 {
-    use HasFactory;
+    use HasFactory, HasTranslations;
 
     /**
      * The table associated with the model.
@@ -54,13 +55,19 @@ class SeerahParticipant extends Model
      */
     protected $casts = [
         'name' => 'array',
+        'description' => 'array',
         'role' => ParticipantRole::class,
     ];
 
     /**
-     * Get the event this participant belongs to
+     * Translatable attributes
      *
-     * @return BelongsTo
+     * @var array<string>
+     */
+    public array $translatable = ['name', 'description'];
+
+    /**
+     * Get the event this participant belongs to
      */
     public function event(): BelongsTo
     {
@@ -70,14 +77,13 @@ class SeerahParticipant extends Model
     /**
      * Scope: Filter by role
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param ParticipantRole|string $role
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByRole($query, ParticipantRole|string $role)
     {
         $roleValue = $role instanceof ParticipantRole ? $role->value : $role;
+
         return $query->where('role', $roleValue);
     }
 }
-

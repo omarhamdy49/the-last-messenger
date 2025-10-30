@@ -26,8 +26,6 @@ enum ArticleStatus: string
 
     /**
      * Get label for display
-     *
-     * @return string
      */
     public function label(): string
     {
@@ -40,12 +38,9 @@ enum ArticleStatus: string
 
     /**
      * Check if article is published
-     *
-     * @return bool
      */
     public function isPublished(): bool
     {
         return $this === self::PUBLISHED;
     }
 }
-

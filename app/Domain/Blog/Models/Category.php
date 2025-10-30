@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Domain\Blog\Models;
 
 use App\Domain\Blog\Enums\CategoryType;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Builder;
+use Spatie\Translatable\HasTranslations;
 
 /**
  * Category Model
@@ -29,7 +30,7 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class Category extends Model
 {
-    use HasFactory;
+    use HasFactory, HasTranslations;
 
     /**
      * The attributes that are mass assignable.
@@ -63,9 +64,14 @@ class Category extends Model
     }
 
     /**
-     * Get parent category
+     * Translatable attributes
      *
-     * @return BelongsTo
+     * @var array<string>
+     */
+    public array $translatable = ['name', 'description'];
+
+    /**
+     * Get parent category
      */
     public function parent(): BelongsTo
     {
@@ -74,8 +80,6 @@ class Category extends Model
 
     /**
      * Get child categories
-     *
-     * @return HasMany
      */
     public function children(): HasMany
     {
@@ -84,8 +88,6 @@ class Category extends Model
 
     /**
      * Get articles in this category
-     *
-     * @return HasMany
      */
     public function articles(): HasMany
     {
@@ -94,9 +96,6 @@ class Category extends Model
 
     /**
      * Scope: Root categories only (no parent)
-     *
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeRoot(Builder $query): Builder
     {
@@ -105,10 +104,6 @@ class Category extends Model
 
     /**
      * Scope: Filter by type
-     *
-     * @param Builder $query
-     * @param CategoryType $type
-     * @return Builder
      */
     public function scopeOfType(Builder $query, CategoryType $type): Builder
     {
@@ -117,9 +112,6 @@ class Category extends Model
 
     /**
      * Scope: Ordered by display order
-     *
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeOrdered(Builder $query): Builder
     {
@@ -128,8 +120,6 @@ class Category extends Model
 
     /**
      * Check if category has children
-     *
-     * @return bool
      */
     public function hasChildren(): bool
     {
@@ -138,8 +128,6 @@ class Category extends Model
 
     /**
      * Check if category is root (no parent)
-     *
-     * @return bool
      */
     public function isRoot(): bool
     {
@@ -148,9 +136,6 @@ class Category extends Model
 
     /**
      * Get name in specified language
-     *
-     * @param string $language
-     * @return string|null
      */
     public function getNameInLanguage(string $language): ?string
     {
@@ -159,13 +144,9 @@ class Category extends Model
 
     /**
      * Get description in specified language
-     *
-     * @param string $language
-     * @return string|null
      */
     public function getDescriptionInLanguage(string $language): ?string
     {
         return $this->description[$language] ?? $this->description['ar'] ?? null;
     }
 }
-

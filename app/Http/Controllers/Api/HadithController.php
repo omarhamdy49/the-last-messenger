@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
-use App\Domain\Hadith\Enums\HadithGrade;
 use App\Domain\Hadith\Models\HadithBook;
 use App\Domain\Hadith\Services\HadithService;
 use App\Exceptions\Domain\ResourceNotFoundException;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\HadithResource;
 use App\Http\Resources\HadithBookResource;
+use App\Http\Resources\HadithResource;
 use App\Support\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,8 +24,6 @@ class HadithController extends Controller
 
     /**
      * Constructor
-     *
-     * @param HadithService $hadithService
      */
     public function __construct(
         protected HadithService $hadithService
@@ -47,9 +44,6 @@ class HadithController extends Controller
      * Display a listing of hadith
      *
      * GET /api/hadith
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function index(Request $request): JsonResponse
     {
@@ -71,7 +65,7 @@ class HadithController extends Controller
         }
 
         return $this->paginatedResponse($hadiths->setCollection(
-            $hadiths->getCollection()->map(fn($hadith) => new HadithResource($hadith))
+            $hadiths->getCollection()->map(fn ($hadith) => new HadithResource($hadith))
         ));
     }
 
@@ -79,14 +73,12 @@ class HadithController extends Controller
      * Display the specified hadith
      *
      * GET /api/hadith/{id}
-     *
-     * @param int $id
-     * @return JsonResponse
      */
     public function show(int $id): JsonResponse
     {
         try {
             $hadith = $this->hadithService->getHadithWithNarrators($id);
+
             return $this->successResponse(new HadithResource($hadith));
         } catch (ResourceNotFoundException $e) {
             return $this->notFoundResponse($e->getMessage());
@@ -97,12 +89,11 @@ class HadithController extends Controller
      * Get all hadith books
      *
      * GET /api/hadith/books
-     *
-     * @return JsonResponse
      */
     public function books(): JsonResponse
     {
         $books = HadithBook::with('chapters')->ordered()->get();
+
         return $this->successResponse(HadithBookResource::collection($books));
     }
 
@@ -110,16 +101,12 @@ class HadithController extends Controller
      * Get a specific hadith book with hadiths
      *
      * GET /api/hadith/books/{slug}
-     *
-     * @param Request $request
-     * @param string $slug
-     * @return JsonResponse
      */
     public function bookShow(Request $request, string $slug): JsonResponse
     {
         $book = HadithBook::where('slug', $slug)->with('chapters')->first();
 
-        if (!$book) {
+        if (! $book) {
             return $this->notFoundResponse('Hadith book not found');
         }
 
@@ -144,10 +131,6 @@ class HadithController extends Controller
      * Get hadiths by chapter
      *
      * GET /api/hadith/chapters/{id}
-     *
-     * @param Request $request
-     * @param int $id
-     * @return JsonResponse
      */
     public function chapterShow(Request $request, int $id): JsonResponse
     {
@@ -155,7 +138,7 @@ class HadithController extends Controller
         $hadiths = $this->hadithService->getHadithByChapter($id, (int) $perPage);
 
         return $this->paginatedResponse($hadiths->setCollection(
-            $hadiths->getCollection()->map(fn($hadith) => new HadithResource($hadith))
+            $hadiths->getCollection()->map(fn ($hadith) => new HadithResource($hadith))
         ));
     }
 
@@ -163,9 +146,6 @@ class HadithController extends Controller
      * Search hadith
      *
      * GET /api/hadith/search
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function search(Request $request): JsonResponse
     {
@@ -180,7 +160,7 @@ class HadithController extends Controller
         $hadiths = $this->hadithService->searchHadith($query, (int) $perPage);
 
         return $this->paginatedResponse($hadiths->setCollection(
-            $hadiths->getCollection()->map(fn($hadith) => new HadithResource($hadith))
+            $hadiths->getCollection()->map(fn ($hadith) => new HadithResource($hadith))
         ));
     }
 
@@ -188,9 +168,6 @@ class HadithController extends Controller
      * Get authentic hadith (sahih)
      *
      * GET /api/hadith/sahih
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function sahih(Request $request): JsonResponse
     {
@@ -198,7 +175,7 @@ class HadithController extends Controller
         $hadiths = $this->hadithService->getSahihHadith((int) $perPage);
 
         return $this->paginatedResponse($hadiths->setCollection(
-            $hadiths->getCollection()->map(fn($hadith) => new HadithResource($hadith))
+            $hadiths->getCollection()->map(fn ($hadith) => new HadithResource($hadith))
         ));
     }
 
@@ -206,9 +183,6 @@ class HadithController extends Controller
      * Get reliable hadith (sahih or hasan)
      *
      * GET /api/hadith/reliable
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function reliable(Request $request): JsonResponse
     {
@@ -216,7 +190,7 @@ class HadithController extends Controller
         $hadiths = $this->hadithService->getReliableHadith((int) $perPage);
 
         return $this->paginatedResponse($hadiths->setCollection(
-            $hadiths->getCollection()->map(fn($hadith) => new HadithResource($hadith))
+            $hadiths->getCollection()->map(fn ($hadith) => new HadithResource($hadith))
         ));
     }
 
@@ -224,19 +198,15 @@ class HadithController extends Controller
      * Get hadith by book and number
      *
      * GET /api/hadith/books/{bookId}/hadith/{number}
-     *
-     * @param int $bookId
-     * @param int $number
-     * @return JsonResponse
      */
     public function byBookAndNumber(int $bookId, int $number): JsonResponse
     {
         try {
             $hadith = $this->hadithService->findByBookAndNumber($bookId, $number);
+
             return $this->successResponse(new HadithResource($hadith));
         } catch (ResourceNotFoundException $e) {
             return $this->notFoundResponse($e->getMessage());
         }
     }
 }
-

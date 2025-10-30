@@ -78,8 +78,6 @@ class MediaEpisode extends Model
 
     /**
      * Get the program this episode belongs to
-     *
-     * @return BelongsTo
      */
     public function program(): BelongsTo
     {
@@ -88,8 +86,6 @@ class MediaEpisode extends Model
 
     /**
      * Get the next episode
-     *
-     * @return MediaEpisode|null
      */
     public function nextEpisode(): ?MediaEpisode
     {
@@ -103,8 +99,6 @@ class MediaEpisode extends Model
 
     /**
      * Get the previous episode
-     *
-     * @return MediaEpisode|null
      */
     public function previousEpisode(): ?MediaEpisode
     {
@@ -118,8 +112,6 @@ class MediaEpisode extends Model
 
     /**
      * Check if episode is published
-     *
-     * @return bool
      */
     public function isPublished(): bool
     {
@@ -128,9 +120,6 @@ class MediaEpisode extends Model
 
     /**
      * Increment views count
-     *
-     * @param int $amount
-     * @return void
      */
     public function incrementViews(int $amount = 1): void
     {
@@ -140,8 +129,6 @@ class MediaEpisode extends Model
 
     /**
      * Get duration in human-readable format
-     *
-     * @return string
      */
     public function getDurationFormatted(): string
     {
@@ -157,8 +144,6 @@ class MediaEpisode extends Model
 
     /**
      * Extract video ID from URL (YouTube, Vimeo)
-     *
-     * @return string|null
      */
     public function getVideoId(): ?string
     {
@@ -177,8 +162,6 @@ class MediaEpisode extends Model
 
     /**
      * Get video platform (youtube, vimeo, or direct)
-     *
-     * @return string
      */
     public function getVideoPlatform(): string
     {
@@ -196,7 +179,7 @@ class MediaEpisode extends Model
     /**
      * Scope: Published episodes
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopePublished($query)
@@ -208,8 +191,7 @@ class MediaEpisode extends Model
     /**
      * Scope: By program
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $programId
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByProgram($query, int $programId)
@@ -220,8 +202,7 @@ class MediaEpisode extends Model
     /**
      * Scope: Order by episode number
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $direction
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeOrderByEpisode($query, string $direction = 'asc')
@@ -232,8 +213,7 @@ class MediaEpisode extends Model
     /**
      * Scope: Most viewed
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $limit
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeMostViewed($query, int $limit = 10)
@@ -241,4 +221,3 @@ class MediaEpisode extends Model
         return $query->orderByDesc('views_count')->limit($limit);
     }
 }
-

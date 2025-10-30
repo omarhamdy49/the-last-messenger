@@ -28,8 +28,6 @@ enum NarratorGrade: string
 
     /**
      * Get label for display
-     *
-     * @return string
      */
     public function label(): string
     {
@@ -44,8 +42,6 @@ enum NarratorGrade: string
 
     /**
      * Get Arabic label
-     *
-     * @return string
      */
     public function labelArabic(): string
     {
@@ -58,4 +54,3 @@ enum NarratorGrade: string
         };
     }
 }
-

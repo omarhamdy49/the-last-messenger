@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Domain\Blog\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
-use Illuminate\Database\Eloquent\Builder;
+use Spatie\Translatable\HasTranslations;
 
 /**
  * Tag Model
@@ -22,7 +23,7 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class Tag extends Model
 {
-    use HasFactory;
+    use HasFactory, HasTranslations;
 
     /**
      * The attributes that are mass assignable.
@@ -48,9 +49,14 @@ class Tag extends Model
     }
 
     /**
-     * Get articles with this tag
+     * Translatable attributes
      *
-     * @return MorphToMany
+     * @var array<string>
+     */
+    public array $translatable = ['name'];
+
+    /**
+     * Get articles with this tag
      */
     public function articles(): MorphToMany
     {
@@ -59,10 +65,6 @@ class Tag extends Model
 
     /**
      * Scope: Filter by type
-     *
-     * @param Builder $query
-     * @param string $type
-     * @return Builder
      */
     public function scopeOfType(Builder $query, string $type): Builder
     {
@@ -71,13 +73,9 @@ class Tag extends Model
 
     /**
      * Get name in specified language
-     *
-     * @param string $language
-     * @return string|null
      */
     public function getNameInLanguage(string $language): ?string
     {
         return $this->name[$language] ?? $this->name['ar'] ?? null;
     }
 }
-

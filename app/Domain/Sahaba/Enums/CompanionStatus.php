@@ -31,8 +31,6 @@ enum CompanionStatus: string
 
     /**
      * Get label for display
-     *
-     * @return string
      */
     public function label(): string
     {
@@ -50,8 +48,6 @@ enum CompanionStatus: string
 
     /**
      * Get Arabic label
-     *
-     * @return string
      */
     public function labelArabic(): string
     {
@@ -69,8 +65,6 @@ enum CompanionStatus: string
 
     /**
      * Get importance rank (higher = more important)
-     *
-     * @return int
      */
     public function rank(): int
     {
@@ -86,4 +80,3 @@ enum CompanionStatus: string
         };
     }
 }
-

@@ -7,9 +7,8 @@ namespace App\Domain\Hadith\Repositories;
 use App\Domain\Hadith\Enums\HadithGrade;
 use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Shared\Repositories\BaseRepository;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -25,7 +24,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
      */
     protected function getModel(): Model
     {
-        return new Hadith();
+        return new Hadith;
     }
 
     /**
@@ -36,7 +35,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
         $query = $this->model->byBook($bookId)
             ->orderBy('hadith_number');
 
-        if (!empty($relations)) {
+        if (! empty($relations)) {
             $query->with($relations);
         }
 
@@ -51,7 +50,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
         $query = $this->model->byChapter($chapterId)
             ->orderBy('hadith_number');
 
-        if (!empty($relations)) {
+        if (! empty($relations)) {
             $query->with($relations);
         }
 
@@ -67,7 +66,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             ->orderBy('book_id')
             ->orderBy('hadith_number');
 
-        if (!empty($relations)) {
+        if (! empty($relations)) {
             $query->with($relations);
         }
 
@@ -83,7 +82,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             ->orderBy('book_id')
             ->orderBy('hadith_number');
 
-        if (!empty($relations)) {
+        if (! empty($relations)) {
             $query->with($relations);
         }
 
@@ -99,7 +98,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             ->orderBy('book_id')
             ->orderBy('hadith_number');
 
-        if (!empty($relations)) {
+        if (! empty($relations)) {
             $query->with($relations);
         }
 
@@ -115,7 +114,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             ->orderBy('book_id')
             ->orderBy('hadith_number');
 
-        if (!empty($relations)) {
+        if (! empty($relations)) {
             $searchQuery->with($relations);
         }
 
@@ -133,7 +132,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             $query = $this->model->where('book_id', $bookId)
                 ->where('hadith_number', $hadithNumber);
 
-            if (!empty($relations)) {
+            if (! empty($relations)) {
                 $query->with($relations);
             }
 
@@ -168,10 +167,8 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
     /**
      * Advanced filter with multiple criteria
      *
-     * @param array<string, mixed> $filters
-     * @param int $perPage
-     * @param array<string> $relations
-     * @return LengthAwarePaginator
+     * @param  array<string, mixed>  $filters
+     * @param  array<string>  $relations
      */
     public function filterHadith(array $filters, int $perPage = 15, array $relations = []): LengthAwarePaginator
     {
@@ -193,7 +190,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             $query->search($filters['search']);
         }
 
-        if (!empty($relations)) {
+        if (! empty($relations)) {
             $query->with($relations);
         }
 
@@ -202,4 +199,3 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             ->paginate($perPage);
     }
 }
-

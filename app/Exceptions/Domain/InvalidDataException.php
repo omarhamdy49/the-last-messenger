@@ -18,8 +18,7 @@ class InvalidDataException extends Exception
     /**
      * Create a new exception instance
      *
-     * @param string $message
-     * @param array<string, mixed> $errors
+     * @param  array<string, mixed>  $errors
      */
     public function __construct(string $message = 'Invalid data provided', protected array $errors = [])
     {
@@ -36,4 +35,3 @@ class InvalidDataException extends Exception
         return $this->errors;
     }
 }
-

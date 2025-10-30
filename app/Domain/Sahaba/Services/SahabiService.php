@@ -7,27 +7,24 @@ namespace App\Domain\Sahaba\Services;
 use App\Domain\Sahaba\Enums\CompanionStatus;
 use App\Domain\Sahaba\Models\Sahabi;
 use App\Domain\Sahaba\Repositories\SahabiRepositoryInterface;
+use App\Domain\Shared\Services\BaseService;
 use App\Exceptions\Domain\ResourceNotFoundException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
-class SahabiService
+class SahabiService extends BaseService
 {
     /**
      * SahabiService constructor
-     *
-     * @param SahabiRepositoryInterface $repository
      */
     public function __construct(
-        private readonly SahabiRepositoryInterface $repository
+        SahabiRepositoryInterface $repository
     ) {
+        $this->repository = $repository;
     }
 
     /**
      * Get all companions with pagination
-     *
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getAllCompanions(int $perPage = 15): LengthAwarePaginator
     {
@@ -37,8 +34,6 @@ class SahabiService
     /**
      * Get companion by slug
      *
-     * @param string $slug
-     * @return Sahabi
      * @throws ResourceNotFoundException
      */
     public function getCompanionBySlug(string $slug): Sahabi
@@ -57,10 +52,6 @@ class SahabiService
 
     /**
      * Get companions by status
-     *
-     * @param CompanionStatus|string $status
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getCompanionsByStatus(CompanionStatus|string $status, int $perPage = 15): LengthAwarePaginator
     {
@@ -69,10 +60,6 @@ class SahabiService
 
     /**
      * Get companions by tribe
-     *
-     * @param string $tribe
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getCompanionsByTribe(string $tribe, int $perPage = 15): LengthAwarePaginator
     {
@@ -81,10 +68,6 @@ class SahabiService
 
     /**
      * Get companions who participated in a battle
-     *
-     * @param string $battle
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getCompanionsByBattle(string $battle, int $perPage = 15): LengthAwarePaginator
     {
@@ -93,9 +76,6 @@ class SahabiService
 
     /**
      * Get featured companions
-     *
-     * @param int $limit
-     * @return Collection
      */
     public function getFeaturedCompanions(int $limit = 10): Collection
     {
@@ -104,9 +84,6 @@ class SahabiService
 
     /**
      * Get early Muslims
-     *
-     * @param int $limit
-     * @return Collection
      */
     public function getEarlyMuslims(int $limit = 10): Collection
     {
@@ -115,9 +92,6 @@ class SahabiService
 
     /**
      * Get top hadith narrators
-     *
-     * @param int $limit
-     * @return Collection
      */
     public function getTopNarrators(int $limit = 10): Collection
     {
@@ -126,14 +100,9 @@ class SahabiService
 
     /**
      * Search companions
-     *
-     * @param string $query
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function searchCompanions(string $query, int $perPage = 15): LengthAwarePaginator
     {
         return $this->repository->search($query, $perPage);
     }
 }
-

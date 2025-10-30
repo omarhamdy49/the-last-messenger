@@ -14,7 +14,7 @@ enum SajdaType: string
      */
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::RECOMMENDED => 'Recommended',
             self::OBLIGATORY => 'Obligatory',
         };
@@ -25,10 +25,9 @@ enum SajdaType: string
      */
     public function labelArabic(): string
     {
-        return match($this) {
+        return match ($this) {
             self::RECOMMENDED => 'مستحبة',
             self::OBLIGATORY => 'واجبة',
         };
     }
 }
-

@@ -16,7 +16,6 @@ class HadithResource extends JsonResource
     /**
      * Transform the resource into an array.
      *
-     * @param Request $request
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
@@ -38,15 +37,14 @@ class HadithResource extends JsonResource
             'views_count' => $this->views_count,
             'is_authentic' => $this->isAuthentic(),
             'is_reliable' => $this->isReliable(),
-            
+
             // Relationships
             'book' => new HadithBookResource($this->whenLoaded('book')),
             'chapter' => new HadithChapterResource($this->whenLoaded('chapter')),
             'narrators' => HadithNarratorResource::collection($this->whenLoaded('narrators')),
-            
+
             'created_at' => $this->created_at->toISOString(),
             'updated_at' => $this->updated_at->toISOString(),
         ];
     }
 }
-

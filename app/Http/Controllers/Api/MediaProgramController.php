@@ -18,19 +18,13 @@ class MediaProgramController extends Controller
 
     /**
      * MediaProgramController constructor
-     *
-     * @param MediaProgramService $mediaProgramService
      */
     public function __construct(
         private readonly MediaProgramService $mediaProgramService
-    ) {
-    }
+    ) {}
 
     /**
      * Get all programs with pagination
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function index(Request $request): JsonResponse
     {
@@ -44,9 +38,6 @@ class MediaProgramController extends Controller
 
     /**
      * Get a single program by slug
-     *
-     * @param string $slug
-     * @return JsonResponse
      */
     public function show(string $slug): JsonResponse
     {
@@ -63,10 +54,6 @@ class MediaProgramController extends Controller
 
     /**
      * Get programs by category
-     *
-     * @param Request $request
-     * @param int $categoryId
-     * @return JsonResponse
      */
     public function byCategory(Request $request, int $categoryId): JsonResponse
     {
@@ -80,9 +67,6 @@ class MediaProgramController extends Controller
 
     /**
      * Get popular programs
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function popular(Request $request): JsonResponse
     {
@@ -96,9 +80,6 @@ class MediaProgramController extends Controller
 
     /**
      * Get recent programs
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function recent(Request $request): JsonResponse
     {
@@ -112,9 +93,6 @@ class MediaProgramController extends Controller
 
     /**
      * Search programs
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function search(Request $request): JsonResponse
     {
@@ -134,10 +112,6 @@ class MediaProgramController extends Controller
 
     /**
      * Get program with specific episode
-     *
-     * @param string $slug
-     * @param int $episodeNumber
-     * @return JsonResponse
      */
     public function episode(string $slug, int $episodeNumber): JsonResponse
     {
@@ -155,9 +129,6 @@ class MediaProgramController extends Controller
 
     /**
      * Get all episodes for a program
-     *
-     * @param string $slug
-     * @return JsonResponse
      */
     public function episodes(string $slug): JsonResponse
     {
@@ -173,4 +144,3 @@ class MediaProgramController extends Controller
         }
     }
 }
-

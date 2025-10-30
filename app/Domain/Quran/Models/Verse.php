@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Translatable\HasTranslations;
 
 /**
  * Verse Model (Quran Ayah)
@@ -36,7 +37,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Verse extends Model
 {
-    use HasFactory;
+    use HasFactory, HasTranslations;
 
     /**
      * The table associated with the model.
@@ -92,9 +93,14 @@ class Verse extends Model
     ];
 
     /**
-     * Get the surah this verse belongs to
+     * Translatable attributes
      *
-     * @return BelongsTo
+     * @var array<string>
+     */
+    public array $translatable = ['translations'];
+
+    /**
+     * Get the surah this verse belongs to
      */
     public function surah(): BelongsTo
     {
@@ -103,8 +109,6 @@ class Verse extends Model
 
     /**
      * Get tafseer for this verse
-     *
-     * @return HasMany
      */
     public function tafseer(): HasMany
     {
@@ -113,9 +117,6 @@ class Verse extends Model
 
     /**
      * Get translation in specific language
-     *
-     * @param string $language
-     * @return string|null
      */
     public function getTranslation(string $language = 'en'): ?string
     {
@@ -124,8 +125,6 @@ class Verse extends Model
 
     /**
      * Get verse reference (e.g., "2:255" for Ayat Al-Kursi)
-     *
-     * @return string
      */
     public function getReference(): string
     {
@@ -135,8 +134,7 @@ class Verse extends Model
     /**
      * Scope: Filter by Juz
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $juz
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByJuz($query, int $juz)
@@ -147,8 +145,7 @@ class Verse extends Model
     /**
      * Scope: Filter by page
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $page
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByPage($query, int $page)
@@ -159,7 +156,7 @@ class Verse extends Model
     /**
      * Scope: Only Sajda verses
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeSajda($query)
@@ -170,24 +167,21 @@ class Verse extends Model
     /**
      * Scope: Search in Arabic text
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $searchTerm
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeSearchArabic($query, string $searchTerm)
     {
         return $query->where(function ($q) use ($searchTerm) {
             $q->where('text_simple', 'like', "%{$searchTerm}%")
-              ->orWhere('text_uthmani', 'like', "%{$searchTerm}%");
+                ->orWhere('text_uthmani', 'like', "%{$searchTerm}%");
         });
     }
 
     /**
      * Scope: Search in translations
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $searchTerm
-     * @param string $language
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeSearchTranslation($query, string $searchTerm, string $language = 'en')
@@ -198,4 +192,3 @@ class Verse extends Model
         );
     }
 }
-

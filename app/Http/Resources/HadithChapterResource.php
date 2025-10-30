@@ -16,7 +16,6 @@ class HadithChapterResource extends JsonResource
     /**
      * Transform the resource into an array.
      *
-     * @param Request $request
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
@@ -29,10 +28,9 @@ class HadithChapterResource extends JsonResource
             'name' => $this->getNameInLanguage($language),
             'description' => $this->getDescriptionInLanguage($language),
             'display_order' => $this->display_order,
-            
+
             // Relationships
             'book' => new HadithBookResource($this->whenLoaded('book')),
         ];
     }
 }
-

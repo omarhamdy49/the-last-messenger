@@ -7,6 +7,7 @@ namespace App\Domain\Blog\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Translatable\HasTranslations;
 
 /**
  * Series Model
@@ -23,7 +24,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Series extends Model
 {
-    use HasFactory;
+    use HasFactory, HasTranslations;
 
     /**
      * The attributes that are mass assignable.
@@ -53,9 +54,14 @@ class Series extends Model
     }
 
     /**
-     * Get articles in this series
+     * Translatable attributes
      *
-     * @return HasMany
+     * @var array<string>
+     */
+    public array $translatable = ['title', 'description'];
+
+    /**
+     * Get articles in this series
      */
     public function articles(): HasMany
     {
@@ -64,8 +70,6 @@ class Series extends Model
 
     /**
      * Update total articles count
-     *
-     * @return void
      */
     public function updateArticlesCount(): void
     {
@@ -74,9 +78,6 @@ class Series extends Model
 
     /**
      * Get title in specified language
-     *
-     * @param string $language
-     * @return string|null
      */
     public function getTitleInLanguage(string $language): ?string
     {
@@ -85,13 +86,9 @@ class Series extends Model
 
     /**
      * Get description in specified language
-     *
-     * @param string $language
-     * @return string|null
      */
     public function getDescriptionInLanguage(string $language): ?string
     {
         return $this->description[$language] ?? $this->description['ar'] ?? null;
     }
 }
-

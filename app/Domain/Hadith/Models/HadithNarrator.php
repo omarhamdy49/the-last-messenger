@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace App\Domain\Hadith\Models;
 
 use App\Domain\Hadith\Enums\NarratorGrade;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Builder;
+use Spatie\Translatable\HasTranslations;
 
 /**
  * Hadith Narrator Model
@@ -18,14 +19,14 @@ use Illuminate\Database\Eloquent\Builder;
  * @property string $slug
  * @property string $name_arabic
  * @property string|null $name_english
- * @property string|null $biography
+ * @property array|null $biography
  * @property NarratorGrade $reliability_grade
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  */
 class HadithNarrator extends Model
 {
-    use HasFactory;
+    use HasFactory, HasTranslations;
 
     protected $table = 'hadith_narrators';
 
@@ -50,14 +51,20 @@ class HadithNarrator extends Model
     protected function casts(): array
     {
         return [
+            'biography' => 'array',
             'reliability_grade' => NarratorGrade::class,
         ];
     }
 
     /**
-     * Get all hadith narrated by this person
+     * Translatable attributes
      *
-     * @return BelongsToMany
+     * @var array<string>
+     */
+    public array $translatable = ['biography'];
+
+    /**
+     * Get all hadith narrated by this person
      */
     public function hadiths(): BelongsToMany
     {
@@ -68,10 +75,6 @@ class HadithNarrator extends Model
 
     /**
      * Scope: Filter by reliability grade
-     *
-     * @param Builder $query
-     * @param NarratorGrade $grade
-     * @return Builder
      */
     public function scopeByGrade(Builder $query, NarratorGrade $grade): Builder
     {
@@ -80,9 +83,6 @@ class HadithNarrator extends Model
 
     /**
      * Scope: Trustworthy narrators only
-     *
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeTrustworthy(Builder $query): Builder
     {
@@ -94,8 +94,6 @@ class HadithNarrator extends Model
 
     /**
      * Check if narrator is trustworthy
-     *
-     * @return bool
      */
     public function isTrustworthy(): bool
     {
@@ -105,4 +103,3 @@ class HadithNarrator extends Model
         ]);
     }
 }
-

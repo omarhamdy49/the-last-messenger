@@ -14,7 +14,7 @@ enum RevelationPlace: string
      */
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::MAKKAH => 'Makkan',
             self::MADINAH => 'Madinan',
         };
@@ -25,10 +25,9 @@ enum RevelationPlace: string
      */
     public function labelArabic(): string
     {
-        return match($this) {
+        return match ($this) {
             self::MAKKAH => 'مكية',
             self::MADINAH => 'مدنية',
         };
     }
 }
-

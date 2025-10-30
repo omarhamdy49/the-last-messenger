@@ -7,9 +7,10 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\HadithController;
 use App\Http\Controllers\Api\MediaProgramController;
-use App\Http\Controllers\Api\SeerahEventController;
-use App\Http\Controllers\Api\SahabiController;
 use App\Http\Controllers\Api\QuranController;
+use App\Http\Controllers\Api\SahabiController;
+use App\Http\Controllers\Api\SeerahEventController;
+use App\Http\Controllers\LanguageController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -27,7 +28,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register'])->name('auth.register');
     Route::post('/login', [AuthController::class, 'login'])->name('auth.login');
-    
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::get('/user', [AuthController::class, 'user'])->name('auth.user');
@@ -55,7 +56,7 @@ Route::prefix('articles')->group(function () {
         Route::post('/', [ArticleController::class, 'store'])->name('articles.store');
         Route::put('/{article}', [ArticleController::class, 'update'])->name('articles.update');
         Route::delete('/{article}', [ArticleController::class, 'destroy'])->name('articles.destroy');
-        
+
         // Article actions
         Route::post('/{article}/favorite', [ArticleController::class, 'toggleFavorite'])->name('articles.favorite');
         Route::post('/{article}/publish', [ArticleController::class, 'publish'])->name('articles.publish');
@@ -124,7 +125,7 @@ Route::prefix('quran')->group(function () {
     Route::get('/surahs', [QuranController::class, 'surahs'])->name('quran.surahs');
     Route::get('/surahs/{number}', [QuranController::class, 'surah'])->name('quran.surah');
     Route::get('/revelation/{place}', [QuranController::class, 'surahsByRevelation'])->name('quran.by-revelation');
-    
+
     // Verse routes
     Route::get('/surahs/{surahNumber}/verses', [QuranController::class, 'verses'])->name('quran.verses');
     Route::get('/surahs/{surahNumber}/verses/{verseNumber}', [QuranController::class, 'verse'])->name('quran.verse');
@@ -132,9 +133,16 @@ Route::prefix('quran')->group(function () {
     Route::get('/page/{page}', [QuranController::class, 'versesByPage'])->name('quran.page');
     Route::get('/sajda', [QuranController::class, 'sajdaVerses'])->name('quran.sajda');
     Route::get('/random', [QuranController::class, 'randomVerse'])->name('quran.random');
-    
+
     // Search
     Route::get('/search', [QuranController::class, 'search'])->name('quran.search');
+});
+
+// Language routes
+Route::prefix('languages')->group(function () {
+    Route::get('/active', [LanguageController::class, 'active'])->name('languages.active');
+    Route::get('/all', [LanguageController::class, 'all'])->name('languages.all');
+    Route::get('/current', [LanguageController::class, 'current'])->name('languages.current');
 });
 
 // Health check
@@ -146,4 +154,3 @@ Route::get('/health', function () {
         'version' => '1.0.0',
     ]);
 })->name('health');
-

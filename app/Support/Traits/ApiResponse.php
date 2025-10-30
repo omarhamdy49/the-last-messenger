@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Support\Traits;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
  * API Response Trait
@@ -16,11 +16,6 @@ trait ApiResponse
 {
     /**
      * Success response
-     *
-     * @param mixed $data
-     * @param string $message
-     * @param int $code
-     * @return JsonResponse
      */
     protected function successResponse(mixed $data = null, string $message = 'Success', int $code = Response::HTTP_OK): JsonResponse
     {
@@ -34,10 +29,7 @@ trait ApiResponse
     /**
      * Error response
      *
-     * @param string $message
-     * @param int $code
-     * @param array<string, mixed>|null $errors
-     * @return JsonResponse
+     * @param  array<string, mixed>|null  $errors
      */
     protected function errorResponse(string $message = 'Error', int $code = Response::HTTP_BAD_REQUEST, ?array $errors = null): JsonResponse
     {
@@ -55,10 +47,6 @@ trait ApiResponse
 
     /**
      * Paginated response
-     *
-     * @param LengthAwarePaginator $paginator
-     * @param string $message
-     * @return JsonResponse
      */
     protected function paginatedResponse(LengthAwarePaginator $paginator, string $message = 'Success'): JsonResponse
     {
@@ -85,10 +73,6 @@ trait ApiResponse
 
     /**
      * Created response
-     *
-     * @param mixed $data
-     * @param string $message
-     * @return JsonResponse
      */
     protected function createdResponse(mixed $data = null, string $message = 'Resource created successfully'): JsonResponse
     {
@@ -97,8 +81,6 @@ trait ApiResponse
 
     /**
      * No content response
-     *
-     * @return JsonResponse
      */
     protected function noContentResponse(): JsonResponse
     {
@@ -107,9 +89,6 @@ trait ApiResponse
 
     /**
      * Not found response
-     *
-     * @param string $message
-     * @return JsonResponse
      */
     protected function notFoundResponse(string $message = 'Resource not found'): JsonResponse
     {
@@ -118,9 +97,6 @@ trait ApiResponse
 
     /**
      * Unauthorized response
-     *
-     * @param string $message
-     * @return JsonResponse
      */
     protected function unauthorizedResponse(string $message = 'Unauthorized'): JsonResponse
     {
@@ -129,9 +105,6 @@ trait ApiResponse
 
     /**
      * Forbidden response
-     *
-     * @param string $message
-     * @return JsonResponse
      */
     protected function forbiddenResponse(string $message = 'Forbidden'): JsonResponse
     {
@@ -141,9 +114,7 @@ trait ApiResponse
     /**
      * Validation error response
      *
-     * @param array<string, mixed> $errors
-     * @param string $message
-     * @return JsonResponse
+     * @param  array<string, mixed>  $errors
      */
     protected function validationErrorResponse(array $errors, string $message = 'Validation failed'): JsonResponse
     {
@@ -152,13 +123,9 @@ trait ApiResponse
 
     /**
      * Server error response
-     *
-     * @param string $message
-     * @return JsonResponse
      */
     protected function serverErrorResponse(string $message = 'Internal server error'): JsonResponse
     {
         return $this->errorResponse($message, Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 }
-

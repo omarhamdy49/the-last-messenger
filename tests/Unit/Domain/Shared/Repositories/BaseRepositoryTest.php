@@ -29,10 +29,11 @@ class BaseRepositoryTest extends TestCase
         // Create test articles
         Article::factory()->count(20)->create();
 
-        $repository = new class extends BaseRepository {
+        $repository = new class extends BaseRepository
+        {
             protected function getModel(): \Illuminate\Database\Eloquent\Model
             {
-                return new Article();
+                return new Article;
             }
         };
 
@@ -43,4 +44,3 @@ class BaseRepositoryTest extends TestCase
         $this->assertEquals(20, $result->total());
     }
 }
-

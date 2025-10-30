@@ -65,8 +65,6 @@ class MediaCategory extends Model
 
     /**
      * Get all programs in this category
-     *
-     * @return HasMany
      */
     public function programs(): HasMany
     {
@@ -75,8 +73,6 @@ class MediaCategory extends Model
 
     /**
      * Get active programs in this category
-     *
-     * @return HasMany
      */
     public function activePrograms(): HasMany
     {
@@ -88,7 +84,7 @@ class MediaCategory extends Model
     /**
      * Scope: Order by display order
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeOrdered($query)
@@ -96,4 +92,3 @@ class MediaCategory extends Model
         return $query->orderBy('display_order');
     }
 }
-

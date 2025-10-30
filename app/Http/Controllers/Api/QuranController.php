@@ -18,20 +18,15 @@ class QuranController extends Controller
 
     /**
      * QuranController constructor
-     *
-     * @param QuranService $quranService
      */
     public function __construct(
         private readonly QuranService $quranService
-    ) {
-    }
+    ) {}
 
     // ===================== SURAH ENDPOINTS =====================
 
     /**
      * Get all surahs
-     *
-     * @return JsonResponse
      */
     public function surahs(): JsonResponse
     {
@@ -44,9 +39,6 @@ class QuranController extends Controller
 
     /**
      * Get single surah by number
-     *
-     * @param int $number
-     * @return JsonResponse
      */
     public function surah(int $number): JsonResponse
     {
@@ -63,9 +55,6 @@ class QuranController extends Controller
 
     /**
      * Get surahs by revelation place (Makkan/Madinan)
-     *
-     * @param string $place
-     * @return JsonResponse
      */
     public function surahsByRevelation(string $place): JsonResponse
     {
@@ -84,9 +73,6 @@ class QuranController extends Controller
 
     /**
      * Get all verses in a surah
-     *
-     * @param int $surahNumber
-     * @return JsonResponse
      */
     public function verses(int $surahNumber): JsonResponse
     {
@@ -103,10 +89,6 @@ class QuranController extends Controller
 
     /**
      * Get single verse
-     *
-     * @param int $surahNumber
-     * @param int $verseNumber
-     * @return JsonResponse
      */
     public function verse(int $surahNumber, int $verseNumber): JsonResponse
     {
@@ -123,10 +105,6 @@ class QuranController extends Controller
 
     /**
      * Get verses by Juz number
-     *
-     * @param Request $request
-     * @param int $juz
-     * @return JsonResponse
      */
     public function versesByJuz(Request $request, int $juz): JsonResponse
     {
@@ -144,9 +122,6 @@ class QuranController extends Controller
 
     /**
      * Get verses by page number
-     *
-     * @param int $page
-     * @return JsonResponse
      */
     public function versesByPage(int $page): JsonResponse
     {
@@ -163,8 +138,6 @@ class QuranController extends Controller
 
     /**
      * Get all Sajda verses
-     *
-     * @return JsonResponse
      */
     public function sajdaVerses(): JsonResponse
     {
@@ -177,8 +150,6 @@ class QuranController extends Controller
 
     /**
      * Get random verse (Verse of the Day)
-     *
-     * @return JsonResponse
      */
     public function randomVerse(): JsonResponse
     {
@@ -193,9 +164,6 @@ class QuranController extends Controller
 
     /**
      * Search in Quran (Arabic or Translation)
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function search(Request $request): JsonResponse
     {
@@ -223,4 +191,3 @@ class QuranController extends Controller
         }
     }
 }
-

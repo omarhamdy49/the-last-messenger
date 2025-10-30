@@ -8,7 +8,6 @@ use App\Domain\Media\Enums\ProgramStatus;
 use App\Domain\Media\Models\MediaEpisode;
 use App\Domain\Media\Models\MediaProgram;
 use App\Domain\Media\Repositories\MediaProgramRepositoryInterface;
-use App\Domain\Shared\Services\BaseService;
 use App\Exceptions\Domain\ResourceNotFoundException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -17,19 +16,13 @@ class MediaProgramService
 {
     /**
      * MediaProgramService constructor
-     *
-     * @param MediaProgramRepositoryInterface $repository
      */
     public function __construct(
         private readonly MediaProgramRepositoryInterface $repository
-    ) {
-    }
+    ) {}
 
     /**
      * Get all programs with pagination
-     *
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getAllPrograms(int $perPage = 15): LengthAwarePaginator
     {
@@ -39,8 +32,6 @@ class MediaProgramService
     /**
      * Get program by slug
      *
-     * @param string $slug
-     * @return MediaProgram
      * @throws ResourceNotFoundException
      */
     public function getProgramBySlug(string $slug): MediaProgram
@@ -56,10 +47,6 @@ class MediaProgramService
 
     /**
      * Get programs by category
-     *
-     * @param int $categoryId
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getProgramsByCategory(int $categoryId, int $perPage = 15): LengthAwarePaginator
     {
@@ -68,10 +55,6 @@ class MediaProgramService
 
     /**
      * Get programs by status
-     *
-     * @param ProgramStatus|string $status
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getProgramsByStatus(ProgramStatus|string $status, int $perPage = 15): LengthAwarePaginator
     {
@@ -80,9 +63,6 @@ class MediaProgramService
 
     /**
      * Get popular programs
-     *
-     * @param int $limit
-     * @return Collection
      */
     public function getPopularPrograms(int $limit = 10): Collection
     {
@@ -91,9 +71,6 @@ class MediaProgramService
 
     /**
      * Get recent programs
-     *
-     * @param int $limit
-     * @return Collection
      */
     public function getRecentPrograms(int $limit = 10): Collection
     {
@@ -102,10 +79,6 @@ class MediaProgramService
 
     /**
      * Search programs
-     *
-     * @param string $query
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function searchPrograms(string $query, int $perPage = 15): LengthAwarePaginator
     {
@@ -114,9 +87,6 @@ class MediaProgramService
 
     /**
      * Create a new program
-     *
-     * @param array $data
-     * @return MediaProgram
      */
     public function createProgram(array $data): MediaProgram
     {
@@ -130,9 +100,6 @@ class MediaProgramService
     /**
      * Update a program
      *
-     * @param int $id
-     * @param array $data
-     * @return MediaProgram
      * @throws ResourceNotFoundException
      */
     public function updateProgram(int $id, array $data): MediaProgram
@@ -151,8 +118,6 @@ class MediaProgramService
     /**
      * Delete a program
      *
-     * @param int $id
-     * @return bool
      * @throws ResourceNotFoundException
      */
     public function deleteProgram(int $id): bool
@@ -171,9 +136,6 @@ class MediaProgramService
     /**
      * Update program status
      *
-     * @param int $id
-     * @param ProgramStatus|string $status
-     * @return MediaProgram
      * @throws ResourceNotFoundException
      */
     public function updateProgramStatus(int $id, ProgramStatus|string $status): MediaProgram
@@ -186,9 +148,8 @@ class MediaProgramService
     /**
      * Get program with episode
      *
-     * @param string $programSlug
-     * @param int $episodeNumber
      * @return array{program: MediaProgram, episode: MediaEpisode}
+     *
      * @throws ResourceNotFoundException
      */
     public function getProgramWithEpisode(string $programSlug, int $episodeNumber): array
@@ -213,4 +174,3 @@ class MediaProgramService
         ];
     }
 }
-

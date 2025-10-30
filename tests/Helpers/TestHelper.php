@@ -33,6 +33,7 @@ trait TestHelper
     {
         $user = $this->createTestUser($attributes);
         $this->actingAs($user);
+
         return $user;
     }
 
@@ -41,7 +42,7 @@ trait TestHelper
      */
     protected function createTestArticle(array $attributes = []): Article
     {
-        if (!isset($attributes['category_id'])) {
+        if (! isset($attributes['category_id'])) {
             $category = Category::factory()->create();
             $attributes['category_id'] = $category->id;
         }
@@ -125,4 +126,3 @@ trait TestHelper
             ]);
     }
 }
-

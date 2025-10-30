@@ -26,9 +26,6 @@ class AuthController extends Controller
      * Register a new user
      *
      * POST /api/register
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function register(Request $request): JsonResponse
     {
@@ -63,8 +60,6 @@ class AuthController extends Controller
      *
      * POST /api/login
      *
-     * @param Request $request
-     * @return JsonResponse
      * @throws ValidationException
      */
     public function login(Request $request): JsonResponse
@@ -76,7 +71,7 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
@@ -98,9 +93,6 @@ class AuthController extends Controller
      * Logout user (revoke token)
      *
      * POST /api/logout
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function logout(Request $request): JsonResponse
     {
@@ -113,13 +105,9 @@ class AuthController extends Controller
      * Get authenticated user
      *
      * GET /api/user
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function user(Request $request): JsonResponse
     {
         return $this->successResponse(new UserResource($request->user()));
     }
 }
-

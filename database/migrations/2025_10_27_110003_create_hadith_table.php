@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -39,10 +39,10 @@ return new class extends Migration
         if (config('database.default') === 'mysql') {
             // Full-text index on Arabic text
             DB::statement('ALTER TABLE hadith ADD FULLTEXT fulltext_arabic_text (arabic_text)');
-            
+
             // Add generated column for English translation search
             DB::statement("ALTER TABLE hadith ADD COLUMN translation_en_searchable TEXT GENERATED ALWAYS AS (JSON_UNQUOTE(JSON_EXTRACT(translations, '$.en'))) STORED");
-            
+
             // Full-text index on English translation
             DB::statement('ALTER TABLE hadith ADD FULLTEXT fulltext_translation_en (translation_en_searchable)');
         }
@@ -56,4 +56,3 @@ return new class extends Migration
         Schema::dropIfExists('hadith');
     }
 };
-

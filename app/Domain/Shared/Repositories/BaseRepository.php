@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Domain\Shared\Repositories;
 
 use App\Domain\Shared\Contracts\RepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -17,7 +17,9 @@ use Illuminate\Support\Facades\Cache;
 abstract class BaseRepository implements RepositoryInterface
 {
     protected Model $model;
+
     protected int $cacheTTL = 900; // 15 minutes default
+
     protected string $cachePrefix = '';
 
     /**
@@ -31,15 +33,11 @@ abstract class BaseRepository implements RepositoryInterface
 
     /**
      * Get model instance
-     *
-     * @return Model
      */
     abstract protected function getModel(): Model;
 
     /**
      * Get cache prefix for this repository
-     *
-     * @return string
      */
     protected function getCachePrefix(): string
     {
@@ -56,7 +54,7 @@ abstract class BaseRepository implements RepositoryInterface
         return Cache::remember($cacheKey, $this->cacheTTL, function () use ($columns, $relations) {
             $query = $this->model->select($columns);
 
-            if (!empty($relations)) {
+            if (! empty($relations)) {
                 $query->with($relations);
             }
 
@@ -71,7 +69,7 @@ abstract class BaseRepository implements RepositoryInterface
     {
         $query = $this->model->select($columns);
 
-        if (!empty($relations)) {
+        if (! empty($relations)) {
             $query->with($relations);
         }
 
@@ -88,7 +86,7 @@ abstract class BaseRepository implements RepositoryInterface
         return Cache::remember($cacheKey, $this->cacheTTL, function () use ($id, $columns, $relations) {
             $query = $this->model->select($columns);
 
-            if (!empty($relations)) {
+            if (! empty($relations)) {
                 $query->with($relations);
             }
 
@@ -103,7 +101,7 @@ abstract class BaseRepository implements RepositoryInterface
     {
         $query = $this->model->select($columns);
 
-        if (!empty($relations)) {
+        if (! empty($relations)) {
             $query->with($relations);
         }
 
@@ -120,7 +118,7 @@ abstract class BaseRepository implements RepositoryInterface
         return Cache::remember($cacheKey, $this->cacheTTL, function () use ($column, $value, $columns, $relations) {
             $query = $this->model->select($columns)->where($column, $value);
 
-            if (!empty($relations)) {
+            if (! empty($relations)) {
                 $query->with($relations);
             }
 
@@ -138,7 +136,7 @@ abstract class BaseRepository implements RepositoryInterface
         return Cache::remember($cacheKey, $this->cacheTTL, function () use ($column, $value, $columns, $relations) {
             $query = $this->model->select($columns)->where($column, $value);
 
-            if (!empty($relations)) {
+            if (! empty($relations)) {
                 $query->with($relations);
             }
 
@@ -228,16 +226,14 @@ abstract class BaseRepository implements RepositoryInterface
     /**
      * Generate cache key
      *
-     * @param string $method
-     * @param array<string, mixed> $parameters
-     * @return string
+     * @param  array<string, mixed>  $parameters
      */
     protected function getCacheKey(string $method, array $parameters = []): string
     {
-        $key = $this->cachePrefix . ':' . $method;
+        $key = $this->cachePrefix.':'.$method;
 
-        if (!empty($parameters)) {
-            $key .= ':' . md5(serialize($parameters));
+        if (! empty($parameters)) {
+            $key .= ':'.md5(serialize($parameters));
         }
 
         return $key;
@@ -246,19 +242,17 @@ abstract class BaseRepository implements RepositoryInterface
     /**
      * Get query builder with common optimizations
      *
-     * @param array<string> $relations
-     * @param array<string> $columns
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  array<string>  $relations
+     * @param  array<string>  $columns
      */
     protected function queryWithOptimizations(array $relations = [], array $columns = ['*']): \Illuminate\Database\Eloquent\Builder
     {
         $query = $this->model->select($columns);
 
-        if (!empty($relations)) {
+        if (! empty($relations)) {
             $query->with($relations);
         }
 
         return $query;
     }
 }
-

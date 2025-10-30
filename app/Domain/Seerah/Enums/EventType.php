@@ -32,8 +32,6 @@ enum EventType: string
 
     /**
      * Get label for display
-     *
-     * @return string
      */
     public function label(): string
     {
@@ -52,8 +50,6 @@ enum EventType: string
 
     /**
      * Get Arabic label
-     *
-     * @return string
      */
     public function labelArabic(): string
     {
@@ -72,8 +68,6 @@ enum EventType: string
 
     /**
      * Get icon for UI
-     *
-     * @return string
      */
     public function icon(): string
     {
@@ -92,8 +86,6 @@ enum EventType: string
 
     /**
      * Get color for UI
-     *
-     * @return string
      */
     public function color(): string
     {
@@ -110,4 +102,3 @@ enum EventType: string
         };
     }
 }
-

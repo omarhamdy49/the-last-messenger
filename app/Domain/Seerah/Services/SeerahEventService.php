@@ -4,31 +4,27 @@ declare(strict_types=1);
 
 namespace App\Domain\Seerah\Services;
 
-use App\Domain\Shared\Services\BaseService;
 use App\Domain\Seerah\Enums\EventType;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Repositories\SeerahEventRepositoryInterface;
+use App\Domain\Shared\Services\BaseService;
 use App\Exceptions\Domain\ResourceNotFoundException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
-class SeerahEventService
+class SeerahEventService extends BaseService
 {
     /**
      * SeerahEventService constructor
-     *
-     * @param SeerahEventRepositoryInterface $repository
      */
     public function __construct(
-        private readonly SeerahEventRepositoryInterface $repository
+        SeerahEventRepositoryInterface $repository
     ) {
+        $this->repository = $repository;
     }
 
     /**
      * Get all events chronologically
-     *
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getAllEvents(int $perPage = 15): LengthAwarePaginator
     {
@@ -38,8 +34,6 @@ class SeerahEventService
     /**
      * Get event by slug
      *
-     * @param string $slug
-     * @return SeerahEvent
      * @throws ResourceNotFoundException
      */
     public function getEventBySlug(string $slug): SeerahEvent
@@ -58,10 +52,6 @@ class SeerahEventService
 
     /**
      * Get events by type
-     *
-     * @param EventType|string $type
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getEventsByType(EventType|string $type, int $perPage = 15): LengthAwarePaginator
     {
@@ -70,10 +60,6 @@ class SeerahEventService
 
     /**
      * Get events by Hijri year
-     *
-     * @param int $year
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getEventsByHijriYear(int $year, int $perPage = 15): LengthAwarePaginator
     {
@@ -82,10 +68,6 @@ class SeerahEventService
 
     /**
      * Get events by Gregorian year
-     *
-     * @param int $year
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getEventsByGregorianYear(int $year, int $perPage = 15): LengthAwarePaginator
     {
@@ -94,9 +76,6 @@ class SeerahEventService
 
     /**
      * Get featured events
-     *
-     * @param int $limit
-     * @return Collection
      */
     public function getFeaturedEvents(int $limit = 10): Collection
     {
@@ -105,8 +84,6 @@ class SeerahEventService
 
     /**
      * Get events with location (for map)
-     *
-     * @return Collection
      */
     public function getEventsWithLocation(): Collection
     {
@@ -115,10 +92,6 @@ class SeerahEventService
 
     /**
      * Search events
-     *
-     * @param string $query
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function searchEvents(string $query, int $perPage = 15): LengthAwarePaginator
     {
@@ -127,9 +100,6 @@ class SeerahEventService
 
     /**
      * Create a new event
-     *
-     * @param array $data
-     * @return SeerahEvent
      */
     public function createEvent(array $data): SeerahEvent
     {
@@ -143,9 +113,6 @@ class SeerahEventService
     /**
      * Update an event
      *
-     * @param int $id
-     * @param array $data
-     * @return SeerahEvent
      * @throws ResourceNotFoundException
      */
     public function updateEvent(int $id, array $data): SeerahEvent
@@ -164,8 +131,6 @@ class SeerahEventService
     /**
      * Delete an event
      *
-     * @param int $id
-     * @return bool
      * @throws ResourceNotFoundException
      */
     public function deleteEvent(int $id): bool
@@ -180,5 +145,31 @@ class SeerahEventService
 
         return true;
     }
-}
 
+    /**
+     * Count events by category (event type)
+     *
+     * @return array<string, int>
+     */
+    public function countByCategory(): array
+    {
+        $eventTypes = EventType::cases();
+        $counts = [];
+
+        foreach ($eventTypes as $type) {
+            $counts[$type->value] = $this->repository->count([
+                'event_type' => $type->value,
+            ]);
+        }
+
+        return $counts;
+    }
+
+    /**
+     * Search events (alias for searchEvents)
+     */
+    public function search(string $query, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->searchEvents($query, $perPage);
+    }
+}

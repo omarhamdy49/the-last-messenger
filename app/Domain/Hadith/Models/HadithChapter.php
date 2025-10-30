@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domain\Hadith\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Builder;
+use Spatie\Translatable\HasTranslations;
 
 /**
  * Hadith Chapter Model
@@ -25,7 +26,7 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class HadithChapter extends Model
 {
-    use HasFactory;
+    use HasFactory, HasTranslations;
 
     protected $table = 'hadith_chapters';
 
@@ -58,9 +59,14 @@ class HadithChapter extends Model
     }
 
     /**
-     * Get the book this chapter belongs to
+     * Translatable attributes
      *
-     * @return BelongsTo
+     * @var array<string>
+     */
+    public array $translatable = ['name', 'description'];
+
+    /**
+     * Get the book this chapter belongs to
      */
     public function book(): BelongsTo
     {
@@ -69,8 +75,6 @@ class HadithChapter extends Model
 
     /**
      * Get all hadith in this chapter
-     *
-     * @return HasMany
      */
     public function hadiths(): HasMany
     {
@@ -79,9 +83,6 @@ class HadithChapter extends Model
 
     /**
      * Scope: Ordered by display order
-     *
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeOrdered(Builder $query): Builder
     {
@@ -90,9 +91,6 @@ class HadithChapter extends Model
 
     /**
      * Get name in specified language
-     *
-     * @param string $language
-     * @return string|null
      */
     public function getNameInLanguage(string $language): ?string
     {
@@ -101,13 +99,9 @@ class HadithChapter extends Model
 
     /**
      * Get description in specified language
-     *
-     * @param string $language
-     * @return string|null
      */
     public function getDescriptionInLanguage(string $language): ?string
     {
         return $this->description[$language] ?? $this->description['ar'] ?? null;
     }
 }
-

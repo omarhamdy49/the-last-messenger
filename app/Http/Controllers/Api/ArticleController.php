@@ -24,8 +24,6 @@ class ArticleController extends Controller
 
     /**
      * Constructor
-     *
-     * @param ArticleService $articleService
      */
     public function __construct(
         protected ArticleService $articleService
@@ -37,9 +35,6 @@ class ArticleController extends Controller
      * Display a listing of published articles
      *
      * GET /api/articles
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function index(Request $request): JsonResponse
     {
@@ -51,7 +46,7 @@ class ArticleController extends Controller
             : $this->articleService->getPublishedArticles((int) $perPage);
 
         return $this->paginatedResponse($articles->setCollection(
-            $articles->getCollection()->map(fn($article) => new ArticleResource($article))
+            $articles->getCollection()->map(fn ($article) => new ArticleResource($article))
         ));
     }
 
@@ -59,14 +54,12 @@ class ArticleController extends Controller
      * Display the specified article
      *
      * GET /api/articles/{slug}
-     *
-     * @param string $slug
-     * @return JsonResponse
      */
     public function show(string $slug): JsonResponse
     {
         try {
             $article = $this->articleService->getArticleBySlug($slug);
+
             return $this->successResponse(new ArticleResource($article));
         } catch (ResourceNotFoundException $e) {
             return $this->notFoundResponse($e->getMessage());
@@ -77,9 +70,6 @@ class ArticleController extends Controller
      * Store a newly created article
      *
      * POST /api/articles
-     *
-     * @param StoreArticleRequest $request
-     * @return JsonResponse
      */
     public function store(StoreArticleRequest $request): JsonResponse
     {
@@ -100,10 +90,6 @@ class ArticleController extends Controller
      * Update the specified article
      *
      * PUT/PATCH /api/articles/{id}
-     *
-     * @param UpdateArticleRequest $request
-     * @param int $id
-     * @return JsonResponse
      */
     public function update(UpdateArticleRequest $request, int $id): JsonResponse
     {
@@ -130,14 +116,12 @@ class ArticleController extends Controller
      * Remove the specified article
      *
      * DELETE /api/articles/{id}
-     *
-     * @param int $id
-     * @return JsonResponse
      */
     public function destroy(int $id): JsonResponse
     {
         try {
             $this->articleService->deleteArticle($id);
+
             return $this->successResponse(null, 'Article deleted successfully');
         } catch (ResourceNotFoundException $e) {
             return $this->notFoundResponse($e->getMessage());
@@ -148,9 +132,6 @@ class ArticleController extends Controller
      * Get featured articles
      *
      * GET /api/articles/featured
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function featured(Request $request): JsonResponse
     {
@@ -164,9 +145,6 @@ class ArticleController extends Controller
      * Get popular articles
      *
      * GET /api/articles/popular
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function popular(Request $request): JsonResponse
     {
@@ -180,9 +158,6 @@ class ArticleController extends Controller
      * Get recent articles
      *
      * GET /api/articles/recent
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function recent(Request $request): JsonResponse
     {
@@ -196,9 +171,6 @@ class ArticleController extends Controller
      * Search articles
      *
      * GET /api/articles/search
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function search(Request $request): JsonResponse
     {
@@ -213,7 +185,7 @@ class ArticleController extends Controller
         $articles = $this->articleService->searchArticles($query, (int) $perPage);
 
         return $this->paginatedResponse($articles->setCollection(
-            $articles->getCollection()->map(fn($article) => new ArticleResource($article))
+            $articles->getCollection()->map(fn ($article) => new ArticleResource($article))
         ));
     }
 
@@ -221,10 +193,6 @@ class ArticleController extends Controller
      * Toggle favorite for authenticated user
      *
      * POST /api/articles/{id}/favorite
-     *
-     * @param Request $request
-     * @param int $id
-     * @return JsonResponse
      */
     public function toggleFavorite(Request $request, int $id): JsonResponse
     {
@@ -244,14 +212,12 @@ class ArticleController extends Controller
      * Publish article
      *
      * POST /api/articles/{id}/publish
-     *
-     * @param int $id
-     * @return JsonResponse
      */
     public function publish(int $id): JsonResponse
     {
         try {
             $this->articleService->publishArticle($id);
+
             return $this->successResponse(null, 'Article published successfully');
         } catch (ResourceNotFoundException $e) {
             return $this->notFoundResponse($e->getMessage());
@@ -262,14 +228,12 @@ class ArticleController extends Controller
      * Unpublish article (set to draft)
      *
      * POST /api/articles/{id}/unpublish
-     *
-     * @param int $id
-     * @return JsonResponse
      */
     public function unpublish(int $id): JsonResponse
     {
         try {
             $this->articleService->unpublishArticle($id);
+
             return $this->successResponse(null, 'Article unpublished successfully');
         } catch (ResourceNotFoundException $e) {
             return $this->notFoundResponse($e->getMessage());
@@ -280,18 +244,15 @@ class ArticleController extends Controller
      * Archive article
      *
      * POST /api/articles/{id}/archive
-     *
-     * @param int $id
-     * @return JsonResponse
      */
     public function archive(int $id): JsonResponse
     {
         try {
             $this->articleService->archiveArticle($id);
+
             return $this->successResponse(null, 'Article archived successfully');
         } catch (ResourceNotFoundException $e) {
             return $this->notFoundResponse($e->getMessage());
         }
     }
 }
-

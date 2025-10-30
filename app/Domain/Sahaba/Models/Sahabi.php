@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Translatable\HasTranslations;
 
 /**
@@ -55,9 +57,9 @@ use Spatie\Translatable\HasTranslations;
  * @property \Carbon\Carbon $updated_at
  * @property \Carbon\Carbon|null $deleted_at
  */
-class Sahabi extends Model
+class Sahabi extends Model implements HasMedia
 {
-    use HasFactory, HasTranslations, SoftDeletes;
+    use HasFactory, HasTranslations, InteractsWithMedia, SoftDeletes;
 
     /**
      * The table associated with the model.
@@ -151,8 +153,6 @@ class Sahabi extends Model
 
     /**
      * Get the related article
-     *
-     * @return BelongsTo
      */
     public function article(): BelongsTo
     {
@@ -161,8 +161,6 @@ class Sahabi extends Model
 
     /**
      * Get father (from people table)
-     *
-     * @return BelongsTo
      */
     public function father(): BelongsTo
     {
@@ -171,8 +169,6 @@ class Sahabi extends Model
 
     /**
      * Get mother (from people table)
-     *
-     * @return BelongsTo
      */
     public function mother(): BelongsTo
     {
@@ -181,8 +177,6 @@ class Sahabi extends Model
 
     /**
      * Get people related to this companion
-     *
-     * @return HasMany
      */
     public function people(): HasMany
     {
@@ -191,9 +185,6 @@ class Sahabi extends Model
 
     /**
      * Increment views count
-     *
-     * @param int $amount
-     * @return void
      */
     public function incrementViews(int $amount = 1): void
     {
@@ -202,9 +193,6 @@ class Sahabi extends Model
 
     /**
      * Check if companion participated in a battle
-     *
-     * @param string $battleName
-     * @return bool
      */
     public function participatedInBattle(string $battleName): bool
     {
@@ -217,9 +205,6 @@ class Sahabi extends Model
 
     /**
      * Get display name (combines name and laqab)
-     *
-     * @param string $language
-     * @return string
      */
     public function getDisplayName(string $language = 'ar'): string
     {
@@ -236,21 +221,20 @@ class Sahabi extends Model
     /**
      * Scope: Filter by status
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param CompanionStatus|string $status
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByStatus($query, CompanionStatus|string $status)
     {
         $statusValue = $status instanceof CompanionStatus ? $status->value : $status;
+
         return $query->where('status', $statusValue);
     }
 
     /**
      * Scope: Filter by gender
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $gender
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByGender($query, string $gender)
@@ -261,8 +245,7 @@ class Sahabi extends Model
     /**
      * Scope: Filter by tribe
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $tribe
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByTribe($query, string $tribe)
@@ -273,8 +256,7 @@ class Sahabi extends Model
     /**
      * Scope: Participated in battle
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $battle
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeParticipatedIn($query, string $battle)
@@ -285,7 +267,7 @@ class Sahabi extends Model
     /**
      * Scope: Featured companions
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeFeatured($query)
@@ -296,8 +278,7 @@ class Sahabi extends Model
     /**
      * Scope: Order by importance
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $direction
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByImportance($query, string $direction = 'desc')
@@ -308,8 +289,7 @@ class Sahabi extends Model
     /**
      * Scope: Early Muslims (by conversion order)
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $limit
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeEarlyMuslims($query, int $limit = 10)
@@ -322,8 +302,7 @@ class Sahabi extends Model
     /**
      * Scope: Most hadith narrators
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $limit
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeTopNarrators($query, int $limit = 10)
@@ -332,5 +311,36 @@ class Sahabi extends Model
             ->orderByDesc('hadith_count')
             ->limit($limit);
     }
-}
 
+    /**
+     * Register media collections
+     */
+    public function registerMediaCollections(): void
+    {
+        // Profile image collection (single file)
+        $this->addMediaCollection('profile_image')
+            ->singleFile()
+            ->acceptsMimeTypes(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'])
+            ->maxFilesize(10 * 1024 * 1024) // 10MB
+            ->useDisk('public')
+            ->registerMediaConversions(function () {
+                $this->addMediaConversion('thumb')
+                    ->width(150)
+                    ->height(150)
+                    ->sharpen(10)
+                    ->nonQueued();
+
+                $this->addMediaConversion('medium')
+                    ->width(600)
+                    ->height(400)
+                    ->sharpen(10)
+                    ->nonQueued();
+
+                $this->addMediaConversion('large')
+                    ->width(1200)
+                    ->height(800)
+                    ->sharpen(10)
+                    ->nonQueued();
+            });
+    }
+}

@@ -17,19 +17,13 @@ class SeerahEventController extends Controller
 
     /**
      * SeerahEventController constructor
-     *
-     * @param SeerahEventService $timelineEventService
      */
     public function __construct(
         private readonly SeerahEventService $timelineEventService
-    ) {
-    }
+    ) {}
 
     /**
      * Get all events chronologically
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function index(Request $request): JsonResponse
     {
@@ -43,9 +37,6 @@ class SeerahEventController extends Controller
 
     /**
      * Get a single event by slug
-     *
-     * @param string $slug
-     * @return JsonResponse
      */
     public function show(string $slug): JsonResponse
     {
@@ -62,10 +53,6 @@ class SeerahEventController extends Controller
 
     /**
      * Get events by type
-     *
-     * @param Request $request
-     * @param string $type
-     * @return JsonResponse
      */
     public function byType(Request $request, string $type): JsonResponse
     {
@@ -79,10 +66,6 @@ class SeerahEventController extends Controller
 
     /**
      * Get events by Hijri year
-     *
-     * @param Request $request
-     * @param int $year
-     * @return JsonResponse
      */
     public function byHijriYear(Request $request, int $year): JsonResponse
     {
@@ -96,10 +79,6 @@ class SeerahEventController extends Controller
 
     /**
      * Get events by Gregorian year
-     *
-     * @param Request $request
-     * @param int $year
-     * @return JsonResponse
      */
     public function byGregorianYear(Request $request, int $year): JsonResponse
     {
@@ -113,9 +92,6 @@ class SeerahEventController extends Controller
 
     /**
      * Get featured events
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function featured(Request $request): JsonResponse
     {
@@ -129,8 +105,6 @@ class SeerahEventController extends Controller
 
     /**
      * Get events with location (for map view)
-     *
-     * @return JsonResponse
      */
     public function map(): JsonResponse
     {
@@ -143,9 +117,6 @@ class SeerahEventController extends Controller
 
     /**
      * Search events
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function search(Request $request): JsonResponse
     {
@@ -163,4 +134,3 @@ class SeerahEventController extends Controller
         );
     }
 }
-

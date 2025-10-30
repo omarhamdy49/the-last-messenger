@@ -16,7 +16,6 @@ class CategoryResource extends JsonResource
     /**
      * Transform the resource into an array.
      *
-     * @param Request $request
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
@@ -32,15 +31,14 @@ class CategoryResource extends JsonResource
             'icon' => $this->icon,
             'color' => $this->color,
             'display_order' => $this->display_order,
-            
+
             // Relationships
             'parent' => new CategoryResource($this->whenLoaded('parent')),
             'children' => CategoryResource::collection($this->whenLoaded('children')),
-            
+
             // Computed
             'has_children' => $this->hasChildren(),
             'is_root' => $this->isRoot(),
         ];
     }
 }
-
