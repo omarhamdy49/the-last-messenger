@@ -241,4 +241,62 @@ class ArticleService extends BaseService
     {
         return $this->repository->countByStatus($status);
     }
+
+    /**
+     * Filter articles by category
+     */
+    public function filterByCategory(int $categoryId, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->getByCategory($categoryId, $perPage, ['author', 'category', 'tags']);
+    }
+
+    /**
+     * Filter articles by author
+     */
+    public function filterByAuthor(int $authorId, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->getByAuthor($authorId, $perPage, ['author', 'category', 'tags']);
+    }
+
+    /**
+     * Filter articles by date range
+     */
+    public function filterByDateRange(string $startDate, string $endDate, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->getByDateRange($startDate, $endDate, $perPage, ['author', 'category', 'tags']);
+    }
+
+    /**
+     * Filter articles by series
+     */
+    public function filterBySeries(int $seriesId, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->getBySeries($seriesId);
+    }
+
+    /**
+     * Filter articles by status
+     */
+    public function filterByStatus(string $status, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->paginate($perPage, ['*'], ['author', 'category', 'tags']);
+    }
+
+    /**
+     * Filter articles by tag
+     */
+    public function filterByTag(int $tagId, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->getByTag($tagId, $perPage, ['author', 'category', 'tags']);
+    }
+
+    /**
+     * Filter articles with multiple criteria
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function paginateWithFilters(array $filters, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->filterArticles($filters, $perPage, ['author', 'category', 'tags', 'series']);
+    }
 }

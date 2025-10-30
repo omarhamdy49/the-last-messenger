@@ -36,15 +36,33 @@ class ArticleController extends Controller
     public function index(Request $request): View|JsonResponse
     {
         $perPage = $request->integer('per_page', 50);
-        $status = $request->input('status');
-        $categoryId = $request->integer('category_id');
-        $search = $request->input('search');
 
-        $articles = $this->articleService->paginate(
-            $perPage,
-            ['*'],
-            ['author', 'category', 'tags']
-        );
+        // Build filters array
+        $filters = [
+            'status' => $request->input('status'),
+            'category_id' => $request->input('category_id'),
+            'author_id' => $request->input('author_id'),
+            'series_id' => $request->input('series_id'),
+            'tag_id' => $request->input('tag_id'),
+            'start_date' => $request->input('start_date'),
+            'end_date' => $request->input('end_date'),
+            'is_featured' => $request->input('is_featured'),
+            'search' => $request->input('search'),
+        ];
+
+        // Remove empty filters
+        $filters = array_filter($filters, fn ($value) => $value !== null && $value !== '');
+
+        // Get articles with filters
+        if (! empty($filters)) {
+            $articles = $this->articleService->paginateWithFilters($filters, $perPage);
+        } else {
+            $articles = $this->articleService->paginate(
+                $perPage,
+                ['*'],
+                ['author', 'category', 'tags']
+            );
+        }
 
         // Calculate stats
         $stats = [
@@ -65,7 +83,7 @@ class ArticleController extends Controller
                     'per_page' => $articles->perPage(),
                     'total' => $articles->total(),
                     'last_page' => $articles->lastPage(),
-                ]
+                ],
             ]);
         }
 
@@ -327,6 +345,77 @@ class ArticleController extends Controller
                 'total' => $articles->total(),
                 'last_page' => $articles->lastPage(),
             ],
+        ]);
+    }
+
+    /**
+     * Get all categories for selector (AJAX endpoint)
+     *
+     * GET /su/portal/v1/admin/articles/categories
+     */
+    public function getCategories(): JsonResponse
+    {
+        $categories = \App\Domain\Blog\Models\Category::select('id', 'name', 'parent_id')
+            ->orderBy('name')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $categories,
+        ]);
+    }
+
+    /**
+     * Get all tags for selector (AJAX endpoint)
+     *
+     * GET /su/portal/v1/admin/articles/tags
+     */
+    public function getTags(): JsonResponse
+    {
+        $tags = \App\Domain\Blog\Models\Tag::select('id', 'name')
+            ->orderBy('name')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $tags,
+        ]);
+    }
+
+    /**
+     * Get all series for selector (AJAX endpoint)
+     *
+     * GET /su/portal/v1/admin/articles/series
+     */
+    public function getSeries(): JsonResponse
+    {
+        $series = \App\Domain\Blog\Models\Series::select('id', 'title', 'slug')
+            ->orderBy('title')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $series,
+        ]);
+    }
+
+    /**
+     * Get all authors for selector (AJAX endpoint)
+     *
+     * GET /su/portal/v1/admin/articles/authors
+     */
+    public function getAuthors(): JsonResponse
+    {
+        $authors = \App\Models\User::select('id', 'name', 'email')
+            ->whereHas('roles', function ($query) {
+                $query->whereIn('name', ['admin', 'super_admin', 'editor']);
+            })
+            ->orderBy('name')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $authors,
         ]);
     }
 }

@@ -49,4 +49,34 @@ interface VerseRepositoryInterface extends RepositoryInterface
      * Get random verse
      */
     public function getRandomVerse(): ?\App\Domain\Quran\Models\Verse;
+
+    /**
+     * Get paginated verses with filters
+     */
+    public function paginateWithFilters(
+        int $perPage = 15,
+        string $search = '',
+        string $sortBy = 'verse_key',
+        array $filters = []
+    ): LengthAwarePaginator;
+
+    /**
+     * Bulk delete verses
+     */
+    public function bulkDelete(array $ids): int;
+
+    /**
+     * Search verses with filters
+     */
+    public function search(
+        string $query,
+        int $perPage = 15,
+        ?int $surahId = null,
+        string $language = 'en'
+    ): LengthAwarePaginator;
+
+    /**
+     * Count Sajda verses
+     */
+    public function countSajdaVerses(): int;
 }

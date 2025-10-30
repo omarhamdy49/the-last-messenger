@@ -164,4 +164,64 @@ class HadithService extends BaseService
         $hadith->narrators()->sync($syncData);
         $this->repository->clearCache();
     }
+
+    /**
+     * Filter hadith by book
+     */
+    public function filterByBook(int $bookId, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->getByBook($bookId, $perPage, ['book', 'chapter', 'narrators']);
+    }
+
+    /**
+     * Filter hadith by chapter
+     */
+    public function filterByChapter(int $chapterId, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->getByChapter($chapterId, $perPage, ['book', 'chapter', 'narrators']);
+    }
+
+    /**
+     * Filter hadith by grade
+     */
+    public function filterByGrade(string $grade, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->getByGrade(HadithGrade::from($grade), $perPage, ['book', 'chapter']);
+    }
+
+    /**
+     * Filter hadith by narrator
+     */
+    public function filterByNarrator(int $narratorId, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->getByNarrator($narratorId, $perPage, ['book', 'chapter', 'narrators']);
+    }
+
+    /**
+     * Filter hadith by date range
+     */
+    public function filterByDateRange(string $startDate, string $endDate, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->getByDateRange($startDate, $endDate, $perPage, ['book', 'chapter']);
+    }
+
+    /**
+     * Get chapters for specific book
+     */
+    public function getChaptersForBook(int $bookId): \Illuminate\Database\Eloquent\Collection
+    {
+        return \App\Domain\Hadith\Models\HadithChapter::where('book_id', $bookId)
+            ->orderBy('chapter_number')
+            ->get(['id', 'book_id', 'chapter_number', 'title']);
+    }
+
+    /**
+     * Filter hadith with multiple criteria
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function paginateWithFilters(array $filters, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->filterHadith($filters, $perPage, ['book', 'chapter', 'narrators']);
+    }
 }

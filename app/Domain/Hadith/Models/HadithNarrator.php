@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Translatable\HasTranslations;
 
 /**
@@ -17,16 +18,23 @@ use Spatie\Translatable\HasTranslations;
  *
  * @property int $id
  * @property string $slug
- * @property string $name_arabic
- * @property string|null $name_english
- * @property array|null $biography
+ * @property array $name
+ * @property array|null $biography_json
  * @property NarratorGrade $reliability_grade
+ * @property string|null $era
+ * @property string|null $country
+ * @property string|null $birth_hijri
+ * @property string|null $death_hijri
+ * @property array|null $teachers
+ * @property array|null $students
+ * @property string $status
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
+ * @property \Carbon\Carbon|null $deleted_at
  */
 class HadithNarrator extends Model
 {
-    use HasFactory, HasTranslations;
+    use HasFactory, HasTranslations, SoftDeletes;
 
     protected $table = 'hadith_narrators';
 
@@ -37,10 +45,16 @@ class HadithNarrator extends Model
      */
     protected $fillable = [
         'slug',
-        'name_arabic',
-        'name_english',
-        'biography',
+        'name',
+        'biography_json',
         'reliability_grade',
+        'era',
+        'country',
+        'birth_hijri',
+        'death_hijri',
+        'teachers',
+        'students',
+        'status',
     ];
 
     /**
@@ -51,8 +65,11 @@ class HadithNarrator extends Model
     protected function casts(): array
     {
         return [
-            'biography' => 'array',
+            'name' => 'array',
+            'biography_json' => 'array',
             'reliability_grade' => NarratorGrade::class,
+            'teachers' => 'array',
+            'students' => 'array',
         ];
     }
 
@@ -61,7 +78,7 @@ class HadithNarrator extends Model
      *
      * @var array<string>
      */
-    public array $translatable = ['biography'];
+    public array $translatable = ['name', 'biography_json'];
 
     /**
      * Get all hadith narrated by this person
@@ -79,6 +96,41 @@ class HadithNarrator extends Model
     public function scopeByGrade(Builder $query, NarratorGrade $grade): Builder
     {
         return $query->where('reliability_grade', $grade);
+    }
+
+    /**
+     * Scope: Filter by era/period
+     */
+    public function scopeByEra(Builder $query, string $era): Builder
+    {
+        return $query->where('era', $era);
+    }
+
+    /**
+     * Scope: Filter by country
+     */
+    public function scopeByCountry(Builder $query, string $country): Builder
+    {
+        return $query->where('country', $country);
+    }
+
+    /**
+     * Scope: Active narrators only
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', 'active');
+    }
+
+    /**
+     * Scope: Search by name
+     */
+    public function scopeSearch(Builder $query, string $searchTerm): Builder
+    {
+        return $query->where(function ($q) use ($searchTerm) {
+            $q->whereRaw("MATCH(name_ar_generated, name_en_generated) AGAINST(? IN NATURAL LANGUAGE MODE)", [$searchTerm])
+                ->orWhere('country', 'like', "%{$searchTerm}%");
+        });
     }
 
     /**
@@ -101,5 +153,47 @@ class HadithNarrator extends Model
             NarratorGrade::THIQAH,
             NarratorGrade::SADUQ,
         ]);
+    }
+
+    /**
+     * Get hadith count for this narrator
+     */
+    public function getHadithCountAttribute(): int
+    {
+        return $this->hadiths()->count();
+    }
+
+    /**
+     * Get teachers as narrator models
+     */
+    public function getTeachersAttribute(): array
+    {
+        if (empty($this->attributes['teachers'])) {
+            return [];
+        }
+
+        $teacherIds = json_decode($this->attributes['teachers'], true);
+        if (empty($teacherIds) || !is_array($teacherIds)) {
+            return [];
+        }
+
+        return self::whereIn('id', $teacherIds)->get()->toArray();
+    }
+
+    /**
+     * Get students as narrator models
+     */
+    public function getStudentsAttribute(): array
+    {
+        if (empty($this->attributes['students'])) {
+            return [];
+        }
+
+        $studentIds = json_decode($this->attributes['students'], true);
+        if (empty($studentIds) || !is_array($studentIds)) {
+            return [];
+        }
+
+        return self::whereIn('id', $studentIds)->get()->toArray();
     }
 }

@@ -37,11 +37,31 @@ class MediaProgramController extends Controller
     {
         $perPage = $request->integer('per_page', 50);
 
-        $programs = $this->mediaProgramService->paginate(
-            $perPage,
-            ['*'],
-            ['episodes', 'category']
-        );
+        // Build filters array
+        $filters = [
+            'category_id' => $request->input('category_id'),
+            'status' => $request->input('status'),
+            'is_published' => $request->input('is_published'),
+            'min_views' => $request->input('min_views'),
+            'max_views' => $request->input('max_views'),
+            'min_episodes' => $request->input('min_episodes'),
+            'max_episodes' => $request->input('max_episodes'),
+            'search' => $request->input('search'),
+        ];
+
+        // Remove empty filters
+        $filters = array_filter($filters, fn ($value) => $value !== null && $value !== '');
+
+        // Get programs with filters
+        if (! empty($filters)) {
+            $programs = $this->mediaProgramService->paginateWithFilters($filters, $perPage);
+        } else {
+            $programs = $this->mediaProgramService->paginate(
+                $perPage,
+                ['*'],
+                ['episodes', 'category']
+            );
+        }
 
         $stats = [
             'total' => $this->mediaProgramService->count(),
@@ -58,7 +78,7 @@ class MediaProgramController extends Controller
                     'per_page' => $programs->perPage(),
                     'total' => $programs->total(),
                     'last_page' => $programs->lastPage(),
-                ]
+                ],
             ]);
         }
 
@@ -241,5 +261,44 @@ class MediaProgramController extends Controller
                 'last_page' => $programs->lastPage(),
             ],
         ]);
+    }
+
+    /**
+     * Get all media categories for selector (AJAX endpoint)
+     *
+     * GET /su/portal/v1/admin/media-programs/categories
+     */
+    public function getCategories(): JsonResponse
+    {
+        $categories = \App\Domain\Media\Models\MediaCategory::select('id', 'name', 'slug')
+            ->orderBy('name')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $categories,
+        ]);
+    }
+
+    /**
+     * Update episode count for a program (AJAX endpoint)
+     *
+     * POST /su/portal/v1/admin/media-programs/{id}/update-episode-count
+     */
+    public function updateEpisodeCount(int $id): JsonResponse
+    {
+        try {
+            $this->mediaProgramService->updateEpisodeCount($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم تحديث عدد الحلقات بنجاح',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'فشل تحديث عدد الحلقات',
+            ], 500);
+        }
     }
 }

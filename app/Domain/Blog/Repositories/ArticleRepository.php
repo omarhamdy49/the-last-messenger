@@ -232,6 +232,120 @@ class ArticleRepository extends BaseRepository implements ArticleRepositoryInter
     }
 
     /**
+     * Filter articles by multiple criteria
+     *
+     * @param  array<string, mixed>  $filters
+     * @param  array<string>  $relations
+     */
+    public function filterArticles(array $filters, int $perPage = 15, array $relations = []): LengthAwarePaginator
+    {
+        $query = $this->model->query();
+
+        // Filter by category
+        if (isset($filters['category_id']) && $filters['category_id']) {
+            $query->byCategory((int) $filters['category_id']);
+        }
+
+        // Filter by author
+        if (isset($filters['author_id']) && $filters['author_id']) {
+            $query->where('user_id', (int) $filters['author_id']);
+        }
+
+        // Filter by series
+        if (isset($filters['series_id']) && $filters['series_id']) {
+            $query->bySeries((int) $filters['series_id']);
+        }
+
+        // Filter by status
+        if (isset($filters['status']) && $filters['status']) {
+            $query->where('status', $filters['status']);
+        }
+
+        // Filter by date range
+        if (isset($filters['start_date']) && $filters['start_date']) {
+            $query->where('published_at', '>=', $filters['start_date']);
+        }
+
+        if (isset($filters['end_date']) && $filters['end_date']) {
+            $query->where('published_at', '<=', $filters['end_date']);
+        }
+
+        // Filter by tag
+        if (isset($filters['tag_id']) && $filters['tag_id']) {
+            $query->whereHas('tags', function ($q) use ($filters) {
+                $q->where('tags.id', (int) $filters['tag_id']);
+            });
+        }
+
+        // Filter by featured
+        if (isset($filters['is_featured']) && $filters['is_featured']) {
+            $query->where('is_featured', (bool) $filters['is_featured']);
+        }
+
+        // Search query
+        if (isset($filters['search']) && $filters['search']) {
+            $query->search($filters['search']);
+        }
+
+        // Eager load relations
+        if (! empty($relations)) {
+            $query->with($relations);
+        }
+
+        return $query->orderByDesc('published_at')->paginate($perPage);
+    }
+
+    /**
+     * Get articles by author
+     */
+    public function getByAuthor(int $authorId, int $perPage = 15, array $relations = []): LengthAwarePaginator
+    {
+        $query = $this->model->published()
+            ->where('user_id', $authorId)
+            ->orderByDesc('published_at');
+
+        if (! empty($relations)) {
+            $query->with($relations);
+        }
+
+        return $query->paginate($perPage);
+    }
+
+    /**
+     * Get articles by tag
+     */
+    public function getByTag(int $tagId, int $perPage = 15, array $relations = []): LengthAwarePaginator
+    {
+        $query = $this->model->published()
+            ->whereHas('tags', function ($q) use ($tagId) {
+                $q->where('tags.id', $tagId);
+            })
+            ->orderByDesc('published_at');
+
+        if (! empty($relations)) {
+            $query->with($relations);
+        }
+
+        return $query->paginate($perPage);
+    }
+
+    /**
+     * Get articles by date range
+     */
+    public function getByDateRange(string $startDate, string $endDate, int $perPage = 15, array $relations = []): LengthAwarePaginator
+    {
+        $query = $this->model->published()
+            ->whereBetween('published_at', [$startDate, $endDate])
+            ->orderByDesc('published_at');
+
+        if (! empty($relations)) {
+            $query->with($relations);
+        }
+
+        return $query->paginate($perPage);
+    }
+
+    /**
      * Clear cache for all articles
      */
     public function clearCache(): void

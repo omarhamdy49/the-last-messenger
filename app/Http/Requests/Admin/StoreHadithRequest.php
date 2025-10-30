@@ -19,26 +19,34 @@ class StoreHadithRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'book' => ['required', 'string', 'max:255'],
-            'chapter' => ['nullable', 'string', 'max:255'],
-            'hadith_number' => ['nullable', 'integer'],
-            'text' => ['required', 'array'],
-            'text.ar' => ['required', 'string'],
-            'text.en' => ['nullable', 'string'],
-            'text.fr' => ['nullable', 'string'],
-            'text.tr' => ['nullable', 'string'],
-            'text.ur' => ['nullable', 'string'],
-            'grade' => ['nullable', 'string', 'max:100'],
-            'narrator' => ['nullable', 'string', 'max:500'],
-            'reference' => ['nullable', 'string', 'max:500'],
+            'book_id' => ['required', 'integer', 'exists:hadith_books,id'],
+            'chapter_id' => ['required', 'integer', 'exists:hadith_chapters,id'],
+            'hadith_number' => ['required', 'integer', 'min:1'],
+            'arabic_text' => ['required', 'string'],
+            'narrator_chain' => ['nullable', 'string'],
+            'translations' => ['nullable', 'array'],
+            'translations.en' => ['nullable', 'string'],
+            'translations.fr' => ['nullable', 'string'],
+            'translations.tr' => ['nullable', 'string'],
+            'translations.ur' => ['nullable', 'string'],
+            'grade' => ['required', 'in:sahih,hasan,daif,mawdu,unknown'],
+            'reference_url' => ['nullable', 'url', 'max:500'],
+            'narrators' => ['required', 'array', 'min:1'],
+            'narrators.*' => ['integer', 'exists:hadith_narrators,id'],
+            'variant_hadith_ids' => ['nullable', 'array'],
+            'variant_hadith_ids.*' => ['integer', 'exists:hadith,id'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'text.ar.required' => 'Arabic text is required',
-            'book.required' => 'Book name is required',
+            'arabic_text.required' => 'النص العربي مطلوب',
+            'book_id.required' => 'الكتاب مطلوب',
+            'chapter_id.required' => 'الباب مطلوب',
+            'hadith_number.required' => 'رقم الحديث مطلوب',
+            'grade.required' => 'درجة الحديث مطلوبة',
+            'narrators.required' => 'يجب اختيار راوٍ واحد على الأقل',
         ];
     }
 }

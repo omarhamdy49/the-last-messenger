@@ -121,6 +121,106 @@ class MediaProgramRepository extends BaseRepository implements MediaProgramRepos
     }
 
     /**
+     * Filter programs by multiple criteria
+     *
+     * @param  array<string, mixed>  $filters
+     * @param  array<string>  $relations
+     */
+    public function filterPrograms(array $filters, int $perPage = 15, array $relations = []): LengthAwarePaginator
+    {
+        $query = $this->model->query();
+
+        // Filter by category
+        if (isset($filters['category_id']) && $filters['category_id']) {
+            $query->byCategory((int) $filters['category_id']);
+        }
+
+        // Filter by status
+        if (isset($filters['status']) && $filters['status']) {
+            $query->byStatus($filters['status']);
+        }
+
+        // Filter by published
+        if (isset($filters['is_published'])) {
+            $query->where('is_published', (bool) $filters['is_published']);
+        }
+
+        // Filter by view count range
+        if (isset($filters['min_views']) && $filters['min_views'] !== null) {
+            $query->where('total_views', '>=', (int) $filters['min_views']);
+        }
+
+        if (isset($filters['max_views']) && $filters['max_views'] !== null) {
+            $query->where('total_views', '<=', (int) $filters['max_views']);
+        }
+
+        // Filter by episode count range
+        if (isset($filters['min_episodes']) && $filters['min_episodes'] !== null) {
+            $query->where('total_episodes', '>=', (int) $filters['min_episodes']);
+        }
+
+        if (isset($filters['max_episodes']) && $filters['max_episodes'] !== null) {
+            $query->where('total_episodes', '<=', (int) $filters['max_episodes']);
+        }
+
+        // Search query
+        if (isset($filters['search']) && $filters['search']) {
+            $searchTerm = $filters['search'];
+            $query->where(function ($q) use ($searchTerm) {
+                $q->whereRaw("JSON_SEARCH(title, 'one', ?) IS NOT NULL", ["%{$searchTerm}%"])
+                    ->orWhereRaw("JSON_SEARCH(description, 'one', ?) IS NOT NULL", ["%{$searchTerm}%"]);
+            });
+        }
+
+        // Eager load relations
+        if (! empty($relations)) {
+            $query->with($relations);
+        }
+
+        return $query->orderByDesc('total_views')->paginate($perPage);
+    }
+
+    /**
+     * Get programs by view count range
+     */
+    public function getByViewCount(int $min, int $max, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->model->with(['category'])
+            ->whereBetween('total_views', [$min, $max])
+            ->orderByDesc('total_views')
+            ->paginate($perPage);
+    }
+
+    /**
+     * Get programs by episode count range
+     */
+    public function getByEpisodeCount(int $min, int $max, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->model->with(['category'])
+            ->whereBetween('total_episodes', [$min, $max])
+            ->orderByDesc('created_at')
+            ->paginate($perPage);
+    }
+
+    /**
+     * Update episode count for a program
+     */
+    public function updateEpisodeCount(int $programId): bool
+    {
+        $program = $this->find($programId);
+        if (! $program) {
+            return false;
+        }
+
+        $count = $program->episodes()->published()->count();
+        $result = $program->update(['total_episodes' => $count]);
+
+        $this->clearCacheForModel($programId);
+
+        return $result;
+    }
+
+    /**
      * Clear cache for program
      */
     public function clearCacheForModel(int $id): void

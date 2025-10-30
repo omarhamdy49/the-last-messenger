@@ -176,4 +176,62 @@ class MediaProgramService extends BaseService
             'episode' => $episode,
         ];
     }
+
+    /**
+     * Filter programs by category
+     */
+    public function filterByCategory(int $categoryId, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->getByCategory($categoryId, $perPage);
+    }
+
+    /**
+     * Filter programs by status
+     */
+    public function filterByStatus(string $status, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->getByStatus($status, $perPage);
+    }
+
+    /**
+     * Filter programs by published status
+     */
+    public function filterByPublished(bool $published, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->paginate($perPage, ['*'], ['category']);
+    }
+
+    /**
+     * Filter programs by view count range
+     */
+    public function filterByViewCount(int $min, int $max, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->getByViewCount($min, $max, $perPage);
+    }
+
+    /**
+     * Filter programs by episode count range
+     */
+    public function filterByEpisodeCount(int $min, int $max, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->getByEpisodeCount($min, $max, $perPage);
+    }
+
+    /**
+     * Update episode count for a program
+     */
+    public function updateEpisodeCount(int $programId): void
+    {
+        $this->repository->updateEpisodeCount($programId);
+    }
+
+    /**
+     * Filter programs with multiple criteria
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function paginateWithFilters(array $filters, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->filterPrograms($filters, $perPage, ['category']);
+    }
 }

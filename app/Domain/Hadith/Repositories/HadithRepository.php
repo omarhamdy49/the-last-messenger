@@ -190,6 +190,22 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             $query->search($filters['search']);
         }
 
+        // Filter by narrator
+        if (isset($filters['narrator_id'])) {
+            $query->whereHas('narrators', function ($q) use ($filters) {
+                $q->where('hadith_narrators.id', (int) $filters['narrator_id']);
+            });
+        }
+
+        // Filter by date range
+        if (isset($filters['start_date']) && $filters['start_date']) {
+            $query->where('created_at', '>=', $filters['start_date']);
+        }
+
+        if (isset($filters['end_date']) && $filters['end_date']) {
+            $query->where('created_at', '<=', $filters['end_date']);
+        }
+
         if (! empty($relations)) {
             $query->with($relations);
         }
@@ -197,5 +213,37 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
         return $query->orderBy('book_id')
             ->orderBy('hadith_number')
             ->paginate($perPage);
+    }
+
+    /**
+     * Get hadith by narrator
+     */
+    public function getByNarrator(int $narratorId, int $perPage = 15, array $relations = []): LengthAwarePaginator
+    {
+        $query = $this->model->whereHas('narrators', function ($q) use ($narratorId) {
+            $q->where('hadith_narrators.id', $narratorId);
+        })->orderBy('book_id')->orderBy('hadith_number');
+
+        if (! empty($relations)) {
+            $query->with($relations);
+        }
+
+        return $query->paginate($perPage);
+    }
+
+    /**
+     * Get hadith by date range
+     */
+    public function getByDateRange(string $startDate, string $endDate, int $perPage = 15, array $relations = []): LengthAwarePaginator
+    {
+        $query = $this->model->whereBetween('created_at', [$startDate, $endDate])
+            ->orderBy('book_id')
+            ->orderBy('hadith_number');
+
+        if (! empty($relations)) {
+            $query->with($relations);
+        }
+
+        return $query->paginate($perPage);
     }
 }

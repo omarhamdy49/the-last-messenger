@@ -21,17 +21,37 @@ class RepositoryServiceProvider extends ServiceProvider
     {
         // Blog Module Repositories
         $this->app->bind(ArticleRepositoryInterface::class, ArticleRepository::class);
+        $this->app->bind(
+            \App\Domain\Blog\Repositories\CategoryRepositoryInterface::class,
+            \App\Domain\Blog\Repositories\CategoryRepository::class
+        );
+        $this->app->bind(
+            \App\Domain\Blog\Repositories\SeriesRepositoryInterface::class,
+            \App\Domain\Blog\Repositories\SeriesRepository::class
+        );
+        $this->app->bind(
+            \App\Domain\Blog\Repositories\TagRepositoryInterface::class,
+            \App\Domain\Blog\Repositories\TagRepository::class
+        );
 
         // Hadith Module Repositories
         $this->app->bind(
             \App\Domain\Hadith\Repositories\HadithRepositoryInterface::class,
             \App\Domain\Hadith\Repositories\HadithRepository::class
         );
+        $this->app->bind(
+            \App\Domain\Hadith\Repositories\HadithNarratorRepositoryInterface::class,
+            \App\Domain\Hadith\Repositories\HadithNarratorRepository::class
+        );
 
         // Media Module Repositories
         $this->app->bind(
             \App\Domain\Media\Repositories\MediaProgramRepositoryInterface::class,
             \App\Domain\Media\Repositories\MediaProgramRepository::class
+        );
+        $this->app->bind(
+            \App\Domain\Media\Repositories\MediaCategoryRepositoryInterface::class,
+            \App\Domain\Media\Repositories\MediaCategoryRepository::class
         );
 
         // Seerah Module Repositories
@@ -54,6 +74,14 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(
             \App\Domain\Quran\Repositories\VerseRepositoryInterface::class,
             \App\Domain\Quran\Repositories\VerseRepository::class
+        );
+        $this->app->bind(
+            \App\Domain\Quran\Repositories\ReciterRepositoryInterface::class,
+            \App\Domain\Quran\Repositories\ReciterRepository::class
+        );
+        $this->app->bind(
+            \App\Domain\Quran\Repositories\TafseerRepositoryInterface::class,
+            \App\Domain\Quran\Repositories\TafseerRepository::class
         );
 
         // Genealogy Module Repositories

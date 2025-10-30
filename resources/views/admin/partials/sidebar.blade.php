@@ -56,6 +56,46 @@
                         @endif
                     </a>
 
+                    <!-- Blog Categories -->
+                    <a href="{{ route('admin.categories.index') }}"
+                       class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"
+                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                        <i data-lucide="tags" class="w-5 h-5 flex-shrink-0"></i>
+                        <span x-show="sidebarOpen" x-transition class="font-semibold">التصنيفات</span>
+                    </a>
+
+                    <!-- Tags -->
+                    <a href="{{ route('admin.tags.index') }}"
+                       class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.tags.*') ? 'active' : '' }}"
+                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                        <i data-lucide="bookmark" class="w-5 h-5 flex-shrink-0"></i>
+                        <span x-show="sidebarOpen" x-transition class="font-semibold">الوسوم</span>
+                    </a>
+
+                    <!-- Series -->
+                    <a href="{{ route('admin.series.index') }}"
+                       class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.series.*') ? 'active' : '' }}"
+                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                        <i data-lucide="list" class="w-5 h-5 flex-shrink-0"></i>
+                        <span x-show="sidebarOpen" x-transition class="font-semibold">السلاسل</span>
+                    </a>
+
+                    <!-- Hadith Books -->
+                    <a href="{{ route('admin.hadith-books.index') }}"
+                       class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.hadith-books.*') ? 'active' : '' }}"
+                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                        <i data-lucide="book-open" class="w-5 h-5 flex-shrink-0"></i>
+                        <span x-show="sidebarOpen" x-transition class="font-semibold">كتب الحديث</span>
+                    </a>
+
+                    <!-- Hadith Chapters -->
+                    <a href="{{ route('admin.hadith-chapters.index') }}"
+                       class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.hadith-chapters.*') ? 'active' : '' }}"
+                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                        <i data-lucide="book-marked" class="w-5 h-5 flex-shrink-0"></i>
+                        <span x-show="sidebarOpen" x-transition class="font-semibold">أبواب الحديث</span>
+                    </a>
+
                     <!-- Hadith -->
                     <a href="{{ route('admin.hadith.index') }}"
                        class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.hadith.*') ? 'active' : '' }}"
@@ -69,6 +109,14 @@
                         @endif
                     </a>
 
+                    <!-- Media Categories -->
+                    <a href="{{ route('admin.media-categories.index') }}"
+                       class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.media-categories.*') ? 'active' : '' }}"
+                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                        <i data-lucide="folder-video" class="w-5 h-5 flex-shrink-0"></i>
+                        <span x-show="sidebarOpen" x-transition class="font-semibold">فئات الوسائط</span>
+                    </a>
+
                     <!-- Media Programs -->
                     <a href="{{ route('admin.media-programs.index') }}"
                        class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.media-programs.*') ? 'active' : '' }}"
@@ -80,6 +128,14 @@
                                 {{ $stats['media'] ?? 0 }}
                             </span>
                         @endif
+                    </a>
+
+                    <!-- Media Episodes -->
+                    <a href="{{ route('admin.media-episodes.index') }}"
+                       class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.media-episodes.*') ? 'active' : '' }}"
+                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                        <i data-lucide="play-circle" class="w-5 h-5 flex-shrink-0"></i>
+                        <span x-show="sidebarOpen" x-transition class="font-semibold">حلقات الوسائط</span>
                     </a>
 
                     <!-- Seerah Events -->

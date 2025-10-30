@@ -23,6 +23,7 @@ class UpdateMediaProgramRequest extends FormRequest
 
         return [
             'slug' => ['sometimes', 'required', 'string', 'max:255', Rule::unique('media_programs', 'slug')->ignore($programId)],
+            'category_id' => ['sometimes', 'required', 'integer', 'exists:media_categories,id'],
             'title' => ['sometimes', 'required', 'array'],
             'title.ar' => ['required_with:title', 'string', 'max:500'],
             'title.en' => ['nullable', 'string', 'max:500'],
@@ -37,7 +38,9 @@ class UpdateMediaProgramRequest extends FormRequest
             'description.ur' => ['nullable', 'string'],
             'type' => ['sometimes', 'required', 'string', 'in:series,standalone,documentary'],
             'thumbnail' => ['nullable', 'string', 'max:500'],
+            'featured_image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'duration_minutes' => ['nullable', 'integer', 'min:1'],
+            'status' => ['nullable', 'in:ongoing,completed,upcoming'],
         ];
     }
 }

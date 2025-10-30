@@ -37,11 +37,30 @@ class HadithController extends Controller
     {
         $perPage = $request->integer('per_page', 50);
 
-        $hadith = $this->hadithService->paginate(
-            $perPage,
-            ['*'],
-            ['narrators', 'book', 'chapter']
-        );
+        // Build filters array
+        $filters = [
+            'book_id' => $request->input('book_id'),
+            'chapter_id' => $request->input('chapter_id'),
+            'grade' => $request->input('grade'),
+            'narrator_id' => $request->input('narrator_id'),
+            'start_date' => $request->input('start_date'),
+            'end_date' => $request->input('end_date'),
+            'search' => $request->input('search'),
+        ];
+
+        // Remove empty filters
+        $filters = array_filter($filters, fn ($value) => $value !== null && $value !== '');
+
+        // Get hadith with filters
+        if (! empty($filters)) {
+            $hadith = $this->hadithService->paginateWithFilters($filters, $perPage);
+        } else {
+            $hadith = $this->hadithService->paginate(
+                $perPage,
+                ['*'],
+                ['narrators', 'book', 'chapter']
+            );
+        }
 
         $stats = [
             'total' => $this->hadithService->count(),
@@ -240,6 +259,69 @@ class HadithController extends Controller
                 'total' => $hadith->total(),
                 'last_page' => $hadith->lastPage(),
             ],
+        ]);
+    }
+
+    /**
+     * Get all hadith books for selector (AJAX endpoint)
+     *
+     * GET /su/portal/v1/admin/hadith/books
+     */
+    public function getBooks(): JsonResponse
+    {
+        $books = \App\Domain\Hadith\Models\HadithBook::select('id', 'name', 'slug')
+            ->orderBy('name')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $books,
+        ]);
+    }
+
+    /**
+     * Get chapters for specific book (AJAX endpoint)
+     *
+     * GET /su/portal/v1/admin/hadith/chapters?book_id={id}
+     */
+    public function getChapters(Request $request): JsonResponse
+    {
+        $request->validate([
+            'book_id' => ['required', 'integer', 'exists:hadith_books,id'],
+        ]);
+
+        $bookId = $request->integer('book_id');
+        $chapters = $this->hadithService->getChaptersForBook($bookId);
+
+        return response()->json([
+            'success' => true,
+            'data' => $chapters,
+        ]);
+    }
+
+    /**
+     * Get all narrators for selector (AJAX endpoint)
+     *
+     * GET /su/portal/v1/admin/hadith/narrators
+     */
+    public function getNarrators(Request $request): JsonResponse
+    {
+        $search = $request->input('search');
+
+        $query = \App\Domain\Hadith\Models\HadithNarrator::select('id', 'name', 'full_name');
+
+        if ($search) {
+            $query->where('name', 'like', "%{$search}%")
+                ->orWhere('full_name', 'like', "%{$search}%");
+        }
+
+        $narrators = $query->orderBy('name')
+            ->limit(50)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $narrators,
         ]);
     }
 }

@@ -1,0 +1,201 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domain\Quran\Services;
+
+use App\Domain\Quran\Models\Tafseer;
+use App\Domain\Quran\Repositories\TafseerRepositoryInterface;
+use App\Domain\Shared\Services\BaseService;
+use App\Exceptions\Domain\DuplicateResourceException;
+use App\Exceptions\Domain\ResourceNotFoundException;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * Tafseer Service
+ * Business logic for Tafseer management
+ */
+class TafseerService extends BaseService
+{
+    /**
+     * TafseerService constructor
+     */
+    public function __construct(
+        TafseerRepositoryInterface $repository
+    ) {
+        $this->repository = $repository;
+    }
+
+    /**
+     * Get tafseer with filters and pagination
+     */
+    public function paginateWithFilters(
+        int $perPage = 15,
+        ?int $surahId = null,
+        ?string $source = null,
+        ?string $search = null,
+        string $sortBy = 'verse_reference'
+    ): LengthAwarePaginator {
+        $filters = [
+            'surah_id' => $surahId,
+            'source' => $source,
+            'search' => $search,
+            'sort_by' => $sortBy,
+        ];
+
+        return $this->repository->paginateWithFilters($perPage, $filters);
+    }
+
+    /**
+     * Get tafseer by verse reference
+     *
+     * @return Collection<int, Model>
+     */
+    public function getByVerseReference(string $verseReference): Collection
+    {
+        return $this->repository->getByVerseReference($verseReference);
+    }
+
+    /**
+     * Get tafseer by surah
+     */
+    public function getBySurah(int $surahId, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->getBySurah($surahId, $perPage);
+    }
+
+    /**
+     * Get tafseer by source
+     */
+    public function getBySource(string $source, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->getBySource($source, $perPage);
+    }
+
+    /**
+     * Search tafseer
+     */
+    public function search(string $query, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->search($query, $perPage);
+    }
+
+    /**
+     * Create new tafseer with duplicate check
+     *
+     * @param  array<string, mixed>  $data
+     *
+     * @throws DuplicateResourceException
+     */
+    public function create(array $data): Model
+    {
+        // Check for duplicates
+        if ($this->repository->checkDuplicate($data['verse_reference'], $data['source'])) {
+            throw new DuplicateResourceException(
+                "Tafseer already exists for verse {$data['verse_reference']} from source {$data['source']}"
+            );
+        }
+
+        return $this->repository->create($data);
+    }
+
+    /**
+     * Update tafseer with duplicate check
+     *
+     * @param  array<string, mixed>  $data
+     *
+     * @throws ResourceNotFoundException
+     * @throws DuplicateResourceException
+     */
+    public function updateTafseer(Tafseer $tafseer, array $data): Model
+    {
+        // Check for duplicates (excluding current record)
+        if (isset($data['verse_reference']) && isset($data['source'])) {
+            if ($this->repository->checkDuplicate($data['verse_reference'], $data['source'], $tafseer->id)) {
+                throw new DuplicateResourceException(
+                    "Tafseer already exists for verse {$data['verse_reference']} from source {$data['source']}"
+                );
+            }
+        }
+
+        $this->repository->update($tafseer->id, $data);
+
+        return $this->repository->find($tafseer->id);
+    }
+
+    /**
+     * Delete tafseer by model
+     *
+     * @throws ResourceNotFoundException
+     */
+    public function deleteTafseer(Tafseer $tafseer): bool
+    {
+        return $this->repository->delete($tafseer->id);
+    }
+
+    /**
+     * Bulk delete tafseer
+     *
+     * @param  array<int>  $ids
+     */
+    public function bulkDelete(array $ids): int
+    {
+        return $this->repository->bulkDelete($ids);
+    }
+
+    /**
+     * Get tafseer with details
+     *
+     * @throws ResourceNotFoundException
+     */
+    public function getWithDetails(int $id): Model
+    {
+        $tafseer = $this->repository->getWithDetails($id);
+
+        if (! $tafseer) {
+            throw new ResourceNotFoundException("Tafseer not found: {$id}");
+        }
+
+        return $tafseer;
+    }
+
+    /**
+     * Get available sources
+     *
+     * @return array<string>
+     */
+    public function getAvailableSources(): array
+    {
+        return $this->repository->getAvailableSources();
+    }
+
+    /**
+     * Count unique surahs covered
+     */
+    public function countUniqueSurahs(): int
+    {
+        return $this->repository->countUniqueSurahs();
+    }
+
+    /**
+     * Get source display names
+     *
+     * @return array<string, string>
+     */
+    public function getSourceNames(): array
+    {
+        return [
+            'ibn_kathir' => 'Ibn Kathir',
+            'jalalayn' => 'Jalalayn',
+            'sadi' => "Sa'di",
+            'qurtubi' => 'Qurtubi',
+            'tabari' => 'Tabari',
+            'baghawi' => 'Baghawi',
+            'muyassar' => 'Muyassar',
+            'ashhari' => 'Ashhari',
+            'qasimi' => 'Qasimi',
+        ];
+    }
+}

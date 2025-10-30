@@ -1,0 +1,238 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domain\Blog\Repositories;
+
+use App\Domain\Blog\Enums\CategoryType;
+use App\Domain\Blog\Models\Category;
+use App\Domain\Shared\Repositories\BaseRepository;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Category Repository Implementation
+ * Handles all database operations for categories with optimization and caching
+ */
+class CategoryRepository extends BaseRepository implements CategoryRepositoryInterface
+{
+    protected int $cacheTTL = 900; // 15 minutes
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function getModel(): Model
+    {
+        return new Category;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function paginateWithFilters(int $perPage = 50, string $search = '', array $filters = [], array $with = []): LengthAwarePaginator
+    {
+        $query = $this->model->query();
+
+        // Eager load relationships
+        $defaultRelations = ['parent', 'children'];
+        $relations = ! empty($with) ? $with : $defaultRelations;
+        $query->with($relations)->withCount('articles');
+
+        // Apply search across all languages in name and description
+        if (! empty($search)) {
+            $query->where(function ($q) use ($search) {
+                // Search in all language fields
+                foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $lang) {
+                    $q->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.{$lang}')) LIKE ?", ["%{$search}%"])
+                        ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(description, '$.{$lang}')) LIKE ?", ["%{$search}%"]);
+                }
+                // Also search slug
+                $q->orWhere('slug', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // Apply filters
+        if (isset($filters['type'])) {
+            $query->where('type', $filters['type']);
+        }
+
+        if (isset($filters['parent_id'])) {
+            if ($filters['parent_id'] === 'null' || $filters['parent_id'] === null) {
+                $query->whereNull('parent_id');
+            } else {
+                $query->where('parent_id', $filters['parent_id']);
+            }
+        }
+
+        // Order by display order, then by name
+        $query->orderBy('display_order')->orderBy('id');
+
+        return $query->paginate($perPage);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function countByStatus(string $status): int
+    {
+        $cacheKey = $this->getCacheKey('countByStatus', compact('status'));
+
+        return Cache::remember($cacheKey, $this->cacheTTL, function () use ($status) {
+            return $this->model->where('status', $status)->count();
+        });
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function countByType(CategoryType $type): int
+    {
+        $cacheKey = $this->getCacheKey('countByType', ['type' => $type->value]);
+
+        return Cache::remember($cacheKey, $this->cacheTTL, function () use ($type) {
+            return $this->model->where('type', $type)->count();
+        });
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getRootCategories(): Collection
+    {
+        $cacheKey = $this->getCacheKey('rootCategories');
+
+        return Cache::remember($cacheKey, $this->cacheTTL, function () {
+            return $this->model->root()
+                ->with(['children'])
+                ->withCount('articles')
+                ->orderBy('display_order')
+                ->get();
+        });
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getRootCategoriesExcept(int $excludeId): Collection
+    {
+        $cacheKey = $this->getCacheKey('rootCategoriesExcept', compact('excludeId'));
+
+        return Cache::remember($cacheKey, $this->cacheTTL, function () use ($excludeId) {
+            return $this->model->root()
+                ->where('id', '!=', $excludeId)
+                ->orderBy('display_order')
+                ->get();
+        });
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function search(string $query, int $perPage = 50, ?string $type = null): LengthAwarePaginator
+    {
+        $searchQuery = $this->model->query();
+
+        // Search across all language fields
+        $searchQuery->where(function ($q) use ($query) {
+            foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $lang) {
+                $q->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.{$lang}')) LIKE ?", ["%{$query}%"])
+                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(description, '$.{$lang}')) LIKE ?", ["%{$query}%"]);
+            }
+            $q->orWhere('slug', 'LIKE', "%{$query}%");
+        });
+
+        // Filter by type if provided
+        if ($type !== null) {
+            $searchQuery->where('type', $type);
+        }
+
+        // Eager load relationships
+        $searchQuery->with(['parent', 'children'])
+            ->withCount('articles')
+            ->orderBy('display_order');
+
+        return $searchQuery->paginate($perPage);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function bulkDelete(array $ids): int
+    {
+        $count = $this->model->whereIn('id', $ids)->delete();
+        $this->clearCache();
+
+        return $count;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function updateDisplayOrder(array $items): void
+    {
+        DB::transaction(function () use ($items) {
+            foreach ($items as $item) {
+                $this->model->where('id', $item['id'])
+                    ->update(['display_order' => $item['display_order']]);
+            }
+        });
+
+        $this->clearCache();
+    }
+
+    /**
+     * Clear cache for all categories
+     */
+    public function clearCache(): void
+    {
+        Cache::tags(['categories'])->flush();
+    }
+
+    /**
+     * Override base create to clear cache
+     *
+     * {@inheritdoc}
+     */
+    public function create(array $data): Model
+    {
+        $model = parent::create($data);
+        $this->clearCache();
+
+        return $model;
+    }
+
+    /**
+     * Override base update to clear cache
+     *
+     * {@inheritdoc}
+     */
+    public function update(int $id, array $data): bool
+    {
+        $result = parent::update($id, $data);
+
+        if ($result) {
+            $this->clearCache();
+        }
+
+        return $result;
+    }
+
+    /**
+     * Override base delete to clear cache
+     *
+     * {@inheritdoc}
+     */
+    public function delete(int $id): bool
+    {
+        $result = parent::delete($id);
+
+        if ($result) {
+            $this->clearCache();
+        }
+
+        return $result;
+    }
+}
