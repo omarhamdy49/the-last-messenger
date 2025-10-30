@@ -8,18 +8,21 @@ use App\Domain\Media\Enums\ProgramStatus;
 use App\Domain\Media\Models\MediaEpisode;
 use App\Domain\Media\Models\MediaProgram;
 use App\Domain\Media\Repositories\MediaProgramRepositoryInterface;
+use App\Domain\Shared\Services\BaseService;
 use App\Exceptions\Domain\ResourceNotFoundException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
-class MediaProgramService
+class MediaProgramService extends BaseService
 {
     /**
      * MediaProgramService constructor
      */
     public function __construct(
-        private readonly MediaProgramRepositoryInterface $repository
-    ) {}
+        MediaProgramRepositoryInterface $repository
+    ) {
+        $this->repository = $repository;
+    }
 
     /**
      * Get all programs with pagination

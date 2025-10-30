@@ -9,6 +9,7 @@ use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreArticleRequest;
 use App\Http\Requests\Admin\UpdateArticleRequest;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -32,7 +33,7 @@ class ArticleController extends Controller
      *
      * GET /su/portal/v1/admin/articles
      */
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
         $perPage = $request->integer('per_page', 50);
         $status = $request->input('status');
@@ -52,6 +53,21 @@ class ArticleController extends Controller
             'draft' => $this->articleService->countByStatus('draft'),
             'archived' => $this->articleService->countByStatus('archived'),
         ];
+
+        // Return JSON for AJAX requests
+        if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json([
+                'success' => true,
+                'data' => $articles->items(),
+                'stats' => $stats,
+                'meta' => [
+                    'current_page' => $articles->currentPage(),
+                    'per_page' => $articles->perPage(),
+                    'total' => $articles->total(),
+                    'last_page' => $articles->lastPage(),
+                ]
+            ]);
+        }
 
         return view('admin.articles.index', compact('articles', 'stats'));
     }

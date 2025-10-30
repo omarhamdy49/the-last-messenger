@@ -9,6 +9,7 @@ use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreMediaProgramRequest;
 use App\Http\Requests\Admin\UpdateMediaProgramRequest;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -32,7 +33,7 @@ class MediaProgramController extends Controller
      *
      * GET /su/portal/v1/admin/media-programs
      */
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
         $perPage = $request->integer('per_page', 50);
 
@@ -46,7 +47,22 @@ class MediaProgramController extends Controller
             'total' => $this->mediaProgramService->count(),
         ];
 
-        return view('admin.media.index', compact('programs', 'stats'));
+        // Return JSON for AJAX requests
+        if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json([
+                'success' => true,
+                'data' => $programs->items(),
+                'stats' => $stats,
+                'meta' => [
+                    'current_page' => $programs->currentPage(),
+                    'per_page' => $programs->perPage(),
+                    'total' => $programs->total(),
+                    'last_page' => $programs->lastPage(),
+                ]
+            ]);
+        }
+
+        return view('admin.media-programs.index', compact('programs', 'stats'));
     }
 
     /**
@@ -56,7 +72,7 @@ class MediaProgramController extends Controller
      */
     public function create(): View
     {
-        return view('admin.media.create');
+        return view('admin.media-programs.create');
     }
 
     /**
@@ -89,7 +105,7 @@ class MediaProgramController extends Controller
             abort(404, 'Media program not found');
         }
 
-        return view('admin.media.show', compact('program'));
+        return view('admin.media-programs.show', compact('program'));
     }
 
     /**
@@ -105,7 +121,7 @@ class MediaProgramController extends Controller
             abort(404, 'Media program not found');
         }
 
-        return view('admin.media.edit', compact('program'));
+        return view('admin.media-programs.edit', compact('program'));
     }
 
     /**

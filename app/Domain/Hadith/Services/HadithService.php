@@ -34,7 +34,7 @@ class HadithService extends BaseService
         return $this->repository->getByBook($bookId, $perPage, ['book', 'chapter']);
     }
 
-    /**
+    /**`
      * Get hadith by chapter
      */
     public function getHadithByChapter(int $chapterId, int $perPage = 15): LengthAwarePaginator

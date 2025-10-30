@@ -37,32 +37,45 @@ class UserController extends Controller
      */
     public function index(Request $request): \Illuminate\View\View|JsonResponse
     {
-        // If request expects JSON (from AJAX), return API response
-        if ($request->wantsJson() || $request->is('*/api/*')) {
-            $perPage = $request->integer('per_page', 15);
-            $verified = $request->input('verified');
-            $search = $request->input('search');
+        $perPage = $request->integer('per_page', 15);
+        $verified = $request->input('verified');
+        $search = $request->input('search');
 
-            $users = User::with('roles')
-                ->when($search, function ($query, $search) {
-                    return $query->where('name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
-                })
-                ->when($verified !== null, function ($query) use ($verified) {
-                    return $verified === 'true'
-                        ? $query->whereNotNull('email_verified_at')
-                        : $query->whereNull('email_verified_at');
-                })
-                ->latest()
-                ->paginate($perPage);
+        $users = User::with('roles')
+            ->when($search, function ($query, $search) {
+                return $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            })
+            ->when($verified !== null, function ($query) use ($verified) {
+                return $verified === 'true'
+                    ? $query->whereNotNull('email_verified_at')
+                    : $query->whereNull('email_verified_at');
+            })
+            ->latest()
+            ->paginate($perPage);
 
-            return $this->paginatedResponse($users->setCollection(
-                $users->getCollection()->map(fn ($u) => new UserResource($u))
-            ));
+        $stats = [
+            'total' => User::count(),
+            'verified' => User::whereNotNull('email_verified_at')->count(),
+            'unverified' => User::whereNull('email_verified_at')->count(),
+        ];
+
+        // Return JSON for AJAX requests
+        if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json([
+                'success' => true,
+                'data' => $users->items(),
+                'stats' => $stats,
+                'meta' => [
+                    'current_page' => $users->currentPage(),
+                    'per_page' => $users->perPage(),
+                    'total' => $users->total(),
+                    'last_page' => $users->lastPage(),
+                ],
+            ]);
         }
 
-        // Otherwise return the Blade view
-        return view('admin.users.index');
+        return view('admin.users.index', compact('users', 'stats'));
     }
 
     /**

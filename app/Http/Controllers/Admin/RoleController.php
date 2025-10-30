@@ -36,22 +36,36 @@ class RoleController extends Controller
      */
     public function index(Request $request): \Illuminate\View\View|JsonResponse
     {
-        // If request expects JSON (from AJAX), return API response
-        if ($request->wantsJson() || $request->is('*/api/*')) {
-            $perPage = $request->integer('per_page', 15);
-            $search = $request->input('search');
+        $perPage = $request->integer('per_page', 15);
+        $search = $request->input('search');
 
-            $roles = Role::with('permissions')
-                ->when($search, function ($query, $search) {
-                    return $query->where('name', 'like', "%{$search}%");
-                })
-                ->paginate($perPage);
+        $roles = Role::with('permissions')
+            ->when($search, function ($query, $search) {
+                return $query->where('name', 'like', "%{$search}%");
+            })
+            ->paginate($perPage);
 
-            return $this->paginatedResponse($roles);
+        $stats = [
+            'total' => Role::count(),
+            'with_permissions' => Role::has('permissions')->count(),
+        ];
+
+        // Return JSON for AJAX requests
+        if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json([
+                'success' => true,
+                'data' => $roles->items(),
+                'stats' => $stats,
+                'meta' => [
+                    'current_page' => $roles->currentPage(),
+                    'per_page' => $roles->perPage(),
+                    'total' => $roles->total(),
+                    'last_page' => $roles->lastPage(),
+                ],
+            ]);
         }
 
-        // Otherwise return the Blade view
-        return view('admin.roles.index');
+        return view('admin.roles.index', compact('roles', 'stats'));
     }
 
     /**

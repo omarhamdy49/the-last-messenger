@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Admin;
 use App\Domain\Shared\Repositories\AdminLogRepositoryInterface;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -28,7 +29,7 @@ class ActivityLogController extends Controller
      *
      * GET /su/portal/v1/admin/activity-logs
      */
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
         // Build filters array
         $filters = [
@@ -38,14 +39,14 @@ class ActivityLogController extends Controller
             'date_from' => $request->input('date_from'),
             'date_to' => $request->input('date_to'),
             'ip_address' => $request->input('ip_address'),
-            'per_page' => 50,
+            'per_page' => $request->integer('per_page', 50),
         ];
 
         // Get logs with filters or all logs
         $hasFilters = array_filter($filters, fn ($value) => ! is_null($value) && $value !== '');
         $logs = ! empty($hasFilters)
             ? $this->logRepository->search($filters)
-            : $this->logRepository->getAll(50);
+            : $this->logRepository->getAll($filters['per_page']);
 
         // Calculate stats
         $stats = [
@@ -61,6 +62,21 @@ class ActivityLogController extends Controller
                 ->first()
                 ->action ?? 'لا يوجد',
         ];
+
+        // Return JSON for AJAX requests
+        if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json([
+                'success' => true,
+                'data' => $logs->items(),
+                'stats' => $stats,
+                'meta' => [
+                    'current_page' => $logs->currentPage(),
+                    'per_page' => $logs->perPage(),
+                    'total' => $logs->total(),
+                    'last_page' => $logs->lastPage(),
+                ],
+            ]);
+        }
 
         // Get all users for filter dropdown
         $users = User::select('id', 'name', 'email')->orderBy('name')->get();

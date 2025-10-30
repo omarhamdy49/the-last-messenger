@@ -9,6 +9,7 @@ use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreSeerahEventRequest;
 use App\Http\Requests\Admin\UpdateSeerahEventRequest;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -32,7 +33,7 @@ class SeerahEventController extends Controller
      *
      * GET /su/portal/v1/admin/seerah-events
      */
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
         $perPage = $request->integer('per_page', 15);
         $events = $this->seerahEventService->paginate($perPage, ['*'], []);
@@ -42,7 +43,22 @@ class SeerahEventController extends Controller
             'categories' => $this->seerahEventService->countByCategory(),
         ];
 
-        return view('admin.seerah.index', compact('events', 'stats'));
+        // Return JSON for AJAX requests
+        if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json([
+                'success' => true,
+                'data' => $events->items(),
+                'stats' => $stats,
+                'meta' => [
+                    'current_page' => $events->currentPage(),
+                    'per_page' => $events->perPage(),
+                    'total' => $events->total(),
+                    'last_page' => $events->lastPage(),
+                ],
+            ]);
+        }
+
+        return view('admin.seerah-events.index', compact('events', 'stats'));
     }
 
     /**
@@ -52,7 +68,7 @@ class SeerahEventController extends Controller
      */
     public function create(): View
     {
-        return view('admin.seerah.create');
+        return view('admin.seerah-events.create');
     }
 
     /**
@@ -84,7 +100,7 @@ class SeerahEventController extends Controller
             abort(404, 'Seerah event not found');
         }
 
-        return view('admin.seerah.show', compact('event'));
+        return view('admin.seerah-events.show', compact('event'));
     }
 
     /**
@@ -100,7 +116,7 @@ class SeerahEventController extends Controller
             abort(404, 'Seerah event not found');
         }
 
-        return view('admin.seerah.edit', compact('event'));
+        return view('admin.seerah-events.edit', compact('event'));
     }
 
     /**

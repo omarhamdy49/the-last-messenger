@@ -9,6 +9,7 @@ use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreQuranVerseRequest;
 use App\Http\Requests\Admin\UpdateQuranVerseRequest;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -32,7 +33,7 @@ class QuranController extends Controller
      *
      * GET /su/portal/v1/admin/quran
      */
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
         $perPage = $request->integer('per_page', 15);
         $verses = $this->quranService->paginate($perPage, ['*'], []);
@@ -41,6 +42,21 @@ class QuranController extends Controller
             'total' => $this->quranService->count(),
             'surahs' => 114, // Total surahs in Quran
         ];
+
+        // Return JSON for AJAX requests
+        if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json([
+                'success' => true,
+                'data' => $verses->items(),
+                'stats' => $stats,
+                'meta' => [
+                    'current_page' => $verses->currentPage(),
+                    'per_page' => $verses->perPage(),
+                    'total' => $verses->total(),
+                    'last_page' => $verses->lastPage(),
+                ],
+            ]);
+        }
 
         return view('admin.quran.index', compact('verses', 'stats'));
     }

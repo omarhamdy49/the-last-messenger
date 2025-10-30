@@ -9,6 +9,7 @@ use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreSahabiRequest;
 use App\Http\Requests\Admin\UpdateSahabiRequest;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -32,7 +33,7 @@ class SahabiController extends Controller
      *
      * GET /su/portal/v1/admin/sahaba
      */
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
         $perPage = $request->integer('per_page', 15);
         $sahaba = $this->sahabiService->paginate($perPage, ['*'], []);
@@ -42,6 +43,21 @@ class SahabiController extends Controller
             'male' => $this->sahabiService->countByGender('male'),
             'female' => $this->sahabiService->countByGender('female'),
         ];
+
+        // Return JSON for AJAX requests
+        if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json([
+                'success' => true,
+                'data' => $sahaba->items(),
+                'stats' => $stats,
+                'meta' => [
+                    'current_page' => $sahaba->currentPage(),
+                    'per_page' => $sahaba->perPage(),
+                    'total' => $sahaba->total(),
+                    'last_page' => $sahaba->lastPage(),
+                ],
+            ]);
+        }
 
         return view('admin.sahaba.index', compact('sahaba', 'stats'));
     }

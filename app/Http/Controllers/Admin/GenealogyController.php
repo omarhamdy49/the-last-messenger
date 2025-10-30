@@ -9,6 +9,7 @@ use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreGenealogyRequest;
 use App\Http\Requests\Admin\UpdateGenealogyRequest;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -32,7 +33,7 @@ class GenealogyController extends Controller
      *
      * GET /su/portal/v1/admin/genealogy
      */
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
         $perPage = $request->integer('per_page', 15);
         $people = $this->genealogyService->getAllPeople($perPage);
@@ -41,6 +42,21 @@ class GenealogyController extends Controller
             'total' => $this->genealogyService->count(),
             'relationships' => $this->genealogyService->countRelationships(),
         ];
+
+        // Return JSON for AJAX requests
+        if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json([
+                'success' => true,
+                'data' => $people->items(),
+                'stats' => $stats,
+                'meta' => [
+                    'current_page' => $people->currentPage(),
+                    'per_page' => $people->perPage(),
+                    'total' => $people->total(),
+                    'last_page' => $people->lastPage(),
+                ],
+            ]);
+        }
 
         return view('admin.genealogy.index', compact('people', 'stats'));
     }
