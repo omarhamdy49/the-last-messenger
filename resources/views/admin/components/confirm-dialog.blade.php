@@ -1,7 +1,7 @@
 {{-- Confirmation Dialog Component --}}
 {{-- Usage: Call window.showConfirm(message, onConfirm, onCancel) --}}
 
-<div x-data="confirmDialog()" x-init="init()" @confirm.window="show($event.detail)" class="fixed inset-0 z-40 pointer-events-none" :class="visible ? 'pointer-events-auto' : ''">
+<div x-data="confirmDialog()" x-init="init()" @confirm.window="show($event.detail)" class="fixed inset-0 z-40 pointer-events-none" :class="visible ? 'pointer-events-auto' : ''" style="opacity: 0; transition: opacity 0.3s ease-in-out;" :style="visible ? 'opacity: 1;' : 'opacity: 0;'">
     <!-- Backdrop -->
     <div
         x-show="visible"
@@ -13,6 +13,7 @@
         x-transition:leave-end="opacity-0"
         @click="cancel()"
         class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        :class="!visible ? 'pointer-events-none' : ''"
     ></div>
 
     <!-- Dialog Container -->
@@ -81,6 +82,9 @@
             onCancel: null,
 
             init() {
+                // Ensure visible is false on init
+                this.visible = false;
+                // Make function globally available
                 window.showConfirm = this.showDialog.bind(this);
             },
 
