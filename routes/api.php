@@ -5,10 +5,13 @@ declare(strict_types=1);
 use App\Http\Controllers\Api\ArticleController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\FilterController;
 use App\Http\Controllers\Api\HadithController;
+use App\Http\Controllers\Api\InteractionController;
 use App\Http\Controllers\Api\MediaProgramController;
 use App\Http\Controllers\Api\QuranController;
 use App\Http\Controllers\Api\SahabiController;
+use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\SeerahEventController;
 use App\Http\Controllers\LanguageController;
 use Illuminate\Support\Facades\Route;
@@ -143,6 +146,64 @@ Route::prefix('languages')->group(function () {
     Route::get('/active', [LanguageController::class, 'active'])->name('languages.active');
     Route::get('/all', [LanguageController::class, 'all'])->name('languages.all');
     Route::get('/current', [LanguageController::class, 'current'])->name('languages.current');
+});
+
+// Search routes
+Route::prefix('search')->group(function () {
+    // Public search endpoints
+    Route::post('/', [SearchController::class, 'index'])->name('search.index');
+    Route::post('/{module}', [SearchController::class, 'searchModule'])->name('search.module');
+    Route::get('/suggestions', [SearchController::class, 'suggestions'])->name('search.suggestions');
+    Route::get('/trending', [SearchController::class, 'trending'])->name('search.trending');
+    Route::get('/modules', [SearchController::class, 'modules'])->name('search.modules');
+
+    // Protected search endpoints (require authentication)
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('/history', [SearchController::class, 'history'])->name('search.history');
+        Route::delete('/history', [SearchController::class, 'clearHistory'])->name('search.clear-history');
+    });
+});
+
+// Filter routes (all require authentication)
+Route::middleware('auth:sanctum')->prefix('filters')->group(function () {
+    Route::get('/', [FilterController::class, 'index'])->name('filters.index');
+    Route::post('/', [FilterController::class, 'store'])->name('filters.store');
+    Route::put('/{id}', [FilterController::class, 'update'])->name('filters.update');
+    Route::delete('/{id}', [FilterController::class, 'destroy'])->name('filters.destroy');
+    Route::post('/{id}/apply', [FilterController::class, 'apply'])->name('filters.apply');
+    Route::post('/{id}/set-default', [FilterController::class, 'setDefault'])->name('filters.set-default');
+    Route::get('/public', [FilterController::class, 'publicFilters'])->name('filters.public');
+
+    // Search preferences
+    Route::get('/preferences/{module}', [FilterController::class, 'getPreferences'])->name('filters.preferences.get');
+    Route::post('/preferences/{module}', [FilterController::class, 'savePreferences'])->name('filters.preferences.save');
+});
+
+// Interaction & Engagement Tracking routes (all require authentication)
+Route::middleware('auth:sanctum')->group(function () {
+    // Record interactions
+    Route::post('/interactions', [InteractionController::class, 'store'])->name('interactions.store');
+
+    // User engagement metrics
+    Route::get('/engagement/me', [InteractionController::class, 'getMyEngagement'])->name('engagement.me');
+    Route::get('/engagement/users/{id}', [InteractionController::class, 'getUserEngagement'])->name('engagement.user');
+
+    // User activity
+    Route::get('/interactions/me', [InteractionController::class, 'getMyActivity'])->name('interactions.me');
+    Route::get('/engagement/trends', [InteractionController::class, 'getMyTrends'])->name('engagement.trends');
+
+    // Content engagement stats (public content)
+    Route::get('/engagement/content/{type}/{id}', [InteractionController::class, 'getContentEngagement'])->name('engagement.content');
+
+    // Leaderboards and top content
+    Route::get('/engagement/leaderboard', [InteractionController::class, 'getLeaderboard'])->name('engagement.leaderboard');
+    Route::get('/engagement/content/top', [InteractionController::class, 'getTopContent'])->name('engagement.top-content');
+
+    // Platform statistics
+    Route::get('/engagement/stats', [InteractionController::class, 'getPlatformStats'])->name('engagement.stats');
+
+    // Export user data
+    Route::get('/engagement/export', [InteractionController::class, 'exportMyData'])->name('engagement.export');
 });
 
 // Health check

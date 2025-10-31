@@ -47,7 +47,7 @@ class CategoryController extends Controller
         $filters = $request->only(['type', 'parent_id']);
 
         // Fetch paginated data with filters applied
-        $categories = $this->categoryService->paginate(
+        $categories = $this->categoryService->paginateWithFilters(
             perPage: $perPage,
             search: $search,
             filters: $filters,

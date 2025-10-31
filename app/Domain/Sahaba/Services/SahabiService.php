@@ -105,4 +105,12 @@ class SahabiService extends BaseService
     {
         return $this->repository->search($query, $perPage);
     }
+
+    /**
+     * Count companions by gender
+     */
+    public function countByGender(string $gender): int
+    {
+        return $this->repository->count(['gender' => $gender]);
+    }
 }

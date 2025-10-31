@@ -164,9 +164,6 @@
                         <p class="text-sm text-gray-400">{{ $episode->duration ?? 'N/A' }} دقيقة</p>
                     </div>
                 </div>
-                <a href="{{ route('admin.media-episodes.show', $episode) }}" class="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-all">
-                    عرض
-                </a>
             </div>
             @endforeach
         </div>

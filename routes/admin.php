@@ -3,30 +3,34 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\ArticleController;
+use App\Http\Controllers\Admin\AuditController;
+use App\Http\Controllers\Admin\BulkOperationController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\ExportController;
 use App\Http\Controllers\Admin\GenealogyController;
 use App\Http\Controllers\Admin\HadithController;
-use App\Http\Controllers\Admin\HadithBookController;
-use App\Http\Controllers\Admin\HadithChapterController;
 use App\Http\Controllers\Admin\HadithNarratorController;
+use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\LanguageSettingsController;
 use App\Http\Controllers\Admin\MediaCategoryController;
-use App\Http\Controllers\Admin\MediaEpisodeController;
 use App\Http\Controllers\Admin\MediaProgramController;
 use App\Http\Controllers\Admin\MediaUploadController;
 use App\Http\Controllers\Admin\QuranController;
-use App\Http\Controllers\Admin\SurahController;
-use App\Http\Controllers\Admin\VerseController;
 use App\Http\Controllers\Admin\ReciterController;
 use App\Http\Controllers\Admin\RoleController;
-use App\Http\Controllers\Admin\TafseerController;
 use App\Http\Controllers\Admin\SahabiController;
+use App\Http\Controllers\Admin\SchedulerController;
 use App\Http\Controllers\Admin\SeerahEventController;
 use App\Http\Controllers\Admin\SeriesController;
+use App\Http\Controllers\Admin\SurahController;
+use App\Http\Controllers\Admin\TafseerController;
 use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\VerseController;
+use App\Http\Controllers\Admin\VersionController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -102,6 +106,22 @@ Route::prefix('su/portal/v1/admin')
             Route::get('/growth', [DashboardController::class, 'growth'])->name('growth');
             Route::get('/popular', [DashboardController::class, 'popular'])->name('popular');
             Route::post('/cache/clear', [DashboardController::class, 'clearCache'])->name('cache.clear');
+        });
+
+        // Analytics Routes
+        Route::prefix('analytics')->name('admin.analytics.')->group(function (): void {
+            Route::get('/', [AnalyticsController::class, 'dashboard'])->name('index');
+            Route::get('/stats', [AnalyticsController::class, 'getStats'])->name('stats');
+            Route::get('/charts/{type}', [AnalyticsController::class, 'getChartData'])->name('charts');
+            Route::get('/engagement', [AnalyticsController::class, 'getEngagement'])->name('engagement');
+            Route::get('/trends', [AnalyticsController::class, 'getTrends'])->name('trends');
+            Route::get('/top-content', [AnalyticsController::class, 'getTopContent'])->name('top-content');
+            Route::get('/module/{module}', [AnalyticsController::class, 'getModuleAnalytics'])->name('module');
+            Route::get('/comparison', [AnalyticsController::class, 'getComparison'])->name('comparison');
+            Route::get('/recent-activity', [AnalyticsController::class, 'getRecentActivity'])->name('recent-activity');
+            Route::get('/performance', [AnalyticsController::class, 'getPerformance'])->name('performance');
+            Route::get('/export', [AnalyticsController::class, 'exportAnalytics'])->name('export');
+            Route::post('/cache/clear', [AnalyticsController::class, 'clearCache'])->name('cache.clear');
         });
 
         // Components Demo Route (for development)
@@ -194,49 +214,6 @@ Route::prefix('su/portal/v1/admin')
             'destroy' => 'admin.media-categories.destroy',
         ]);
 
-        // Hadith Book Routes
-        Route::prefix('hadith-books')->group(function (): void {
-            Route::post('/bulk-delete', [HadithBookController::class, 'bulkDelete'])->name('admin.hadith-books.bulk-delete');
-        });
-        Route::resource('hadith-books', HadithBookController::class)->names([
-            'index' => 'admin.hadith-books.index',
-            'create' => 'admin.hadith-books.create',
-            'store' => 'admin.hadith-books.store',
-            'show' => 'admin.hadith-books.show',
-            'edit' => 'admin.hadith-books.edit',
-            'update' => 'admin.hadith-books.update',
-            'destroy' => 'admin.hadith-books.destroy',
-        ]);
-
-        // Hadith Chapter Routes
-        Route::prefix('hadith-chapters')->group(function (): void {
-            Route::post('/bulk-delete', [HadithChapterController::class, 'bulkDelete'])->name('admin.hadith-chapters.bulk-delete');
-        });
-        Route::resource('hadith-chapters', HadithChapterController::class)->names([
-            'index' => 'admin.hadith-chapters.index',
-            'create' => 'admin.hadith-chapters.create',
-            'store' => 'admin.hadith-chapters.store',
-            'show' => 'admin.hadith-chapters.show',
-            'edit' => 'admin.hadith-chapters.edit',
-            'update' => 'admin.hadith-chapters.update',
-            'destroy' => 'admin.hadith-chapters.destroy',
-        ]);
-
-        // Media Episode Routes
-        Route::prefix('media-episodes')->group(function (): void {
-            Route::post('/bulk-delete', [MediaEpisodeController::class, 'bulkDelete'])->name('admin.media-episodes.bulk-delete');
-            Route::post('/bulk-status', [MediaEpisodeController::class, 'bulkStatus'])->name('admin.media-episodes.bulk-status');
-            Route::get('/suggest-number', [MediaEpisodeController::class, 'suggestNumber'])->name('admin.media-episodes.suggest-number');
-        });
-        Route::resource('media-episodes', MediaEpisodeController::class)->names([
-            'index' => 'admin.media-episodes.index',
-            'create' => 'admin.media-episodes.create',
-            'store' => 'admin.media-episodes.store',
-            'show' => 'admin.media-episodes.show',
-            'edit' => 'admin.media-episodes.edit',
-            'update' => 'admin.media-episodes.update',
-            'destroy' => 'admin.media-episodes.destroy',
-        ]);
 
         // Hadith Routes
         Route::prefix('hadith')->group(function (): void {
@@ -286,6 +263,21 @@ Route::prefix('su/portal/v1/admin')
             'edit' => 'admin.media-programs.edit',
             'update' => 'admin.media-programs.update',
             'destroy' => 'admin.media-programs.destroy',
+        ]);
+
+        // Quran Routes (main entry point for Quran management)
+        Route::prefix('quran')->group(function (): void {
+            Route::get('/search', [QuranController::class, 'search'])->name('admin.quran.search');
+            Route::post('/bulk-delete', [QuranController::class, 'bulkDelete'])->name('admin.quran.bulk-delete');
+        });
+        Route::resource('quran', QuranController::class)->names([
+            'index' => 'admin.quran.index',
+            'create' => 'admin.quran.create',
+            'store' => 'admin.quran.store',
+            'show' => 'admin.quran.show',
+            'edit' => 'admin.quran.edit',
+            'update' => 'admin.quran.update',
+            'destroy' => 'admin.quran.destroy',
         ]);
 
         // Quran Surah Routes (no create/store - 114 surahs are fixed)
@@ -440,5 +432,76 @@ Route::prefix('su/portal/v1/admin')
             Route::post('/{code}/set-default', [LanguageSettingsController::class, 'setDefault'])->name('set-default');
             Route::post('/{code}/toggle', [LanguageSettingsController::class, 'toggle'])->name('toggle');
             Route::post('/reorder', [LanguageSettingsController::class, 'reorder'])->name('reorder');
+        });
+
+        // Export Routes
+        Route::prefix('export')->name('export.')->group(function (): void {
+            Route::post('/', [ExportController::class, 'export'])->name('export');
+            Route::get('/{module}/columns', [ExportController::class, 'getColumns'])->name('columns');
+            Route::get('/history', [ExportController::class, 'history'])->name('history');
+            Route::get('/stats', [ExportController::class, 'stats'])->name('stats');
+            Route::delete('/cleanup', [ExportController::class, 'cleanup'])->name('cleanup');
+        });
+
+        // Import Routes
+        Route::prefix('import')->name('import.')->group(function (): void {
+            Route::get('/{module}', [ImportController::class, 'importForm'])->name('form');
+            Route::post('/{module}/parse', [ImportController::class, 'parseFile'])->name('parse');
+            Route::post('/{module}/validate', [ImportController::class, 'validateData'])->name('validate');
+            Route::post('/{module}/execute', [ImportController::class, 'execute'])->name('execute');
+            Route::get('/{importId}/preview', [ImportController::class, 'preview'])->name('preview');
+            Route::get('/{importId}/status', [ImportController::class, 'status'])->name('status');
+            Route::get('/history', [ImportController::class, 'history'])->name('history');
+            Route::get('/{importId}/errors', [ImportController::class, 'errors'])->name('errors');
+            Route::delete('/{importId}', [ImportController::class, 'destroy'])->name('destroy');
+        });
+
+        // Content Scheduler Routes
+        Route::prefix('scheduler')->name('scheduler.')->group(function (): void {
+            Route::get('/', [SchedulerController::class, 'index'])->name('index');
+            Route::get('/create', [SchedulerController::class, 'create'])->name('create');
+            Route::post('/', [SchedulerController::class, 'store'])->name('store');
+            Route::get('/{id}', [SchedulerController::class, 'show'])->name('show');
+            Route::get('/{id}/edit', [SchedulerController::class, 'edit'])->name('edit');
+            Route::put('/{id}', [SchedulerController::class, 'update'])->name('update');
+            Route::delete('/{id}', [SchedulerController::class, 'destroy'])->name('destroy');
+            Route::get('/{type}/{id}/history', [SchedulerController::class, 'history'])->name('history');
+        });
+
+        // Bulk Operations Routes
+        Route::prefix('bulk-operations')->name('bulk-operations.')->group(function (): void {
+            Route::post('/', [BulkOperationController::class, 'store'])->name('store');
+            Route::get('/', [BulkOperationController::class, 'index'])->name('index');
+            Route::get('/stats', [BulkOperationController::class, 'stats'])->name('stats');
+            Route::get('/{id}/status', [BulkOperationController::class, 'status'])->name('status');
+            Route::get('/{id}/download', [BulkOperationController::class, 'download'])->name('download');
+            Route::delete('/{id}', [BulkOperationController::class, 'destroy'])->name('destroy');
+        });
+
+        // Version Control Routes
+        Route::prefix('versions')->name('versions.')->group(function (): void {
+            Route::get('/stats', [VersionController::class, 'stats'])->name('stats');
+            Route::get('/{type}/{id}', [VersionController::class, 'getVersions'])->name('list');
+            Route::get('/{versionId}', [VersionController::class, 'getVersion'])->name('show');
+            Route::get('/{v1}/{v2}/compare', [VersionController::class, 'compare'])->name('compare');
+            Route::post('/revert', [VersionController::class, 'revert'])->name('revert');
+            Route::get('/{type}/{id}/timeline', [VersionController::class, 'getTimeline'])->name('timeline');
+            Route::post('/{type}/{id}/prune', [VersionController::class, 'prune'])->name('prune');
+        });
+
+        // Audit Log Routes
+        Route::prefix('audit')->name('audit.')->group(function (): void {
+            Route::get('/', [AuditController::class, 'index'])->name('index');
+            Route::get('/stats', [AuditController::class, 'stats'])->name('stats');
+            Route::get('/export', [AuditController::class, 'export'])->name('export');
+            Route::get('/activity-report', [AuditController::class, 'activityReport'])->name('activity-report');
+            Route::get('/heatmap', [AuditController::class, 'heatmap'])->name('heatmap');
+            Route::post('/generate-report', [AuditController::class, 'generateReport'])->name('generate-report');
+            Route::post('/prune', [AuditController::class, 'prune'])->name('prune');
+            Route::get('/{id}', [AuditController::class, 'show'])->name('show');
+            Route::get('/user/{userId}', [AuditController::class, 'userActivity'])->name('user-activity');
+            Route::get('/user/{userId}/report', [AuditController::class, 'userActivityReport'])->name('user-activity-report');
+            Route::get('/ip/{ipAddress}', [AuditController::class, 'logsByIp'])->name('logs-by-ip');
+            Route::get('/action/{action}', [AuditController::class, 'logsByAction'])->name('logs-by-action');
         });
     });

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use App\Domain\Shared\Traits\HasInteractions;
 use Spatie\Translatable\HasTranslations;
 
 /**
@@ -32,7 +33,7 @@ use Spatie\Translatable\HasTranslations;
  */
 class Hadith extends Model
 {
-    use HasFactory, HasTranslations;
+    use HasFactory, HasTranslations, HasInteractions;
 
     protected $table = 'hadith';
 

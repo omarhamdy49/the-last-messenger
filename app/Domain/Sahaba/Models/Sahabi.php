@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Domain\Shared\Traits\HasInteractions;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Translatable\HasTranslations;
@@ -59,7 +60,7 @@ use Spatie\Translatable\HasTranslations;
  */
 class Sahabi extends Model implements HasMedia
 {
-    use HasFactory, HasTranslations, InteractsWithMedia, SoftDeletes;
+    use HasFactory, HasTranslations, InteractsWithMedia, SoftDeletes, HasInteractions;
 
     /**
      * The table associated with the model.

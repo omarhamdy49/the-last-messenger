@@ -7,6 +7,7 @@ namespace App\Domain\Hadith\Repositories;
 use App\Domain\Hadith\Enums\NarratorGrade;
 use App\Domain\Hadith\Models\HadithNarrator;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 /**
@@ -16,11 +17,81 @@ use Illuminate\Support\Collection;
 interface HadithNarratorRepositoryInterface
 {
     /**
+     * Get all narrators
+     *
+     * @param  array<string>  $columns
+     * @param  array<string>  $relations
+     * @return Collection<int, Model>
+     */
+    public function all(array $columns = ['*'], array $relations = []): Collection;
+
+    /**
+     * Find narrator by ID
+     *
+     * @param  array<string>  $columns
+     * @param  array<string>  $relations
+     */
+    public function find(int $id, array $columns = ['*'], array $relations = []): ?Model;
+
+    /**
+     * Find narrator by ID or fail
+     *
+     * @param  array<string>  $columns
+     * @param  array<string>  $relations
+     */
+    public function findOrFail(int $id, array $columns = ['*'], array $relations = []): Model;
+
+    /**
+     * Find narrator by column value
+     *
+     * @param  array<string>  $columns
+     * @param  array<string>  $relations
+     */
+    public function findBy(string $column, mixed $value, array $columns = ['*'], array $relations = []): ?Model;
+
+    /**
+     * Find narrators by column value
+     *
+     * @param  array<string>  $columns
+     * @param  array<string>  $relations
+     * @return Collection<int, Model>
+     */
+    public function findAllBy(string $column, mixed $value, array $columns = ['*'], array $relations = []): Collection;
+
+    /**
+     * Count narrators with optional conditions
+     *
+     * @param  array<string, mixed>  $conditions
+     */
+    public function count(array $conditions = []): int;
+
+    /**
+     * Check if narrator exists
+     */
+    public function exists(int $id): bool;
+
+    /**
+     * Get narrators with eager loading
+     *
+     * @param  array<string>  $relations
+     * @return Collection<int, Model>
+     */
+    public function with(array $relations): Collection;
+
+    /**
+     * Get paginated narrators (standard signature for compatibility)
+     *
+     * @param  array<string>  $columns
+     * @param  array<string>  $relations
+     */
+    public function paginate(int $perPage = 15, array $columns = ['*'], array $relations = []): LengthAwarePaginator;
+
+    /**
      * Get paginated narrators with filters
      *
      * @param  array<string, mixed>  $filters
      */
-    public function paginate(int $perPage = 15, array $filters = []): LengthAwarePaginator;
+    public function paginateWithFilters(int $perPage = 15, array $filters = []): LengthAwarePaginator;
 
     /**
      * Find narrator by ID
@@ -84,16 +155,28 @@ interface HadithNarratorRepositoryInterface
     public function create(array $data): HadithNarrator;
 
     /**
-     * Update narrator
+     * Update narrator by ID (standard signature for compatibility)
      *
      * @param  array<string, mixed>  $data
      */
-    public function update(HadithNarrator $narrator, array $data): HadithNarrator;
+    public function update(int $id, array $data): bool;
 
     /**
-     * Delete narrator
+     * Update narrator by model instance
+     *
+     * @param  array<string, mixed>  $data
      */
-    public function delete(HadithNarrator $narrator): bool;
+    public function updateNarrator(HadithNarrator $narrator, array $data): HadithNarrator;
+
+    /**
+     * Delete narrator by ID (standard signature for compatibility)
+     */
+    public function delete(int $id): bool;
+
+    /**
+     * Delete narrator by model instance
+     */
+    public function deleteNarrator(HadithNarrator $narrator): bool;
 
     /**
      * Bulk delete narrators

@@ -95,6 +95,52 @@ class RepositoryServiceProvider extends ServiceProvider
             \App\Domain\Shared\Repositories\AdminLogRepositoryInterface::class,
             \App\Domain\Shared\Repositories\AdminLogRepository::class
         );
+        $this->app->bind(
+            \App\Domain\Shared\Repositories\ImportRepositoryInterface::class,
+            \App\Domain\Shared\Repositories\ImportRepository::class
+        );
+
+        // Engagement Tracking Repositories
+        $this->app->bind(
+            \App\Domain\Shared\Repositories\UserInteractionRepositoryInterface::class,
+            \App\Domain\Shared\Repositories\UserInteractionRepository::class
+        );
+        $this->app->bind(
+            \App\Domain\Shared\Repositories\UserEngagementMetricRepositoryInterface::class,
+            \App\Domain\Shared\Repositories\UserEngagementMetricRepository::class
+        );
+
+        // Bulk Operations Repository
+        $this->app->bind(
+            \App\Domain\Shared\Repositories\BulkOperationRepositoryInterface::class,
+            \App\Domain\Shared\Repositories\BulkOperationRepository::class
+        );
+
+        // Content Scheduler Repository
+        $this->app->bind(
+            \App\Domain\Shared\Repositories\SchedulerRepositoryInterface::class,
+            \App\Domain\Shared\Repositories\SchedulerRepository::class
+        );
+
+        // Search & Filter Repositories
+        $this->app->bind(
+            \App\Domain\Shared\Repositories\SearchHistoryRepositoryInterface::class,
+            \App\Domain\Shared\Repositories\SearchHistoryRepository::class
+        );
+        $this->app->bind(
+            \App\Domain\Shared\Repositories\SavedFilterRepositoryInterface::class,
+            \App\Domain\Shared\Repositories\SavedFilterRepository::class
+        );
+
+        // Version Control & Audit Repositories
+        $this->app->bind(
+            \App\Domain\Shared\Repositories\ContentVersionRepositoryInterface::class,
+            \App\Domain\Shared\Repositories\ContentVersionRepository::class
+        );
+        $this->app->bind(
+            \App\Domain\Shared\Repositories\AuditLogRepositoryInterface::class,
+            \App\Domain\Shared\Repositories\AuditLogRepository::class
+        );
     }
 
     /**

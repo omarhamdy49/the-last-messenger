@@ -6,7 +6,6 @@ namespace App\Domain\Hadith\Repositories;
 
 use App\Domain\Hadith\Enums\NarratorGrade;
 use App\Domain\Hadith\Models\HadithNarrator;
-use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -17,12 +16,21 @@ use Illuminate\Support\Str;
  * Hadith Narrator Repository Implementation
  * Handles all database operations for hadith narrators with caching
  */
-class HadithNarratorRepository extends BaseRepository implements HadithNarratorRepositoryInterface
+class HadithNarratorRepository implements HadithNarratorRepositoryInterface
 {
     protected int $cacheTTL = 1800; // 30 minutes
 
+    protected Model $model;
+
+    protected string $cachePrefix = 'hadith_narrator';
+
+    public function __construct()
+    {
+        $this->model = $this->getModel();
+    }
+
     /**
-     * {@inheritdoc}
+     * Get model instance
      */
     protected function getModel(): Model
     {
@@ -30,9 +38,165 @@ class HadithNarratorRepository extends BaseRepository implements HadithNarratorR
     }
 
     /**
+     * Get cache key for this repository
+     */
+    protected function getCacheKey(string $key, array $params = []): string
+    {
+        $suffix = empty($params) ? $key : $key . ':' . implode(':', array_values($params));
+        return $this->cachePrefix . ':' . $suffix;
+    }
+
+    /**
      * {@inheritdoc}
      */
-    public function paginate(int $perPage = 15, array $filters = []): LengthAwarePaginator
+    public function all(array $columns = ['*'], array $relations = []): Collection
+    {
+        $cacheKey = $this->getCacheKey('all', compact('columns', 'relations'));
+
+        return Cache::tags(['hadith_narrators'])->remember(
+            $cacheKey,
+            $this->cacheTTL,
+            function () use ($columns, $relations) {
+                $query = $this->model->select($columns);
+
+                if (!empty($relations)) {
+                    $query->with($relations);
+                }
+
+                return $query->get();
+            }
+        );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function find(int $id, array $columns = ['*'], array $relations = []): ?Model
+    {
+        $cacheKey = $this->getCacheKey('find', compact('id', 'columns', 'relations'));
+
+        return Cache::tags(['hadith_narrators'])->remember(
+            $cacheKey,
+            $this->cacheTTL,
+            function () use ($id, $columns, $relations) {
+                $query = $this->model->select($columns);
+
+                if (!empty($relations)) {
+                    $query->with($relations);
+                }
+
+                return $query->find($id);
+            }
+        );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function findOrFail(int $id, array $columns = ['*'], array $relations = []): Model
+    {
+        $query = $this->model->select($columns);
+
+        if (!empty($relations)) {
+            $query->with($relations);
+        }
+
+        return $query->findOrFail($id);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function findBy(string $column, mixed $value, array $columns = ['*'], array $relations = []): ?Model
+    {
+        $cacheKey = $this->getCacheKey('findBy', compact('column', 'value', 'columns', 'relations'));
+
+        return Cache::tags(['hadith_narrators'])->remember(
+            $cacheKey,
+            $this->cacheTTL,
+            function () use ($column, $value, $columns, $relations) {
+                $query = $this->model->select($columns)->where($column, $value);
+
+                if (!empty($relations)) {
+                    $query->with($relations);
+                }
+
+                return $query->first();
+            }
+        );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function findAllBy(string $column, mixed $value, array $columns = ['*'], array $relations = []): Collection
+    {
+        $cacheKey = $this->getCacheKey('findAllBy', compact('column', 'value', 'columns', 'relations'));
+
+        return Cache::tags(['hadith_narrators'])->remember(
+            $cacheKey,
+            $this->cacheTTL,
+            function () use ($column, $value, $columns, $relations) {
+                $query = $this->model->select($columns)->where($column, $value);
+
+                if (!empty($relations)) {
+                    $query->with($relations);
+                }
+
+                return $query->get();
+            }
+        );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function count(array $conditions = []): int
+    {
+        $query = $this->model->query();
+
+        foreach ($conditions as $column => $value) {
+            $query->where($column, $value);
+        }
+
+        return $query->count();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function exists(int $id): bool
+    {
+        return $this->model->where('id', $id)->exists();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function with(array $relations): Collection
+    {
+        return $this->model->with($relations)->get();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function paginate(int $perPage = 15, array $columns = ['*'], array $relations = []): LengthAwarePaginator
+    {
+        $query = $this->model->select($columns);
+
+        if (!empty($relations)) {
+            $query->with($relations);
+        }
+
+        return $query->paginate($perPage);
+    }
+
+    /**
+     * {@inheritdoc}
+     * Paginate narrators with filters
+     */
+    public function paginateWithFilters(int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
         $query = $this->model->query();
 
@@ -274,8 +438,19 @@ class HadithNarratorRepository extends BaseRepository implements HadithNarratorR
 
     /**
      * {@inheritdoc}
+     * Update narrator by ID (standard signature for compatibility)
      */
-    public function update(HadithNarrator $narrator, array $data): HadithNarrator
+    public function update(int $id, array $data): bool
+    {
+        $narrator = $this->model->findOrFail($id);
+        return $this->updateNarrator($narrator, $data) !== null;
+    }
+
+    /**
+     * {@inheritdoc}
+     * Update narrator by model instance
+     */
+    public function updateNarrator(HadithNarrator $narrator, array $data): HadithNarrator
     {
         // Update slug if name changed
         if (isset($data['name']) && $data['name'] !== $narrator->name) {
@@ -292,8 +467,19 @@ class HadithNarratorRepository extends BaseRepository implements HadithNarratorR
 
     /**
      * {@inheritdoc}
+     * Delete narrator by ID (standard signature for compatibility)
      */
-    public function delete(HadithNarrator $narrator): bool
+    public function delete(int $id): bool
+    {
+        $narrator = $this->model->findOrFail($id);
+        return $this->deleteNarrator($narrator);
+    }
+
+    /**
+     * {@inheritdoc}
+     * Delete narrator by model instance
+     */
+    public function deleteNarrator(HadithNarrator $narrator): bool
     {
         $result = $narrator->delete();
 

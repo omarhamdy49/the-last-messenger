@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Domain\Shared\Traits\HasInteractions;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Translatable\HasTranslations;
@@ -41,7 +42,7 @@ use Spatie\Translatable\HasTranslations;
  */
 class Article extends Model implements HasMedia
 {
-    use HasFactory, HasTranslations, InteractsWithMedia, SoftDeletes;
+    use HasFactory, HasTranslations, InteractsWithMedia, SoftDeletes, HasInteractions;
 
     /**
      * The attributes that are mass assignable.
@@ -140,13 +141,7 @@ class Article extends Model implements HasMedia
         return $this->morphMany(Favorite::class, 'favorable');
     }
 
-    /**
-     * Get user interactions
-     */
-    public function interactions(): MorphMany
-    {
-        return $this->morphMany(UserInteraction::class, 'interactable');
-    }
+    // Note: interactions() method provided by HasInteractions trait
 
     /**
      * Scope: Published articles only

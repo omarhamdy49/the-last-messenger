@@ -30,7 +30,7 @@ class HadithNarratorService
      */
     public function paginate(int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
-        return $this->repository->paginate($perPage, $filters);
+        return $this->repository->paginateWithFilters($perPage, $filters);
     }
 
     /**
@@ -50,7 +50,7 @@ class HadithNarratorService
      */
     public function update(HadithNarrator $narrator, array $data): HadithNarrator
     {
-        return $this->repository->update($narrator, $data);
+        return $this->repository->updateNarrator($narrator, $data);
     }
 
     /**
@@ -58,7 +58,7 @@ class HadithNarratorService
      */
     public function delete(HadithNarrator $narrator): bool
     {
-        return $this->repository->delete($narrator);
+        return $this->repository->deleteNarrator($narrator);
     }
 
     /**

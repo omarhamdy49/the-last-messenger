@@ -26,11 +26,22 @@ class SurahService extends BaseService
     }
 
     /**
+     * Get paginated surahs (BaseService signature compatibility)
+     *
+     * @param  array<string>  $columns
+     * @param  array<string>  $relations
+     */
+    public function paginate(int $perPage = 15, array $columns = ['*'], array $relations = []): LengthAwarePaginator
+    {
+        return parent::paginate($perPage, $columns, $relations);
+    }
+
+    /**
      * Get paginated surahs with optional search and filters
      *
      * @param  array<string, mixed>  $filters
      */
-    public function paginate(
+    public function paginateWithFilters(
         int $perPage = 15,
         string $search = '',
         string $sortBy = 'number',
@@ -111,12 +122,22 @@ class SurahService extends BaseService
     }
 
     /**
-     * Update surah metadata
+     * Update surah metadata (BaseService signature compatibility)
      * Note: Surahs cannot be created or deleted (fixed 114 surahs)
      *
      * @param  array<string, mixed>  $data
      */
-    public function update(int $id, array $data): Surah
+    public function update(int $id, array $data): bool
+    {
+        return parent::update($id, $data);
+    }
+
+    /**
+     * Update surah metadata and return updated model
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function updateSurah(int $id, array $data): Surah
     {
         $this->repository->update($id, $data);
 

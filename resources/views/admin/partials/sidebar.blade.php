@@ -80,22 +80,6 @@
                         <span x-show="sidebarOpen" x-transition class="font-semibold">السلاسل</span>
                     </a>
 
-                    <!-- Hadith Books -->
-                    <a href="{{ route('admin.hadith-books.index') }}"
-                       class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.hadith-books.*') ? 'active' : '' }}"
-                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
-                        <i data-lucide="book-open" class="w-5 h-5 flex-shrink-0"></i>
-                        <span x-show="sidebarOpen" x-transition class="font-semibold">كتب الحديث</span>
-                    </a>
-
-                    <!-- Hadith Chapters -->
-                    <a href="{{ route('admin.hadith-chapters.index') }}"
-                       class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.hadith-chapters.*') ? 'active' : '' }}"
-                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
-                        <i data-lucide="book-marked" class="w-5 h-5 flex-shrink-0"></i>
-                        <span x-show="sidebarOpen" x-transition class="font-semibold">أبواب الحديث</span>
-                    </a>
-
                     <!-- Hadith -->
                     <a href="{{ route('admin.hadith.index') }}"
                        class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.hadith.*') ? 'active' : '' }}"
@@ -128,14 +112,6 @@
                                 {{ $stats['media'] ?? 0 }}
                             </span>
                         @endif
-                    </a>
-
-                    <!-- Media Episodes -->
-                    <a href="{{ route('admin.media-episodes.index') }}"
-                       class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.media-episodes.*') ? 'active' : '' }}"
-                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
-                        <i data-lucide="play-circle" class="w-5 h-5 flex-shrink-0"></i>
-                        <span x-show="sidebarOpen" x-transition class="font-semibold">حلقات الوسائط</span>
                     </a>
 
                     <!-- Seerah Events -->

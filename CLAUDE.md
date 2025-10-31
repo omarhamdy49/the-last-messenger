@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **The Last Messenger** is a comprehensive Islamic digital encyclopedia backend built with Laravel 12.x, focusing on Prophet Muhammad ﷺ biography (Seerah), Hadith database, Quran module, media programs, timeline events, and genealogy. This is the **Laravel backend** for the project, with a separate UI project containing HTML prototypes.
 
-**Current Status**: ~70% complete (7 of 10 major modules implemented)
+**Current Status**: ~75% complete (7 of 10 major modules + engagement tracking implemented)
 
 ## Architecture
 
@@ -24,6 +24,11 @@ app/
 │   ├── Quran/                # Quran verses & surahs (✅ Complete)
 │   ├── Genealogy/            # Family tree (✅ Complete)
 │   └── Shared/               # Base classes, contracts, traits
+│       ├── Models/           # UserInteraction, UserEngagementMetric
+│       ├── Services/         # InteractionService
+│       ├── Repositories/     # Interaction & Metric repositories
+│       ├── Traits/           # HasInteractions trait
+│       └── Enums/            # InteractionType enum
 ├── Http/                      # API layer
 │   ├── Controllers/Api/      # Thin controllers
 │   ├── Resources/            # JSON transformers
@@ -864,11 +869,94 @@ composer require barryvdh/laravel-debugbar --dev
 # Always use with() in repositories
 ```
 
+## User Engagement Tracking System
+
+A comprehensive engagement tracking system has been implemented to monitor user interactions across the platform.
+
+### Features
+- **Interaction Types**: view, like, share, bookmark, comment, download, print, search, progress, complete
+- **Engagement Scoring**: Weighted point system (view=1pt, like=5pts, share=10pts, complete=15pts, etc.)
+- **Streak Tracking**: Consecutive active days with automatic validation
+- **Time Metrics**: Track total time spent and average session duration
+- **Device Detection**: Auto-detect device type (mobile/tablet/desktop) and platform (iOS/Android/Web)
+- **Content Analytics**: View engagement stats for any content
+- **Leaderboards**: Top engaged users and most engaged content
+- **Privacy**: GDPR-compliant data export
+
+### API Endpoints
+```php
+POST   /api/interactions              // Record interaction
+GET    /api/engagement/me             // My engagement metrics
+GET    /api/interactions/me           // My activity history
+GET    /api/engagement/trends         // My engagement trends
+GET    /api/engagement/content/{type}/{id}  // Content engagement stats
+GET    /api/engagement/leaderboard    // Top users leaderboard
+GET    /api/engagement/stats          // Platform statistics
+GET    /api/engagement/export         // Export my data (GDPR)
+```
+
+### Using HasInteractions Trait
+Models with interaction tracking: Article, Hadith, MediaProgram, SeerahEvent, Sahabi
+
+```php
+// Record interaction
+$article->recordInteraction($user, InteractionType::VIEW, $metadata, $duration);
+
+// Check if user interacted
+$article->hasInteraction($user, InteractionType::LIKE); // returns bool
+
+// Get counts
+$article->getViewsCount();
+$article->getLikesCount();
+$article->getSharesCount();
+$article->getEngagementScore(); // Weighted score
+
+// Get statistics
+$article->getUniqueInteractorsCount();
+$article->getAverageTimeSpent();
+$article->getInteractionsByType(); // Array of counts
+```
+
+### InteractionService Methods
+```php
+use App\Domain\Shared\Services\InteractionService;
+
+$service = app(InteractionService::class);
+
+// Record interactions
+$service->recordView($user, $content, $metadata, $durationSeconds);
+$service->recordInteraction($user, $content, InteractionType::LIKE);
+
+// Get engagement data
+$service->getEngagementScore($user);
+$service->getContentEngagement($content);
+$service->getUserEngagementHistory($user);
+$service->getEngagementTrends($user, $days);
+
+// Get leaderboards
+$service->getMostEngagedUsers($limit);
+$service->getMostEngagedContent($limit);
+$service->getPlatformEngagementStats();
+```
+
+### Database Tables
+- **user_interactions**: Individual interactions (polymorphic, with device/platform tracking)
+- **user_engagement_metrics**: Aggregated per-user metrics (scores, streaks, time spent)
+
+### Caching
+- Interaction queries: 30 minutes
+- Leaderboards: 1 hour
+- Platform stats: 1 hour
+- Auto-invalidation on create/update/delete
+
+**See ENGAGEMENT_TRACKING_IMPLEMENTATION.md for complete documentation.**
+
 ## Related Documentation
 
 - **README.md** - Project overview and installation
 - **QUICK_START.md** - Quick start guide and common tasks
 - **PROJECT_STATUS_70_PERCENT.md** - Current implementation status
+- **ENGAGEMENT_TRACKING_IMPLEMENTATION.md** - Complete engagement tracking documentation
 - **MIGRATION_FIX.md** - JSON full-text search migration issue resolution
 - **MIGRATION_INSTRUCTIONS.md** - Database migration guide
 - **be-tasks.md** - Detailed implementation tasks (if exists)
@@ -988,4 +1076,5 @@ public function toArray(Request $request): array
 - Ensure any new code adheres to the project's coding standards and styles.
 - Ensure all new features are fully tested and works without errors.
 - always create tasks.md file to track all tasks and always update it with new progress to keep remaining tasks visible.
-- don't create summary document after each task
+-  **CRITICAL:**  don't create summary document after each task
+- user docker container to run mysql commands dev-mysql-db with username root and password omar and db_name=the_last_massenger

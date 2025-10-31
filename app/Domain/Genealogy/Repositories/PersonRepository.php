@@ -19,10 +19,8 @@ class PersonRepository extends BaseRepository implements PersonRepositoryInterfa
 {
     /**
      * Get the model class name
-     *
-     * @return \Illuminate\Database\Eloquent\Model
      */
-    protected function getModel()
+    protected function getModel(): \Illuminate\Database\Eloquent\Model
     {
         return new Person();
     }

@@ -57,11 +57,30 @@ class VerseService extends BaseService
     }
 
     /**
-     * Update existing verse with business logic
+     * Update existing verse (BaseService signature compatibility)
      *
      * @param  array<string, mixed>  $data
      */
-    public function update(int $id, array $data): Verse
+    public function update(int $id, array $data): bool
+    {
+        // Recalculate verse_key if surah or verse number changed
+        if (isset($data['surah_id']) || isset($data['verse_number'])) {
+            $verse = $this->repository->findOrFail($id);
+            $surahId = $data['surah_id'] ?? $verse->surah_id;
+            $verseNumber = $data['verse_number'] ?? $verse->verse_number;
+
+            $data['verse_key'] = $this->calculateVerseKey($surahId, $verseNumber);
+        }
+
+        return parent::update($id, $data);
+    }
+
+    /**
+     * Update existing verse and return updated model
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function updateVerse(int $id, array $data): Verse
     {
         // Recalculate verse_key if surah or verse number changed
         if (isset($data['surah_id']) || isset($data['verse_number'])) {

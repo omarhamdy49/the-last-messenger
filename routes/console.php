@@ -1,8 +1,61 @@
 <?php
 
+declare(strict_types=1);
+
+use App\Domain\Shared\Services\SchedulerService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+/**
+ * Content Scheduler Command
+ * Processes scheduled content for publishing/unpublishing/updating
+ * Runs every 5 minutes
+ */
+Artisan::command('content:process-scheduled', function () {
+    $this->info('Processing scheduled content...');
+
+    $schedulerService = app(SchedulerService::class);
+
+    try {
+        $results = $schedulerService->processScheduledContent();
+
+        $this->info("Processed: {$results['processed']}");
+        $this->info("Success: {$results['success']}");
+
+        if ($results['failed'] > 0) {
+            $this->warn("Failed: {$results['failed']}");
+
+            foreach ($results['errors'] as $error) {
+                $this->error("Schedule #{$error['schedule_id']}: {$error['error']}");
+            }
+        }
+
+        $this->newLine();
+        $this->info('✓ Content scheduling processing completed successfully');
+
+        return 0;
+    } catch (\Exception $e) {
+        $this->error('Failed to process scheduled content: '.$e->getMessage());
+
+        return 1;
+    }
+})->purpose('Process scheduled content for publishing');
+
+/**
+ * Schedule the content processor to run every 5 minutes
+ */
+Schedule::command('content:process-scheduled')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->onSuccess(function () {
+        \Illuminate\Support\Facades\Log::info('Scheduled content processed successfully');
+    })
+    ->onFailure(function () {
+        \Illuminate\Support\Facades\Log::error('Failed to process scheduled content');
+    });
