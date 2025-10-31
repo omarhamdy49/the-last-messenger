@@ -18,10 +18,6 @@
             </div>
 
             <div class="mt-4 md:mt-0 flex items-center space-x-3 space-x-reverse">
-                <button @click="toggleDarkMode" :title="darkMode ? 'الوضع الفاتح' : 'الوضع الداكن'" class="px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center space-x-2 space-x-reverse" :class="darkMode ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20' : 'bg-gray-200 hover:bg-gray-300 text-gray-800 border border-gray-300'">
-                    <i :data-lucide="darkMode ? 'sun' : 'moon'" class="w-4 h-4"></i>
-                </button>
-
                 <button @click="exportHadith" class="px-5 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center space-x-2 space-x-reverse backdrop-blur-sm hover:scale-105" :class="darkMode ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20' : 'bg-gray-200 hover:bg-gray-300 text-gray-800 border border-gray-300'">
                     <i data-lucide="download" class="w-4 h-4"></i>
                     <span>تصدير</span>
@@ -296,19 +292,15 @@
                         <th class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
                             <input type="checkbox" @change="toggleSelectAll" class="w-4 h-4 rounded text-blue-500 cursor-pointer" :class="darkMode ? 'border-white/20 bg-white/5' : 'border-gray-300 bg-white'">
                         </th>
-                        <th class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">رقم</th>
-                        <th class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">الكتاب</th>
-                        <th class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">الباب</th>
-                        <th class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">النص العربي</th>
-                        <th class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">الدرجة</th>
-                        <th class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">المشاهدات</th>
-                        <th class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">الإجراءات</th>
+                        <th class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider w-24" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">URN</th>
+                        <th class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider flex-1" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">النص العربي</th>
+                        <th class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider w-32" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y" :class="darkMode ? 'divide-white/10' : 'divide-gray-200'">
                     <template x-if="items.length === 0">
                         <tr>
-                            <td colspan="8" class="px-6 py-16 text-center">
+                            <td colspan="4" class="px-6 py-16 text-center">
                                 <div class="flex flex-col items-center justify-center">
                                     <div class="w-24 h-24 bg-gradient-to-br from-blue-500/20 to-green-500/20 rounded-full flex items-center justify-center mb-4">
                                         <i data-lucide="book-open" class="w-12 h-12" :class="darkMode ? 'text-gray-500' : 'text-gray-400'"></i>
@@ -326,47 +318,16 @@
 
                     <template x-for="hadith in items" :key="hadith.id">
                         <tr class="transition-colors duration-200 group" :class="darkMode ? 'hover:bg-white/5' : 'hover:bg-gray-50'">
-                            <td class="px-6 py-4">
+                            <td class="px-6 py-5">
                                 <input type="checkbox" :value="hadith.id" x-model="selectedHadith" class="w-4 h-4 rounded text-blue-500 cursor-pointer" :class="darkMode ? 'border-white/20 bg-white/5' : 'border-gray-300 bg-white'">
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center space-x-2">
-                                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-green-500 flex items-center justify-center">
-                                        <span class="text-white font-bold text-xs" x-text="hadith.hadith_number"></span>
-                                    </div>
-                                </div>
+                            <td class="px-6 py-5 whitespace-nowrap">
+                                <span class="text-sm font-mono" :class="darkMode ? 'text-gray-400' : 'text-gray-600'" x-text="hadith.urn || hadith.id"></span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex flex-col">
-                                    <span class="text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'" x-text="hadith.book?.name || '-'"></span>
-                                    <span class="text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-500'" x-text="'ID: ' + hadith.book?.id"></span>
-                                </div>
+                            <td class="px-6 py-5">
+                                <p class="text-right font-amiri text-base leading-relaxed line-clamp-4" :class="darkMode ? 'text-white' : 'text-gray-900'" dir="rtl" x-text="hadith.arabic_text"></p>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'" x-text="hadith.chapter?.name || 'بدون باب'"></span>
-                            </td>
-                            <td class="px-6 py-4 max-w-xs">
-                                <p class="text-right line-clamp-2 font-amiri text-sm" :class="darkMode ? 'text-white' : 'text-gray-900'" dir="rtl" x-text="hadith.arabic_text"></p>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span
-                                    class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold"
-                                    :class="{
-                                        'bg-green-500/20 text-green-400 border border-green-500/30': hadith.grade.value === 'sahih',
-                                        'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30': hadith.grade.value === 'hasan',
-                                        'bg-orange-500/20 text-orange-400 border border-orange-500/30': hadith.grade.value === 'daif',
-                                        'bg-red-500/20 text-red-400 border border-red-500/30': hadith.grade.value === 'weak'
-                                    }"
-                                    x-text="hadith.grade.label_arabic"
-                                ></span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center space-x-1" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                                    <i data-lucide="eye" class="w-4 h-4 text-blue-400"></i>
-                                    <span class="text-sm font-semibold" x-text="hadith.views_count"></span>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td class="px-6 py-5 whitespace-nowrap">
                                 <div class="flex items-center space-x-2 space-x-reverse">
                                     <a :href="`/su/portal/v1/admin/hadith/${hadith.id}/edit`" class="p-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg transition-all hover:scale-110" title="تعديل">
                                         <i data-lucide="edit" class="w-4 h-4"></i>
@@ -470,8 +431,7 @@ function hadithManager() {
         showAdvancedFilters: false,
         currentPage: 1,
         totalPages: 1,
-        perPage: 50,
-        darkMode: localStorage.getItem('darkMode') !== 'false',
+        perPage: 15,
         stats: {
             total: 0,
             sahih: 0,
@@ -489,29 +449,9 @@ function hadithManager() {
         },
 
         async init() {
-            this.applyDarkMode();
             await this.loadData();
             this.loading = false;
             this.$nextTick(() => lucide.createIcons());
-        },
-
-        toggleDarkMode() {
-            this.darkMode = !this.darkMode;
-            localStorage.setItem('darkMode', this.darkMode);
-            this.applyDarkMode();
-            this.$nextTick(() => lucide.createIcons());
-        },
-
-        applyDarkMode() {
-            if (this.darkMode) {
-                document.documentElement.classList.add('dark');
-                document.body.classList.add('bg-black');
-                document.body.classList.remove('bg-gray-50');
-            } else {
-                document.documentElement.classList.remove('dark');
-                document.body.classList.add('bg-gray-50');
-                document.body.classList.remove('bg-black');
-            }
         },
 
         async loadData() {
