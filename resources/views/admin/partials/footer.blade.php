@@ -6,7 +6,7 @@
             <div class="text-center md:text-right mb-4 md:mb-0">
                 <p class="text-sm transition-colors"
                    :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                    © {{ date('Y') }} <span class="gradient-text font-bold">آخر الرسل</span> - جميع الحقوق محفوظة
+                    © {{ date('Y') }} <span class="gradient-text font-bold">خاتَمُ المُرْسَلِين</span> - جميع الحقوق محفوظة
                 </p>
             </div>
 

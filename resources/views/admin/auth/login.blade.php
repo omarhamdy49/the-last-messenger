@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>تسجيل الدخول - آخر الرسل</title>
+    <title>تسجيل الدخول - خاتَمُ المُرْسَلِين</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -134,7 +134,7 @@
             <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl glass mb-4 animate-float">
                 <i data-lucide="book-open" class="w-10 h-10 text-white"></i>
             </div>
-            <h1 class="text-4xl font-bold text-white mb-2">آخر الرسل</h1>
+            <h1 class="text-4xl font-bold text-white mb-2">خاتَمُ المُرْسَلِين</h1>
             <p class="text-white/80 text-lg">لوحة التحكم الإدارية</p>
         </div>
 
@@ -255,7 +255,7 @@
 
         <!-- Footer -->
         <div class="text-center mt-8 text-white/70 text-sm">
-            <p>© {{ date('Y') }} آخر الرسل - جميع الحقوق محفوظة</p>
+            <p>© {{ date('Y') }} خاتَمُ المُرْسَلِين - جميع الحقوق محفوظة</p>
         </div>
     </div>
 

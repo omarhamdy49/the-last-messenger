@@ -19,7 +19,7 @@
                             <i data-lucide="book-open" class="w-6 h-6 text-white"></i>
                         </div>
                         <div x-show="sidebarOpen" x-transition class="overflow-hidden">
-                            <h1 class="text-xl font-bold transition-colors" :class="darkMode ? 'text-white' : 'text-gray-900'">آخر الرسل</h1>
+                            <h1 class="text-xl font-bold transition-colors" :class="darkMode ? 'text-white' : 'text-gray-900'">خاتَمُ المُرْسَلِين</h1>
                             <p class="text-xs transition-colors" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">لوحة التحكم</p>
                         </div>
                     </a>
