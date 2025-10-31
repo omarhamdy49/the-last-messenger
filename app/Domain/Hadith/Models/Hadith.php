@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Spatie\Translatable\HasTranslations;
 
@@ -92,6 +93,21 @@ class Hadith extends Model
     public function chapter(): BelongsTo
     {
         return $this->belongsTo(HadithChapter::class, 'chapter_id');
+    }
+
+    /**
+     * Get all narrators in the chain for this hadith
+     */
+    public function narrators(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            HadithNarrator::class,
+            'hadith_narrator_chain',
+            'hadith_id',
+            'narrator_id'
+        )
+            ->withPivot('position')
+            ->orderByPivot('position');
     }
 
     /**
