@@ -24,6 +24,7 @@ class Person extends Model
 
     protected $fillable = [
         'name',
+        'slug',
         'title',
         'biography',
         'person_type',
@@ -42,6 +43,13 @@ class Person extends Model
         'occupation',
         'is_verified',
         'notes',
+        'is_featured',
+        'kunya',
+        'laqab',
+        'full_name',
+        'profile_image',
+        'gallery',
+        'generation',
     ];
 
     public $translatable = [

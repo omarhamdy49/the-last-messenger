@@ -27,12 +27,8 @@ class TagController extends Controller
     public function __construct(
         protected TagService $service
     ) {
-        // Protect routes - only authenticated admins with permission
+        // Protect routes - only authenticated admins
         $this->middleware('auth');
-        $this->middleware('permission:tags.view')->only(['index', 'show']);
-        $this->middleware('permission:tags.create')->only(['create', 'store']);
-        $this->middleware('permission:tags.update')->only(['edit', 'update']);
-        $this->middleware('permission:tags.delete')->only(['destroy', 'bulkDelete']);
     }
 
     /**

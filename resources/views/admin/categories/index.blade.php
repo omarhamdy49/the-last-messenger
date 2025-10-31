@@ -8,34 +8,34 @@
     <div class="flex justify-between items-center mb-8">
         <div>
             <h1 class="text-3xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                Categories
+                الفئات
             </h1>
             <p class="mt-2" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                Manage all categories in the system
+                إدارة جميع الفئات في النظام
             </p>
         </div>
         <a href="{{ route('admin.categories.create') }}"
            class="bg-gradient-to-r from-[#0056b3] to-[#218838] text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all">
-            + Create New
+            + إنشاء فئة جديدة
         </a>
     </div>
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="glass-light rounded-lg p-6" :class="darkMode ? 'glass-dark' : ''">
-            <p class="text-sm font-semibold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">Total Categories</p>
+            <p class="text-sm font-semibold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">إجمالي الفئات</p>
             <p class="text-4xl font-bold mt-2 text-[#0056b3]" x-text="stats.total ?? 0"></p>
         </div>
         <div class="glass-light rounded-lg p-6" :class="darkMode ? 'glass-dark' : ''">
-            <p class="text-sm font-semibold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">Blog</p>
+            <p class="text-sm font-semibold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">مقالات</p>
             <p class="text-4xl font-bold mt-2 text-blue-600" x-text="stats.blog ?? 0"></p>
         </div>
         <div class="glass-light rounded-lg p-6" :class="darkMode ? 'glass-dark' : ''">
-            <p class="text-sm font-semibold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">Media</p>
+            <p class="text-sm font-semibold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">وسائط</p>
             <p class="text-4xl font-bold mt-2 text-green-600" x-text="stats.media ?? 0"></p>
         </div>
         <div class="glass-light rounded-lg p-6" :class="darkMode ? 'glass-dark' : ''">
-            <p class="text-sm font-semibold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">Timeline</p>
+            <p class="text-sm font-semibold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">الخط الزمني</p>
             <p class="text-4xl font-bold mt-2 text-teal-600" x-text="stats.timeline ?? 0"></p>
         </div>
     </div>
@@ -45,39 +45,39 @@
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
                 <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Search
+                    البحث
                 </label>
                 <input type="text"
                        x-model="search"
-                       placeholder="Search categories..."
+                       placeholder="ابحث في الفئات..."
                        @input="debounce(() => loadData(), 500)"
                        class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3]"
                        :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
             </div>
             <div>
                 <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Type
+                    النوع
                 </label>
                 <select x-model="filters.type"
                         @change="loadData()"
                         class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3]"
                         :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                    <option value="">All Types</option>
-                    <option value="blog">Blog</option>
-                    <option value="media">Media</option>
-                    <option value="timeline">Timeline</option>
+                    <option value="">جميع الأنواع</option>
+                    <option value="blog">مقالات</option>
+                    <option value="media">وسائط</option>
+                    <option value="timeline">خط زمني</option>
                 </select>
             </div>
             <div>
                 <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Parent
+                    الفئة الأب
                 </label>
                 <select x-model="filters.parent_id"
                         @change="loadData()"
                         class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3]"
                         :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                    <option value="">All Categories</option>
-                    <option value="root">Root Only</option>
+                    <option value="">جميع الفئات</option>
+                    <option value="root">الفئات الرئيسية فقط</option>
                 </select>
             </div>
             <div>
@@ -86,7 +86,7 @@
                 </label>
                 <button @click="loadData()"
                         class="w-full bg-[#0056b3] text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition">
-                    Search
+                    بحث
                 </button>
             </div>
         </div>
@@ -96,11 +96,11 @@
     <div class="glass-light rounded-lg p-4 mb-6" :class="darkMode ? 'glass-dark' : ''" x-show="selectedCount > 0">
         <div class="flex items-center justify-between">
             <span class="font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                <span x-text="selectedCount"></span> item(s) selected
+                تم تحديد <span x-text="selectedCount"></span> عنصر
             </span>
             <button @click="bulkDelete()"
                     class="bg-red-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-red-700 transition">
-                Delete Selected
+                حذف المحدد
             </button>
         </div>
     </div>
@@ -124,12 +124,12 @@
                         <th class="px-6 py-3 text-right text-sm font-semibold">
                             <input type="checkbox" @change="toggleSelectAll()" class="rounded">
                         </th>
-                        <th class="px-6 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">Name</th>
-                        <th class="px-6 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">Type</th>
-                        <th class="px-6 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">Children</th>
-                        <th class="px-6 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">Articles</th>
-                        <th class="px-6 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">Order</th>
-                        <th class="px-6 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">Actions</th>
+                        <th class="px-6 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الاسم</th>
+                        <th class="px-6 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">النوع</th>
+                        <th class="px-6 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الفئات الفرعية</th>
+                        <th class="px-6 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">المقالات</th>
+                        <th class="px-6 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الترتيب</th>
+                        <th class="px-6 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -141,7 +141,7 @@
                             <td class="px-6 py-4 font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">
                                 <span :style="`margin-right: ${(item.depth ?? 0) * 20}px`"></span>
                                 <i :data-lucide="item.icon ?? 'folder'" class="w-4 h-4 inline ml-2"></i>
-                                <span x-text="item.name?.en || item.name?.ar || '—'"></span>
+                                <span x-text="item.name?.ar || item.name?.en || '—'"></span>
                             </td>
                             <td class="px-6 py-4">
                                 <span class="px-2 py-1 rounded-full text-xs font-semibold"
@@ -154,15 +154,15 @@
                             <td class="px-6 py-4">
                                 <a :href="`/su/portal/v1/admin/categories/${item.id}/edit`"
                                    class="text-[#0056b3] hover:text-blue-700 font-semibold text-sm ml-3">
-                                    Edit
+                                    تحرير
                                 </a>
                                 <a :href="`/su/portal/v1/admin/categories/${item.id}`"
                                    class="text-[#64CCC5] hover:text-teal-700 font-semibold text-sm ml-3">
-                                    View
+                                    عرض
                                 </a>
                                 <button @click="deleteItem(item.id)"
                                         class="text-red-600 hover:text-red-700 font-semibold text-sm ml-3">
-                                    Delete
+                                    حذف
                                 </button>
                             </td>
                         </tr>
@@ -174,7 +174,7 @@
         <template x-if="!loading && items.length === 0">
             <div class="p-8 text-center">
                 <p :class="darkMode ? 'text-gray-400' : 'text-gray-600'" class="text-lg">
-                    No categories found
+                    لم يتم العثور على فئات
                 </p>
             </div>
         </template>
@@ -183,22 +183,22 @@
     <!-- Pagination -->
     <div class="mt-6 flex justify-between items-center">
         <p :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-            Showing <span x-text="(currentPage - 1) * perPage + 1"></span>
-            to <span x-text="Math.min(currentPage * perPage, totalItems)"></span>
-            of <span x-text="totalItems"></span> items
+            عرض <span x-text="(currentPage - 1) * perPage + 1"></span>
+            إلى <span x-text="Math.min(currentPage * perPage, totalItems)"></span>
+            من <span x-text="totalItems"></span> عنصر
         </p>
         <div class="flex gap-2">
             <button @click="previousPage()"
                     :disabled="currentPage === 1"
                     :class="currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''"
                     class="px-4 py-2 bg-[#0056b3] text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition">
-                Previous
+                السابق
             </button>
             <button @click="nextPage()"
                     :disabled="currentPage >= totalPages"
                     :class="currentPage >= totalPages ? 'opacity-50 cursor-not-allowed' : ''"
                     class="px-4 py-2 bg-[#0056b3] text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition">
-                Next
+                التالي
             </button>
         </div>
     </div>
@@ -289,7 +289,7 @@ function categoryManager() {
         },
 
         async deleteItem(id) {
-            if (!confirm('Are you sure you want to delete this category?')) return;
+            if (!confirm('هل أنت متأكد من رغبتك في حذف هذه الفئة؟')) return;
 
             try {
                 const response = await fetch(`/su/portal/v1/admin/categories/${id}`, {
@@ -302,7 +302,7 @@ function categoryManager() {
 
                 if (response.ok) {
                     this.loadData();
-                    alert('Category deleted successfully');
+                    alert('تم حذف الفئة بنجاح');
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -310,7 +310,7 @@ function categoryManager() {
         },
 
         async bulkDelete() {
-            if (!confirm(`Delete ${this.selected.length} categories?`)) return;
+            if (!confirm(`حذف ${this.selected.length} فئة؟`)) return;
 
             try {
                 const response = await fetch(`/su/portal/v1/admin/categories/bulk-delete`, {
@@ -327,7 +327,7 @@ function categoryManager() {
                     this.selected = [];
                     this.selectedCount = 0;
                     this.loadData();
-                    alert('Categories deleted successfully');
+                    alert('تم حذف الفئات بنجاح');
                 }
             } catch (error) {
                 console.error('Error:', error);

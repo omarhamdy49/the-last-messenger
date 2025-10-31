@@ -27,8 +27,7 @@ class BulkOperationController extends Controller
     public function __construct(
         private readonly BulkOperationService $bulkOperationService
     ) {
-        $this->middleware('auth:sanctum');
-        $this->middleware('permission:manage_content');
+        $this->middleware('auth');
     }
 
     /**

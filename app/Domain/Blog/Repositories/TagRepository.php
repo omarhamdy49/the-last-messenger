@@ -97,7 +97,9 @@ class TagRepository implements TagRepositoryInterface
     public function create(array $data): Model
     {
         $tag = $this->model::create($data);
-        Cache::tags(['tags'])->flush();
+        Cache::forget('tags:count');
+        Cache::forget('tags:total_usage');
+        Cache::forget('tags:most_used');
 
         return $tag;
     }
@@ -113,7 +115,9 @@ class TagRepository implements TagRepositoryInterface
     {
         $tag = $this->findOrFail($id);
         $tag->update($data);
-        Cache::tags(['tags'])->flush();
+        Cache::forget('tags:count');
+        Cache::forget('tags:total_usage');
+        Cache::forget('tags:most_used');
 
         return $tag->fresh();
     }
@@ -132,7 +136,9 @@ class TagRepository implements TagRepositoryInterface
         $tag->articles()->detach();
 
         $result = $tag->delete();
-        Cache::tags(['tags'])->flush();
+        Cache::forget('tags:count');
+        Cache::forget('tags:total_usage');
+        Cache::forget('tags:most_used');
 
         return $result;
     }
@@ -152,7 +158,9 @@ class TagRepository implements TagRepositoryInterface
             ->delete();
 
         $count = $this->model::whereIn('id', $ids)->delete();
-        Cache::tags(['tags'])->flush();
+        Cache::forget('tags:count');
+        Cache::forget('tags:total_usage');
+        Cache::forget('tags:most_used');
 
         return $count;
     }
@@ -175,7 +183,7 @@ class TagRepository implements TagRepositoryInterface
      */
     public function count(): int
     {
-        return Cache::tags(['tags'])->remember(
+        return Cache::remember(
             'tags:count',
             now()->addMinutes(15),
             fn () => $this->model::count()
@@ -189,7 +197,7 @@ class TagRepository implements TagRepositoryInterface
      */
     public function getTotalUsageCount(): int
     {
-        return Cache::tags(['tags'])->remember(
+        return Cache::remember(
             'tags:total_usage',
             now()->addMinutes(15),
             fn () => DB::table('taggables')
@@ -206,7 +214,7 @@ class TagRepository implements TagRepositoryInterface
      */
     public function getMostUsedTag(): ?Model
     {
-        return Cache::tags(['tags'])->remember(
+        return Cache::remember(
             'tags:most_used',
             now()->addMinutes(15),
             fn () => $this->model::withCount('articles')

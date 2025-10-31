@@ -188,7 +188,11 @@ class CategoryRepository extends BaseRepository implements CategoryRepositoryInt
      */
     public function clearCache(): void
     {
-        Cache::tags(['categories'])->flush();
+        Cache::forget('categories:all');
+        Cache::forget('categories:published');
+        Cache::forget('categories:by_type');
+        Cache::forget('categories:tree');
+        Cache::forget('categories:siblings');
     }
 
     /**

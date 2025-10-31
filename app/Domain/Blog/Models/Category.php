@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 use Spatie\Translatable\HasTranslations;
 
 /**
@@ -69,6 +70,31 @@ class Category extends Model
      * @var array<string>
      */
     public array $translatable = ['name', 'description'];
+
+    /**
+     * Boot the model
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        // Auto-generate slug from English name if not provided
+        static::creating(function ($model) {
+            if (empty($model->slug)) {
+                // Generate slug from English name, fallback to Arabic
+                $name = $model->name['en'] ?? $model->name['ar'] ?? 'category';
+                $model->slug = Str::slug($name);
+            }
+        });
+
+        // Update slug if name changes
+        static::updating(function ($model) {
+            if ($model->isDirty('name') && empty($model->slug)) {
+                $name = $model->name['en'] ?? $model->name['ar'] ?? 'category';
+                $model->slug = Str::slug($name);
+            }
+        });
+    }
 
     /**
      * Get parent category

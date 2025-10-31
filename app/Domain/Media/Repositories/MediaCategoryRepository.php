@@ -160,6 +160,7 @@ class MediaCategoryRepository extends BaseRepository implements MediaCategoryRep
      */
     public function clearCache(): void
     {
-        Cache::tags(['media_categories'])->flush();
+        Cache::forget('media_categories:all');
+        Cache::forget('media_categories:featured');
     }
 }

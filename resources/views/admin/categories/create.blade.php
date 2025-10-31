@@ -3,7 +3,7 @@
 @section('title', 'Create Category')
 
 @section('content')
-<div class="container mx-auto px-4 py-8" x-data="{ activeLanguage: 'en', darkMode: localStorage.getItem('darkMode') === 'true' }">
+<div class="container mx-auto px-4 py-8" x-data="{ activeLanguage: 'ar', darkMode: localStorage.getItem('darkMode') === 'true' }">
     <!-- Header -->
     <div class="mb-8">
         <h1 class="text-3xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">
@@ -14,8 +14,25 @@
         </p>
     </div>
 
+    <!-- Error Messages -->
+    @if ($errors->any())
+        <div class="mb-6 p-4 bg-red-50 border-r-4 border-red-500 text-red-800 rounded-lg" :class="darkMode ? 'bg-red-900/20 text-red-300 border-red-400' : ''">
+            <div class="flex items-start">
+                <i data-lucide="alert-circle" class="w-5 h-5 mt-0.5 mr-3 flex-shrink-0"></i>
+                <div>
+                    <h3 class="font-semibold mb-2">Validation Errors</h3>
+                    <ul class="list-disc list-inside space-y-1 text-sm">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- Form -->
-    <form action="{{ route('admin.categories.store') }}" method="POST"
+    <form action="{{ route('admin.categories.store') }}" method="POST" novalidate
           class="glass-light rounded-lg p-8 max-w-4xl" :class="darkMode ? 'glass-dark' : ''">
         @csrf
 
@@ -34,7 +51,7 @@
 
         <!-- Multi-language Fields -->
         @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $lang)
-            <div x-show="activeLanguage === '{{ $lang }}'" class="space-y-6">
+            <div x-show="activeLanguage === '{{ $lang }}'" x-cloak class="space-y-6">
                 <!-- Name Field -->
                 <div>
                     <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -43,7 +60,7 @@
                     <input type="text"
                            name="name[{{ $lang }}]"
                            value="{{ old("name.$lang") }}"
-                           {{ in_array($lang, ['ar', 'en']) ? 'required' : '' }}
+                           required
                            class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3] @error("name.$lang") border-red-500 @enderror"
                            :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
                     @error("name.$lang")
@@ -168,6 +185,41 @@
 @push('scripts')
 <script>
     lucide.createIcons();
+
+    // Form validation for multi-language fields
+    document.querySelector('form')?.addEventListener('submit', function(e) {
+        const form = this;
+        let isValid = true;
+        const errors = [];
+
+        // Check Arabic name (required)
+        const arName = form.querySelector('input[name="name[ar]"]');
+        if (!arName || arName.value.trim() === '') {
+            isValid = false;
+            errors.push('Arabic name is required');
+        }
+
+        // Check English name (required)
+        const enName = form.querySelector('input[name="name[en]"]');
+        if (!enName || enName.value.trim() === '') {
+            isValid = false;
+            errors.push('English name is required');
+        }
+
+        // Check type field (required)
+        const typeSelect = form.querySelector('select[name="type"]');
+        if (!typeSelect || typeSelect.value === '') {
+            isValid = false;
+            errors.push('Type is required');
+        }
+
+        if (!isValid) {
+            e.preventDefault();
+            e.stopPropagation();
+            alert('Validation errors:\n\n' + errors.join('\n'));
+            return false;
+        }
+    });
 </script>
 @endpush
 @endsection

@@ -44,7 +44,7 @@ class ImportController extends Controller
         private readonly ImportRepositoryInterface $importRepository,
         private readonly AdminLoggerService $adminLogger
     ) {
-        $this->middleware('auth:sanctum');
+        $this->middleware('auth');
     }
 
     /**

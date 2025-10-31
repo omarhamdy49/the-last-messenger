@@ -158,6 +158,7 @@ class SeriesRepository extends BaseRepository implements SeriesRepositoryInterfa
      */
     public function clearCache(): void
     {
-        Cache::tags(['series'])->flush();
+        Cache::forget('series:all');
+        Cache::forget('series:featured');
     }
 }

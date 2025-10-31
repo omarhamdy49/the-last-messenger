@@ -350,6 +350,8 @@ class ArticleRepository extends BaseRepository implements ArticleRepositoryInter
      */
     public function clearCache(): void
     {
-        Cache::tags(['articles'])->flush();
+        Cache::forget('articles:featured');
+        Cache::forget('articles:recent');
+        Cache::forget('articles:trending');
     }
 }

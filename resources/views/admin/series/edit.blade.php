@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container mx-auto px-4 py-8" x-data="{
-    activeLanguage: 'en',
+    activeLanguage: 'ar',
     darkMode: localStorage.getItem('darkMode') === 'true',
     thumbnailPreview: '{{ $series->thumbnail ?? '' }}',
     deleteThumbnail: false
@@ -41,19 +41,16 @@
         <!-- Multi-language Fields -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $lang)
-                <div x-show="activeLanguage === '{{ $lang }}'">
+                <div x-show="activeLanguage === '{{ $lang }}'" x-cloak>
                     <!-- Title Field -->
                     <div class="mb-4">
                         <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            Title ({{ strtoupper($lang) }})
-                            @if(in_array($lang, ['ar', 'en']))
-                                <span class="text-red-500">*</span>
-                            @endif
+                            Title ({{ strtoupper($lang) }}) <span class="text-red-500">*</span>
                         </label>
                         <input type="text"
                                name="title[{{ $lang }}]"
                                value="{{ old("title.$lang", $series->title[$lang] ?? '') }}"
-                               @if(in_array($lang, ['ar', 'en'])) required @endif
+                               required
                                class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3] transition-colors"
                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
                         @error("title.$lang")
@@ -62,7 +59,7 @@
                     </div>
                 </div>
 
-                <div x-show="activeLanguage === '{{ $lang }}'">
+                <div x-show="activeLanguage === '{{ $lang }}'" x-cloak>
                     <!-- Description Field -->
                     <div class="mb-4">
                         <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">

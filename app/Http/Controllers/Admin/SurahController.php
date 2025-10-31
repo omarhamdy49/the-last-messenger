@@ -44,7 +44,7 @@ class SurahController extends Controller
         $filters = $request->only(['revelation_place']);
 
         // Fetch paginated data with filters applied
-        $surahs = $this->surahService->paginate(
+        $surahs = $this->surahService->paginateWithFilters(
             perPage: $perPage,
             search: $search,
             sortBy: $sortBy,

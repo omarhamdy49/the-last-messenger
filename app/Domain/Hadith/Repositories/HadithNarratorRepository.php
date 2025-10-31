@@ -53,7 +53,7 @@ class HadithNarratorRepository implements HadithNarratorRepositoryInterface
     {
         $cacheKey = $this->getCacheKey('all', compact('columns', 'relations'));
 
-        return Cache::tags(['hadith_narrators'])->remember(
+        return Cache::remember(
             $cacheKey,
             $this->cacheTTL,
             function () use ($columns, $relations) {
@@ -75,7 +75,7 @@ class HadithNarratorRepository implements HadithNarratorRepositoryInterface
     {
         $cacheKey = $this->getCacheKey('find', compact('id', 'columns', 'relations'));
 
-        return Cache::tags(['hadith_narrators'])->remember(
+        return Cache::remember(
             $cacheKey,
             $this->cacheTTL,
             function () use ($id, $columns, $relations) {
@@ -111,7 +111,7 @@ class HadithNarratorRepository implements HadithNarratorRepositoryInterface
     {
         $cacheKey = $this->getCacheKey('findBy', compact('column', 'value', 'columns', 'relations'));
 
-        return Cache::tags(['hadith_narrators'])->remember(
+        return Cache::remember(
             $cacheKey,
             $this->cacheTTL,
             function () use ($column, $value, $columns, $relations) {
@@ -133,7 +133,7 @@ class HadithNarratorRepository implements HadithNarratorRepositoryInterface
     {
         $cacheKey = $this->getCacheKey('findAllBy', compact('column', 'value', 'columns', 'relations'));
 
-        return Cache::tags(['hadith_narrators'])->remember(
+        return Cache::remember(
             $cacheKey,
             $this->cacheTTL,
             function () use ($column, $value, $columns, $relations) {
@@ -235,7 +235,7 @@ class HadithNarratorRepository implements HadithNarratorRepositoryInterface
     {
         $cacheKey = $this->getCacheKey('narrator', ['id' => $id]);
 
-        return Cache::tags(['hadith_narrators'])->remember(
+        return Cache::remember(
             $cacheKey,
             $this->cacheTTL,
             fn () => $this->model->withCount('hadiths')->find($id)
@@ -261,7 +261,7 @@ class HadithNarratorRepository implements HadithNarratorRepositoryInterface
     {
         $cacheKey = $this->getCacheKey('byGrade', ['grade' => $grade->value]);
 
-        return Cache::tags(['hadith_narrators'])->remember(
+        return Cache::remember(
             $cacheKey,
             $this->cacheTTL,
             fn () => $this->model->byGrade($grade)
@@ -279,7 +279,7 @@ class HadithNarratorRepository implements HadithNarratorRepositoryInterface
     {
         $cacheKey = $this->getCacheKey('byEra', ['era' => $era]);
 
-        return Cache::tags(['hadith_narrators'])->remember(
+        return Cache::remember(
             $cacheKey,
             $this->cacheTTL,
             fn () => $this->model->byEra($era)
@@ -297,7 +297,7 @@ class HadithNarratorRepository implements HadithNarratorRepositoryInterface
     {
         $cacheKey = $this->getCacheKey('byCountry', ['country' => $country]);
 
-        return Cache::tags(['hadith_narrators'])->remember(
+        return Cache::remember(
             $cacheKey,
             $this->cacheTTL,
             fn () => $this->model->byCountry($country)
@@ -359,7 +359,7 @@ class HadithNarratorRepository implements HadithNarratorRepositoryInterface
     {
         $cacheKey = $this->getCacheKey('hadithCount', ['id' => $narratorId]);
 
-        return Cache::tags(['hadith_narrators'])->remember(
+        return Cache::remember(
             $cacheKey,
             $this->cacheTTL,
             fn () => $this->model->find($narratorId)?->hadiths()->count() ?? 0
@@ -373,7 +373,7 @@ class HadithNarratorRepository implements HadithNarratorRepositoryInterface
     {
         $cacheKey = $this->getCacheKey('countByGrade');
 
-        return Cache::tags(['hadith_narrators'])->remember(
+        return Cache::remember(
             $cacheKey,
             $this->cacheTTL,
             function () {
@@ -393,7 +393,7 @@ class HadithNarratorRepository implements HadithNarratorRepositoryInterface
     {
         $cacheKey = $this->getCacheKey('countByEra');
 
-        return Cache::tags(['hadith_narrators'])->remember(
+        return Cache::remember(
             $cacheKey,
             $this->cacheTTL,
             function () {
@@ -507,7 +507,7 @@ class HadithNarratorRepository implements HadithNarratorRepositoryInterface
     {
         $cacheKey = $this->getCacheKey('active');
 
-        return Cache::tags(['hadith_narrators'])->remember(
+        return Cache::remember(
             $cacheKey,
             $this->cacheTTL,
             fn () => $this->model->active()
@@ -524,7 +524,7 @@ class HadithNarratorRepository implements HadithNarratorRepositoryInterface
     {
         $cacheKey = $this->getCacheKey('trustworthy');
 
-        return Cache::tags(['hadith_narrators'])->remember(
+        return Cache::remember(
             $cacheKey,
             $this->cacheTTL,
             fn () => $this->model->trustworthy()
@@ -540,7 +540,27 @@ class HadithNarratorRepository implements HadithNarratorRepositoryInterface
      */
     public function clearCache(): void
     {
-        Cache::tags(['hadith_narrators'])->flush();
+        // Clear specific cache keys used in this repository
+        // Note: This is a simplified approach. In production, consider using cache tags
+        // or maintaining a list of active cache keys for more efficient invalidation.
+
+        // Clear common cache keys
+        Cache::forget($this->getCacheKey('active'));
+        Cache::forget($this->getCacheKey('trustworthy'));
+        Cache::forget($this->getCacheKey('countByGrade'));
+        Cache::forget($this->getCacheKey('countByEra'));
+
+        // Note: Dynamic cache keys (all, find, findBy, findAllBy, narrator, byGrade, byEra,
+        // byCountry, hadithCount) with parameters cannot be easily invalidated individually.
+        // Consider implementing a pattern-based cache clearing mechanism or using Redis
+        // SCAN command to find and delete keys matching patterns like:
+        // - hadith_narrator:all:*
+        // - hadith_narrator:find:*
+        // - hadith_narrator:narrator:*
+        // - hadith_narrator:byGrade:*
+        // - hadith_narrator:byEra:*
+        // - hadith_narrator:byCountry:*
+        // - hadith_narrator:hadithCount:*
     }
 
     /**

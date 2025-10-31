@@ -3,7 +3,7 @@
 @section('title', 'Edit Tag')
 
 @section('content')
-<div class="container mx-auto px-4 py-8" x-data="{ activeLanguage: 'en', darkMode: localStorage.getItem('darkMode') === 'true' }">
+<div class="container mx-auto px-4 py-8" x-data="{ activeLanguage: 'ar', darkMode: localStorage.getItem('darkMode') === 'true' }">
     <!-- Header -->
     <div class="mb-8">
         <h1 class="text-3xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">
@@ -15,7 +15,7 @@
     </div>
 
     <!-- Form -->
-    <form action="{{ route('admin.tags.update', $tag->id) }}" method="POST"
+    <form action="{{ route('admin.tags.update', $tag->id) }}" method="POST" novalidate
           class="glass-light rounded-lg p-8 max-w-4xl" :class="darkMode ? 'glass-dark' : ''">
         @csrf
         @method('PUT')
@@ -45,7 +45,7 @@
 
         <!-- Multi-language Fields -->
         @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $lang)
-            <div x-show="activeLanguage === '{{ $lang }}'" class="space-y-6">
+            <div x-show="activeLanguage === '{{ $lang }}'" x-cloak class="space-y-6">
                 <!-- Name Field -->
                 <div>
                     <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -54,7 +54,7 @@
                     <input type="text"
                            name="name[{{ $lang }}]"
                            value="{{ old("name.$lang", $tag->name[$lang] ?? '') }}"
-                           {{ in_array($lang, ['ar', 'en']) ? 'required' : '' }}
+                           required
                            class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3] @error("name.$lang") border-red-500 @enderror"
                            :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
                     @error("name.$lang")
@@ -86,23 +86,19 @@
                 @enderror
             </div>
 
-            <!-- Slug -->
+            <!-- Slug (Read-only) -->
             <div>
                 <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                     Slug
                 </label>
                 <input type="text"
-                       name="slug"
-                       value="{{ old('slug', $tag->slug) }}"
-                       placeholder="auto-generated-slug"
-                       class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3] @error('slug') border-red-500 @enderror"
-                       :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                       value="{{ $tag->slug }}"
+                       readonly
+                       class="w-full px-4 py-2 rounded-lg border opacity-75 cursor-not-allowed focus:outline-none"
+                       :class="darkMode ? 'bg-gray-700 border-gray-600 text-gray-400' : 'bg-gray-100 border-gray-300 text-gray-600'">
                 <p class="text-xs mt-1" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
-                    Auto-generated from English name, can be edited
+                    Auto-generated from English name
                 </p>
-                @error('slug')
-                    <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
-                @enderror
             </div>
         </div>
 
@@ -144,6 +140,35 @@
 @push('scripts')
 <script>
     lucide.createIcons();
+
+    // Form validation for multi-language fields
+    document.querySelector('form')?.addEventListener('submit', function(e) {
+        const form = this;
+        let isValid = true;
+        const errors = [];
+
+        // Check all required language fields
+        ['ar', 'en', 'fr', 'tr', 'ur'].forEach(lang => {
+            const nameInput = form.querySelector(`input[name="name[${lang}]"]`);
+            if (nameInput && nameInput.value.trim() === '') {
+                isValid = false;
+                errors.push(`Name (${lang.toUpperCase()}) is required`);
+            }
+        });
+
+        // Check type field
+        const typeSelect = form.querySelector('select[name="type"]');
+        if (typeSelect && typeSelect.value === '') {
+            isValid = false;
+            errors.push('Type is required');
+        }
+
+        if (!isValid) {
+            e.preventDefault();
+            alert('Please fill in all required fields:\n\n' + errors.join('\n'));
+            return false;
+        }
+    });
 </script>
 @endpush
 @endsection

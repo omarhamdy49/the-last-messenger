@@ -43,7 +43,7 @@
             </div>
             <div class="flex-1">
                 <h2 class="text-2xl font-bold mb-4" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                    {{ $tag->name['en'] ?? $tag->name['ar'] }}
+                    {{ is_array($tag->name) ? ($tag->name['en'] ?? $tag->name['ar']) : $tag->name }}
                 </h2>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -69,10 +69,13 @@
                     <h3 class="text-sm font-semibold mb-3" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">Names in All Languages</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         @foreach(['ar' => 'Arabic', 'en' => 'English', 'fr' => 'French', 'tr' => 'Turkish', 'ur' => 'Urdu'] as $lang => $label)
-                            @if(!empty($tag->name[$lang]))
+                            @php
+                                $nameValue = is_array($tag->name) ? ($tag->name[$lang] ?? null) : null;
+                            @endphp
+                            @if(!empty($nameValue))
                                 <div>
                                     <span class="text-xs font-semibold" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">{{ $label }}:</span>
-                                    <p :class="darkMode ? 'text-white' : 'text-gray-900'" dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">{{ $tag->name[$lang] }}</p>
+                                    <p :class="darkMode ? 'text-white' : 'text-gray-900'" dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">{{ $nameValue }}</p>
                                 </div>
                             @endif
                         @endforeach
@@ -138,7 +141,7 @@
                         @foreach($tag->articles->take(50) as $article)
                             <tr class="border-t" :class="darkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'">
                                 <td class="px-4 py-3 font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                                    {{ $article->title['en'] ?? $article->title['ar'] }}
+                                    {{ is_array($article->title) ? ($article->title['en'] ?? $article->title['ar']) : $article->title }}
                                 </td>
                                 <td class="px-4 py-3 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ $article->author->name ?? 'N/A' }}</td>
                                 <td class="px-4 py-3">

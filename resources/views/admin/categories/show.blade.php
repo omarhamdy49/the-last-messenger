@@ -40,12 +40,12 @@
                 <li><a href="{{ route('admin.categories.index') }}" class="text-[#0056b3] hover:text-blue-700">Categories</a></li>
                 <li><i data-lucide="chevron-left" class="w-4 h-4 mx-2 text-gray-400"></i></li>
                 @if($category->parent->parent)
-                    <li><a href="{{ route('admin.categories.show', $category->parent->parent->id) }}" class="text-[#0056b3] hover:text-blue-700">{{ $category->parent->parent->name['en'] ?? $category->parent->parent->name['ar'] }}</a></li>
+                    <li><a href="{{ route('admin.categories.show', $category->parent->parent->id) }}" class="text-[#0056b3] hover:text-blue-700">{{ is_array($category->parent->parent->name) ? ($category->parent->parent->name['en'] ?? $category->parent->parent->name['ar']) : $category->parent->parent->name }}</a></li>
                     <li><i data-lucide="chevron-left" class="w-4 h-4 mx-2 text-gray-400"></i></li>
                 @endif
-                <li><a href="{{ route('admin.categories.show', $category->parent->id) }}" class="text-[#0056b3] hover:text-blue-700">{{ $category->parent->name['en'] ?? $category->parent->name['ar'] }}</a></li>
+                <li><a href="{{ route('admin.categories.show', $category->parent->id) }}" class="text-[#0056b3] hover:text-blue-700">{{ is_array($category->parent->name) ? ($category->parent->name['en'] ?? $category->parent->name['ar']) : $category->parent->name }}</a></li>
                 <li><i data-lucide="chevron-left" class="w-4 h-4 mx-2 text-gray-400"></i></li>
-                <li><span class="font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ $category->name['en'] ?? $category->name['ar'] }}</span></li>
+                <li><span class="font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ is_array($category->name) ? ($category->name['en'] ?? $category->name['ar']) : $category->name }}</span></li>
             </ol>
         </nav>
     @endif
@@ -61,15 +61,15 @@
             </div>
             <div class="flex-1">
                 <h2 class="text-2xl font-bold mb-4" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                    {{ $category->name['en'] ?? $category->name['ar'] }}
+                    {{ is_array($category->name) ? ($category->name['en'] ?? $category->name['ar']) : $category->name }}
                 </h2>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                         <p class="text-sm font-semibold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">Type</p>
                         <span class="px-3 py-1 rounded-full text-xs font-semibold mt-1 inline-block"
-                              :class="'{{ $category->type }}' === 'blog' ? 'bg-blue-100 text-blue-800' : '{{ $category->type }}' === 'media' ? 'bg-green-100 text-green-800' : 'bg-teal-100 text-teal-800'">
-                            {{ ucfirst($category->type) }}
+                              :class="'{{ $category->type->value }}' === 'blog' ? 'bg-blue-100 text-blue-800' : '{{ $category->type->value }}' === 'media' ? 'bg-green-100 text-green-800' : 'bg-teal-100 text-teal-800'">
+                            {{ $category->type->label() }}
                         </span>
                     </div>
                     <div>
@@ -91,10 +91,13 @@
                     <h3 class="text-sm font-semibold mb-3" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">Names in All Languages</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         @foreach(['ar' => 'Arabic', 'en' => 'English', 'fr' => 'French', 'tr' => 'Turkish', 'ur' => 'Urdu'] as $lang => $label)
-                            @if(!empty($category->name[$lang]))
+                            @php
+                                $nameValue = is_array($category->name) ? ($category->name[$lang] ?? null) : null;
+                            @endphp
+                            @if(!empty($nameValue))
                                 <div>
                                     <span class="text-xs font-semibold" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">{{ $label }}:</span>
-                                    <p :class="darkMode ? 'text-white' : 'text-gray-900'" dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">{{ $category->name[$lang] }}</p>
+                                    <p :class="darkMode ? 'text-white' : 'text-gray-900'" dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">{{ $nameValue }}</p>
                                 </div>
                             @endif
                         @endforeach
@@ -102,10 +105,13 @@
                 </div>
 
                 <!-- Description -->
-                @if(!empty($category->description['en']) || !empty($category->description['ar']))
+                @php
+                    $descValue = is_array($category->description) ? ($category->description['en'] ?? $category->description['ar'] ?? null) : $category->description;
+                @endphp
+                @if(!empty($descValue))
                     <div class="border-t pt-4 mt-4" :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
                         <h3 class="text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">Description</h3>
-                        <p :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ $category->description['en'] ?? $category->description['ar'] }}</p>
+                        <p :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ $descValue }}</p>
                     </div>
                 @endif
             </div>
@@ -134,12 +140,12 @@
                             <tr class="border-t" :class="darkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'">
                                 <td class="px-4 py-3 font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">
                                     <i data-lucide="{{ $child->icon ?? 'folder' }}" class="w-4 h-4 inline ml-2"></i>
-                                    {{ $child->name['en'] ?? $child->name['ar'] }}
+                                    {{ is_array($child->name) ? ($child->name['en'] ?? $child->name['ar']) : $child->name }}
                                 </td>
                                 <td class="px-4 py-3">
                                     <span class="px-2 py-1 rounded-full text-xs font-semibold"
-                                          :class="'{{ $child->type }}' === 'blog' ? 'bg-blue-100 text-blue-800' : '{{ $child->type }}' === 'media' ? 'bg-green-100 text-green-800' : 'bg-teal-100 text-teal-800'">
-                                        {{ ucfirst($child->type) }}
+                                          :class="'{{ $child->type->value }}' === 'blog' ? 'bg-blue-100 text-blue-800' : '{{ $child->type->value }}' === 'media' ? 'bg-green-100 text-green-800' : 'bg-teal-100 text-teal-800'">
+                                        {{ $child->type->label() }}
                                     </span>
                                 </td>
                                 <td class="px-4 py-3 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ $child->children_count ?? 0 }}</td>
@@ -177,7 +183,7 @@
                         @foreach($category->articles as $article)
                             <tr class="border-t" :class="darkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'">
                                 <td class="px-4 py-3 font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                                    {{ $article->title['en'] ?? $article->title['ar'] }}
+                                    {{ is_array($article->title) ? ($article->title['en'] ?? $article->title['ar']) : $article->title }}
                                 </td>
                                 <td class="px-4 py-3 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ $article->author->name ?? 'N/A' }}</td>
                                 <td class="px-4 py-3">

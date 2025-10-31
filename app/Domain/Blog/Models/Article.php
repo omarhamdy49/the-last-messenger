@@ -205,7 +205,7 @@ class Article extends Model implements HasMedia
     public function scopeSearch(Builder $query, string $search): Builder
     {
         return $query->whereRaw(
-            'MATCH(title, excerpt) AGAINST(? IN BOOLEAN MODE)',
+            'MATCH(title_searchable, excerpt_searchable) AGAINST(? IN BOOLEAN MODE)',
             [$search]
         );
     }

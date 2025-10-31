@@ -28,12 +28,8 @@ class MediaCategoryController extends Controller
     public function __construct(
         protected MediaCategoryService $service
     ) {
-        // Protect routes - only authenticated admins with permission
-        $this->middleware('auth:sanctum');
-        $this->middleware('permission:media-category.view')->only(['index', 'show']);
-        $this->middleware('permission:media-category.create')->only(['create', 'store']);
-        $this->middleware('permission:media-category.update')->only(['edit', 'update']);
-        $this->middleware('permission:media-category.delete')->only(['destroy']);
+        // Protect routes - only authenticated admins
+        $this->middleware('auth');
     }
 
     /**
@@ -50,10 +46,15 @@ class MediaCategoryController extends Controller
         $perPage = $request->integer('per_page', 50);
         $search = $request->string('search')->trim()->toString();
 
-        // Fetch paginated data with search
-        $categories = $this->service->paginate(
+        // Get filters from request (no hierarchical filters needed for flat categories)
+        $filters = [];
+
+        // Fetch paginated data with filters
+        $categories = $this->service->paginateWithFilters(
             perPage: $perPage,
-            search: $search
+            search: $search,
+            filters: $filters,
+            with: []
         );
 
         // Get statistics for stats cards
@@ -129,8 +130,8 @@ class MediaCategoryController extends Controller
      */
     public function edit(int $id): View
     {
-        $category = $this->service->findOrFail($id);
-        return view('admin.media-categories.edit', compact('category'));
+        $mediaCategory = $this->service->findOrFail($id);
+        return view('admin.media-categories.edit', compact('mediaCategory'));
     }
 
     /**
@@ -171,10 +172,10 @@ class MediaCategoryController extends Controller
      */
     public function show(int $id): View
     {
-        $category = $this->service->findOrFail($id);
+        $mediaCategory = $this->service->findOrFail($id);
         $programs = $this->service->getProgramsByCategory($id, perPage: 15);
 
-        return view('admin.media-categories.show', compact('category', 'programs'));
+        return view('admin.media-categories.show', compact('mediaCategory', 'programs'));
     }
 
     /**
