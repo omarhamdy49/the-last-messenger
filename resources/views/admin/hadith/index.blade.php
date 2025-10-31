@@ -288,21 +288,23 @@
         <div class="overflow-x-auto custom-scrollbar">
             <table class="w-full">
                 <thead>
-                    <tr class="border-b border-white/10">
+                    <tr class="border-b border-white/10 bg-white/5">
                         <th class="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">
-                            <input type="checkbox" @change="toggleSelectAll" class="w-4 h-4 rounded border-white/20 bg-white/5 text-blue-500">
+                            <input type="checkbox" @change="toggleSelectAll" class="w-4 h-4 rounded border-white/20 bg-white/5 text-blue-500 cursor-pointer">
                         </th>
                         <th class="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">رقم</th>
                         <th class="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">الكتاب</th>
+                        <th class="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">الباب</th>
                         <th class="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">النص العربي</th>
                         <th class="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">الدرجة</th>
+                        <th class="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">المشاهدات</th>
                         <th class="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-white/10">
                     <template x-if="items.length === 0">
                         <tr>
-                            <td colspan="6" class="px-6 py-16 text-center">
+                            <td colspan="8" class="px-6 py-16 text-center">
                                 <div class="flex flex-col items-center justify-center">
                                     <div class="w-24 h-24 bg-gradient-to-br from-blue-500/20 to-green-500/20 rounded-full flex items-center justify-center mb-4">
                                         <i data-lucide="book-open" class="w-12 h-12 text-gray-500"></i>
@@ -321,33 +323,52 @@
                     <template x-for="hadith in items" :key="hadith.id">
                         <tr class="hover:bg-white/5 transition-colors duration-200 group">
                             <td class="px-6 py-4">
-                                <input type="checkbox" :value="hadith.id" x-model="selectedHadith" class="w-4 h-4 rounded border-white/20 bg-white/5 text-blue-500">
+                                <input type="checkbox" :value="hadith.id" x-model="selectedHadith" class="w-4 h-4 rounded border-white/20 bg-white/5 text-blue-500 cursor-pointer">
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="text-white font-bold" x-text="hadith.hadith_number"></span>
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-green-500 flex items-center justify-center">
+                                        <span class="text-white font-bold text-xs" x-text="hadith.hadith_number"></span>
+                                    </div>
+                                </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="text-gray-300 text-sm" x-text="hadith.book?.name || '-'"></span>
+                                <div class="flex flex-col">
+                                    <span class="text-gray-300 text-sm font-semibold" x-text="hadith.book?.name || '-'"></span>
+                                    <span class="text-gray-500 text-xs" x-text="'ID: ' + hadith.book?.id"></span>
+                                </div>
                             </td>
-                            <td class="px-6 py-4 max-w-md">
-                                <p class="text-white text-right line-clamp-2 font-amiri text-lg" dir="rtl" x-text="hadith.arabic_text"></p>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="text-gray-400 text-sm" x-text="hadith.chapter?.name || 'بدون باب'"></span>
+                            </td>
+                            <td class="px-6 py-4 max-w-xs">
+                                <p class="text-white text-right line-clamp-2 font-amiri text-sm" dir="rtl" x-text="hadith.arabic_text"></p>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span
-                                    class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold"
+                                    class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold"
                                     :class="{
-                                        'bg-green-500/20 text-green-400 border border-green-500/30': hadith.grade === 'sahih',
-                                        'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30': hadith.grade === 'hasan',
-                                        'bg-orange-500/20 text-orange-400 border border-orange-500/30': hadith.grade === 'daif',
-                                        'bg-red-500/20 text-red-400 border border-red-500/30': hadith.grade === 'weak'
+                                        'bg-green-500/20 text-green-400 border border-green-500/30': hadith.grade.value === 'sahih',
+                                        'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30': hadith.grade.value === 'hasan',
+                                        'bg-orange-500/20 text-orange-400 border border-orange-500/30': hadith.grade.value === 'daif',
+                                        'bg-red-500/20 text-red-400 border border-red-500/30': hadith.grade.value === 'weak'
                                     }"
-                                    x-text="hadith.grade === 'sahih' ? 'صحيح' : (hadith.grade === 'hasan' ? 'حسن' : (hadith.grade === 'daif' ? 'ضعيف' : 'موضوع'))"
+                                    x-text="hadith.grade.label_arabic"
                                 ></span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center space-x-1 text-gray-400">
+                                    <i data-lucide="eye" class="w-4 h-4 text-blue-400"></i>
+                                    <span class="text-sm font-semibold" x-text="hadith.views_count"></span>
+                                </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center space-x-2 space-x-reverse">
                                     <a :href="`/su/portal/v1/admin/hadith/${hadith.id}/edit`" class="p-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg transition-all hover:scale-110" title="تعديل">
                                         <i data-lucide="edit" class="w-4 h-4"></i>
+                                    </a>
+                                    <a :href="`/su/portal/v1/admin/hadith/${hadith.id}`" class="p-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-all hover:scale-110" title="عرض">
+                                        <i data-lucide="eye" class="w-4 h-4"></i>
                                     </a>
                                     <button @click="deleteHadith(hadith.id)" class="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all hover:scale-110" title="حذف">
                                         <i data-lucide="trash-2" class="w-4 h-4"></i>
@@ -362,16 +383,61 @@
 
         {{-- Pagination --}}
         <div class="border-t border-white/10 p-6">
-            <div class="flex items-center justify-between">
-                <div class="text-sm text-gray-400">
-                    صفحة <span class="text-white font-bold" x-text="currentPage"></span> من <span class="text-white font-bold" x-text="totalPages"></span>
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div class="text-sm text-gray-400 space-y-2">
+                    <p class="font-semibold">معلومات الصفحة</p>
+                    <div class="flex items-center space-x-2 space-x-reverse">
+                        <span>يتم عرض</span>
+                        <span class="text-white font-bold" x-text="items.length"></span>
+                        <span>من</span>
+                        <span class="text-white font-bold" x-text="stats.total"></span>
+                        <span>حديث</span>
+                    </div>
+                    <div>
+                        <span>صفحة</span>
+                        <span class="text-white font-bold" x-text="currentPage"></span>
+                        <span>من</span>
+                        <span class="text-white font-bold" x-text="totalPages"></span>
+                    </div>
                 </div>
+
                 <div class="flex items-center space-x-2 space-x-reverse">
-                    <button @click="currentPage > 1 && changePage(currentPage - 1)" :disabled="currentPage === 1" class="px-4 py-2 bg-white/10 text-white rounded-lg">
+                    <button
+                        @click="currentPage > 1 && changePage(1)"
+                        :disabled="currentPage === 1"
+                        class="px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all"
+                        title="الصفحة الأولى"
+                    >
+                        <i data-lucide="chevrons-right" class="w-4 h-4"></i>
+                    </button>
+                    <button
+                        @click="currentPage > 1 && changePage(currentPage - 1)"
+                        :disabled="currentPage === 1"
+                        class="px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all"
+                        title="السابق"
+                    >
                         <i data-lucide="chevron-right" class="w-4 h-4"></i>
                     </button>
-                    <button @click="currentPage < totalPages && changePage(currentPage + 1)" :disabled="currentPage === totalPages" class="px-4 py-2 bg-white/10 text-white rounded-lg">
+
+                    <div class="px-4 py-2 bg-white/5 rounded-lg">
+                        <span class="text-white font-semibold" x-text="currentPage + ' / ' + totalPages"></span>
+                    </div>
+
+                    <button
+                        @click="currentPage < totalPages && changePage(currentPage + 1)"
+                        :disabled="currentPage === totalPages"
+                        class="px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all"
+                        title="التالي"
+                    >
                         <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                    </button>
+                    <button
+                        @click="currentPage < totalPages && changePage(totalPages)"
+                        :disabled="currentPage === totalPages"
+                        class="px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all"
+                        title="الصفحة الأخيرة"
+                    >
+                        <i data-lucide="chevrons-left" class="w-4 h-4"></i>
                     </button>
                 </div>
             </div>
