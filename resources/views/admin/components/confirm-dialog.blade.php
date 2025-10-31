@@ -1,7 +1,7 @@
 {{-- Confirmation Dialog Component --}}
 {{-- Usage: Call window.showConfirm(message, onConfirm, onCancel) --}}
 
-<div x-data="confirmDialog()" x-init="init()" @confirm.window="show($event.detail)" class="fixed inset-0 z-50">
+<div x-data="confirmDialog()" x-init="init()" @confirm.window="show($event.detail)" class="fixed inset-0 z-40 pointer-events-none" :class="visible ? 'pointer-events-auto' : ''">
     <!-- Backdrop -->
     <div
         x-show="visible"
@@ -129,8 +129,14 @@
 </script>
 
 <style>
-    /* Ensure the dialog is on top of other fixed elements */
-    [x-data="confirmDialog()"] {
-        z-index: 50;
+    /* RTL Support for backdrop */
+    [dir="rtl"] .confirm-dialog-container {
+        right: 0;
+        left: auto;
+    }
+
+    [dir="ltr"] .confirm-dialog-container {
+        left: 0;
+        right: auto;
     }
 </style>
