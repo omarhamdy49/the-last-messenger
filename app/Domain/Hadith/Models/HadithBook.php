@@ -57,8 +57,6 @@ class HadithBook extends Model
     protected function casts(): array
     {
         return [
-            'name' => 'array',
-            'description' => 'array',
             'total_hadith_count' => 'integer',
             'display_order' => 'integer',
             'active' => 'boolean',
@@ -117,7 +115,7 @@ class HadithBook extends Model
      */
     public function getNameInLanguage(string $language): ?string
     {
-        return $this->name[$language] ?? $this->name['ar'] ?? null;
+        return $this->getTranslation('name', $language, false) ?? $this->getTranslation('name', 'ar', false);
     }
 
     /**
@@ -125,7 +123,7 @@ class HadithBook extends Model
      */
     public function getDescriptionInLanguage(string $language): ?string
     {
-        return $this->description[$language] ?? $this->description['ar'] ?? null;
+        return $this->getTranslation('description', $language, false) ?? $this->getTranslation('description', 'ar', false);
     }
 
     /**

@@ -324,10 +324,10 @@
                                 <input type="checkbox" :value="hadith.id" x-model="selectedHadith" class="w-4 h-4 rounded border-white/20 bg-white/5 text-blue-500">
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="text-white font-bold" x-text="hadith.number"></span>
+                                <span class="text-white font-bold" x-text="hadith.hadith_number"></span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="text-gray-300 text-sm" x-text="hadith.book"></span>
+                                <span class="text-gray-300 text-sm" x-text="hadith.book?.name || '-'"></span>
                             </td>
                             <td class="px-6 py-4 max-w-md">
                                 <p class="text-white text-right line-clamp-2 font-amiri text-lg" dir="rtl" x-text="hadith.arabic_text"></p>

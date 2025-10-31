@@ -9,6 +9,7 @@ use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreHadithRequest;
 use App\Http\Requests\Admin\UpdateHadithRequest;
+use App\Http\Resources\HadithResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -70,7 +71,7 @@ class HadithController extends Controller
         if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
             return response()->json([
                 'success' => true,
-                'data' => $hadith->items(),
+                'data' => HadithResource::collection($hadith->items()),
                 'stats' => $stats,
                 'meta' => [
                     'current_page' => $hadith->currentPage(),
