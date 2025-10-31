@@ -193,6 +193,16 @@
         animation: shimmer 2s infinite;
     }
 
+    /* Light mode skeleton */
+    [data-light-mode="true"] .skeleton {
+        background: linear-gradient(90deg,
+            rgba(0, 0, 0, 0.05) 25%,
+            rgba(0, 0, 0, 0.08) 50%,
+            rgba(0, 0, 0, 0.05) 75%
+        );
+        background-size: 200% 100%;
+    }
+
     @keyframes shimmer {
         0% { background-position: -200% 0; }
         100% { background-position: 200% 0; }
@@ -271,7 +281,7 @@
 
     {{-- SECTION 1: HERO SECTION WITH LIVE METRICS --}}
     <section class="relative overflow-hidden rounded-3xl p-8 md:p-12 hero-mesh-bg"
-             :class="darkMode ? 'bg-gradient-to-br from-gray-900 to-gray-800 shadow-2xl' : 'glass-light-strong'">
+             :class="darkMode ? 'bg-gradient-to-br from-gray-900 to-gray-800 shadow-2xl' : 'bg-gradient-to-br from-blue-50 to-emerald-50 shadow-xl border border-blue-100'">
 
         {{-- Floating Orbs Background --}}
         <div class="floating-orb floating-orb-1"></div>
@@ -299,7 +309,7 @@
 
                     {{-- Central Metric Display --}}
                     <div class="rounded-2xl p-8 fade-in-up stagger-2"
-                         :class="darkMode ? 'glass-premium' : 'glass-light'">
+                         :class="darkMode ? 'glass-premium' : 'glass-light-soft'">
                         <div class="text-center">
                             <p class="text-sm font-bold mb-2" :class="darkMode ? 'text-gray-400' : 'text-gray-700'">
                                 إجمالي المحتوى
@@ -336,7 +346,7 @@
 
                 {{-- Right: Real-Time Activity Stream --}}
                 <div class="rounded-2xl p-6 fade-in-up stagger-4 h-96"
-                     :class="darkMode ? 'glass-premium' : 'glass-light'">
+                     :class="darkMode ? 'glass-premium' : 'glass-light-soft'">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-xl font-bold flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
                             <div class="w-2 h-2 bg-emerald-500 rounded-full activity-pulse"></div>
@@ -390,7 +400,7 @@
     <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {{-- Articles Card --}}
         <div class="premium-card rounded-2xl p-6 fade-in-up stagger-1"
-             :class="darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'glass-light-soft border-0'">
+             :class="darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'glass-light-soft border border-blue-100/50 shadow-sm'">
             <div class="flex items-center justify-between mb-4">
                 <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/50">
                     <i data-lucide="file-text" class="w-7 h-7 text-white"></i>
@@ -426,7 +436,7 @@
 
         {{-- Hadith Card --}}
         <div class="premium-card rounded-2xl p-6 fade-in-up stagger-2"
-             :class="darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'glass-light-soft border-0'">
+             :class="darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'glass-light-soft border border-emerald-100/50 shadow-sm'">
             <div class="flex items-center justify-between mb-4">
                 <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/50">
                     <i data-lucide="scroll-text" class="w-7 h-7 text-white"></i>
@@ -464,7 +474,7 @@
 
         {{-- Media Programs Card --}}
         <div class="premium-card rounded-2xl p-6 fade-in-up stagger-3"
-             :class="darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'glass-light-soft border-0'">
+             :class="darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'glass-light-soft border border-purple-100/50 shadow-sm'">
             <div class="flex items-center justify-between mb-4">
                 <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/50">
                     <i data-lucide="video" class="w-7 h-7 text-white"></i>
@@ -498,7 +508,7 @@
 
         {{-- Active Users Card --}}
         <div class="premium-card rounded-2xl p-6 fade-in-up stagger-4"
-             :class="darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'glass-light-soft border-0'">
+             :class="darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'glass-light-soft border border-cyan-100/50 shadow-sm'">
             <div class="flex items-center justify-between mb-4">
                 <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-[#64CCC5] to-[#4BA5A3] flex items-center justify-center shadow-lg shadow-[#64CCC5]/50">
                     <i data-lucide="users" class="w-7 h-7 text-white"></i>
@@ -535,7 +545,7 @@
     <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {{-- Content Growth Chart --}}
         <div class="lg:col-span-2 rounded-2xl p-6 scale-in stagger-1"
-             :class="darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white shadow-xl'">
+             :class="darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'glass-light-soft border border-gray-100/50 shadow-lg'">
             <div class="flex items-center justify-between mb-6">
                 <div>
                     <h3 class="text-xl font-bold mb-1" :class="darkMode ? 'text-white' : 'text-gray-900'">نمو المحتوى</h3>
@@ -566,7 +576,7 @@
 
         {{-- Module Distribution Chart --}}
         <div class="rounded-2xl p-6 scale-in stagger-2"
-             :class="darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white shadow-xl'">
+             :class="darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'glass-light-soft border border-gray-100/50 shadow-lg'">
             <div class="mb-6">
                 <h3 class="text-xl font-bold mb-1" :class="darkMode ? 'text-white' : 'text-gray-900'">توزيع المحتوى</h3>
                 <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">حسب النوع</p>
@@ -583,7 +593,7 @@
         {{-- Top Article --}}
         <div @click="navigateToTopArticle()"
              class="premium-card rounded-xl p-4 cursor-pointer fade-in-up stagger-1"
-             :class="darkMode ? 'bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20' : 'bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200'">
+             :class="darkMode ? 'bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20' : 'bg-gradient-to-br from-[#0056b3]/5 to-[#218838]/5 border border-blue-200/60 shadow-sm'">
             <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-3 shadow-md">
                 <i data-lucide="trophy" class="w-5 h-5 text-white"></i>
             </div>
@@ -593,7 +603,7 @@
 
         {{-- Most Active Day --}}
         <div class="premium-card rounded-xl p-4 fade-in-up stagger-2"
-             :class="darkMode ? 'bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border border-emerald-500/20' : 'bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200'">
+             :class="darkMode ? 'bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border border-emerald-500/20' : 'bg-gradient-to-br from-[#0056b3]/5 to-[#218838]/5 border border-emerald-200/60 shadow-sm'">
             <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mb-3 shadow-md">
                 <i data-lucide="calendar-check" class="w-5 h-5 text-white"></i>
             </div>
@@ -603,7 +613,7 @@
 
         {{-- Popular Category --}}
         <div class="premium-card rounded-xl p-4 fade-in-up stagger-3"
-             :class="darkMode ? 'bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20' : 'bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200'">
+             :class="darkMode ? 'bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20' : 'bg-gradient-to-br from-[#0056b3]/5 to-[#218838]/5 border border-purple-200/60 shadow-sm'">
             <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mb-3 shadow-md">
                 <i data-lucide="folder-open" class="w-5 h-5 text-white"></i>
             </div>
@@ -613,7 +623,7 @@
 
         {{-- Top Narrator --}}
         <div class="premium-card rounded-xl p-4 fade-in-up stagger-4"
-             :class="darkMode ? 'bg-gradient-to-br from-[#64CCC5]/10 to-[#4BA5A3]/5 border border-[#64CCC5]/20' : 'bg-gradient-to-br from-cyan-50 to-cyan-100 border border-cyan-200'">
+             :class="darkMode ? 'bg-gradient-to-br from-[#64CCC5]/10 to-[#4BA5A3]/5 border border-[#64CCC5]/20' : 'bg-gradient-to-br from-[#0056b3]/5 to-[#218838]/5 border border-cyan-200/60 shadow-sm'">
             <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-[#64CCC5] to-[#4BA5A3] flex items-center justify-center mb-3 shadow-md">
                 <i data-lucide="user-check" class="w-5 h-5 text-white"></i>
             </div>
@@ -623,7 +633,7 @@
 
         {{-- Latest Upload --}}
         <div class="premium-card rounded-xl p-4 fade-in-up stagger-5"
-             :class="darkMode ? 'bg-gradient-to-br from-yellow-500/10 to-yellow-600/5 border border-yellow-500/20' : 'bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200'">
+             :class="darkMode ? 'bg-gradient-to-br from-yellow-500/10 to-yellow-600/5 border border-yellow-500/20' : 'bg-gradient-to-br from-[#0056b3]/5 to-[#218838]/5 border border-yellow-200/60 shadow-sm'">
             <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-500 to-yellow-600 flex items-center justify-center mb-3 shadow-md">
                 <i data-lucide="upload" class="w-5 h-5 text-white"></i>
             </div>
@@ -633,7 +643,7 @@
 
         {{-- Pending Reviews --}}
         <div class="premium-card rounded-xl p-4 fade-in-up stagger-6"
-             :class="darkMode ? 'bg-gradient-to-br from-red-500/10 to-red-600/5 border border-red-500/20' : 'bg-gradient-to-br from-red-50 to-red-100 border border-red-200'">
+             :class="darkMode ? 'bg-gradient-to-br from-red-500/10 to-red-600/5 border border-red-500/20' : 'bg-gradient-to-br from-[#0056b3]/5 to-[#218838]/5 border border-red-200/60 shadow-sm'">
             <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mb-3 shadow-md">
                 <i data-lucide="alert-circle" class="w-5 h-5 text-white"></i>
             </div>
@@ -646,7 +656,7 @@
     <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {{-- Module Health Status --}}
         <div class="rounded-2xl p-6 slide-in-left stagger-1"
-             :class="darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white shadow-xl'">
+             :class="darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'glass-light-soft border border-gray-100/50 shadow-lg'">
             <div class="mb-6">
                 <h3 class="text-xl font-bold mb-1" :class="darkMode ? 'text-white' : 'text-gray-900'">صحة الوحدات</h3>
                 <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">حالة الأنظمة</p>
@@ -679,7 +689,7 @@
 
         {{-- Recent Content Preview (Carousel) --}}
         <div class="lg:col-span-2 rounded-2xl p-6 slide-in-left stagger-2"
-             :class="darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white shadow-xl'">
+             :class="darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'glass-light-soft border border-gray-100/50 shadow-lg'">
             <div class="flex items-center justify-between mb-6">
                 <div>
                     <h3 class="text-xl font-bold mb-1" :class="darkMode ? 'text-white' : 'text-gray-900'">المحتوى الأخير</h3>
@@ -715,7 +725,7 @@
                 <div x-show="contentTab === 'articles'" class="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <template x-for="article in recentArticles.slice(0, 6)" :key="article.id">
                         <div class="premium-card rounded-lg overflow-hidden cursor-pointer"
-                             :class="darkMode ? 'bg-gray-900/50' : 'bg-gray-50'">
+                             :class="darkMode ? 'bg-gray-900/50' : 'glass-light-soft border border-gray-100/50'">
                             <div class="aspect-video bg-gradient-to-br from-blue-500/20 to-blue-600/10 flex items-center justify-center">
                                 <i data-lucide="file-text" class="w-8 h-8" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
                             </div>
@@ -731,7 +741,7 @@
                 <div x-show="contentTab === 'hadith'" class="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <template x-for="hadith in recentHadith.slice(0, 6)" :key="hadith.id">
                         <div class="premium-card rounded-lg overflow-hidden cursor-pointer"
-                             :class="darkMode ? 'bg-gray-900/50' : 'bg-gray-50'">
+                             :class="darkMode ? 'bg-gray-900/50' : 'glass-light-soft border border-gray-100/50'">
                             <div class="aspect-video bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 flex items-center justify-center">
                                 <i data-lucide="scroll-text" class="w-8 h-8" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
                             </div>
@@ -747,7 +757,7 @@
                 <div x-show="contentTab === 'media'" class="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <template x-for="program in recentMedia.slice(0, 6)" :key="program.id">
                         <div class="premium-card rounded-lg overflow-hidden cursor-pointer"
-                             :class="darkMode ? 'bg-gray-900/50' : 'bg-gray-50'">
+                             :class="darkMode ? 'bg-gray-900/50' : 'glass-light-soft border border-gray-100/50'">
                             <div class="aspect-video bg-gradient-to-br from-purple-500/20 to-purple-600/10 flex items-center justify-center relative">
                                 <i data-lucide="video" class="w-8 h-8" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
                                 <div class="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/50">
@@ -771,7 +781,7 @@
     <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {{-- API Response Time --}}
         <div class="rounded-xl p-6 fade-in-up stagger-1"
-             :class="darkMode ? 'bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50' : 'bg-gradient-to-br from-white to-gray-50 shadow-xl'">
+             :class="darkMode ? 'bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50' : 'glass-light-soft border border-blue-100/50 shadow-lg'">
             <div class="flex items-center gap-3 mb-4">
                 <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
                     <i data-lucide="zap" class="w-5 h-5 text-white"></i>
@@ -791,7 +801,7 @@
 
         {{-- Database Size --}}
         <div class="rounded-xl p-6 fade-in-up stagger-2"
-             :class="darkMode ? 'bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50' : 'bg-gradient-to-br from-white to-gray-50 shadow-xl'">
+             :class="darkMode ? 'bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50' : 'glass-light-soft border border-emerald-100/50 shadow-lg'">
             <div class="flex items-center gap-3 mb-4">
                 <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
                     <i data-lucide="database" class="w-5 h-5 text-white"></i>
@@ -812,7 +822,7 @@
 
         {{-- Cache Hit Rate --}}
         <div class="rounded-xl p-6 fade-in-up stagger-3"
-             :class="darkMode ? 'bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50' : 'bg-gradient-to-br from-white to-gray-50 shadow-xl'">
+             :class="darkMode ? 'bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50' : 'glass-light-soft border border-purple-100/50 shadow-lg'">
             <div class="flex items-center gap-3 mb-4">
                 <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
                     <i data-lucide="gauge" class="w-5 h-5 text-white"></i>
@@ -843,7 +853,7 @@
 
         {{-- Active Sessions --}}
         <div class="rounded-xl p-6 fade-in-up stagger-4"
-             :class="darkMode ? 'bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50' : 'bg-gradient-to-br from-white to-gray-50 shadow-xl'">
+             :class="darkMode ? 'bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50' : 'glass-light-soft border border-cyan-100/50 shadow-lg'">
             <div class="flex items-center gap-3 mb-4">
                 <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-[#64CCC5] to-[#4BA5A3] flex items-center justify-center">
                     <i data-lucide="activity" class="w-5 h-5 text-white"></i>
@@ -867,7 +877,7 @@
 
     {{-- SECTION 8: CALENDAR WIDGET --}}
     <section class="rounded-2xl p-6 scale-in"
-             :class="darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white shadow-xl'">
+             :class="darkMode ? 'bg-gray-800/50 border border-gray-700/50' : 'glass-light-soft border border-gray-100/50 shadow-lg'">
         <div class="mb-6">
             <h3 class="text-xl font-bold mb-1" :class="darkMode ? 'text-white' : 'text-gray-900'">
                 <i data-lucide="calendar" class="w-5 h-5 inline-block ml-2"></i>
@@ -889,10 +899,10 @@
         <div class="grid grid-cols-7 gap-2">
             <template x-for="day in calendarDays" :key="day.date">
                 <div @click="selectCalendarDay(day)"
-                     class="aspect-square rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-110 heatmap-cell"
+                     class="aspect-square rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-110 heatmap-cell border"
                      :class="[
                         day.isToday ? 'ring-2 ring-[#64CCC5] ring-offset-2' : '',
-                        day.hasContent ? (darkMode ? 'bg-gradient-to-br from-[#0056b3] to-[#218838]' : 'bg-gradient-to-br from-blue-100 to-emerald-100') : (darkMode ? 'bg-gray-700/50' : 'bg-gray-50'),
+                        day.hasContent ? (darkMode ? 'bg-gradient-to-br from-[#0056b3] to-[#218838] border-blue-500/30' : 'bg-gradient-to-br from-[#0056b3]/10 to-[#218838]/10 border border-blue-200/60') : (darkMode ? 'bg-gray-700/50 border-gray-600/30' : 'glass-light-soft border-gray-100/50'),
                         day.isOtherMonth ? 'opacity-30' : ''
                      ]">
                     <span class="text-sm font-bold" :class="day.hasContent ? 'text-white' : (darkMode ? 'text-gray-300' : 'text-gray-900')" x-text="day.day"></span>
