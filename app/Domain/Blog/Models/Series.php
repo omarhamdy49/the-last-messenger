@@ -40,25 +40,20 @@ class Series extends Model
     ];
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'title' => 'array',
-            'description' => 'array',
-            'total_articles' => 'integer',
-        ];
-    }
-
-    /**
      * Translatable attributes
+     * Handled by Spatie\Translatable\HasTranslations trait
+     * Do NOT add these to $casts as it conflicts with HasTranslations
      *
      * @var array<string>
      */
     public array $translatable = ['title', 'description'];
+
+    protected function casts(): array
+    {
+        return [
+            'total_articles' => 'integer',
+        ];
+    }
 
     /**
      * Get articles in this series
@@ -77,11 +72,32 @@ class Series extends Model
     }
 
     /**
+     * Get all translations for title attribute
+     * Returns the raw JSON decoded to array
+     */
+    public function getTitleTranslations(): array
+    {
+        $raw = $this->getAttributes()['title'] ?? '{}';
+        return is_string($raw) ? json_decode($raw, true) : $raw;
+    }
+
+    /**
+     * Get all translations for description attribute
+     * Returns the raw JSON decoded to array
+     */
+    public function getDescriptionTranslations(): array
+    {
+        $raw = $this->getAttributes()['description'] ?? '{}';
+        return is_string($raw) ? json_decode($raw, true) : $raw;
+    }
+
+    /**
      * Get title in specified language
      */
     public function getTitleInLanguage(string $language): ?string
     {
-        return $this->title[$language] ?? $this->title['ar'] ?? null;
+        $translations = $this->getTitleTranslations();
+        return $translations[$language] ?? $translations['ar'] ?? null;
     }
 
     /**
@@ -89,6 +105,7 @@ class Series extends Model
      */
     public function getDescriptionInLanguage(string $language): ?string
     {
-        return $this->description[$language] ?? $this->description['ar'] ?? null;
+        $translations = $this->getDescriptionTranslations();
+        return $translations[$language] ?? $translations['ar'] ?? null;
     }
 }

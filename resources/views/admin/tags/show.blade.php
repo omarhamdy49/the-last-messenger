@@ -50,8 +50,8 @@
                     <div>
                         <p class="text-sm font-semibold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">Type</p>
                         <span class="px-3 py-1 rounded-full text-xs font-semibold mt-1 inline-block"
-                              :class="'{{ $tag->type }}' === 'article' ? 'bg-blue-100 text-blue-800' : '{{ $tag->type }}' === 'hadith' ? 'bg-green-100 text-green-800' : '{{ $tag->type }}' === 'program' ? 'bg-purple-100 text-purple-800' : 'bg-orange-100 text-orange-800'">
-                            {{ ucfirst($tag->type) }}
+                              :class="'{{ (string) $tag->type }}' === 'article' ? 'bg-blue-100 text-blue-800' : '{{ (string) $tag->type }}' === 'hadith' ? 'bg-green-100 text-green-800' : '{{ (string) $tag->type }}' === 'program' ? 'bg-purple-100 text-purple-800' : 'bg-orange-100 text-orange-800'">
+                            {{ ucfirst((string) $tag->type) }}
                         </span>
                     </div>
                     <div>
@@ -146,8 +146,8 @@
                                 <td class="px-4 py-3 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ $article->author->name ?? 'N/A' }}</td>
                                 <td class="px-4 py-3">
                                     <span class="px-2 py-1 rounded-full text-xs font-semibold"
-                                          :class="'{{ $article->status }}' === 'published' ? 'bg-green-100 text-green-800' : '{{ $article->status }}' === 'draft' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'">
-                                        {{ ucfirst($article->status) }}
+                                          :class="'{{ $article->status->value }}' === 'published' ? 'bg-green-100 text-green-800' : '{{ $article->status->value }}' === 'draft' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'">
+                                        {{ $article->status->label() }}
                                     </span>
                                 </td>
                                 <td class="px-4 py-3 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ $article->published_at?->format('Y-m-d') ?? 'N/A' }}</td>

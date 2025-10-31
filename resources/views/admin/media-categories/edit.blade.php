@@ -42,9 +42,14 @@
                         <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                             Name ({{ strtoupper($lang) }}) <span class="text-red-500">*</span>
                         </label>
+                        @php
+                            // Get all translations for the name attribute
+                            $translations = $mediaCategory->getNameTranslations();
+                            $nameValue = $translations[$lang] ?? '';
+                        @endphp
                         <input type="text"
                                name="name[{{ $lang }}]"
-                               value="{{ old("name.$lang", $mediaCategory->name[$lang] ?? '') }}"
+                               value="{{ old("name.$lang", $nameValue) }}"
                                required
                                class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3] transition-colors"
                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
@@ -60,10 +65,15 @@
                         <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                             Description ({{ strtoupper($lang) }})
                         </label>
+                        @php
+                            // Get all translations for the description attribute
+                            $translations = $mediaCategory->getDescriptionTranslations();
+                            $descValue = $translations[$lang] ?? '';
+                        @endphp
                         <textarea name="description[{{ $lang }}]"
                                   rows="4"
                                   class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3] transition-colors"
-                                  :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">{{ old("description.$lang", $mediaCategory->description[$lang] ?? '') }}</textarea>
+                                  :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">{{ old("description.$lang", $descValue) }}</textarea>
                         @error("description.$lang")
                             <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                         @enderror

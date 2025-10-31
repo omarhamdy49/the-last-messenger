@@ -38,19 +38,9 @@ class Tag extends Model
     ];
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'name' => 'array',
-        ];
-    }
-
-    /**
      * Translatable attributes
+     * Handled by Spatie\Translatable\HasTranslations trait
+     * Do NOT add these to $casts as it conflicts with HasTranslations
      *
      * @var array<string>
      */
@@ -67,7 +57,8 @@ class Tag extends Model
         static::creating(function ($model) {
             if (empty($model->slug)) {
                 // Generate slug from English name, fallback to Arabic
-                $name = $model->name['en'] ?? $model->name['ar'] ?? 'tag';
+                $nameTranslations = json_decode($model->getAttributes()['name'] ?? '{}', true);
+                $name = $nameTranslations['en'] ?? $nameTranslations['ar'] ?? 'tag';
                 $model->slug = Str::slug($name);
             }
         });
@@ -75,7 +66,8 @@ class Tag extends Model
         // Update slug if name changes
         static::updating(function ($model) {
             if ($model->isDirty('name') && empty($model->slug)) {
-                $name = $model->name['en'] ?? $model->name['ar'] ?? 'tag';
+                $nameTranslations = json_decode($model->getAttributes()['name'] ?? '{}', true);
+                $name = $nameTranslations['en'] ?? $nameTranslations['ar'] ?? 'tag';
                 $model->slug = Str::slug($name);
             }
         });
@@ -98,10 +90,21 @@ class Tag extends Model
     }
 
     /**
+     * Get all translations for name attribute
+     * Returns the raw JSON decoded to array
+     */
+    public function getNameTranslations(): array
+    {
+        $raw = $this->getAttributes()['name'] ?? '{}';
+        return is_string($raw) ? json_decode($raw, true) : $raw;
+    }
+
+    /**
      * Get name in specified language
      */
     public function getNameInLanguage(string $language): ?string
     {
-        return $this->name[$language] ?? $this->name['ar'] ?? null;
+        $translations = $this->getNameTranslations();
+        return $translations[$language] ?? $translations['ar'] ?? null;
     }
 }

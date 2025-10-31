@@ -41,9 +41,14 @@
                     <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                         Name ({{ strtoupper($lang) }}) <span class="text-red-600">*</span>
                     </label>
+                    @php
+                        // Get all translations for the name attribute
+                        $translations = $category->getNameTranslations();
+                        $nameValue = $translations[$lang] ?? '';
+                    @endphp
                     <input type="text"
                            name="name[{{ $lang }}]"
-                           value="{{ old("name.$lang", $category->name[$lang] ?? '') }}"
+                           value="{{ old("name.$lang", $nameValue) }}"
                            required
                            class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3] @error("name.$lang") border-red-500 @enderror"
                            :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
@@ -57,10 +62,15 @@
                     <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                         Description ({{ strtoupper($lang) }})
                     </label>
+                    @php
+                        // Get all translations for the description attribute
+                        $translations = $category->getDescriptionTranslations();
+                        $descValue = $translations[$lang] ?? '';
+                    @endphp
                     <textarea name="description[{{ $lang }}]"
                               rows="4"
                               class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3]"
-                              :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">{{ old("description.$lang", $category->description[$lang] ?? '') }}</textarea>
+                              :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">{{ old("description.$lang", $descValue) }}</textarea>
                 </div>
             </div>
         @endforeach
@@ -96,27 +106,30 @@
                         class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3] @error('type') border-red-500 @enderror"
                         :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
                     <option value="">Select Type</option>
-                    <option value="blog" {{ old('type', $category->type) === 'blog' ? 'selected' : '' }}>Blog</option>
-                    <option value="media" {{ old('type', $category->type) === 'media' ? 'selected' : '' }}>Media</option>
-                    <option value="timeline" {{ old('type', $category->type) === 'timeline' ? 'selected' : '' }}>Timeline</option>
+                    <option value="blog" {{ old('type', $category->type?->value) === 'blog' ? 'selected' : '' }}>Blog</option>
+                    <option value="media" {{ old('type', $category->type?->value) === 'media' ? 'selected' : '' }}>Media</option>
+                    <option value="timeline" {{ old('type', $category->type?->value) === 'timeline' ? 'selected' : '' }}>Timeline</option>
                 </select>
                 @error('type')
                     <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                 @enderror
             </div>
 
-            <!-- Slug (Read-only) -->
+            <!-- Slug (Editable) -->
             <div>
                 <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Slug
+                    Slug <span class="text-yellow-600">(Auto-generated from English name)</span>
                 </label>
                 <input type="text"
-                       value="{{ $category->slug }}"
-                       readonly
-                       class="w-full px-4 py-2 rounded-lg border opacity-75 cursor-not-allowed focus:outline-none"
-                       :class="darkMode ? 'bg-gray-700 border-gray-600 text-gray-400' : 'bg-gray-100 border-gray-300 text-gray-600'">
+                       name="slug"
+                       value="{{ old('slug', $category->slug) }}"
+                       class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3] @error('slug') border-red-500 @enderror"
+                       :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                @error('slug')
+                    <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+                @enderror
                 <p class="text-xs mt-1" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
-                    Auto-generated from English name
+                    You can edit this manually. It will auto-generate when you change the English name.
                 </p>
             </div>
 
@@ -208,6 +221,17 @@
 <script>
     lucide.createIcons();
 
+    // Slugify function - converts text to URL-friendly slug
+    function slugify(text) {
+        return text
+            .toLowerCase()
+            .trim()
+            .replace(/[^\w\s-]/g, '')  // Remove special characters
+            .replace(/\s+/g, '-')       // Replace spaces with hyphens
+            .replace(/-+/g, '-')        // Replace multiple hyphens with single hyphen
+            .replace(/^-+|-+$/g, '');   // Remove leading/trailing hyphens
+    }
+
     // Form validation for multi-language fields
     document.querySelector('form')?.addEventListener('submit', function(e) {
         const form = this;
@@ -230,12 +254,33 @@
             errors.push('Type is required');
         }
 
+        // Auto-generate slug from English name if it's empty
+        // This is a convenience feature; the backend will also auto-generate if needed
+        const slugInput = form.querySelector('input[name="slug"]');
+        const englishNameInput = form.querySelector('input[name="name[en]"]');
+
+        if (slugInput && slugInput.value.trim() === '' && englishNameInput && englishNameInput.value.trim() !== '') {
+            // Auto-generate slug from English name to give immediate feedback
+            slugInput.value = slugify(englishNameInput.value);
+        }
+
         if (!isValid) {
             e.preventDefault();
             alert('Please fill in all required fields:\n\n' + errors.join('\n'));
             return false;
         }
     });
+
+    // Auto-generate slug from English name when it changes
+    const englishNameInput = document.querySelector('input[name="name[en]"]');
+    if (englishNameInput) {
+        englishNameInput.addEventListener('input', function() {
+            const slugInput = document.querySelector('input[name="slug"]');
+            if (slugInput) {
+                slugInput.value = slugify(this.value);
+            }
+        });
+    }
 </script>
 @endpush
 @endsection

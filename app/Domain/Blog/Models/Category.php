@@ -50,26 +50,18 @@ class Category extends Model
     ];
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'type' => CategoryType::class,
-            'name' => 'array',
-            'description' => 'array',
-            'display_order' => 'integer',
-        ];
-    }
-
-    /**
      * Translatable attributes
+     * Handled by Spatie\Translatable\HasTranslations trait
+     * Do NOT add these to $casts as it conflicts with HasTranslations
      *
      * @var array<string>
      */
     public array $translatable = ['name', 'description'];
+
+    protected $casts = [
+        'type' => CategoryType::class,
+        'display_order' => 'integer',
+    ];
 
     /**
      * Boot the model
@@ -82,7 +74,8 @@ class Category extends Model
         static::creating(function ($model) {
             if (empty($model->slug)) {
                 // Generate slug from English name, fallback to Arabic
-                $name = $model->name['en'] ?? $model->name['ar'] ?? 'category';
+                $nameTranslations = json_decode($model->getAttributes()['name'] ?? '{}', true);
+                $name = $nameTranslations['en'] ?? $nameTranslations['ar'] ?? 'category';
                 $model->slug = Str::slug($name);
             }
         });
@@ -90,7 +83,8 @@ class Category extends Model
         // Update slug if name changes
         static::updating(function ($model) {
             if ($model->isDirty('name') && empty($model->slug)) {
-                $name = $model->name['en'] ?? $model->name['ar'] ?? 'category';
+                $nameTranslations = json_decode($model->getAttributes()['name'] ?? '{}', true);
+                $name = $nameTranslations['en'] ?? $nameTranslations['ar'] ?? 'category';
                 $model->slug = Str::slug($name);
             }
         });
@@ -161,11 +155,32 @@ class Category extends Model
     }
 
     /**
+     * Get all translations for name attribute
+     * Returns the raw JSON decoded to array
+     */
+    public function getNameTranslations(): array
+    {
+        $raw = $this->getAttributes()['name'] ?? '{}';
+        return is_string($raw) ? json_decode($raw, true) : $raw;
+    }
+
+    /**
+     * Get all translations for description attribute
+     * Returns the raw JSON decoded to array
+     */
+    public function getDescriptionTranslations(): array
+    {
+        $raw = $this->getAttributes()['description'] ?? '{}';
+        return is_string($raw) ? json_decode($raw, true) : $raw;
+    }
+
+    /**
      * Get name in specified language
      */
     public function getNameInLanguage(string $language): ?string
     {
-        return $this->name[$language] ?? $this->name['ar'] ?? null;
+        $translations = $this->getNameTranslations();
+        return $translations[$language] ?? $translations['ar'] ?? null;
     }
 
     /**
@@ -173,6 +188,7 @@ class Category extends Model
      */
     public function getDescriptionInLanguage(string $language): ?string
     {
-        return $this->description[$language] ?? $this->description['ar'] ?? null;
+        $translations = $this->getDescriptionTranslations();
+        return $translations[$language] ?? $translations['ar'] ?? null;
     }
 }

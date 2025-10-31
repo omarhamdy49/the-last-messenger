@@ -289,49 +289,67 @@ function categoryManager() {
         },
 
         async deleteItem(id) {
-            if (!confirm('هل أنت متأكد من رغبتك في حذف هذه الفئة؟')) return;
+            const self = this;
+            window.showConfirm({
+                title: 'حذف الفئة',
+                message: 'هل أنت متأكد من رغبتك في حذف هذه الفئة؟ لا يمكن التراجع عن هذا الإجراء.',
+                onConfirm: async () => {
+                    try {
+                        const response = await fetch(`/su/portal/v1/admin/categories/${id}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            }
+                        });
 
-            try {
-                const response = await fetch(`/su/portal/v1/admin/categories/${id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        if (response.ok) {
+                            window.showToast('تم حذف الفئة بنجاح', 'success');
+                            self.loadData();
+                        } else {
+                            const data = await response.json();
+                            window.showToast(data.message || 'فشل في حذف الفئة', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        window.showToast('حدث خطأ أثناء حذف الفئة', 'error');
                     }
-                });
-
-                if (response.ok) {
-                    this.loadData();
-                    alert('تم حذف الفئة بنجاح');
                 }
-            } catch (error) {
-                console.error('Error:', error);
-            }
+            });
         },
 
         async bulkDelete() {
-            if (!confirm(`حذف ${this.selected.length} فئة؟`)) return;
+            const self = this;
+            window.showConfirm({
+                title: 'حذف فئات متعددة',
+                message: `هل أنت متأكد من رغبتك في حذف ${this.selected.length} فئة؟ لا يمكن التراجع عن هذا الإجراء.`,
+                onConfirm: async () => {
+                    try {
+                        const response = await fetch(`/su/portal/v1/admin/categories/bulk-delete`, {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ ids: self.selected })
+                        });
 
-            try {
-                const response = await fetch(`/su/portal/v1/admin/categories/bulk-delete`, {
-                    method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ ids: this.selected })
-                });
-
-                if (response.ok) {
-                    this.selected = [];
-                    this.selectedCount = 0;
-                    this.loadData();
-                    alert('تم حذف الفئات بنجاح');
+                        if (response.ok) {
+                            const data = await response.json();
+                            self.selected = [];
+                            self.selectedCount = 0;
+                            self.loadData();
+                            window.showToast(`تم حذف ${data.deleted} فئة بنجاح`, 'success');
+                        } else {
+                            window.showToast('فشل في حذف الفئات', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        window.showToast('حدث خطأ أثناء حذف الفئات', 'error');
+                    }
                 }
-            } catch (error) {
-                console.error('Error:', error);
-            }
+            });
         },
 
         debounce(fn, delay) {

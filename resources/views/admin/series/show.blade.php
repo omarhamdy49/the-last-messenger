@@ -142,11 +142,11 @@
                             </td>
                             <td class="px-6 py-4">
                                 <span class="px-3 py-1 rounded-full text-sm font-semibold
-                                    @if($article->status === 'published') bg-green-100 text-green-800
-                                    @elseif($article->status === 'draft') bg-yellow-100 text-yellow-800
+                                    @if($article->status->value === 'published') bg-green-100 text-green-800
+                                    @elseif($article->status->value === 'draft') bg-yellow-100 text-yellow-800
                                     @else bg-gray-100 text-gray-800
                                     @endif">
-                                    {{ ucfirst($article->status) }}
+                                    {{ $article->status->label() }}
                                 </span>
                             </td>
                             <td class="px-6 py-4">

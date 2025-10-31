@@ -159,8 +159,8 @@ class CategoryController extends Controller
             $oldCategory = $this->categoryService->findOrFail($id);
             $oldValues = $oldCategory->toArray();
 
-            // Perform update
-            $category = $this->categoryService->update($id, $request->validated());
+            // Perform update using updateCategory (not update) to trigger business logic
+            $category = $this->categoryService->updateCategory($id, $request->validated());
 
             // Log the update with diff
             $this->logger->logUpdate($category, $oldValues, $category->toArray(), $request->user());

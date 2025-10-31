@@ -80,12 +80,14 @@ class CategoryService extends BaseService
             $this->validateParentId($data['parent_id'], $id);
         }
 
-        // Update slug if name changed and slug not provided
-        if (isset($data['name']) && empty($data['slug'])) {
-            $data['slug'] = $this->generateUniqueSlug(
-                $data['name']['en'] ?? $data['name']['ar'],
-                $id
-            );
+        // Auto-generate slug from English name if slug is empty
+        if (empty($data['slug'])) {
+            if (isset($data['name'])) {
+                $data['slug'] = $this->generateUniqueSlug(
+                    $data['name']['en'] ?? $data['name']['ar'],
+                    $id
+                );
+            }
         }
 
         $this->repository->update($id, $data);

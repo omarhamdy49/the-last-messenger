@@ -58,6 +58,15 @@ class HadithNarrator extends Model
     ];
 
     /**
+     * Translatable attributes
+     * Handled by Spatie\Translatable\HasTranslations trait
+     * Do NOT add these to $casts as it conflicts with HasTranslations
+     *
+     * @var array<string>
+     */
+    public array $translatable = ['name', 'biography_json'];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -65,20 +74,11 @@ class HadithNarrator extends Model
     protected function casts(): array
     {
         return [
-            'name' => 'array',
-            'biography_json' => 'array',
             'reliability_grade' => NarratorGrade::class,
             'teachers' => 'array',
             'students' => 'array',
         ];
     }
-
-    /**
-     * Translatable attributes
-     *
-     * @var array<string>
-     */
-    public array $translatable = ['name', 'biography_json'];
 
     /**
      * Get all hadith narrated by this person
@@ -195,5 +195,25 @@ class HadithNarrator extends Model
         }
 
         return self::whereIn('id', $studentIds)->get()->toArray();
+    }
+
+    /**
+     * Get all translations for name attribute
+     * Returns the raw JSON decoded to array
+     */
+    public function getNameTranslations(): array
+    {
+        $raw = $this->getAttributes()['name'] ?? '{}';
+        return is_string($raw) ? json_decode($raw, true) : $raw;
+    }
+
+    /**
+     * Get all translations for biography_json attribute
+     * Returns the raw JSON decoded to array
+     */
+    public function getBiographyTranslations(): array
+    {
+        $raw = $this->getAttributes()['biography_json'] ?? '{}';
+        return is_string($raw) ? json_decode($raw, true) : $raw;
     }
 }

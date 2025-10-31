@@ -256,46 +256,66 @@ function mediaCategoryManager() {
         },
 
         async deleteItem(id) {
-            if (!confirm('Are you sure you want to delete this category?')) return;
+            const self = this;
+            window.showConfirm({
+                title: 'Delete Media Category',
+                message: 'Are you sure you want to delete this category? This action cannot be undone.',
+                onConfirm: async () => {
+                    try {
+                        const response = await fetch(`/su/portal/v1/admin/media-categories/${id}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            }
+                        });
 
-            try {
-                const response = await fetch(`/su/portal/v1/admin/media-categories/${id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        if (response.ok) {
+                            window.showToast('Media category deleted successfully', 'success');
+                            await self.loadData();
+                        } else {
+                            const data = await response.json();
+                            window.showToast(data.message || 'Failed to delete category', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error deleting category:', error);
+                        window.showToast('An error occurred while deleting the category', 'error');
                     }
-                });
-
-                if (response.ok) {
-                    await this.loadData();
                 }
-            } catch (error) {
-                console.error('Error deleting category:', error);
-            }
+            });
         },
 
         async bulkDelete() {
-            if (!confirm(`Delete ${this.selected.length} categories?`)) return;
+            const self = this;
+            window.showConfirm({
+                title: 'Delete Multiple Media Categories',
+                message: `Are you sure you want to delete ${this.selected.length} categories? This action cannot be undone.`,
+                onConfirm: async () => {
+                    try {
+                        const response = await fetch('/su/portal/v1/admin/media-categories/bulk-delete', {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ ids: self.selected })
+                        });
 
-            try {
-                const response = await fetch('/su/portal/v1/admin/media-categories/bulk-delete', {
-                    method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ ids: this.selected })
-                });
-
-                if (response.ok) {
-                    this.selected = [];
-                    await this.loadData();
+                        if (response.ok) {
+                            const data = await response.json();
+                            self.selected = [];
+                            await self.loadData();
+                            window.showToast(`${data.deleted} categories deleted successfully`, 'success');
+                        } else {
+                            window.showToast('Failed to delete categories', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error bulk deleting:', error);
+                        window.showToast('An error occurred while deleting the categories', 'error');
+                    }
                 }
-            } catch (error) {
-                console.error('Error bulk deleting:', error);
-            }
+            });
         }
     };
 }

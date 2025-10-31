@@ -261,49 +261,66 @@ function seriesManager() {
         },
 
         async deleteItem(id) {
-            if (!confirm('هل أنت متأكد من حذف هذه السلسلة؟')) return;
+            const self = this;
+            window.showConfirm({
+                title: 'حذف السلسلة',
+                message: 'هل أنت متأكد من رغبتك في حذف هذه السلسلة؟ لا يمكن التراجع عن هذا الإجراء.',
+                onConfirm: async () => {
+                    try {
+                        const response = await fetch(`/su/portal/v1/admin/series/${id}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            }
+                        });
 
-            try {
-                const response = await fetch(`/su/portal/v1/admin/series/${id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        if (response.ok) {
+                            window.showToast('تم حذف السلسلة بنجاح', 'success');
+                            self.loadData();
+                        } else {
+                            const data = await response.json();
+                            window.showToast(data.message || 'فشل في حذف السلسلة', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        window.showToast('حدث خطأ أثناء حذف السلسلة', 'error');
                     }
-                });
-
-                if (response.ok) {
-                    this.loadData();
-                    window.showToast?.('تم الحذف بنجاح', 'success');
                 }
-            } catch (error) {
-                console.error('Error:', error);
-                window.showToast?.('حدث خطأ أثناء الحذف', 'error');
-            }
+            });
         },
 
         async bulkDelete() {
-            if (!confirm(`حذف ${this.selected.length} سلسلة؟`)) return;
+            const self = this;
+            window.showConfirm({
+                title: 'حذف سلاسل متعددة',
+                message: `هل أنت متأكد من رغبتك في حذف ${this.selected.length} سلسلة؟ لا يمكن التراجع عن هذا الإجراء.`,
+                onConfirm: async () => {
+                    try {
+                        const response = await fetch(`/su/portal/v1/admin/series/bulk-delete`, {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ ids: self.selected })
+                        });
 
-            try {
-                const response = await fetch(`/su/portal/v1/admin/series/bulk-delete`, {
-                    method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ ids: this.selected })
-                });
-
-                if (response.ok) {
-                    this.selected = [];
-                    this.loadData();
-                    window.showToast?.('تم الحذف بنجاح', 'success');
+                        if (response.ok) {
+                            const data = await response.json();
+                            self.selected = [];
+                            self.loadData();
+                            window.showToast(`تم حذف ${data.deleted} سلسلة بنجاح`, 'success');
+                        } else {
+                            window.showToast('فشل في حذف السلاسل', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        window.showToast('حدث خطأ أثناء حذف السلاسل', 'error');
+                    }
                 }
-            } catch (error) {
-                console.error('Error:', error);
-            }
+            });
         },
 
         debounce(fn, delay) {

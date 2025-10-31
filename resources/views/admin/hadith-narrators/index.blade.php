@@ -273,27 +273,35 @@ function narratorsManager() {
         },
 
         async deleteNarrator(id) {
-            if (!confirm('هل أنت متأكد من حذف هذا الراوي؟')) return;
+            const self = this;
+            window.showConfirm({
+                title: 'حذف الراوي',
+                message: 'هل أنت متأكد من رغبتك في حذف هذا الراوي؟ لا يمكن التراجع عن هذا الإجراء.',
+                onConfirm: async () => {
+                    try {
+                        const response = await fetch(`/su/portal/v1/admin/hadith-narrators/${id}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json'
+                            }
+                        });
 
-            try {
-                const response = await fetch(`/su/portal/v1/admin/hadith-narrators/${id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json'
+                        if (response.ok) {
+                            await self.loadData();
+                            self.$nextTick(() => lucide.createIcons());
+                            window.showToast('تم حذف الراوي بنجاح', 'success');
+                        } else {
+                            const data = await response.json();
+                            window.showToast(data.message || 'فشل في حذف الراوي', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error deleting narrator:', error);
+                        window.showToast('حدث خطأ أثناء حذف الراوي', 'error');
                     }
-                });
-
-                if (response.ok) {
-                    await this.loadData();
-                    this.$nextTick(() => lucide.createIcons());
-                    window.showToast('تم حذف الراوي بنجاح', 'success');
                 }
-            } catch (error) {
-                console.error('Error deleting narrator:', error);
-                window.showToast('حدث خطأ أثناء الحذف', 'error');
-            }
+            });
         }
     };
 }

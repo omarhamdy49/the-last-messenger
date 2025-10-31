@@ -46,22 +46,22 @@ class MediaCategory extends Model
     ];
 
     /**
+     * Translatable attributes
+     * Handled by Spatie\Translatable\HasTranslations trait
+     * Do NOT add these to $casts as it conflicts with HasTranslations
+     *
+     * @var array<string>
+     */
+    public array $translatable = ['name', 'description'];
+
+    /**
      * The attributes that should be cast.
      *
      * @var array<string, string>
      */
     protected $casts = [
-        'name' => 'array',
-        'description' => 'array',
         'display_order' => 'integer',
     ];
-
-    /**
-     * Translatable attributes
-     *
-     * @var array<string>
-     */
-    public array $translatable = ['name', 'description'];
 
     /**
      * Get all programs in this category
@@ -90,5 +90,43 @@ class MediaCategory extends Model
     public function scopeOrdered($query)
     {
         return $query->orderBy('display_order');
+    }
+
+    /**
+     * Get all translations for name attribute
+     * Returns the raw JSON decoded to array
+     */
+    public function getNameTranslations(): array
+    {
+        $raw = $this->getAttributes()['name'] ?? '{}';
+        return is_string($raw) ? json_decode($raw, true) : $raw;
+    }
+
+    /**
+     * Get all translations for description attribute
+     * Returns the raw JSON decoded to array
+     */
+    public function getDescriptionTranslations(): array
+    {
+        $raw = $this->getAttributes()['description'] ?? '{}';
+        return is_string($raw) ? json_decode($raw, true) : $raw;
+    }
+
+    /**
+     * Get name in specified language
+     */
+    public function getNameInLanguage(string $language): ?string
+    {
+        $translations = $this->getNameTranslations();
+        return $translations[$language] ?? $translations['ar'] ?? null;
+    }
+
+    /**
+     * Get description in specified language
+     */
+    public function getDescriptionInLanguage(string $language): ?string
+    {
+        $translations = $this->getDescriptionTranslations();
+        return $translations[$language] ?? $translations['ar'] ?? null;
     }
 }

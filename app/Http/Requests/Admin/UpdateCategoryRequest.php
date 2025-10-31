@@ -49,6 +49,15 @@ class UpdateCategoryRequest extends FormRequest
             // Type field - must be one of the enum values
             'type' => ['required', Rule::in(CategoryType::values())],
 
+            // Slug - can be edited manually or auto-generated if empty
+            'slug' => [
+                'nullable',
+                'string',
+                'max:255',
+                'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', // Only lowercase letters, numbers, and hyphens
+                Rule::unique('categories', 'slug')->ignore($categoryId), // Unique except for this category
+            ],
+
             // Parent category - nullable (for root categories)
             // Cannot set self as parent
             'parent_id' => [
@@ -77,6 +86,8 @@ class UpdateCategoryRequest extends FormRequest
             'name.en.required' => 'English name is required',
             'name.ar.max' => 'Arabic name cannot exceed 255 characters',
             'name.en.max' => 'English name cannot exceed 255 characters',
+            'slug.regex' => 'Slug can only contain lowercase letters, numbers, and hyphens',
+            'slug.unique' => 'This slug is already in use. Please choose a different one.',
             'type.required' => 'Category type is required',
             'type.in' => 'Invalid category type. Must be blog, media, or timeline',
             'parent_id.exists' => 'Selected parent category does not exist',

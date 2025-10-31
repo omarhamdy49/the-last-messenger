@@ -51,9 +51,14 @@
                     <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                         Name ({{ strtoupper($lang) }}) <span class="text-red-600">*</span>
                     </label>
+                    @php
+                        // Get all translations for the name attribute
+                        $translations = $tag->getNameTranslations();
+                        $nameValue = $translations[$lang] ?? '';
+                    @endphp
                     <input type="text"
                            name="name[{{ $lang }}]"
-                           value="{{ old("name.$lang", $tag->name[$lang] ?? '') }}"
+                           value="{{ old("name.$lang", $nameValue) }}"
                            required
                            class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3] @error("name.$lang") border-red-500 @enderror"
                            :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">

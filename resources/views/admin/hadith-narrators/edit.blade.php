@@ -7,7 +7,14 @@
     <!-- Page Header -->
     <div class="mb-8">
         <h1 class="text-3xl font-bold mb-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-            {{ __('admin.edit_narrator') }}: {{ $narrator->name['en'] ?? $narrator->name['ar'] }}
+            {{ __('admin.edit_narrator') }}:
+            @php
+                if (is_array($narrator->name)) {
+                    echo $narrator->name['en'] ?? $narrator->name['ar'] ?? '';
+                } else {
+                    echo $narrator->name;
+                }
+            @endphp
         </h1>
         <p class="text-gray-500">{{ __('admin.edit_narrator_description') }}</p>
     </div>
@@ -47,10 +54,15 @@
                             {{ __("admin.name_$lang") }}
                             <span class="text-red-500">*</span>
                         </label>
+                        @php
+                            // Get all translations for the name attribute
+                            $translations = $narrator->getNameTranslations();
+                            $nameValue = $translations[$lang] ?? '';
+                        @endphp
                         <input type="text"
                                name="name[{{ $lang }}]"
                                id="name_{{ $lang }}"
-                               value="{{ old("name.$lang", $narrator->name[$lang] ?? '') }}"
+                               value="{{ old("name.$lang", $nameValue) }}"
                                class="w-full px-4 py-2 rounded-lg border transition"
                                :class="darkMode ? 'bg-gray-800 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'"
                                placeholder="{{ __('admin.enter_name') }}"
@@ -66,12 +78,17 @@
                                :class="darkMode ? 'text-gray-200' : 'text-gray-700'">
                             {{ __("admin.biography_$lang") }}
                         </label>
+                        @php
+                            // Get all translations for the biography_json attribute
+                            $translations = $narrator->getBiographyTranslations();
+                            $bioValue = $translations[$lang] ?? '';
+                        @endphp
                         <textarea name="biography_json[{{ $lang }}]"
                                   id="biography_json_{{ $lang }}"
                                   rows="5"
                                   class="w-full px-4 py-2 rounded-lg border transition"
                                   :class="darkMode ? 'bg-gray-800 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'"
-                                  placeholder="{{ __('admin.enter_biography') }}">{{ old("biography_json.$lang", $narrator->biography_json[$lang] ?? '') }}</textarea>
+                                  placeholder="{{ __('admin.enter_biography') }}">{{ old("biography_json.$lang", $bioValue) }}</textarea>
                         @error("biography_json.$lang")
                             <span class="text-red-500 text-sm mt-1 block">{{ $message }}</span>
                         @enderror
@@ -103,10 +120,10 @@
                             :class="darkMode ? 'bg-gray-800 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'"
                             required>
                         <option value="">{{ __('admin.select_grade') }}</option>
-                        <option value="Sahih" {{ old('reliability_grade', $narrator->reliability_grade) === 'Sahih' ? 'selected' : '' }}>{{ __('admin.sahih') }}</option>
-                        <option value="Hasan" {{ old('reliability_grade', $narrator->reliability_grade) === 'Hasan' ? 'selected' : '' }}>{{ __('admin.hasan') }}</option>
-                        <option value="Daif" {{ old('reliability_grade', $narrator->reliability_grade) === 'Daif' ? 'selected' : '' }}>{{ __('admin.daif') }}</option>
-                        <option value="Weak" {{ old('reliability_grade', $narrator->reliability_grade) === 'Weak' ? 'selected' : '' }}>{{ __('admin.weak') }}</option>
+                        <option value="Sahih" {{ old('reliability_grade', $narrator->reliability_grade?->value) === 'Sahih' ? 'selected' : '' }}>{{ __('admin.sahih') }}</option>
+                        <option value="Hasan" {{ old('reliability_grade', $narrator->reliability_grade?->value) === 'Hasan' ? 'selected' : '' }}>{{ __('admin.hasan') }}</option>
+                        <option value="Daif" {{ old('reliability_grade', $narrator->reliability_grade?->value) === 'Daif' ? 'selected' : '' }}>{{ __('admin.daif') }}</option>
+                        <option value="Weak" {{ old('reliability_grade', $narrator->reliability_grade?->value) === 'Weak' ? 'selected' : '' }}>{{ __('admin.weak') }}</option>
                     </select>
                     @error('reliability_grade')
                         <span class="text-red-500 text-sm mt-1 block">{{ $message }}</span>
@@ -232,7 +249,13 @@
                             @if($n->id !== $narrator->id)
                                 <option value="{{ $n->id }}"
                                         {{ in_array($n->id, old('teachers', $narrator->teachers ?? [])) ? 'selected' : '' }}>
-                                    {{ $n->name['en'] ?? $n->name['ar'] }}
+                                    @php
+                                        if (is_array($n->name)) {
+                                            echo $n->name['en'] ?? $n->name['ar'] ?? '';
+                                        } else {
+                                            echo $n->name;
+                                        }
+                                    @endphp
                                 </option>
                             @endif
                         @endforeach
@@ -258,7 +281,13 @@
                             @if($n->id !== $narrator->id)
                                 <option value="{{ $n->id }}"
                                         {{ in_array($n->id, old('students', $narrator->students ?? [])) ? 'selected' : '' }}>
-                                    {{ $n->name['en'] ?? $n->name['ar'] }}
+                                    @php
+                                        if (is_array($n->name)) {
+                                            echo $n->name['en'] ?? $n->name['ar'] ?? '';
+                                        } else {
+                                            echo $n->name;
+                                        }
+                                    @endphp
                                 </option>
                             @endif
                         @endforeach

@@ -17,6 +17,11 @@
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
+    <!-- x-cloak CSS for Alpine.js -->
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -367,6 +372,9 @@
 
     <!-- Toast Notification Component -->
     @include('admin.components.toast')
+
+    <!-- Confirmation Dialog Component -->
+    @include('admin.components.confirm-dialog')
 
     <script>
         // Initialize Lucide icons

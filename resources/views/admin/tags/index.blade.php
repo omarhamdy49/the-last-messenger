@@ -327,49 +327,67 @@ function tagManager() {
         },
 
         async deleteItem(id) {
-            if (!confirm('Are you sure you want to delete this tag?')) return;
+            const self = this;
+            window.showConfirm({
+                title: 'Delete Tag',
+                message: 'Are you sure you want to delete this tag? This action cannot be undone.',
+                onConfirm: async () => {
+                    try {
+                        const response = await fetch(`/su/portal/v1/admin/tags/${id}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            }
+                        });
 
-            try {
-                const response = await fetch(`/su/portal/v1/admin/tags/${id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        if (response.ok) {
+                            window.showToast('Tag deleted successfully', 'success');
+                            self.loadData();
+                        } else {
+                            const data = await response.json();
+                            window.showToast(data.message || 'Failed to delete tag', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        window.showToast('An error occurred while deleting the tag', 'error');
                     }
-                });
-
-                if (response.ok) {
-                    this.loadData();
-                    alert('Tag deleted successfully');
                 }
-            } catch (error) {
-                console.error('Error:', error);
-            }
+            });
         },
 
         async bulkDelete() {
-            if (!confirm(`Delete ${this.selected.length} tags?`)) return;
+            const self = this;
+            window.showConfirm({
+                title: 'Delete Multiple Tags',
+                message: `Are you sure you want to delete ${this.selected.length} tags? This action cannot be undone.`,
+                onConfirm: async () => {
+                    try {
+                        const response = await fetch(`/su/portal/v1/admin/tags/bulk-delete`, {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ ids: self.selected })
+                        });
 
-            try {
-                const response = await fetch(`/su/portal/v1/admin/tags/bulk-delete`, {
-                    method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ ids: this.selected })
-                });
-
-                if (response.ok) {
-                    this.selected = [];
-                    this.selectedCount = 0;
-                    this.loadData();
-                    alert('Tags deleted successfully');
+                        if (response.ok) {
+                            const data = await response.json();
+                            self.selected = [];
+                            self.selectedCount = 0;
+                            self.loadData();
+                            window.showToast(`${data.deleted} tags deleted successfully`, 'success');
+                        } else {
+                            window.showToast('Failed to delete tags', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        window.showToast('An error occurred while deleting the tags', 'error');
+                    }
                 }
-            } catch (error) {
-                console.error('Error:', error);
-            }
+            });
         },
 
         showMergeModal() {
