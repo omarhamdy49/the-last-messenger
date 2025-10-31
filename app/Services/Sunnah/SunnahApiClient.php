@@ -1,0 +1,322 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Sunnah;
+
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\RetryMiddleware;
+use GuzzleHttp\Psr7\Request as Psr7Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use stdClass;
+
+class SunnahApiClient
+{
+    private Client $client;
+    private string $baseUrl;
+    private string $apiKey;
+    private int $rateLimitDelay = 5000; // milliseconds (5 seconds)
+    private float $lastRequestTime = 0;
+
+    /**
+     * List of common user agents to rotate through
+     */
+    private const USER_AGENTS = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/91.0.864.59',
+        'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0',
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Mobile/15E148 Safari/604.1',
+        'Mozilla/5.0 (Linux; Android 11; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36',
+    ];
+
+    public function __construct()
+    {
+        $this->baseUrl = config('sunnah.api.base_url');
+        $this->apiKey = config('sunnah.api.key');
+        $this->rateLimitDelay = config('sunnah.api.rate_limit.delay_between_requests', 5000);
+
+        // Create Guzzle client with retry middleware
+        $this->client = new Client([
+            'base_uri' => $this->baseUrl,
+            'timeout' => config('sunnah.api.timeout', 30),
+            'headers' => [
+                'X-API-Key' => $this->apiKey,
+                'Accept' => 'application/json',
+                'User-Agent' => $this->getRandomUserAgent(),
+                'Referer' => 'https://sunnah.com/',
+            ],
+        ]);
+    }
+
+    /**
+     * Get a random user agent from the list
+     */
+    private function getRandomUserAgent(): string
+    {
+        return self::USER_AGENTS[array_rand(self::USER_AGENTS)];
+    }
+
+    /**
+     * Get all collections (hadith books)
+     */
+    public function getCollections(int $limit = 50, int $page = 1): stdClass
+    {
+        $this->applyRateLimit();
+
+        $response = $this->client->get('collections', [
+            'query' => [
+                'limit' => $limit,
+                'page' => $page,
+            ],
+        ]);
+
+        return json_decode((string) $response->getBody());
+    }
+
+    /**
+     * Get a specific collection by name
+     */
+    public function getCollection(string $collectionName): stdClass
+    {
+        $this->applyRateLimit();
+
+        $response = $this->client->get("collections/{$collectionName}");
+
+        return json_decode((string) $response->getBody());
+    }
+
+    /**
+     * Get all books in a collection
+     */
+    public function getBooks(string $collectionName, int $limit = 50, int $page = 1): stdClass
+    {
+        $this->applyRateLimit();
+
+        $response = $this->client->get("collections/{$collectionName}/books", [
+            'query' => [
+                'limit' => $limit,
+                'page' => $page,
+            ],
+        ]);
+
+        return json_decode((string) $response->getBody());
+    }
+
+    /**
+     * Get a specific book in a collection
+     */
+    public function getBook(string $collectionName, string $bookNumber): stdClass
+    {
+        $this->applyRateLimit();
+
+        $response = $this->client->get("collections/{$collectionName}/books/{$bookNumber}");
+
+        return json_decode((string) $response->getBody());
+    }
+
+    /**
+     * Get all chapters in a book
+     */
+    public function getChapters(string $collectionName, string $bookNumber, int $limit = 50, int $page = 1): stdClass
+    {
+        $this->applyRateLimit();
+
+        $response = $this->client->get("collections/{$collectionName}/books/{$bookNumber}/chapters", [
+            'query' => [
+                'limit' => $limit,
+                'page' => $page,
+            ],
+        ]);
+
+        return json_decode((string) $response->getBody());
+    }
+
+    /**
+     * Get a specific chapter
+     */
+    public function getChapter(string $collectionName, string $bookNumber, string|float $chapterId): stdClass
+    {
+        $this->applyRateLimit();
+
+        $response = $this->client->get("collections/{$collectionName}/books/{$bookNumber}/chapters/{$chapterId}");
+
+        return json_decode((string) $response->getBody());
+    }
+
+    /**
+     * Get all hadiths in a book
+     */
+    public function getHadithsByBook(string $collectionName, string $bookNumber, int $limit = 50, int $page = 1): stdClass
+    {
+        $this->applyRateLimit();
+
+        $response = $this->client->get("collections/{$collectionName}/books/{$bookNumber}/hadiths", [
+            'query' => [
+                'limit' => $limit,
+                'page' => $page,
+            ],
+        ]);
+
+        return json_decode((string) $response->getBody());
+    }
+
+    /**
+     * Get a specific hadith by URN
+     */
+    public function getHadithByUrn(int|string $urn): stdClass
+    {
+        $this->applyRateLimit();
+
+        $response = $this->client->get("hadiths/{$urn}");
+
+        return json_decode((string) $response->getBody());
+    }
+
+    /**
+     * Get a specific hadith by collection and hadith number
+     */
+    public function getHadith(string $collectionName, string $hadithNumber): stdClass
+    {
+        $this->applyRateLimit();
+
+        $response = $this->client->get("collections/{$collectionName}/hadiths/{$hadithNumber}");
+
+        return json_decode((string) $response->getBody());
+    }
+
+    /**
+     * Get all hadiths with filters
+     */
+    public function getHadiths(
+        ?string $collection = null,
+        ?string $bookNumber = null,
+        ?float $chapterId = null,
+        ?string $hadithNumber = null,
+        int $limit = 50,
+        int $page = 1
+    ): stdClass {
+        $this->applyRateLimit();
+
+        $query = [
+            'limit' => $limit,
+            'page' => $page,
+        ];
+
+        if ($collection) {
+            $query['collection'] = $collection;
+        }
+        if ($bookNumber) {
+            $query['bookNumber'] = $bookNumber;
+        }
+        if ($chapterId) {
+            $query['chapterId'] = $chapterId;
+        }
+        if ($hadithNumber) {
+            $query['hadithNumber'] = $hadithNumber;
+        }
+
+        $response = $this->client->get('hadiths', ['query' => $query]);
+
+        return json_decode((string) $response->getBody());
+    }
+
+    /**
+     * Get a random hadith
+     */
+    public function getRandomHadith(): stdClass
+    {
+        $this->applyRateLimit();
+
+        $response = $this->client->get('hadiths/random');
+
+        return json_decode((string) $response->getBody());
+    }
+
+    /**
+     * Apply rate limiting by enforcing minimum delay between requests
+     */
+    private function applyRateLimit(): void
+    {
+        $now = microtime(true) * 1000; // Convert to milliseconds
+        $elapsed = $now - $this->lastRequestTime;
+
+        if ($elapsed < $this->rateLimitDelay) {
+            $sleep = (int) ceil($this->rateLimitDelay - $elapsed);
+            usleep($sleep * 1000); // Convert milliseconds to microseconds
+            Log::debug("Rate limiting: slept for {$sleep}ms");
+        }
+
+        $this->lastRequestTime = microtime(true) * 1000;
+    }
+
+    /**
+     * Paginate through all results using a callback
+     *
+     * @param callable $callback Function that receives page data and returns true to continue
+     * @param int $limit Items per page
+     */
+    public function paginateAll(callable $callback, string $endpoint, int $limit = 50): void
+    {
+        $page = 1;
+        $hasMore = true;
+
+        while ($hasMore) {
+            try {
+                // Make the request based on endpoint
+                if (str_contains($endpoint, '{collection}')) {
+                    // Will be replaced by the callback function
+                    break;
+                }
+
+                $response = $this->client->get($endpoint, [
+                    'query' => [
+                        'limit' => $limit,
+                        'page' => $page,
+                    ],
+                ]);
+
+                $data = json_decode((string) $response->getBody());
+
+                $shouldContinue = $callback($data);
+
+                if (!$shouldContinue || !isset($data->next) || $data->next === null) {
+                    $hasMore = false;
+                } else {
+                    $page = $data->next;
+                }
+            } catch (RequestException $e) {
+                Log::error('Sunnah API pagination error', [
+                    'endpoint' => $endpoint,
+                    'page' => $page,
+                    'error' => $e->getMessage(),
+                ]);
+                throw $e;
+            }
+        }
+    }
+
+    /**
+     * Test API connection
+     */
+    public function testConnection(): bool
+    {
+        try {
+            $this->applyRateLimit();
+            $response = $this->client->get('collections', ['query' => ['limit' => 1]]);
+
+            return $response->getStatusCode() === 200;
+        } catch (RequestException $e) {
+            Log::error('Sunnah API connection test failed', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+}

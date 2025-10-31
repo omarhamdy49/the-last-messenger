@@ -7,20 +7,23 @@ namespace App\Domain\Hadith\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Translatable\HasTranslations;
 
 /**
  * Hadith Book Model
- * Represents hadith collections (e.g., Sahih al-Bukhari, Sahih Muslim)
+ * Represents hadith books (e.g., Sahih al-Bukhari, Sahih Muslim)
  *
  * @property int $id
  * @property string $slug
+ * @property int|null $collection_id
  * @property array $name
  * @property array|null $description
  * @property string|null $author_name
  * @property int $total_hadith_count
  * @property int $display_order
+ * @property bool $active
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  */
@@ -37,11 +40,13 @@ class HadithBook extends Model
      */
     protected $fillable = [
         'slug',
+        'collection_id',
         'name',
         'description',
         'author_name',
         'total_hadith_count',
         'display_order',
+        'active',
     ];
 
     /**
@@ -56,6 +61,7 @@ class HadithBook extends Model
             'description' => 'array',
             'total_hadith_count' => 'integer',
             'display_order' => 'integer',
+            'active' => 'boolean',
         ];
     }
 
@@ -65,6 +71,14 @@ class HadithBook extends Model
      * @var array<string>
      */
     public array $translatable = ['name', 'description'];
+
+    /**
+     * Get the collection this book belongs to
+     */
+    public function collection(): BelongsTo
+    {
+        return $this->belongsTo(HadithCollection::class, 'collection_id');
+    }
 
     /**
      * Get all chapters in this book
@@ -80,6 +94,14 @@ class HadithBook extends Model
     public function hadiths(): HasMany
     {
         return $this->hasMany(Hadith::class, 'book_id');
+    }
+
+    /**
+     * Scope: Active books only
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('active', true);
     }
 
     /**

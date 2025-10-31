@@ -11,19 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('import_mappings', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('import_id')->constrained()->onDelete('cascade');
-            $table->string('csv_column');
-            $table->string('db_field');
-            $table->string('transform_rule')->nullable(); // date_format, uppercase, etc.
-            $table->integer('column_index')->unsigned();
-            $table->timestamps();
-
-            // Composite unique index
-            $table->unique(['import_id', 'csv_column']);
-            $table->index('import_id');
-        });
+        // Import mapping tables have been removed - see 2025_10_31_120008_drop_import_tables.php
+        // This migration is kept for migration history but does not create any tables
     }
 
     /**

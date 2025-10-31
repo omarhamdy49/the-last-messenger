@@ -33,6 +33,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
     public function getByBook(int $bookId, int $perPage = 15, array $relations = []): LengthAwarePaginator
     {
         $query = $this->model->byBook($bookId)
+            ->active()
             ->orderBy('hadith_number');
 
         if (! empty($relations)) {
@@ -48,6 +49,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
     public function getByChapter(int $chapterId, int $perPage = 15, array $relations = []): LengthAwarePaginator
     {
         $query = $this->model->byChapter($chapterId)
+            ->active()
             ->orderBy('hadith_number');
 
         if (! empty($relations)) {
@@ -63,6 +65,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
     public function getByGrade(HadithGrade $grade, int $perPage = 15, array $relations = []): LengthAwarePaginator
     {
         $query = $this->model->byGrade($grade)
+            ->active()
             ->orderBy('book_id')
             ->orderBy('hadith_number');
 
@@ -79,6 +82,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
     public function getSahih(int $perPage = 15, array $relations = []): LengthAwarePaginator
     {
         $query = $this->model->sahih()
+            ->active()
             ->orderBy('book_id')
             ->orderBy('hadith_number');
 
@@ -95,6 +99,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
     public function getReliable(int $perPage = 15, array $relations = []): LengthAwarePaginator
     {
         $query = $this->model->reliable()
+            ->active()
             ->orderBy('book_id')
             ->orderBy('hadith_number');
 
@@ -111,6 +116,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
     public function search(string $query, int $perPage = 15, array $relations = []): LengthAwarePaginator
     {
         $searchQuery = $this->model->search($query)
+            ->active()
             ->orderBy('book_id')
             ->orderBy('hadith_number');
 
@@ -159,7 +165,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
         $cacheKey = $this->getCacheKey('withNarrators', compact('id'));
 
         return Cache::remember($cacheKey, $this->cacheTTL, function () use ($id) {
-            return $this->model->with(['book', 'chapter', 'narrators'])
+            return $this->model->with(['book', 'chapter'])
                 ->find($id);
         });
     }
@@ -172,7 +178,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
      */
     public function filterHadith(array $filters, int $perPage = 15, array $relations = []): LengthAwarePaginator
     {
-        $query = $this->model->query();
+        $query = $this->model->active();
 
         if (isset($filters['book_id'])) {
             $query->byBook($filters['book_id']);
@@ -222,7 +228,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
     {
         $query = $this->model->whereHas('narrators', function ($q) use ($narratorId) {
             $q->where('hadith_narrators.id', $narratorId);
-        })->orderBy('book_id')->orderBy('hadith_number');
+        })->active()->orderBy('book_id')->orderBy('hadith_number');
 
         if (! empty($relations)) {
             $query->with($relations);
@@ -237,6 +243,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
     public function getByDateRange(string $startDate, string $endDate, int $perPage = 15, array $relations = []): LengthAwarePaginator
     {
         $query = $this->model->whereBetween('created_at', [$startDate, $endDate])
+            ->active()
             ->orderBy('book_id')
             ->orderBy('hadith_number');
 

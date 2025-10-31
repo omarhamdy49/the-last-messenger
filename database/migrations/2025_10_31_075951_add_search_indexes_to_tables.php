@@ -116,47 +116,91 @@ return new class extends Migration
     {
         // Drop indexes if they exist
         if (Schema::hasTable('articles')) {
-            Schema::table('articles', function (Blueprint $table) {
-                $table->dropIndex('idx_articles_status');
-                $table->dropIndex('idx_articles_published_at');
-            });
+            try {
+                DB::statement('DROP INDEX idx_articles_status ON articles');
+            } catch (\Exception $e) {
+                // Index might not exist, skip
+            }
+            try {
+                DB::statement('DROP INDEX idx_articles_published_at ON articles');
+            } catch (\Exception $e) {
+                // Index might not exist, skip
+            }
         }
 
         if (Schema::hasTable('hadith')) {
-            Schema::table('hadith', function (Blueprint $table) {
-                $table->dropIndex('idx_hadith_book_id');
-                $table->dropIndex('idx_hadith_chapter_id');
-                $table->dropIndex('idx_hadith_authenticity');
-            });
+            try {
+                DB::statement('DROP INDEX idx_hadith_book_id ON hadith');
+            } catch (\Exception $e) {
+                // Index might not exist, skip
+            }
+            try {
+                DB::statement('DROP INDEX idx_hadith_chapter_id ON hadith');
+            } catch (\Exception $e) {
+                // Index might not exist, skip
+            }
+            try {
+                DB::statement('DROP INDEX idx_hadith_authenticity ON hadith');
+            } catch (\Exception $e) {
+                // Index might not exist, skip
+            }
         }
 
         if (Schema::hasTable('media_programs')) {
-            Schema::table('media_programs', function (Blueprint $table) {
-                $table->dropIndex('idx_media_programs_category');
-                $table->dropIndex('idx_media_programs_type');
-            });
+            try {
+                DB::statement('DROP INDEX idx_media_programs_category ON media_programs');
+            } catch (\Exception $e) {
+                // Index might not exist, skip
+            }
+            try {
+                DB::statement('DROP INDEX idx_media_programs_type ON media_programs');
+            } catch (\Exception $e) {
+                // Index might not exist, skip
+            }
         }
 
         if (Schema::hasTable('seerah_events')) {
-            Schema::table('seerah_events', function (Blueprint $table) {
-                $table->dropIndex('idx_seerah_events_type');
-                $table->dropIndex('idx_seerah_events_importance');
-                $table->dropIndex('idx_seerah_events_hijri_date');
-            });
+            try {
+                DB::statement('DROP INDEX idx_seerah_events_type ON seerah_events');
+            } catch (\Exception $e) {
+                // Index might not exist, skip
+            }
+            try {
+                DB::statement('DROP INDEX idx_seerah_events_importance ON seerah_events');
+            } catch (\Exception $e) {
+                // Index might not exist, skip
+            }
+            try {
+                DB::statement('DROP INDEX idx_seerah_events_hijri_date ON seerah_events');
+            } catch (\Exception $e) {
+                // Index might not exist, skip
+            }
         }
 
         if (Schema::hasTable('sahabis')) {
-            Schema::table('sahabis', function (Blueprint $table) {
-                $table->dropIndex('idx_sahabis_status');
-                $table->dropIndex('idx_sahabis_tribe');
-            });
+            try {
+                DB::statement('DROP INDEX idx_sahabis_status ON sahabis');
+            } catch (\Exception $e) {
+                // Index might not exist, skip
+            }
+            try {
+                DB::statement('DROP INDEX idx_sahabis_tribe ON sahabis');
+            } catch (\Exception $e) {
+                // Index might not exist, skip
+            }
         }
 
         if (Schema::hasTable('quran_verses')) {
-            Schema::table('quran_verses', function (Blueprint $table) {
-                $table->dropIndex('idx_quran_verses_surah');
-                $table->dropIndex('idx_quran_verses_juz');
-            });
+            try {
+                DB::statement('DROP INDEX idx_quran_verses_surah ON quran_verses');
+            } catch (\Exception $e) {
+                // Index might not exist, skip
+            }
+            try {
+                DB::statement('DROP INDEX idx_quran_verses_juz ON quran_verses');
+            } catch (\Exception $e) {
+                // Index might not exist, skip
+            }
         }
     }
 };

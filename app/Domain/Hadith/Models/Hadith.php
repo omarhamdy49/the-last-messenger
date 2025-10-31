@@ -5,13 +5,12 @@ declare(strict_types=1);
 namespace App\Domain\Hadith\Models;
 
 use App\Domain\Hadith\Enums\HadithGrade;
+use App\Domain\Shared\Traits\HasInteractions;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use App\Domain\Shared\Traits\HasInteractions;
 use Spatie\Translatable\HasTranslations;
 
 /**
@@ -19,21 +18,22 @@ use Spatie\Translatable\HasTranslations;
  * Represents individual hadith with full text and narration chain
  *
  * @property int $id
+ * @property string|null $urn
  * @property int $book_id
  * @property int|null $chapter_id
  * @property int $hadith_number
  * @property string $arabic_text
- * @property string|null $narrator_chain
  * @property array|null $translations
  * @property HadithGrade $grade
- * @property string|null $reference_url
+ * @property bool $active
  * @property int $views_count
+ * @property \Carbon\Carbon|null $synced_at
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  */
 class Hadith extends Model
 {
-    use HasFactory, HasTranslations, HasInteractions;
+    use HasFactory, HasInteractions, HasTranslations;
 
     protected $table = 'hadith';
 
@@ -43,15 +43,16 @@ class Hadith extends Model
      * @var array<string>
      */
     protected $fillable = [
+        'urn',
         'book_id',
         'chapter_id',
         'hadith_number',
         'arabic_text',
-        'narrator_chain',
         'translations',
         'grade',
-        'reference_url',
+        'active',
         'views_count',
+        'synced_at',
     ];
 
     /**
@@ -65,6 +66,7 @@ class Hadith extends Model
             'translations' => 'array',
             'grade' => HadithGrade::class,
             'hadith_number' => 'integer',
+            'active' => 'boolean',
             'views_count' => 'integer',
         ];
     }
@@ -90,16 +92,6 @@ class Hadith extends Model
     public function chapter(): BelongsTo
     {
         return $this->belongsTo(HadithChapter::class, 'chapter_id');
-    }
-
-    /**
-     * Get all narrators in the chain
-     */
-    public function narrators(): BelongsToMany
-    {
-        return $this->belongsToMany(HadithNarrator::class, 'hadith_narrator_chain')
-            ->withPivot('position')
-            ->orderByPivot('position');
     }
 
     /**
@@ -140,6 +132,14 @@ class Hadith extends Model
     public function scopeByGrade(Builder $query, HadithGrade $grade): Builder
     {
         return $query->where('grade', $grade);
+    }
+
+    /**
+     * Scope: Active hadith only
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('active', true);
     }
 
     /**

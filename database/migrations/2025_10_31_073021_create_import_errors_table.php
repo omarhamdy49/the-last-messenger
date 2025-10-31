@@ -11,20 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('import_errors', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('import_id')->constrained()->onDelete('cascade');
-            $table->integer('row_number')->unsigned();
-            $table->string('field_name')->nullable();
-            $table->text('error_message');
-            $table->enum('severity', ['error', 'warning'])->default('error');
-            $table->json('row_data')->nullable(); // Store problematic row data
-            $table->timestamps();
-
-            // Indexes for performance
-            $table->index(['import_id', 'severity']);
-            $table->index('row_number');
-        });
+        // Import error tables have been removed - see 2025_10_31_120008_drop_import_tables.php
+        // This migration is kept for migration history but does not create any tables
     }
 
     /**
