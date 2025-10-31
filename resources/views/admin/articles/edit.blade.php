@@ -202,15 +202,47 @@
                     :value="old('excerpt', $article->excerpt ?? [])"
                 />
 
-                {{-- Content Field --}}
-                <x-forms.multi-lang-input
-                    name="content"
-                    label="المحتوى"
-                    type="textarea"
-                    :rows="12"
-                    :value="old('content', $article->content ?? [])"
-                    required
-                />
+                {{-- Content Field with TinyMCE Editor --}}
+                <div class="mb-6">
+                    <label class="block text-sm font-semibold mb-3" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                        <i data-lucide="file-text" class="w-4 h-4 inline-block ml-1"></i>
+                        المحتوى
+                        <span class="text-red-400">*</span>
+                    </label>
+
+                    {{-- Language Tabs --}}
+                    <div class="flex gap-2 mb-4 border-b pb-2 overflow-x-auto" :class="darkMode ? 'border-gray-700' : 'border-gray-200'" x-data="{ activeLanguage: 'ar' }">
+                        @foreach(['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'] as $lang => $label)
+                            <button type="button"
+                                    @click="activeLanguage = '{{ $lang }}'"
+                                    :class="activeLanguage === '{{ $lang }}' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' : ''"
+                                    class="px-4 py-2 rounded-lg transition-all whitespace-nowrap"
+                                    :class="darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-200'">
+                                {{ $label }}
+                                @if($lang === 'ar')
+                                    <span class="text-red-400 ml-1">*</span>
+                                @endif
+                            </button>
+                        @endforeach
+                    </div>
+
+                    {{-- Quill Rich Text Editors for each language --}}
+                    @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $lang)
+                        <div x-show="activeLanguage === '{{ $lang }}'" x-cloak>
+                            <x-admin.editor
+                                name="content[{{ $lang }}]"
+                                :value="old('content.' . $lang, $article->content[$lang] ?? '')"
+                                language="{{ $lang }}"
+                                :height="500"
+                                :required="$lang === 'ar'"
+                                placeholder="{{ $lang === 'ar' ? 'اكتب محتوى المقال هنا... يدعم التنسيق الغني والوسائط' : 'Write your article content here... Supports rich formatting and media' }}"
+                            />
+                            @error("content.$lang")
+                                <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    @endforeach
+                </div>
             </div>
         </div>
 
@@ -247,6 +279,25 @@ function articleForm() {
 
         handleSubmit(event) {
             this.isSubmitting = true;
+
+            // Quill editors automatically update hidden inputs on text change
+            // No need to manually extract content
+            // Optional: Validate content if needed
+            const arabicContentInput = document.querySelector('input[name="content[ar]"]');
+            if (arabicContentInput) {
+                const arabicContent = arabicContentInput.value.trim();
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = arabicContent;
+                const textContent = tempDiv.textContent || tempDiv.innerText || '';
+
+                if (!textContent || textContent.trim().length === 0) {
+                    alert('Arabic content is required');
+                    this.isSubmitting = false;
+                    event.preventDefault();
+                    return false;
+                }
+            }
+
             return true;
         },
 

@@ -33,7 +33,13 @@ class AdminAuthMiddleware
             return redirect()->route('login');
         }
 
-        if (! $request->user()->hasAnyRole(['admin', 'super_admin', 'editor'])) {
+        // Super admin users have unrestricted access
+        if ($request->user()->hasRole('super_admin')) {
+            return $next($request);
+        }
+
+        // Admin and editor users need proper authorization
+        if (! $request->user()->hasAnyRole(['admin', 'editor'])) {
             // Return JSON for API requests, redirect for web
             if ($request->expectsJson()) {
                 return response()->json([

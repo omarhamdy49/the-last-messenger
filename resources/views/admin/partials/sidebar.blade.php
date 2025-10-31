@@ -97,7 +97,7 @@
                     <a href="{{ route('admin.media-categories.index') }}"
                        class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.media-categories.*') ? 'active' : '' }}"
                        :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
-                        <i data-lucide="folder-video" class="w-5 h-5 flex-shrink-0"></i>
+                        <i data-lucide="film" class="w-5 h-5 flex-shrink-0"></i>
                         <span x-show="sidebarOpen" x-transition class="font-semibold">فئات الوسائط</span>
                     </a>
 

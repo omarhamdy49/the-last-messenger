@@ -14,6 +14,165 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Global Quill Editor Initialization (Vanilla JavaScript) -->
+    <script>
+/**
+ * Initialize all Quill editors on the page
+ * Vanilla JavaScript - no Alpine.js dependencies
+ */
+
+// Wait for Quill library to load, then initialize editors
+function waitForQuill(callback, maxAttempts = 50) {
+    if (typeof Quill !== 'undefined') {
+        callback();
+    } else if (maxAttempts > 0) {
+        setTimeout(() => waitForQuill(callback, maxAttempts - 1), 100);
+    }
+}
+
+waitForQuill(function() {
+    // Initialize editors when Quill is ready
+    const editorWrappers = document.querySelectorAll('[data-quill-editor]');
+    editorWrappers.forEach(wrapper => {
+        setTimeout(() => initializeQuillEditor(wrapper), 300);
+    });
+});
+
+function initializeQuillEditor(wrapper) {
+    // Get configuration from data attributes
+    const config = {
+        fieldName: wrapper.dataset.quillName || 'content',
+        language: wrapper.dataset.quillLanguage || 'ar',
+        height: parseInt(wrapper.dataset.quillHeight || '400'),
+        required: wrapper.dataset.quillRequired === 'true',
+        disabled: wrapper.dataset.quillDisabled === 'true',
+        content: wrapper.dataset.quillValue || ''
+    };
+
+    // Find the editor div and container
+    const containerWrapper = wrapper.querySelector('.editor-container-wrapper');
+    const editorDiv = wrapper.querySelector('[data-quill-target]');
+    const hiddenInput = wrapper.querySelector('input[type="hidden"]');
+    const loader = wrapper.querySelector('[data-quill-loader]');
+
+    if (!editorDiv || !hiddenInput || !containerWrapper) {
+        console.error('Missing editor elements:', { editorDiv, hiddenInput, containerWrapper });
+        return;
+    }
+
+    try {
+        // Initialize Quill
+        const quill = new Quill(editorDiv, {
+            theme: 'snow',
+            placeholder: getPlaceholder(config.language),
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['blockquote', 'code-block'],
+                    [{ 'align': [] }],
+                    ['link', 'image'],
+                    ['clean']
+                ]
+            },
+            readOnly: config.disabled
+        });
+
+        // Set initial content if provided
+        if (config.content) {
+            quill.root.innerHTML = config.content;
+        }
+
+        // Set RTL if needed
+        const isRTL = ['ar', 'ur', 'he'].includes(config.language);
+        if (isRTL) {
+            editorDiv.setAttribute('dir', 'rtl');
+            editorDiv.classList.add('rtl-editor');
+        }
+
+        // Update hidden input on text change
+        quill.on('text-change', () => {
+            const html = quill.root.innerHTML;
+            hiddenInput.value = (html === '<p><br></p>' || html === '') ? '' : html;
+            updateCharCount(wrapper, quill, config);
+        });
+
+        // Apply dark mode if enabled
+        updateEditorTheme(editorDiv, config.language);
+
+        // Store quill instance on wrapper for later access
+        wrapper.quillInstance = quill;
+
+        // Hide loading and show editor
+        if (loader) {
+            loader.style.display = 'none';
+        }
+
+        // Show the editor container
+        containerWrapper.style.display = 'block';
+
+        console.log('Quill editor initialized successfully for field:', config.fieldName);
+
+    } catch (error) {
+        console.error('Failed to initialize Quill editor:', error);
+        const errorDiv = wrapper.querySelector('[data-quill-error]');
+        const errorText = wrapper.querySelector('[data-quill-error-text]');
+        if (errorDiv) {
+            errorDiv.style.display = 'block';
+            if (errorText) {
+                errorText.textContent = 'Error: ' + error.message;
+            }
+        }
+        if (loader) {
+            loader.style.display = 'none';
+        }
+    }
+}
+
+function getPlaceholder(language) {
+    const placeholders = {
+        ar: 'اكتب محتوى المقالة هنا...',
+        en: 'Write article content here...',
+        fr: 'Écrivez le contenu de l\'article ici...',
+        tr: 'Makale içeriğini buraya yazın...',
+        ur: 'یہاں مضمون کا مواد لکھیں...'
+    };
+    return placeholders[language] || 'Write content here...';
+}
+
+function updateCharCount(wrapper, quill, config) {
+    const charCounter = wrapper.querySelector('[data-quill-char-count]');
+    if (!charCounter) return;
+
+    const text = quill.getText();
+    const count = text.trim().length;
+    charCounter.textContent = `${count} characters`;
+
+    // Show min chars warning
+    const minCharsText = wrapper.querySelector('[data-quill-min-chars]');
+    if (minCharsText && config.required && count < 50) {
+        minCharsText.style.display = 'block';
+    } else if (minCharsText) {
+        minCharsText.style.display = 'none';
+    }
+}
+
+function updateEditorTheme(editorDiv, language) {
+    const darkMode = localStorage.getItem('darkMode') !== 'false';
+    if (darkMode) {
+        editorDiv.classList.add('dark-editor');
+        const toolbar = editorDiv.parentElement?.querySelector('.ql-toolbar');
+        if (toolbar) toolbar.classList.add('dark-toolbar');
+    } else {
+        editorDiv.classList.remove('dark-editor');
+        const toolbar = editorDiv.parentElement?.querySelector('.ql-toolbar');
+        if (toolbar) toolbar.classList.remove('dark-toolbar');
+    }
+}
+    </script>
+
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
