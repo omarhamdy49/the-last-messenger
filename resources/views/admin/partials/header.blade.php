@@ -1,22 +1,32 @@
 <header class="relative z-10 transition-colors duration-300"
         :class="darkMode ? 'bg-gray-900/95 backdrop-blur-lg shadow-lg' : 'glass-light-soft shadow-md'"
         x-data="{ userMenuOpen: false, notificationsOpen: false }">
-    <div class="px-6 py-4">
+    <div class="px-4 lg:px-6 py-4">
         <div class="flex items-center justify-between">
-            <!-- Page Title -->
-            <div class="flex-1">
-                <h2 class="text-2xl font-bold transition-colors"
-                    :class="darkMode ? 'text-white' : 'text-gray-900'">
-                    @yield('page-title', 'لوحة المعلومات')
-                </h2>
-                @if(isset($pageSubtitle))
-                    <p class="text-sm mt-1 transition-colors"
-                       :class="darkMode ? 'text-gray-300' : 'text-gray-600'">{{ $pageSubtitle }}</p>
-                @endif
+            <!-- Mobile Menu Toggle + Page Title -->
+            <div class="flex items-center gap-3 flex-1">
+                <!-- Mobile Menu Button -->
+                <button @click="sidebarOpen = !sidebarOpen"
+                        class="lg:hidden p-2 rounded-xl transition-all duration-300"
+                        :class="darkMode ? 'hover:bg-white/10 text-white' : 'hover:bg-gray-100 text-gray-700'">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+
+                <!-- Page Title -->
+                <div>
+                    <h2 class="text-xl lg:text-2xl font-bold transition-colors"
+                        :class="darkMode ? 'text-white' : 'text-gray-900'">
+                        @yield('page-title', 'لوحة المعلومات')
+                    </h2>
+                    @if(isset($pageSubtitle))
+                        <p class="text-sm mt-1 transition-colors hidden sm:block"
+                           :class="darkMode ? 'text-gray-300' : 'text-gray-600'">{{ $pageSubtitle }}</p>
+                    @endif
+                </div>
             </div>
 
             <!-- Header Actions -->
-            <div class="flex items-center space-x-4 space-x-reverse">
+            <div class="flex items-center space-x-2 lg:space-x-4 space-x-reverse">
                 <!-- Search Bar -->
                 <div class="relative hidden md:block">
                     <input

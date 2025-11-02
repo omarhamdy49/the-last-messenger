@@ -8,7 +8,7 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\FilterController;
 use App\Http\Controllers\Api\HadithController;
 use App\Http\Controllers\Api\InteractionController;
-use App\Http\Controllers\Api\MediaProgramController;
+// use App\Http\Controllers\Api\MediaProgramController;
 use App\Http\Controllers\Api\QuranController;
 use App\Http\Controllers\Api\SahabiController;
 use App\Http\Controllers\Api\SearchController;
@@ -82,18 +82,18 @@ Route::prefix('hadith')->group(function () {
     Route::get('/{id}', [HadithController::class, 'show'])->name('hadith.show');
 });
 
-// Media/Programs routes
-Route::prefix('media')->group(function () {
-    // Public routes
-    Route::get('/programs', [MediaProgramController::class, 'index'])->name('media.programs.index');
-    Route::get('/programs/popular', [MediaProgramController::class, 'popular'])->name('media.programs.popular');
-    Route::get('/programs/recent', [MediaProgramController::class, 'recent'])->name('media.programs.recent');
-    Route::get('/programs/search', [MediaProgramController::class, 'search'])->name('media.programs.search');
-    Route::get('/programs/category/{categoryId}', [MediaProgramController::class, 'byCategory'])->name('media.programs.by-category');
-    Route::get('/programs/{slug}', [MediaProgramController::class, 'show'])->name('media.programs.show');
-    Route::get('/programs/{slug}/episodes', [MediaProgramController::class, 'episodes'])->name('media.programs.episodes');
-    Route::get('/programs/{slug}/episodes/{episodeNumber}', [MediaProgramController::class, 'episode'])->name('media.programs.episode');
-});
+// Media/Programs routes - Temporarily disabled until controller is recreated
+// Route::prefix('media')->group(function () {
+//     // Public routes
+//     Route::get('/programs', [MediaProgramController::class, 'index'])->name('media.programs.index');
+//     Route::get('/programs/popular', [MediaProgramController::class, 'popular'])->name('media.programs.popular');
+//     Route::get('/programs/recent', [MediaProgramController::class, 'recent'])->name('media.programs.recent');
+//     Route::get('/programs/search', [MediaProgramController::class, 'search'])->name('media.programs.search');
+//     Route::get('/programs/category/{categoryId}', [MediaProgramController::class, 'byCategory'])->name('media.programs.by-category');
+//     Route::get('/programs/{slug}', [MediaProgramController::class, 'show'])->name('media.programs.show');
+//     Route::get('/programs/{slug}/episodes', [MediaProgramController::class, 'episodes'])->name('media.programs.episodes');
+//     Route::get('/programs/{slug}/episodes/{episodeNumber}', [MediaProgramController::class, 'episode'])->name('media.programs.episode');
+// });
 
 // Seerah routes (Prophet's Biography Timeline)
 Route::prefix('seerah')->group(function () {

@@ -173,6 +173,9 @@ function updateEditorTheme(editorDiv, language) {
 }
     </script>
 
+    <!-- Alpine.js Plugins -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
@@ -186,6 +189,19 @@ function updateEditorTheme(editorDiv, language) {
 
     <!-- Chart.js for analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- FilePond for file uploads -->
+    <link href="https://unpkg.com/filepond/dist/filepond.css" rel="stylesheet">
+    <link href="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css" rel="stylesheet">
+    <script src="https://unpkg.com/filepond/dist/filepond.js"></script>
+    <script src="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.js"></script>
+    <script src="https://unpkg.com/filepond-plugin-file-validate-type/dist/filepond-plugin-file-validate-type.js"></script>
+    <script src="https://unpkg.com/filepond-plugin-file-validate-size/dist/filepond-plugin-file-validate-size.js"></script>
+    <script src="https://unpkg.com/filepond-plugin-image-validate-size/dist/filepond-plugin-image-validate-size.js"></script>
+
+    <!-- Cropper.js for image cropping -->
+    <link href="https://unpkg.com/cropperjs/dist/cropper.css" rel="stylesheet">
+    <script src="https://unpkg.com/cropperjs/dist/cropper.js"></script>
 
     <script>
         tailwind.config = {
@@ -433,12 +449,107 @@ function updateEditorTheme(editorDiv, language) {
         .dark textarea:focus {
             box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.2);
         }
+
+        /* ===== RESPONSIVE UTILITIES ===== */
+        /* Ensure modals are always on top */
+        [class*="z-[100]"] {
+            z-index: 100 !important;
+        }
+
+        /* Mobile-optimized touch targets */
+        @media (max-width: 768px) {
+            button,
+            a,
+            input[type="checkbox"],
+            input[type="radio"] {
+                min-height: 44px;
+                min-width: 44px;
+            }
+
+            /* Better tap experience */
+            * {
+                -webkit-tap-highlight-color: rgba(0, 86, 179, 0.1);
+            }
+
+            /* Reduce animations on mobile for better performance */
+            .particle,
+            .floating-orb {
+                display: none;
+            }
+
+            /* Optimize font sizes for mobile */
+            h1 { font-size: 1.75rem !important; }
+            h2 { font-size: 1.5rem !important; }
+            h3 { font-size: 1.25rem !important; }
+        }
+
+        /* Tablet optimizations */
+        @media (min-width: 768px) and (max-width: 1024px) {
+            .sidebar-item span {
+                display: inline-block;
+            }
+        }
+
+        /* Smooth scrolling for all scrollable areas */
+        .custom-scrollbar,
+        .overflow-x-auto,
+        .overflow-y-auto {
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+        }
+
+        /* Better table responsiveness */
+        @media (max-width: 768px) {
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            th, td {
+                padding: 0.75rem 0.5rem !important;
+                font-size: 0.875rem;
+            }
+        }
+
+        /* Ensure sidebar doesn't interfere on mobile */
+        @media (max-width: 1023px) {
+            aside {
+                box-shadow: -4px 0 12px rgba(0, 0, 0, 0.15);
+            }
+        }
+
+        /* Optimize modal on mobile */
+        @media (max-width: 640px) {
+            [class*="max-w-2xl"],
+            [class*="max-w-4xl"] {
+                max-width: 100vw !important;
+                margin: 0 !important;
+                border-radius: 1rem 1rem 0 0 !important;
+            }
+
+            .fixed.inset-0[class*="z-[100]"] {
+                align-items: flex-end !important;
+            }
+        }
     </style>
 
     @stack('styles')
 </head>
-<body class="min-h-screen" x-data="{ sidebarOpen: true, darkMode: localStorage.getItem('darkMode') === 'true' }"
-      :class="darkMode ? 'dark bg-gray-900' : 'light'">
+<body class="min-h-screen" x-data="{
+    sidebarOpen: window.innerWidth >= 1024,
+    darkMode: localStorage.getItem('darkMode') === 'true',
+    init() {
+        // Handle responsive sidebar on resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 1024) {
+                this.sidebarOpen = true;
+            }
+        });
+    }
+}" :class="darkMode ? 'dark bg-gray-900' : 'light'"
+      @keydown.escape="if (window.innerWidth < 1024) { sidebarOpen = false }">
     <style>
         body.light {
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(240, 245, 255, 0.6) 100%);
@@ -468,16 +579,32 @@ function updateEditorTheme(editorDiv, language) {
     </div>
 
     <div class="flex h-screen overflow-hidden">
+        <!-- Mobile Overlay -->
+        <div x-show="sidebarOpen && window.innerWidth < 1024"
+             x-transition:enter="transition-opacity ease-linear duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition-opacity ease-linear duration-300"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             @click="sidebarOpen = false"
+             class="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 lg:hidden"
+             style="display: none;"></div>
+
         <!-- Sidebar -->
-        @include('admin.partials.sidebar')
+        <div class="fixed lg:relative inset-y-0 right-0 z-40 lg:z-10 transition-transform duration-300 lg:translate-x-0"
+             :class="sidebarOpen ? 'translate-x-0' : 'translate-x-full'"
+             x-cloak>
+            @include('admin.partials.sidebar')
+        </div>
 
         <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col overflow-hidden">
+        <div class="flex-1 flex flex-col overflow-hidden w-full">
             <!-- Header -->
             @include('admin.partials.header')
 
             <!-- Main Content -->
-            <main class="flex-1 overflow-x-hidden overflow-y-auto custom-scrollbar p-6 relative z-10">
+            <main class="flex-1 overflow-x-hidden overflow-y-auto custom-scrollbar p-4 lg:p-6 relative z-10">
                 <!-- Breadcrumb -->
                 @if(isset($breadcrumbs))
                     <nav class="mb-6" aria-label="Breadcrumb">
@@ -534,6 +661,12 @@ function updateEditorTheme(editorDiv, language) {
 
     <!-- Confirmation Dialog Component -->
     @include('admin.components.confirm-dialog')
+
+    {{-- DISABLED: Global Media Picker Modal --}}
+    {{-- <x-media.picker-modal /> --}}
+
+    {{-- DISABLED: Global Image Cropper Modal --}}
+    {{-- <x-media.cropper-modal /> --}}
 
     <script>
         // Initialize Lucide icons

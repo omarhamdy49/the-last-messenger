@@ -10,6 +10,8 @@ use App\Domain\Shared\Services\BaseService;
 use App\Exceptions\Domain\ResourceNotFoundException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\UploadedFile;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /**
  * Article Service
@@ -298,5 +300,92 @@ class ArticleService extends BaseService
     public function paginateWithFilters(array $filters, int $perPage = 15): LengthAwarePaginator
     {
         return $this->repository->filterArticles($filters, $perPage, ['author', 'category', 'tags', 'series']);
+    }
+
+    /**
+     * Handle featured image upload or media selection
+     *
+     * @param Article $article
+     * @param UploadedFile|null $file Uploaded file
+     * @param int|null $mediaId Existing media ID
+     * @return void
+     */
+    public function handleFeaturedImage(Article $article, ?UploadedFile $file = null, ?int $mediaId = null): void
+    {
+        if ($file) {
+            // Upload new file
+            $article->addMedia($file)
+                ->toMediaCollection('featured_image', 'public');
+        } elseif ($mediaId) {
+            // Copy existing media from library
+            $media = Media::find($mediaId);
+            if ($media) {
+                $media->copy($article, 'featured_image');
+            }
+        }
+    }
+
+    /**
+     * Handle OG image upload or media selection
+     *
+     * @param Article $article
+     * @param UploadedFile|null $file Uploaded file
+     * @param int|null $mediaId Existing media ID
+     * @return void
+     */
+    public function handleOgImage(Article $article, ?UploadedFile $file = null, ?int $mediaId = null): void
+    {
+        if ($file) {
+            // Upload new file
+            $article->addMedia($file)
+                ->toMediaCollection('og_image', 'public');
+        } elseif ($mediaId) {
+            // Copy existing media from library
+            $media = Media::find($mediaId);
+            if ($media) {
+                $media->copy($article, 'og_image');
+            }
+        }
+    }
+
+    /**
+     * Handle gallery images upload or media selection
+     *
+     * @param Article $article
+     * @param array|null $files Array of uploaded files
+     * @param array|null $mediaIds Array of existing media IDs
+     * @return void
+     */
+    public function handleGalleryImages(Article $article, ?array $files = null, ?array $mediaIds = null): void
+    {
+        if ($files) {
+            // Upload new files
+            foreach ($files as $file) {
+                $article->addMedia($file)
+                    ->toMediaCollection('gallery', 'public');
+            }
+        }
+
+        if ($mediaIds) {
+            // Copy existing media from library
+            foreach ($mediaIds as $mediaId) {
+                $media = Media::find($mediaId);
+                if ($media) {
+                    $media->copy($article, 'gallery');
+                }
+            }
+        }
+    }
+
+    /**
+     * Clear all images from a specific collection
+     *
+     * @param Article $article
+     * @param string $collectionName Collection name (featured_image, og_image, gallery)
+     * @return void
+     */
+    public function clearMediaCollection(Article $article, string $collectionName): void
+    {
+        $article->clearMediaCollection($collectionName);
     }
 }

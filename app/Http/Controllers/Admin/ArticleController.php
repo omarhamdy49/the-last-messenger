@@ -150,6 +150,49 @@ class ArticleController extends Controller
             // Create article
             $article = $this->articleService->createArticle($request->validated());
 
+            // Handle featured image (file upload or media picker selection)
+            if ($request->hasFile('featured_image')) {
+                $this->articleService->handleFeaturedImage(
+                    $article,
+                    $request->file('featured_image')
+                );
+            } elseif ($request->has('featured_image_media_id')) {
+                $this->articleService->handleFeaturedImage(
+                    $article,
+                    null,
+                    $request->input('featured_image_media_id')
+                );
+            }
+
+            // Handle OG image (file upload or media picker selection)
+            if ($request->hasFile('og_image')) {
+                $this->articleService->handleOgImage(
+                    $article,
+                    $request->file('og_image')
+                );
+            } elseif ($request->has('og_image_media_id')) {
+                $this->articleService->handleOgImage(
+                    $article,
+                    null,
+                    $request->input('og_image_media_id')
+                );
+            }
+
+            // Handle gallery images (file uploads or media picker selections)
+            if ($request->hasFile('gallery')) {
+                $this->articleService->handleGalleryImages(
+                    $article,
+                    $request->file('gallery')
+                );
+            }
+            if ($request->has('gallery_media_ids')) {
+                $this->articleService->handleGalleryImages(
+                    $article,
+                    null,
+                    $request->input('gallery_media_ids')
+                );
+            }
+
             // Sync tags if provided
             if ($request->has('tags')) {
                 $this->articleService->syncTags($article->id, $request->input('tags'));
@@ -226,6 +269,52 @@ class ArticleController extends Controller
             // Perform update
             $this->articleService->updateArticle($article->id, $request->validated());
 
+            // Reload article with fresh data for media operations
+            $article->refresh();
+
+            // Handle featured image (file upload or media picker selection)
+            if ($request->hasFile('featured_image')) {
+                $this->articleService->handleFeaturedImage(
+                    $article,
+                    $request->file('featured_image')
+                );
+            } elseif ($request->has('featured_image_media_id')) {
+                $this->articleService->handleFeaturedImage(
+                    $article,
+                    null,
+                    $request->input('featured_image_media_id')
+                );
+            }
+
+            // Handle OG image (file upload or media picker selection)
+            if ($request->hasFile('og_image')) {
+                $this->articleService->handleOgImage(
+                    $article,
+                    $request->file('og_image')
+                );
+            } elseif ($request->has('og_image_media_id')) {
+                $this->articleService->handleOgImage(
+                    $article,
+                    null,
+                    $request->input('og_image_media_id')
+                );
+            }
+
+            // Handle gallery images (file uploads or media picker selections)
+            if ($request->hasFile('gallery')) {
+                $this->articleService->handleGalleryImages(
+                    $article,
+                    $request->file('gallery')
+                );
+            }
+            if ($request->has('gallery_media_ids')) {
+                $this->articleService->handleGalleryImages(
+                    $article,
+                    null,
+                    $request->input('gallery_media_ids')
+                );
+            }
+
             // Sync tags if provided
             if ($request->has('tags')) {
                 $this->articleService->syncTags($article->id, $request->input('tags'));
@@ -262,6 +351,11 @@ class ArticleController extends Controller
         // Authorization check
 
         try {
+            // Clear all media collections before deletion
+            $this->articleService->clearMediaCollection($article, 'featured_image');
+            $this->articleService->clearMediaCollection($article, 'og_image');
+            $this->articleService->clearMediaCollection($article, 'gallery');
+
             // Perform soft deletion
             $this->articleService->deleteArticle($article->id);
 

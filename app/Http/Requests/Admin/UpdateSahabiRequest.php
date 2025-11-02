@@ -40,6 +40,17 @@ class UpdateSahabiRequest extends FormRequest
             'death_date' => ['nullable', 'string', 'max:100'],
             'relationship_to_prophet' => ['nullable', 'string', 'max:500'],
             'notable_events' => ['nullable', 'array'],
+
+            // Profile image - support both upload and picker
+            'profile_image' => ['nullable', 'file', 'image', 'max:10240'],
+            'profile_image_media_id' => ['nullable', 'exists:media,id'],
+
+            // Gallery - support both upload and picker
+            'gallery' => ['nullable', 'array'],
+            'gallery.*' => ['file', 'image', 'max:10240'],
+            'gallery_media_ids' => ['nullable', 'array'],
+            'gallery_media_ids.*' => ['exists:media,id'],
+            'replace_gallery' => ['nullable', 'boolean'],
         ];
     }
 }

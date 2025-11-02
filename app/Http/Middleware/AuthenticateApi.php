@@ -37,7 +37,7 @@ class AuthenticateApi extends Middleware
      *
      * @throws AuthenticationException
      */
-    public function handle(Request $request, Closure $next, ...$guards): mixed
+    public function handle($request, Closure $next, ...$guards)
     {
         try {
             $this->authenticate($request, $guards);

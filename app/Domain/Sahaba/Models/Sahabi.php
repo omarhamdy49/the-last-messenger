@@ -323,25 +323,85 @@ class Sahabi extends Model implements HasMedia
             ->singleFile()
             ->acceptsMimeTypes(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'])
             ->maxFilesize(10 * 1024 * 1024) // 10MB
-            ->useDisk('public')
-            ->registerMediaConversions(function () {
-                $this->addMediaConversion('thumb')
-                    ->width(150)
-                    ->height(150)
-                    ->sharpen(10)
-                    ->nonQueued();
+            ->useDisk('public');
 
-                $this->addMediaConversion('medium')
-                    ->width(600)
-                    ->height(400)
-                    ->sharpen(10)
-                    ->nonQueued();
+        // Gallery collection (multiple files) - Historical images, artifacts, etc.
+        $this->addMediaCollection('gallery')
+            ->acceptsMimeTypes(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'])
+            ->maxFilesize(10 * 1024 * 1024) // 10MB
+            ->useDisk('public');
+    }
 
-                $this->addMediaConversion('large')
-                    ->width(1200)
-                    ->height(800)
-                    ->sharpen(10)
-                    ->nonQueued();
-            });
+    /**
+     * Register media conversions
+     */
+    public function registerMediaConversions(?\Spatie\MediaLibrary\MediaCollections\Models\Media $media = null): void
+    {
+        // Avatar conversion (100x100 crop-center for small profile pics)
+        $this->addMediaConversion('avatar')
+            ->width(100)
+            ->height(100)
+            ->crop('crop-center')
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('profile_image')
+            ->nonQueued();
+
+        // Thumbnail conversion (150x150 crop-center)
+        $this->addMediaConversion('thumbnail')
+            ->width(150)
+            ->height(150)
+            ->crop('crop-center')
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('profile_image', 'gallery')
+            ->nonQueued();
+
+        // Display conversion (600x800 contain for profile page)
+        $this->addMediaConversion('display')
+            ->width(600)
+            ->height(800)
+            ->fit('contain')
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('profile_image', 'gallery')
+            ->nonQueued();
+    }
+
+    /**
+     * Get profile image URL (accessor with backward compatibility)
+     *
+     * @return string|null
+     */
+    public function getProfileImageUrlAttribute(): ?string
+    {
+        return $this->getFirstMediaUrl('profile_image') ?: $this->profile_image;
+    }
+
+    /**
+     * Get avatar URL (small profile image)
+     *
+     * @return string|null
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        return $this->getFirstMediaUrl('profile_image', 'avatar') ?: null;
+    }
+
+    /**
+     * Get gallery images with conversions
+     *
+     * @return array
+     */
+    public function getGalleryImagesAttribute(): array
+    {
+        return $this->getMedia('gallery')->map(fn($media) => [
+            'id' => $media->id,
+            'url' => $media->getUrl(),
+            'thumbnail' => $media->getUrl('thumbnail'),
+            'display' => $media->getUrl('display'),
+            'alt' => $media->getCustomProperty('alt_text'),
+            'caption' => $media->getCustomProperty('caption'),
+        ])->toArray();
     }
 }

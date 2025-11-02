@@ -44,15 +44,15 @@ class RepositoryServiceProvider extends ServiceProvider
             \App\Domain\Hadith\Repositories\HadithNarratorRepository::class
         );
 
-        // Media Module Repositories
-        $this->app->bind(
-            \App\Domain\Media\Repositories\MediaProgramRepositoryInterface::class,
-            \App\Domain\Media\Repositories\MediaProgramRepository::class
-        );
-        $this->app->bind(
-            \App\Domain\Media\Repositories\MediaCategoryRepositoryInterface::class,
-            \App\Domain\Media\Repositories\MediaCategoryRepository::class
-        );
+        // DISABLED: Media Module Repositories
+        // $this->app->bind(
+        //     \App\Domain\Media\Repositories\MediaProgramRepositoryInterface::class,
+        //     \App\Domain\Media\Repositories\MediaProgramRepository::class
+        // );
+        // $this->app->bind(
+        //     \App\Domain\Media\Repositories\MediaCategoryRepositoryInterface::class,
+        //     \App\Domain\Media\Repositories\MediaCategoryRepository::class
+        // );
 
         // Seerah Module Repositories
         $this->app->bind(

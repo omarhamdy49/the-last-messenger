@@ -10,15 +10,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Translatable\HasTranslations;
 
 /**
  * Person Model
  * Represents individuals in the genealogical tree
  */
-class Person extends Model
+class Person extends Model implements HasMedia
 {
-    use HasTranslations, SoftDeletes;
+    use HasTranslations, InteractsWithMedia, SoftDeletes;
 
     protected $table = 'people';
 
@@ -176,5 +178,64 @@ class Person extends Model
         }
 
         return null;
+    }
+
+    /**
+     * Register media collections
+     */
+    public function registerMediaCollections(): void
+    {
+        // Profile image collection (single file)
+        $this->addMediaCollection('profile_image')
+            ->singleFile()
+            ->acceptsMimeTypes(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'])
+            ->maxFilesize(10 * 1024 * 1024) // 10MB
+            ->useDisk('public');
+    }
+
+    /**
+     * Register media conversions
+     */
+    public function registerMediaConversions(?\Spatie\MediaLibrary\MediaCollections\Models\Media $media = null): void
+    {
+        // Avatar conversion (100x100 crop-center for genealogy tree nodes)
+        $this->addMediaConversion('avatar')
+            ->width(100)
+            ->height(100)
+            ->crop('crop-center')
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('profile_image')
+            ->nonQueued();
+
+        // Display conversion (400x400 contain for profile page)
+        $this->addMediaConversion('display')
+            ->width(400)
+            ->height(400)
+            ->fit('contain')
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('profile_image')
+            ->nonQueued();
+    }
+
+    /**
+     * Get profile image URL (accessor with backward compatibility)
+     *
+     * @return string|null
+     */
+    public function getProfileImageUrlAttribute(): ?string
+    {
+        return $this->getFirstMediaUrl('profile_image') ?: $this->profile_image;
+    }
+
+    /**
+     * Get avatar URL (small profile image for tree visualization)
+     *
+     * @return string|null
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        return $this->getFirstMediaUrl('profile_image', 'avatar') ?: null;
     }
 }

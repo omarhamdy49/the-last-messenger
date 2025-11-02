@@ -10,8 +10,8 @@ use App\Domain\Hadith\Exporters\HadithExporter;
 use App\Domain\Hadith\Exporters\HadithNarratorExporter;
 use App\Domain\Hadith\Repositories\HadithRepositoryInterface;
 use App\Domain\Hadith\Repositories\HadithNarratorRepositoryInterface;
-use App\Domain\Media\Exporters\MediaProgramExporter;
-use App\Domain\Media\Repositories\MediaProgramRepositoryInterface;
+// use App\Domain\Media\Exporters\MediaProgramExporter;
+// use App\Domain\Media\Repositories\MediaProgramRepositoryInterface;
 use App\Domain\Quran\Exporters\ReciterExporter;
 use App\Domain\Quran\Exporters\SurahExporter;
 use App\Domain\Quran\Exporters\TafseerExporter;
@@ -49,7 +49,7 @@ class ExportController extends Controller
         protected ArticleRepositoryInterface $articleRepository,
         protected HadithRepositoryInterface $hadithRepository,
         protected HadithNarratorRepositoryInterface $narratorRepository,
-        protected MediaProgramRepositoryInterface $mediaProgramRepository,
+        // protected MediaProgramRepositoryInterface $mediaProgramRepository,
         protected SeerahEventRepositoryInterface $seerahEventRepository,
         protected SahabiRepositoryInterface $sahabiRepository,
         protected SurahRepositoryInterface $surahRepository,
@@ -299,12 +299,13 @@ class ExportController extends Controller
                 $filters,
                 $columns
             ),
-            ExportModule::MEDIA_PROGRAMS => new MediaProgramExporter(
-                $this->mediaProgramRepository,
-                $language,
-                $filters,
-                $columns
-            ),
+            // DISABLED: Media programs exporter
+            // ExportModule::MEDIA_PROGRAMS => new MediaProgramExporter(
+            //     $this->mediaProgramRepository,
+            //     $language,
+            //     $filters,
+            //     $columns
+            // ),
             ExportModule::SEERAH_EVENTS => new SeerahEventExporter(
                 $this->seerahEventRepository,
                 $language,

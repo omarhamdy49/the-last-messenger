@@ -97,6 +97,36 @@ class SahabiController extends Controller
     {
         $sahabi = $this->sahabiService->create($request->validated());
 
+        // Handle profile image (file upload or media picker selection)
+        if ($request->hasFile('profile_image')) {
+            $sahabi->addMedia($request->file('profile_image'))
+                ->toMediaCollection('profile_image');
+        } elseif ($request->has('profile_image_media_id')) {
+            $media = \Spatie\MediaLibrary\MediaCollections\Models\Media::find($request->input('profile_image_media_id'));
+            if ($media) {
+                $media->copy($sahabi, 'profile_image');
+            }
+        }
+
+        // Handle gallery (multiple images)
+        if ($request->hasFile('gallery')) {
+            foreach ($request->file('gallery') as $file) {
+                $sahabi->addMedia($file)->toMediaCollection('gallery');
+            }
+        }
+
+        if ($request->has('gallery_media_ids')) {
+            foreach ($request->input('gallery_media_ids', []) as $mediaId) {
+                $media = \Spatie\MediaLibrary\MediaCollections\Models\Media::find($mediaId);
+                if ($media) {
+                    $media->copy($sahabi, 'gallery');
+                }
+            }
+        }
+
+        // Refresh the model to include media
+        $sahabi->refresh();
+
         // Log the creation
         $this->logger->logCreate($sahabi, $request->user());
 
@@ -140,6 +170,43 @@ class SahabiController extends Controller
         $this->sahabiService->update($id, $request->validated());
 
         $sahabi = $this->sahabiService->find($id);
+
+        // Handle profile image (file upload or media picker selection)
+        if ($request->hasFile('profile_image')) {
+            $sahabi->clearMediaCollection('profile_image');
+            $sahabi->addMedia($request->file('profile_image'))
+                ->toMediaCollection('profile_image');
+        } elseif ($request->has('profile_image_media_id')) {
+            $sahabi->clearMediaCollection('profile_image');
+            $media = \Spatie\MediaLibrary\MediaCollections\Models\Media::find($request->input('profile_image_media_id'));
+            if ($media) {
+                $media->copy($sahabi, 'profile_image');
+            }
+        }
+
+        // Handle gallery - replace mode
+        if ($request->has('replace_gallery') && $request->input('replace_gallery')) {
+            $sahabi->clearMediaCollection('gallery');
+        }
+
+        // Handle gallery (multiple images)
+        if ($request->hasFile('gallery')) {
+            foreach ($request->file('gallery') as $file) {
+                $sahabi->addMedia($file)->toMediaCollection('gallery');
+            }
+        }
+
+        if ($request->has('gallery_media_ids')) {
+            foreach ($request->input('gallery_media_ids', []) as $mediaId) {
+                $media = \Spatie\MediaLibrary\MediaCollections\Models\Media::find($mediaId);
+                if ($media) {
+                    $media->copy($sahabi, 'gallery');
+                }
+            }
+        }
+
+        // Refresh the model to include media
+        $sahabi->refresh();
 
         // Log the update with diff
         $this->logger->logUpdate($sahabi, $oldValues, $sahabi->toArray(), $request->user());

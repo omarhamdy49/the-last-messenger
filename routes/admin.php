@@ -15,9 +15,18 @@ use App\Http\Controllers\Admin\HadithController;
 use App\Http\Controllers\Admin\HadithNarratorController;
 use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\LanguageSettingsController;
-use App\Http\Controllers\Admin\MediaCategoryController;
-use App\Http\Controllers\Admin\MediaProgramController;
-use App\Http\Controllers\Admin\MediaUploadController;
+// use App\Http\Controllers\Admin\MediaCategoryController;
+// use App\Http\Controllers\Admin\MediaProgramController;
+use App\Http\Controllers\Admin\MediaController;
+// use App\Http\Controllers\Admin\MediaUploadController;
+// use App\Http\Controllers\Admin\MediaLibraryController;
+// use App\Http\Controllers\Admin\MediaFolderController;
+// use App\Http\Controllers\Admin\MediaTagController;
+// use App\Http\Controllers\Admin\MediaSettingsController;
+// use App\Http\Controllers\Admin\MediaSearchController;
+// use App\Http\Controllers\Admin\MediaBulkController;
+// use App\Http\Controllers\Admin\MediaCropController;
+// use App\Http\Controllers\Admin\MediaUsageController;
 use App\Http\Controllers\Admin\QuranController;
 use App\Http\Controllers\Admin\ReciterController;
 use App\Http\Controllers\Admin\RoleController;
@@ -129,12 +138,106 @@ Route::prefix('su/portal/v1/admin')
             return view('admin.components-demo');
         })->name('admin.components.demo');
 
-        // Media Upload Routes
-        Route::prefix('media')->name('media.')->group(function (): void {
-            Route::post('/upload', [MediaUploadController::class, 'upload'])->name('upload');
-            Route::delete('/{id}', [MediaUploadController::class, 'delete'])->name('delete');
-            Route::get('/list', [MediaUploadController::class, 'list'])->name('list');
-            Route::post('/reorder', [MediaUploadController::class, 'reorder'])->name('reorder');
+        // DISABLED: Old Media Upload Routes (Legacy - for backward compatibility)
+        // Route::prefix('media')->name('media.')->group(function (): void {
+        //     Route::post('/upload', [MediaUploadController::class, 'upload'])->name('upload');
+        //     Route::delete('/{id}', [MediaUploadController::class, 'delete'])->name('delete');
+        //     Route::get('/list', [MediaUploadController::class, 'list'])->name('list');
+        //     Route::post('/reorder', [MediaUploadController::class, 'reorder'])->name('reorder');
+        // });
+
+        // DISABLED: Media Library Web Pages
+        // Route::get('/media', function () {
+        //     return view('admin.media.index');
+        // })->name('admin.media.index');
+
+        // Route::get('/media/settings', function () {
+        //     return view('admin.media.settings');
+        // })->name('admin.media.settings');
+
+        // DISABLED: Media Library Routes (Comprehensive)
+        // Route::prefix('media-library')->name('media-library.')->group(function (): void {
+        //     // Main media endpoints (non-wildcard routes first)
+        //     Route::get('/', [MediaLibraryController::class, 'index'])->name('index');
+        //     Route::post('/', [MediaLibraryController::class, 'store'])->name('store');
+
+        //     // Stats endpoint
+        //     Route::get('/stats', [MediaLibraryController::class, 'stats'])->name('stats');
+
+        //     // Crop endpoints (must be before {id} routes)
+        //     Route::post('/crop', [MediaCropController::class, 'crop'])->name('crop');
+
+        //     // Usage endpoints
+        //     Route::get('/unused', [MediaUsageController::class, 'unused'])->name('unused');
+        //     Route::delete('/unused/cleanup', [MediaUsageController::class, 'cleanupUnused'])->name('unused.cleanup');
+
+        //     // Folder endpoints
+        //     Route::prefix('folders')->name('folders.')->group(function (): void {
+        //         Route::get('/', [MediaFolderController::class, 'index'])->name('index');
+        //         Route::post('/', [MediaFolderController::class, 'store'])->name('store');
+        //         Route::put('/{id}', [MediaFolderController::class, 'update'])->name('update');
+        //         Route::delete('/{id}', [MediaFolderController::class, 'destroy'])->name('destroy');
+        //         Route::post('/{id}/move', [MediaFolderController::class, 'move'])->name('move');
+        //         Route::get('/{id}/contents', [MediaFolderController::class, 'contents'])->name('contents');
+        //     });
+
+        //     // Tag endpoints
+        //     Route::prefix('tags')->name('tags.')->group(function (): void {
+        //         Route::get('/', [MediaTagController::class, 'index'])->name('index');
+        //         Route::post('/', [MediaTagController::class, 'store'])->name('store');
+        //         Route::put('/{id}', [MediaTagController::class, 'update'])->name('update');
+        //         Route::delete('/{id}', [MediaTagController::class, 'destroy'])->name('destroy');
+        //         Route::post('/attach', [MediaTagController::class, 'attachToMedia'])->name('attach');
+        //         Route::post('/detach', [MediaTagController::class, 'detachFromMedia'])->name('detach');
+        //     });
+
+        //     // Settings endpoints
+        //     Route::prefix('settings')->name('settings.')->group(function (): void {
+        //         Route::get('/', [MediaSettingsController::class, 'index'])->name('index');
+        //         Route::get('/{key}', [MediaSettingsController::class, 'show'])->name('show');
+        //         Route::put('/', [MediaSettingsController::class, 'update'])->name('update');
+        //         Route::post('/size-presets', [MediaSettingsController::class, 'saveSizePreset'])->name('size-presets.save');
+        //         Route::delete('/size-presets/{name}', [MediaSettingsController::class, 'deleteSizePreset'])->name('size-presets.delete');
+        //         Route::post('/reset', [MediaSettingsController::class, 'resetToDefaults'])->name('reset');
+        //     });
+
+        //     // Search endpoints
+        //     Route::prefix('search')->name('search.')->group(function (): void {
+        //         Route::get('/', [MediaSearchController::class, 'search'])->name('index');
+        //         Route::get('/suggestions', [MediaSearchController::class, 'suggestions'])->name('suggestions');
+        //     });
+
+        //     // Bulk endpoints
+        //     Route::prefix('bulk')->name('bulk.')->group(function (): void {
+        //         Route::post('/upload', [MediaBulkController::class, 'bulkUpload'])->name('upload');
+        //         Route::delete('/delete', [MediaBulkController::class, 'bulkDelete'])->name('delete');
+        //         Route::post('/tag', [MediaBulkController::class, 'bulkTag'])->name('tag');
+        //         Route::post('/move', [MediaBulkController::class, 'bulkMove'])->name('move');
+        //         Route::post('/download', [MediaBulkController::class, 'bulkDownload'])->name('download');
+        //         Route::post('/optimize', [MediaBulkController::class, 'bulkOptimize'])->name('optimize');
+        //     });
+
+        //     // Wildcard routes MUST be at the end to avoid conflicts
+        //     Route::get('/{id}', [MediaLibraryController::class, 'show'])->name('show');
+        //     Route::put('/{id}', [MediaLibraryController::class, 'update'])->name('update');
+        //     Route::delete('/{id}', [MediaLibraryController::class, 'destroy'])->name('destroy');
+        //     Route::get('/{id}/download', [MediaLibraryController::class, 'download'])->name('download');
+        //     Route::get('/{id}/conversions', [MediaLibraryController::class, 'conversions'])->name('conversions');
+        //     Route::post('/{id}/crop', [MediaCropController::class, 'crop'])->name('crop.media');
+        //     Route::post('/{id}/crop-replace', [MediaCropController::class, 'cropAndReplace'])->name('crop-replace');
+        //     Route::post('/{id}/crop-preview', [MediaCropController::class, 'previewCrop'])->name('crop-preview');
+        //     Route::get('/{id}/usage', [MediaUsageController::class, 'show'])->name('usage.show');
+        // });
+
+        // Simple Media Management Routes (ImageMagick)
+        Route::prefix('simple-media')->name('admin.simple-media.')->group(function (): void {
+            Route::get('/', [MediaController::class, 'index'])->name('index');
+            Route::post('/', [MediaController::class, 'store'])->name('store');
+            Route::get('/{media}', [MediaController::class, 'show'])->name('show');
+            Route::put('/{media}', [MediaController::class, 'update'])->name('update');
+            Route::delete('/{media}', [MediaController::class, 'destroy'])->name('destroy');
+            Route::post('/{media}/optimize', [MediaController::class, 'optimize'])->name('optimize');
+            Route::post('/{media}/thumbnail', [MediaController::class, 'thumbnail'])->name('thumbnail');
         });
 
         // Article Routes
@@ -199,20 +302,20 @@ Route::prefix('su/portal/v1/admin')
             'destroy' => 'admin.series.destroy',
         ]);
 
-        // Media Category Routes
-        Route::prefix('media-categories')->group(function (): void {
-            Route::post('/bulk-delete', [MediaCategoryController::class, 'bulkDelete'])->name('admin.media-categories.bulk-delete');
-            Route::post('/reorder', [MediaCategoryController::class, 'reorder'])->name('admin.media-categories.reorder');
-        });
-        Route::resource('media-categories', MediaCategoryController::class)->names([
-            'index' => 'admin.media-categories.index',
-            'create' => 'admin.media-categories.create',
-            'store' => 'admin.media-categories.store',
-            'show' => 'admin.media-categories.show',
-            'edit' => 'admin.media-categories.edit',
-            'update' => 'admin.media-categories.update',
-            'destroy' => 'admin.media-categories.destroy',
-        ]);
+        // DISABLED: Media Category Routes
+        // Route::prefix('media-categories')->group(function (): void {
+        //     Route::post('/bulk-delete', [MediaCategoryController::class, 'bulkDelete'])->name('admin.media-categories.bulk-delete');
+        //     Route::post('/reorder', [MediaCategoryController::class, 'reorder'])->name('admin.media-categories.reorder');
+        // });
+        // Route::resource('media-categories', MediaCategoryController::class)->names([
+        //     'index' => 'admin.media-categories.index',
+        //     'create' => 'admin.media-categories.create',
+        //     'store' => 'admin.media-categories.store',
+        //     'show' => 'admin.media-categories.show',
+        //     'edit' => 'admin.media-categories.edit',
+        //     'update' => 'admin.media-categories.update',
+        //     'destroy' => 'admin.media-categories.destroy',
+        // ]);
 
 
         // Hadith Routes
@@ -250,20 +353,20 @@ Route::prefix('su/portal/v1/admin')
             'destroy' => 'admin.hadith-narrators.destroy',
         ]);
 
-        // Media Program Routes
-        Route::prefix('media-programs')->group(function (): void {
-            Route::get('/search', [MediaProgramController::class, 'search'])->name('admin.media-programs.search');
-            Route::post('/bulk-delete', [MediaProgramController::class, 'bulkDelete'])->name('admin.media-programs.bulk-delete');
-        });
-        Route::resource('media-programs', MediaProgramController::class)->names([
-            'index' => 'admin.media-programs.index',
-            'create' => 'admin.media-programs.create',
-            'store' => 'admin.media-programs.store',
-            'show' => 'admin.media-programs.show',
-            'edit' => 'admin.media-programs.edit',
-            'update' => 'admin.media-programs.update',
-            'destroy' => 'admin.media-programs.destroy',
-        ]);
+        // DISABLED: Media Program Routes
+        // Route::prefix('media-programs')->group(function (): void {
+        //     Route::get('/search', [MediaProgramController::class, 'search'])->name('admin.media-programs.search');
+        //     Route::post('/bulk-delete', [MediaProgramController::class, 'bulkDelete'])->name('admin.media-programs.bulk-delete');
+        // });
+        // Route::resource('media-programs', MediaProgramController::class)->names([
+        //     'index' => 'admin.media-programs.index',
+        //     'create' => 'admin.media-programs.create',
+        //     'store' => 'admin.media-programs.store',
+        //     'show' => 'admin.media-programs.show',
+        //     'edit' => 'admin.media-programs.edit',
+        //     'update' => 'admin.media-programs.update',
+        //     'destroy' => 'admin.media-programs.destroy',
+        // ]);
 
         // Quran Routes (main entry point for Quran management)
         Route::prefix('quran')->group(function (): void {

@@ -1,9 +1,8 @@
 <aside
-    class="relative z-20 transition-all duration-300 custom-scrollbar overflow-y-auto"
-    :class="sidebarOpen ? 'w-72' : 'w-20'"
-    x-cloak
+    class="relative h-full w-72 lg:w-auto transition-all duration-300 custom-scrollbar overflow-y-auto flex-shrink-0"
+    :class="!sidebarOpen && window.innerWidth >= 1024 ? 'lg:w-20' : 'lg:w-72'"
 >
-    <div class="h-full relative overflow-hidden transition-colors duration-300"
+    <div class="h-full relative overflow-y-auto custom-scrollbar transition-colors duration-300"
          :class="darkMode ? 'bg-gray-900/95 backdrop-blur-lg shadow-2xl' : 'glass-light-soft shadow-lg border-r border-blue-100/50'">
         <!-- Gradient Overlay (only in dark mode) -->
         <div class="absolute inset-0 opacity-10 gradient-primary" x-show="darkMode"></div>
@@ -93,25 +92,12 @@
                         @endif
                     </a>
 
-                    <!-- Media Categories -->
-                    <a href="{{ route('admin.media-categories.index') }}"
-                       class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.media-categories.*') ? 'active' : '' }}"
+                    <!-- Simple Media Library -->
+                    <a href="{{ route('admin.simple-media.index') }}"
+                       class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.simple-media.*') ? 'active' : '' }}"
                        :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
-                        <i data-lucide="film" class="w-5 h-5 flex-shrink-0"></i>
-                        <span x-show="sidebarOpen" x-transition class="font-semibold">فئات الوسائط</span>
-                    </a>
-
-                    <!-- Media Programs -->
-                    <a href="{{ route('admin.media-programs.index') }}"
-                       class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.media-programs.*') ? 'active' : '' }}"
-                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
-                        <i data-lucide="video" class="w-5 h-5 flex-shrink-0"></i>
-                        <span x-show="sidebarOpen" x-transition class="font-semibold">البرامج الإعلامية</span>
-                        @if(isset($stats['media']) && $stats['media'] > 0)
-                            <span x-show="sidebarOpen" x-transition class="mr-auto bg-purple-500/20 text-purple-300 text-xs px-2 py-1 rounded-full">
-                                {{ $stats['media'] ?? 0 }}
-                            </span>
-                        @endif
+                        <i data-lucide="image" class="w-5 h-5 flex-shrink-0"></i>
+                        <span x-show="sidebarOpen" x-transition class="font-semibold">مكتبة الوسائط</span>
                     </a>
 
                     <!-- Seerah Events -->

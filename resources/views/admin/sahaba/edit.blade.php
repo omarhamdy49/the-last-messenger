@@ -134,6 +134,40 @@
                 </div>
             </div>
 
+            <!-- Media Section -->
+            <div class="bg-white rounded-xl shadow-sm p-6 space-y-6">
+                <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <i data-lucide="image" class="w-5 h-5 text-brand-primary"></i>
+                    <span>الصور والوسائط</span>
+                </h2>
+
+                <!-- Profile Image -->
+                <div class="mb-6">
+                    <x-media.picker-button
+                        name="profile_image"
+                        label="صورة الملف الشخصي"
+                        :value="$sahabi->profile_image_url ?? null"
+                        mode="single"
+                        accept="image/*"
+                        help-text="يفضل استخدام صورة بحجم 800×800 بكسل" />
+                </div>
+
+                <!-- Gallery Images -->
+                <div class="mb-6">
+                    <x-media.picker-button
+                        name="gallery"
+                        label="معرض الصور"
+                        :value="$sahabi->gallery_images ?? []"
+                        mode="multiple"
+                        accept="image/*"
+                        :max-selection="10"
+                        help-text="اختر حتى 10 صور للمعرض (صور تاريخية، مخطوطات، إلخ)" />
+
+                    <!-- Hidden field to indicate if we should replace gallery -->
+                    <input type="hidden" name="replace_gallery" value="0">
+                </div>
+            </div>
+
             <!-- Biographical Information -->
             <div class="bg-white rounded-xl shadow-sm p-6 space-y-6">
                 <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">

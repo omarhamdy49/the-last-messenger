@@ -336,10 +336,10 @@
                             <i data-lucide="scroll-text" class="w-5 h-5"></i>
                             <span>حديث جديد</span>
                         </a>
-                        <a href="{{ route('admin.media-programs.create') }}"
+                        <a href="{{ route('admin.simple-media.index') }}"
                            class="magnetic-btn px-6 py-3 rounded-xl glass-premium text-white font-bold border border-white/20 hover:border-white/40 transition-all flex items-center gap-2">
-                            <i data-lucide="video" class="w-5 h-5"></i>
-                            <span>برنامج جديد</span>
+                            <i data-lucide="image" class="w-5 h-5"></i>
+                            <span>مكتبة الوسائط</span>
                         </a>
                     </div>
                 </div>
@@ -1117,11 +1117,11 @@ function enhancedDashboard() {
                     route: '{{ route("admin.hadith.index") }}'
                 },
                 {
-                    name: 'البرامج',
-                    icon: 'video',
+                    name: 'الوسائط',
+                    icon: 'image',
                     count: this.stats.media.total,
                     status: this.stats.media.total > 50 ? 'healthy' : this.stats.media.total > 20 ? 'warning' : 'critical',
-                    route: '{{ route("admin.media-programs.index") }}'
+                    route: '{{ route("admin.simple-media.index") }}'
                 },
                 {
                     name: 'الصحابة',

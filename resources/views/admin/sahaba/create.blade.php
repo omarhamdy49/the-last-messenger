@@ -159,6 +159,32 @@
             </div>
         </div>
 
+        <!-- Media Section -->
+        <div class="bg-white rounded-xl shadow-sm p-6 space-y-6">
+            <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <i data-lucide="image" class="w-5 h-5 text-brand-primary"></i>
+                <span>الصور والوسائط</span>
+            </h2>
+
+            <!-- Profile Image -->
+            <x-media.picker-button
+                name="profile_image"
+                label="صورة الملف الشخصي"
+                mode="single"
+                accept="image/*"
+                :required="false"
+                help-text="يفضل استخدام صورة بحجم 800×800 بكسل" />
+
+            <!-- Gallery Images -->
+            <x-media.picker-button
+                name="gallery_images"
+                label="معرض الصور"
+                mode="multiple"
+                accept="image/*"
+                :required="false"
+                help-text="يمكنك اختيار عدة صور للمعرض" />
+        </div>
+
         <!-- Biographical Information -->
         <div class="bg-white rounded-xl shadow-sm p-6 space-y-6">
             <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">

@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Domain\Shared\Traits\HasInteractions;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Translatable\HasTranslations;
 
 /**
@@ -42,9 +44,9 @@ use Spatie\Translatable\HasTranslations;
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  */
-class SeerahEvent extends Model
+class SeerahEvent extends Model implements HasMedia
 {
-    use HasFactory, HasTranslations, HasInteractions;
+    use HasFactory, HasTranslations, InteractsWithMedia, HasInteractions;
 
     /**
      * The table associated with the model.
@@ -263,5 +265,98 @@ class SeerahEvent extends Model
     {
         return $query->whereNotNull('latitude')
             ->whereNotNull('longitude');
+    }
+
+    /**
+     * Register media collections
+     */
+    public function registerMediaCollections(): void
+    {
+        // Featured image collection (single file)
+        $this->addMediaCollection('featured_image')
+            ->singleFile()
+            ->acceptsMimeTypes(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'])
+            ->maxFilesize(10 * 1024 * 1024) // 10MB
+            ->useDisk('public');
+
+        // Gallery collection (multiple files) - Historical photos, maps, artifacts
+        $this->addMediaCollection('gallery')
+            ->acceptsMimeTypes(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'])
+            ->maxFilesize(10 * 1024 * 1024) // 10MB
+            ->useDisk('public');
+    }
+
+    /**
+     * Register media conversions
+     */
+    public function registerMediaConversions(?\Spatie\MediaLibrary\MediaCollections\Models\Media $media = null): void
+    {
+        // Thumbnail conversion (150x150 crop-center)
+        $this->addMediaConversion('thumbnail')
+            ->width(150)
+            ->height(150)
+            ->crop('crop-center')
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('featured_image', 'gallery')
+            ->nonQueued();
+
+        // Medium conversion (800x600 contain)
+        $this->addMediaConversion('medium')
+            ->width(800)
+            ->height(600)
+            ->fit('contain')
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('featured_image', 'gallery')
+            ->nonQueued();
+
+        // Large conversion (1200x800 contain)
+        $this->addMediaConversion('large')
+            ->width(1200)
+            ->height(800)
+            ->fit('contain')
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('featured_image', 'gallery')
+            ->nonQueued();
+    }
+
+    /**
+     * Get featured image URL (accessor with backward compatibility)
+     *
+     * @return string|null
+     */
+    public function getFeaturedImageUrlAttribute(): ?string
+    {
+        return $this->getFirstMediaUrl('featured_image') ?: $this->featured_image;
+    }
+
+    /**
+     * Get featured image thumbnail URL
+     *
+     * @return string|null
+     */
+    public function getFeaturedImageThumbnailAttribute(): ?string
+    {
+        return $this->getFirstMediaUrl('featured_image', 'thumbnail') ?: null;
+    }
+
+    /**
+     * Get gallery images with conversions
+     *
+     * @return array
+     */
+    public function getGalleryImagesAttribute(): array
+    {
+        return $this->getMedia('gallery')->map(fn($media) => [
+            'id' => $media->id,
+            'url' => $media->getUrl(),
+            'thumbnail' => $media->getUrl('thumbnail'),
+            'medium' => $media->getUrl('medium'),
+            'large' => $media->getUrl('large'),
+            'alt' => $media->getCustomProperty('alt_text'),
+            'caption' => $media->getCustomProperty('caption'),
+        ])->toArray();
     }
 }

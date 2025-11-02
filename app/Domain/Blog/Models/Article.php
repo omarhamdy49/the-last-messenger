@@ -309,50 +309,119 @@ class Article extends Model implements HasMedia
             ->singleFile()
             ->acceptsMimeTypes(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'])
             ->maxFilesize(10 * 1024 * 1024) // 10MB
-            ->useDisk('public')
-            ->registerMediaConversions(function () {
-                $this->addMediaConversion('thumb')
-                    ->width(150)
-                    ->height(150)
-                    ->sharpen(10)
-                    ->nonQueued();
+            ->useDisk('public');
 
-                $this->addMediaConversion('medium')
-                    ->width(600)
-                    ->height(400)
-                    ->sharpen(10)
-                    ->nonQueued();
-
-                $this->addMediaConversion('large')
-                    ->width(1200)
-                    ->height(800)
-                    ->sharpen(10)
-                    ->nonQueued();
-            });
+        // OG image collection (single file) for social media sharing
+        $this->addMediaCollection('og_image')
+            ->singleFile()
+            ->acceptsMimeTypes(['image/jpeg', 'image/jpg', 'image/png', 'image/webp'])
+            ->maxFilesize(5 * 1024 * 1024) // 5MB
+            ->useDisk('public');
 
         // Gallery collection (multiple files)
         $this->addMediaCollection('gallery')
             ->acceptsMimeTypes(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'])
             ->maxFilesize(10 * 1024 * 1024) // 10MB
-            ->useDisk('public')
-            ->registerMediaConversions(function () {
-                $this->addMediaConversion('thumb')
-                    ->width(150)
-                    ->height(150)
-                    ->sharpen(10)
-                    ->nonQueued();
+            ->useDisk('public');
+    }
 
-                $this->addMediaConversion('medium')
-                    ->width(600)
-                    ->height(400)
-                    ->sharpen(10)
-                    ->nonQueued();
+    /**
+     * Register media conversions
+     */
+    public function registerMediaConversions(?\Spatie\MediaLibrary\MediaCollections\Models\Media $media = null): void
+    {
+        // Thumbnail conversion (150x150 crop-center)
+        $this->addMediaConversion('thumbnail')
+            ->width(150)
+            ->height(150)
+            ->crop('crop-center')
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('featured_image', 'gallery')
+            ->nonQueued();
 
-                $this->addMediaConversion('large')
-                    ->width(1200)
-                    ->height(800)
-                    ->sharpen(10)
-                    ->nonQueued();
-            });
+        // Medium conversion (800x600 contain)
+        $this->addMediaConversion('medium')
+            ->width(800)
+            ->height(600)
+            ->fit('contain')
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('featured_image', 'gallery')
+            ->nonQueued();
+
+        // Large conversion (1200x800 contain)
+        $this->addMediaConversion('large')
+            ->width(1200)
+            ->height(800)
+            ->fit('contain')
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('featured_image', 'gallery')
+            ->nonQueued();
+
+        // OG image conversion (1200x630 crop for social media)
+        $this->addMediaConversion('og')
+            ->width(1200)
+            ->height(630)
+            ->fit('crop')
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('og_image')
+            ->nonQueued();
+    }
+
+    /**
+     * Get featured image URL (accessor with backward compatibility)
+     *
+     * @return string|null
+     */
+    public function getFeaturedImageUrlAttribute(): ?string
+    {
+        return $this->getFirstMediaUrl('featured_image') ?: $this->featured_image;
+    }
+
+    /**
+     * Get featured image thumbnail URL
+     *
+     * @return string|null
+     */
+    public function getFeaturedImageThumbnailAttribute(): ?string
+    {
+        return $this->getFirstMediaUrl('featured_image', 'thumbnail') ?: null;
+    }
+
+    /**
+     * Get OG image URL (accessor with backward compatibility)
+     *
+     * @return string|null
+     */
+    public function getOgImageUrlAttribute(): ?string
+    {
+        $mediaUrl = $this->getFirstMediaUrl('og_image', 'og');
+        if ($mediaUrl) {
+            return $mediaUrl;
+        }
+
+        // Fallback to featured image if no OG image
+        return $this->getFirstMediaUrl('featured_image', 'og') ?: $this->featured_image;
+    }
+
+    /**
+     * Get gallery images with conversions
+     *
+     * @return array
+     */
+    public function getGalleryImagesAttribute(): array
+    {
+        return $this->getMedia('gallery')->map(fn($media) => [
+            'id' => $media->id,
+            'url' => $media->getUrl(),
+            'thumbnail' => $media->getUrl('thumbnail'),
+            'medium' => $media->getUrl('medium'),
+            'large' => $media->getUrl('large'),
+            'alt' => $media->getCustomProperty('alt_text'),
+            'caption' => $media->getCustomProperty('caption'),
+        ])->toArray();
     }
 }

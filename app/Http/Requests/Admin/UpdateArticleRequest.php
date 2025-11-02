@@ -106,7 +106,22 @@ class UpdateArticleRequest extends FormRequest
             'content.ur' => ['nullable', 'string', 'min:50'],
 
             // Image upload (when uploading file directly)
-            'featured_image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,gif', 'max:2048'],
+            'featured_image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,gif', 'max:10240'],
+
+            // Media library selection (when selecting from media picker)
+            'featured_image_media_id' => ['nullable', 'exists:media,id'],
+
+            // OG image
+            'og_image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            'og_image_media_id' => ['nullable', 'exists:media,id'],
+
+            // Gallery images (multiple files)
+            'gallery' => ['nullable', 'array', 'max:10'],
+            'gallery.*' => ['image', 'mimes:jpeg,jpg,png,webp,gif', 'max:10240'],
+
+            // Gallery media IDs (when selecting from media picker)
+            'gallery_media_ids' => ['nullable', 'array', 'max:10'],
+            'gallery_media_ids.*' => ['exists:media,id'],
 
             // Status and flags
             'status' => ['sometimes', 'string', Rule::in(ArticleStatus::values())],
@@ -181,7 +196,24 @@ class UpdateArticleRequest extends FormRequest
             // Image validation messages
             'featured_image.image' => 'The featured image must be a valid image file.',
             'featured_image.mimes' => 'The featured image must be in JPEG, PNG, WebP, or GIF format.',
-            'featured_image.max' => 'The featured image size cannot exceed 2MB.',
+            'featured_image.max' => 'The featured image size cannot exceed 10MB.',
+            'featured_image_media_id.exists' => 'The selected media does not exist.',
+
+            // OG image validation messages
+            'og_image.image' => 'The OG image must be a valid image file.',
+            'og_image.mimes' => 'The OG image must be in JPEG, PNG, or WebP format.',
+            'og_image.max' => 'The OG image size cannot exceed 5MB.',
+            'og_image_media_id.exists' => 'The selected OG image does not exist.',
+
+            // Gallery validation messages
+            'gallery.array' => 'The gallery must be an array of images.',
+            'gallery.max' => 'You cannot upload more than 10 gallery images.',
+            'gallery.*.image' => 'All gallery items must be valid image files.',
+            'gallery.*.mimes' => 'Gallery images must be in JPEG, PNG, WebP, or GIF format.',
+            'gallery.*.max' => 'Each gallery image cannot exceed 10MB.',
+            'gallery_media_ids.array' => 'The gallery media IDs must be an array.',
+            'gallery_media_ids.max' => 'You cannot select more than 10 gallery images.',
+            'gallery_media_ids.*.exists' => 'One or more selected gallery images do not exist.',
 
             // Status validation messages
             'status.in' => 'The selected status is invalid. Valid options are: draft, published, or archived.',
