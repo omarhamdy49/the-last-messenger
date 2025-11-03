@@ -668,6 +668,9 @@ function updateEditorTheme(editorDiv, language) {
     {{-- DISABLED: Global Image Cropper Modal --}}
     {{-- <x-media.cropper-modal /> --}}
 
+    <!-- Media Picker Component Script -->
+    <script src="{{ asset('js/media-picker.js') }}"></script>
+
     <script>
         // Initialize Lucide icons
         lucide.createIcons();

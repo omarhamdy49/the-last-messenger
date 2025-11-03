@@ -433,7 +433,7 @@
                                 <div class="grid grid-cols-3 gap-4 mb-4" x-show="form.gallery.length > 0">
                                     <template x-for="(image, index) in form.gallery" :key="index">
                                         <div class="relative group">
-                                            <img :src="image" alt="Gallery" class="w-full h-40 object-cover rounded-lg">
+                                            <img :src="image?.url || image" alt="Gallery" class="w-full h-40 object-cover rounded-lg">
                                             <button type="button" @click="removeGalleryImage(index)" class="absolute top-2 left-2 bg-red-500 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -442,14 +442,13 @@
                                         </div>
                                     </template>
                                 </div>
-                                <input type="file" id="gallery" @change="handleGallery" accept="image/*" multiple class="hidden">
-                                <label for="gallery" class="flex items-center justify-center gap-2 px-6 py-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+                                <button type="button" @click="openMediaLibrary('gallery')" class="flex items-center justify-center gap-2 w-full px-6 py-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
                                     <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                     </svg>
-                                    <span class="text-gray-600 dark:text-gray-400 font-medium">إضافة صور</span>
-                                </label>
-                                <p class="text-xs text-gray-500 mt-2 text-right">PNG, JPG بحجم أقصى 5 ميجابايت لكل صورة. يمكنك رفع صور متعددة.</p>
+                                    <span class="text-gray-600 dark:text-gray-400 font-medium">إضافة صور من المكتبة</span>
+                                </button>
+                                <p class="text-xs text-gray-500 mt-2 text-right">اختر صور متعددة من مكتبة الوسائط</p>
                             </div>
 
                         </div>
@@ -797,26 +796,24 @@
                         <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 text-right">الصورة المميزة</h3>
 
                         <div x-show="!form.featuredImage" class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center">
-                            <input type="file" id="featuredImage" @change="handleFeaturedImage" accept="image/*" class="hidden">
-                            <label for="featuredImage" class="cursor-pointer">
+                            <button type="button" @click="openMediaLibrary('featured')" class="w-full">
                                 <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                 </svg>
-                                <p class="text-sm text-gray-600 dark:text-gray-400 font-medium">رفع صورة</p>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 font-medium">اختر من مكتبة الوسائط</p>
                                 <p class="text-xs text-gray-500 mt-1">JPEG, PNG, WebP</p>
-                                <p class="text-xs text-gray-500">الحجم الأقصى: 2 ميجابايت</p>
                                 <p class="text-xs text-gray-500">المقاس الموصى به: 1200×630 بكسل</p>
-                            </label>
+                            </button>
                         </div>
 
                         <div x-show="form.featuredImage" class="relative group">
                             <div class="image-preview">
-                                <img :src="form.featuredImage" alt="Featured" class="w-full h-full object-cover">
+                                <img :src="form.featuredImage?.url || form.featuredImage" alt="Featured" class="w-full h-full object-cover">
                             </div>
                             <div class="mt-3 flex gap-2">
-                                <label for="featuredImage" class="flex-1 px-3 py-2 text-center text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+                                <button type="button" @click="openMediaLibrary('featured')" class="flex-1 px-3 py-2 text-center text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                                     تغيير
-                                </label>
+                                </button>
                                 <button type="button" @click="form.featuredImage = null; updateProgress()" class="flex-1 px-3 py-2 text-sm border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors">
                                     حذف
                                 </button>
@@ -896,6 +893,184 @@
         </div>
     </div>
 
+    <!-- Media Library Modal -->
+    <div x-show="mediaLibrary.isOpen"
+         x-cloak
+         @keydown.escape.window="mediaLibrary.isOpen = false"
+         class="fixed inset-0 z-50 overflow-y-auto"
+         style="display: none;">
+
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+             @click="mediaLibrary.isOpen = false"></div>
+
+        <!-- Modal -->
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden"
+                 @click.stop>
+
+                <!-- Header -->
+                <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">مكتبة الوسائط</h2>
+                    <button @click="mediaLibrary.isOpen = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Filters -->
+                <div class="p-6 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <!-- Search -->
+                        <div class="md:col-span-2">
+                            <input type="text"
+                                   x-model="mediaLibrary.search"
+                                   @input="filterMedia()"
+                                   placeholder="بحث بالاسم..."
+                                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-right"
+                                   dir="rtl">
+                        </div>
+
+                        <!-- Type Filter -->
+                        <div>
+                            <select x-model="mediaLibrary.typeFilter"
+                                    @change="filterMedia()"
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-right"
+                                    dir="rtl">
+                                <option value="all">جميع الأنواع</option>
+                                <option value="image">صور</option>
+                                <option value="video">فيديو</option>
+                                <option value="document">مستندات</option>
+                            </select>
+                        </div>
+
+                        <!-- Date Filter -->
+                        <div>
+                            <select x-model="mediaLibrary.dateFilter"
+                                    @change="filterMedia()"
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-right"
+                                    dir="rtl">
+                                <option value="all">جميع التواريخ</option>
+                                <option value="today">اليوم</option>
+                                <option value="week">هذا الأسبوع</option>
+                                <option value="month">هذا الشهر</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Media Grid -->
+                <div class="p-6 overflow-y-auto" style="max-height: 500px;">
+                    <!-- Loading State -->
+                    <div x-show="mediaLibrary.loading" class="flex items-center justify-center py-20">
+                        <div class="text-center">
+                            <svg class="animate-spin h-12 w-12 mx-auto text-blue-500 mb-4" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <p class="text-gray-600 dark:text-gray-400">جاري التحميل...</p>
+                        </div>
+                    </div>
+
+                    <!-- Media Grid -->
+                    <div x-show="!mediaLibrary.loading" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <template x-for="(media, index) in mediaLibrary.filteredItems" :key="media.id">
+                            <div @click="selectMedia(media)"
+                                 :class="isMediaSelected(media) ? 'ring-4 ring-blue-500' : ''"
+                                 class="relative group cursor-pointer rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-300 transition-all">
+                                <div class="aspect-square bg-gray-100 dark:bg-gray-800">
+                                    <img :src="media.url"
+                                         :alt="media.name"
+                                         class="w-full h-full object-cover">
+                                </div>
+
+                                <!-- Selected Badge -->
+                                <div x-show="isMediaSelected(media)"
+                                     class="absolute top-2 right-2 bg-blue-500 text-white rounded-full p-1">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                    </svg>
+                                </div>
+
+                                <!-- Info Overlay -->
+                                <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <p class="text-white text-xs truncate" x-text="media.name"></p>
+                                    <p class="text-white text-xs" x-text="formatFileSize(media.size)"></p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div x-show="!mediaLibrary.loading && mediaLibrary.filteredItems.length === 0" class="text-center py-12">
+                        <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <p class="text-gray-500 dark:text-gray-400">لا توجد وسائط</p>
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                <div class="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                    <div class="flex items-center justify-between">
+                        <div class="text-sm text-gray-600 dark:text-gray-400">
+                            عرض <span x-text="mediaLibrary.pagination.from"></span> -
+                            <span x-text="mediaLibrary.pagination.to"></span> من
+                            <span x-text="mediaLibrary.pagination.total"></span>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button @click="previousPage()"
+                                    :disabled="mediaLibrary.pagination.currentPage === 1"
+                                    :class="mediaLibrary.pagination.currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200 dark:hover:bg-gray-700'"
+                                    class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300">
+                                السابق
+                            </button>
+
+                            <div class="flex gap-1">
+                                <template x-for="page in pageNumbers()" :key="page">
+                                    <button @click="goToPage(page)"
+                                            :class="page === mediaLibrary.pagination.currentPage ? 'bg-blue-500 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
+                                            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                                            x-text="page">
+                                    </button>
+                                </template>
+                            </div>
+
+                            <button @click="nextPage()"
+                                    :disabled="mediaLibrary.pagination.currentPage === mediaLibrary.pagination.lastPage"
+                                    :class="mediaLibrary.pagination.currentPage === mediaLibrary.pagination.lastPage ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200 dark:hover:bg-gray-700'"
+                                    class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300">
+                                التالي
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                    <div class="text-sm text-gray-600 dark:text-gray-400">
+                        <span x-show="mediaLibrary.mode === 'gallery'">
+                            <span x-text="mediaLibrary.selectedItems.length"></span> عنصر محدد
+                        </span>
+                    </div>
+                    <div class="flex gap-3">
+                        <button @click="mediaLibrary.isOpen = false"
+                                class="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
+                            إلغاء
+                        </button>
+                        <button @click="confirmSelection()"
+                                class="px-6 py-2 gradient-button text-white rounded-lg">
+                            تأكيد الاختيار
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
 </div>
 
 @push('scripts')
@@ -941,6 +1116,27 @@ function articleForm() {
         },
 
         errors: {},
+
+        // Media Library
+        mediaLibrary: {
+            isOpen: false,
+            loading: false,
+            mode: 'featured', // 'featured' or 'gallery'
+            search: '',
+            typeFilter: 'all',
+            dateFilter: 'all',
+            allItems: [],
+            filteredItems: [],
+            selectedItems: [],
+            pagination: {
+                currentPage: 1,
+                perPage: 12,
+                total: 0,
+                from: 0,
+                to: 0,
+                lastPage: 1
+            }
+        },
 
         init() {
             this.updateProgress();
@@ -1107,6 +1303,210 @@ function articleForm() {
         removeGalleryImage(index) {
             this.form.gallery.splice(index, 1);
             this.updateProgress();
+        },
+
+        // Media Library Methods
+        async loadMediaLibrary() {
+            this.mediaLibrary.loading = true;
+            try {
+                const response = await fetch('/su/portal/v1/admin/simple-media', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load media library');
+                }
+
+                const data = await response.json();
+
+                // Transform Laravel pagination data to our format
+                this.mediaLibrary.allItems = data.data.map(item => ({
+                    id: item.id,
+                    name: item.original_filename || item.filename,
+                    url: item.url,
+                    type: item.type || 'image',
+                    size: item.size,
+                    created_at: item.created_at
+                }));
+
+                this.filterMedia();
+            } catch (error) {
+                console.error('Error loading media library:', error);
+                alert('فشل تحميل مكتبة الوسائط. يرجى المحاولة مرة أخرى.');
+            } finally {
+                this.mediaLibrary.loading = false;
+            }
+        },
+
+        async openMediaLibrary(mode) {
+            this.mediaLibrary.mode = mode;
+            this.mediaLibrary.isOpen = true;
+            this.mediaLibrary.selectedItems = [];
+            this.mediaLibrary.search = '';
+            this.mediaLibrary.typeFilter = 'all';
+            this.mediaLibrary.dateFilter = 'all';
+            this.mediaLibrary.pagination.currentPage = 1;
+
+            // Reload media library data when opened
+            await this.loadMediaLibrary();
+        },
+
+        filterMedia() {
+            let filtered = [...this.mediaLibrary.allItems];
+
+            // Search filter
+            if (this.mediaLibrary.search) {
+                const search = this.mediaLibrary.search.toLowerCase();
+                filtered = filtered.filter(item =>
+                    item.name.toLowerCase().includes(search)
+                );
+            }
+
+            // Type filter
+            if (this.mediaLibrary.typeFilter !== 'all') {
+                filtered = filtered.filter(item =>
+                    item.type === this.mediaLibrary.typeFilter
+                );
+            }
+
+            // Date filter
+            if (this.mediaLibrary.dateFilter !== 'all') {
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                const monthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+
+                filtered = filtered.filter(item => {
+                    const itemDate = new Date(item.created_at);
+                    if (this.mediaLibrary.dateFilter === 'today') {
+                        return itemDate >= today;
+                    } else if (this.mediaLibrary.dateFilter === 'week') {
+                        return itemDate >= weekAgo;
+                    } else if (this.mediaLibrary.dateFilter === 'month') {
+                        return itemDate >= monthAgo;
+                    }
+                    return true;
+                });
+            }
+
+            // Update pagination
+            this.mediaLibrary.pagination.total = filtered.length;
+            this.mediaLibrary.pagination.lastPage = Math.ceil(filtered.length / this.mediaLibrary.pagination.perPage);
+
+            // Paginate
+            const start = (this.mediaLibrary.pagination.currentPage - 1) * this.mediaLibrary.pagination.perPage;
+            const end = start + this.mediaLibrary.pagination.perPage;
+
+            this.mediaLibrary.pagination.from = filtered.length > 0 ? start + 1 : 0;
+            this.mediaLibrary.pagination.to = Math.min(end, filtered.length);
+
+            this.mediaLibrary.filteredItems = filtered.slice(start, end);
+        },
+
+        selectMedia(media) {
+            if (this.mediaLibrary.mode === 'featured') {
+                // Single selection for featured image
+                this.mediaLibrary.selectedItems = [media];
+            } else {
+                // Multiple selection for gallery
+                const index = this.mediaLibrary.selectedItems.findIndex(item => item.id === media.id);
+                if (index > -1) {
+                    this.mediaLibrary.selectedItems.splice(index, 1);
+                } else {
+                    this.mediaLibrary.selectedItems.push(media);
+                }
+            }
+        },
+
+        isMediaSelected(media) {
+            return this.mediaLibrary.selectedItems.some(item => item.id === media.id);
+        },
+
+        confirmSelection() {
+            if (this.mediaLibrary.mode === 'featured') {
+                if (this.mediaLibrary.selectedItems.length > 0) {
+                    this.form.featuredImage = this.mediaLibrary.selectedItems[0];
+                    this.updateProgress();
+                }
+            } else {
+                // Add to gallery (avoid duplicates)
+                this.mediaLibrary.selectedItems.forEach(media => {
+                    const exists = this.form.gallery.some(item =>
+                        (item.id && item.id === media.id) || item === media.url
+                    );
+                    if (!exists) {
+                        this.form.gallery.push(media);
+                    }
+                });
+                this.updateProgress();
+            }
+            this.mediaLibrary.isOpen = false;
+        },
+
+        previousPage() {
+            if (this.mediaLibrary.pagination.currentPage > 1) {
+                this.mediaLibrary.pagination.currentPage--;
+                this.filterMedia();
+            }
+        },
+
+        nextPage() {
+            if (this.mediaLibrary.pagination.currentPage < this.mediaLibrary.pagination.lastPage) {
+                this.mediaLibrary.pagination.currentPage++;
+                this.filterMedia();
+            }
+        },
+
+        goToPage(page) {
+            this.mediaLibrary.pagination.currentPage = page;
+            this.filterMedia();
+        },
+
+        pageNumbers() {
+            const pages = [];
+            const current = this.mediaLibrary.pagination.currentPage;
+            const last = this.mediaLibrary.pagination.lastPage;
+
+            if (last <= 7) {
+                for (let i = 1; i <= last; i++) {
+                    pages.push(i);
+                }
+            } else {
+                if (current <= 4) {
+                    for (let i = 1; i <= 5; i++) {
+                        pages.push(i);
+                    }
+                    pages.push('...');
+                    pages.push(last);
+                } else if (current >= last - 3) {
+                    pages.push(1);
+                    pages.push('...');
+                    for (let i = last - 4; i <= last; i++) {
+                        pages.push(i);
+                    }
+                } else {
+                    pages.push(1);
+                    pages.push('...');
+                    for (let i = current - 1; i <= current + 1; i++) {
+                        pages.push(i);
+                    }
+                    pages.push('...');
+                    pages.push(last);
+                }
+            }
+
+            return pages.filter(p => p !== '...' || pages.indexOf(p) === pages.lastIndexOf(p));
+        },
+
+        formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
         }
     };
 }
