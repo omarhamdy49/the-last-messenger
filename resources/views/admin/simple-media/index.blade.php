@@ -239,6 +239,7 @@
                     <!-- Drag & Drop Zone -->
                     <div>
                         <div class="relative"
+                             x-cloak
                              @dragover.prevent="isDragging = true"
                              @dragleave.prevent="isDragging = false"
                              @drop.prevent="handleDrop($event)">
@@ -284,8 +285,8 @@
                                 <template x-if="uploadData.files.length === 0">
                                     <div>
                                         <p class="text-lg font-semibold mb-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                                            <span x-show="!isDragging">اسحب وأفلت الملفات هنا</span>
-                                            <span x-show="isDragging" class="text-blue-500">أفلت الملفات الآن</span>
+                                            <span x-show="!isDragging" x-cloak>اسحب وأفلت الملفات هنا</span>
+                                            <span x-show="isDragging" x-cloak class="text-blue-500">أفلت الملفات الآن</span>
                                         </p>
                                         <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
                                             أو انقر للتصفح واختيار الملفات

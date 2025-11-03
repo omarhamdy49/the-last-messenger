@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Spatie\Translatable\HasTranslations;
@@ -33,6 +35,10 @@ use Spatie\Translatable\HasTranslations;
  * @property array|null $seo_description Multi-language SEO description (JSON)
  * @property string|null $seo_keywords Comma-separated SEO keywords
  * @property string|null $og_image Open Graph image path
+ * @property array|null $meta_description Multi-language meta descriptions (JSON)
+ * @property array|null $keywords Array of SEO keywords (JSON array)
+ * @property array|null $share_text Multi-language social share text (JSON)
+ * @property string|null $social_image Social media preview image path
  * @property int $reading_time_minutes Estimated reading time
  * @property int $views_count Total view count
  * @property int $favorites_count Total favorites count
@@ -46,6 +52,7 @@ use Spatie\Translatable\HasTranslations;
  * @property \Carbon\Carbon|null $deleted_at Soft delete timestamp
  *
  * @property-read User $author Article author
+ * @property-read \Illuminate\Database\Eloquent\Collection|ArticleGallery[] $gallery Gallery images
  * @property-read User|null $reviewer Article reviewer
  * @property-read Category|null $category Article category
  * @property-read Series|null $series Article series
@@ -95,6 +102,40 @@ class Article extends Model
     public const SUPPORTED_LANGUAGES = ['ar', 'en', 'fr', 'tr', 'ur'];
 
     /**
+     * Difficulty level constants for educational content
+     */
+    public const DIFFICULTY_BEGINNER = 'beginner';
+    public const DIFFICULTY_INTERMEDIATE = 'intermediate';
+    public const DIFFICULTY_ADVANCED = 'advanced';
+
+    /**
+     * Available difficulty levels
+     */
+    public const DIFFICULTY_LEVELS = [
+        self::DIFFICULTY_BEGINNER,
+        self::DIFFICULTY_INTERMEDIATE,
+        self::DIFFICULTY_ADVANCED,
+    ];
+
+    /**
+     * Target audience constants
+     */
+    public const AUDIENCE_CHILDREN = 'children';
+    public const AUDIENCE_YOUTH = 'youth';
+    public const AUDIENCE_ADULTS = 'adults';
+    public const AUDIENCE_SCHOLARS = 'scholars';
+
+    /**
+     * Available target audiences
+     */
+    public const TARGET_AUDIENCES = [
+        self::AUDIENCE_CHILDREN,
+        self::AUDIENCE_YOUTH,
+        self::AUDIENCE_ADULTS,
+        self::AUDIENCE_SCHOLARS,
+    ];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
@@ -102,6 +143,8 @@ class Article extends Model
     protected $fillable = [
         'slug',
         'user_id',
+        'author_id',
+        'co_authors',
         'reviewer_id',
         'category_id',
         'series_id',
@@ -113,12 +156,35 @@ class Article extends Model
         'seo_description',
         'seo_keywords',
         'og_image',
+        'meta_description',
+        'keywords',
+        'share_text',
+        'social_image',
         'reading_time_minutes',
+        'reading_time_override',
+        'last_viewed_at',
+        'comments_enabled',
+        'comment_moderation',
+        'show_toc',
+        'references',
+        'has_content_warning',
+        'disclaimer_text',
+        'created_by',
+        'last_edited_by',
         'order',
         'featured',
         'is_pinned',
         'status',
         'published_at',
+        // Seerah-specific fields
+        'hijri_date',
+        'gregorian_date',
+        'event_start_date',
+        'event_end_date',
+        'event_locations',
+        'primary_location',
+        'difficulty_level',
+        'target_audience',
     ];
 
     /**
@@ -132,6 +198,8 @@ class Article extends Model
         'content',
         'seo_title',
         'seo_description',
+        'meta_description',
+        'share_text',
     ];
 
     /**
@@ -143,12 +211,29 @@ class Article extends Model
     {
         return [
             'published_at' => 'datetime',
+            'last_viewed_at' => 'datetime',
             'featured' => 'boolean',
             'is_pinned' => 'boolean',
+            'comments_enabled' => 'boolean',
+            'show_toc' => 'boolean',
+            'has_content_warning' => 'boolean',
             'reading_time_minutes' => 'integer',
+            'reading_time_override' => 'integer',
             'views_count' => 'integer',
             'favorites_count' => 'integer',
             'order' => 'integer',
+            'co_authors' => 'array',
+            'references' => 'array',
+            // Seerah-specific date casts
+            'gregorian_date' => 'date',
+            'event_start_date' => 'date',
+            'event_end_date' => 'date',
+            // JSON cast for event locations
+            'event_locations' => 'array',
+            // SEO and social media metadata (JSON for multi-language support)
+            'meta_description' => 'array',
+            'keywords' => 'array',
+            'share_text' => 'array',
         ];
     }
 
@@ -211,12 +296,77 @@ class Article extends Model
     }
 
     /**
+     * Get the user who created this article
+     */
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Get the user who last edited this article
+     */
+    public function lastEditedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'last_edited_by');
+    }
+
+    /**
+     * Get all gallery images for this article
+     */
+    public function gallery(): HasMany
+    {
+        return $this->hasMany(ArticleGallery::class)
+            ->orderBy('order');
+    }
+
+    /**
      * Get all tags for this article (polymorphic relationship)
      */
     public function tags(): MorphToMany
     {
         return $this->morphToMany(Tag::class, 'taggable');
     }
+
+
+    /**
+     * Get related articles (articles this article links to)
+     *
+     * Returns a many-to-many relationship with other articles,
+     * ordered by the 'order' column in the pivot table.
+     */
+    public function relatedArticles(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Article::class,
+            'article_related',
+            'article_id',
+            'related_article_id'
+        )
+            ->withPivot('order')
+            ->withTimestamps()
+            ->orderByPivot('order', 'asc');
+    }
+
+    /**
+     * Get articles that link to this article (inverse relationship)
+     *
+     * Returns articles where this article is listed as a related article.
+     * Useful for bidirectional navigation and finding all references to this article.
+     */
+    public function relatedFrom(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Article::class,
+            'article_related',
+            'related_article_id',
+            'article_id'
+        )
+            ->withPivot('order')
+            ->withTimestamps()
+            ->orderByPivot('order', 'asc');
+    }
+
 
     // ========================================================================
     // QUERY SCOPES
@@ -468,6 +618,25 @@ class Article extends Model
     }
 
     /**
+     * Increment view count and update last viewed timestamp
+     *
+     * Alias method for incrementViewCount with additional timestamp update
+     */
+    public function incrementViews(): void
+    {
+        DB::table('articles')
+            ->where('id', $this->id)
+            ->update([
+                'views_count' => DB::raw('views_count + 1'),
+                'last_viewed_at' => now(),
+            ]);
+
+        // Update local instance
+        $this->views_count++;
+        $this->last_viewed_at = now();
+    }
+
+    /**
      * Increment favorites count
      */
     public function incrementFavoritesCount(): bool
@@ -664,5 +833,148 @@ class Article extends Model
     public function getOgImage(): ?string
     {
         return $this->og_image ?: $this->featured_image;
+    }
+
+    // ========================================================================
+    // ACCESSORS - SEO & SOCIAL MEDIA
+    // ========================================================================
+
+    /**
+     * Get full URL for Open Graph image
+     *
+     * Returns absolute URL for og_image with fallback to featured_image
+     *
+     * @return string|null
+     */
+    public function getOgImageUrlAttribute(): ?string
+    {
+        $image = $this->og_image ?: $this->featured_image;
+
+        if (!$image) {
+            return null;
+        }
+
+        // If already absolute URL, return as is
+        if (filter_var($image, FILTER_VALIDATE_URL)) {
+            return $image;
+        }
+
+        // Build absolute URL
+        return url('storage/' . $image);
+    }
+
+    /**
+     * Get full URL for social media image
+     *
+     * Returns absolute URL for social_image with fallback to og_image or featured_image
+     *
+     * @return string|null
+     */
+    public function getSocialImageUrlAttribute(): ?string
+    {
+        $image = $this->social_image ?: $this->og_image ?: $this->featured_image;
+
+        if (!$image) {
+            return null;
+        }
+
+        // If already absolute URL, return as is
+        if (filter_var($image, FILTER_VALIDATE_URL)) {
+            return $image;
+        }
+
+        // Build absolute URL
+        return url('storage/' . $image);
+    }
+
+    /**
+     * Get meta description with fallback hierarchy
+     *
+     * Fallback order: meta_description -> seo_description -> excerpt
+     *
+     * @param string $locale Language code
+     * @return string
+     */
+    public function getMetaDescription(string $locale = 'ar'): string
+    {
+        // First try meta_description
+        $metaDescription = $this->getTranslation('meta_description', $locale, false);
+        if (!empty($metaDescription)) {
+            return $metaDescription;
+        }
+
+        // Then try seo_description
+        $seoDescription = $this->getTranslation('seo_description', $locale, false);
+        if (!empty($seoDescription)) {
+            return $seoDescription;
+        }
+
+        // Fallback to excerpt
+        return $this->getExcerptOrContent($locale, 160);
+    }
+
+    /**
+     * Get share text with fallback to title
+     *
+     * @param string $locale Language code
+     * @return string
+     */
+    public function getShareText(string $locale = 'ar'): string
+    {
+        $shareText = $this->getTranslation('share_text', $locale, false);
+
+        return $shareText ?: $this->getTranslation('title', $locale);
+    }
+
+    /**
+     * Get keywords as array (handles both JSON array and comma-separated string)
+     *
+     * @return array
+     */
+    public function getKeywordsArray(): array
+    {
+        if (is_array($this->keywords)) {
+            return $this->keywords;
+        }
+
+        if (empty($this->keywords)) {
+            return [];
+        }
+
+        return array_map('trim', explode(',', (string) $this->keywords));
+    }
+
+    /**
+     * Get social media image with fallback chain
+     *
+     * Fallback order: social_image -> og_image -> featured_image
+     *
+     * @return string|null
+     */
+    public function getSocialImage(): ?string
+    {
+        return $this->social_image ?: $this->og_image ?: $this->featured_image;
+    }
+
+    // ========================================================================
+    // ACCESSORS - READING TIME
+    // ========================================================================
+
+    /**
+     * Get reading time with override support
+     *
+     * Returns reading_time_override if set, otherwise returns auto-calculated reading_time_minutes
+     *
+     * @return int Reading time in minutes
+     */
+    public function getReadingTimeAttribute(): int
+    {
+        // If manual override is set, use it
+        if (!is_null($this->reading_time_override)) {
+            return $this->reading_time_override;
+        }
+
+        // Otherwise return the auto-calculated reading time
+        return $this->attributes['reading_time_minutes'] ?? 0;
     }
 }

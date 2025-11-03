@@ -1,674 +1,1116 @@
 @extends('layouts.admin')
 
-@section('title', 'Create New Article')
+@section('title', 'إنشاء مقال جديد')
 
 @push('styles')
 <style>
+    :root {
+        --primary-blue: #0056b3;
+        --primary-green: #218838;
+        --accent-teal: #64CCC5;
+    }
+
+    /* Clean Input Styling */
+    .input-clean {
+        transition: all 0.2s ease;
+    }
+
+    .input-clean:focus {
+        border-color: var(--primary-blue);
+        box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
+    }
+
+    .input-error {
+        border-color: #ef4444;
+    }
+
+    .input-error:focus {
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+    }
+
+    .input-success {
+        border-color: #10b981;
+    }
+
+    /* Tab Styling */
+    .tab-button {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        font-weight: 500;
+        color: #6b7280;
+        transition: all 0.2s ease;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+    }
+
+    .tab-button:hover {
+        color: #111827;
+    }
+
     .tab-button.active {
-        background: linear-gradient(135deg, #0056b3 0%, #218838 100%);
-        color: white;
-        box-shadow: 0 4px 15px rgba(0, 86, 179, 0.3);
+        color: var(--primary-blue);
+        border-bottom-color: var(--primary-blue);
     }
 
+    .dark .tab-button {
+        color: #9ca3af;
+    }
+
+    .dark .tab-button:hover {
+        color: #e5e7eb;
+    }
+
+    .dark .tab-button.active {
+        color: var(--primary-blue);
+    }
+
+    /* Progress Bar */
+    .progress-bar {
+        height: 2px;
+        background: #e5e7eb;
+        border-radius: 9999px;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary-blue), var(--primary-green));
+        transition: width 0.5s ease;
+    }
+
+    /* Character Counter */
     .char-counter {
-        position: absolute;
-        bottom: 8px;
-        left: 12px;
         font-size: 0.75rem;
-        pointer-events: none;
+        color: #9ca3af;
+        transition: color 0.2s ease;
     }
 
-    .content-field-wrapper {
+    .char-counter.over-limit {
+        color: #ef4444;
+    }
+
+    /* Validation Message */
+    .validation-message {
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    /* Sticky Sidebar */
+    .sidebar-sticky {
+        position: sticky;
+        top: 24px;
+        max-height: calc(100vh - 48px);
+        overflow-y: auto;
+    }
+
+    /* Gradient Button */
+    .gradient-button {
+        background: linear-gradient(135deg, var(--primary-blue), var(--primary-green));
+        transition: all 0.2s ease;
+    }
+
+    .gradient-button:hover {
+        box-shadow: 0 4px 12px rgba(0, 86, 179, 0.3);
+        transform: translateY(-1px);
+    }
+
+    /* Card Styling */
+    .sidebar-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .dark .sidebar-card {
+        background: #1f2937;
+        border-color: #374151;
+    }
+
+    .dark .input-clean {
+        background: #111827;
+        border-color: #374151;
+        color: white;
+    }
+
+    /* Toggle Switch */
+    .toggle-switch {
         position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
     }
 
-    /* Custom tag checkbox styling */
-    .tag-checkbox:checked + label {
-        background: linear-gradient(135deg, rgba(0, 86, 179, 0.1) 0%, rgba(33, 136, 56, 0.1) 100%);
-        border-color: #0056b3;
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #cbd5e1;
+        transition: 0.2s;
+        border-radius: 34px;
+    }
+
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.2s;
+        border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+        background: linear-gradient(135deg, var(--primary-blue), var(--primary-green));
+    }
+
+    input:checked + .toggle-slider:before {
+        transform: translateX(20px);
+    }
+
+    /* Fade In Animation */
+    .fade-in {
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Image Preview */
+    .image-preview {
+        position: relative;
+        aspect-ratio: 16/9;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        background: #f3f4f6;
+    }
+
+    .dark .image-preview {
+        background: #374151;
+    }
+
+    /* Custom Scrollbar */
+    .sidebar-sticky::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .sidebar-sticky::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .sidebar-sticky::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+    }
+
+    .dark .sidebar-sticky::-webkit-scrollbar-thumb {
+        background: #4b5563;
     }
 </style>
 @endpush
 
 @section('content')
-<div class="container mx-auto px-4 py-8" x-data="articleForm()" x-init="init()">
-    <!-- Header -->
-    <div class="mb-8">
+<div x-data="articleForm()" x-init="init()">
+
+    <!-- Header Bar -->
+    <div class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 mb-6">
         <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-3xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                    <i data-lucide="file-plus" class="w-8 h-8 inline-block ml-2"></i>
-                    Create New Article
-                </h1>
-                <p class="mt-2" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Create a new Seerah article with multi-language support
-                </p>
-            </div>
-            <a href="{{ route('admin.articles.index') }}"
-               class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors"
-               :class="darkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'">
-                <i data-lucide="arrow-right" class="w-5 h-5"></i>
-                Back to Articles
+            <!-- Back Button -->
+            <a href="{{ route('admin.articles.index') }}" class="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                <span class="font-medium">العودة للمقالات</span>
             </a>
+
+            <!-- Live Title Preview -->
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white truncate max-w-md text-center">
+                <span x-text="form.title[currentLang] || 'مقال بدون عنوان'"></span>
+            </h2>
+
+            <!-- Auto-save Status -->
+            <div class="flex items-center gap-2 text-sm">
+                <span x-show="saving" x-cloak class="text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    جاري الحفظ...
+                </span>
+                <span x-show="!saving && lastSaved" x-cloak class="text-green-600 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    تم الحفظ
+                </span>
+            </div>
         </div>
     </div>
 
-    <!-- Form -->
-    <form action="{{ route('admin.articles.store') }}" method="POST" enctype="multipart/form-data"
-          @submit="handleSubmit"
-          class="transition-colors">
-        @csrf
+    <!-- Main Container -->
+    <div class="max-w-7xl mx-auto px-6 pb-12">
+        <div class="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Main Content Column (Left - 2/3 width) -->
-            <div class="lg:col-span-2 space-y-6">
-                <!-- Multi-language Content Card -->
-                <div class="rounded-2xl p-6 shadow-xl transition-colors" :class="darkMode ? 'glass-dark' : 'glass-light-soft'">
-                    <h2 class="text-xl font-bold mb-6 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                        <i data-lucide="languages" class="w-6 h-6"></i>
-                        Article Content (Multi-language)
-                    </h2>
+            <!-- Main Content Area (2fr - LEFT) -->
+            <div class="lg:col-span-1 order-2 lg:order-1">
+                <div class="space-y-6" dir="rtl">
 
-                    <!-- Language Tabs -->
-                    <div class="flex gap-2 mb-6 border-b pb-2 overflow-x-auto" :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
-                        @foreach(['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'] as $lang => $label)
-                            <button type="button"
-                                    @click="activeLanguage = '{{ $lang }}'"
-                                    :class="activeLanguage === '{{ $lang }}' ? 'tab-button active' : ''"
-                                    class="tab-button px-4 py-2 rounded-lg transition-all whitespace-nowrap"
-                                    :class="darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-200'">
-                                {{ $label }}
-                                @if($lang === 'ar')
-                                    <span class="text-red-400 ml-1">*</span>
-                                @endif
-                            </button>
-                        @endforeach
+                    <!-- Progress Bar -->
+                    <div class="progress-bar" dir="ltr">
+                        <div class="progress-fill" :style="`width: ${progress}%`"></div>
                     </div>
 
-                    <!-- Title Fields (Multi-language) -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-semibold mb-3" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            <i data-lucide="type" class="w-4 h-4 inline-block ml-1"></i>
-                            Article Title
-                        </label>
-                        @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $lang)
-                            <div x-show="activeLanguage === '{{ $lang }}'" x-cloak>
-                                <div class="content-field-wrapper">
-                                    <input type="text"
-                                           name="title[{{ $lang }}]"
-                                           x-model="form.title.{{ $lang }}"
-                                           @input="updateCharCount('title', '{{ $lang }}')"
-                                           maxlength="500"
-                                           {{ $lang === 'ar' ? 'required' : '' }}
-                                           class="w-full px-4 py-3 pb-8 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3] transition-all"
-                                           :class="darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                                           placeholder="{{ $lang === 'ar' ? 'أدخل عنوان المقال بالعربية (مطلوب)' : 'Enter article title in ' . strtoupper($lang) . ' (optional)' }}"
-                                           dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">
-                                    <div class="char-counter" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
-                                        <span x-text="charCounts.title.{{ $lang }}"></span><span class="text-gray-600">/500</span>
-                                        <span x-show="charCounts.title.{{ $lang }} > 0" :class="charCounts.title.{{ $lang }} <= 500 ? 'text-green-500' : 'text-red-500'" class="ml-2">
-                                            <span x-show="charCounts.title.{{ $lang }} <= 500">✓</span>
-                                            <span x-show="charCounts.title.{{ $lang }} > 500">!</span>
-                                        </span>
+                    <!-- Tab Navigation -->
+                    <div class="flex border-b border-gray-200 dark:border-gray-700 gap-4 overflow-x-auto">
+                        <button type="button" @click="activeTab = 'content'" :class="activeTab === 'content' ? 'active' : ''" class="tab-button">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <span>المحتوى</span>
+                        </button>
+                        <button type="button" @click="activeTab = 'media'" :class="activeTab === 'media' ? 'active' : ''" class="tab-button">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            <span>الوسائط</span>
+                        </button>
+                        <button type="button" @click="activeTab = 'seo'" :class="activeTab === 'seo' ? 'active' : ''" class="tab-button">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            <span>تحسين محركات البحث</span>
+                        </button>
+                        <button type="button" @click="activeTab = 'historical'" :class="activeTab === 'historical' ? 'active' : ''" class="tab-button">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            <span>المعلومات التاريخية</span>
+                        </button>
+                        <button type="button" @click="activeTab = 'settings'" :class="activeTab === 'settings' ? 'active' : ''" class="tab-button">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            <span>الإعدادات</span>
+                        </button>
+                        <button type="button" @click="activeTab = 'related'" :class="activeTab === 'related' ? 'active' : ''" class="tab-button">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                            </svg>
+                            <span>المقالات المرتبطة</span>
+                        </button>
+                    </div>
+
+                    <!-- Tab Content -->
+                    <form @submit.prevent="submit">
+
+                        <!-- Tab 1: Content -->
+                        <div x-show="activeTab === 'content'" x-cloak class="space-y-6 fade-in">
+
+                            <!-- Language Switcher -->
+                            <div class="flex justify-end gap-2">
+                                <button type="button" @click="currentLang = 'ar'" :class="currentLang === 'ar' ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                    العربية
+                                </button>
+                                <button type="button" @click="currentLang = 'en'" :class="currentLang === 'en' ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                    English
+                                </button>
+                                <button type="button" @click="currentLang = 'tr'" :class="currentLang === 'tr' ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                    Türkçe
+                                </button>
+                                <button type="button" @click="currentLang = 'ur'" :class="currentLang === 'ur' ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                    اردو
+                                </button>
+                            </div>
+
+                            <!-- Title -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                    عنوان المقال <span class="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    :dir="currentLang === 'ar' || currentLang === 'ur' ? 'rtl' : 'ltr'"
+                                    x-model="form.title[currentLang]"
+                                    @input="validateField('title'); updateProgress()"
+                                    :class="errors.title ? 'input-error' : (form.title[currentLang] ? 'input-success' : '')"
+                                    class="input-clean w-full px-4 py-3 text-lg border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-right"
+                                    placeholder="أدخل عنوان المقال..."
+                                    required
+                                >
+                                <div class="flex items-center justify-between mt-2">
+                                    <div x-show="errors.title" class="validation-message text-red-500 text-right" x-cloak>
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"/>
+                                        </svg>
+                                        <span x-text="errors.title"></span>
+                                    </div>
+                                    <div x-show="form.title[currentLang]" class="char-counter text-left" :class="form.title[currentLang]?.length > 60 ? 'over-limit' : ''" x-cloak dir="ltr">
+                                        <span x-text="form.title[currentLang]?.length || 0"></span>/60 حرف
                                     </div>
                                 </div>
-                                @error("title.$lang")
-                                    <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
-                                @enderror
                             </div>
-                        @endforeach
-                    </div>
 
-                    <!-- Excerpt Fields (Multi-language) -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-semibold mb-3" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            <i data-lucide="align-left" class="w-4 h-4 inline-block ml-1"></i>
-                            Excerpt / Summary
-                            <span class="text-gray-500 text-xs font-normal">(Optional - auto-generated from content if empty)</span>
-                        </label>
-                        @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $lang)
-                            <div x-show="activeLanguage === '{{ $lang }}'" x-cloak>
-                                <div class="content-field-wrapper">
-                                    <textarea name="excerpt[{{ $lang }}]"
-                                              x-model="form.excerpt.{{ $lang }}"
-                                              @input="updateCharCount('excerpt', '{{ $lang }}')"
-                                              rows="3"
-                                              maxlength="1000"
-                                              class="w-full px-4 py-3 pb-8 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3] transition-all"
-                                              :class="darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                                              placeholder="{{ $lang === 'ar' ? 'ملخص قصير للمقال (اختياري)' : 'Brief summary of the article (optional)' }}"
-                                              dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"></textarea>
-                                    <div class="char-counter" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
-                                        <span x-text="charCounts.excerpt.{{ $lang }}"></span><span class="text-gray-600">/1000</span>
+                            <!-- Excerpt -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                    ملخص المقال <span class="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    :dir="currentLang === 'ar' || currentLang === 'ur' ? 'rtl' : 'ltr'"
+                                    x-model="form.excerpt[currentLang]"
+                                    @input="validateField('excerpt'); updateProgress()"
+                                    :class="errors.excerpt ? 'input-error' : (form.excerpt[currentLang] ? 'input-success' : '')"
+                                    class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-right"
+                                    rows="3"
+                                    placeholder="ملخص قصير للمقال..."
+                                    required
+                                ></textarea>
+                                <div class="flex items-center justify-between mt-2">
+                                    <div x-show="errors.excerpt" class="validation-message text-red-500 text-right" x-cloak>
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"/>
+                                        </svg>
+                                        <span x-text="errors.excerpt"></span>
+                                    </div>
+                                    <div x-show="form.excerpt[currentLang]" class="char-counter text-left" :class="form.excerpt[currentLang]?.length > 160 ? 'over-limit' : ''" x-cloak dir="ltr">
+                                        <span x-text="form.excerpt[currentLang]?.length || 0"></span>/160 حرف
                                     </div>
                                 </div>
-                                @error("excerpt.$lang")
-                                    <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
-                                @enderror
                             </div>
-                        @endforeach
-                    </div>
 
-                    <!-- Content Fields (Multi-language) with TinyMCE -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-semibold mb-3" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            <i data-lucide="file-text" class="w-4 h-4 inline-block ml-1"></i>
-                            Full Article Content
-                            <span class="text-red-400">*</span>
-                        </label>
-                        @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $lang)
-                            <div x-show="activeLanguage === '{{ $lang }}'" x-cloak>
-                                <x-admin.editor
-                                    name="content[{{ $lang }}]"
-                                    :value="old('content.' . $lang, '')"
-                                    language="{{ $lang }}"
-                                    :height="500"
-                                    :required="$lang === 'ar'"
-                                    placeholder="{{ $lang === 'ar' ? 'اكتب محتوى المقال هنا... يدعم التنسيق الغني والوسائط' : 'Write your article content here... Supports rich formatting and media' }}"
-                                />
-                                @error("content.$lang")
-                                    <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
-                                @enderror
+                            <!-- Content -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                    محتوى المقال <span class="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    :dir="currentLang === 'ar' || currentLang === 'ur' ? 'rtl' : 'ltr'"
+                                    x-model="form.content[currentLang]"
+                                    @input="validateField('content'); updateProgress(); calculateSEO()"
+                                    :class="errors.content ? 'input-error' : (form.content[currentLang] ? 'input-success' : '')"
+                                    class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-right"
+                                    rows="20"
+                                    placeholder="اكتب محتوى المقال هنا..."
+                                    required
+                                ></textarea>
+                                <div x-show="errors.content" class="validation-message text-red-500 mt-2 text-right" x-cloak>
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"/>
+                                    </svg>
+                                    <span x-text="errors.content"></span>
+                                </div>
                             </div>
-                        @endforeach
-                    </div>
+
+                        </div>
+
+                        <!-- Tab 2: Media & Gallery -->
+                        <div x-show="activeTab === 'media'" x-cloak class="space-y-6 fade-in">
+
+                            <!-- Gallery Images -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 text-right">
+                                    معرض الصور
+                                </label>
+                                <div class="grid grid-cols-3 gap-4 mb-4" x-show="form.gallery.length > 0">
+                                    <template x-for="(image, index) in form.gallery" :key="index">
+                                        <div class="relative group">
+                                            <img :src="image" alt="Gallery" class="w-full h-40 object-cover rounded-lg">
+                                            <button type="button" @click="removeGalleryImage(index)" class="absolute top-2 left-2 bg-red-500 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+                                <input type="file" id="gallery" @change="handleGallery" accept="image/*" multiple class="hidden">
+                                <label for="gallery" class="flex items-center justify-center gap-2 px-6 py-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+                                    <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                    <span class="text-gray-600 dark:text-gray-400 font-medium">إضافة صور</span>
+                                </label>
+                                <p class="text-xs text-gray-500 mt-2 text-right">PNG, JPG بحجم أقصى 5 ميجابايت لكل صورة. يمكنك رفع صور متعددة.</p>
+                            </div>
+
+                        </div>
+
+                        <!-- Tab 3: SEO & Metadata -->
+                        <div x-show="activeTab === 'seo'" x-cloak class="space-y-6 fade-in">
+
+                            <!-- SEO Score -->
+                            <div class="flex items-center justify-between p-4 rounded-lg border bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                                <div class="text-right">
+                                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">درجة الـ SEO</h3>
+                                    <p class="text-xs text-gray-500 mt-1">بناءً على العنوان والوصف والكلمات المفتاحية</p>
+                                </div>
+                                <div class="px-4 py-2 rounded-lg text-sm font-bold" :class="seoScore >= 80 ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : (seoScore >= 50 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300')">
+                                    <span x-text="seoScore"></span>/100
+                                    <div class="text-xs mt-1">
+                                        <span x-show="seoScore >= 80">ممتاز</span>
+                                        <span x-show="seoScore >= 50 && seoScore < 80">جيد</span>
+                                        <span x-show="seoScore < 50">يحتاج تحسين</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Meta Title -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                    عنوان SEO
+                                </label>
+                                <input
+                                    type="text"
+                                    dir="rtl"
+                                    x-model="form.meta_title[currentLang]"
+                                    @input="updateProgress(); calculateSEO()"
+                                    class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-right"
+                                    placeholder="عنوان محسّن لمحركات البحث (60 حرف)..."
+                                >
+                                <div class="flex justify-start mt-2" dir="ltr">
+                                    <div x-show="form.meta_title[currentLang]" class="char-counter" :class="form.meta_title[currentLang]?.length > 60 ? 'over-limit' : ''" x-cloak>
+                                        <span x-text="form.meta_title[currentLang]?.length || 0"></span>/60 حرف
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Meta Description -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                    وصف الميتا
+                                </label>
+                                <textarea
+                                    dir="rtl"
+                                    x-model="form.meta_description[currentLang]"
+                                    @input="updateProgress(); calculateSEO()"
+                                    class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-right"
+                                    rows="4"
+                                    placeholder="وصف قصير للمقال (160 حرف)..."
+                                ></textarea>
+                                <div class="flex justify-start mt-2" dir="ltr">
+                                    <div x-show="form.meta_description[currentLang]" class="char-counter" :class="form.meta_description[currentLang]?.length > 160 ? 'over-limit' : ''" x-cloak>
+                                        <span x-text="form.meta_description[currentLang]?.length || 0"></span>/160 حرف
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Keywords -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                    الكلمات المفتاحية
+                                </label>
+                                <input
+                                    type="text"
+                                    dir="rtl"
+                                    x-model="form.keywords[currentLang]"
+                                    @input="updateProgress(); calculateSEO()"
+                                    class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-right"
+                                    placeholder="كلمة1, كلمة2, كلمة3..."
+                                >
+                                <p class="text-xs text-gray-500 mt-2 text-right">افصل الكلمات بفواصل. الموصى به: 3-10 كلمات مفتاحية.</p>
+                            </div>
+
+                        </div>
+
+                        <!-- Tab 4: Historical Info -->
+                        <div x-show="activeTab === 'historical'" x-cloak class="space-y-6 fade-in">
+
+                            <div class="grid grid-cols-2 gap-6">
+
+                                <!-- Hijri Date -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                        التاريخ الهجري
+                                    </label>
+                                    <input
+                                        type="text"
+                                        dir="rtl"
+                                        x-model="form.hijri_date"
+                                        @input="updateProgress()"
+                                        class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-right"
+                                        placeholder="مثال: 20 رمضان 8 هـ"
+                                    >
+                                </div>
+
+                                <!-- Gregorian Date -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                        التاريخ الميلادي
+                                    </label>
+                                    <input
+                                        type="date"
+                                        x-model="form.gregorian_date"
+                                        @input="updateProgress()"
+                                        class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-left"
+                                        dir="ltr"
+                                    >
+                                </div>
+
+                                <!-- Location -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                        الموقع الرئيسي
+                                    </label>
+                                    <input
+                                        type="text"
+                                        dir="rtl"
+                                        x-model="form.location"
+                                        @input="updateProgress()"
+                                        class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-right"
+                                        placeholder="مثال: مكة المكرمة"
+                                    >
+                                </div>
+
+                                <!-- Difficulty -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                        مستوى الصعوبة
+                                    </label>
+                                    <select dir="rtl" x-model="form.difficulty" @change="updateProgress()" class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-right">
+                                        <option value="">اختر المستوى</option>
+                                        <option value="beginner">مبتدئ</option>
+                                        <option value="intermediate">متوسط</option>
+                                        <option value="advanced">متقدم</option>
+                                    </select>
+                                </div>
+
+                            </div>
+
+                            <!-- Audience -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 text-right">
+                                    الجمهور المستهدف
+                                </label>
+                                <div class="flex flex-wrap gap-4" dir="rtl">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <span class="text-sm text-gray-700 dark:text-gray-300">الأطفال</span>
+                                        <input type="checkbox" value="children" x-model="form.audience" @change="updateProgress()" class="w-4 h-4 rounded text-blue-600">
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <span class="text-sm text-gray-700 dark:text-gray-300">الشباب</span>
+                                        <input type="checkbox" value="youth" x-model="form.audience" @change="updateProgress()" class="w-4 h-4 rounded text-blue-600">
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <span class="text-sm text-gray-700 dark:text-gray-300">البالغين</span>
+                                        <input type="checkbox" value="adults" x-model="form.audience" @change="updateProgress()" class="w-4 h-4 rounded text-blue-600">
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <span class="text-sm text-gray-700 dark:text-gray-300">العلماء والباحثين</span>
+                                        <input type="checkbox" value="scholars" x-model="form.audience" @change="updateProgress()" class="w-4 h-4 rounded text-blue-600">
+                                    </label>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Tab 5: Settings -->
+                        <div x-show="activeTab === 'settings'" x-cloak class="space-y-6 fade-in">
+
+                            <div class="grid grid-cols-2 gap-6">
+
+                                <!-- Author -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                        الكاتب <span class="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        dir="rtl"
+                                        x-model="form.author"
+                                        @input="updateProgress()"
+                                        class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-right"
+                                        placeholder="اسم الكاتب..."
+                                    >
+                                </div>
+
+                                <!-- Show TOC -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                        عرض جدول المحتويات
+                                    </label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" x-model="form.show_toc" @change="updateProgress()">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+
+                            </div>
+
+                            <!-- Comments -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 text-right">
+                                    التعليقات
+                                </label>
+                                <div class="space-y-3" dir="rtl">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <span class="text-sm text-gray-700 dark:text-gray-300">تفعيل التعليقات</span>
+                                        <input type="checkbox" x-model="form.comments_enabled" @change="updateProgress()" class="w-4 h-4 rounded text-blue-600">
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <span class="text-sm text-gray-700 dark:text-gray-300">تتطلب مراجعة يدوية</span>
+                                        <input type="checkbox" x-model="form.comments_moderation" @change="updateProgress()" class="w-4 h-4 rounded text-blue-600">
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- References -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                    المراجع والمصادر
+                                </label>
+                                <textarea
+                                    dir="rtl"
+                                    x-model="form.references"
+                                    @input="updateProgress()"
+                                    class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-right"
+                                    rows="6"
+                                    placeholder="أضف المراجع هنا (سطر واحد لكل مرجع)..."
+                                ></textarea>
+                            </div>
+
+                        </div>
+
+                        <!-- Tab 6: Related Articles -->
+                        <div x-show="activeTab === 'related'" x-cloak class="space-y-6 fade-in">
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                    ابحث عن مقال
+                                </label>
+                                <input
+                                    type="text"
+                                    dir="rtl"
+                                    x-model="relatedSearch"
+                                    class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-right"
+                                    placeholder="اكتب لبحث المقالات..."
+                                >
+                                <p class="text-sm text-gray-500 mt-2 text-right">اضغط لإضافة</p>
+                            </div>
+
+                            <div x-show="form.related_articles.length > 0" class="space-y-2">
+                                <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 text-right">المقالات المختارة</h4>
+                                <template x-for="(article, index) in form.related_articles" :key="index">
+                                    <div class="flex items-center justify-between p-3 rounded-lg border bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700" dir="rtl">
+                                        <button type="button" @click="form.related_articles.splice(index, 1)" class="text-red-500 hover:text-red-700">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                        <span class="text-sm" x-text="article.title"></span>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <div x-show="form.related_articles.length === 0" class="text-center py-12 text-gray-500">
+                                لم يتم اختيار أي مقالات بعد.
+                            </div>
+
+                        </div>
+
+                    </form>
+
                 </div>
             </div>
 
-            <!-- Sidebar Column (Right - 1/3 width) -->
-            <div class="lg:col-span-1 space-y-6">
-                <!-- Publishing Options -->
-                <div class="rounded-2xl p-6 shadow-xl transition-colors" :class="darkMode ? 'glass-dark' : 'glass-light-soft'">
-                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                        <i data-lucide="settings" class="w-5 h-5"></i>
-                        Publishing Options
-                    </h3>
+            <!-- Sidebar (1fr - RIGHT) -->
+            <div class="lg:col-span-1 order-1 lg:order-2">
+                <div class="sidebar-sticky space-y-6" dir="rtl">
 
-                    <!-- Auto-generated Slug -->
-                    <div class="mb-4">
-                        <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            URL Slug <span class="text-red-500">*</span>
-                            <span class="text-gray-500 text-xs font-normal">(Auto-generated)</span>
-                        </label>
-                        <div class="px-4 py-2 rounded-lg border transition-colors text-sm break-all"
-                             :class="darkMode ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-gray-100 border-gray-300 text-gray-600'">
-                            <span x-text="generatedSlug || 'untitled-article'"></span>
+                    <!-- Publishing Options -->
+                    <div class="sidebar-card">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 text-right">خيارات النشر</h3>
+
+                        <!-- Status -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                الحالة <span class="text-red-500">*</span>
+                            </label>
+                            <select dir="rtl" x-model="form.status" @change="updateProgress()" class="input-clean w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-sm text-right">
+                                <option value="draft">مسودة</option>
+                                <option value="published">منشور</option>
+                                <option value="under_review">قيد المراجعة</option>
+                                <option value="archived">مؤرشف</option>
+                            </select>
                         </div>
-                        <input type="hidden" name="slug" :value="generatedSlug || 'article-' + Date.now()">
-                    </div>
 
-                    <!-- Status Dropdown -->
-                    <div class="mb-4">
-                        <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            Status <span class="text-red-500">*</span>
-                        </label>
-                        <select name="status"
-                                x-model="form.status"
-                                required
-                                class="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3] transition-colors"
-                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                            <option value="draft">Draft</option>
-                            <option value="under_review">Under Review</option>
-                            <option value="published">Published</option>
-                            <option value="archived">Archived</option>
-                        </select>
-                        @error('status')
-                            <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- Published Date -->
-                    <div class="mb-4">
-                        <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            Publication Date
-                        </label>
-                        <input type="datetime-local"
-                               name="published_at"
-                               x-model="form.published_at"
-                               class="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3] transition-colors"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                        <p class="text-xs mt-1" :class="darkMode ? 'text-gray-500' : 'text-gray-600'">
-                            Leave empty to use current date/time
-                        </p>
-                        @error('published_at')
-                            <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- Featured Toggle -->
-                    <div class="mb-4 p-3 rounded-lg transition-colors" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                        <label class="flex items-center cursor-pointer">
-                            <input type="checkbox"
-                                   name="featured"
-                                   x-model="form.featured"
-                                   value="1"
-                                   class="w-5 h-5 rounded border-gray-300 text-[#0056b3] focus:ring-[#0056b3] focus:ring-offset-0 transition-colors">
-                            <span class="mr-3">
-                                <span class="text-sm font-semibold block" :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
-                                    Featured Article
-                                </span>
-                                <span class="text-xs" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                                    Display on homepage
-                                </span>
-                            </span>
-                        </label>
-                    </div>
-
-                    <!-- Pinned Toggle -->
-                    <div class="mb-0 p-3 rounded-lg transition-colors" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                        <label class="flex items-center cursor-pointer">
-                            <input type="checkbox"
-                                   name="is_pinned"
-                                   x-model="form.is_pinned"
-                                   value="1"
-                                   class="w-5 h-5 rounded border-gray-300 text-[#0056b3] focus:ring-[#0056b3] focus:ring-offset-0 transition-colors">
-                            <span class="mr-3">
-                                <span class="text-sm font-semibold block" :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
-                                    Pin to Top
-                                </span>
-                                <span class="text-xs" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                                    Keep at top of lists
-                                </span>
-                            </span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Featured Image -->
-                <div class="rounded-2xl p-6 shadow-xl transition-colors" :class="darkMode ? 'glass-dark' : 'glass-light-soft'">
-                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                        <i data-lucide="image" class="w-5 h-5"></i>
-                        Featured Image
-                    </h3>
-
-                    <div class="mb-4">
-                        <input type="file"
-                               name="featured_image"
-                               accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-                               @change="handleImageUpload($event)"
-                               class="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3] transition-colors text-sm"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                        <div class="mt-2 text-xs space-y-1" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                            <p><strong>Formats:</strong> JPEG, PNG, WebP, GIF</p>
-                            <p><strong>Max size:</strong> 2MB</p>
-                            <p><strong>Recommended:</strong> 1200x630px (16:9 ratio)</p>
+                        <!-- Published Date -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                تاريخ النشر
+                            </label>
+                            <input
+                                type="datetime-local"
+                                x-model="form.published_at"
+                                @input="updateProgress()"
+                                class="input-clean w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-sm text-left"
+                                dir="ltr"
+                            >
                         </div>
-                        @error('featured_image')
-                            <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
-                        @enderror
+
+                        <!-- Featured Toggle -->
+                        <div class="flex items-center justify-between py-3 border-t border-gray-200 dark:border-gray-700">
+                            <div class="text-right">
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">مقال مميز</span>
+                                <p class="text-xs text-gray-500">عرض في الصفحة الرئيسية</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" x-model="form.featured" @change="updateProgress()">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- Pinned Toggle -->
+                        <div class="flex items-center justify-between py-3 border-t border-gray-200 dark:border-gray-700">
+                            <div class="text-right">
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">تثبيت في الأعلى</span>
+                                <p class="text-xs text-gray-500">يبقى في أعلى القوائم</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" x-model="form.pinned" @change="updateProgress()">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
                     </div>
 
-                    <!-- Image Preview -->
-                    <div x-show="imagePreview" x-cloak class="mt-4">
-                        <div class="relative rounded-lg overflow-hidden border-2 group transition-colors"
-                             :class="darkMode ? 'border-gray-700' : 'border-gray-300'">
-                            <img :src="imagePreview" alt="Preview" class="w-full h-56 object-cover">
-                            <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <button type="button"
-                                        @click="clearImage()"
-                                        class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2">
-                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                    Remove Image
+                    <!-- Featured Image -->
+                    <div class="sidebar-card">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 text-right">الصورة المميزة</h3>
+
+                        <div x-show="!form.featuredImage" class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center">
+                            <input type="file" id="featuredImage" @change="handleFeaturedImage" accept="image/*" class="hidden">
+                            <label for="featuredImage" class="cursor-pointer">
+                                <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 font-medium">رفع صورة</p>
+                                <p class="text-xs text-gray-500 mt-1">JPEG, PNG, WebP</p>
+                                <p class="text-xs text-gray-500">الحجم الأقصى: 2 ميجابايت</p>
+                                <p class="text-xs text-gray-500">المقاس الموصى به: 1200×630 بكسل</p>
+                            </label>
+                        </div>
+
+                        <div x-show="form.featuredImage" class="relative group">
+                            <div class="image-preview">
+                                <img :src="form.featuredImage" alt="Featured" class="w-full h-full object-cover">
+                            </div>
+                            <div class="mt-3 flex gap-2">
+                                <label for="featuredImage" class="flex-1 px-3 py-2 text-center text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+                                    تغيير
+                                </label>
+                                <button type="button" @click="form.featuredImage = null; updateProgress()" class="flex-1 px-3 py-2 text-sm border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors">
+                                    حذف
                                 </button>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <!-- Category & Organization -->
-                <div class="rounded-2xl p-6 shadow-xl transition-colors" :class="darkMode ? 'glass-dark' : 'glass-light-soft'">
-                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                        <i data-lucide="folder" class="w-5 h-5"></i>
-                        Category & Organization
-                    </h3>
-
-                    <!-- Category Dropdown -->
-                    <div class="mb-4">
-                        <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            Category
-                        </label>
-                        <select name="category_id"
-                                x-model="form.category_id"
-                                class="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3] transition-colors"
-                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                            <option value="">-- Select Category --</option>
-                            <template x-for="category in categories" :key="category.id">
-                                <option :value="category.id" x-text="category.name.ar || category.name.en || category.name"></option>
-                            </template>
-                        </select>
-                        <p x-show="loadingCategories" class="text-xs mt-1 text-gray-500">Loading categories...</p>
-                        @error('category_id')
-                            <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
-                        @enderror
                     </div>
 
-                    <!-- Series Dropdown -->
-                    <div class="mb-4">
-                        <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            Series
-                            <span class="text-gray-500 text-xs font-normal">(For linked articles)</span>
-                        </label>
-                        <select name="series_id"
-                                x-model="form.series_id"
-                                class="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#0056b3] transition-colors"
-                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                            <option value="">-- No Series --</option>
-                            <template x-for="series in seriesList" :key="series.id">
-                                <option :value="series.id" x-text="series.title.ar || series.title.en || series.title"></option>
-                            </template>
-                        </select>
-                        <p x-show="loadingSeries" class="text-xs mt-1 text-gray-500">Loading series...</p>
-                        @error('series_id')
-                            <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
-                        @enderror
-                    </div>
+                    <!-- Category & Organization -->
+                    <div class="sidebar-card">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 text-right">التصنيف والتنظيم</h3>
 
-                    <!-- Tags Multi-select -->
-                    <div class="mb-0">
-                        <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            Tags
-                            <span class="text-gray-500 text-xs font-normal">(Select multiple)</span>
-                        </label>
-                        <div class="border rounded-lg p-3 max-h-64 overflow-y-auto custom-scrollbar transition-colors"
-                             :class="darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'">
-                            <template x-for="tag in tags" :key="tag.id">
-                                <label class="flex items-center mb-2 cursor-pointer p-2 rounded transition-colors hover:bg-opacity-50"
-                                       :class="darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'">
-                                    <input type="checkbox"
-                                           name="tags[]"
-                                           :value="tag.id"
-                                           x-model="form.tags"
-                                           class="w-4 h-4 rounded border-gray-300 text-[#0056b3] focus:ring-[#0056b3] focus:ring-offset-0">
-                                    <span class="mr-2 text-sm" :class="darkMode ? 'text-gray-300' : 'text-gray-700'" x-text="tag.name.ar || tag.name.en || tag.name"></span>
-                                </label>
-                            </template>
-                            <p x-show="loadingTags" class="text-sm text-gray-500 text-center py-2">Loading tags...</p>
-                            <p x-show="!loadingTags && tags.length === 0" class="text-sm text-gray-500 text-center py-2">No tags available</p>
+                        <!-- Category -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                التصنيف <span class="text-red-500">*</span>
+                            </label>
+                            <select dir="rtl" x-model="form.category_id" @change="validateField('category'); updateProgress()" :class="errors.category ? 'input-error' : ''" class="input-clean w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-sm text-right" required>
+                                <option value="">-- اختر التصنيف --</option>
+                                @foreach($categories ?? [] as $category)
+                                <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                @endforeach
+                            </select>
                         </div>
-                        @error('tags')
-                            <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
-                        @enderror
-                    </div>
-                </div>
 
-                <!-- Submit Buttons -->
-                <div class="rounded-2xl p-6 shadow-xl transition-colors" :class="darkMode ? 'glass-dark' : 'glass-light-soft'">
-                    <button type="submit"
-                            :disabled="isSubmitting"
-                            class="w-full bg-gradient-to-r from-[#0056b3] to-[#218838] text-white px-6 py-4 rounded-lg font-bold text-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed mb-3 flex items-center justify-center gap-2">
-                        <span x-show="!isSubmitting" class="flex items-center gap-2">
-                            <i data-lucide="check-circle" class="w-6 h-6"></i>
-                            Create Article
-                        </span>
-                        <span x-show="isSubmitting" class="flex items-center gap-2">
-                            <i data-lucide="loader-2" class="w-6 h-6 animate-spin"></i>
-                            Creating Article...
-                        </span>
-                    </button>
-                    <a href="{{ route('admin.articles.index') }}"
-                       class="w-full block text-center px-6 py-3 rounded-lg font-semibold border transition hover:shadow-md"
-                       :class="darkMode ? 'border-gray-700 text-white hover:bg-gray-800' : 'border-gray-300 text-gray-900 hover:bg-gray-100'">
-                        <i data-lucide="x" class="w-5 h-5 inline-block ml-1"></i>
-                        Cancel
-                    </a>
+                        <!-- Series -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                السلسلة
+                            </label>
+                            <select dir="rtl" x-model="form.series_id" @change="updateProgress()" class="input-clean w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-sm text-right">
+                                <option value="">-- بدون سلسلة --</option>
+                                @foreach($series ?? [] as $s)
+                                <option value="{{ $s->id }}">{{ $s->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <!-- Tags -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                الوسوم
+                            </label>
+                            <div class="max-h-64 overflow-y-auto space-y-2 p-2 border border-gray-200 dark:border-gray-700 rounded-lg">
+                                @foreach($tags ?? [] as $tag)
+                                <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded transition-colors" dir="rtl">
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ $tag->name }}</span>
+                                    <input type="checkbox" value="{{ $tag->id }}" x-model="form.tags" @change="updateProgress()" class="w-4 h-4 rounded text-blue-600">
+                                </label>
+                                @endforeach
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2 text-right" x-show="form.tags.length > 0">
+                                <span x-text="form.tags.length"></span> وسم محدد
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="sidebar-card">
+                        <div class="space-y-3">
+                            <button type="button" @click="openPreview" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                معاينة
+                            </button>
+                            <button type="button" @click="saveDraft" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                حفظ كمسودة
+                            </button>
+                            <button type="submit" @click="publish" class="w-full px-4 py-3 gradient-button text-white font-bold rounded-lg">
+                                نشر المقال
+                            </button>
+                        </div>
+                    </div>
+
                 </div>
             </div>
+
         </div>
-    </form>
+    </div>
+
 </div>
 
 @push('scripts')
 <script>
 function articleForm() {
     return {
-        darkMode: localStorage.getItem('darkMode') === 'true',
-        activeLanguage: 'ar',
-        isSubmitting: false,
-        imagePreview: null,
-        generatedSlug: '',
+        activeTab: 'content',
+        currentLang: 'ar',
+        progress: 0,
+        saving: false,
+        lastSaved: false,
+        seoScore: 0,
+        relatedSearch: '',
+        darkMode: document.documentElement.classList.contains('dark'),
 
         form: {
-            title: { ar: '', en: '', fr: '', tr: '', ur: '' },
-            excerpt: { ar: '', en: '', fr: '', tr: '', ur: '' },
-            content: { ar: '', en: '', fr: '', tr: '', ur: '' },
+            title: { ar: '', en: '', tr: '', ur: '' },
+            excerpt: { ar: '', en: '', tr: '', ur: '' },
+            content: { ar: '', en: '', tr: '', ur: '' },
+            meta_title: { ar: '', en: '', tr: '', ur: '' },
+            meta_description: { ar: '', en: '', tr: '', ur: '' },
+            keywords: { ar: '', en: '', tr: '', ur: '' },
             status: 'draft',
-            published_at: '',
-            featured: false,
-            is_pinned: false,
             category_id: '',
             series_id: '',
-            tags: []
+            author: '',
+            published_at: '',
+            tags: [],
+            featuredImage: null,
+            gallery: [],
+            hijri_date: '',
+            gregorian_date: '',
+            location: '',
+            difficulty: '',
+            audience: [],
+            references: '',
+            featured: false,
+            pinned: false,
+            show_toc: true,
+            comments_enabled: true,
+            comments_moderation: false,
+            related_articles: []
         },
 
-        charCounts: {
-            title: { ar: 0, en: 0, fr: 0, tr: 0, ur: 0 },
-            excerpt: { ar: 0, en: 0, fr: 0, tr: 0, ur: 0 },
-            content: { ar: 0, en: 0, fr: 0, tr: 0, ur: 0 }
-        },
-
-        categories: [],
-        seriesList: [],
-        tags: [],
-        loadingCategories: false,
-        loadingSeries: false,
-        loadingTags: false,
+        errors: {},
 
         init() {
-            this.loadCategories();
-            this.loadSeries();
-            this.loadTags();
-
-            // Watch for title changes to generate slug
-            this.$watch('form.title.ar', value => {
-                this.generatedSlug = this.generateSlug(value);
-            });
-
-            // Reinitialize Lucide icons
-            this.$nextTick(() => {
-                lucide.createIcons();
-            });
+            this.updateProgress();
+            this.setupAutoSave();
         },
 
-        async loadCategories() {
-            this.loadingCategories = true;
+        validateField(field) {
+            delete this.errors[field];
+
+            if (field === 'title' && !this.form.title[this.currentLang]) {
+                this.errors.title = 'عنوان المقال مطلوب';
+            }
+            if (field === 'excerpt' && !this.form.excerpt[this.currentLang]) {
+                this.errors.excerpt = 'ملخص المقال مطلوب';
+            }
+            if (field === 'content' && !this.form.content[this.currentLang]) {
+                this.errors.content = 'محتوى المقال مطلوب';
+            }
+            if (field === 'category' && !this.form.category_id) {
+                this.errors.category = 'التصنيف مطلوب';
+            }
+        },
+
+        updateProgress() {
+            let completed = 0;
+            let total = 10;
+
+            if (this.form.title.ar || this.form.title.en) completed++;
+            if (this.form.excerpt.ar || this.form.excerpt.en) completed++;
+            if (this.form.content.ar || this.form.content.en) completed++;
+            if (this.form.category_id) completed++;
+            if (this.form.featuredImage) completed++;
+            if (this.form.tags.length > 0) completed++;
+            if (this.form.meta_title.ar || this.form.meta_title.en) completed++;
+            if (this.form.meta_description.ar || this.form.meta_description.en) completed++;
+            if (this.form.author) completed++;
+            if (this.form.published_at) completed++;
+
+            this.progress = Math.round((completed / total) * 100);
+        },
+
+        calculateSEO() {
+            let score = 0;
+
+            if (this.form.meta_title[this.currentLang]) {
+                const titleLen = this.form.meta_title[this.currentLang].length;
+                if (titleLen >= 30 && titleLen <= 60) score += 30;
+                else if (titleLen > 0) score += 15;
+            }
+
+            if (this.form.meta_description[this.currentLang]) {
+                const descLen = this.form.meta_description[this.currentLang].length;
+                if (descLen >= 120 && descLen <= 160) score += 30;
+                else if (descLen > 0) score += 15;
+            }
+
+            if (this.form.keywords[this.currentLang]) {
+                const keywordsCount = this.form.keywords[this.currentLang].split(',').filter(k => k.trim()).length;
+                if (keywordsCount >= 3 && keywordsCount <= 10) score += 20;
+                else if (keywordsCount > 0) score += 10;
+            }
+
+            if (this.form.content[this.currentLang]) {
+                const contentLen = this.form.content[this.currentLang].length;
+                if (contentLen >= 300) score += 20;
+                else if (contentLen > 0) score += 10;
+            }
+
+            this.seoScore = score;
+        },
+
+        setupAutoSave() {
+            let timeout;
+            this.$watch('form', () => {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    this.autoSave();
+                }, 3000);
+            }, { deep: true });
+        },
+
+        async autoSave() {
+            this.saving = true;
+            localStorage.setItem('article_draft', JSON.stringify(this.form));
+            await new Promise(resolve => setTimeout(resolve, 500));
+            this.saving = false;
+            this.lastSaved = true;
+            setTimeout(() => {
+                this.lastSaved = false;
+            }, 2000);
+        },
+
+        saveDraft() {
+            this.form.status = 'draft';
+            this.submit();
+        },
+
+        publish() {
+            this.form.status = 'published';
+            this.submit();
+        },
+
+        async submit() {
+            this.validateField('title');
+            this.validateField('excerpt');
+            this.validateField('content');
+            this.validateField('category');
+
+            if (Object.keys(this.errors).length > 0) {
+                alert('يرجى إصلاح الأخطاء قبل الحفظ');
+                this.activeTab = 'content';
+                return;
+            }
+
+            this.saving = true;
+
             try {
-                const response = await fetch('/su/portal/v1/admin/categories', {
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json'
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch categories');
-                }
-
-                const data = await response.json();
-                if (data.success) {
-                    this.categories = data.data;
-                }
+                // TODO: Implement actual form submission
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                localStorage.removeItem('article_draft');
+                window.location.href = '{{ route("admin.articles.index") }}';
             } catch (error) {
-                console.error('Failed to load categories:', error);
-                // Show user-friendly error (could integrate with toast notification)
-            } finally {
-                this.loadingCategories = false;
+                alert('خطأ في حفظ المقال');
+                this.saving = false;
             }
         },
 
-        async loadSeries() {
-            this.loadingSeries = true;
-            try {
-                const response = await fetch('/su/portal/v1/admin/series', {
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json'
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch series');
-                }
-
-                const data = await response.json();
-                if (data.success) {
-                    this.seriesList = data.data;
-                }
-            } catch (error) {
-                console.error('Failed to load series:', error);
-            } finally {
-                this.loadingSeries = false;
-            }
+        openPreview() {
+            window.open('#', '_blank');
         },
 
-        async loadTags() {
-            this.loadingTags = true;
-            try {
-                const response = await fetch('/su/portal/v1/admin/tags', {
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json'
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch tags');
-                }
-
-                const data = await response.json();
-                if (data.success) {
-                    this.tags = data.data;
-                }
-            } catch (error) {
-                console.error('Failed to load tags:', error);
-            } finally {
-                this.loadingTags = false;
-            }
-        },
-
-        updateCharCount(field, lang) {
-            const value = this.form[field][lang];
-            this.charCounts[field][lang] = value ? value.length : 0;
-        },
-
-        generateSlug(text) {
-            if (!text || text.trim() === '') {
-                return '';
-            }
-
-            // Transliterate Arabic to English (simple version - in production use a proper library)
-            const arabicToEnglish = {
-                'ا': 'a', 'أ': 'a', 'إ': 'i', 'آ': 'aa', 'ب': 'b', 'ت': 't', 'ث': 'th',
-                'ج': 'j', 'ح': 'h', 'خ': 'kh', 'د': 'd', 'ذ': 'th', 'ر': 'r', 'ز': 'z',
-                'س': 's', 'ش': 'sh', 'ص': 's', 'ض': 'd', 'ط': 't', 'ظ': 'z', 'ع': 'a',
-                'غ': 'gh', 'ف': 'f', 'ق': 'q', 'ك': 'k', 'ل': 'l', 'م': 'm', 'ن': 'n',
-                'ه': 'h', 'و': 'w', 'ي': 'y', 'ى': 'a', 'ة': 'h', 'ء': 'a'
-            };
-
-            let slug = text.toLowerCase().trim();
-
-            // Transliterate Arabic characters
-            slug = slug.split('').map(char => arabicToEnglish[char] || char).join('');
-
-            // Remove special characters and replace spaces with hyphens
-            slug = slug
-                .replace(/[^\w\s-]/g, '')
-                .replace(/\s+/g, '-')
-                .replace(/-+/g, '-')
-                .replace(/^-+|-+$/g, '');
-
-            // Limit to 100 characters
-            return slug.substring(0, 100);
-        },
-
-        handleImageUpload(event) {
+        handleFeaturedImage(event) {
             const file = event.target.files[0];
-            if (!file) {
-                return;
+            if (file) {
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('حجم الصورة يجب أن يكون أقل من 2 ميجابايت');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.form.featuredImage = e.target.result;
+                    this.updateProgress();
+                };
+                reader.readAsDataURL(file);
             }
+        },
 
-            // Validate file size (2MB)
-            const maxSize = 2 * 1024 * 1024; // 2MB in bytes
-            if (file.size > maxSize) {
-                alert('File size must be less than 2MB. Current size: ' + (file.size / 1024 / 1024).toFixed(2) + 'MB');
-                event.target.value = '';
-                this.imagePreview = null;
-                return;
-            }
-
-            // Validate file type
-            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
-            if (!validTypes.includes(file.type)) {
-                alert('Invalid file type. Please upload JPEG, PNG, WebP, or GIF format.');
-                event.target.value = '';
-                this.imagePreview = null;
-                return;
-            }
-
-            // Create preview
-            this.imagePreview = URL.createObjectURL(file);
-
-            // Reinitialize Lucide icons for the remove button
-            this.$nextTick(() => {
-                lucide.createIcons();
+        handleGallery(event) {
+            const files = Array.from(event.target.files);
+            files.forEach(file => {
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('حجم الصورة يجب أن يكون أقل من 5 ميجابايت');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.form.gallery.push(e.target.result);
+                    this.updateProgress();
+                };
+                reader.readAsDataURL(file);
             });
         },
 
-        clearImage() {
-            this.imagePreview = null;
-            const fileInput = document.querySelector('input[name="featured_image"]');
-            if (fileInput) {
-                fileInput.value = '';
-            }
-        },
-
-        handleSubmit(event) {
-            this.isSubmitting = true;
-
-            // Basic client-side validation
-            if (!this.form.title.ar || this.form.title.ar.trim() === '') {
-                alert('Arabic title is required');
-                this.isSubmitting = false;
-                this.activeLanguage = 'ar';
-                event.preventDefault();
-                return false;
-            }
-
-            // Validate Quill editors content
-            // Note: Quill editors automatically update hidden inputs on text change
-            // The form submission will include all content from hidden inputs
-
-            // Get Arabic content from hidden input
-            const arabicContentInput = document.querySelector('input[name="content[ar]"]');
-            if (arabicContentInput) {
-                const arabicContent = arabicContentInput.value.trim();
-
-                // Simple text extraction from HTML
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = arabicContent;
-                const textContent = tempDiv.textContent || tempDiv.innerText || '';
-
-                if (!textContent || textContent.trim().length < 50) {
-                    alert('Arabic content is required (minimum 50 characters)');
-                    this.isSubmitting = false;
-                    this.activeLanguage = 'ar';
-                    event.preventDefault();
-                    return false;
-                }
-            }
-
-            // Allow form submission
-            return true;
+        removeGalleryImage(index) {
+            this.form.gallery.splice(index, 1);
+            this.updateProgress();
         }
     };
 }
-
-// Initialize Lucide icons on page load
-document.addEventListener('DOMContentLoaded', () => {
-    lucide.createIcons();
-});
 </script>
 @endpush
+
 @endsection
