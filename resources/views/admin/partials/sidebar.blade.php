@@ -1,6 +1,6 @@
 <aside
-    class="relative h-full w-72 lg:w-auto transition-all duration-300 custom-scrollbar overflow-y-auto flex-shrink-0"
-    :class="!sidebarOpen && window.innerWidth >= 1024 ? 'lg:w-20' : 'lg:w-72'"
+    class="relative h-full transition-all duration-300 custom-scrollbar overflow-y-auto flex-shrink-0"
+    :class="sidebarOpen ? 'w-72 lg:w-72' : 'w-72 lg:w-20'"
 >
     <div class="h-full relative overflow-y-auto custom-scrollbar transition-colors duration-300"
          :class="darkMode ? 'bg-gray-900/95 backdrop-blur-lg shadow-2xl' : 'glass-light-soft shadow-lg border-r border-blue-100/50'">
@@ -30,7 +30,8 @@
                 <!-- Dashboard -->
                 <a href="{{ route('admin.dashboard.index') }}"
                    class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.dashboard.*') ? 'active' : '' }}"
-                   :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                   :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'"
+                   title="لوحة المعلومات">
                     <i data-lucide="layout-dashboard" class="w-5 h-5 flex-shrink-0"></i>
                     <span x-show="sidebarOpen" x-transition class="font-semibold">لوحة المعلومات</span>
                 </a>
@@ -45,7 +46,8 @@
                     <!-- Articles -->
                     <a href="{{ route('admin.articles.index') }}"
                        class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.articles.*') ? 'active' : '' }}"
-                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'"
+                       title="المقالات">
                         <i data-lucide="file-text" class="w-5 h-5 flex-shrink-0"></i>
                         <span x-show="sidebarOpen" x-transition class="font-semibold">المقالات</span>
                         @if(isset($stats['articles']) && $stats['articles'] > 0)
@@ -58,7 +60,8 @@
                     <!-- Blog Categories -->
                     <a href="{{ route('admin.categories.index') }}"
                        class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"
-                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'"
+                       title="التصنيفات">
                         <i data-lucide="tags" class="w-5 h-5 flex-shrink-0"></i>
                         <span x-show="sidebarOpen" x-transition class="font-semibold">التصنيفات</span>
                     </a>
@@ -66,7 +69,8 @@
                     <!-- Tags -->
                     <a href="{{ route('admin.tags.index') }}"
                        class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.tags.*') ? 'active' : '' }}"
-                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'"
+                       title="الوسوم">
                         <i data-lucide="bookmark" class="w-5 h-5 flex-shrink-0"></i>
                         <span x-show="sidebarOpen" x-transition class="font-semibold">الوسوم</span>
                     </a>
@@ -74,7 +78,8 @@
                     <!-- Series -->
                     <a href="{{ route('admin.series.index') }}"
                        class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.series.*') ? 'active' : '' }}"
-                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'"
+                       title="السلاسل">
                         <i data-lucide="list" class="w-5 h-5 flex-shrink-0"></i>
                         <span x-show="sidebarOpen" x-transition class="font-semibold">السلاسل</span>
                     </a>
@@ -82,7 +87,8 @@
                     <!-- Hadith -->
                     <a href="{{ route('admin.hadith.index') }}"
                        class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.hadith.*') ? 'active' : '' }}"
-                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'"
+                       title="الأحاديث">
                         <i data-lucide="scroll-text" class="w-5 h-5 flex-shrink-0"></i>
                         <span x-show="sidebarOpen" x-transition class="font-semibold">الأحاديث</span>
                         @if(isset($stats['hadith']) && $stats['hadith'] > 0)
@@ -95,7 +101,8 @@
                     <!-- Simple Media Library -->
                     <a href="{{ route('admin.simple-media.index') }}"
                        class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.simple-media.*') ? 'active' : '' }}"
-                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'"
+                       title="مكتبة الوسائط">
                         <i data-lucide="image" class="w-5 h-5 flex-shrink-0"></i>
                         <span x-show="sidebarOpen" x-transition class="font-semibold">مكتبة الوسائط</span>
                     </a>
@@ -103,7 +110,8 @@
                     <!-- Seerah Events -->
                     <a href="{{ route('admin.seerah-events.index') }}"
                        class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.seerah-events.*') ? 'active' : '' }}"
-                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'"
+                       title="أحداث السيرة">
                         <i data-lucide="calendar" class="w-5 h-5 flex-shrink-0"></i>
                         <span x-show="sidebarOpen" x-transition class="font-semibold">أحداث السيرة</span>
                     </a>
@@ -111,7 +119,8 @@
                     <!-- Sahaba -->
                     <a href="{{ route('admin.sahaba.index') }}"
                        class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.sahaba.*') ? 'active' : '' }}"
-                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'"
+                       title="الصحابة">
                         <i data-lucide="users" class="w-5 h-5 flex-shrink-0"></i>
                         <span x-show="sidebarOpen" x-transition class="font-semibold">الصحابة</span>
                     </a>
@@ -119,7 +128,8 @@
                     <!-- Quran -->
                     <a href="{{ route('admin.quran.index') }}"
                        class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.quran.*') ? 'active' : '' }}"
-                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'"
+                       title="القرآن الكريم">
                         <i data-lucide="book" class="w-5 h-5 flex-shrink-0"></i>
                         <span x-show="sidebarOpen" x-transition class="font-semibold">القرآن الكريم</span>
                     </a>
@@ -127,7 +137,8 @@
                     <!-- Genealogy -->
                     <a href="{{ route('admin.genealogy.index') }}"
                        class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.genealogy.*') ? 'active' : '' }}"
-                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                       :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'"
+                       title="الأنساب">
                         <i data-lucide="git-branch" class="w-5 h-5 flex-shrink-0"></i>
                         <span x-show="sidebarOpen" x-transition class="font-semibold">الأنساب</span>
                     </a>
@@ -144,7 +155,8 @@
                         <!-- Users -->
                         <a href="{{ route('admin.users.index') }}"
                            class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"
-                           :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                           :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'"
+                           title="المستخدمون">
                             <i data-lucide="user-cog" class="w-5 h-5 flex-shrink-0"></i>
                             <span x-show="sidebarOpen" x-transition class="font-semibold">المستخدمون</span>
                             @if(isset($stats['users']) && $stats['users'] > 0)
@@ -158,7 +170,8 @@
                         @if(auth()->user()->hasRole('super_admin'))
                             <a href="{{ route('admin.roles.index') }}"
                                class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 {{ request()->routeIs('admin.roles.*') ? 'active' : '' }}"
-                               :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                               :class="darkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'"
+                               title="الأدوار والصلاحيات">
                                 <i data-lucide="shield" class="w-5 h-5 flex-shrink-0"></i>
                                 <span x-show="sidebarOpen" x-transition class="font-semibold">الأدوار والصلاحيات</span>
                             </a>
@@ -176,7 +189,8 @@
                     <!-- Settings (Future) -->
                     <a href="#"
                        class="sidebar-item flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition-colors duration-200 opacity-50 cursor-not-allowed"
-                       :class="darkMode ? 'text-white' : 'text-gray-700'">
+                       :class="darkMode ? 'text-white' : 'text-gray-700'"
+                       title="الإعدادات">
                         <i data-lucide="settings" class="w-5 h-5 flex-shrink-0"></i>
                         <span x-show="sidebarOpen" x-transition class="font-semibold">الإعدادات</span>
                         <span x-show="sidebarOpen" x-transition class="mr-auto text-xs transition-colors"

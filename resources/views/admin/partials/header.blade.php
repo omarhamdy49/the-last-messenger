@@ -3,12 +3,13 @@
         x-data="{ userMenuOpen: false, notificationsOpen: false }">
     <div class="px-4 lg:px-6 py-4">
         <div class="flex items-center justify-between">
-            <!-- Mobile Menu Toggle + Page Title -->
+            <!-- Menu Toggle Button + Page Title -->
             <div class="flex items-center gap-3 flex-1">
-                <!-- Mobile Menu Button -->
+                <!-- Menu Toggle Button (Mobile & Desktop) -->
                 <button @click="sidebarOpen = !sidebarOpen"
-                        class="lg:hidden p-2 rounded-xl transition-all duration-300"
-                        :class="darkMode ? 'hover:bg-white/10 text-white' : 'hover:bg-gray-100 text-gray-700'">
+                        class="p-2 rounded-xl transition-all duration-300"
+                        :class="darkMode ? 'hover:bg-white/10 text-white' : 'hover:bg-gray-100 text-gray-700'"
+                        title="تبديل الشريط الجانبي">
                     <i data-lucide="menu" class="w-6 h-6"></i>
                 </button>
 

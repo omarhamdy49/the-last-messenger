@@ -11,8 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vite CSS & JS -->
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <!-- Global Quill Editor Initialization (Vanilla JavaScript) -->
     <script>
@@ -175,7 +175,7 @@ function updateEditorTheme(editorDiv, language) {
 
     <!-- Alpine.js Plugins -->
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
-    
+
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
@@ -203,48 +203,6 @@ function updateEditorTheme(editorDiv, language) {
     <link href="https://unpkg.com/cropperjs/dist/cropper.css" rel="stylesheet">
     <script src="https://unpkg.com/cropperjs/dist/cropper.js"></script>
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        'cairo': ['Cairo', 'sans-serif'],
-                    },
-                    colors: {
-                        brand: {
-                            primary: '#0056b3',
-                            secondary: '#218838',
-                            accent: '#64CCC5',
-                        }
-                    },
-                    keyframes: {
-                        fadeInUp: {
-                            '0%': { opacity: '0', transform: 'translateY(20px)' },
-                            '100%': { opacity: '1', transform: 'translateY(0)' }
-                        },
-                        slideIn: {
-                            '0%': { transform: 'translateX(-100%)' },
-                            '100%': { transform: 'translateX(0)' }
-                        },
-                        shimmer: {
-                            '0%': { backgroundPosition: '-1000px 0' },
-                            '100%': { backgroundPosition: '1000px 0' }
-                        },
-                        pulseGlow: {
-                            '0%, 100%': { boxShadow: '0 0 20px rgba(0, 86, 179, 0.3)' },
-                            '50%': { boxShadow: '0 0 30px rgba(33, 136, 56, 0.5)' }
-                        }
-                    },
-                    animation: {
-                        'fade-in-up': 'fadeInUp 0.6s ease-out',
-                        'slide-in': 'slideIn 0.5s ease-out',
-                        'shimmer': 'shimmer 2s infinite',
-                        'pulse-glow': 'pulseGlow 2s ease-in-out infinite'
-                    }
-                }
-            }
-        }
-    </script>
 
     <style>
         * {
@@ -303,6 +261,33 @@ function updateEditorTheme(editorDiv, language) {
         }
 
         /* ===== SIDEBAR ===== */
+        aside {
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Minimized sidebar styling */
+        aside.lg\:w-20 .sidebar-item,
+        [class*="lg:w-20"] .sidebar-item {
+            justify-content: center;
+            padding: 0.75rem;
+        }
+
+        aside.lg\:w-20 .sidebar-item i,
+        [class*="lg:w-20"] .sidebar-item i {
+            margin: 0;
+        }
+
+        /* Logo section in minimized state */
+        aside.lg\:w-20 .p-6,
+        [class*="lg:w-20"] .p-6 {
+            padding: 1rem;
+        }
+
+        aside.lg\:w-20 .flex.items-center.justify-between,
+        [class*="lg:w-20"] .flex.items-center.justify-between {
+            justify-content: center;
+        }
+
         .sidebar-item {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -320,6 +305,22 @@ function updateEditorTheme(editorDiv, language) {
         .sidebar-item.active {
             background: linear-gradient(135deg, #0056b3 0%, #218838 100%);
             box-shadow: 0 4px 15px rgba(0, 86, 179, 0.3);
+        }
+
+        /* Tooltip for minimized sidebar */
+        .sidebar-item[title]:hover::after {
+            content: attr(title);
+            position: absolute;
+            left: 100%;
+            margin-right: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            z-index: 50;
+            font-weight: 500;
         }
 
         /* ===== CARDS ===== */
@@ -535,6 +536,73 @@ function updateEditorTheme(editorDiv, language) {
         }
     </style>
 
+    <!-- WYSIWYG Editor (CKEditor 5) - Global Assets -->
+    <style>
+        /* CKEditor Custom Styles */
+        .ck-editor__editable {
+            min-height: 200px;
+            max-height: 600px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .ck.ck-editor {
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        .ck.ck-toolbar {
+            background: #f9fafb !important;
+            border-color: #e5e7eb !important;
+            border-radius: 0.5rem 0.5rem 0 0 !important;
+        }
+
+        .dark .ck.ck-toolbar {
+            background: #111827 !important;
+            border-color: #374151 !important;
+        }
+
+        .ck.ck-editor__main > .ck-editor__editable {
+            background: white;
+            border-color: #e5e7eb;
+            color: #111827;
+        }
+
+        .dark .ck.ck-editor__main > .ck-editor__editable {
+            background: #1f2937;
+            border-color: #374151;
+            color: #f9fafb;
+        }
+
+        .ck.ck-editor__main > .ck-editor__editable:focus {
+            border-color: #0056b3;
+            box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
+        }
+
+        /* RTL Support */
+        .ck-editor[dir="rtl"] .ck-editor__editable {
+            direction: rtl;
+            text-align: right;
+        }
+
+        /* Dark mode toolbar buttons */
+        .dark .ck.ck-button,
+        .dark .ck.ck-dropdown__button {
+            color: #9ca3af !important;
+        }
+
+        .dark .ck.ck-button:hover,
+        .dark .ck.ck-dropdown__button:hover {
+            background: #374151 !important;
+        }
+
+        .dark .ck.ck-button.ck-on {
+            background: #0056b3 !important;
+            color: white !important;
+        }
+    </style>
+
     @stack('styles')
 </head>
 <body class="min-h-screen" x-data="{
@@ -697,6 +765,10 @@ function updateEditorTheme(editorDiv, language) {
             };
         }
     </script>
+
+    <!-- WYSIWYG Editor (CKEditor 5) - Global Script -->
+    <script src="https://cdn.ckeditor.com/ckeditor5/40.1.0/classic/ckeditor.js"></script>
+    <script src="{{ asset('js/admin/wysiwyg-editor.js') }}"></script>
 
     @stack('scripts')
 </body>

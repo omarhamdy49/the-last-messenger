@@ -393,26 +393,48 @@
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
                                 ملخص المقال <span class="text-red-500">*</span>
                             </label>
-                            <textarea
-                                dir="rtl"
-                                x-model="form.excerpt[currentLang]"
-                                @input="validateField('excerpt'); updateProgress()"
-                                :class="errors.excerpt ? 'input-error' : (form.excerpt[currentLang] ? 'input-success' : '')"
-                                class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-right"
-                                rows="3"
-                                placeholder="ملخص قصير للمقال (اختياري)..."
-                                required
-                            ></textarea>
-                            <div class="flex items-center justify-between mt-2" dir="ltr">
-                                <div x-show="form.excerpt[currentLang]" class="char-counter" :class="form.excerpt[currentLang]?.length > 160 ? 'over-limit' : ''" x-cloak>
-                                    <span x-text="form.excerpt[currentLang]?.length || 0"></span>/160 حرف
-                                </div>
-                                <div x-show="errors.excerpt" class="validation-message text-red-500" x-cloak>
-                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"/>
-                                    </svg>
-                                    <span x-text="errors.excerpt"></span>
-                                </div>
+                            <div x-show="currentLang === 'ar'">
+                                <x-admin.wysiwyg-editor
+                                    name="excerpt[ar]"
+                                    :value="$article->getTranslation('excerpt', 'ar', false) ?? ''"
+                                    language="ar"
+                                    :height="200"
+                                    :required="true"
+                                    id="excerpt_ar"
+                                />
+                            </div>
+                            <div x-show="currentLang === 'en'" x-cloak>
+                                <x-admin.wysiwyg-editor
+                                    name="excerpt[en]"
+                                    :value="$article->getTranslation('excerpt', 'en', false) ?? ''"
+                                    language="en"
+                                    :height="200"
+                                    id="excerpt_en"
+                                />
+                            </div>
+                            <div x-show="currentLang === 'tr'" x-cloak>
+                                <x-admin.wysiwyg-editor
+                                    name="excerpt[tr]"
+                                    :value="$article->getTranslation('excerpt', 'tr', false) ?? ''"
+                                    language="tr"
+                                    :height="200"
+                                    id="excerpt_tr"
+                                />
+                            </div>
+                            <div x-show="currentLang === 'ur'" x-cloak>
+                                <x-admin.wysiwyg-editor
+                                    name="excerpt[ur]"
+                                    :value="$article->getTranslation('excerpt', 'ur', false) ?? ''"
+                                    language="ur"
+                                    :height="200"
+                                    id="excerpt_ur"
+                                />
+                            </div>
+                            <div x-show="errors.excerpt" class="validation-message text-red-500 mt-2" x-cloak>
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"/>
+                                </svg>
+                                <span x-text="errors.excerpt"></span>
                             </div>
                         </div>
 
@@ -421,16 +443,43 @@
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
                                 محتوى المقال <span class="text-red-500">*</span>
                             </label>
-                            <textarea
-                                dir="rtl"
-                                x-model="form.content[currentLang]"
-                                @input="validateField('content'); updateProgress()"
-                                :class="errors.content ? 'input-error' : (form.content[currentLang] ? 'input-success' : '')"
-                                class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-right"
-                                rows="20"
-                                placeholder="اكتب محتوى المقال هنا..."
-                                required
-                            ></textarea>
+                            <div x-show="currentLang === 'ar'">
+                                <x-admin.wysiwyg-editor
+                                    name="content[ar]"
+                                    :value="$article->getTranslation('content', 'ar', false) ?? ''"
+                                    language="ar"
+                                    :height="500"
+                                    :required="true"
+                                    id="content_ar"
+                                />
+                            </div>
+                            <div x-show="currentLang === 'en'" x-cloak>
+                                <x-admin.wysiwyg-editor
+                                    name="content[en]"
+                                    :value="$article->getTranslation('content', 'en', false) ?? ''"
+                                    language="en"
+                                    :height="500"
+                                    id="content_en"
+                                />
+                            </div>
+                            <div x-show="currentLang === 'tr'" x-cloak>
+                                <x-admin.wysiwyg-editor
+                                    name="content[tr]"
+                                    :value="$article->getTranslation('content', 'tr', false) ?? ''"
+                                    language="tr"
+                                    :height="500"
+                                    id="content_tr"
+                                />
+                            </div>
+                            <div x-show="currentLang === 'ur'" x-cloak>
+                                <x-admin.wysiwyg-editor
+                                    name="content[ur]"
+                                    :value="$article->getTranslation('content', 'ur', false) ?? ''"
+                                    language="ur"
+                                    :height="500"
+                                    id="content_ur"
+                                />
+                            </div>
                             <div x-show="errors.content" class="validation-message text-red-500 mt-2" x-cloak dir="rtl">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"/>

@@ -20,7 +20,7 @@
     }
 
     .hover-lift {
-        @apply transition-all duration-300 ease-smooth;
+        @apply transition-all duration-300 ease-in-out;
     }
 
     .hover-lift:hover {
@@ -36,7 +36,7 @@
     }
 
     .module-card .module-icon {
-        @apply transition-all duration-400 ease-bounce-in;
+        @apply transition-all duration-300 ease-in-out;
     }
 
     .module-card:hover .module-icon {
@@ -44,7 +44,7 @@
     }
 
     .premium-card {
-        @apply transition-all duration-400 ease-smooth;
+        @apply transition-all duration-300 ease-in-out;
     }
 
     .premium-card:hover {
@@ -60,7 +60,7 @@
     }
 
     .timeline-card {
-        @apply bg-white dark:bg-[#16213e] rounded-xl p-6 shadow-lg relative transition-all duration-400 ease-smooth;
+        @apply bg-white dark:bg-[#16213e] rounded-xl p-6 shadow-lg relative transition-all duration-300 ease-in-out;
     }
 
     .timeline-card:hover {
