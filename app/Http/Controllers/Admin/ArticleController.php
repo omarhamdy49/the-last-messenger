@@ -82,31 +82,61 @@ class ArticleController extends Controller
         $filters = array_filter($filters, fn ($value) => $value !== null && $value !== '');
 
         // Get articles with filters
-        if (! empty($filters)) {
-            $articles = $this->articleService->paginateWithFilters($filters, $perPage);
-        } else {
-            $articles = $this->articleService->paginate(
-                $perPage,
-                ['*'],
-                ['author', 'category', 'tags']
-            );
+        $query = Article::query()->with(['writerUser', 'category', 'categories', 'tags']);
+
+        if (!empty($filters)) {
+            if (isset($filters['status'])) {
+                $query->where('status', $filters['status']);
+            }
+            if (isset($filters['category_id'])) {
+                $query->where('category_id', $filters['category_id']);
+            }
+            if (isset($filters['is_featured'])) {
+                $query->where('is_featured', $filters['is_featured']);
+            }
+            if (isset($filters['search'])) {
+                $query->search($filters['search'], 'ar');
+            }
         }
+
+        $articles = $query->latest()->paginate($perPage);
 
         // Calculate statistics
         $stats = [
-            'total' => $this->articleService->count(),
-            'published' => $this->articleService->countByStatus('published'),
-            'draft' => $this->articleService->countByStatus('draft'),
-            'under_review' => $this->articleService->countByStatus('under_review'),
-            'archived' => $this->articleService->countByStatus('archived'),
-            'rejected' => $this->articleService->countByStatus('rejected'),
+            'total' => Article::count(),
+            'published' => Article::where('status', 'published')->count(),
+            'draft' => Article::where('status', 'draft')->count(),
+            'under_review' => Article::where('status', 'under_review')->count(),
+            'archived' => Article::where('status', 'archived')->count(),
+            'rejected' => Article::where('status', 'rejected')->count(),
         ];
 
         // Return JSON for AJAX requests
         if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            $formattedArticles = $articles->map(function ($article) {
+                return [
+                    'id' => $article->id,
+                    'title' => $article->getTitle('ar') ?? $article->getTitle('en') ?? 'بدون عنوان',
+                    'excerpt' => $article->getExcerpt('ar') ?? $article->getExcerpt('en') ?? null,
+                    'slug' => $article->slug,
+                    'status' => $article->status,
+                    'views' => $article->views ?? 0,
+                    'featured_image' => $article->thumb ? asset('storage/' . $article->thumb) : null,
+                    'category' => $article->category ? $article->category->getTranslation('name', 'ar', false) : 'غير محدد',
+                    'category_id' => $article->category_id,
+                    'author' => $article->writerUser ? $article->writerUser->name : 'غير محدد',
+                    'author_id' => $article->writer,
+                    'is_featured' => $article->is_featured,
+                    'is_pinned' => $article->is_pinned,
+                    'created_at' => $article->created_at->format('Y-m-d'),
+                    'updated_at' => $article->updated_at->format('Y-m-d'),
+                    'published_at' => $article->published_at ? $article->published_at->format('Y-m-d') : null,
+                ];
+            });
+
             return response()->json([
                 'success' => true,
-                'data' => $articles->items(),
+                'data' => $formattedArticles,
                 'stats' => $stats,
                 'meta' => [
                     'current_page' => $articles->currentPage(),
@@ -117,7 +147,12 @@ class ArticleController extends Controller
             ]);
         }
 
-        return view('admin.articles.index', compact('articles', 'stats', 'filters'));
+        // Get categories and writers for filters
+        $categories = \App\Domain\Blog\Models\Category::where('type', 'blog')->get();
+        $writerIds = Article::pluck('writer')->unique()->filter();
+        $writers = \App\Models\User::whereIn('id', $writerIds)->get();
+
+        return view('admin.articles.index', compact('articles', 'stats', 'filters', 'categories', 'writers'));
     }
 
     /**
@@ -130,7 +165,11 @@ class ArticleController extends Controller
     public function create(): View
     {
         // Authorization is handled by middleware in routes/admin.php
-        return view('admin.articles.create');
+        $categories = \App\Domain\Blog\Models\Category::where('type', 'blog')->get();
+        $tags = \App\Domain\Blog\Models\Tag::all();
+        $writers = \App\Models\User::all();
+
+        return view('admin.articles.create', compact('categories', 'tags', 'writers'));
     }
 
     /**
@@ -224,7 +263,7 @@ class ArticleController extends Controller
     {
         // Authorization is handled by middleware in routes/admin.php
         // Load relationships
-        $article->load(['author', 'reviewer', 'category', 'tags', 'series']);
+        $article->load(['writerUser', 'category', 'categories', 'tags', 'gallery', 'metadata']);
 
         return view('admin.articles.show', compact('article'));
     }
@@ -241,9 +280,14 @@ class ArticleController extends Controller
     {
         // Authorization is handled by middleware in routes/admin.php
         // Load relationships for form population
-        $article->load(['author', 'category', 'tags', 'series']);
+        $article->load(['writerUser', 'category', 'categories', 'tags', 'gallery']);
 
-        return view('admin.articles.edit', compact('article'));
+        // Get categories, tags, and writers for form
+        $categories = \App\Domain\Blog\Models\Category::where('type', 'blog')->get();
+        $tags = \App\Domain\Blog\Models\Tag::all();
+        $writers = \App\Models\User::all();
+
+        return view('admin.articles.edit', compact('article', 'categories', 'tags', 'writers'));
     }
 
     /**

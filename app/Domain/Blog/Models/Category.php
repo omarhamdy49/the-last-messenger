@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use Spatie\Translatable\HasTranslations;
@@ -107,11 +108,19 @@ class Category extends Model
     }
 
     /**
-     * Get articles in this category
+     * Get articles in this category (primary category - old relationship)
      */
     public function articles(): HasMany
     {
         return $this->hasMany(Article::class);
+    }
+
+    /**
+     * Get all articles that have this category (many-to-many)
+     */
+    public function articlesMany(): BelongsToMany
+    {
+        return $this->belongsToMany(Article::class, 'article_category');
     }
 
     /**

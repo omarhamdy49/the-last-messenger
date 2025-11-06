@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -25,16 +26,26 @@ use Spatie\Translatable\HasTranslations;
  * @property int $id
  * @property string $slug
  * @property int $user_id
+ * @property int|null $writer_id
  * @property int|null $category_id
  * @property int|null $series_id
  * @property array $title
+ * @property array|null $description
  * @property array|null $excerpt
  * @property array $content
+ * @property string|null $thumb
  * @property string|null $featured_image
+ * @property int $read_time
  * @property int $reading_time_minutes
  * @property int $views_count
  * @property int $favorites_count
+ * @property bool $is_featured
+ * @property bool $is_pinned
+ * @property array|null $references
+ * @property array|null $statistics
  * @property ArticleStatus $status
+ * @property \Carbon\Carbon|null $publish_date
+ * @property string|null $publish_date_hijri
  * @property \Carbon\Carbon|null $published_at
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
@@ -52,16 +63,26 @@ class Article extends Model implements HasMedia
     protected $fillable = [
         'slug',
         'user_id',
+        'writer_id',
         'category_id',
         'series_id',
         'title',
+        'description',
         'excerpt',
         'content',
+        'thumb',
         'featured_image',
+        'read_time',
         'reading_time_minutes',
         'views_count',
         'favorites_count',
+        'is_featured',
+        'is_pinned',
+        'references',
+        'statistics',
         'status',
+        'publish_date',
+        'publish_date_hijri',
         'published_at',
     ];
 
@@ -74,9 +95,15 @@ class Article extends Model implements HasMedia
     {
         return [
             'title' => 'array',
+            'description' => 'array',
             'excerpt' => 'array',
             'content' => 'array',
+            'references' => 'array',
+            'statistics' => 'array',
+            'is_featured' => 'boolean',
+            'is_pinned' => 'boolean',
             'status' => ArticleStatus::class,
+            'publish_date' => 'datetime',
             'published_at' => 'datetime',
         ];
     }
@@ -86,7 +113,7 @@ class Article extends Model implements HasMedia
      *
      * @var array<string>
      */
-    public array $translatable = ['title', 'excerpt', 'content'];
+    public array $translatable = ['title', 'description', 'excerpt', 'content'];
 
     /**
      * Boot the model
@@ -102,7 +129,7 @@ class Article extends Model implements HasMedia
     }
 
     /**
-     * Get the author of the article
+     * Get the author of the article (creator)
      */
     public function author(): BelongsTo
     {
@@ -110,11 +137,27 @@ class Article extends Model implements HasMedia
     }
 
     /**
-     * Get the category
+     * Get the writer of the article (content creator)
+     */
+    public function writer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'writer_id');
+    }
+
+    /**
+     * Get the primary category (backward compatibility)
      */
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * Get all categories (many-to-many relationship)
+     */
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(Category::class, 'article_category');
     }
 
     /**
@@ -159,7 +202,17 @@ class Article extends Model implements HasMedia
     public function scopeFeatured(Builder $query): Builder
     {
         return $query->published()
-            ->whereNotNull('featured_image')
+            ->where('is_featured', true)
+            ->orderByDesc('published_at');
+    }
+
+    /**
+     * Scope: Pinned articles
+     */
+    public function scopePinned(Builder $query): Builder
+    {
+        return $query->published()
+            ->where('is_pinned', true)
             ->orderByDesc('published_at');
     }
 
@@ -284,6 +337,14 @@ class Article extends Model implements HasMedia
     }
 
     /**
+     * Get description in specified language
+     */
+    public function getDescriptionInLanguage(string $language): ?string
+    {
+        return $this->description[$language] ?? $this->description['ar'] ?? null;
+    }
+
+    /**
      * Get excerpt in specified language
      */
     public function getExcerptInLanguage(string $language): ?string
@@ -300,10 +361,115 @@ class Article extends Model implements HasMedia
     }
 
     /**
+     * Get content body (WYSIWYG content)
+     * Supports nested JSON structure: content->body or flat structure for backward compatibility
+     *
+     * @param string|null $language
+     * @return string|null
+     */
+    public function getContentBodyAttribute(?string $language = null): ?string
+    {
+        $language = $language ?? app()->getLocale();
+        $content = $this->content;
+
+        if (!$content) {
+            return null;
+        }
+
+        // Check if content is in new nested structure
+        if (isset($content[$language]['body'])) {
+            return $content[$language]['body'];
+        }
+
+        // Fallback to old flat structure for backward compatibility
+        if (isset($content[$language]) && is_string($content[$language])) {
+            return $content[$language];
+        }
+
+        // Try default language (Arabic)
+        if (isset($content['ar']['body'])) {
+            return $content['ar']['body'];
+        }
+
+        if (isset($content['ar']) && is_string($content['ar'])) {
+            return $content['ar'];
+        }
+
+        return null;
+    }
+
+    /**
+     * Get table of contents from content
+     *
+     * @param string|null $language
+     * @return array|null
+     */
+    public function getContentTocAttribute(?string $language = null): ?array
+    {
+        $language = $language ?? app()->getLocale();
+        $content = $this->content;
+
+        if (!$content) {
+            return null;
+        }
+
+        return $content[$language]['toc']
+            ?? $content['ar']['toc']
+            ?? null;
+    }
+
+    /**
+     * Get summarize points from content
+     *
+     * @param string|null $language
+     * @return array|null
+     */
+    public function getContentSummarizePointsAttribute(?string $language = null): ?array
+    {
+        $language = $language ?? app()->getLocale();
+        $content = $this->content;
+
+        if (!$content) {
+            return null;
+        }
+
+        return $content[$language]['summarize_points']
+            ?? $content['ar']['summarize_points']
+            ?? null;
+    }
+
+    /**
+     * Get summary from content
+     *
+     * @param string|null $language
+     * @return string|null
+     */
+    public function getContentSummaryAttribute(?string $language = null): ?string
+    {
+        $language = $language ?? app()->getLocale();
+        $content = $this->content;
+
+        if (!$content) {
+            return null;
+        }
+
+        return $content[$language]['summary']
+            ?? $content['ar']['summary']
+            ?? null;
+    }
+
+    /**
      * Register media collections
      */
     public function registerMediaCollections(): void
     {
+        // Thumbnail image collection (single file) - smaller version for cards/lists
+        $this->addMediaCollection('thumb')
+            ->singleFile()
+            ->acceptsMimeTypes(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'])
+            ->maxFilesize(5 * 1024 * 1024) // 5MB
+            ->useDisk('public');
+
         // Featured image collection (single file)
         $this->addMediaCollection('featured_image')
             ->singleFile()
@@ -337,7 +503,7 @@ class Article extends Model implements HasMedia
             ->crop('crop-center')
             ->sharpen(10)
             ->optimize()
-            ->performOnCollections('featured_image', 'gallery')
+            ->performOnCollections('thumb', 'featured_image', 'gallery')
             ->nonQueued();
 
         // Medium conversion (800x600 contain)
@@ -347,7 +513,7 @@ class Article extends Model implements HasMedia
             ->fit('contain')
             ->sharpen(10)
             ->optimize()
-            ->performOnCollections('featured_image', 'gallery')
+            ->performOnCollections('thumb', 'featured_image', 'gallery')
             ->nonQueued();
 
         // Large conversion (1200x800 contain)
@@ -357,7 +523,7 @@ class Article extends Model implements HasMedia
             ->fit('contain')
             ->sharpen(10)
             ->optimize()
-            ->performOnCollections('featured_image', 'gallery')
+            ->performOnCollections('thumb', 'featured_image', 'gallery')
             ->nonQueued();
 
         // OG image conversion (1200x630 crop for social media)
@@ -369,6 +535,26 @@ class Article extends Model implements HasMedia
             ->optimize()
             ->performOnCollections('og_image')
             ->nonQueued();
+    }
+
+    /**
+     * Get thumb image URL (accessor with backward compatibility)
+     *
+     * @return string|null
+     */
+    public function getThumbUrlAttribute(): ?string
+    {
+        return $this->getFirstMediaUrl('thumb') ?: $this->thumb;
+    }
+
+    /**
+     * Get thumb image thumbnail URL
+     *
+     * @return string|null
+     */
+    public function getThumbThumbnailAttribute(): ?string
+    {
+        return $this->getFirstMediaUrl('thumb', 'thumbnail') ?: null;
     }
 
     /**

@@ -15,19 +15,14 @@ return new class extends Migration
     {
         Schema::create('article_gallery', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('article_id')
-                ->constrained('articles')
-                ->onDelete('cascade'); // Delete gallery images when article is deleted
-            $table->string('image_path'); // Path to the image file
-            $table->json('caption')->nullable(); // Multi-language caption {ar, en, fr, tr, ur}
-            $table->json('alt_text')->nullable(); // Multi-language alt text for accessibility
-            $table->integer('order')->default(0); // Display order (0 = first)
+            $table->foreignId('article_id')->constrained('articles')->onDelete('cascade');
+            $table->string('image')->comment('Gallery image path');
+            $table->json('caption')->nullable()->comment('Multi-language caption: {ar, en, fr, tr, ur}');
+            $table->integer('order')->default(0);
             $table->timestamps();
 
-            // Indexes
             $table->index('article_id');
             $table->index('order');
-            $table->index(['article_id', 'order']); // Composite index for efficient ordering queries
         });
     }
 

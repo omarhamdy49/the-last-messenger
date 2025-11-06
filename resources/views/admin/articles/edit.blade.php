@@ -438,46 +438,46 @@
                             </div>
                         </div>
 
-                        <!-- Content Editor -->
+                        <!-- Content Body -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
-                                محتوى المقال <span class="text-red-500">*</span>
+                                نص المقال <span class="text-red-500">*</span>
                             </label>
                             <div x-show="currentLang === 'ar'">
                                 <x-admin.wysiwyg-editor
-                                    name="content[ar]"
-                                    :value="$article->getTranslation('content', 'ar', false) ?? ''"
+                                    name="content[ar][body]"
+                                    :value="$article->getTranslation('content', 'ar', false)['body'] ?? ''"
                                     language="ar"
                                     :height="500"
                                     :required="true"
-                                    id="content_ar"
+                                    id="content_body_ar"
                                 />
                             </div>
                             <div x-show="currentLang === 'en'" x-cloak>
                                 <x-admin.wysiwyg-editor
-                                    name="content[en]"
-                                    :value="$article->getTranslation('content', 'en', false) ?? ''"
+                                    name="content[en][body]"
+                                    :value="$article->getTranslation('content', 'en', false)['body'] ?? ''"
                                     language="en"
                                     :height="500"
-                                    id="content_en"
+                                    id="content_body_en"
                                 />
                             </div>
                             <div x-show="currentLang === 'tr'" x-cloak>
                                 <x-admin.wysiwyg-editor
-                                    name="content[tr]"
-                                    :value="$article->getTranslation('content', 'tr', false) ?? ''"
+                                    name="content[tr][body]"
+                                    :value="$article->getTranslation('content', 'tr', false)['body'] ?? ''"
                                     language="tr"
                                     :height="500"
-                                    id="content_tr"
+                                    id="content_body_tr"
                                 />
                             </div>
                             <div x-show="currentLang === 'ur'" x-cloak>
                                 <x-admin.wysiwyg-editor
-                                    name="content[ur]"
-                                    :value="$article->getTranslation('content', 'ur', false) ?? ''"
+                                    name="content[ur][body]"
+                                    :value="$article->getTranslation('content', 'ur', false)['body'] ?? ''"
                                     language="ur"
                                     :height="500"
-                                    id="content_ur"
+                                    id="content_body_ur"
                                 />
                             </div>
                             <div x-show="errors.content" class="validation-message text-red-500 mt-2" x-cloak dir="rtl">
@@ -486,6 +486,92 @@
                                 </svg>
                                 <span x-text="errors.content"></span>
                             </div>
+                        </div>
+
+                        <!-- Content Table of Contents (TOC) -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                جدول المحتويات (TOC)
+                            </label>
+                            <p class="text-xs text-gray-500 mb-3 text-right">يمكن إنشاء تلقائي من العناوين أو إضافة يدويًا</p>
+
+                            <div class="space-y-3">
+                                <template x-for="(item, index) in (form.content_toc[currentLang] || [])" :key="index">
+                                    <div class="flex gap-2 items-start p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
+                                        <div class="flex-1 space-y-2">
+                                            <input
+                                                type="text"
+                                                x-model="form.content_toc[currentLang][index].title"
+                                                :dir="currentLang === 'ar' || currentLang === 'ur' ? 'rtl' : 'ltr'"
+                                                class="input-clean w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-700 dark:text-white"
+                                                :placeholder="currentLang === 'ar' ? 'عنوان القسم' : 'Section Title'"
+                                            >
+                                            <input
+                                                type="text"
+                                                x-model="form.content_toc[currentLang][index].link"
+                                                dir="ltr"
+                                                class="input-clean w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-700 dark:text-white"
+                                                placeholder="#section-id"
+                                            >
+                                        </div>
+                                        <button type="button" @click="form.content_toc[currentLang].splice(index, 1)" class="text-red-500 hover:text-red-700 mt-1">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </template>
+
+                                <button type="button" @click="addTocItem()" class="w-full px-4 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+                                    + إضافة عنصر لجدول المحتويات
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Content Summarize Points -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                نقاط التلخيص
+                            </label>
+                            <p class="text-xs text-gray-500 mb-3 text-right">نقاط رئيسية من المحتوى</p>
+
+                            <div class="space-y-2">
+                                <template x-for="(point, index) in (form.content_summarize_points[currentLang] || [])" :key="index">
+                                    <div class="flex gap-2 items-center">
+                                        <input
+                                            type="text"
+                                            x-model="form.content_summarize_points[currentLang][index]"
+                                            :dir="currentLang === 'ar' || currentLang === 'ur' ? 'rtl' : 'ltr'"
+                                            class="input-clean flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white"
+                                            :placeholder="currentLang === 'ar' ? 'نقطة رئيسية...' : 'Key point...'"
+                                        >
+                                        <button type="button" @click="form.content_summarize_points[currentLang].splice(index, 1)" class="text-red-500 hover:text-red-700">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </template>
+
+                                <button type="button" @click="addSummarizePoint()" class="w-full px-4 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+                                    + إضافة نقطة تلخيص
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Content Summary -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                ملخص المحتوى
+                            </label>
+                            <p class="text-xs text-gray-500 mb-2 text-right">ملخص موجز للمحتوى الكامل (مختلف عن المقتطف)</p>
+                            <textarea
+                                x-model="form.content_summary[currentLang]"
+                                :dir="currentLang === 'ar' || currentLang === 'ur' ? 'rtl' : 'ltr'"
+                                class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white"
+                                rows="4"
+                                :placeholder="currentLang === 'ar' ? 'ملخص موجز للمحتوى...' : 'Brief summary of content...'"
+                            ></textarea>
                         </div>
 
                     </div>
@@ -984,7 +1070,30 @@ function articleForm() {
         form: {
             title: @json($article->getTranslations('title') ?? ['ar' => '', 'en' => '', 'tr' => '', 'ur' => '']),
             excerpt: @json($article->getTranslations('excerpt') ?? ['ar' => '', 'en' => '', 'tr' => '', 'ur' => '']),
-            content: @json($article->getTranslations('content') ?? ['ar' => '', 'en' => '', 'tr' => '', 'ur' => '']),
+            content_body: {
+                ar: @json($article->getTranslation('content', 'ar', false)['body'] ?? ''),
+                en: @json($article->getTranslation('content', 'en', false)['body'] ?? ''),
+                tr: @json($article->getTranslation('content', 'tr', false)['body'] ?? ''),
+                ur: @json($article->getTranslation('content', 'ur', false)['body'] ?? '')
+            },
+            content_toc: {
+                ar: @json($article->getTranslation('content', 'ar', false)['toc'] ?? []),
+                en: @json($article->getTranslation('content', 'en', false)['toc'] ?? []),
+                tr: @json($article->getTranslation('content', 'tr', false)['toc'] ?? []),
+                ur: @json($article->getTranslation('content', 'ur', false)['toc'] ?? [])
+            },
+            content_summarize_points: {
+                ar: @json($article->getTranslation('content', 'ar', false)['summarize_points'] ?? []),
+                en: @json($article->getTranslation('content', 'en', false)['summarize_points'] ?? []),
+                tr: @json($article->getTranslation('content', 'tr', false)['summarize_points'] ?? []),
+                ur: @json($article->getTranslation('content', 'ur', false)['summarize_points'] ?? [])
+            },
+            content_summary: {
+                ar: @json($article->getTranslation('content', 'ar', false)['summary'] ?? ''),
+                en: @json($article->getTranslation('content', 'en', false)['summary'] ?? ''),
+                tr: @json($article->getTranslation('content', 'tr', false)['summary'] ?? ''),
+                ur: @json($article->getTranslation('content', 'ur', false)['summary'] ?? '')
+            },
             meta_title: @json($article->getTranslations('meta_title') ?? ['ar' => '', 'en' => '', 'tr' => '', 'ur' => '']),
             meta_description: @json($article->getTranslations('meta_description') ?? ['ar' => '', 'en' => '', 'tr' => '', 'ur' => '']),
             keywords: @json($article->getTranslations('keywords') ?? ['ar' => '', 'en' => '', 'tr' => '', 'ur' => '']),
@@ -1027,12 +1136,29 @@ function articleForm() {
             if (field === 'excerpt' && !this.form.excerpt[this.currentLang]) {
                 this.errors.excerpt = 'ملخص المقال مطلوب';
             }
-            if (field === 'content' && !this.form.content[this.currentLang]) {
+            if (field === 'content' && !this.form.content_body[this.currentLang]) {
                 this.errors.content = 'محتوى المقال مطلوب';
             }
             if (field === 'category' && !this.form.category_id) {
                 this.errors.category = 'التصنيف مطلوب';
             }
+        },
+
+        addTocItem() {
+            if (!this.form.content_toc[this.currentLang]) {
+                this.form.content_toc[this.currentLang] = [];
+            }
+            this.form.content_toc[this.currentLang].push({
+                title: '',
+                link: ''
+            });
+        },
+
+        addSummarizePoint() {
+            if (!this.form.content_summarize_points[this.currentLang]) {
+                this.form.content_summarize_points[this.currentLang] = [];
+            }
+            this.form.content_summarize_points[this.currentLang].push('');
         },
 
         updateProgress() {
@@ -1041,7 +1167,7 @@ function articleForm() {
 
             if (this.form.title.ar || this.form.title.en) completed++;
             if (this.form.excerpt.ar || this.form.excerpt.en) completed++;
-            if (this.form.content.ar || this.form.content.en) completed++;
+            if (this.form.content_body.ar || this.form.content_body.en) completed++;
             if (this.form.category_id) completed++;
             if (this.form.featuredImage) completed++;
             if (this.form.tags.length > 0) completed++;
@@ -1074,8 +1200,8 @@ function articleForm() {
                 else if (keywordsCount > 0) score += 10;
             }
 
-            if (this.form.content[this.currentLang]) {
-                const contentLen = this.form.content[this.currentLang].length;
+            if (this.form.content_body[this.currentLang]) {
+                const contentLen = this.form.content_body[this.currentLang].length;
                 if (contentLen >= 300) score += 20;
                 else if (contentLen > 0) score += 10;
             }

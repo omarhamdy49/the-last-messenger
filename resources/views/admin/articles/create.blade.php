@@ -446,46 +446,46 @@
                                 </div>
                             </div>
 
-                            <!-- Content -->
+                            <!-- Content Body -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
-                                    محتوى المقال <span class="text-red-500">*</span>
+                                    نص المقال <span class="text-red-500">*</span>
                                 </label>
                                 <div x-show="currentLang === 'ar'">
                                     <x-admin.wysiwyg-editor
-                                        name="content[ar]"
-                                        :value="old('content.ar', '')"
+                                        name="content[ar][body]"
+                                        :value="old('content.ar.body', '')"
                                         language="ar"
                                         :height="500"
                                         :required="true"
-                                        id="content_ar"
+                                        id="content_body_ar"
                                     />
                                 </div>
                                 <div x-show="currentLang === 'en'" x-cloak>
                                     <x-admin.wysiwyg-editor
-                                        name="content[en]"
-                                        :value="old('content.en', '')"
+                                        name="content[en][body]"
+                                        :value="old('content.en.body', '')"
                                         language="en"
                                         :height="500"
-                                        id="content_en"
+                                        id="content_body_en"
                                     />
                                 </div>
                                 <div x-show="currentLang === 'tr'" x-cloak>
                                     <x-admin.wysiwyg-editor
-                                        name="content[tr]"
-                                        :value="old('content.tr', '')"
+                                        name="content[tr][body]"
+                                        :value="old('content.tr.body', '')"
                                         language="tr"
                                         :height="500"
-                                        id="content_tr"
+                                        id="content_body_tr"
                                     />
                                 </div>
                                 <div x-show="currentLang === 'ur'" x-cloak>
                                     <x-admin.wysiwyg-editor
-                                        name="content[ur]"
-                                        :value="old('content.ur', '')"
+                                        name="content[ur][body]"
+                                        :value="old('content.ur.body', '')"
                                         language="ur"
                                         :height="500"
-                                        id="content_ur"
+                                        id="content_body_ur"
                                     />
                                 </div>
                                 <div x-show="errors.content" class="validation-message text-red-500 mt-2 text-right" x-cloak>
@@ -494,6 +494,92 @@
                                     </svg>
                                     <span x-text="errors.content"></span>
                                 </div>
+                            </div>
+
+                            <!-- Content Table of Contents (TOC) -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                    جدول المحتويات (TOC)
+                                </label>
+                                <p class="text-xs text-gray-500 mb-3 text-right">يمكن إنشاء تلقائي من العناوين أو إضافة يدويًا</p>
+
+                                <div class="space-y-3">
+                                    <template x-for="(item, index) in (form.content_toc[currentLang] || [])" :key="index">
+                                        <div class="flex gap-2 items-start p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
+                                            <div class="flex-1 space-y-2">
+                                                <input
+                                                    type="text"
+                                                    x-model="form.content_toc[currentLang][index].title"
+                                                    :dir="currentLang === 'ar' || currentLang === 'ur' ? 'rtl' : 'ltr'"
+                                                    class="input-clean w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-700 dark:text-white"
+                                                    :placeholder="currentLang === 'ar' ? 'عنوان القسم' : 'Section Title'"
+                                                >
+                                                <input
+                                                    type="text"
+                                                    x-model="form.content_toc[currentLang][index].link"
+                                                    dir="ltr"
+                                                    class="input-clean w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-700 dark:text-white"
+                                                    placeholder="#section-id"
+                                                >
+                                            </div>
+                                            <button type="button" @click="form.content_toc[currentLang].splice(index, 1)" class="text-red-500 hover:text-red-700 mt-1">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </template>
+
+                                    <button type="button" @click="addTocItem()" class="w-full px-4 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+                                        + إضافة عنصر لجدول المحتويات
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Content Summarize Points -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                    نقاط التلخيص
+                                </label>
+                                <p class="text-xs text-gray-500 mb-3 text-right">نقاط رئيسية من المحتوى</p>
+
+                                <div class="space-y-2">
+                                    <template x-for="(point, index) in (form.content_summarize_points[currentLang] || [])" :key="index">
+                                        <div class="flex gap-2 items-center">
+                                            <input
+                                                type="text"
+                                                x-model="form.content_summarize_points[currentLang][index]"
+                                                :dir="currentLang === 'ar' || currentLang === 'ur' ? 'rtl' : 'ltr'"
+                                                class="input-clean flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white"
+                                                :placeholder="currentLang === 'ar' ? 'نقطة رئيسية...' : 'Key point...'"
+                                            >
+                                            <button type="button" @click="form.content_summarize_points[currentLang].splice(index, 1)" class="text-red-500 hover:text-red-700">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </template>
+
+                                    <button type="button" @click="addSummarizePoint()" class="w-full px-4 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+                                        + إضافة نقطة تلخيص
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Content Summary -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
+                                    ملخص المحتوى
+                                </label>
+                                <p class="text-xs text-gray-500 mb-2 text-right">ملخص موجز للمحتوى الكامل (مختلف عن المقتطف)</p>
+                                <textarea
+                                    x-model="form.content_summary[currentLang]"
+                                    :dir="currentLang === 'ar' || currentLang === 'ur' ? 'rtl' : 'ltr'"
+                                    class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white"
+                                    rows="4"
+                                    :placeholder="currentLang === 'ar' ? 'ملخص موجز للمحتوى...' : 'Brief summary of content...'"
+                                ></textarea>
                             </div>
 
                         </div>
@@ -1165,7 +1251,10 @@ function articleForm() {
         form: {
             title: { ar: '', en: '', tr: '', ur: '' },
             excerpt: { ar: '', en: '', tr: '', ur: '' },
-            content: { ar: '', en: '', tr: '', ur: '' },
+            content_body: { ar: '', en: '', tr: '', ur: '' },
+            content_toc: { ar: [], en: [], tr: [], ur: [] },
+            content_summarize_points: { ar: [], en: [], tr: [], ur: [] },
+            content_summary: { ar: '', en: '', tr: '', ur: '' },
             meta_title: { ar: '', en: '', tr: '', ur: '' },
             meta_description: { ar: '', en: '', tr: '', ur: '' },
             keywords: { ar: '', en: '', tr: '', ur: '' },
@@ -1228,12 +1317,29 @@ function articleForm() {
             if (field === 'excerpt' && !this.form.excerpt[this.currentLang]) {
                 this.errors.excerpt = 'ملخص المقال مطلوب';
             }
-            if (field === 'content' && !this.form.content[this.currentLang]) {
+            if (field === 'content' && !this.form.content_body[this.currentLang]) {
                 this.errors.content = 'محتوى المقال مطلوب';
             }
             if (field === 'category' && !this.form.category_id) {
                 this.errors.category = 'التصنيف مطلوب';
             }
+        },
+
+        addTocItem() {
+            if (!this.form.content_toc[this.currentLang]) {
+                this.form.content_toc[this.currentLang] = [];
+            }
+            this.form.content_toc[this.currentLang].push({
+                title: '',
+                link: ''
+            });
+        },
+
+        addSummarizePoint() {
+            if (!this.form.content_summarize_points[this.currentLang]) {
+                this.form.content_summarize_points[this.currentLang] = [];
+            }
+            this.form.content_summarize_points[this.currentLang].push('');
         },
 
         updateProgress() {
@@ -1242,7 +1348,7 @@ function articleForm() {
 
             if (this.form.title.ar || this.form.title.en) completed++;
             if (this.form.excerpt.ar || this.form.excerpt.en) completed++;
-            if (this.form.content.ar || this.form.content.en) completed++;
+            if (this.form.content_body.ar || this.form.content_body.en) completed++;
             if (this.form.category_id) completed++;
             if (this.form.featuredImage) completed++;
             if (this.form.tags.length > 0) completed++;
@@ -1275,8 +1381,8 @@ function articleForm() {
                 else if (keywordsCount > 0) score += 10;
             }
 
-            if (this.form.content[this.currentLang]) {
-                const contentLen = this.form.content[this.currentLang].length;
+            if (this.form.content_body[this.currentLang]) {
+                const contentLen = this.form.content_body[this.currentLang].length;
                 if (contentLen >= 300) score += 20;
                 else if (contentLen > 0) score += 10;
             }
