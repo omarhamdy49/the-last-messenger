@@ -502,6 +502,16 @@
                                     </label>
                                     <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">يمكن إنشاء تلقائي من العناوين أو إضافة يدويًا</p>
                                 </div>
+                                <button
+                                    type="button"
+                                    @click="autoGenerateToc()"
+                                    class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-900 border-2 border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-sm font-medium"
+                                    title="توليد تلقائي من عناوين H2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                    </svg>
+                                    <span class="hidden sm:inline">توليد تلقائي</span>
+                                </button>
                             </div>
 
                             <div class="space-y-3">
@@ -1239,6 +1249,72 @@ function articleForm() {
                 this.form.content_summarize_points[this.currentLang] = [];
             }
             this.form.content_summarize_points[this.currentLang].push('');
+        },
+
+        autoGenerateToc() {
+            // Get the content body for current language from WYSIWYG editor
+            const editorId = `content_body_${this.currentLang}`;
+            let contentHtml = '';
+
+            // Try to get content from TinyMCE if it exists
+            if (typeof tinymce !== 'undefined' && tinymce.get(editorId)) {
+                contentHtml = tinymce.get(editorId).getContent();
+            }
+            // Fallback: try to get from form data
+            else if (this.form.content_body[this.currentLang]) {
+                contentHtml = this.form.content_body[this.currentLang];
+            }
+
+            if (!contentHtml) {
+                alert(this.currentLang === 'ar' ? 'لا يوجد محتوى لاستخراج العناوين منه' : 'No content to extract headings from');
+                return;
+            }
+
+            // Create a temporary div to parse HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = contentHtml;
+
+            // Extract all H2 elements
+            const h2Elements = tempDiv.querySelectorAll('h2');
+
+            if (h2Elements.length === 0) {
+                alert(this.currentLang === 'ar' ? 'لم يتم العثور على عناوين H2 في المحتوى' : 'No H2 headings found in content');
+                return;
+            }
+
+            // Clear existing TOC for current language
+            this.form.content_toc[this.currentLang] = [];
+
+            // Generate TOC items from H2 headings
+            h2Elements.forEach((h2, index) => {
+                const title = h2.textContent.trim();
+
+                // Generate slug from title
+                let slug = title
+                    .toLowerCase()
+                    .replace(/[^\w\s-\u0600-\u06FF]/g, '') // Keep Arabic characters
+                    .replace(/\s+/g, '-')
+                    .replace(/-+/g, '-')
+                    .trim();
+
+                // If slug is empty or all Arabic, use index
+                if (!slug || slug.length < 2) {
+                    slug = `section-${index + 1}`;
+                }
+
+                this.form.content_toc[this.currentLang].push({
+                    title: title,
+                    link: `#${slug}`
+                });
+            });
+
+            // Show success message
+            const message = this.currentLang === 'ar'
+                ? `تم إنشاء ${h2Elements.length} عنصر في جدول المحتويات`
+                : `Generated ${h2Elements.length} TOC items`;
+
+            // You could use a toast notification here instead of alert
+            alert(message);
         },
 
         updateProgress() {
