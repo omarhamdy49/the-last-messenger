@@ -323,12 +323,12 @@
                             <span class="hidden sm:inline">تحسين محركات البحث</span>
                             <span class="sm:hidden">SEO</span>
                         </button>
-                        <button type="button" @click="activeTab = 'historical'" :class="activeTab === 'historical' ? 'active' : ''" class="tab-button shrink-0">
+                        <button type="button" @click="activeTab = 'statistics'" :class="activeTab === 'statistics' ? 'active' : ''" class="tab-button shrink-0">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                             </svg>
-                            <span class="hidden sm:inline">المعلومات التاريخية</span>
-                            <span class="sm:hidden">تاريخي</span>
+                            <span class="hidden sm:inline">الإحصائيات والبيانات</span>
+                            <span class="sm:hidden">إحصائيات</span>
                         </button>
                         <button type="button" @click="activeTab = 'settings'" :class="activeTab === 'settings' ? 'active' : ''" class="tab-button shrink-0">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -796,92 +796,125 @@
 
                         </div>
 
-                        <!-- Tab 4: Historical Info -->
-                        <div x-show="activeTab === 'historical'" x-cloak class="space-y-6 fade-in">
+                        <!-- Tab 4: Statistics & Data -->
+                        <div x-show="activeTab === 'statistics'" x-cloak class="space-y-6 fade-in">
 
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-
-                                <!-- Hijri Date -->
+                            <!-- Views and Read Time -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <!-- Views Counter -->
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
-                                        التاريخ الهجري
+                                        عدد المشاهدات
                                     </label>
-                                    <input
-                                        type="text"
-                                        dir="rtl"
-                                        x-model="form.hijri_date"
-                                        @input="updateProgress()"
-                                        class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-right"
-                                        placeholder="مثال: 20 رمضان 8 هـ"
-                                    >
+                                    <div class="relative">
+                                        <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                        </svg>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            x-model="form.views"
+                                            class="w-full pr-12 pl-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white text-sm"
+                                            placeholder="0"
+                                            readonly
+                                        >
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1 text-right">يتم التحديث تلقائياً</p>
                                 </div>
 
-                                <!-- Gregorian Date -->
+                                <!-- Read Time -->
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
-                                        التاريخ الميلادي
+                                        وقت القراءة (بالدقائق)
                                     </label>
-                                    <input
-                                        type="date"
-                                        x-model="form.gregorian_date"
-                                        @input="updateProgress()"
-                                        class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-left"
-                                        dir="ltr"
-                                    >
+                                    <div class="relative">
+                                        <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="999"
+                                            x-model="form.read_time"
+                                            class="w-full pr-12 pl-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white text-sm"
+                                            placeholder="5"
+                                        >
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1 text-right">الوقت التقديري لقراءة المقال</p>
                                 </div>
-
-                                <!-- Location -->
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
-                                        الموقع الرئيسي
-                                    </label>
-                                    <input
-                                        type="text"
-                                        dir="rtl"
-                                        x-model="form.location"
-                                        @input="updateProgress()"
-                                        class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-right"
-                                        placeholder="مثال: مكة المكرمة"
-                                    >
-                                </div>
-
-                                <!-- Difficulty -->
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
-                                        مستوى الصعوبة
-                                    </label>
-                                    <select dir="rtl" x-model="form.difficulty" @change="updateProgress()" class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-right">
-                                        <option value="">اختر المستوى</option>
-                                        <option value="beginner">مبتدئ</option>
-                                        <option value="intermediate">متوسط</option>
-                                        <option value="advanced">متقدم</option>
-                                    </select>
-                                </div>
-
                             </div>
 
-                            <!-- Audience -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 text-right">
-                                    الجمهور المستهدف
-                                </label>
-                                <div class="flex flex-wrap gap-4" dir="rtl">
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <span class="text-sm text-gray-700 dark:text-gray-300">الأطفال</span>
-                                        <input type="checkbox" value="children" x-model="form.audience" @change="updateProgress()" class="w-4 h-4 rounded text-blue-600">
-                                    </label>
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <span class="text-sm text-gray-700 dark:text-gray-300">الشباب</span>
-                                        <input type="checkbox" value="youth" x-model="form.audience" @change="updateProgress()" class="w-4 h-4 rounded text-blue-600">
-                                    </label>
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <span class="text-sm text-gray-700 dark:text-gray-300">البالغين</span>
-                                        <input type="checkbox" value="adults" x-model="form.audience" @change="updateProgress()" class="w-4 h-4 rounded text-blue-600">
-                                    </label>
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <span class="text-sm text-gray-700 dark:text-gray-300">العلماء والباحثين</span>
-                                        <input type="checkbox" value="scholars" x-model="form.audience" @change="updateProgress()" class="w-4 h-4 rounded text-blue-600">
-                                    </label>
+                            <!-- Statistics (Localized Key-Value Pairs) -->
+                            <div class="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-800 p-6 rounded-xl border border-purple-100 dark:border-gray-700">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1 text-right">
+                                        <label class="block text-base font-bold text-gray-800 dark:text-white">
+                                            إحصائيات ومعلومات إضافية
+                                        </label>
+                                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">أرقام وبيانات مفيدة متعددة اللغات</p>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-3">
+                                    <template x-for="(stat, index) in (form.statistics || [])" :key="index">
+                                        <div class="group bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:shadow-md transition-all duration-200">
+                                            <div class="flex gap-3 items-start">
+                                                <div class="flex-shrink-0 mt-2">
+                                                    <div class="w-7 h-7 rounded-lg bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xs font-bold">
+                                                        <span x-text="index + 1"></span>
+                                                    </div>
+                                                </div>
+                                                <div class="flex-1 space-y-3">
+                                                    <!-- Key (Localized) -->
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 text-right">المفتاح / العنوان</label>
+                                                        <input
+                                                            type="text"
+                                                            x-model="form.statistics[index].key[currentLang]"
+                                                            :dir="currentLang === 'ar' || currentLang === 'ur' ? 'rtl' : 'ltr'"
+                                                            class="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
+                                                            :placeholder="currentLang === 'ar' ? 'مثال: عدد الصفحات' : 'Example: Number of Pages'"
+                                                        >
+                                                    </div>
+                                                    <!-- Value (Localized) -->
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 text-right">القيمة</label>
+                                                        <input
+                                                            type="text"
+                                                            x-model="form.statistics[index].value[currentLang]"
+                                                            :dir="currentLang === 'ar' || currentLang === 'ur' ? 'rtl' : 'ltr'"
+                                                            class="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
+                                                            :placeholder="currentLang === 'ar' ? 'مثال: 350 صفحة' : 'Example: 350 pages'"
+                                                        >
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    @click="form.statistics.splice(index, 1)"
+                                                    class="flex-shrink-0 mt-2 p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <button
+                                        type="button"
+                                        @click="addStatistic()"
+                                        class="w-full flex items-center justify-center gap-2 px-5 py-3.5 border-2 border-dashed border-purple-300 dark:border-purple-700 rounded-xl text-sm font-medium text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:border-purple-400 dark:hover:border-purple-600 transition-all">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                        </svg>
+                                        <span>إضافة إحصائية جديدة</span>
+                                    </button>
                                 </div>
                             </div>
 
@@ -1356,12 +1389,9 @@ function articleForm() {
             tags: [],
             featuredImage: null,
             gallery: [],
-            hijri_date: '',
-            gregorian_date: '',
-            location: '',
-            difficulty: '',
-            audience: [],
-            references: '',
+            views: 0,
+            read_time: 5,
+            statistics: [],
             featured: false,
             pinned: false,
             show_toc: true,
@@ -1430,6 +1460,16 @@ function articleForm() {
                 this.form.content_summarize_points[this.currentLang] = [];
             }
             this.form.content_summarize_points[this.currentLang].push('');
+        },
+
+        addStatistic() {
+            if (!this.form.statistics) {
+                this.form.statistics = [];
+            }
+            this.form.statistics.push({
+                key: { ar: '', en: '', tr: '', ur: '' },
+                value: { ar: '', en: '', tr: '', ur: '' }
+            });
         },
 
         autoGenerateToc() {
