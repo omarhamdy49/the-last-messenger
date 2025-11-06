@@ -497,72 +497,137 @@
                             </div>
 
                             <!-- Content Table of Contents (TOC) -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
-                                    جدول المحتويات (TOC)
-                                </label>
-                                <p class="text-xs text-gray-500 mb-3 text-right">يمكن إنشاء تلقائي من العناوين أو إضافة يدويًا</p>
+                            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-800 p-6 rounded-xl border border-blue-100 dark:border-gray-700">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1 text-right">
+                                        <label class="block text-base font-bold text-gray-800 dark:text-white">
+                                            جدول المحتويات
+                                        </label>
+                                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">يمكن إنشاء تلقائي من العناوين أو إضافة يدويًا</p>
+                                    </div>
+                                </div>
 
                                 <div class="space-y-3">
                                     <template x-for="(item, index) in (form.content_toc[currentLang] || [])" :key="index">
-                                        <div class="flex gap-2 items-start p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
-                                            <div class="flex-1 space-y-2">
-                                                <input
-                                                    type="text"
-                                                    x-model="form.content_toc[currentLang][index].title"
-                                                    :dir="currentLang === 'ar' || currentLang === 'ur' ? 'rtl' : 'ltr'"
-                                                    class="input-clean w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-700 dark:text-white"
-                                                    :placeholder="currentLang === 'ar' ? 'عنوان القسم' : 'Section Title'"
-                                                >
-                                                <input
-                                                    type="text"
-                                                    x-model="form.content_toc[currentLang][index].link"
-                                                    dir="ltr"
-                                                    class="input-clean w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-700 dark:text-white"
-                                                    placeholder="#section-id"
-                                                >
+                                        <div class="group relative bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:shadow-md transition-all duration-200">
+                                            <div class="flex gap-3 items-start">
+                                                <div class="flex-shrink-0 mt-2">
+                                                    <div class="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs font-bold">
+                                                        <span x-text="index + 1"></span>
+                                                    </div>
+                                                </div>
+                                                <div class="flex-1 space-y-3">
+                                                    <div class="relative">
+                                                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 text-right">عنوان القسم</label>
+                                                        <input
+                                                            type="text"
+                                                            x-model="form.content_toc[currentLang][index].title"
+                                                            :dir="currentLang === 'ar' || currentLang === 'ur' ? 'rtl' : 'ltr'"
+                                                            class="w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition-all"
+                                                            :placeholder="currentLang === 'ar' ? 'مثال: المقدمة' : 'Example: Introduction'"
+                                                        >
+                                                    </div>
+                                                    <div class="relative">
+                                                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 text-right">رابط المرساة</label>
+                                                        <div class="flex items-center gap-2">
+                                                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                                                            </svg>
+                                                            <input
+                                                                type="text"
+                                                                x-model="form.content_toc[currentLang][index].link"
+                                                                dir="ltr"
+                                                                class="flex-1 px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white font-mono transition-all"
+                                                                placeholder="#section-introduction"
+                                                            >
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    @click="form.content_toc[currentLang].splice(index, 1)"
+                                                    class="flex-shrink-0 mt-2 p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                    </svg>
+                                                </button>
                                             </div>
-                                            <button type="button" @click="form.content_toc[currentLang].splice(index, 1)" class="text-red-500 hover:text-red-700 mt-1">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                                </svg>
-                                            </button>
                                         </div>
                                     </template>
 
-                                    <button type="button" @click="addTocItem()" class="w-full px-4 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
-                                        + إضافة عنصر لجدول المحتويات
+                                    <button
+                                        type="button"
+                                        @click="addTocItem()"
+                                        class="w-full flex items-center justify-center gap-2 px-5 py-3.5 border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-xl text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-400 dark:hover:border-blue-600 transition-all">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                        </svg>
+                                        <span>إضافة عنصر جديد</span>
                                     </button>
                                 </div>
                             </div>
 
                             <!-- Content Summarize Points -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
-                                    نقاط التلخيص
-                                </label>
-                                <p class="text-xs text-gray-500 mb-3 text-right">نقاط رئيسية من المحتوى</p>
+                            <div class="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-gray-800 dark:to-gray-800 p-6 rounded-xl border border-emerald-100 dark:border-gray-700">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1 text-right">
+                                        <label class="block text-base font-bold text-gray-800 dark:text-white">
+                                            نقاط التلخيص
+                                        </label>
+                                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">النقاط الرئيسية والأفكار المهمة من المحتوى</p>
+                                    </div>
+                                </div>
 
-                                <div class="space-y-2">
+                                <div class="space-y-3">
                                     <template x-for="(point, index) in (form.content_summarize_points[currentLang] || [])" :key="index">
-                                        <div class="flex gap-2 items-center">
-                                            <input
-                                                type="text"
-                                                x-model="form.content_summarize_points[currentLang][index]"
-                                                :dir="currentLang === 'ar' || currentLang === 'ur' ? 'rtl' : 'ltr'"
-                                                class="input-clean flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white"
-                                                :placeholder="currentLang === 'ar' ? 'نقطة رئيسية...' : 'Key point...'"
-                                            >
-                                            <button type="button" @click="form.content_summarize_points[currentLang].splice(index, 1)" class="text-red-500 hover:text-red-700">
+                                        <div class="group flex gap-3 items-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 hover:shadow-md transition-all duration-200">
+                                            <div class="flex-shrink-0">
+                                                <div class="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold">
+                                                    <span x-text="index + 1"></span>
+                                                </div>
+                                            </div>
+                                            <div class="flex-1 relative">
+                                                <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" :class="currentLang === 'ar' || currentLang === 'ur' ? 'right-3' : 'left-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                                </svg>
+                                                <input
+                                                    type="text"
+                                                    x-model="form.content_summarize_points[currentLang][index]"
+                                                    :dir="currentLang === 'ar' || currentLang === 'ur' ? 'rtl' : 'ltr'"
+                                                    class="w-full py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition-all"
+                                                    :class="currentLang === 'ar' || currentLang === 'ur' ? 'pr-10 pl-4' : 'pl-10 pr-4'"
+                                                    :placeholder="currentLang === 'ar' ? 'مثال: تعلم أهمية التخطيط المسبق' : 'Example: Learn the importance of planning'"
+                                                >
+                                            </div>
+                                            <button
+                                                type="button"
+                                                @click="form.content_summarize_points[currentLang].splice(index, 1)"
+                                                class="flex-shrink-0 p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                                 </svg>
                                             </button>
                                         </div>
                                     </template>
 
-                                    <button type="button" @click="addSummarizePoint()" class="w-full px-4 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
-                                        + إضافة نقطة تلخيص
+                                    <button
+                                        type="button"
+                                        @click="addSummarizePoint()"
+                                        class="w-full flex items-center justify-center gap-2 px-5 py-3.5 border-2 border-dashed border-emerald-300 dark:border-emerald-700 rounded-xl text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-400 dark:hover:border-emerald-600 transition-all">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                        </svg>
+                                        <span>إضافة نقطة جديدة</span>
                                     </button>
                                 </div>
                             </div>
@@ -572,14 +637,43 @@
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
                                     ملخص المحتوى
                                 </label>
-                                <p class="text-xs text-gray-500 mb-2 text-right">ملخص موجز للمحتوى الكامل (مختلف عن المقتطف)</p>
-                                <textarea
-                                    x-model="form.content_summary[currentLang]"
-                                    :dir="currentLang === 'ar' || currentLang === 'ur' ? 'rtl' : 'ltr'"
-                                    class="input-clean w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white"
-                                    rows="4"
-                                    :placeholder="currentLang === 'ar' ? 'ملخص موجز للمحتوى...' : 'Brief summary of content...'"
-                                ></textarea>
+                                <p class="text-xs text-gray-500 mb-3 text-right">ملخص موجز للمحتوى الكامل (مختلف عن المقتطف)</p>
+                                <div x-show="currentLang === 'ar'">
+                                    <x-admin.wysiwyg-editor
+                                        name="content_summary[ar]"
+                                        :value="old('content_summary.ar', '')"
+                                        language="ar"
+                                        :height="250"
+                                        id="content_summary_ar"
+                                    />
+                                </div>
+                                <div x-show="currentLang === 'en'" x-cloak>
+                                    <x-admin.wysiwyg-editor
+                                        name="content_summary[en]"
+                                        :value="old('content_summary.en', '')"
+                                        language="en"
+                                        :height="250"
+                                        id="content_summary_en"
+                                    />
+                                </div>
+                                <div x-show="currentLang === 'tr'" x-cloak>
+                                    <x-admin.wysiwyg-editor
+                                        name="content_summary[tr]"
+                                        :value="old('content_summary.tr', '')"
+                                        language="tr"
+                                        :height="250"
+                                        id="content_summary_tr"
+                                    />
+                                </div>
+                                <div x-show="currentLang === 'ur'" x-cloak>
+                                    <x-admin.wysiwyg-editor
+                                        name="content_summary[ur]"
+                                        :value="old('content_summary.ur', '')"
+                                        language="ur"
+                                        :height="250"
+                                        id="content_summary_ur"
+                                    />
+                                </div>
                             </div>
 
                         </div>
@@ -1001,19 +1095,6 @@
                             </select>
                         </div>
 
-                        <!-- Series -->
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
-                                السلسلة
-                            </label>
-                            <select dir="rtl" x-model="form.series_id" @change="updateProgress()" class="input-clean w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white text-sm text-right">
-                                <option value="">-- بدون سلسلة --</option>
-                                @foreach($series ?? [] as $s)
-                                <option value="{{ $s->id }}">{{ $s->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
                         <!-- Tags -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-right">
@@ -1260,7 +1341,6 @@ function articleForm() {
             keywords: { ar: '', en: '', tr: '', ur: '' },
             status: 'draft',
             category_id: '',
-            series_id: '',
             author: '',
             published_at: '',
             tags: [],
