@@ -46,8 +46,8 @@
                 </div>
             </div>
 
-            <!-- Hidden Input for Form Submission -->
-            <input type="hidden" :name="{{ $attributes->get('name', 'media_id') }}" :value="selectedMedia?.id || ''">
+            <!-- Hidden Input for Form Submission (saves URL) -->
+            <input type="hidden" name="{{ $attributes->get('name', 'media_url') }}" :value="selectedMedia?.url || ''">
         </div>
 
     @else
@@ -79,15 +79,17 @@
                 <span class="text-gray-600 dark:text-gray-400 font-medium">إضافة صور من المكتبة</span>
             </button>
 
-            <!-- Hidden Inputs for Form Submission -->
+            <!-- Hidden Inputs for Form Submission (saves URLs) -->
             <template x-for="(media, index) in selectedMediaItems" :key="media.id">
-                <input type="hidden" :name="`{{ $attributes->get('name', 'media_ids') }}[${index}]`" :value="media.id">
+                <input type="hidden" :name="`{{ $attributes->get('name', 'media_urls') }}[` + index + `]`" :value="media.url">
             </template>
         </div>
     @endif
 
-    <!-- Media Library Modal -->
-    <x-media-library-modal />
+    <!-- Media Library Modal (Teleported to body) -->
+    <template x-teleport="body">
+        <x-media-library-modal />
+    </template>
 
 </div>
 
@@ -97,5 +99,10 @@
     }
     .dark .image-preview {
         background: #374151;
+    }
+
+    /* Ensure modal can escape parent container */
+    [x-cloak] {
+        display: none !important;
     }
 </style>

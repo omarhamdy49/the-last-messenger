@@ -764,6 +764,259 @@ function updateEditorTheme(editorDiv, language) {
                 }
             };
         }
+
+        /**
+         * Media Picker Alpine.js Component
+         * Supports both single and multiple selection modes
+         */
+        function mediaPicker(mode = 'single', selectedMedia = null, selectedMediaItems = []) {
+            return {
+                // Core state
+                pickerMode: mode,
+                selectedMedia: selectedMedia,
+                selectedMediaItems: [...selectedMediaItems],
+
+                // Modal state
+                isOpen: false,
+                loading: false,
+
+                // Filter state
+                search: '',
+                typeFilter: 'all',
+                dateFilter: 'all',
+
+                // Data
+                allItems: [],
+                filteredItems: [],
+
+                // Temporary selection (for modal confirmation)
+                tempSelected: [],
+
+                // Pagination
+                pagination: {
+                    currentPage: 1,
+                    lastPage: 1,
+                    total: 0,
+                    from: 0,
+                    to: 0,
+                    perPage: 20
+                },
+
+                /**
+                 * Initialize the component
+                 */
+                init() {
+                    // If we have pre-selected media, ensure it's in the right format
+                    if (this.pickerMode === 'single' && this.selectedMedia) {
+                        this.selectedMedia = typeof this.selectedMedia === 'object' ? this.selectedMedia : null;
+                    }
+
+                    if (this.pickerMode === 'multiple' && this.selectedMediaItems.length > 0) {
+                        this.tempSelected = [...this.selectedMediaItems.map(item => item.id)];
+                    }
+                },
+
+                /**
+                 * Open the media library modal
+                 */
+                openModal() {
+                    this.isOpen = true;
+
+                    // Reset temp selection to current selection
+                    if (this.pickerMode === 'single' && this.selectedMedia) {
+                        this.tempSelected = [this.selectedMedia.id];
+                    } else if (this.pickerMode === 'multiple') {
+                        this.tempSelected = [...this.selectedMediaItems.map(item => item.id)];
+                    } else {
+                        this.tempSelected = [];
+                    }
+
+                    // Load media
+                    this.loadMedia();
+
+                    // Reinitialize Lucide icons after modal renders
+                    this.$nextTick(() => {
+                        if (typeof lucide !== 'undefined') {
+                            lucide.createIcons();
+                        }
+                    });
+                },
+
+                /**
+                 * Load media from the API
+                 */
+                async loadMedia(page = 1) {
+                    this.loading = true;
+
+                    try {
+                        const params = new URLSearchParams({
+                            page: page,
+                            per_page: this.pagination.perPage,
+                            type: this.typeFilter !== 'all' ? this.typeFilter : '',
+                            search: this.search
+                        });
+
+                        const response = await fetch(`/su/portal/v1/admin/simple-media?${params}`, {
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json'
+                            }
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Failed to load media');
+                        }
+
+                        const data = await response.json();
+
+                        // Update media list
+                        this.allItems = data.data || [];
+                        this.filteredItems = [...this.allItems];
+
+                        // Update pagination
+                        this.pagination = {
+                            currentPage: data.current_page || 1,
+                            lastPage: data.last_page || 1,
+                            total: data.total || 0,
+                            from: data.from || 0,
+                            to: data.to || 0,
+                            perPage: data.per_page || 20
+                        };
+
+                    } catch (error) {
+                        console.error('Error loading media:', error);
+                        alert('فشل تحميل الوسائط. يرجى المحاولة مرة أخرى.');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                /**
+                 * Filter media based on search and filters
+                 */
+                filterMedia() {
+                    // Reload from API with filters
+                    this.loadMedia(1);
+                },
+
+                /**
+                 * Select/deselect a media item
+                 */
+                selectMedia(media) {
+                    if (this.pickerMode === 'single') {
+                        // Single mode: replace selection
+                        this.tempSelected = [media.id];
+                    } else {
+                        // Multiple mode: toggle selection
+                        const index = this.tempSelected.indexOf(media.id);
+                        if (index > -1) {
+                            this.tempSelected.splice(index, 1);
+                        } else {
+                            this.tempSelected.push(media.id);
+                        }
+                    }
+                },
+
+                /**
+                 * Check if a media item is selected
+                 */
+                isMediaSelected(media) {
+                    return this.tempSelected.includes(media.id);
+                },
+
+                /**
+                 * Confirm selection and close modal
+                 */
+                confirmSelection() {
+                    if (this.pickerMode === 'single') {
+                        // Single mode: set selectedMedia
+                        const selected = this.allItems.find(item => item.id === this.tempSelected[0]);
+                        this.selectedMedia = selected || null;
+                    } else {
+                        // Multiple mode: set selectedMediaItems
+                        this.selectedMediaItems = this.allItems.filter(item =>
+                            this.tempSelected.includes(item.id)
+                        );
+                    }
+
+                    this.isOpen = false;
+                },
+
+                /**
+                 * Remove selected media (single mode)
+                 */
+                removeMedia() {
+                    this.selectedMedia = null;
+                },
+
+                /**
+                 * Remove a media item from selection (multiple mode)
+                 */
+                removeMediaItem(index) {
+                    this.selectedMediaItems.splice(index, 1);
+                },
+
+                /**
+                 * Format file size for display
+                 */
+                formatFileSize(bytes) {
+                    if (!bytes) return '0 Bytes';
+
+                    const k = 1024;
+                    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+                    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+                },
+
+                /**
+                 * Pagination: Go to specific page
+                 */
+                goToPage(page) {
+                    if (page >= 1 && page <= this.pagination.lastPage) {
+                        this.loadMedia(page);
+                    }
+                },
+
+                /**
+                 * Pagination: Go to next page
+                 */
+                nextPage() {
+                    if (this.pagination.currentPage < this.pagination.lastPage) {
+                        this.loadMedia(this.pagination.currentPage + 1);
+                    }
+                },
+
+                /**
+                 * Pagination: Go to previous page
+                 */
+                previousPage() {
+                    if (this.pagination.currentPage > 1) {
+                        this.loadMedia(this.pagination.currentPage - 1);
+                    }
+                },
+
+                /**
+                 * Calculate page numbers to display
+                 */
+                pageNumbers() {
+                    const current = this.pagination.currentPage;
+                    const last = this.pagination.lastPage;
+                    const delta = 2; // Number of pages to show on each side
+                    const pages = [];
+
+                    for (let i = Math.max(1, current - delta); i <= Math.min(last, current + delta); i++) {
+                        pages.push(i);
+                    }
+
+                    return pages;
+                }
+            };
+        }
+
+        // Make mediaPicker globally available
+        window.mediaPicker = mediaPicker;
     </script>
 
     <!-- WYSIWYG Editor (CKEditor 5) - Global Script -->

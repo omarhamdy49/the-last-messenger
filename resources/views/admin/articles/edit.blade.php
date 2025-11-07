@@ -266,51 +266,29 @@
                 </h2>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {{-- Current & New Thumbnail --}}
+                    {{-- Thumbnail (Media Library Picker) --}}
                     <div class="lg:col-span-2">
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                            الصورة المصغرة
-                        </label>
+                        @php
+                            // Pre-populate with existing thumbnail if it exists
+                            $existingThumb = null;
+                            if ($article->thumb) {
+                                $existingThumb = [
+                                    'id' => $article->id,
+                                    'url' => asset('storage/' . $article->thumb),
+                                    'filename' => basename($article->thumb),
+                                    'original_filename' => basename($article->thumb)
+                                ];
+                            }
+                        @endphp
 
-                        {{-- Current Thumbnail --}}
-                        @if($article->thumb)
-                            <div class="mb-4">
-                                <p class="text-xs text-gray-500 mb-2">الصورة الحالية:</p>
-                                <img src="{{ asset('storage/' . $article->thumb) }}" alt="Current Thumbnail" class="h-32 w-auto rounded-lg shadow-md">
-                            </div>
-                        @endif
-
-                        <div class="thumb-preview" x-ref="thumbPreview"
-                             @click="$refs.thumbInput.click()"
-                             @dragover.prevent="thumbDragOver = true"
-                             @dragleave.prevent="thumbDragOver = false"
-                             @drop.prevent="handleThumbDrop($event)"
-                             :class="{'ring-4 ring-[#64CCC5] ring-opacity-50': thumbDragOver}">
-
-                            <template x-if="!thumbPreviewUrl">
-                                <div class="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-black hover:bg-opacity-5 transition-colors">
-                                    <svg class="w-16 h-16 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                    </svg>
-                                    <p class="text-gray-600 dark:text-gray-400 font-medium">انقر لتغيير الصورة أو اسحب صورة جديدة</p>
-                                    <p class="text-sm text-gray-500 mt-1">PNG, JPG, WebP (الحد الأقصى 5MB)</p>
-                                </div>
-                            </template>
-
-                            <template x-if="thumbPreviewUrl">
-                                <div class="relative w-full h-full group">
-                                    <img :src="thumbPreviewUrl" alt="Preview" class="w-full h-full object-cover">
-                                    <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                        <button type="button" @click.stop="removeThumb()" class="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors">
-                                            حذف الصورة الجديدة
-                                        </button>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
-
-                        <input type="file" x-ref="thumbInput" name="thumb" accept="image/*" class="hidden" @change="handleThumbChange($event)">
-                        <p class="text-xs text-gray-500 mt-2">* اختياري - رفع صورة جديدة سيستبدل الصورة الحالية</p>
+                        <x-media-picker
+                            mode="single"
+                            label="صورة مصغرة للمقالة"
+                            name="thumb"
+                            :selected="$existingThumb"
+                            previewSize="default"
+                        />
+                        <p class="text-xs text-gray-500 mt-2">* اختياري - اختر صورة جديدة من المكتبة لتحديث الصورة المصغرة</p>
                     </div>
 
                     {{-- Writer Selection --}}
@@ -794,8 +772,6 @@ function articleWizard() {
         activeLanguage: 'ar',
         autoSaveStatus: '',
         autoSaveTimer: null,
-        thumbPreviewUrl: null,
-        thumbDragOver: false,
         galleryDragOver: false,
         galleryImages: [],
         _initialized: false, // Flag to prevent double initialization
@@ -830,6 +806,10 @@ function articleWizard() {
         references: {!! json_encode($article->references ?? []) !!},
 
         init() {
+            // Prevent double initialization
+            if (this._initialized) return;
+            this._initialized = true;
+
             this.initTinyMCE();
             this.setupAutoSave();
             this.setupKeyboardShortcuts();
@@ -916,28 +896,6 @@ function articleWizard() {
             const text = body.replace(/<[^>]*>/g, '');
             const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
             return `${words} كلمة`;
-        },
-
-        // Thumbnail handling
-        handleThumbChange(event) {
-            const file = event.target.files[0];
-            if (file) {
-                this.thumbPreviewUrl = URL.createObjectURL(file);
-            }
-        },
-
-        handleThumbDrop(event) {
-            this.thumbDragOver = false;
-            const file = event.dataTransfer.files[0];
-            if (file && file.type.startsWith('image/')) {
-                this.$refs.thumbInput.files = event.dataTransfer.files;
-                this.thumbPreviewUrl = URL.createObjectURL(file);
-            }
-        },
-
-        removeThumb() {
-            this.thumbPreviewUrl = null;
-            this.$refs.thumbInput.value = '';
         },
 
         // Gallery handling
@@ -1034,6 +992,7 @@ function articleWizard() {
         },
 
         validateAndSubmit(event) {
+            // Validate required fields
             if (!this.locales.ar.title) {
                 alert('العنوان العربي مطلوب!');
                 this.currentStep = 2;
@@ -1041,7 +1000,10 @@ function articleWizard() {
                 return;
             }
 
+            // Clear draft after successful submission
             localStorage.removeItem('article_edit_{{ $article->id }}');
+
+            // Submit form
             event.target.submit();
         }
     }

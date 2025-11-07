@@ -2,15 +2,16 @@
 <div x-show="isOpen"
      x-cloak
      @keydown.escape.window="isOpen = false"
-     class="fixed inset-0 z-50 overflow-y-auto"
-     style="display: none;">
+     class="fixed inset-0 overflow-y-auto"
+     style="display: none; position: fixed !important; top: 0; left: 0; right: 0; bottom: 0; z-index: 99999 !important;">
 
     <!-- Backdrop -->
-    <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+    <div class="fixed inset-0 bg-black bg-opacity-70 transition-opacity"
+         style="z-index: 99998;"
          @click="isOpen = false"></div>
 
     <!-- Modal -->
-    <div class="flex items-center justify-center min-h-screen p-4">
+    <div class="flex items-center justify-center min-h-screen p-4 relative" style="z-index: 99999;">
         <div class="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden"
              @click.stop>
 
