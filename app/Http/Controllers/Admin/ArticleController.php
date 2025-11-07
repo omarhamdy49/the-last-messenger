@@ -5,10 +5,15 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Domain\Blog\Models\Category;
-use App\Http\Controllers\Controller;
+use App\Domain\Blog\Models\Tag;
+use App\Domain\Shared\Services\VersionService;
+use App\Http\Requests\Admin\Article\StoreArticleRequest;
+use App\Http\Requests\Admin\Article\UpdateArticleRequest;
+use App\Http\Resources\ArticleResource;
 use App\Models\Article;
 use App\Models\ArticleLocale;
 use App\Models\User;
+use App\Repositories\ArticleRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,41 +22,57 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
-class ArticleController extends Controller
+class ArticleController extends AdminController
 {
     /**
      * Supported locales
      */
     protected array $locales = ['ar', 'en', 'fr', 'tr', 'ur'];
 
+    public function __construct(
+        protected ArticleRepository $repository,
+        protected VersionService $versionService
+    ) {
+        parent::__construct();
+    }
+
     /**
      * Display a listing of articles
      */
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
-        $query = Article::with(['locales', 'writer', 'category', 'categories'])
-            ->orderBy('created_at', 'desc');
+        $this->authorizeAdmin('view articles');
 
-        // Filter by featured
-        if ($request->has('featured')) {
-            $query->where('is_featured', true);
+        $filters = $this->getFilters($request, [
+            'status',
+            'category_id',
+            'author_id',
+            'is_featured',
+            'is_pinned',
+            'locale',
+            'date_from',
+            'date_to'
+        ]);
+
+        $search = $this->getSearchQuery($request);
+        $pagination = $this->getPaginationParams($request);
+
+        $articles = $this->repository->getAllWithFilters(
+            $filters,
+            $search,
+            $pagination['per_page'],
+            $pagination['sort'],
+            $pagination['order']
+        );
+
+        if ($this->expectsJson($request)) {
+            return $this->paginatedResponse($articles, 'Articles retrieved successfully');
         }
-
-        // Filter by pinned
-        if ($request->has('pinned')) {
-            $query->where('is_pinned', true);
-        }
-
-        // Filter by category
-        if ($request->filled('category_id')) {
-            $query->where('category_id', $request->category_id);
-        }
-
-        $articles = $query->paginate(20);
 
         $categories = Category::all();
+        $authors = User::role('writer')->get();
 
-        return view('admin.articles.index', compact('articles', 'categories'));
+        return view('admin.articles.index', compact('articles', 'categories', 'authors'));
     }
 
     /**
@@ -59,42 +80,27 @@ class ArticleController extends Controller
      */
     public function create(): View
     {
+        $this->authorizeAdmin('create articles');
+
         $categories = Category::all();
-        $writers = User::all();
+        $writers = User::role('writer')->get();
+        $tags = Tag::where('type', 'article')->get();
         $locales = $this->locales;
 
-        return view('admin.articles.create', compact('categories', 'writers', 'locales'));
+        return view('admin.articles.create', compact('categories', 'writers', 'tags', 'locales'));
     }
 
     /**
      * Store a newly created article
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreArticleRequest $request): RedirectResponse|JsonResponse
     {
-        $validated = $request->validate([
-            'thumb' => 'nullable|image|max:5120',
-            'writer_id' => 'nullable|exists:users,id',
-            'read_time' => 'required|integer|min:0',
-            'is_featured' => 'boolean',
-            'is_pinned' => 'boolean',
-            'category_id' => 'nullable|exists:categories,id',
-            'hijri_date' => 'nullable|string|max:255',
-            'categories' => 'nullable|array',
-            'categories.*' => 'exists:categories,id',
-
-            // Locales
-            'locales' => 'required|array',
-            'locales.*.locale' => 'required|in:' . implode(',', $this->locales),
-            'locales.*.title' => 'required|string|max:500',
-            'locales.*.description' => 'nullable|string',
-            'locales.*.excerpt' => 'nullable|string',
-            'locales.*.body' => 'nullable|string',
-            'locales.*.summary' => 'nullable|string',
-            'locales.*.is_ready' => 'boolean',
-        ]);
+        $this->authorizeAdmin('create articles');
 
         DB::beginTransaction();
         try {
+            $validated = $request->validated();
+
             // Handle thumbnail upload
             $thumbPath = null;
             if ($request->hasFile('thumb')) {
@@ -104,8 +110,8 @@ class ArticleController extends Controller
             // Create article
             $article = Article::create([
                 'thumb' => $thumbPath,
-                'writer_id' => $validated['writer_id'] ?? null,
-                'read_time' => $validated['read_time'],
+                'writer_id' => $validated['writer_id'] ?? auth()->id(),
+                'read_time' => $validated['read_time'] ?? $this->calculateReadTime($validated['content']['ar'] ?? ''),
                 'views' => 0,
                 'is_featured' => $request->boolean('is_featured'),
                 'is_pinned' => $request->boolean('is_pinned'),
@@ -114,30 +120,74 @@ class ArticleController extends Controller
             ]);
 
             // Create locales
-            foreach ($validated['locales'] as $localeData) {
-                $slug = Str::slug($localeData['title']) . '-' . Str::random(6);
+            foreach ($this->locales as $locale) {
+                if (isset($validated['title'][$locale])) {
+                    $slug = $this->generateUniqueSlug($validated['title'][$locale], $locale);
 
-                $article->locales()->create([
-                    'locale' => $localeData['locale'],
-                    'title' => $localeData['title'],
-                    'slug' => $slug,
-                    'description' => $localeData['description'] ?? null,
-                    'excerpt' => $localeData['excerpt'] ?? null,
-                    'content' => [
-                        'body' => $localeData['body'] ?? null,
-                        'toc' => [],
-                        'summary' => $localeData['summary'] ?? null,
-                    ],
-                    'is_ready' => $localeData['is_ready'] ?? false,
-                ]);
+                    $article->locales()->create([
+                        'locale' => $locale,
+                        'title' => $validated['title'][$locale],
+                        'slug' => $validated['slug'][$locale] ?? $slug,
+                        'description' => $validated['description'][$locale] ?? null,
+                        'excerpt' => $validated['excerpt'][$locale] ?? null,
+                        'content' => [
+                            'body' => $validated['content'][$locale] ?? null,
+                            'toc' => $this->generateTableOfContents($validated['content'][$locale] ?? ''),
+                            'summary' => $validated['summary'][$locale] ?? null,
+                        ],
+                        'seo_title' => $validated['seo_title'][$locale] ?? null,
+                        'seo_description' => $validated['seo_description'][$locale] ?? null,
+                        'is_ready' => $validated['is_ready'][$locale] ?? false,
+                    ]);
+                }
             }
 
-            // Attach categories
-            if (!empty($validated['categories'])) {
-                $article->categories()->attach($validated['categories']);
+            // Attach primary category
+            if (!empty($validated['category_id'])) {
+                $article->categories()->attach($validated['category_id']);
             }
+
+            // Attach additional categories
+            if (!empty($validated['additional_categories'])) {
+                $article->categories()->syncWithoutDetaching($validated['additional_categories']);
+            }
+
+            // Attach tags
+            if (!empty($validated['tags'])) {
+                $article->tags()->attach($validated['tags']);
+            }
+
+            // Attach gallery media
+            if (!empty($validated['gallery'])) {
+                $article->media()->syncWithoutDetaching($validated['gallery']);
+            }
+
+            // Handle scheduled publishing
+            if ($validated['status'] === 'scheduled' && isset($validated['published_at'])) {
+                // Queue the publishing job
+                \App\Jobs\PublishScheduledContent::dispatch($article, $validated['published_at']);
+            }
+
+            // Create initial version
+            $this->versionService->createVersion(
+                $article,
+                $article->toArray(),
+                auth()->id(),
+                'Initial version created'
+            );
 
             DB::commit();
+
+            $this->logActivity('created', 'Article', $article->id, [
+                'title' => $validated['title']['ar'] ?? $validated['title']['en'],
+            ]);
+
+            if ($this->expectsJson(request())) {
+                return $this->createdResponse(
+                    new ArticleResource($article),
+                    'Article created successfully'
+                );
+            }
 
             return redirect()
                 ->route('admin.articles.index')
@@ -147,22 +197,35 @@ class ArticleController extends Controller
             DB::rollBack();
 
             // Delete uploaded thumbnail if exists
-            if ($thumbPath) {
+            if (isset($thumbPath) && $thumbPath) {
                 Storage::disk('public')->delete($thumbPath);
+            }
+
+            if ($this->expectsJson(request())) {
+                return $this->serverErrorResponse('Failed to create article: ' . $e->getMessage());
             }
 
             return back()
                 ->withInput()
-                ->with('error', 'Failed to create article: ' . $e->getMessage());
+                ->withErrors(['error' => 'Failed to create article: ' . $e->getMessage()]);
         }
     }
 
     /**
      * Display the specified article
      */
-    public function show(Article $article): View
+    public function show(Article $article): View|JsonResponse
     {
-        $article->load(['locales', 'writer', 'category', 'categories', 'gallery']);
+        $this->authorizeAdmin('view articles');
+
+        $article->load(['locales', 'writer', 'category', 'categories', 'tags', 'media', 'versions']);
+
+        if ($this->expectsJson(request())) {
+            return $this->successResponse(
+                new ArticleResource($article),
+                'Article retrieved successfully'
+            );
+        }
 
         return view('admin.articles.show', compact('article'));
     }
@@ -172,45 +235,30 @@ class ArticleController extends Controller
      */
     public function edit(Article $article): View
     {
-        $article->load(['locales', 'categories']);
+        $this->authorizeAdmin('edit articles');
+
+        $article->load(['locales', 'categories', 'tags']);
 
         $categories = Category::all();
-        $writers = User::all();
+        $writers = User::role('writer')->get();
+        $tags = Tag::where('type', 'article')->get();
         $locales = $this->locales;
 
-        return view('admin.articles.edit', compact('article', 'categories', 'writers', 'locales'));
+        return view('admin.articles.edit', compact('article', 'categories', 'writers', 'tags', 'locales'));
     }
 
     /**
      * Update the specified article
      */
-    public function update(Request $request, Article $article): RedirectResponse
+    public function update(UpdateArticleRequest $request, Article $article): RedirectResponse|JsonResponse
     {
-        $validated = $request->validate([
-            'thumb' => 'nullable|image|max:5120',
-            'writer_id' => 'nullable|exists:users,id',
-            'read_time' => 'required|integer|min:0',
-            'is_featured' => 'boolean',
-            'is_pinned' => 'boolean',
-            'category_id' => 'nullable|exists:categories,id',
-            'hijri_date' => 'nullable|string|max:255',
-            'categories' => 'nullable|array',
-            'categories.*' => 'exists:categories,id',
-
-            // Locales
-            'locales' => 'required|array',
-            'locales.*.id' => 'nullable|exists:article_locale,id',
-            'locales.*.locale' => 'required|in:' . implode(',', $this->locales),
-            'locales.*.title' => 'required|string|max:500',
-            'locales.*.description' => 'nullable|string',
-            'locales.*.excerpt' => 'nullable|string',
-            'locales.*.body' => 'nullable|string',
-            'locales.*.summary' => 'nullable|string',
-            'locales.*.is_ready' => 'boolean',
-        ]);
+        $this->authorizeAdmin('edit articles');
 
         DB::beginTransaction();
         try {
+            $validated = $request->validated();
+            $oldData = $article->toArray();
+
             // Handle thumbnail upload
             if ($request->hasFile('thumb')) {
                 // Delete old thumbnail
@@ -223,8 +271,8 @@ class ArticleController extends Controller
             // Update article
             $article->update([
                 'thumb' => $validated['thumb'] ?? $article->thumb,
-                'writer_id' => $validated['writer_id'] ?? null,
-                'read_time' => $validated['read_time'],
+                'writer_id' => $validated['writer_id'] ?? $article->writer_id,
+                'read_time' => $validated['read_time'] ?? $article->read_time,
                 'is_featured' => $request->boolean('is_featured'),
                 'is_pinned' => $request->boolean('is_pinned'),
                 'category_id' => $validated['category_id'] ?? null,
@@ -232,45 +280,63 @@ class ArticleController extends Controller
             ]);
 
             // Update or create locales
-            foreach ($validated['locales'] as $localeData) {
-                $slug = Str::slug($localeData['title']) . '-' . Str::random(6);
+            foreach ($this->locales as $locale) {
+                if (isset($validated['title'][$locale])) {
+                    $slug = $validated['slug'][$locale] ?? $this->generateUniqueSlug($validated['title'][$locale], $locale, $article->id);
 
-                if (!empty($localeData['id'])) {
-                    // Update existing locale
-                    ArticleLocale::where('id', $localeData['id'])->update([
-                        'title' => $localeData['title'],
-                        'slug' => $slug,
-                        'description' => $localeData['description'] ?? null,
-                        'excerpt' => $localeData['excerpt'] ?? null,
-                        'content' => [
-                            'body' => $localeData['body'] ?? null,
-                            'toc' => [],
-                            'summary' => $localeData['summary'] ?? null,
-                        ],
-                        'is_ready' => $localeData['is_ready'] ?? false,
-                    ]);
-                } else {
-                    // Create new locale
-                    $article->locales()->create([
-                        'locale' => $localeData['locale'],
-                        'title' => $localeData['title'],
-                        'slug' => $slug,
-                        'description' => $localeData['description'] ?? null,
-                        'excerpt' => $localeData['excerpt'] ?? null,
-                        'content' => [
-                            'body' => $localeData['body'] ?? null,
-                            'toc' => [],
-                            'summary' => $localeData['summary'] ?? null,
-                        ],
-                        'is_ready' => $localeData['is_ready'] ?? false,
-                    ]);
+                    $article->locales()->updateOrCreate(
+                        ['locale' => $locale],
+                        [
+                            'title' => $validated['title'][$locale],
+                            'slug' => $slug,
+                            'description' => $validated['description'][$locale] ?? null,
+                            'excerpt' => $validated['excerpt'][$locale] ?? null,
+                            'content' => [
+                                'body' => $validated['content'][$locale] ?? null,
+                                'toc' => $this->generateTableOfContents($validated['content'][$locale] ?? ''),
+                                'summary' => $validated['summary'][$locale] ?? null,
+                            ],
+                            'seo_title' => $validated['seo_title'][$locale] ?? null,
+                            'seo_description' => $validated['seo_description'][$locale] ?? null,
+                            'is_ready' => $validated['is_ready'][$locale] ?? false,
+                        ]
+                    );
                 }
             }
 
             // Sync categories
-            $article->categories()->sync($validated['categories'] ?? []);
+            $categoryIds = array_merge(
+                [$validated['category_id']],
+                $validated['additional_categories'] ?? []
+            );
+            $article->categories()->sync(array_filter($categoryIds));
+
+            // Sync tags
+            $article->tags()->sync($validated['tags'] ?? []);
+
+            // Sync gallery media
+            $article->media()->sync($validated['gallery'] ?? []);
+
+            // Create version
+            $this->versionService->createVersion(
+                $article,
+                $article->toArray(),
+                auth()->id(),
+                'Article updated'
+            );
 
             DB::commit();
+
+            $this->logActivity('updated', 'Article', $article->id, [
+                'title' => $validated['title']['ar'] ?? $validated['title']['en'],
+            ]);
+
+            if ($this->expectsJson(request())) {
+                return $this->successResponse(
+                    new ArticleResource($article),
+                    'Article updated successfully'
+                );
+            }
 
             return redirect()
                 ->route('admin.articles.index')
@@ -279,19 +345,206 @@ class ArticleController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
+            if ($this->expectsJson(request())) {
+                return $this->serverErrorResponse('Failed to update article: ' . $e->getMessage());
+            }
+
             return back()
                 ->withInput()
-                ->with('error', 'Failed to update article: ' . $e->getMessage());
+                ->withErrors(['error' => 'Failed to update article: ' . $e->getMessage()]);
         }
     }
 
     /**
-     * Remove the specified article
+     * Soft delete the specified article
      */
-    public function destroy(Article $article): RedirectResponse
+    public function destroy(Article $article): RedirectResponse|JsonResponse
     {
+        $this->authorizeAdmin('delete articles');
+
         try {
-            // Delete thumbnail if exists
+            $article->delete();
+
+            $this->logActivity('deleted', 'Article', $article->id, [
+                'title' => $article->locales->first()->title ?? 'Untitled',
+            ]);
+
+            if ($this->expectsJson(request())) {
+                return $this->successResponse(null, 'Article deleted successfully');
+            }
+
+            return redirect()
+                ->route('admin.articles.index')
+                ->with('success', 'Article deleted successfully!');
+
+        } catch (\Exception $e) {
+            if ($this->expectsJson(request())) {
+                return $this->serverErrorResponse('Failed to delete article: ' . $e->getMessage());
+            }
+
+            return back()
+                ->withErrors(['error' => 'Failed to delete article: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Bulk delete multiple articles
+     */
+    public function bulkDestroy(Request $request): JsonResponse
+    {
+        $this->authorizeAdmin('delete articles');
+
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:articles,id',
+        ]);
+
+        $results = $this->handleBulkOperation($request, 'delete', function ($id) {
+            $article = Article::findOrFail($id);
+            $article->delete();
+        });
+
+        return $this->successResponse($results, "{$results['success']} articles deleted successfully");
+    }
+
+    /**
+     * Bulk publish multiple articles
+     */
+    public function bulkPublish(Request $request): JsonResponse
+    {
+        $this->authorizeAdmin('edit articles');
+
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:articles,id',
+        ]);
+
+        $results = $this->handleBulkOperation($request, 'publish', function ($id) {
+            $article = Article::findOrFail($id);
+            $article->locales()->update(['is_ready' => true]);
+        });
+
+        return $this->successResponse($results, "{$results['success']} articles published successfully");
+    }
+
+    /**
+     * Duplicate an article
+     */
+    public function duplicate(Article $article): RedirectResponse|JsonResponse
+    {
+        $this->authorizeAdmin('create articles');
+
+        DB::beginTransaction();
+        try {
+            // Create a copy of the article
+            $newArticle = $article->replicate();
+            $newArticle->is_featured = false;
+            $newArticle->is_pinned = false;
+            $newArticle->views = 0;
+            $newArticle->save();
+
+            // Copy locales
+            foreach ($article->locales as $locale) {
+                $newLocale = $locale->replicate();
+                $newLocale->article_id = $newArticle->id;
+                $newLocale->slug = $locale->slug . '-copy-' . Str::random(6);
+                $newLocale->is_ready = false;
+                $newLocale->save();
+            }
+
+            // Copy relationships
+            $newArticle->categories()->sync($article->categories->pluck('id'));
+            $newArticle->tags()->sync($article->tags->pluck('id'));
+
+            DB::commit();
+
+            $this->logActivity('duplicated', 'Article', $newArticle->id, [
+                'original_id' => $article->id,
+            ]);
+
+            if ($this->expectsJson(request())) {
+                return $this->createdResponse(
+                    new ArticleResource($newArticle),
+                    'Article duplicated successfully'
+                );
+            }
+
+            return redirect()
+                ->route('admin.articles.edit', $newArticle)
+                ->with('success', 'Article duplicated successfully!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            if ($this->expectsJson(request())) {
+                return $this->serverErrorResponse('Failed to duplicate article: ' . $e->getMessage());
+            }
+
+            return back()
+                ->withErrors(['error' => 'Failed to duplicate article: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Preview an article (before publishing)
+     */
+    public function preview(Article $article, Request $request): View
+    {
+        $locale = $request->get('locale', 'ar');
+        $articleLocale = $article->locales()->where('locale', $locale)->first();
+
+        if (!$articleLocale) {
+            abort(404, 'Article not available in this language');
+        }
+
+        return view('admin.articles.preview', compact('article', 'articleLocale'));
+    }
+
+    /**
+     * Restore a soft-deleted article
+     */
+    public function restore(int $id): RedirectResponse|JsonResponse
+    {
+        $this->authorizeAdmin('edit articles');
+
+        try {
+            $article = Article::withTrashed()->findOrFail($id);
+            $article->restore();
+
+            $this->logActivity('restored', 'Article', $article->id);
+
+            if ($this->expectsJson(request())) {
+                return $this->successResponse(
+                    new ArticleResource($article),
+                    'Article restored successfully'
+                );
+            }
+
+            return redirect()
+                ->route('admin.articles.index')
+                ->with('success', 'Article restored successfully!');
+
+        } catch (\Exception $e) {
+            if ($this->expectsJson(request())) {
+                return $this->serverErrorResponse('Failed to restore article: ' . $e->getMessage());
+            }
+
+            return back()
+                ->withErrors(['error' => 'Failed to restore article: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Permanently delete an article
+     */
+    public function forceDelete(int $id): RedirectResponse|JsonResponse
+    {
+        $this->authorizeAdmin('delete articles');
+
+        try {
+            $article = Article::withTrashed()->findOrFail($id);
+
+            // Delete thumbnail
             if ($article->thumb) {
                 Storage::disk('public')->delete($article->thumb);
             }
@@ -303,232 +556,35 @@ class ArticleController extends Controller
                 }
             }
 
-            // Delete article (cascade will handle related records)
-            $article->delete();
+            $article->forceDelete();
+
+            $this->logActivity('force_deleted', 'Article', $id);
+
+            if ($this->expectsJson(request())) {
+                return $this->successResponse(null, 'Article permanently deleted');
+            }
 
             return redirect()
                 ->route('admin.articles.index')
-                ->with('success', 'Article deleted successfully!');
+                ->with('success', 'Article permanently deleted!');
 
         } catch (\Exception $e) {
+            if ($this->expectsJson(request())) {
+                return $this->serverErrorResponse('Failed to permanently delete article: ' . $e->getMessage());
+            }
+
             return back()
-                ->with('error', 'Failed to delete article: ' . $e->getMessage());
+                ->withErrors(['error' => 'Failed to permanently delete article: ' . $e->getMessage()]);
         }
     }
 
     /**
-     * API endpoint for AJAX article listing
+     * Get article statistics
      */
-    public function api(Request $request): JsonResponse
+    public function statistics(): JsonResponse
     {
-        try {
-            $perPage = $request->input('per_page', 12);
-            $locale = $request->input('locale', 'en');
-
-            $query = Article::with([
-                'locales' => function ($q) use ($locale) {
-                    $q->where('locale', $locale);
-                },
-                'writer:id,name,email',
-                'category:id,name',
-                'categories:id,name'
-            ]);
-
-            // Search by title/excerpt in article_locale table
-            if ($request->filled('search')) {
-                $search = $request->input('search');
-                $query->whereHas('locales', function ($q) use ($search, $locale) {
-                    $q->where('locale', $locale)
-                        ->where(function ($subQ) use ($search) {
-                            $subQ->where('title', 'LIKE', "%{$search}%")
-                                ->orWhere('excerpt', 'LIKE', "%{$search}%")
-                                ->orWhere('description', 'LIKE', "%{$search}%");
-                        });
-                });
-            }
-
-            // Filter by category
-            if ($request->filled('category_id')) {
-                $categoryId = $request->input('category_id');
-                $query->where(function ($q) use ($categoryId) {
-                    $q->where('category_id', $categoryId)
-                        ->orWhereHas('categories', function ($subQ) use ($categoryId) {
-                            $subQ->where('categories.id', $categoryId);
-                        });
-                });
-            }
-
-            // Filter by status
-            if ($request->filled('status')) {
-                $status = $request->input('status');
-                switch ($status) {
-                    case 'featured':
-                        $query->where('is_featured', true);
-                        break;
-                    case 'pinned':
-                        $query->where('is_pinned', true);
-                        break;
-                    case 'draft':
-                        $query->whereDoesntHave('locales', function ($q) {
-                            $q->where('is_ready', true);
-                        });
-                        break;
-                    case 'all':
-                    default:
-                        // No filter
-                        break;
-                }
-            }
-
-            // Filter by locale (articles with ready translations in that locale)
-            $query->whereHas('locales', function ($q) use ($locale) {
-                $q->where('locale', $locale)
-                    ->where('is_ready', true);
-            });
-
-            // Sort
-            $sort = $request->input('sort', 'latest');
-            switch ($sort) {
-                case 'popular':
-                    $query->orderBy('views', 'desc');
-                    break;
-                case 'alphabetical':
-                    $query->whereHas('locales', function ($q) use ($locale) {
-                        $q->where('locale', $locale);
-                    })->get()->sortBy(function ($article) use ($locale) {
-                        return $article->locales->where('locale', $locale)->first()->title ?? '';
-                    });
-                    break;
-                case 'oldest':
-                    $query->orderBy('created_at', 'asc');
-                    break;
-                case 'latest':
-                default:
-                    $query->orderBy('created_at', 'desc');
-                    break;
-            }
-
-            // Paginate
-            $articles = $query->paginate($perPage);
-
-            // Get stats
-            $stats = [
-                'total' => Article::count(),
-                'total_views' => Article::sum('views'),
-                'featured_count' => Article::where('is_featured', true)->count(),
-            ];
-
-            return response()->json([
-                'success' => true,
-                'data' => $articles->items(),
-                'meta' => [
-                    'current_page' => $articles->currentPage(),
-                    'last_page' => $articles->lastPage(),
-                    'from' => $articles->firstItem(),
-                    'to' => $articles->lastItem(),
-                    'total' => $articles->total(),
-                    'per_page' => $articles->perPage(),
-                ],
-                'stats' => $stats,
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch articles: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Bulk actions on multiple articles
-     */
-    public function bulkAction(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'article_ids' => 'required|array',
-            'article_ids.*' => 'exists:articles,id',
-            'action' => 'required|in:feature,unfeature,pin,unpin,archive,delete',
-        ]);
-
-        DB::beginTransaction();
-        try {
-            $articleIds = $validated['article_ids'];
-            $action = $validated['action'];
-            $affectedCount = 0;
-
-            switch ($action) {
-                case 'feature':
-                    $affectedCount = Article::whereIn('id', $articleIds)
-                        ->update(['is_featured' => true]);
-                    $message = "{$affectedCount} articles marked as featured";
-                    break;
-
-                case 'unfeature':
-                    $affectedCount = Article::whereIn('id', $articleIds)
-                        ->update(['is_featured' => false]);
-                    $message = "{$affectedCount} articles unmarked as featured";
-                    break;
-
-                case 'pin':
-                    $affectedCount = Article::whereIn('id', $articleIds)
-                        ->update(['is_pinned' => true]);
-                    $message = "{$affectedCount} articles pinned";
-                    break;
-
-                case 'unpin':
-                    $affectedCount = Article::whereIn('id', $articleIds)
-                        ->update(['is_pinned' => false]);
-                    $message = "{$affectedCount} articles unpinned";
-                    break;
-
-                case 'archive':
-                    // Mark all locales as not ready (draft status)
-                    $affectedCount = ArticleLocale::whereIn('article_id', $articleIds)
-                        ->update(['is_ready' => false]);
-                    $message = "{$affectedCount} article translations archived";
-                    break;
-
-                case 'delete':
-                    $articles = Article::whereIn('id', $articleIds)->get();
-
-                    // Delete thumbnails and gallery images
-                    foreach ($articles as $article) {
-                        if ($article->thumb) {
-                            Storage::disk('public')->delete($article->thumb);
-                        }
-
-                        foreach ($article->gallery as $galleryItem) {
-                            if ($galleryItem->image) {
-                                Storage::disk('public')->delete($galleryItem->image);
-                            }
-                        }
-                    }
-
-                    $affectedCount = Article::whereIn('id', $articleIds)->delete();
-                    $message = "{$affectedCount} articles deleted";
-                    break;
-
-                default:
-                    throw new \Exception('Invalid action');
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => $message,
-                'affected_count' => $affectedCount,
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Bulk action failed: ' . $e->getMessage(),
-            ], 500);
-        }
+        $stats = $this->repository->getStatistics();
+        return $this->successResponse($stats, 'Statistics retrieved successfully');
     }
 
     /**
@@ -536,23 +592,13 @@ class ArticleController extends Controller
      */
     public function toggleFeature(Article $article): JsonResponse
     {
-        try {
-            $article->update([
-                'is_featured' => !$article->is_featured,
-            ]);
+        $this->authorizeAdmin('edit articles');
 
-            return response()->json([
-                'success' => true,
-                'message' => $article->is_featured ? 'Article marked as featured' : 'Article unmarked as featured',
-                'is_featured' => $article->is_featured,
-            ]);
+        $article->update(['is_featured' => !$article->is_featured]);
 
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to toggle featured status: ' . $e->getMessage(),
-            ], 500);
-        }
+        return $this->successResponse([
+            'is_featured' => $article->is_featured
+        ], 'Featured status updated');
     }
 
     /**
@@ -560,75 +606,103 @@ class ArticleController extends Controller
      */
     public function togglePin(Article $article): JsonResponse
     {
-        try {
-            $article->update([
-                'is_pinned' => !$article->is_pinned,
-            ]);
+        $this->authorizeAdmin('edit articles');
 
-            return response()->json([
-                'success' => true,
-                'message' => $article->is_pinned ? 'Article pinned' : 'Article unpinned',
-                'is_pinned' => $article->is_pinned,
-            ]);
+        $article->update(['is_pinned' => !$article->is_pinned]);
 
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to toggle pinned status: ' . $e->getMessage(),
-            ], 500);
-        }
+        return $this->successResponse([
+            'is_pinned' => $article->is_pinned
+        ], 'Pinned status updated');
     }
 
     /**
-     * Get article statistics
+     * Increment article views
      */
-    public function stats(): JsonResponse
+    public function incrementViews(Article $article): JsonResponse
     {
-        try {
-            $stats = [
-                'total_articles' => Article::count(),
-                'total_views' => Article::sum('views'),
-                'featured_count' => Article::where('is_featured', true)->count(),
-                'pinned_count' => Article::where('is_pinned', true)->count(),
-                'recent_count' => Article::where('created_at', '>=', now()->subDays(7))->count(),
-                'draft_count' => Article::whereDoesntHave('locales', function ($q) {
-                    $q->where('is_ready', true);
-                })->count(),
-                'by_category' => Category::withCount('articles')->get()->map(function ($category) {
-                    return [
-                        'id' => $category->id,
-                        'name' => $category->name,
-                        'count' => $category->articles_count,
-                    ];
-                }),
-                'by_locale' => collect($this->locales)->map(function ($locale) {
-                    return [
-                        'locale' => $locale,
-                        'count' => ArticleLocale::where('locale', $locale)
-                            ->where('is_ready', true)
-                            ->count(),
-                    ];
-                }),
-                'recent_articles' => Article::with(['locales', 'writer:id,name', 'category:id,name'])
-                    ->orderBy('created_at', 'desc')
-                    ->limit(5)
-                    ->get(),
-                'top_viewed' => Article::with(['locales', 'writer:id,name', 'category:id,name'])
-                    ->orderBy('views', 'desc')
-                    ->limit(5)
-                    ->get(),
-            ];
+        $this->repository->incrementViews($article->id);
 
-            return response()->json([
-                'success' => true,
-                'stats' => $stats,
-            ]);
+        return $this->successResponse([
+            'views' => $article->fresh()->views
+        ], 'Views incremented');
+    }
 
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch statistics: ' . $e->getMessage(),
-            ], 500);
+    /**
+     * Get trashed articles
+     */
+    public function trash(Request $request): View|JsonResponse
+    {
+        $this->authorizeAdmin('view articles');
+
+        $articles = Article::onlyTrashed()
+            ->with(['locales', 'writer', 'category'])
+            ->orderBy('deleted_at', 'desc')
+            ->paginate(15);
+
+        if ($this->expectsJson($request)) {
+            return $this->paginatedResponse($articles, 'Trashed articles retrieved');
         }
+
+        return view('admin.articles.trash', compact('articles'));
+    }
+
+    /**
+     * Generate unique slug
+     */
+    protected function generateUniqueSlug(string $title, string $locale, ?int $excludeArticleId = null): string
+    {
+        $slug = Str::slug($title);
+        $originalSlug = $slug;
+        $counter = 1;
+
+        while (true) {
+            $query = ArticleLocale::where('slug', $slug)->where('locale', $locale);
+
+            if ($excludeArticleId) {
+                $query->where('article_id', '!=', $excludeArticleId);
+            }
+
+            if (!$query->exists()) {
+                break;
+            }
+
+            $slug = $originalSlug . '-' . $counter++;
+        }
+
+        return $slug;
+    }
+
+    /**
+     * Calculate read time from content
+     */
+    protected function calculateReadTime(string $content): int
+    {
+        $wordCount = str_word_count(strip_tags($content));
+        return max(1, (int) ceil($wordCount / 200)); // Assuming 200 words per minute
+    }
+
+    /**
+     * Generate table of contents from HTML content
+     */
+    protected function generateTableOfContents(string $content): array
+    {
+        $toc = [];
+
+        // Extract headings using regex
+        preg_match_all('/<h([2-3])[^>]*>(.*?)<\/h[2-3]>/i', $content, $matches, PREG_SET_ORDER);
+
+        foreach ($matches as $index => $match) {
+            $level = (int) $match[1];
+            $text = strip_tags($match[2]);
+            $id = Str::slug($text);
+
+            $toc[] = [
+                'id' => $id,
+                'text' => $text,
+                'level' => $level,
+            ];
+        }
+
+        return $toc;
     }
 }

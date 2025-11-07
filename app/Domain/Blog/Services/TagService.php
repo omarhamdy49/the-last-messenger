@@ -227,4 +227,38 @@ class TagService
 
         return $count;
     }
+
+    /**
+     * Search tags for autocomplete
+     *
+     * @param string $query
+     * @param string|null $type
+     * @param int $limit
+     * @return \Illuminate\Support\Collection
+     */
+    public function searchForAutocomplete(string $query, ?string $type = null, int $limit = 10): \Illuminate\Support\Collection
+    {
+        return $this->repository->searchForAutocomplete($query, $type, $limit);
+    }
+
+    /**
+     * Get unused tags (zero usage_count)
+     *
+     * @param int $perPage
+     * @return LengthAwarePaginator
+     */
+    public function getUnusedTags(int $perPage = 50): LengthAwarePaginator
+    {
+        return $this->repository->getUnusedTags($perPage);
+    }
+
+    /**
+     * Recalculate usage count for all tags
+     *
+     * @return int Number of tags updated
+     */
+    public function recalculateAllUsageCounts(): int
+    {
+        return $this->repository->recalculateAllUsageCounts();
+    }
 }

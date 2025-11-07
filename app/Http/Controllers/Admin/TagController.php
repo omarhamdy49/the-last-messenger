@@ -288,4 +288,61 @@ class TagController extends Controller
             ], 422);
         }
     }
+
+    /**
+     * Search tags for autocomplete (AJAX endpoint)
+     *
+     * GET /su/portal/v1/admin/tags/search
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'q' => 'required|string|min:1|max:100',
+            'type' => 'nullable|in:article,hadith,program,event',
+            'limit' => 'nullable|integer|min:1|max:50',
+        ]);
+
+        $query = $validated['q'];
+        $type = $validated['type'] ?? null;
+        $limit = $validated['limit'] ?? 10;
+
+        $tags = $this->service->searchForAutocomplete($query, $type, $limit);
+
+        return response()->json([
+            'success' => true,
+            'data' => $tags,
+        ]);
+    }
+
+    /**
+     * Get unused tags (tags with zero usage_count)
+     *
+     * GET /su/portal/v1/admin/tags/unused
+     *
+     * @param Request $request
+     * @return View|JsonResponse
+     */
+    public function unused(Request $request): View|JsonResponse
+    {
+        $perPage = $request->integer('per_page', 50);
+        $unusedTags = $this->service->getUnusedTags($perPage);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'data' => $unusedTags->items(),
+                'meta' => [
+                    'current_page' => $unusedTags->currentPage(),
+                    'per_page' => $unusedTags->perPage(),
+                    'total' => $unusedTags->total(),
+                    'last_page' => $unusedTags->lastPage(),
+                ],
+            ]);
+        }
+
+        return view('admin.tags.unused', compact('unusedTags'));
+    }
 }

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
-use App\Domain\Blog\Exporters\ArticleExporter;
-use App\Domain\Blog\Repositories\ArticleRepositoryInterface;
+// use App\Domain\Blog\Exporters\ArticleExporter; // Temporarily disabled
+// use App\Domain\Blog\Repositories\ArticleRepositoryInterface; // Temporarily disabled
 use App\Domain\Hadith\Exporters\HadithExporter;
 use App\Domain\Hadith\Exporters\HadithNarratorExporter;
 use App\Domain\Hadith\Repositories\HadithRepositoryInterface;
@@ -46,7 +46,7 @@ class ExportController extends Controller
      */
     public function __construct(
         protected AdminLoggerService $logger,
-        protected ArticleRepositoryInterface $articleRepository,
+        // protected ArticleRepositoryInterface $articleRepository, // Temporarily disabled
         protected HadithRepositoryInterface $hadithRepository,
         protected HadithNarratorRepositoryInterface $narratorRepository,
         // protected MediaProgramRepositoryInterface $mediaProgramRepository,
@@ -281,12 +281,13 @@ class ExportController extends Controller
         array $columns = []
     ): ?object {
         return match ($module) {
-            ExportModule::ARTICLES => new ArticleExporter(
-                $this->articleRepository,
-                $language,
-                $filters,
-                $columns
-            ),
+            // TEMPORARILY DISABLED: Articles export
+            // ExportModule::ARTICLES => new ArticleExporter(
+            //     $this->articleRepository,
+            //     $language,
+            //     $filters,
+            //     $columns
+            // ),
             ExportModule::HADITH => new HadithExporter(
                 $this->hadithRepository,
                 $language,

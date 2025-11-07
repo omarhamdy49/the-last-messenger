@@ -370,4 +370,135 @@ class CategoryController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Get category tree as JSON (for hierarchical display)
+     *
+     * GET /su/portal/v1/admin/categories/tree
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function tree(Request $request): JsonResponse
+    {
+        $language = $request->input('language', 'ar');
+        $type = $request->input('type');
+
+        $tree = \App\Domain\Blog\Models\Category::getTree(null, $language);
+
+        if ($type) {
+            $tree = array_filter($tree, fn($cat) => $cat['type'] === $type);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $tree,
+        ]);
+    }
+
+    /**
+     * Restore soft-deleted category
+     *
+     * POST /su/portal/v1/admin/categories/{id}/restore
+     *
+     * @param int $id
+     * @return RedirectResponse|JsonResponse
+     */
+    public function restore(Request $request, int $id): RedirectResponse|JsonResponse
+    {
+        try {
+            $category = \App\Domain\Blog\Models\Category::withTrashed()->findOrFail($id);
+            $category->restore();
+
+            // Log the restoration
+            $this->logger->logRestore($category, $request->user());
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Category restored successfully',
+                    'data' => $category,
+                ]);
+            }
+
+            return redirect()
+                ->route('admin.categories.index')
+                ->with('success', 'Category restored successfully');
+        } catch (\Exception $e) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to restore category',
+                    'error' => $e->getMessage(),
+                ], 422);
+            }
+
+            return redirect()
+                ->back()
+                ->with('error', 'Failed to restore category: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Duplicate/clone an existing category
+     *
+     * POST /su/portal/v1/admin/categories/{id}/duplicate
+     *
+     * @param int $id
+     * @return RedirectResponse|JsonResponse
+     */
+    public function duplicate(Request $request, int $id): RedirectResponse|JsonResponse
+    {
+        try {
+            $originalCategory = $this->categoryService->findOrFail($id);
+
+            // Create duplicate data
+            $duplicateData = [
+                'name' => $originalCategory->getNameTranslations(),
+                'description' => $originalCategory->getDescriptionTranslations(),
+                'type' => $originalCategory->type->value,
+                'status' => 'inactive', // Set duplicates as inactive by default
+                'parent_id' => $originalCategory->parent_id,
+                'icon' => $originalCategory->icon,
+                'color' => $originalCategory->color,
+                'display_order' => $originalCategory->display_order + 1,
+            ];
+
+            // Add suffix to names to indicate it's a copy
+            foreach ($duplicateData['name'] as $lang => $name) {
+                if ($name) {
+                    $duplicateData['name'][$lang] = $name . ' (Copy)';
+                }
+            }
+
+            $newCategory = $this->categoryService->create($duplicateData);
+
+            // Log the duplication
+            $this->logger->logCreate($newCategory, $request->user());
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Category duplicated successfully',
+                    'data' => $newCategory,
+                ]);
+            }
+
+            return redirect()
+                ->route('admin.categories.edit', $newCategory->id)
+                ->with('success', 'Category duplicated successfully. You can now edit the copy.');
+        } catch (\Exception $e) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to duplicate category',
+                    'error' => $e->getMessage(),
+                ], 422);
+            }
+
+            return redirect()
+                ->back()
+                ->with('error', 'Failed to duplicate category: ' . $e->getMessage());
+        }
+    }
 }

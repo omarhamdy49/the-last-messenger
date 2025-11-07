@@ -1,187 +1,276 @@
-{{--
-    Admin Sidebar Component
+<!-- Admin Sidebar Component -->
+<aside x-show="sidebarOpen"
+       x-transition:enter="transform transition ease-out duration-300"
+       x-transition:enter-start="rtl:-translate-x-full ltr:translate-x-full"
+       x-transition:enter-end="translate-x-0"
+       x-transition:leave="transform transition ease-in duration-200"
+       x-transition:leave-start="translate-x-0"
+       x-transition:leave-end="rtl:-translate-x-full ltr:translate-x-full"
+       :class="[
+           darkMode ? 'glass-dark' : 'glass-light',
+           'fixed lg:static inset-y-0 rtl:right-0 ltr:left-0 z-40 w-72 flex flex-col glass'
+       ]"
+       class="border-e"
+       :dir="currentLang === 'ar' || currentLang === 'ur' ? 'rtl' : 'ltr'"
+       @click.away="if (window.innerWidth < 1024) sidebarOpen = false">
 
-    Props:
-    - $activeMenu (string): Currently active menu item
-
-    Usage:
-    <x-admin.sidebar activeMenu="dashboard" />
---}}
-
-@props([
-    'activeMenu' => 'dashboard'
-])
-
-<aside {{ $attributes->merge(['class' => 'w-64 bg-gray-900 min-h-screen flex flex-col']) }}
-       x-data="{
-           collapsed: localStorage.getItem('sidebarCollapsed') === 'true',
-           mobileSidebarOpen: false
-       }"
-       :class="collapsed ? 'w-20' : 'w-64'">
-
-    {{-- Logo --}}
-    <div class="h-16 flex items-center justify-center border-b border-gray-800 px-4">
-        <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-gradient-to-br from-[#0056b3] to-[#218838] rounded-xl flex items-center justify-center flex-shrink-0">
-                <i class="w-6 h-6 text-white" data-lucide="zap"></i>
+    <!-- Logo Section -->
+    <div class="flex items-center justify-between px-6 py-6 border-b"
+         :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
+        <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 group">
+            <!-- Logo Icon with Gradient Background -->
+            <div class="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow group-hover:scale-110 transition-transform">
+                <i data-lucide="moon-star" class="w-7 h-7 text-white"></i>
             </div>
-            <span x-show="!collapsed"
-                  class="text-xl font-bold bg-gradient-to-r from-[#0056b3] to-[#218838] bg-clip-text text-transparent">
-                {{ __('admin.title') }}
-            </span>
+
+            <!-- Logo Text -->
+            <div class="flex flex-col">
+                <span class="text-lg font-bold gradient-text">The Last Messenger</span>
+                <span class="text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">Admin Panel</span>
+            </div>
         </a>
+
+        <!-- Close Button (Mobile Only) -->
+        <button @click="sidebarOpen = false"
+                class="lg:hidden p-2 rounded-lg hover:bg-gray-800/50 transition-colors">
+            <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
     </div>
 
-    {{-- Collapse Toggle --}}
-    <button @click="collapsed = !collapsed; localStorage.setItem('sidebarCollapsed', collapsed)"
-            class="hidden lg:flex items-center justify-center h-10 border-b border-gray-800 text-gray-400 hover:text-white hover:bg-gray-800 transition">
-        <i x-show="!collapsed" class="w-4 h-4" data-lucide="chevrons-left"></i>
-        <i x-show="collapsed" class="w-4 h-4" data-lucide="chevrons-right"></i>
-    </button>
+    <!-- Navigation Menu -->
+    <nav class="flex-1 overflow-y-auto custom-scrollbar px-4 py-6"
+         x-data="{
+             activeMenu: '{{ request()->segment(2) ?? 'dashboard' }}',
+             openSubmenu: null,
 
-    {{-- Navigation --}}
-    <nav class="flex-1 overflow-y-auto custom-scrollbar py-6">
-        <div class="space-y-1 px-3">
+             isActive(route) {
+                 return this.activeMenu === route;
+             },
 
-            {{-- Dashboard --}}
+             toggleSubmenu(menu) {
+                 this.openSubmenu = this.openSubmenu === menu ? null : menu;
+             }
+         }">
+
+        <!-- Navigation Items -->
+        <div class="space-y-2">
+
+            <!-- Dashboard -->
             <a href="{{ route('admin.dashboard') }}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ $activeMenu === 'dashboard' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}"
-               :title="collapsed ? '{{ __('admin.dashboard') }}' : ''">
-                <i class="w-5 h-5 flex-shrink-0" data-lucide="layout-dashboard"></i>
-                <span x-show="!collapsed" class="font-medium">{{ __('admin.dashboard') }}</span>
+               @click="activeMenu = 'dashboard'"
+               :class="isActive('dashboard') ?
+                   'bg-gradient-primary text-white shadow-lg' :
+                   (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                <span class="font-semibold">Dashboard</span>
             </a>
 
-            {{-- Divider --}}
-            <div class="h-px bg-gray-800 my-4" x-show="!collapsed"></div>
-            <div class="text-xs font-semibold text-gray-500 px-3 mb-2" x-show="!collapsed">
-                {{ __('admin.content_management') }}
+            <!-- Content Management -->
+            <div x-data="{ open: false }">
+                <button @click="toggleSubmenu('content')"
+                        :class="openSubmenu === 'content' || activeMenu.includes('articles') || activeMenu.includes('categories') ?
+                            'bg-gradient-primary text-white shadow-lg' :
+                            (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+                        class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="file-text" class="w-5 h-5"></i>
+                        <span class="font-semibold">Content</span>
+                    </div>
+                    <i data-lucide="chevron-down"
+                       class="w-4 h-4 transition-transform"
+                       :class="openSubmenu === 'content' ? 'rotate-180' : ''"></i>
+                </button>
+
+                <!-- Submenu -->
+                <div x-show="openSubmenu === 'content'"
+                     x-collapse
+                     class="mt-2 ms-6 space-y-1">
+                    <a href="{{ route('admin.articles.index') }}"
+                       @click="activeMenu = 'articles'"
+                       :class="isActive('articles') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="scroll-text" class="w-4 h-4"></i>
+                        <span>Articles</span>
+                    </a>
+                    <a href="{{ route('admin.categories.index') }}"
+                       @click="activeMenu = 'categories'"
+                       :class="isActive('categories') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="folder" class="w-4 h-4"></i>
+                        <span>Categories</span>
+                    </a>
+                    <a href="{{ route('admin.tags.index') }}"
+                       @click="activeMenu = 'tags'"
+                       :class="isActive('tags') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="tag" class="w-4 h-4"></i>
+                        <span>Tags</span>
+                    </a>
+                </div>
             </div>
 
-            {{-- Articles --}}
-            <a href="{{ route('admin.articles.index') }}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ $activeMenu === 'articles' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}"
-               :title="collapsed ? '{{ __('admin.articles') }}' : ''">
-                <i class="w-5 h-5 flex-shrink-0" data-lucide="file-text"></i>
-                <span x-show="!collapsed" class="font-medium">{{ __('admin.articles') }}</span>
-                <span x-show="!collapsed"
-                      class="ms-auto px-2 py-0.5 text-xs font-bold rounded-full bg-[#64CCC5] text-black">
-                    {{ \App\Domain\Blog\Models\Article::count() }}
-                </span>
-            </a>
+            <!-- Media & Programs -->
+            <div x-data="{ open: false }">
+                <button @click="toggleSubmenu('media')"
+                        :class="openSubmenu === 'media' || activeMenu.includes('programs') || activeMenu.includes('episodes') ?
+                            'bg-gradient-primary text-white shadow-lg' :
+                            (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+                        class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="video" class="w-5 h-5"></i>
+                        <span class="font-semibold">Media</span>
+                    </div>
+                    <i data-lucide="chevron-down"
+                       class="w-4 h-4 transition-transform"
+                       :class="openSubmenu === 'media' ? 'rotate-180' : ''"></i>
+                </button>
 
-            {{-- Categories --}}
-            <a href="{{ route('admin.categories.index') }}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ $activeMenu === 'categories' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}"
-               :title="collapsed ? '{{ __('admin.categories') }}' : ''">
-                <i class="w-5 h-5 flex-shrink-0" data-lucide="folder"></i>
-                <span x-show="!collapsed" class="font-medium">{{ __('admin.categories') }}</span>
-            </a>
+                <div x-show="openSubmenu === 'media'"
+                     x-collapse
+                     class="mt-2 ms-6 space-y-1">
+                    <a href="{{ route('admin.programs.index') }}"
+                       @click="activeMenu = 'programs'"
+                       :class="isActive('programs') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="tv" class="w-4 h-4"></i>
+                        <span>Programs</span>
+                    </a>
+                    <a href="{{ route('admin.episodes.index') }}"
+                       @click="activeMenu = 'episodes'"
+                       :class="isActive('episodes') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="film" class="w-4 h-4"></i>
+                        <span>Episodes</span>
+                    </a>
+                </div>
+            </div>
 
-            {{-- Hadith --}}
+            <!-- Hadith Management -->
             <a href="{{ route('admin.hadith.index') }}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ $activeMenu === 'hadith' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}"
-               :title="collapsed ? '{{ __('admin.hadith') }}' : ''">
-                <i class="w-5 h-5 flex-shrink-0" data-lucide="scroll-text"></i>
-                <span x-show="!collapsed" class="font-medium">{{ __('admin.hadith') }}</span>
+               @click="activeMenu = 'hadith'"
+               :class="isActive('hadith') ?
+                   'bg-gradient-primary text-white shadow-lg' :
+                   (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
+                <i data-lucide="book-open" class="w-5 h-5"></i>
+                <span class="font-semibold">Hadith</span>
             </a>
 
-            {{-- Media Programs --}}
-            <a href="{{ route('admin.media.index') }}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ $activeMenu === 'media' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}"
-               :title="collapsed ? '{{ __('admin.media') }}' : ''">
-                <i class="w-5 h-5 flex-shrink-0" data-lucide="play-circle"></i>
-                <span x-show="!collapsed" class="font-medium">{{ __('admin.media') }}</span>
-            </a>
-
-            {{-- Timeline Events --}}
-            <a href="{{ route('admin.seerah.index') }}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ $activeMenu === 'seerah' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}"
-               :title="collapsed ? '{{ __('admin.timeline') }}' : ''">
-                <i class="w-5 h-5 flex-shrink-0" data-lucide="git-branch"></i>
-                <span x-show="!collapsed" class="font-medium">{{ __('admin.timeline') }}</span>
-            </a>
-
-            {{-- Sahaba --}}
-            <a href="{{ route('admin.sahaba.index') }}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ $activeMenu === 'sahaba' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}"
-               :title="collapsed ? '{{ __('admin.sahaba') }}' : ''">
-                <i class="w-5 h-5 flex-shrink-0" data-lucide="users"></i>
-                <span x-show="!collapsed" class="font-medium">{{ __('admin.sahaba') }}</span>
-            </a>
-
-            {{-- Quran --}}
+            <!-- Quran Management -->
             <a href="{{ route('admin.quran.index') }}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ $activeMenu === 'quran' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}"
-               :title="collapsed ? '{{ __('admin.quran') }}' : ''">
-                <i class="w-5 h-5 flex-shrink-0" data-lucide="book"></i>
-                <span x-show="!collapsed" class="font-medium">{{ __('admin.quran') }}</span>
+               @click="activeMenu = 'quran'"
+               :class="isActive('quran') ?
+                   'bg-gradient-primary text-white shadow-lg' :
+                   (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
+                <i data-lucide="book-marked" class="w-5 h-5"></i>
+                <span class="font-semibold">Quran</span>
             </a>
 
-            {{-- Genealogy --}}
+            <!-- Genealogy -->
             <a href="{{ route('admin.genealogy.index') }}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ $activeMenu === 'genealogy' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}"
-               :title="collapsed ? '{{ __('admin.genealogy') }}' : ''">
-                <i class="w-5 h-5 flex-shrink-0" data-lucide="network"></i>
-                <span x-show="!collapsed" class="font-medium">{{ __('admin.genealogy') }}</span>
+               @click="activeMenu = 'genealogy'"
+               :class="isActive('genealogy') ?
+                   'bg-gradient-primary text-white shadow-lg' :
+                   (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
+                <i data-lucide="git-branch" class="w-5 h-5"></i>
+                <span class="font-semibold">Genealogy</span>
             </a>
 
-            {{-- Divider --}}
-            <div class="h-px bg-gray-800 my-4" x-show="!collapsed"></div>
-            <div class="text-xs font-semibold text-gray-500 px-3 mb-2" x-show="!collapsed">
-                {{ __('admin.system') }}
-            </div>
+            <!-- Divider -->
+            <div class="my-4 border-t" :class="darkMode ? 'border-gray-800' : 'border-gray-200'"></div>
 
-            {{-- Users --}}
+            <!-- User Management -->
             <a href="{{ route('admin.users.index') }}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ $activeMenu === 'users' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}"
-               :title="collapsed ? '{{ __('admin.users') }}' : ''">
-                <i class="w-5 h-5 flex-shrink-0" data-lucide="user-cog"></i>
-                <span x-show="!collapsed" class="font-medium">{{ __('admin.users') }}</span>
+               @click="activeMenu = 'users'"
+               :class="isActive('users') ?
+                   'bg-gradient-primary text-white shadow-lg' :
+                   (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
+                <i data-lucide="users" class="w-5 h-5"></i>
+                <span class="font-semibold">Users</span>
             </a>
 
-            {{-- Settings --}}
-            <a href="{{ route('admin.settings.index') }}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ $activeMenu === 'settings' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}"
-               :title="collapsed ? '{{ __('admin.settings') }}' : ''">
-                <i class="w-5 h-5 flex-shrink-0" data-lucide="settings"></i>
-                <span x-show="!collapsed" class="font-medium">{{ __('admin.settings') }}</span>
+            <!-- Roles & Permissions -->
+            <a href="{{ route('admin.roles.index') }}"
+               @click="activeMenu = 'roles'"
+               :class="isActive('roles') ?
+                   'bg-gradient-primary text-white shadow-lg' :
+                   (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
+                <i data-lucide="shield" class="w-5 h-5"></i>
+                <span class="font-semibold">Roles</span>
             </a>
 
-            {{-- Logs --}}
-            <a href="{{ route('admin.logs.index') }}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ $activeMenu === 'logs' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}"
-               :title="collapsed ? '{{ __('admin.logs') }}' : ''">
-                <i class="w-5 h-5 flex-shrink-0" data-lucide="activity"></i>
-                <span x-show="!collapsed" class="font-medium">{{ __('admin.logs') }}</span>
+            <!-- Analytics -->
+            <a href="{{ route('admin.analytics.index') }}"
+               @click="activeMenu = 'analytics'"
+               :class="isActive('analytics') ?
+                   'bg-gradient-primary text-white shadow-lg' :
+                   (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
+                <i data-lucide="bar-chart" class="w-5 h-5"></i>
+                <span class="font-semibold">Analytics</span>
             </a>
+
+            <!-- Settings -->
+            <a href="{{ route('admin.settings') }}"
+               @click="activeMenu = 'settings'"
+               :class="isActive('settings') ?
+                   'bg-gradient-primary text-white shadow-lg' :
+                   (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+                <span class="font-semibold">Settings</span>
+            </a>
+
         </div>
     </nav>
 
-    {{-- User Info & Logout --}}
-    <div class="border-t border-gray-800 p-4">
-        <div class="flex items-center gap-3" :class="collapsed ? 'justify-center' : ''">
-            <img src="{{ auth()->user()->avatar ?? asset('images/default-avatar.png') }}"
-                 alt="{{ auth()->user()->name }}"
-                 class="w-10 h-10 rounded-full flex-shrink-0">
+    <!-- Sidebar Footer -->
+    <div class="px-4 py-4 border-t" :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
+        <!-- Quick Stats Card -->
+        <div class="glass rounded-xl p-4 mb-3"
+             :class="darkMode ? 'bg-gray-800/30' : 'bg-gray-100/50'">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-semibold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                    Storage Used
+                </span>
+                <span class="text-xs font-bold text-accent">72%</span>
+            </div>
+            <div class="w-full h-2 rounded-full overflow-hidden"
+                 :class="darkMode ? 'bg-gray-700' : 'bg-gray-200'">
+                <div class="h-full bg-gradient-primary rounded-full" style="width: 72%"></div>
+            </div>
+        </div>
 
-            <div x-show="!collapsed" class="flex-1 min-w-0">
-                <p class="text-sm font-semibold text-white truncate">
-                    {{ auth()->user()->name }}
+        <!-- User Profile Section -->
+        <div class="flex items-center gap-3 p-3 rounded-xl glass"
+             :class="darkMode ? 'bg-gray-800/30 hover:bg-gray-800/50' : 'bg-gray-100/50 hover:bg-gray-100'">
+            <div class="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow">
+                <span class="text-white font-bold text-sm">AD</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold truncate" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                    Admin User
                 </p>
-                <p class="text-xs text-gray-500 truncate">
-                    {{ auth()->user()->email }}
+                <p class="text-xs truncate" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
+                    admin@thelastmessenger.com
                 </p>
             </div>
-
-            <form action="{{ route('admin.logout') }}" method="POST" class="flex-shrink-0">
-                @csrf
-                <button type="submit"
-                        class="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition"
-                        :title="collapsed ? '{{ __('auth.logout') }}' : ''"
-                        aria-label="{{ __('auth.logout') }}">
-                    <i class="w-5 h-5" data-lucide="log-out"></i>
-                </button>
-            </form>
         </div>
     </div>
+
 </aside>

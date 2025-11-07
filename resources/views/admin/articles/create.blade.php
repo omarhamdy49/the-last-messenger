@@ -1,940 +1,225 @@
 @extends('layouts.admin')
 
-@section('title', 'إنشاء مقال جديد')
-
-@push('styles')
-<style>
-    /* Premium Gradient Color Scheme */
-    .gradient-primary {
-        background: linear-gradient(135deg, #0056b3 0%, #218838 100%);
-    }
-
-    .gradient-text {
-        background: linear-gradient(135deg, #0056b3 0%, #218838 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    /* Glassmorphism Effect */
-    .glass {
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    [x-cloak] { display: none !important; }
-
-    /* Step Progress */
-    .step-line {
-        position: absolute;
-        top: 20px;
-        left: 50%;
-        right: -50%;
-        height: 2px;
-        background: #e5e7eb;
-        z-index: 0;
-    }
-
-    .step-line.active {
-        background: linear-gradient(90deg, #0056b3 0%, #218838 100%);
-    }
-
-    /* Teal Accent for Interactive Elements */
-    .accent-teal {
-        color: #64CCC5;
-    }
-
-    .hover-teal:hover {
-        color: #64CCC5 !important;
-    }
-
-    /* Premium Card Hover */
-    .premium-card {
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .premium-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    }
-
-    /* Language Tab Styles */
-    .lang-tab {
-        position: relative;
-        padding: 0.75rem 1.5rem;
-        border-radius: 0.5rem;
-        transition: all 0.3s ease;
-        cursor: pointer;
-    }
-
-    .lang-tab.active {
-        background: linear-gradient(135deg, #0056b3 0%, #218838 100%);
-        color: white;
-        box-shadow: 0 4px 6px -1px rgba(0, 86, 179, 0.2);
-    }
-
-    .lang-tab:not(.active):hover {
-        background: rgba(100, 204, 197, 0.1);
-        color: #64CCC5;
-    }
-
-    /* Thumbnail Preview */
-    .thumb-preview {
-        position: relative;
-        width: 100%;
-        aspect-ratio: 16/9;
-        border-radius: 1rem;
-        overflow: hidden;
-        background: linear-gradient(135deg, rgba(0, 86, 179, 0.1) 0%, rgba(33, 136, 56, 0.1) 100%);
-    }
-
-    /* Gallery Grid */
-    .gallery-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 1rem;
-    }
-
-    .gallery-item {
-        position: relative;
-        aspect-ratio: 1;
-        border-radius: 0.5rem;
-        overflow: hidden;
-        cursor: move;
-    }
-
-    /* Dark Mode Support */
-    .dark .glass {
-        background: rgba(0, 0, 0, 0.05);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(0, 0, 0, 0.1);
-    }
-
-    /* Auto-save Indicator */
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
-    }
-
-    .saving {
-        animation: pulse 1.5s ease-in-out infinite;
-    }
-
-    /* TinyMCE Container */
-    .tox-tinymce {
-        border-radius: 0.5rem !important;
-        border-color: #e5e7eb !important;
-    }
-
-    /* Reference Item */
-    .reference-item {
-        position: relative;
-        padding: 1rem;
-        border: 2px solid #e5e7eb;
-        border-radius: 0.5rem;
-        transition: all 0.2s;
-    }
-
-    .reference-item:hover {
-        border-color: #64CCC5;
-        background: rgba(100, 204, 197, 0.05);
-    }
-</style>
-@endpush
+@section('title', 'Create New Article')
 
 @section('content')
-<div class="container mx-auto px-4 py-8 max-w-7xl" x-data="articleWizard()">
+<div class="container mx-auto px-4 py-8 max-w-7xl">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <div class="flex items-center gap-4 mb-4">
+            <a href="{{ route('admin.articles.index') }}"
+               class="p-2 rounded-lg transition-all hover:scale-110"
+               :class="darkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'">
+                <i data-lucide="arrow-left" class="w-6 h-6"></i>
+            </a>
 
-    {{-- Header with Auto-save Indicator --}}
-    <div class="mb-8 flex items-center justify-between">
-        <div>
-            <h1 class="text-4xl font-bold gradient-text mb-2">إنشاء مقال جديد</h1>
-            <p class="text-gray-600 dark:text-gray-400">أنشئ مقالاً احترافياً مع دعم متعدد اللغات</p>
-        </div>
-
-        {{-- Auto-save Status --}}
-        <div class="flex items-center gap-3">
-            <div x-show="autoSaveStatus === 'saving'" class="flex items-center gap-2 text-blue-600 saving">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                </svg>
-                <span class="text-sm font-medium">جاري الحفظ...</span>
-            </div>
-
-            <div x-show="autoSaveStatus === 'saved'" class="flex items-center gap-2 text-green-600">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                </svg>
-                <span class="text-sm font-medium">تم الحفظ تلقائياً</span>
-            </div>
-        </div>
-    </div>
-
-    {{-- Step Progress Indicator --}}
-    <div class="mb-10 bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 premium-card">
-        <div class="flex items-center justify-between relative">
-            @foreach(['التفاصيل الأساسية', 'المحتوى متعدد اللغات', 'الوسائط والمعرض', 'SEO والبيانات الوصفية', 'التصنيفات والمراجع'] as $index => $stepName)
-                <div class="flex flex-col items-center relative z-10" style="flex: 1;">
-                    {{-- Line to Next Step --}}
-                    @if($index < 4)
-                        <div class="step-line" :class="{'active': currentStep > {{ $index + 1 }}}"></div>
-                    @endif
-
-                    {{-- Step Circle --}}
-                    <div class="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg mb-3 transition-all duration-300"
-                         :class="currentStep > {{ $index + 1 }} ? 'gradient-primary text-white shadow-lg' :
-                                 currentStep === {{ $index + 1 }} ? 'ring-4 ring-[#64CCC5] ring-opacity-50 bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-xl scale-110' :
-                                 'bg-gray-200 dark:bg-gray-700 text-gray-500'">
-                        <span x-show="currentStep <= {{ $index + 1 }}">{{ $index + 1 }}</span>
-                        <svg x-show="currentStep > {{ $index + 1 }}" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                        </svg>
-                    </div>
-
-                    {{-- Step Label --}}
-                    <span class="text-sm font-semibold text-center transition-colors duration-300"
-                          :class="currentStep === {{ $index + 1 }} ? 'accent-teal' : 'text-gray-600 dark:text-gray-400'">
-                        {{ $stepName }}
-                    </span>
-                </div>
-            @endforeach
-        </div>
-    </div>
-
-    {{-- Main Form --}}
-    <form method="POST" action="{{ route('admin.articles.store') }}" enctype="multipart/form-data"
-          @submit.prevent="validateAndSubmit" id="articleForm">
-        @csrf
-
-        {{-- Step 1: Basic Details --}}
-        <div x-show="currentStep === 1" x-cloak class="space-y-6">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 premium-card">
-                <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-                    <span class="gradient-text">الخطوة 1:</span>
-                    <span class="text-gray-800 dark:text-gray-200">التفاصيل الأساسية</span>
-                </h2>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {{-- Thumbnail Upload (Media Library Picker) --}}
-                    <div class="lg:col-span-2">
-                        <x-media-picker
-                            mode="single"
-                            label="صورة مصغرة للمقالة"
-                            name="thumb"
-                            previewSize="default"
-                        />
-                        <p class="text-xs text-gray-500 mt-2">* الصورة المصغرة مطلوبة وستظهر في قائمة المقالات</p>
-                    </div>
-
-                    {{-- Writer Selection --}}
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">الكاتب</label>
-                        <select name="writer_id" x-model="formData.writer_id" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent transition-all dark:bg-gray-700 dark:text-white">
-                            <option value="">اختر الكاتب</option>
-                            @foreach($writers ?? [] as $writer)
-                                <option value="{{ $writer->id }}">{{ $writer->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    {{-- Category Selection --}}
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">التصنيف الرئيسي</label>
-                        <select name="category_id" x-model="formData.category_id" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent transition-all dark:bg-gray-700 dark:text-white">
-                            <option value="">اختر التصنيف</option>
-                            @foreach($categories ?? [] as $category)
-                                <option value="{{ $category->id }}">{{ $category->getLocale('ar')->title ?? $category->id }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    {{-- Read Time with Auto Calculator --}}
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                            <span>وقت القراءة (دقائق) <span class="text-red-500">*</span></span>
-                            <button type="button" @click="calculateReadTime()" class="text-xs px-2 py-1 bg-gradient-to-r from-[#0056b3] to-[#218838] text-white rounded hover:shadow-lg transition-all">
-                                احسب تلقائياً
-                            </button>
-                        </label>
-                        <input type="number" name="read_time" x-model="formData.read_time" min="0" required
-                               class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent transition-all dark:bg-gray-700 dark:text-white"
-                               placeholder="5">
-                    </div>
-
-                    {{-- Hijri Date Picker --}}
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">التاريخ الهجري</label>
-                        <input type="text" name="hijri_date" x-model="formData.hijri_date"
-                               class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent transition-all dark:bg-gray-700 dark:text-white"
-                               placeholder="1 محرم 1446">
-                        <p class="text-xs text-gray-500 mt-1">مثال: 1 محرم 1446</p>
-                    </div>
-
-                    {{-- Flags --}}
-                    <div class="lg:col-span-2 flex gap-8 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <label class="flex items-center gap-3 cursor-pointer group">
-                            <div class="relative">
-                                <input type="checkbox" name="is_featured" x-model="formData.is_featured" value="1" class="sr-only peer">
-                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#64CCC5] peer-focus:ring-opacity-30 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-gradient-to-r peer-checked:from-[#0056b3] peer-checked:to-[#218838]"></div>
-                            </div>
-                            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-[#64CCC5] transition-colors">مقال مميز</span>
-                        </label>
-
-                        <label class="flex items-center gap-3 cursor-pointer group">
-                            <div class="relative">
-                                <input type="checkbox" name="is_pinned" x-model="formData.is_pinned" value="1" class="sr-only peer">
-                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#64CCC5] peer-focus:ring-opacity-30 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-gradient-to-r peer-checked:from-[#0056b3] peer-checked:to-[#218838]"></div>
-                            </div>
-                            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-[#64CCC5] transition-colors">مقال مثبت</span>
-                        </label>
-                    </div>
-                </div>
+            <div class="flex-1">
+                <h1 class="text-3xl font-bold gradient-text mb-2">
+                    Create New Article
+                </h1>
+                <p class="text-sm"
+                   :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                    Fill in the details below to create a new article for your site
+                </p>
             </div>
         </div>
 
-        {{-- Step 2: Multi-Language Content --}}
-        <div x-show="currentStep === 2" x-cloak class="space-y-6">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 premium-card">
-                <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-                    <span class="gradient-text">الخطوة 2:</span>
-                    <span class="text-gray-800 dark:text-gray-200">المحتوى متعدد اللغات</span>
-                </h2>
-
-                {{-- Language Tabs --}}
-                <div class="flex gap-3 mb-6 flex-wrap">
-                    @foreach(['ar' => ['العربية', '🇸🇦'], 'en' => ['English', '🇬🇧'], 'fr' => ['Français', '🇫🇷'], 'tr' => ['Türkçe', '🇹🇷'], 'ur' => ['اردو', '🇵🇰']] as $code => $langInfo)
-                        <button type="button" @click="activeLanguage = '{{ $code }}'"
-                                class="lang-tab flex items-center gap-2"
-                                :class="{'active': activeLanguage === '{{ $code }}'}">
-                            <span class="text-2xl">{{ $langInfo[1] }}</span>
-                            <span class="font-semibold">{{ $langInfo[0] }}</span>
-                            <svg x-show="locales['{{ $code }}'].is_ready" class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                            </svg>
-                        </button>
-                    @endforeach
+        <!-- Progress Steps -->
+        <div class="glass rounded-lg p-4"
+             :class="darkMode ? 'glass-dark' : 'glass-light'">
+            <div class="flex items-center justify-between relative">
+                <div class="absolute top-1/2 left-0 right-0 h-0.5 -translate-y-1/2"
+                     :class="darkMode ? 'bg-gray-700' : 'bg-gray-300'">
                 </div>
 
-                {{-- Language Content Forms --}}
-                @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $locale)
-                    <div x-show="activeLanguage === '{{ $locale }}'" x-cloak>
-                        <input type="hidden" :name="'locales[{{ $locale }}][locale]'" value="{{ $locale }}">
-
-                        <div class="space-y-6" :dir="['ar', 'ur'].includes('{{ $locale }}') ? 'rtl' : 'ltr'">
-                            {{-- Title --}}
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                                    العنوان <span class="text-red-500" x-show="activeLanguage === 'ar'">*</span>
-                                    <span class="text-xs text-gray-500 ml-2" x-text="'(' + (locales['{{ $locale }}'].title?.length || 0) + '/500)'"></span>
-                                </label>
-                                <input type="text"
-                                       :name="'locales[{{ $locale }}][title]'"
-                                       x-model="locales['{{ $locale }}'].title"
-                                       @input="generateSlug('{{ $locale }}')"
-                                       :required="activeLanguage === 'ar'"
-                                       maxlength="500"
-                                       class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent transition-all dark:bg-gray-700 dark:text-white"
-                                       placeholder="أدخل عنوان المقال">
-                            </div>
-
-                            {{-- Auto-generated Slug --}}
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                                    <span>الرابط (Slug)</span>
-                                    <span class="text-xs text-gray-500">(يتم إنشاؤه تلقائياً)</span>
-                                </label>
-                                <div class="flex gap-2">
-                                    <input type="text"
-                                           x-model="locales['{{ $locale }}'].slug"
-                                           readonly
-                                           class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400">
-                                    <button type="button" @click="generateSlug('{{ $locale }}')"
-                                            class="px-4 py-3 bg-gradient-to-r from-[#0056b3] to-[#218838] text-white rounded-lg hover:shadow-lg transition-all">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-
-                            {{-- Excerpt --}}
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                                    المقتطف
-                                    <span class="text-xs text-gray-500 ml-2" x-text="'(' + (locales['{{ $locale }}'].excerpt?.length || 0) + '/500)'"></span>
-                                </label>
-                                <textarea :name="'locales[{{ $locale }}][excerpt]'"
-                                          x-model="locales['{{ $locale }}'].excerpt"
-                                          rows="3"
-                                          maxlength="500"
-                                          class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent transition-all dark:bg-gray-700 dark:text-white resize-none"
-                                          placeholder="ملخص قصير للمقال"></textarea>
-                            </div>
-
-                            {{-- Rich Text Editor --}}
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center justify-between">
-                                    <span>المحتوى</span>
-                                    <span class="text-xs font-normal" x-text="getWordCount('{{ $locale }}')"></span>
-                                </label>
-                                <textarea :name="'locales[{{ $locale }}][body]'"
-                                          :id="'editor_{{ $locale }}'"
-                                          x-model="locales['{{ $locale }}'].body"
-                                          class="tinymce-editor"></textarea>
-                            </div>
-
-                            {{-- Summary --}}
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">الملخص</label>
-                                <textarea :name="'locales[{{ $locale }}][summary]'"
-                                          x-model="locales['{{ $locale }}'].summary"
-                                          rows="3"
-                                          class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent transition-all dark:bg-gray-700 dark:text-white resize-none"
-                                          placeholder="ملخص شامل للمقال"></textarea>
-                            </div>
-
-                            {{-- Is Ready Checkbox --}}
-                            <label class="flex items-center gap-3 cursor-pointer group">
-                                <div class="relative">
-                                    <input type="checkbox"
-                                           :name="'locales[{{ $locale }}][is_ready]'"
-                                           x-model="locales['{{ $locale }}'].is_ready"
-                                           value="1"
-                                           class="sr-only peer">
-                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#64CCC5] peer-focus:ring-opacity-30 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-gradient-to-r peer-checked:from-[#0056b3] peer-checked:to-[#218838]"></div>
-                                </div>
-                                <span class="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-[#64CCC5] transition-colors">
-                                    الترجمة جاهزة للنشر
-                                </span>
-                            </label>
+                @foreach([
+                    ['step' => 1, 'label' => 'Content', 'icon' => 'file-text'],
+                    ['step' => 2, 'label' => 'Media', 'icon' => 'image'],
+                    ['step' => 3, 'label' => 'Categories', 'icon' => 'folder'],
+                    ['step' => 4, 'label' => 'Publish', 'icon' => 'send'],
+                ] as $item)
+                    <div class="relative z-10 flex flex-col items-center gap-2">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300"
+                             :class="darkMode ?
+                                 'bg-gray-800 text-gray-400 border-2 border-gray-700' :
+                                 'bg-white text-gray-600 border-2 border-gray-300'">
+                            <i data-lucide="{{ $item['icon'] }}" class="w-5 h-5"></i>
                         </div>
+                        <span class="text-xs font-semibold"
+                              :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                            {{ $item['label'] }}
+                        </span>
                     </div>
                 @endforeach
             </div>
         </div>
+    </div>
 
-        {{-- Step 3: Media & Gallery --}}
-        <div x-show="currentStep === 3" x-cloak class="space-y-6">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 premium-card">
-                <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-                    <span class="gradient-text">الخطوة 3:</span>
-                    <span class="text-gray-800 dark:text-gray-200">الوسائط والمعرض</span>
-                </h2>
-
-                {{-- Gallery Upload --}}
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">معرض الصور</label>
-
-                    <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center cursor-pointer hover:border-[#64CCC5] transition-colors"
-                         @click="$refs.galleryInput.click()"
-                         @dragover.prevent="galleryDragOver = true"
-                         @dragleave.prevent="galleryDragOver = false"
-                         @drop.prevent="handleGalleryDrop($event)"
-                         :class="{'border-[#64CCC5] bg-[#64CCC5] bg-opacity-5': galleryDragOver}">
-                        <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                        </svg>
-                        <p class="text-gray-600 dark:text-gray-400 font-medium">انقر لرفع الصور أو اسحبها هنا</p>
-                        <p class="text-sm text-gray-500 mt-1">يمكنك رفع عدة صور في وقت واحد</p>
-                    </div>
-
-                    <input type="file" x-ref="galleryInput" name="gallery[]" accept="image/*" multiple class="hidden" @change="handleGalleryChange($event)">
-
-                    {{-- Gallery Preview Grid --}}
-                    <div x-show="galleryImages.length > 0" class="gallery-grid mt-6">
-                        <template x-for="(image, index) in galleryImages" :key="index">
-                            <div class="gallery-item group relative" draggable="true">
-                                <img :src="image.url" :alt="'Gallery ' + (index + 1)" class="w-full h-full object-cover">
-
-                                {{-- Overlay with Actions --}}
-                                <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                    <button type="button" @click="removeGalleryImage(index)"
-                                            class="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                        </svg>
-                                    </button>
-                                </div>
-
-                                {{-- Order Badge --}}
-                                <div class="absolute top-2 left-2 w-8 h-8 bg-gradient-to-r from-[#0056b3] to-[#218838] text-white rounded-full flex items-center justify-center text-sm font-bold">
-                                    <span x-text="index + 1"></span>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
+    <!-- Alert for validation errors -->
+    @if($errors->any())
+        <div class="mb-6 p-4 rounded-lg border-l-4 border-red-500 animate-fadeInUp"
+             :class="darkMode ? 'bg-red-900/20 border-red-500' : 'bg-red-50 border-red-500'">
+            <div class="flex items-start gap-3">
+                <i data-lucide="alert-circle" class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"></i>
+                <div class="flex-1">
+                    <h3 class="font-bold text-red-500 mb-2">
+                        Please fix the following errors:
+                    </h3>
+                    <ul class="list-disc list-inside space-y-1 text-sm"
+                        :class="darkMode ? 'text-red-400' : 'text-red-600'">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
                 </div>
             </div>
         </div>
+    @endif
 
-        {{-- Step 4: SEO & Metadata --}}
-        <div x-show="currentStep === 4" x-cloak class="space-y-6">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 premium-card">
-                <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-                    <span class="gradient-text">الخطوة 4:</span>
-                    <span class="text-gray-800 dark:text-gray-200">SEO والبيانات الوصفية</span>
-                </h2>
-
-                {{-- SEO for Each Language --}}
-                <div class="space-y-6">
-                    <p class="text-sm text-gray-600 dark:text-gray-400">قم بتحسين المقال لمحركات البحث لكل لغة</p>
-
-                    @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $locale)
-                        <div class="p-6 border-2 border-gray-200 dark:border-gray-700 rounded-xl">
-                            <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
-                                <span>{{ ['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'][$locale] }}</span>
-                                <span class="text-2xl">{{ ['ar' => '🇸🇦', 'en' => '🇬🇧', 'fr' => '🇫🇷', 'tr' => '🇹🇷', 'ur' => '🇵🇰'][$locale] }}</span>
-                            </h3>
-
-                            <div class="space-y-4">
-                                {{-- Meta Title --}}
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                        عنوان الميتا
-                                        <span class="text-xs text-gray-500 ml-2" x-text="'(' + (locales['{{ $locale }}'].seo_title?.length || 0) + '/60)'"></span>
-                                    </label>
-                                    <input type="text"
-                                           :name="'locales[{{ $locale }}][seo_title]'"
-                                           x-model="locales['{{ $locale }}'].seo_title"
-                                           maxlength="60"
-                                           class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent transition-all dark:bg-gray-700 dark:text-white"
-                                           placeholder="عنوان تحسين محركات البحث (60 حرف)">
-                                </div>
-
-                                {{-- Meta Description --}}
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                        وصف الميتا
-                                        <span class="text-xs text-gray-500 ml-2" x-text="'(' + (locales['{{ $locale }}'].seo_description?.length || 0) + '/160)'"></span>
-                                    </label>
-                                    <textarea :name="'locales[{{ $locale }}][seo_description]'"
-                                              x-model="locales['{{ $locale }}'].seo_description"
-                                              maxlength="160"
-                                              rows="2"
-                                              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent transition-all dark:bg-gray-700 dark:text-white resize-none"
-                                              placeholder="وصف محركات البحث (160 حرف)"></textarea>
-                                </div>
-
-                                {{-- Keywords --}}
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">الكلمات المفتاحية</label>
-                                    <input type="text"
-                                           :name="'locales[{{ $locale }}][seo_keywords]'"
-                                           x-model="locales['{{ $locale }}'].seo_keywords"
-                                           class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent transition-all dark:bg-gray-700 dark:text-white"
-                                           placeholder="الكلمات المفتاحية مفصولة بفواصل">
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
+    <!-- Success Alert (if any) -->
+    @if(session('success'))
+        <div class="mb-6 p-4 rounded-lg border-l-4 border-green-500 animate-fadeInUp"
+             :class="darkMode ? 'bg-green-900/20' : 'bg-green-50'">
+            <div class="flex items-start gap-3">
+                <i data-lucide="check-circle" class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5"></i>
+                <div class="flex-1">
+                    <p class="font-semibold"
+                       :class="darkMode ? 'text-green-400' : 'text-green-600'">
+                        {{ session('success') }}
+                    </p>
                 </div>
             </div>
         </div>
+    @endif
 
-        {{-- Step 5: Categories & References --}}
-        <div x-show="currentStep === 5" x-cloak class="space-y-6">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 premium-card">
-                <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-                    <span class="gradient-text">الخطوة 5:</span>
-                    <span class="text-gray-800 dark:text-gray-200">التصنيفات والمراجع</span>
-                </h2>
+    <!-- Tips & Best Practices -->
+    <div class="mb-6 p-4 rounded-lg border-l-4 border-blue-500"
+         :class="darkMode ? 'bg-blue-900/20' : 'bg-blue-50'"
+         x-data="{ showTips: true }">
+        <div class="flex items-start gap-3">
+            <i data-lucide="lightbulb" class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5"></i>
+            <div class="flex-1">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-bold"
+                        :class="darkMode ? 'text-blue-400' : 'text-blue-600'">
+                        Article Creation Tips
+                    </h3>
+                    <button @click="showTips = !showTips"
+                            class="text-sm font-medium"
+                            :class="darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'">
+                        <span x-text="showTips ? 'Hide' : 'Show'"></span>
+                    </button>
+                </div>
 
-                <div class="space-y-8">
-                    {{-- Additional Categories --}}
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">تصنيفات إضافية</label>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                            @foreach($categories ?? [] as $category)
-                                <label class="flex items-center gap-2 p-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:border-[#64CCC5] transition-colors">
-                                    <input type="checkbox" name="categories[]" value="{{ $category->id }}" class="w-4 h-4 text-[#0056b3] rounded focus:ring-[#64CCC5]">
-                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ $category->getLocale('ar')->title ?? $category->id }}</span>
-                                </label>
-                            @endforeach
-                        </div>
-                    </div>
-
-                    {{-- References --}}
-                    <div>
-                        <div class="flex items-center justify-between mb-4">
-                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">المراجع</label>
-                            <button type="button" @click="addReference()"
-                                    class="px-4 py-2 bg-gradient-to-r from-[#0056b3] to-[#218838] text-white rounded-lg hover:shadow-lg transition-all flex items-center gap-2">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                                </svg>
-                                إضافة مرجع
-                            </button>
-                        </div>
-
-                        <div class="space-y-4">
-                            <template x-for="(ref, index) in references" :key="index">
-                                <div class="reference-item">
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">العنوان</label>
-                                            <input type="text"
-                                                   :name="'references[' + index + '][title]'"
-                                                   x-model="ref.title"
-                                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent transition-all dark:bg-gray-700 dark:text-white text-sm"
-                                                   placeholder="عنوان المرجع">
-                                        </div>
-
-                                        <div>
-                                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">المؤلف</label>
-                                            <input type="text"
-                                                   :name="'references[' + index + '][author]'"
-                                                   x-model="ref.author"
-                                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent transition-all dark:bg-gray-700 dark:text-white text-sm"
-                                                   placeholder="اسم المؤلف">
-                                        </div>
-
-                                        <div>
-                                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">الرابط</label>
-                                            <input type="url"
-                                                   :name="'references[' + index + '][url]'"
-                                                   x-model="ref.url"
-                                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent transition-all dark:bg-gray-700 dark:text-white text-sm"
-                                                   placeholder="https://example.com">
-                                        </div>
-
-                                        <div>
-                                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">سنة النشر</label>
-                                            <input type="text"
-                                                   :name="'references[' + index + '][year]'"
-                                                   x-model="ref.year"
-                                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent transition-all dark:bg-gray-700 dark:text-white text-sm"
-                                                   placeholder="2024">
-                                        </div>
-                                    </div>
-
-                                    <button type="button" @click="removeReference(index)"
-                                            class="absolute top-3 left-3 p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900 rounded transition-colors">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </template>
-
-                            <p x-show="references.length === 0" class="text-center text-gray-500 py-8">لم تتم إضافة أي مراجع بعد</p>
-                        </div>
-                    </div>
+                <div x-show="showTips" x-collapse>
+                    <ul class="space-y-1 text-sm"
+                        :class="darkMode ? 'text-blue-300' : 'text-blue-700'">
+                        <li class="flex items-start gap-2">
+                            <i data-lucide="check" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+                            <span>Write compelling titles (50-60 characters) for better SEO</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i data-lucide="check" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+                            <span>Choose a high-quality featured image (recommended: 1200x630px)</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i data-lucide="check" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+                            <span>Fill in all language tabs for better reach</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i data-lucide="check" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+                            <span>Use SEO metadata to improve search engine visibility</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i data-lucide="check" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+                            <span>Add relevant tags and categories for better organization</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i data-lucide="check" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+                            <span>Your work is auto-saved every 30 seconds</span>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
+    </div>
 
-        {{-- Navigation Buttons --}}
-        <div class="flex justify-between items-center mt-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-            <button type="button" @click="prevStep()" x-show="currentStep > 1"
-                    class="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-semibold transition-all flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                </svg>
-                السابق
-            </button>
-
-            <div x-show="currentStep === 1"></div>
-
-            <div class="flex gap-3">
-                <button type="button" @click="saveDraft()"
-                        class="px-6 py-3 border-2 border-[#64CCC5] text-[#64CCC5] hover:bg-[#64CCC5] hover:text-white rounded-lg font-semibold transition-all flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
-                    </svg>
-                    حفظ كمسودة
-                </button>
-
-                <button type="button" @click="nextStep()" x-show="currentStep < 5"
-                        class="px-6 py-3 bg-gradient-to-r from-[#0056b3] to-[#218838] hover:shadow-xl text-white rounded-lg font-semibold transition-all flex items-center gap-2">
-                    التالي
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
-                </button>
-
-                <button type="submit" x-show="currentStep === 5"
-                        class="px-8 py-3 bg-gradient-to-r from-[#0056b3] to-[#218838] hover:shadow-xl text-white rounded-lg font-bold transition-all flex items-center gap-2 text-lg">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    نشر المقال
-                </button>
-            </div>
-        </div>
-    </form>
+    <!-- Article Form -->
+    @include('admin.articles._form', [
+        'article' => null,
+        'categories' => $categories ?? [],
+        'tags' => $tags ?? [],
+        'authors' => $authors ?? [],
+    ])
 </div>
-@endsection
+
+<!-- Auto-save indicator -->
+<div x-data="{ show: false, message: '' }"
+     @auto-save-success.window="show = true; message = $event.detail.message; setTimeout(() => show = false, 3000)"
+     x-show="show"
+     x-transition
+     class="fixed bottom-8 right-8 z-50 px-4 py-3 rounded-lg shadow-lg glass animate-fadeInUp"
+     :class="darkMode ? 'glass-dark' : 'glass-light'">
+    <div class="flex items-center gap-2">
+        <i data-lucide="check" class="w-4 h-4 text-green-500"></i>
+        <span class="text-sm font-medium"
+              :class="darkMode ? 'text-gray-200' : 'text-gray-800'"
+              x-text="message"></span>
+    </div>
+</div>
 
 @push('scripts')
-<script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
-
 <script>
-function articleWizard() {
-    return {
-        currentStep: 1,
-        activeLanguage: 'ar',
-        autoSaveStatus: '', // 'saving', 'saved', ''
-        autoSaveTimer: null,
-        galleryDragOver: false,
-        galleryImages: [],
-        _initialized: false, // Flag to prevent double initialization
+    // Warn before leaving if there are unsaved changes
+    let formChanged = false;
 
-        formData: {
-            writer_id: '',
-            category_id: '',
-            read_time: 5,
-            hijri_date: '',
-            is_featured: false,
-            is_pinned: false
-        },
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.querySelector('form');
 
-        locales: {
-            ar: { locale: 'ar', title: '', slug: '', excerpt: '', body: '', summary: '', is_ready: true, seo_title: '', seo_description: '', seo_keywords: '' },
-            en: { locale: 'en', title: '', slug: '', excerpt: '', body: '', summary: '', is_ready: false, seo_title: '', seo_description: '', seo_keywords: '' },
-            fr: { locale: 'fr', title: '', slug: '', excerpt: '', body: '', summary: '', is_ready: false, seo_title: '', seo_description: '', seo_keywords: '' },
-            tr: { locale: 'tr', title: '', slug: '', excerpt: '', body: '', summary: '', is_ready: false, seo_title: '', seo_description: '', seo_keywords: '' },
-            ur: { locale: 'ur', title: '', slug: '', excerpt: '', body: '', summary: '', is_ready: false, seo_title: '', seo_description: '', seo_keywords: '' }
-        },
-
-        references: [],
-
-        init() {
-            // Prevent double initialization
-            if (this._initialized) return;
-            this._initialized = true;
-
-            // Initialize TinyMCE for all languages
-            this.initTinyMCE();
-
-            // Load from localStorage (draft)
-            this.loadDraft();
-
-            // Setup auto-save
-            this.setupAutoSave();
-
-            // Keyboard shortcuts
-            this.setupKeyboardShortcuts();
-        },
-
-        initTinyMCE() {
-            const locales = ['ar', 'en', 'fr', 'tr', 'ur'];
-
-            locales.forEach(locale => {
-                const isRTL = ['ar', 'ur'].includes(locale);
-
-                tinymce.init({
-                    selector: `#editor_${locale}`,
-                    height: 500,
-                    directionality: isRTL ? 'rtl' : 'ltr',
-                    language: locale,
-                    menubar: false,
-                    plugins: [
-                        'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-                        'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                        'insertdatetime', 'media', 'table', 'help', 'wordcount'
-                    ],
-                    toolbar: 'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media | removeformat code fullscreen | help',
-                    content_style: 'body { font-family: Cairo, Arial, sans-serif; font-size: 16px; }',
-                    setup: (editor) => {
-                        editor.on('change keyup', () => {
-                            this.locales[locale].body = editor.getContent();
-                            this.triggerAutoSave();
-                        });
-                    }
-                });
-            });
-        },
-
-        nextStep() {
-            if (this.currentStep < 5) {
-                this.currentStep++;
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        },
-
-        prevStep() {
-            if (this.currentStep > 1) {
-                this.currentStep--;
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        },
-
-        generateSlug(locale) {
-            const title = this.locales[locale].title;
-            if (!title) return;
-
-            const slug = title
-                .toLowerCase()
-                .trim()
-                .replace(/[^\u0600-\u06FFa-z0-9\s-]/g, '') // Keep Arabic, English, numbers
-                .replace(/\s+/g, '-')
-                .replace(/-+/g, '-')
-                .substring(0, 100);
-
-            this.locales[locale].slug = slug + '-' + Math.random().toString(36).substring(2, 8);
-        },
-
-        calculateReadTime() {
-            // Average reading speed: 200 words per minute (Arabic) / 250 (English)
-            let totalWords = 0;
-
-            Object.keys(this.locales).forEach(locale => {
-                if (this.locales[locale].body) {
-                    const text = this.locales[locale].body.replace(/<[^>]*>/g, '');
-                    const words = text.trim().split(/\s+/).length;
-                    totalWords += words;
-                }
+        if (form) {
+            form.addEventListener('input', () => {
+                formChanged = true;
             });
 
-            const avgWordsPerMinute = 225;
-            this.formData.read_time = Math.max(1, Math.ceil(totalWords / avgWordsPerMinute));
-        },
-
-        getWordCount(locale) {
-            const body = this.locales[locale].body || '';
-            const text = body.replace(/<[^>]*>/g, '');
-            const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
-            return `${words} كلمة`;
-        },
-
-        // Gallery handling
-        handleGalleryChange(event) {
-            this.addGalleryFiles(event.target.files);
-        },
-
-        handleGalleryDrop(event) {
-            this.galleryDragOver = false;
-            this.addGalleryFiles(event.dataTransfer.files);
-        },
-
-        addGalleryFiles(files) {
-            Array.from(files).forEach(file => {
-                if (file.type.startsWith('image/')) {
-                    this.galleryImages.push({
-                        file: file,
-                        url: URL.createObjectURL(file)
-                    });
-                }
+            form.addEventListener('submit', () => {
+                formChanged = false;
             });
-        },
-
-        removeGalleryImage(index) {
-            this.galleryImages.splice(index, 1);
-        },
-
-        // References
-        addReference() {
-            this.references.push({
-                title: '',
-                author: '',
-                url: '',
-                year: ''
-            });
-        },
-
-        removeReference(index) {
-            this.references.splice(index, 1);
-        },
-
-        // Auto-save
-        setupAutoSave() {
-            setInterval(() => {
-                this.autoSave();
-            }, 30000); // Auto-save every 30 seconds
-        },
-
-        triggerAutoSave() {
-            clearTimeout(this.autoSaveTimer);
-            this.autoSaveTimer = setTimeout(() => {
-                this.autoSave();
-            }, 2000);
-        },
-
-        autoSave() {
-            this.autoSaveStatus = 'saving';
-
-            const draft = {
-                formData: this.formData,
-                locales: this.locales,
-                references: this.references,
-                timestamp: new Date().toISOString()
-            };
-
-            localStorage.setItem('article_draft', JSON.stringify(draft));
-
-            setTimeout(() => {
-                this.autoSaveStatus = 'saved';
-                setTimeout(() => {
-                    this.autoSaveStatus = '';
-                }, 2000);
-            }, 500);
-        },
-
-        loadDraft() {
-            const draft = localStorage.getItem('article_draft');
-            if (draft) {
-                const data = JSON.parse(draft);
-                if (confirm('تم العثور على مسودة محفوظة. هل تريد استعادتها؟')) {
-                    this.formData = data.formData || this.formData;
-                    this.locales = { ...this.locales, ...data.locales };
-                    this.references = data.references || [];
-                }
-            }
-        },
-
-        saveDraft() {
-            this.autoSave();
-            alert('تم حفظ المسودة بنجاح!');
-        },
-
-        // Keyboard shortcuts
-        setupKeyboardShortcuts() {
-            document.addEventListener('keydown', (e) => {
-                // Ctrl+S or Cmd+S to save draft
-                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                    e.preventDefault();
-                    this.saveDraft();
-                }
-
-                // Ctrl+Right Arrow to go to next step
-                if ((e.ctrlKey || e.metaKey) && e.key === 'ArrowRight') {
-                    e.preventDefault();
-                    this.nextStep();
-                }
-
-                // Ctrl+Left Arrow to go to previous step
-                if ((e.ctrlKey || e.metaKey) && e.key === 'ArrowLeft') {
-                    e.preventDefault();
-                    this.prevStep();
-                }
-            });
-        },
-
-        validateAndSubmit(event) {
-            // Validate required fields
-            if (!this.locales.ar.title) {
-                alert('العنوان العربي مطلوب!');
-                this.currentStep = 2;
-                this.activeLanguage = 'ar';
-                return;
-            }
-
-            // Check if thumbnail is selected from media library
-            const thumbUrl = document.querySelector('input[name="thumb"]');
-            if (!thumbUrl || !thumbUrl.value) {
-                alert('الصورة المصغرة مطلوبة!');
-                this.currentStep = 1;
-                return;
-            }
-
-            // Clear draft after successful submission
-            localStorage.removeItem('article_draft');
-
-            // Submit form
-            event.target.submit();
         }
-    }
-}
+
+        window.addEventListener('beforeunload', (e) => {
+            if (formChanged) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+                return e.returnValue;
+            }
+        });
+
+        // Check for auto-saved draft
+        const savedDraft = localStorage.getItem('article_draft');
+        if (savedDraft) {
+            const draft = JSON.parse(savedDraft);
+            const timeDiff = Date.now() - draft.timestamp;
+            const minutes = Math.floor(timeDiff / 60000);
+
+            if (minutes < 60) {
+                if (confirm(`Found an auto-saved draft from ${minutes} minute(s) ago. Would you like to restore it?`)) {
+                    // Restore draft data
+                    Object.keys(draft.data).forEach(key => {
+                        const input = form.querySelector(`[name="${key}"]`);
+                        if (input && input.type !== 'file') {
+                            input.value = draft.data[key];
+                        }
+                    });
+
+                    // Trigger Alpine.js reactivity
+                    form.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            } else {
+                // Clear old draft
+                localStorage.removeItem('article_draft');
+            }
+        }
+    });
 </script>
 @endpush
+@endsection

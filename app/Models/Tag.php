@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\Translatable\HasTranslations;
@@ -19,13 +20,17 @@ use Spatie\Translatable\HasTranslations;
  * @property int $id
  * @property string $slug
  * @property array $name
+ * @property array|null $description
  * @property string $type
+ * @property string|null $color
+ * @property int $usage_count
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
+ * @property \Carbon\Carbon|null $deleted_at
  */
 class Tag extends Model
 {
-    use HasFactory, HasTranslations;
+    use HasFactory, HasTranslations, SoftDeletes;
 
     /**
      * The table associated with the model.
@@ -38,7 +43,10 @@ class Tag extends Model
     protected $fillable = [
         'slug',
         'name',
+        'description',
         'type',
+        'color',
+        'usage_count',
     ];
 
     /**
@@ -46,12 +54,14 @@ class Tag extends Model
      */
     protected $casts = [
         'name' => 'array',
+        'description' => 'array',
+        'usage_count' => 'integer',
     ];
 
     /**
      * Translatable attributes.
      */
-    public array $translatable = ['name'];
+    public array $translatable = ['name', 'description'];
 
     /**
      * Boot the model.
@@ -104,12 +114,81 @@ class Tag extends Model
     }
 
     /**
-     * Scope: Popular tags.
+     * Scope: Popular tags (by usage_count).
      */
     public function scopePopular($query, int $limit = 10)
     {
-        return $query->withCount('media')
-            ->orderByDesc('media_count')
+        return $query->orderByDesc('usage_count')
             ->limit($limit);
+    }
+
+    /**
+     * Scope: Recent tags (recently created).
+     */
+    public function scopeRecent($query, int $days = 30)
+    {
+        return $query->where('created_at', '>=', now()->subDays($days))
+            ->orderByDesc('created_at');
+    }
+
+    /**
+     * Scope: Unused tags (zero usage_count).
+     */
+    public function scopeUnused($query)
+    {
+        return $query->where('usage_count', 0);
+    }
+
+    /**
+     * Increment usage count when tag is attached
+     */
+    public function incrementUsage(): void
+    {
+        $this->increment('usage_count');
+    }
+
+    /**
+     * Decrement usage count when tag is detached
+     */
+    public function decrementUsage(): void
+    {
+        $this->decrement('usage_count');
+    }
+
+    /**
+     * Recalculate usage count from actual relationships
+     */
+    public function recalculateUsage(): void
+    {
+        $count = $this->articles()->count() + $this->media()->count();
+        $this->update(['usage_count' => $count]);
+    }
+
+    /**
+     * Get description in specified language
+     */
+    public function getDescriptionInLanguage(string $language): ?string
+    {
+        if (!$this->description) {
+            return null;
+        }
+
+        $translations = is_string($this->description)
+            ? json_decode($this->description, true)
+            : $this->description;
+
+        return $translations[$language] ?? $translations['ar'] ?? null;
+    }
+
+    /**
+     * Get name in specified language
+     */
+    public function getNameInLanguage(string $language): ?string
+    {
+        $translations = is_string($this->name)
+            ? json_decode($this->name, true)
+            : $this->name;
+
+        return $translations[$language] ?? $translations['ar'] ?? null;
     }
 }

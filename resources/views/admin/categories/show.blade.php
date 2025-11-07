@@ -1,213 +1,373 @@
 @extends('layouts.admin')
 
-@section('title', 'Category Details')
-
 @section('content')
-<div class="container mx-auto px-4 py-8" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true' }">
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-8">
-        <div>
-            <h1 class="text-3xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                Category Details
-            </h1>
-            <p class="mt-2" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                View category information and relationships
-            </p>
-        </div>
-        <div class="flex gap-3">
-            <a href="{{ route('admin.categories.edit', $category->id) }}"
-               class="bg-gradient-to-r from-[#0056b3] to-[#218838] text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all">
-                <i data-lucide="edit" class="w-4 h-4 inline ml-2"></i>
-                Edit
-            </a>
-            <form action="{{ route('admin.categories.destroy', $category->id) }}" method="POST" class="inline">
-                @csrf
-                @method('DELETE')
-                <button type="submit"
-                        onclick="return confirm('Are you sure you want to delete this category?')"
-                        class="bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition-all">
-                    <i data-lucide="trash-2" class="w-4 h-4 inline ml-2"></i>
-                    Delete
-                </button>
-            </form>
-        </div>
-    </div>
+<div class="max-w-7xl mx-auto">
 
-    <!-- Breadcrumb showing parent path -->
-    @if($category->parent)
-        <nav class="mb-6" aria-label="Breadcrumb">
-            <ol class="flex items-center space-x-2 space-x-reverse">
-                <li><a href="{{ route('admin.categories.index') }}" class="text-[#0056b3] hover:text-blue-700">Categories</a></li>
-                <li><i data-lucide="chevron-left" class="w-4 h-4 mx-2 text-gray-400"></i></li>
-                @if($category->parent->parent)
-                    <li><a href="{{ route('admin.categories.show', $category->parent->parent->id) }}" class="text-[#0056b3] hover:text-blue-700">{{ is_array($category->parent->parent->name) ? ($category->parent->parent->name['en'] ?? $category->parent->parent->name['ar']) : $category->parent->parent->name }}</a></li>
-                    <li><i data-lucide="chevron-left" class="w-4 h-4 mx-2 text-gray-400"></i></li>
-                @endif
-                <li><a href="{{ route('admin.categories.show', $category->parent->id) }}" class="text-[#0056b3] hover:text-blue-700">{{ is_array($category->parent->name) ? ($category->parent->name['en'] ?? $category->parent->name['ar']) : $category->parent->name }}</a></li>
-                <li><i data-lucide="chevron-left" class="w-4 h-4 mx-2 text-gray-400"></i></li>
-                <li><span class="font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ is_array($category->name) ? ($category->name['en'] ?? $category->name['ar']) : $category->name }}</span></li>
-            </ol>
-        </nav>
-    @endif
+    <!-- Breadcrumbs -->
+    <nav class="mb-6 flex items-center gap-2 text-sm"
+         :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+        <a href="{{ route('admin.dashboard') }}"
+           class="hover:text-accent transition-colors">
+            <i data-lucide="home" class="w-4 h-4"></i>
+        </a>
+        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        <a href="{{ route('admin.categories.index') }}"
+           class="hover:text-accent transition-colors">
+            Categories
+        </a>
+        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        <span :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $category->name }}</span>
+    </nav>
 
-    <!-- Category Information -->
-    <div class="glass-light rounded-lg p-8 mb-6" :class="darkMode ? 'glass-dark' : ''">
-        <div class="flex items-start gap-6">
-            <div class="flex-shrink-0">
-                <div class="w-20 h-20 rounded-lg flex items-center justify-center"
-                     style="background-color: {{ $category->color ?? '#0056b3' }}">
-                    <i data-lucide="{{ $category->icon ?? 'folder' }}" class="w-10 h-10 text-white"></i>
-                </div>
+    <!-- Page Header with Actions -->
+    <div class="mb-8 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        <div class="flex items-start gap-4">
+            <!-- Category Icon -->
+            <div class="flex-shrink-0 w-16 h-16 rounded-xl flex items-center justify-center"
+                 style="background: linear-gradient(135deg, {{ $category->color }}22 0%, {{ $category->color }}44 100%);">
+                <i data-lucide="{{ $category->icon }}"
+                   class="w-8 h-8"
+                   style="color: {{ $category->color }};"></i>
             </div>
-            <div class="flex-1">
-                <h2 class="text-2xl font-bold mb-4" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                    {{ is_array($category->name) ? ($category->name['en'] ?? $category->name['ar']) : $category->name }}
-                </h2>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <p class="text-sm font-semibold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">Type</p>
-                        <span class="px-3 py-1 rounded-full text-xs font-semibold mt-1 inline-block"
-                              :class="'{{ $category->type->value }}' === 'blog' ? 'bg-blue-100 text-blue-800' : '{{ $category->type->value }}' === 'media' ? 'bg-green-100 text-green-800' : 'bg-teal-100 text-teal-800'">
-                            {{ $category->type->label() }}
+            <div>
+                <h1 class="text-3xl font-bold mb-2"
+                    :class="darkMode ? 'text-white' : 'text-gray-900'">
+                    {{ $category->name }}
+                </h1>
+                <div class="flex items-center gap-3 flex-wrap">
+                    @if($category->is_active)
+                        <span class="px-3 py-1 rounded-full text-sm font-semibold bg-green-500/10 text-green-500 flex items-center gap-1">
+                            <i data-lucide="check-circle" class="w-4 h-4"></i>
+                            Active
                         </span>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">Display Order</p>
-                        <p class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $category->display_order ?? 0 }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">Children Count</p>
-                        <p class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $category->children_count ?? 0 }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">Articles Count</p>
-                        <p class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $category->articles_count ?? 0 }}</p>
-                    </div>
-                </div>
+                    @else
+                        <span class="px-3 py-1 rounded-full text-sm font-semibold bg-gray-500/10 text-gray-500 flex items-center gap-1">
+                            <i data-lucide="x-circle" class="w-4 h-4"></i>
+                            Inactive
+                        </span>
+                    @endif
 
-                <!-- All Language Names -->
-                <div class="border-t pt-4" :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
-                    <h3 class="text-sm font-semibold mb-3" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">Names in All Languages</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        @foreach(['ar' => 'Arabic', 'en' => 'English', 'fr' => 'French', 'tr' => 'Turkish', 'ur' => 'Urdu'] as $lang => $label)
-                            @php
-                                $nameValue = is_array($category->name) ? ($category->name[$lang] ?? null) : null;
-                            @endphp
-                            @if(!empty($nameValue))
-                                <div>
-                                    <span class="text-xs font-semibold" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">{{ $label }}:</span>
-                                    <p :class="darkMode ? 'text-white' : 'text-gray-900'" dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">{{ $nameValue }}</p>
-                                </div>
-                            @endif
-                        @endforeach
-                    </div>
-                </div>
+                    @if($category->parent)
+                        <span class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                            <i data-lucide="folder-tree" class="w-4 h-4 inline"></i>
+                            Child of: <a href="{{ route('admin.categories.show', $category->parent) }}"
+                                        class="text-accent hover:underline">{{ $category->parent->name }}</a>
+                        </span>
+                    @endif
 
-                <!-- Description -->
-                @php
-                    $descValue = is_array($category->description) ? ($category->description['en'] ?? $category->description['ar'] ?? null) : $category->description;
-                @endphp
-                @if(!empty($descValue))
-                    <div class="border-t pt-4 mt-4" :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
-                        <h3 class="text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">Description</h3>
-                        <p :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ $descValue }}</p>
-                    </div>
-                @endif
+                    <span class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                        <i data-lucide="calendar" class="w-4 h-4 inline"></i>
+                        Created {{ $category->created_at->diffForHumans() }}
+                    </span>
+                </div>
             </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <a href="{{ route('admin.categories.edit', $category) }}"
+               class="px-6 py-2.5 rounded-lg font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white hover:scale-105 transition-all shadow-lg flex items-center gap-2">
+                <i data-lucide="edit" class="w-5 h-5"></i>
+                <span>Edit</span>
+            </a>
+
+            <button @click="duplicateCategory"
+                    class="px-6 py-2.5 rounded-lg font-semibold transition-all hover:scale-105 flex items-center gap-2"
+                    :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
+                <i data-lucide="copy" class="w-5 h-5"></i>
+                <span>Duplicate</span>
+            </button>
+
+            <button @click="deleteCategory"
+                    class="px-6 py-2.5 rounded-lg font-semibold bg-red-500 text-white hover:bg-red-600 transition-all hover:scale-105 flex items-center gap-2">
+                <i data-lucide="trash-2" class="w-5 h-5"></i>
+                <span>Delete</span>
+            </button>
         </div>
     </div>
 
-    <!-- Child Categories -->
-    @if($category->children && $category->children->count() > 0)
-        <div class="glass-light rounded-lg p-6 mb-6" :class="darkMode ? 'glass-dark' : ''">
-            <h3 class="text-xl font-bold mb-4" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                Child Categories ({{ $category->children->count() }})
-            </h3>
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead :class="darkMode ? 'bg-gray-800' : 'bg-gray-100'">
-                        <tr>
-                            <th class="px-4 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">Name</th>
-                            <th class="px-4 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">Type</th>
-                            <th class="px-4 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">Children</th>
-                            <th class="px-4 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">Articles</th>
-                            <th class="px-4 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($category->children as $child)
-                            <tr class="border-t" :class="darkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'">
-                                <td class="px-4 py-3 font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                                    <i data-lucide="{{ $child->icon ?? 'folder' }}" class="w-4 h-4 inline ml-2"></i>
-                                    {{ is_array($child->name) ? ($child->name['en'] ?? $child->name['ar']) : $child->name }}
-                                </td>
-                                <td class="px-4 py-3">
-                                    <span class="px-2 py-1 rounded-full text-xs font-semibold"
-                                          :class="'{{ $child->type->value }}' === 'blog' ? 'bg-blue-100 text-blue-800' : '{{ $child->type->value }}' === 'media' ? 'bg-green-100 text-green-800' : 'bg-teal-100 text-teal-800'">
-                                        {{ $child->type->label() }}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ $child->children_count ?? 0 }}</td>
-                                <td class="px-4 py-3 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ $child->articles_count ?? 0 }}</td>
-                                <td class="px-4 py-3">
-                                    <a href="{{ route('admin.categories.show', $child->id) }}" class="text-[#0056b3] hover:text-blue-700 text-sm font-semibold ml-3">View</a>
-                                    <a href="{{ route('admin.categories.edit', $child->id) }}" class="text-[#64CCC5] hover:text-teal-700 text-sm font-semibold ml-3">Edit</a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    @endif
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-    <!-- Articles using this category -->
-    @if($category->articles && $category->articles->count() > 0)
-        <div class="glass-light rounded-lg p-6" :class="darkMode ? 'glass-dark' : ''">
-            <h3 class="text-xl font-bold mb-4" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                Articles in this Category ({{ $category->articles->count() }})
-            </h3>
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead :class="darkMode ? 'bg-gray-800' : 'bg-gray-100'">
-                        <tr>
-                            <th class="px-4 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">Title</th>
-                            <th class="px-4 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">Author</th>
-                            <th class="px-4 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">Status</th>
-                            <th class="px-4 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">Date</th>
-                            <th class="px-4 py-3 text-right text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($category->articles as $article)
-                            <tr class="border-t" :class="darkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'">
-                                <td class="px-4 py-3 font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                                    {{ is_array($article->title) ? ($article->title['en'] ?? $article->title['ar']) : $article->title }}
-                                </td>
-                                <td class="px-4 py-3 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ $article->author->name ?? 'N/A' }}</td>
-                                <td class="px-4 py-3">
-                                    <span class="px-2 py-1 rounded-full text-xs font-semibold"
-                                          :class="'{{ $article->status->value }}' === 'published' ? 'bg-green-100 text-green-800' : '{{ $article->status->value }}' === 'draft' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'">
-                                        {{ $article->status->label() }}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ $article->published_at?->format('Y-m-d') ?? 'N/A' }}</td>
-                                <td class="px-4 py-3">
-                                    <a href="{{ route('admin.articles.edit', $article->id) }}" class="text-[#0056b3] hover:text-blue-700 text-sm font-semibold ml-3">Edit</a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+        <!-- Main Content -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- Description -->
+            @if($category->description)
+                <div class="rounded-2xl overflow-hidden shadow-xl border"
+                     :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
+                    <div class="p-6">
+                        <h2 class="text-xl font-bold mb-4 flex items-center gap-2"
+                            :class="darkMode ? 'text-white' : 'text-gray-900'">
+                            <i data-lucide="file-text" class="w-5 h-5 text-accent"></i>
+                            Description
+                        </h2>
+                        <p class="leading-relaxed" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            {{ $category->description }}
+                        </p>
+                    </div>
+                </div>
+            @endif
+
+            <!-- Hierarchy Path -->
+            @if($category->ancestors && count($category->ancestors) > 0)
+                <div class="rounded-2xl overflow-hidden shadow-xl border"
+                     :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
+                    <div class="p-6">
+                        <h2 class="text-xl font-bold mb-4 flex items-center gap-2"
+                            :class="darkMode ? 'text-white' : 'text-gray-900'">
+                            <i data-lucide="git-branch" class="w-5 h-5 text-accent"></i>
+                            Hierarchy Path
+                        </h2>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            @foreach($category->ancestors as $ancestor)
+                                <a href="{{ route('admin.categories.show', $ancestor) }}"
+                                   class="px-3 py-2 rounded-lg font-medium transition-all hover:scale-105 flex items-center gap-2"
+                                   :class="darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">
+                                    <i data-lucide="{{ $ancestor->icon }}" class="w-4 h-4"></i>
+                                    {{ $ancestor->name }}
+                                </a>
+                                <i data-lucide="chevron-right" class="w-4 h-4" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
+                            @endforeach
+                            <span class="px-3 py-2 rounded-lg font-semibold bg-accent/10 text-accent flex items-center gap-2">
+                                <i data-lucide="{{ $category->icon }}" class="w-4 h-4"></i>
+                                {{ $category->name }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            <!-- Children Categories -->
+            @if($category->children && count($category->children) > 0)
+                <div class="rounded-2xl overflow-hidden shadow-xl border"
+                     :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
+                    <div class="p-6">
+                        <h2 class="text-xl font-bold mb-4 flex items-center gap-2"
+                            :class="darkMode ? 'text-white' : 'text-gray-900'">
+                            <i data-lucide="folders" class="w-5 h-5 text-accent"></i>
+                            Subcategories ({{ count($category->children) }})
+                        </h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            @foreach($category->children as $child)
+                                <a href="{{ route('admin.categories.show', $child) }}"
+                                   class="p-4 rounded-xl transition-all hover:scale-105 flex items-center gap-3 group"
+                                   :class="darkMode ? 'bg-gray-800 hover:bg-gray-750' : 'bg-gray-50 hover:bg-gray-100'">
+                                    <div class="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
+                                         style="background: linear-gradient(135deg, {{ $child->color }}22 0%, {{ $child->color }}44 100%);">
+                                        <i data-lucide="{{ $child->icon }}" class="w-6 h-6" style="color: {{ $child->color }};"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <h3 class="font-semibold truncate group-hover:text-accent transition-colors"
+                                            :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                            {{ $child->name }}
+                                        </h3>
+                                        <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                            {{ $child->articles_count ?? 0 }} articles
+                                        </p>
+                                    </div>
+                                    <i data-lucide="chevron-right" class="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                       :class="darkMode ? 'text-gray-400' : 'text-gray-600'"></i>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            <!-- Recent Articles -->
+            @if($recentArticles && count($recentArticles) > 0)
+                <div class="rounded-2xl overflow-hidden shadow-xl border"
+                     :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-bold flex items-center gap-2"
+                                :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                <i data-lucide="file-text" class="w-5 h-5 text-accent"></i>
+                                Recent Articles
+                            </h2>
+                            <a href="{{ route('admin.articles.index', ['category' => $category->id]) }}"
+                               class="text-sm font-medium text-accent hover:underline">
+                                View All
+                            </a>
+                        </div>
+                        <div class="space-y-3">
+                            @foreach($recentArticles as $article)
+                                <a href="{{ route('admin.articles.show', $article) }}"
+                                   class="flex items-center gap-4 p-3 rounded-lg transition-all hover:scale-[1.02] group"
+                                   :class="darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'">
+                                    @if($article->featured_image)
+                                        <img src="{{ $article->featured_image->url }}"
+                                             alt="{{ $article->title }}"
+                                             class="w-16 h-16 rounded-lg object-cover flex-shrink-0">
+                                    @else
+                                        <div class="w-16 h-16 rounded-lg flex items-center justify-center flex-shrink-0"
+                                             :class="darkMode ? 'bg-gray-800' : 'bg-gray-100'">
+                                            <i data-lucide="file-text" class="w-6 h-6"
+                                               :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
+                                        </div>
+                                    @endif
+                                    <div class="flex-1 min-w-0">
+                                        <h3 class="font-semibold truncate group-hover:text-accent transition-colors"
+                                            :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                            {{ $article->title }}
+                                        </h3>
+                                        <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                            {{ $article->created_at->format('M d, Y') }}
+                                        </p>
+                                    </div>
+                                    <i data-lucide="chevron-right" class="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                                       :class="darkMode ? 'text-gray-400' : 'text-gray-600'"></i>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
         </div>
-    @endif
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+
+            <!-- Stats Card -->
+            <div class="rounded-2xl overflow-hidden shadow-xl border"
+                 :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
+                <div class="p-6">
+                    <h2 class="text-lg font-bold mb-4"
+                        :class="darkMode ? 'text-white' : 'text-gray-900'">
+                        Statistics
+                    </h2>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                <i data-lucide="file-text" class="w-4 h-4 inline mr-2"></i>
+                                Articles
+                            </span>
+                            <span class="font-bold text-lg"
+                                  :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                {{ $category->articles_count ?? 0 }}
+                            </span>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                <i data-lucide="folders" class="w-4 h-4 inline mr-2"></i>
+                                Subcategories
+                            </span>
+                            <span class="font-bold text-lg"
+                                  :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                {{ count($category->children ?? []) }}
+                            </span>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                <i data-lucide="layers" class="w-4 h-4 inline mr-2"></i>
+                                Depth Level
+                            </span>
+                            <span class="font-bold text-lg"
+                                  :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                {{ $category->depth ?? 0 }}
+                            </span>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                <i data-lucide="arrow-up-down" class="w-4 h-4 inline mr-2"></i>
+                                Display Order
+                            </span>
+                            <span class="font-bold text-lg"
+                                  :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                {{ $category->order }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Details Card -->
+            <div class="rounded-2xl overflow-hidden shadow-xl border"
+                 :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
+                <div class="p-6">
+                    <h2 class="text-lg font-bold mb-4"
+                        :class="darkMode ? 'text-white' : 'text-gray-900'">
+                        Details
+                    </h2>
+                    <div class="space-y-3 text-sm">
+                        <div>
+                            <span class="block mb-1 font-semibold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                Created At
+                            </span>
+                            <span :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                {{ $category->created_at->format('M d, Y h:i A') }}
+                            </span>
+                        </div>
+
+                        <div>
+                            <span class="block mb-1 font-semibold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                Updated At
+                            </span>
+                            <span :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                {{ $category->updated_at->format('M d, Y h:i A') }}
+                            </span>
+                        </div>
+
+                        @if($category->slug)
+                            <div>
+                                <span class="block mb-1 font-semibold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                    Slug
+                                </span>
+                                <code class="px-2 py-1 rounded text-xs font-mono"
+                                      :class="darkMode ? 'bg-gray-800 text-accent' : 'bg-gray-100 text-accent'">
+                                    {{ $category->slug }}
+                                </code>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            <!-- Featured Image -->
+            @if($category->featuredImage)
+                <div class="rounded-2xl overflow-hidden shadow-xl border"
+                     :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
+                    <div class="p-6">
+                        <h2 class="text-lg font-bold mb-4"
+                            :class="darkMode ? 'text-white' : 'text-gray-900'">
+                            Featured Image
+                        </h2>
+                        <img src="{{ $category->featuredImage->url }}"
+                             alt="{{ $category->name }}"
+                             class="w-full rounded-lg">
+                    </div>
+                </div>
+            @endif
+        </div>
+    </div>
 </div>
 
 @push('scripts')
 <script>
-    lucide.createIcons();
+function duplicateCategory() {
+    if (confirm('This will create a copy of this category. Continue?')) {
+        window.location.href = '{{ route("admin.categories.create") }}?duplicate={{ $category->id }}';
+    }
+}
+
+function deleteCategory() {
+    if (!confirm('Are you sure you want to delete this category? All subcategories will also be deleted.')) {
+        return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ route("admin.categories.destroy", $category) }}';
+    form.innerHTML = `
+        @csrf
+        @method('DELETE')
+    `;
+    document.body.appendChild(form);
+    form.submit();
+}
 </script>
 @endpush
 @endsection

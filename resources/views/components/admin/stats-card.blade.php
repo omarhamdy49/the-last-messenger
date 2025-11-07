@@ -1,0 +1,143 @@
+{{--
+/**
+ * Stats Card Component
+ *
+ * A reusable statistics card with icon, title, value, and change percentage.
+ * Supports gradient backgrounds, animated counters, and responsive design.
+ *
+ * @props
+ * - icon: string (required) - Lucide icon name (e.g., 'users', 'file-text')
+ * - title: string (required) - Card title/label
+ * - value: string|number (required) - The main statistic value
+ * - change: string (optional) - Percentage change (e.g., '+12%', '-5%')
+ * - changeType: string (optional) - 'up' or 'down' - affects color
+ * - gradient: boolean (optional) - Use gradient background
+ * - delay: string (optional) - Animation delay class (e.g., 'delay-100')
+ * - href: string (optional) - Make card clickable
+ *
+ * @example
+ * <x-admin.stats-card
+ *     icon="users"
+ *     title="Total Users"
+ *     value="12,345"
+ *     change="+12%"
+ *     changeType="up"
+ *     :gradient="true"
+ *     delay="delay-100"
+ *     href="/admin/users"
+ * />
+ */
+--}}
+
+@props([
+    'icon' => 'activity',
+    'title' => 'Statistic',
+    'value' => '0',
+    'change' => null,
+    'changeType' => 'up',
+    'gradient' => false,
+    'delay' => '',
+    'href' => null
+])
+
+@php
+    $isClickable = !empty($href);
+    $baseClasses = 'block rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group';
+    $changeColorClass = $changeType === 'up' ? 'text-green-500' : 'text-red-500';
+@endphp
+
+<div class="animate-fadeInUp {{ $delay }}"
+     x-data="{
+         countValue: 0,
+         targetValue: {{ is_numeric($value) ? $value : 0 }},
+
+         animateCounter() {
+             if (this.targetValue === 0) return;
+
+             const duration = 1500;
+             const steps = 60;
+             const stepValue = this.targetValue / steps;
+             const stepDuration = duration / steps;
+
+             let currentStep = 0;
+             const interval = setInterval(() => {
+                 currentStep++;
+                 this.countValue = Math.min(
+                     Math.round(stepValue * currentStep),
+                     this.targetValue
+                 );
+
+                 if (currentStep >= steps) {
+                     clearInterval(interval);
+                     this.countValue = this.targetValue;
+                 }
+             }, stepDuration);
+         }
+     }"
+     x-init="setTimeout(() => animateCounter(), {{ $delay ? '300' : '100' }})">
+
+    @if($isClickable)
+        <a href="{{ $href }}" {{ $attributes->merge(['class' => $baseClasses]) }}
+    @else
+        <div {{ $attributes->merge(['class' => $baseClasses]) }}
+    @endif
+           :class="darkMode ?
+               '{{ $gradient ? 'bg-gradient-to-br from-brand to-secondary text-white' : 'bg-gray-900 border border-gray-800' }}' :
+               '{{ $gradient ? 'bg-gradient-to-br from-brand to-secondary text-white' : 'bg-white border border-gray-200' }}'">
+
+        <!-- Header with Icon -->
+        <div class="flex items-start justify-between mb-4">
+            <div class="p-3 rounded-xl {{ $gradient ? 'bg-white/20' : 'bg-gradient-to-br from-brand to-secondary' }}
+                        group-hover:scale-110 transition-transform duration-300">
+                <i data-lucide="{{ $icon }}"
+                   class="w-6 h-6 {{ $gradient ? 'text-white' : 'text-white' }}"></i>
+            </div>
+
+            @if($change)
+                <div class="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold
+                            {{ $gradient ? 'bg-white/20 text-white' : $changeColorClass . ' bg-current/10' }}">
+                    <i data-lucide="{{ $changeType === 'up' ? 'trending-up' : 'trending-down' }}"
+                       class="w-3 h-3"></i>
+                    <span>{{ $change }}</span>
+                </div>
+            @endif
+        </div>
+
+        <!-- Value with Counter Animation -->
+        <div class="mb-2">
+            @if(is_numeric($value))
+                <h3 class="text-3xl font-bold {{ $gradient ? 'text-white' : 'gradient-text' }}"
+                    x-text="countValue.toLocaleString()">
+                    0
+                </h3>
+            @else
+                <h3 class="text-3xl font-bold {{ $gradient ? 'text-white' : 'gradient-text' }}">
+                    {{ $value }}
+                </h3>
+            @endif
+        </div>
+
+        <!-- Title -->
+        <p class="text-sm font-medium {{ $gradient ? 'text-white/80' : '' }}"
+           :class="!{{ $gradient ? 'true' : 'false' }} && (darkMode ? 'text-gray-400' : 'text-gray-600')">
+            {{ $title }}
+        </p>
+
+        @if($isClickable)
+            <!-- View More Link -->
+            <div class="mt-4 pt-4 border-t {{ $gradient ? 'border-white/20' : '' }}"
+                 :class="!{{ $gradient ? 'true' : 'false' }} && (darkMode ? 'border-gray-800' : 'border-gray-200')">
+                <div class="flex items-center gap-2 text-sm font-semibold group-hover:gap-3 transition-all
+                            {{ $gradient ? 'text-white' : 'text-brand' }}">
+                    <span>View Details</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </div>
+            </div>
+        @endif
+
+    @if($isClickable)
+        </a>
+    @else
+        </div>
+    @endif
+</div>

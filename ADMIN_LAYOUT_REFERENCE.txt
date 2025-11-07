@@ -1,0 +1,330 @@
+================================================================================
+NETFLIX-GRADE RTL ADMIN LAYOUT - QUICK REFERENCE
+================================================================================
+Created: November 7, 2025
+For: The Last Messenger Platform
+================================================================================
+
+FILES CREATED
+================================================================================
+
+1. Main Layout File
+   Path: /resources/views/layouts/admin.blade.php
+   Size: ~10KB
+   Purpose: Master admin layout with RTL support, dark mode, and Alpine.js
+
+2. Sidebar Component
+   Path: /resources/views/components/admin/sidebar.blade.php
+   Size: ~14KB
+   Purpose: Animated sidebar with navigation menu and collapsible submenus
+
+3. Header Component
+   Path: /resources/views/components/admin/header.blade.php
+   Size: ~18KB
+   Purpose: Sticky header with breadcrumbs, search, notifications, and user menu
+
+4. Example Page
+   Path: /resources/views/admin/example-page.blade.php
+   Size: ~8KB
+   Purpose: Demonstrates layout usage and key features
+
+================================================================================
+KEY FEATURES IMPLEMENTED
+================================================================================
+
+RTL SUPPORT
+-----------
+- Automatic RTL/LTR detection based on language (ar, ur = RTL)
+- Sidebar positions dynamically (right for RTL, left for LTR)
+- Uses logical properties (ms-*, me-*) instead of (ml-*, mr-*)
+- Cairo font optimized for Arabic text
+
+DARK/LIGHT MODE
+---------------
+- Toggle button in header
+- Persistent state via localStorage
+- Default: Dark mode
+- All components support both modes
+- Smooth transitions between modes
+
+GLASSMORPHISM DESIGN
+--------------------
+- Backdrop blur effects on header and sidebar
+- Glass utility classes (.glass, .glass-dark, .glass-light)
+- Translucent backgrounds with border highlights
+- Premium Netflix-inspired aesthetic
+
+COLOR SCHEME
+------------
+Primary Gradient: #0056b3 (blue) → #218838 (green)
+Accent Color: #64CCC5 (teal)
+Usage:
+  - Primary buttons: bg-gradient-primary
+  - Hover states: text-accent
+  - Active menu items: bg-gradient-primary text-white
+  - Shadows: shadow-glow (teal glow effect)
+
+ANIMATIONS
+----------
+Available keyframes:
+  - fadeInUp: 0.6s ease-out (fade + upward movement)
+  - fadeIn: 0.8s ease-out (simple fade)
+  - slideInRight: 0.5s ease-out (horizontal slide)
+  - shimmer: 2s infinite (loading effect)
+
+Stagger delays: Add style="animation-delay: 0.1s" for sequential loading
+
+SIDEBAR NAVIGATION
+------------------
+Menu Structure:
+  - Dashboard
+  - Content (expandable)
+    - Articles
+    - Categories
+    - Tags
+  - Media (expandable)
+    - Programs
+    - Episodes
+  - Hadith
+  - Quran
+  - Genealogy
+  - Users
+  - Roles
+  - Analytics
+  - Settings
+
+Features:
+  - Active state highlighting with gradient background
+  - Hover effects with smooth transitions
+  - Collapsible submenus with Alpine.js
+  - Icons for all menu items (Lucide)
+  - User profile section in footer
+  - Storage usage indicator
+
+HEADER COMPONENTS
+-----------------
+1. Hamburger Menu Button
+   - Toggles sidebar on mobile
+   - Scales on hover
+
+2. Breadcrumbs
+   - Pass $breadcrumbs array from controller
+   - Auto-generated if not provided
+   - Format: [['label' => 'Name', 'url' => '/path'], ...]
+
+3. Search Bar
+   - Desktop: Full search input with dropdown
+   - Mobile: Icon button only
+   - Quick results dropdown
+   - Clear button when typing
+
+4. Language Switcher
+   - Dropdown with 5 languages (ar, en, tr, fr, ur)
+   - Active language highlighted with gradient
+   - Flag emoji or language name display
+
+5. Dark/Light Toggle
+   - Sun icon for dark mode
+   - Moon icon for light mode
+   - Persists to localStorage
+
+6. Notifications
+   - Bell icon with red badge
+   - Dropdown with notification list
+   - Categorized by type (user, article, video, etc.)
+   - View all link at bottom
+
+7. User Profile Menu
+   - Avatar with initials
+   - User name and email
+   - Dropdown with Profile, Settings, Help
+   - Logout button (red color)
+
+RESPONSIVE BEHAVIOR
+-------------------
+Mobile (< 1024px):
+  - Sidebar hidden by default
+  - Hamburger menu shows sidebar as overlay
+  - Click outside to close
+  - Search icon instead of full search bar
+
+Desktop (>= 1024px):
+  - Sidebar always visible
+  - Full search bar shown
+  - User info visible in profile menu
+
+ALPINE.JS STATE MANAGEMENT
+---------------------------
+Global state variables:
+  - darkMode: Boolean (from localStorage)
+  - sidebarOpen: Boolean (window.innerWidth >= 1024)
+  - currentLang: String (app locale)
+
+Methods:
+  - toggleDarkMode(): Switch theme + save to localStorage
+  - toggleSidebar(): Show/hide sidebar
+  - changeLang(lang): Switch language + reload page
+
+LAYOUT USAGE
+================================================================================
+
+Basic Usage:
+------------
+@extends('layouts.admin')
+
+@section('content')
+    <!-- Your content here -->
+@endsection
+
+With Breadcrumbs:
+-----------------
+@php
+    $breadcrumbs = [
+        ['label' => 'Dashboard', 'url' => route('admin.dashboard')],
+        ['label' => 'Articles', 'url' => route('admin.articles.index')],
+        ['label' => 'Create', 'url' => '#']
+    ];
+@endphp
+
+@extends('layouts.admin')
+
+@section('content')
+    <!-- Your content here -->
+@endsection
+
+With Page Header:
+-----------------
+@section('page-header')
+    <div class="flex items-center justify-between">
+        <h1 class="text-3xl font-bold gradient-text">Page Title</h1>
+        <button class="px-4 py-2 rounded-xl bg-gradient-primary text-white">
+            Action Button
+        </button>
+    </div>
+@endsection
+
+With Custom Scripts:
+--------------------
+@push('scripts')
+<script>
+    // Your custom JavaScript
+    console.log('Page loaded');
+</script>
+@endpush
+
+With Custom Styles:
+-------------------
+@push('styles')
+<style>
+    /* Your custom CSS */
+</style>
+@endpush
+
+TAILWIND CLASSES REFERENCE
+================================================================================
+
+Glassmorphism:
+  .glass - Base glass effect
+  .glass-dark - Dark mode glass (rgba(0,0,0,0.5))
+  .glass-light - Light mode glass (rgba(255,255,255,0.9))
+
+Gradients:
+  bg-gradient-primary - Blue to green gradient
+  gradient-text - Gradient text effect
+
+Shadows:
+  shadow-soft - Soft blue shadow
+  shadow-glow - Teal glow effect
+
+Animations:
+  animate-fadeInUp - Fade in with upward movement
+  animate-fadeIn - Simple fade in
+  animate-slideInRight - Slide from left
+
+Custom Scrollbar:
+  .custom-scrollbar - Styled scrollbar with teal thumb
+
+COLOR VARIABLES
+================================================================================
+
+Tailwind Config Colors:
+  brand: #0056b3 (with shades 50-900)
+  secondary: #218838 (with shades 50-900)
+  accent: #64CCC5
+
+Usage Examples:
+  text-brand - Blue text
+  bg-secondary - Green background
+  text-accent - Teal text
+  hover:text-accent - Teal on hover
+
+ICONS
+================================================================================
+
+Library: Lucide Icons (https://lucide.dev)
+CDN: https://unpkg.com/lucide@latest
+
+Initialization:
+  lucide.createIcons() - Call after Alpine renders
+
+Common Icons Used:
+  - layout-dashboard: Dashboard
+  - file-text: Articles
+  - video: Media
+  - book-open: Hadith
+  - users: Users
+  - settings: Settings
+  - moon/sun: Dark mode toggle
+  - languages: Language switcher
+  - bell: Notifications
+  - search: Search
+  - menu: Hamburger menu
+
+FONTS
+================================================================================
+
+Primary: Cairo (Google Fonts)
+Weights: 300, 400, 600, 700, 900
+Optimized for: Arabic, English, Turkish, French, Urdu
+
+ACCESSIBILITY
+================================================================================
+
+- Semantic HTML5 elements
+- ARIA labels on interactive elements
+- Keyboard navigation support
+- Focus states on all interactive elements
+- High contrast in both light and dark modes
+- RTL support for screen readers
+
+BROWSER SUPPORT
+================================================================================
+
+- Chrome/Edge: Full support
+- Firefox: Full support
+- Safari: Full support (with -webkit- prefixes for backdrop-blur)
+- Mobile browsers: Responsive design with touch support
+
+PERFORMANCE OPTIMIZATIONS
+================================================================================
+
+- CSS transitions limited to transform and opacity
+- Hardware-accelerated animations (translateX, translateY, scale)
+- Debounced resize events
+- Lazy loading for icons
+- Minimal JavaScript footprint (Alpine.js only)
+
+FUTURE ENHANCEMENTS
+================================================================================
+
+- Add notification WebSocket support
+- Implement real search functionality
+- Add user avatar upload
+- Create admin user profile page
+- Add settings page with theme customization
+- Implement activity logging
+- Add keyboard shortcuts
+
+================================================================================
+END OF REFERENCE
+================================================================================

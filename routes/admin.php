@@ -94,13 +94,53 @@ Route::middleware(['web'])->group(function () {
     })->name('admin.logout');
 });
 
+// Main Dashboard Route (must be defined before the group to avoid override)
+Route::get('su/portal/v1/admin/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['web', 'auth', 'admin', 'throttle:60,1'])
+    ->name('admin.dashboard');
+
+// Analytics Route Alias
+Route::get('su/portal/v1/admin/analytics', [AnalyticsController::class, 'dashboard'])
+    ->middleware(['web', 'auth', 'admin', 'throttle:60,1'])
+    ->name('admin.analytics');
+
+// Settings Route Placeholder (coming soon)
+Route::get('su/portal/v1/admin/settings', function () {
+    return view('admin.coming-soon', ['module' => 'Settings']);
+})->middleware(['web', 'auth', 'admin', 'throttle:60,1'])
+    ->name('admin.settings');
+
+// Programs & Episodes Route Placeholders (Media module - coming soon)
+Route::get('su/portal/v1/admin/programs', function () {
+    return view('admin.coming-soon', ['module' => 'Programs']);
+})->middleware(['web', 'auth', 'admin', 'throttle:60,1'])
+    ->name('admin.programs.index');
+
+Route::get('su/portal/v1/admin/episodes', function () {
+    return view('admin.coming-soon', ['module' => 'Episodes']);
+})->middleware(['web', 'auth', 'admin', 'throttle:60,1'])
+    ->name('admin.episodes.index');
+
+// Help Route
+Route::get('su/portal/v1/admin/help', function () {
+    return view('admin.help');
+})->middleware(['web', 'auth', 'admin', 'throttle:60,1'])
+    ->name('admin.help');
+
+// Profile Route
+Route::get('su/portal/v1/admin/profile', function () {
+    return view('admin.coming-soon', ['module' => 'Profile']);
+})->middleware(['web', 'auth', 'admin', 'throttle:60,1'])
+    ->name('admin.profile');
+
 Route::prefix('su/portal/v1/admin')
     ->middleware(['web', 'auth', 'admin', 'throttle:60,1'])
     ->group(function (): void {
 
         // Dashboard Routes
         Route::prefix('dashboard')->name('admin.dashboard.')->group(function (): void {
-            Route::get('/', [DashboardController::class, 'index'])->name('index');
+            // Note: Main dashboard route (/) is defined above as 'admin.dashboard' for convenience
+            // Route::get('/', [DashboardController::class, 'index'])->name('index');
             Route::get('/statistics', [DashboardController::class, 'statistics'])->name('statistics');
             Route::get('/content-growth', [DashboardController::class, 'contentGrowth'])->name('content-growth');
             Route::get('/module-distribution', [DashboardController::class, 'moduleDistribution'])->name('module-distribution');
@@ -271,8 +311,14 @@ Route::prefix('su/portal/v1/admin')
         Route::post('articles/{article}/toggle-feature', [ArticleController::class, 'toggleFeature'])->name('admin.articles.toggle-feature');
         Route::post('articles/{article}/toggle-pin', [ArticleController::class, 'togglePin'])->name('admin.articles.toggle-pin');
 
+        // Article trash route
+        Route::get('articles/trash', [ArticleController::class, 'trash'])->name('admin.articles.trash');
+
         // Category Routes
         Route::prefix('categories')->group(function (): void {
+            // Special endpoints (must be before resource routes to avoid conflicts)
+            Route::get('/tree', [CategoryController::class, 'tree'])->name('admin.categories.tree');
+            Route::get('/search', [CategoryController::class, 'search'])->name('admin.categories.search');
             Route::post('/bulk-delete', [CategoryController::class, 'bulkDelete'])->name('admin.categories.bulk-delete');
             Route::post('/reorder', [CategoryController::class, 'reorder'])->name('admin.categories.reorder');
         });
@@ -285,9 +331,15 @@ Route::prefix('su/portal/v1/admin')
             'update' => 'admin.categories.update',
             'destroy' => 'admin.categories.destroy',
         ]);
+        // Post-resource routes (with ID parameter)
+        Route::post('categories/{id}/restore', [CategoryController::class, 'restore'])->name('admin.categories.restore');
+        Route::post('categories/{id}/duplicate', [CategoryController::class, 'duplicate'])->name('admin.categories.duplicate');
 
         // Tag Routes
         Route::prefix('tags')->group(function (): void {
+            // Special endpoints (must be before resource routes to avoid conflicts)
+            Route::get('/search', [TagController::class, 'search'])->name('admin.tags.search');
+            Route::get('/unused', [TagController::class, 'unused'])->name('admin.tags.unused');
             Route::post('/merge', [TagController::class, 'merge'])->name('admin.tags.merge');
             Route::post('/bulk-delete', [TagController::class, 'bulkDelete'])->name('admin.tags.bulk-delete');
         });

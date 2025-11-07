@@ -18,6 +18,14 @@ export default {
                 arabic: ['Amiri', 'serif'],
             },
 
+            fontWeight: {
+                'light': '300',
+                'normal': '400',
+                'semibold': '600',
+                'bold': '700',
+                'black': '900',
+            },
+
             colors: {
                 // Custom blue-green gradient color palette
                 primary: {
@@ -136,8 +144,46 @@ export default {
                 'bounce-in': 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
                 'smooth': 'cubic-bezier(0.4, 0, 0.2, 1)',
             },
+
+            transitionDuration: {
+                'fast': '300ms',
+                'medium': '500ms',
+                'slow': '800ms',
+            },
+
+            spacing: {
+                '18': '4.5rem',
+                '88': '22rem',
+                '100': '25rem',
+                '112': '28rem',
+                '128': '32rem',
+            },
+
+            zIndex: {
+                '60': '60',
+                '70': '70',
+                '80': '80',
+                '90': '90',
+                '100': '100',
+            },
+
+            backdropBlur: {
+                xs: '2px',
+            },
         },
     },
 
-    plugins: [],
+    plugins: [
+        // RTL support plugin
+        function({ addUtilities }) {
+            addUtilities({
+                '.rtl': {
+                    direction: 'rtl',
+                },
+                '.ltr': {
+                    direction: 'ltr',
+                },
+            })
+        },
+    ],
 };

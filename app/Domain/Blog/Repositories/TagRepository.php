@@ -299,4 +299,76 @@ class TagRepository implements TagRepositoryInterface
 
         return $query->first();
     }
+
+    /**
+     * Search tags for autocomplete
+     *
+     * @param string $query
+     * @param string|null $type
+     * @param int $limit
+     * @return \Illuminate\Support\Collection
+     */
+    public function searchForAutocomplete(string $query, ?string $type = null, int $limit = 10): \Illuminate\Support\Collection
+    {
+        $searchQuery = $this->model::query();
+
+        // Search across all language fields
+        $searchQuery->where(function ($q) use ($query) {
+            foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $lang) {
+                $q->orWhere("name->{$lang}", 'like', "%{$query}%");
+            }
+            $q->orWhere('slug', 'like', "%{$query}%");
+        });
+
+        // Filter by type if provided
+        if ($type !== null) {
+            $searchQuery->where('type', $type);
+        }
+
+        // Order by usage count (most used first)
+        $searchQuery->orderByDesc('usage_count');
+
+        return $searchQuery->limit($limit)->get();
+    }
+
+    /**
+     * Get unused tags (zero usage_count)
+     *
+     * @param int $perPage
+     * @return LengthAwarePaginator
+     */
+    public function getUnusedTags(int $perPage = 50): LengthAwarePaginator
+    {
+        return $this->model::where('usage_count', 0)
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+    }
+
+    /**
+     * Recalculate usage count for all tags
+     *
+     * @return int Number of tags updated
+     */
+    public function recalculateAllUsageCounts(): int
+    {
+        $tags = $this->model::all();
+        $updated = 0;
+
+        foreach ($tags as $tag) {
+            $count = DB::table('taggables')
+                ->where('tag_id', $tag->id)
+                ->count();
+
+            if ($tag->usage_count !== $count) {
+                $tag->update(['usage_count' => $count]);
+                $updated++;
+            }
+        }
+
+        Cache::forget('tags:count');
+        Cache::forget('tags:total_usage');
+        Cache::forget('tags:most_used');
+
+        return $updated;
+    }
 }

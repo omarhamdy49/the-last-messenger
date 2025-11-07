@@ -26,8 +26,23 @@ class CategoryResource extends JsonResource
             'id' => $this->id,
             'slug' => $this->slug,
             'type' => $this->type->value,
+            'status' => $this->status,
+
+            // Multi-language fields
             'name' => $this->getNameInLanguage($language),
             'description' => $this->getDescriptionInLanguage($language),
+            'translations' => [
+                'name' => $this->getNameTranslations(),
+                'description' => $this->getDescriptionTranslations(),
+            ],
+
+            // Hierarchy fields
+            'parent_id' => $this->parent_id,
+            'lft' => $this->lft,
+            'rgt' => $this->rgt,
+            'depth' => $this->depth,
+
+            // Visual fields
             'icon' => $this->icon,
             'color' => $this->color,
             'display_order' => $this->display_order,
@@ -36,9 +51,16 @@ class CategoryResource extends JsonResource
             'parent' => new CategoryResource($this->whenLoaded('parent')),
             'children' => CategoryResource::collection($this->whenLoaded('children')),
 
-            // Computed
+            // Computed properties
             'has_children' => $this->hasChildren(),
             'is_root' => $this->isRoot(),
+            'is_leaf' => $this->isLeaf(),
+            'is_active' => $this->isActive(),
+            'articles_count' => $this->when(isset($this->articles_count), $this->articles_count),
+
+            // Timestamps
+            'created_at' => $this->created_at?->toISOString(),
+            'updated_at' => $this->updated_at?->toISOString(),
         ];
     }
 }
