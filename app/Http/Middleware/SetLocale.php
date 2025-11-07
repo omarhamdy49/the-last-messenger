@@ -38,17 +38,23 @@ class SetLocale
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Force Arabic for admin panel routes
-        if ($request->is('admin/*') || $request->is('admin')) {
-            $locale = 'ar';
-        } else {
-            $locale = $this->determineLocale($request);
-        }
+        // Force Arabic for admin panel routes (bypass validation)
+        $isAdminRoute = $request->is('su/portal/v1/admin/*') || $request->is('su/portal/v1/admin') ||
+                        $request->is('admin/*') || $request->is('admin');
 
-        // Set application locale
-        if ($this->isValidLocale($locale)) {
+        if ($isAdminRoute) {
+            $locale = 'ar';
+            // Force set locale for admin without validation
             App::setLocale($locale);
             Carbon::setLocale($locale);
+        } else {
+            $locale = $this->determineLocale($request);
+
+            // Set application locale (with validation for non-admin routes)
+            if ($this->isValidLocale($locale)) {
+                App::setLocale($locale);
+                Carbon::setLocale($locale);
+            }
         }
 
         return $next($request);

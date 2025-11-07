@@ -584,7 +584,7 @@ Route::prefix('su/portal/v1/admin')
         ]);
 
         // Activity Log Routes
-        Route::prefix('activity-logs')->name('activity-logs.')->group(function (): void {
+        Route::prefix('activity-logs')->name('admin.activity-logs.')->group(function (): void {
             Route::get('/', [ActivityLogController::class, 'index'])->name('index');
             Route::get('/user/{userId}', [ActivityLogController::class, 'userActivity'])->name('user');
             Route::get('/model/{type}/{id}', [ActivityLogController::class, 'modelHistory'])->name('model');
@@ -592,7 +592,7 @@ Route::prefix('su/portal/v1/admin')
         });
 
         // Language Settings Routes
-        Route::prefix('settings/languages')->name('settings.languages.')->group(function (): void {
+        Route::prefix('settings/languages')->name('admin.settings.languages.')->group(function (): void {
             Route::get('/', [LanguageSettingsController::class, 'index'])->name('index');
             Route::get('/list', [LanguageSettingsController::class, 'list'])->name('list');
             Route::post('/', [LanguageSettingsController::class, 'store'])->name('store');
@@ -604,7 +604,7 @@ Route::prefix('su/portal/v1/admin')
         });
 
         // Export Routes
-        Route::prefix('export')->name('export.')->group(function (): void {
+        Route::prefix('export')->name('admin.export.')->group(function (): void {
             Route::post('/', [ExportController::class, 'export'])->name('export');
             Route::get('/{module}/columns', [ExportController::class, 'getColumns'])->name('columns');
             Route::get('/history', [ExportController::class, 'history'])->name('history');
@@ -613,7 +613,7 @@ Route::prefix('su/portal/v1/admin')
         });
 
         // Import Routes
-        Route::prefix('import')->name('import.')->group(function (): void {
+        Route::prefix('import')->name('admin.import.')->group(function (): void {
             Route::get('/{module}', [ImportController::class, 'importForm'])->name('form');
             Route::post('/{module}/parse', [ImportController::class, 'parseFile'])->name('parse');
             Route::post('/{module}/validate', [ImportController::class, 'validateData'])->name('validate');
@@ -626,7 +626,7 @@ Route::prefix('su/portal/v1/admin')
         });
 
         // Content Scheduler Routes
-        Route::prefix('scheduler')->name('scheduler.')->group(function (): void {
+        Route::prefix('scheduler')->name('admin.scheduler.')->group(function (): void {
             Route::get('/', [SchedulerController::class, 'index'])->name('index');
             Route::get('/create', [SchedulerController::class, 'create'])->name('create');
             Route::post('/', [SchedulerController::class, 'store'])->name('store');
@@ -638,7 +638,7 @@ Route::prefix('su/portal/v1/admin')
         });
 
         // Bulk Operations Routes
-        Route::prefix('bulk-operations')->name('bulk-operations.')->group(function (): void {
+        Route::prefix('bulk-operations')->name('admin.bulk-operations.')->group(function (): void {
             Route::post('/', [BulkOperationController::class, 'store'])->name('store');
             Route::get('/', [BulkOperationController::class, 'index'])->name('index');
             Route::get('/stats', [BulkOperationController::class, 'stats'])->name('stats');
@@ -648,7 +648,7 @@ Route::prefix('su/portal/v1/admin')
         });
 
         // Version Control Routes
-        Route::prefix('versions')->name('versions.')->group(function (): void {
+        Route::prefix('versions')->name('admin.versions.')->group(function (): void {
             Route::get('/stats', [VersionController::class, 'stats'])->name('stats');
             Route::get('/{type}/{id}', [VersionController::class, 'getVersions'])->name('list');
             Route::get('/{versionId}', [VersionController::class, 'getVersion'])->name('show');
@@ -659,7 +659,7 @@ Route::prefix('su/portal/v1/admin')
         });
 
         // Audit Log Routes
-        Route::prefix('audit')->name('audit.')->group(function (): void {
+        Route::prefix('audit')->name('admin.audit.')->group(function (): void {
             Route::get('/', [AuditController::class, 'index'])->name('index');
             Route::get('/stats', [AuditController::class, 'stats'])->name('stats');
             Route::get('/export', [AuditController::class, 'export'])->name('export');

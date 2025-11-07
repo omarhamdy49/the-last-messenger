@@ -1,17 +1,16 @@
 <!-- Admin Sidebar Component -->
 <aside x-show="sidebarOpen"
        x-transition:enter="transform transition ease-out duration-300"
-       x-transition:enter-start="rtl:-translate-x-full ltr:translate-x-full"
+       x-transition:enter-start="{{ in_array(app()->getLocale(), ['ar', 'ur']) ? '-translate-x-full' : 'translate-x-full' }}"
        x-transition:enter-end="translate-x-0"
        x-transition:leave="transform transition ease-in duration-200"
        x-transition:leave-start="translate-x-0"
-       x-transition:leave-end="rtl:-translate-x-full ltr:translate-x-full"
+       x-transition:leave-end="{{ in_array(app()->getLocale(), ['ar', 'ur']) ? '-translate-x-full' : 'translate-x-full' }}"
        :class="[
            darkMode ? 'glass-dark' : 'glass-light',
-           'fixed lg:static inset-y-0 rtl:right-0 ltr:left-0 z-40 w-72 flex flex-col glass'
+           'fixed lg:static inset-y-0 {{ in_array(app()->getLocale(), ['ar', 'ur']) ? 'right-0' : 'left-0' }} z-40 w-72 flex flex-col glass'
        ]"
        class="border-e"
-       :dir="currentLang === 'ar' || currentLang === 'ur' ? 'rtl' : 'ltr'"
        @click.away="if (window.innerWidth < 1024) sidebarOpen = false">
 
     <!-- Logo Section -->
