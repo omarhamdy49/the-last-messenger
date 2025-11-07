@@ -242,11 +242,21 @@ Route::prefix('su/portal/v1/admin')
 
         // Article Routes
         Route::prefix('articles')->group(function (): void {
-            Route::get('/search', [ArticleController::class, 'search'])->name('admin.articles.search');
+            // API endpoints (must be before resource routes to avoid conflicts)
+            Route::get('/api', [ArticleController::class, 'api'])->name('admin.articles.api');
+            Route::get('/stats', [ArticleController::class, 'stats'])->name('admin.articles.stats');
+
+            // Bulk actions
+            Route::post('/bulk-action', [ArticleController::class, 'bulkAction'])->name('admin.articles.bulk-action');
             Route::post('/bulk-delete', [ArticleController::class, 'bulkDelete'])->name('admin.articles.bulk-delete');
             Route::post('/bulk-publish', [ArticleController::class, 'bulkPublish'])->name('admin.articles.bulk-publish');
             Route::post('/bulk-archive', [ArticleController::class, 'bulkArchive'])->name('admin.articles.bulk-archive');
+
+            // Search
+            Route::get('/search', [ArticleController::class, 'search'])->name('admin.articles.search');
         });
+
+        // Article resource routes
         Route::resource('articles', ArticleController::class)->names([
             'index' => 'admin.articles.index',
             'create' => 'admin.articles.create',
@@ -256,6 +266,10 @@ Route::prefix('su/portal/v1/admin')
             'update' => 'admin.articles.update',
             'destroy' => 'admin.articles.destroy',
         ]);
+
+        // Article toggle routes (must be after resource to avoid route conflicts)
+        Route::post('articles/{article}/toggle-feature', [ArticleController::class, 'toggleFeature'])->name('admin.articles.toggle-feature');
+        Route::post('articles/{article}/toggle-pin', [ArticleController::class, 'togglePin'])->name('admin.articles.toggle-pin');
 
         // Category Routes
         Route::prefix('categories')->group(function (): void {

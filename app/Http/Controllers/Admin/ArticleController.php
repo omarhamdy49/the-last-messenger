@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Article;
 use App\Models\ArticleLocale;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -312,6 +313,322 @@ class ArticleController extends Controller
         } catch (\Exception $e) {
             return back()
                 ->with('error', 'Failed to delete article: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * API endpoint for AJAX article listing
+     */
+    public function api(Request $request): JsonResponse
+    {
+        try {
+            $perPage = $request->input('per_page', 12);
+            $locale = $request->input('locale', 'en');
+
+            $query = Article::with([
+                'locales' => function ($q) use ($locale) {
+                    $q->where('locale', $locale);
+                },
+                'writer:id,name,email',
+                'category:id,name',
+                'categories:id,name'
+            ]);
+
+            // Search by title/excerpt in article_locale table
+            if ($request->filled('search')) {
+                $search = $request->input('search');
+                $query->whereHas('locales', function ($q) use ($search, $locale) {
+                    $q->where('locale', $locale)
+                        ->where(function ($subQ) use ($search) {
+                            $subQ->where('title', 'LIKE', "%{$search}%")
+                                ->orWhere('excerpt', 'LIKE', "%{$search}%")
+                                ->orWhere('description', 'LIKE', "%{$search}%");
+                        });
+                });
+            }
+
+            // Filter by category
+            if ($request->filled('category_id')) {
+                $categoryId = $request->input('category_id');
+                $query->where(function ($q) use ($categoryId) {
+                    $q->where('category_id', $categoryId)
+                        ->orWhereHas('categories', function ($subQ) use ($categoryId) {
+                            $subQ->where('categories.id', $categoryId);
+                        });
+                });
+            }
+
+            // Filter by status
+            if ($request->filled('status')) {
+                $status = $request->input('status');
+                switch ($status) {
+                    case 'featured':
+                        $query->where('is_featured', true);
+                        break;
+                    case 'pinned':
+                        $query->where('is_pinned', true);
+                        break;
+                    case 'draft':
+                        $query->whereDoesntHave('locales', function ($q) {
+                            $q->where('is_ready', true);
+                        });
+                        break;
+                    case 'all':
+                    default:
+                        // No filter
+                        break;
+                }
+            }
+
+            // Filter by locale (articles with ready translations in that locale)
+            $query->whereHas('locales', function ($q) use ($locale) {
+                $q->where('locale', $locale)
+                    ->where('is_ready', true);
+            });
+
+            // Sort
+            $sort = $request->input('sort', 'latest');
+            switch ($sort) {
+                case 'popular':
+                    $query->orderBy('views', 'desc');
+                    break;
+                case 'alphabetical':
+                    $query->whereHas('locales', function ($q) use ($locale) {
+                        $q->where('locale', $locale);
+                    })->get()->sortBy(function ($article) use ($locale) {
+                        return $article->locales->where('locale', $locale)->first()->title ?? '';
+                    });
+                    break;
+                case 'oldest':
+                    $query->orderBy('created_at', 'asc');
+                    break;
+                case 'latest':
+                default:
+                    $query->orderBy('created_at', 'desc');
+                    break;
+            }
+
+            // Paginate
+            $articles = $query->paginate($perPage);
+
+            // Get stats
+            $stats = [
+                'total' => Article::count(),
+                'total_views' => Article::sum('views'),
+                'featured_count' => Article::where('is_featured', true)->count(),
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $articles->items(),
+                'meta' => [
+                    'current_page' => $articles->currentPage(),
+                    'last_page' => $articles->lastPage(),
+                    'from' => $articles->firstItem(),
+                    'to' => $articles->lastItem(),
+                    'total' => $articles->total(),
+                    'per_page' => $articles->perPage(),
+                ],
+                'stats' => $stats,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch articles: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Bulk actions on multiple articles
+     */
+    public function bulkAction(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'article_ids' => 'required|array',
+            'article_ids.*' => 'exists:articles,id',
+            'action' => 'required|in:feature,unfeature,pin,unpin,archive,delete',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $articleIds = $validated['article_ids'];
+            $action = $validated['action'];
+            $affectedCount = 0;
+
+            switch ($action) {
+                case 'feature':
+                    $affectedCount = Article::whereIn('id', $articleIds)
+                        ->update(['is_featured' => true]);
+                    $message = "{$affectedCount} articles marked as featured";
+                    break;
+
+                case 'unfeature':
+                    $affectedCount = Article::whereIn('id', $articleIds)
+                        ->update(['is_featured' => false]);
+                    $message = "{$affectedCount} articles unmarked as featured";
+                    break;
+
+                case 'pin':
+                    $affectedCount = Article::whereIn('id', $articleIds)
+                        ->update(['is_pinned' => true]);
+                    $message = "{$affectedCount} articles pinned";
+                    break;
+
+                case 'unpin':
+                    $affectedCount = Article::whereIn('id', $articleIds)
+                        ->update(['is_pinned' => false]);
+                    $message = "{$affectedCount} articles unpinned";
+                    break;
+
+                case 'archive':
+                    // Mark all locales as not ready (draft status)
+                    $affectedCount = ArticleLocale::whereIn('article_id', $articleIds)
+                        ->update(['is_ready' => false]);
+                    $message = "{$affectedCount} article translations archived";
+                    break;
+
+                case 'delete':
+                    $articles = Article::whereIn('id', $articleIds)->get();
+
+                    // Delete thumbnails and gallery images
+                    foreach ($articles as $article) {
+                        if ($article->thumb) {
+                            Storage::disk('public')->delete($article->thumb);
+                        }
+
+                        foreach ($article->gallery as $galleryItem) {
+                            if ($galleryItem->image) {
+                                Storage::disk('public')->delete($galleryItem->image);
+                            }
+                        }
+                    }
+
+                    $affectedCount = Article::whereIn('id', $articleIds)->delete();
+                    $message = "{$affectedCount} articles deleted";
+                    break;
+
+                default:
+                    throw new \Exception('Invalid action');
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'affected_count' => $affectedCount,
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Bulk action failed: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Toggle featured status
+     */
+    public function toggleFeature(Article $article): JsonResponse
+    {
+        try {
+            $article->update([
+                'is_featured' => !$article->is_featured,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $article->is_featured ? 'Article marked as featured' : 'Article unmarked as featured',
+                'is_featured' => $article->is_featured,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to toggle featured status: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Toggle pinned status
+     */
+    public function togglePin(Article $article): JsonResponse
+    {
+        try {
+            $article->update([
+                'is_pinned' => !$article->is_pinned,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $article->is_pinned ? 'Article pinned' : 'Article unpinned',
+                'is_pinned' => $article->is_pinned,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to toggle pinned status: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get article statistics
+     */
+    public function stats(): JsonResponse
+    {
+        try {
+            $stats = [
+                'total_articles' => Article::count(),
+                'total_views' => Article::sum('views'),
+                'featured_count' => Article::where('is_featured', true)->count(),
+                'pinned_count' => Article::where('is_pinned', true)->count(),
+                'recent_count' => Article::where('created_at', '>=', now()->subDays(7))->count(),
+                'draft_count' => Article::whereDoesntHave('locales', function ($q) {
+                    $q->where('is_ready', true);
+                })->count(),
+                'by_category' => Category::withCount('articles')->get()->map(function ($category) {
+                    return [
+                        'id' => $category->id,
+                        'name' => $category->name,
+                        'count' => $category->articles_count,
+                    ];
+                }),
+                'by_locale' => collect($this->locales)->map(function ($locale) {
+                    return [
+                        'locale' => $locale,
+                        'count' => ArticleLocale::where('locale', $locale)
+                            ->where('is_ready', true)
+                            ->count(),
+                    ];
+                }),
+                'recent_articles' => Article::with(['locales', 'writer:id,name', 'category:id,name'])
+                    ->orderBy('created_at', 'desc')
+                    ->limit(5)
+                    ->get(),
+                'top_viewed' => Article::with(['locales', 'writer:id,name', 'category:id,name'])
+                    ->orderBy('views', 'desc')
+                    ->limit(5)
+                    ->get(),
+            ];
+
+            return response()->json([
+                'success' => true,
+                'stats' => $stats,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch statistics: ' . $e->getMessage(),
+            ], 500);
         }
     }
 }
