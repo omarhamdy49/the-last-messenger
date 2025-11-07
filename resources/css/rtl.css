@@ -1,0 +1,260 @@
+/**
+ * RTL (Right-to-Left) Styles for Arabic Admin Panel
+ *
+ * This file contains CSS overrides for proper RTL layout support
+ */
+
+/* Force RTL direction for Arabic content */
+[dir="rtl"] {
+    direction: rtl;
+    text-align: right;
+}
+
+/* Override Tailwind's default left/right positioning */
+[dir="rtl"] .float-left {
+    float: right !important;
+}
+
+[dir="rtl"] .float-right {
+    float: left !important;
+}
+
+/* Flip margins and paddings */
+[dir="rtl"] .ml-auto {
+    margin-left: unset !important;
+    margin-right: auto !important;
+}
+
+[dir="rtl"] .mr-auto {
+    margin-right: unset !important;
+    margin-left: auto !important;
+}
+
+/* Text alignment */
+[dir="rtl"] .text-left {
+    text-align: right !important;
+}
+
+[dir="rtl"] .text-right {
+    text-align: left !important;
+}
+
+/* Borders */
+[dir="rtl"] .border-l {
+    border-left: none !important;
+    border-right: 1px solid currentColor !important;
+}
+
+[dir="rtl"] .border-r {
+    border-right: none !important;
+    border-left: 1px solid currentColor !important;
+}
+
+/* Rounded corners */
+[dir="rtl"] .rounded-l {
+    border-radius: 0 0.25rem 0.25rem 0 !important;
+}
+
+[dir="rtl"] .rounded-r {
+    border-radius: 0.25rem 0 0 0.25rem !important;
+}
+
+[dir="rtl"] .rounded-tl {
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0.25rem !important;
+}
+
+[dir="rtl"] .rounded-tr {
+    border-top-right-radius: 0 !important;
+    border-top-left-radius: 0.25rem !important;
+}
+
+[dir="rtl"] .rounded-bl {
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0.25rem !important;
+}
+
+[dir="rtl"] .rounded-br {
+    border-bottom-right-radius: 0 !important;
+    border-bottom-left-radius: 0.25rem !important;
+}
+
+/* Flexbox */
+[dir="rtl"] .flex-row-reverse {
+    flex-direction: row !important;
+}
+
+/* Transform and rotate icons that need flipping */
+[dir="rtl"] .rtl-flip {
+    transform: scaleX(-1);
+}
+
+/* Dropdown menus */
+[dir="rtl"] .dropdown-menu {
+    right: 0;
+    left: auto;
+}
+
+/* Forms */
+[dir="rtl"] input[type="checkbox"],
+[dir="rtl"] input[type="radio"] {
+    margin-right: 0;
+    margin-left: 0.5rem;
+}
+
+/* Lists */
+[dir="rtl"] ul,
+[dir="rtl"] ol {
+    padding-right: 1.5rem;
+    padding-left: 0;
+}
+
+/* Navigation */
+[dir="rtl"] .breadcrumb-item + .breadcrumb-item::before {
+    padding-right: 0.5rem;
+    padding-left: 0.5rem;
+    content: "\\";
+}
+
+/* Tables */
+[dir="rtl"] table {
+    text-align: right;
+}
+
+[dir="rtl"] th:first-child,
+[dir="rtl"] td:first-child {
+    text-align: right;
+}
+
+/* Modal positioning */
+[dir="rtl"] .modal-header .close {
+    margin: -1rem auto -1rem -1rem;
+}
+
+/* Tooltips and popovers */
+[dir="rtl"] .tooltip,
+[dir="rtl"] .popover {
+    text-align: right;
+}
+
+/* Sidebar */
+[dir="rtl"] .sidebar {
+    right: 0;
+    left: auto;
+}
+
+/* Notifications */
+[dir="rtl"] .notification {
+    right: auto;
+    left: 1rem;
+}
+
+/* Progress bars */
+[dir="rtl"] .progress-bar {
+    right: 0;
+}
+
+/* Arabic font optimization */
+[dir="rtl"] {
+    font-family: 'Cairo', 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
+    font-feature-settings: 'liga' 1, 'calt' 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Line height adjustments for Arabic text */
+[dir="rtl"] p,
+[dir="rtl"] .text {
+    line-height: 1.8;
+}
+
+[dir="rtl"] h1,
+[dir="rtl"] h2,
+[dir="rtl"] h3,
+[dir="rtl"] h4,
+[dir="rtl"] h5,
+[dir="rtl"] h6 {
+    line-height: 1.6;
+}
+
+/* Button icon alignment */
+[dir="rtl"] .btn svg,
+[dir="rtl"] .button svg {
+    margin-right: 0;
+    margin-left: 0.5rem;
+}
+
+/* Data tables */
+[dir="rtl"] .datatable th,
+[dir="rtl"] .datatable td {
+    text-align: right;
+}
+
+[dir="rtl"] .datatable-actions {
+    text-align: left;
+}
+
+/* Form labels */
+[dir="rtl"] label {
+    text-align: right;
+}
+
+/* Select arrows */
+[dir="rtl"] select {
+    background-position: left 0.5rem center;
+    padding-right: 0.75rem;
+    padding-left: 2.5rem;
+}
+
+/* Search inputs with icons */
+[dir="rtl"] .search-input-wrapper input {
+    padding-right: 0.75rem;
+    padding-left: 2.5rem;
+}
+
+[dir="rtl"] .search-input-wrapper .search-icon {
+    right: auto;
+    left: 0.75rem;
+}
+
+/* Animations should respect RTL */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+[dir="rtl"] .slide-in-right {
+    animation: slideInLeft 0.3s ease-out;
+}
+
+[dir="rtl"] .slide-in-left {
+    animation: slideInRight 0.3s ease-out;
+}
+
+/* Custom scrollbar for RTL */
+[dir="rtl"]::-webkit-scrollbar {
+    width: 8px;
+}
+
+[dir="rtl"] .scrollable::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+[dir="rtl"] .scrollable::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+}

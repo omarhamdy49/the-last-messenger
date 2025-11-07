@@ -224,22 +224,22 @@
                     :class="darkMode ? 'glass-dark border-gray-800' : 'glass-light border-gray-200'">
                 <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
                     <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                        &copy; {{ date('Y') }} The Last Messenger. All rights reserved.
+                        &copy; {{ date('Y') }} {{ __('admin.copyright') }}
                     </p>
                     <div class="flex items-center gap-4 text-sm">
                         <a href="#" class="hover:text-accent transition-colors"
                            :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                            Documentation
+                            {{ __('admin.documentation') }}
                         </a>
                         <span :class="darkMode ? 'text-gray-600' : 'text-gray-300'">|</span>
                         <a href="#" class="hover:text-accent transition-colors"
                            :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                            Support
+                            {{ __('admin.support') }}
                         </a>
                         <span :class="darkMode ? 'text-gray-600' : 'text-gray-300'">|</span>
                         <a href="#" class="hover:text-accent transition-colors"
                            :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                            API Docs
+                            {{ __('admin.api_docs') }}
                         </a>
                     </div>
                 </div>

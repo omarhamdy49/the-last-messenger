@@ -23,6 +23,18 @@ return [
     'loading' => 'جاري التحميل...',
     'no_data' => 'لا توجد بيانات',
     'confirm_delete' => 'هل أنت متأكد من الحذف؟',
+    'copyright' => 'الرسول الأخير. جميع الحقوق محفوظة.',
+    'documentation' => 'التوثيق',
+    'support' => 'الدعم',
+    'api_docs' => 'توثيق API',
+    'notifications' => 'الإشعارات',
+    'no_notifications' => 'لا توجد إشعارات',
+    'view_all_notifications' => 'عرض كل الإشعارات',
+    'mark_as_read' => 'تعليم كمقروء',
+    'admin_panel' => 'لوحة الإدارة',
+    'analytics' => 'التحليلات',
+    'no_results' => 'لا توجد نتائج',
+    'help' => 'المساعدة',
 
     // Navigation
     'nav' => [

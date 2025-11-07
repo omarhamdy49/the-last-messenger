@@ -25,8 +25,8 @@
 
             <!-- Logo Text -->
             <div class="flex flex-col">
-                <span class="text-lg font-bold gradient-text">The Last Messenger</span>
-                <span class="text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">Admin Panel</span>
+                <span class="text-lg font-bold gradient-text">{{ config('app.name') }}</span>
+                <span class="text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">{{ __('admin.admin_panel') }}</span>
             </div>
         </a>
 
@@ -63,7 +63,7 @@
                    (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
                class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
                 <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
-                <span class="font-semibold">Dashboard</span>
+                <span class="font-semibold">{{ __('admin.dashboard') }}</span>
             </a>
 
             <!-- Content Management -->
@@ -75,7 +75,7 @@
                         class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
                     <div class="flex items-center gap-3">
                         <i data-lucide="file-text" class="w-5 h-5"></i>
-                        <span class="font-semibold">Content</span>
+                        <span class="font-semibold">{{ __('admin.nav.content') }}</span>
                     </div>
                     <i data-lucide="chevron-down"
                        class="w-4 h-4 transition-transform"
@@ -93,7 +93,7 @@
                            (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
                        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
                         <i data-lucide="scroll-text" class="w-4 h-4"></i>
-                        <span>Articles</span>
+                        <span>{{ __('admin.articles') }}</span>
                     </a>
                     <a href="{{ route('admin.categories.index') }}"
                        @click="activeMenu = 'categories'"
@@ -102,7 +102,7 @@
                            (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
                        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
                         <i data-lucide="folder" class="w-4 h-4"></i>
-                        <span>Categories</span>
+                        <span>{{ __('admin.categories') }}</span>
                     </a>
                     <a href="{{ route('admin.tags.index') }}"
                        @click="activeMenu = 'tags'"
@@ -111,7 +111,7 @@
                            (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
                        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
                         <i data-lucide="tag" class="w-4 h-4"></i>
-                        <span>Tags</span>
+                        <span>{{ __('admin.tags') }}</span>
                     </a>
                 </div>
             </div>
@@ -125,7 +125,7 @@
                         class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
                     <div class="flex items-center gap-3">
                         <i data-lucide="video" class="w-5 h-5"></i>
-                        <span class="font-semibold">Media</span>
+                        <span class="font-semibold">{{ __('admin.nav.media') }}</span>
                     </div>
                     <i data-lucide="chevron-down"
                        class="w-4 h-4 transition-transform"
@@ -142,7 +142,7 @@
                            (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
                        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
                         <i data-lucide="tv" class="w-4 h-4"></i>
-                        <span>Programs</span>
+                        <span>{{ __('admin.media_programs') }}</span>
                     </a>
                     <a href="{{ route('admin.episodes.index') }}"
                        @click="activeMenu = 'episodes'"
@@ -151,7 +151,7 @@
                            (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
                        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
                         <i data-lucide="film" class="w-4 h-4"></i>
-                        <span>Episodes</span>
+                        <span>{{ __('admin.episodes') }}</span>
                     </a>
                 </div>
             </div>
@@ -164,7 +164,7 @@
                    (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
                class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
                 <i data-lucide="book-open" class="w-5 h-5"></i>
-                <span class="font-semibold">Hadith</span>
+                <span class="font-semibold">{{ __('admin.hadith') }}</span>
             </a>
 
             <!-- Quran Management -->
@@ -175,7 +175,7 @@
                    (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
                class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
                 <i data-lucide="book-marked" class="w-5 h-5"></i>
-                <span class="font-semibold">Quran</span>
+                <span class="font-semibold">{{ __('admin.quran') }}</span>
             </a>
 
             <!-- Genealogy -->
@@ -186,7 +186,7 @@
                    (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
                class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
                 <i data-lucide="git-branch" class="w-5 h-5"></i>
-                <span class="font-semibold">Genealogy</span>
+                <span class="font-semibold">{{ __('admin.genealogy') }}</span>
             </a>
 
             <!-- Divider -->
@@ -200,7 +200,7 @@
                    (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
                class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
                 <i data-lucide="users" class="w-5 h-5"></i>
-                <span class="font-semibold">Users</span>
+                <span class="font-semibold">{{ __('admin.users') }}</span>
             </a>
 
             <!-- Roles & Permissions -->
@@ -211,7 +211,7 @@
                    (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
                class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
                 <i data-lucide="shield" class="w-5 h-5"></i>
-                <span class="font-semibold">Roles</span>
+                <span class="font-semibold">{{ __('admin.roles') }}</span>
             </a>
 
             <!-- Analytics -->
@@ -222,7 +222,7 @@
                    (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
                class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
                 <i data-lucide="bar-chart" class="w-5 h-5"></i>
-                <span class="font-semibold">Analytics</span>
+                <span class="font-semibold">{{ __('admin.analytics') }}</span>
             </a>
 
             <!-- Settings -->
@@ -233,7 +233,7 @@
                    (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
                class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
                 <i data-lucide="settings" class="w-5 h-5"></i>
-                <span class="font-semibold">Settings</span>
+                <span class="font-semibold">{{ __('admin.settings') }}</span>
             </a>
 
         </div>
@@ -241,36 +241,23 @@
 
     <!-- Sidebar Footer -->
     <div class="px-4 py-4 border-t" :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
-        <!-- Quick Stats Card -->
-        <div class="glass rounded-xl p-4 mb-3"
-             :class="darkMode ? 'bg-gray-800/30' : 'bg-gray-100/50'">
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-semibold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Storage Used
-                </span>
-                <span class="text-xs font-bold text-accent">72%</span>
+        @auth
+            <!-- User Profile Section -->
+            <div class="flex items-center gap-3 p-3 rounded-xl glass"
+                 :class="darkMode ? 'bg-gray-800/30 hover:bg-gray-800/50' : 'bg-gray-100/50 hover:bg-gray-100'">
+                <div class="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow">
+                    <span class="text-white font-bold text-sm">{{ strtoupper(substr(auth()->user()->name, 0, 2)) }}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                        {{ auth()->user()->name }}
+                    </p>
+                    <p class="text-xs truncate" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
+                        {{ auth()->user()->email }}
+                    </p>
+                </div>
             </div>
-            <div class="w-full h-2 rounded-full overflow-hidden"
-                 :class="darkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                <div class="h-full bg-gradient-primary rounded-full" style="width: 72%"></div>
-            </div>
-        </div>
-
-        <!-- User Profile Section -->
-        <div class="flex items-center gap-3 p-3 rounded-xl glass"
-             :class="darkMode ? 'bg-gray-800/30 hover:bg-gray-800/50' : 'bg-gray-100/50 hover:bg-gray-100'">
-            <div class="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow">
-                <span class="text-white font-bold text-sm">AD</span>
-            </div>
-            <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold truncate" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                    Admin User
-                </p>
-                <p class="text-xs truncate" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
-                    admin@thelastmessenger.com
-                </p>
-            </div>
-        </div>
+        @endauth
     </div>
 
 </aside>

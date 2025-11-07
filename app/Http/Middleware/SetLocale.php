@@ -6,6 +6,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -27,20 +28,27 @@ class SetLocale
      * Handle an incoming request.
      *
      * Priority order:
-     * 1. User preference (if authenticated)
-     * 2. Session locale
-     * 3. Request header (Accept-Language)
-     * 4. Default locale (ar)
+     * 1. Force Arabic for admin panel
+     * 2. User preference (if authenticated)
+     * 3. Session locale
+     * 4. Request header (Accept-Language)
+     * 5. Default locale (ar)
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $locale = $this->determineLocale($request);
+        // Force Arabic for admin panel routes
+        if ($request->is('admin/*') || $request->is('admin')) {
+            $locale = 'ar';
+        } else {
+            $locale = $this->determineLocale($request);
+        }
 
         // Set application locale
         if ($this->isValidLocale($locale)) {
             App::setLocale($locale);
+            Carbon::setLocale($locale);
         }
 
         return $next($request);

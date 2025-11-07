@@ -8,6 +8,8 @@ use App\Http\Controllers\Controller;
 use App\Support\Traits\ApiResponse;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Session;
 
 /**
  * Base Admin Controller
@@ -265,5 +267,67 @@ abstract class AdminController extends Controller
         }
 
         return back()->withErrors(['error' => $message])->withInput();
+    }
+
+    /**
+     * Switch application locale
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+     */
+    public function switchLocale(Request $request)
+    {
+        $locale = $request->input('locale', 'ar');
+
+        // Validate locale
+        $supportedLocales = ['ar', 'en', 'fr', 'tr', 'ur'];
+        if (!in_array($locale, $supportedLocales)) {
+            return $this->failure('اللغة المحددة غير مدعومة.', 400);
+        }
+
+        // Store locale in session
+        Session::put('locale', $locale);
+
+        // Update user preference if authenticated
+        if (auth()->check() && auth()->user()) {
+            auth()->user()->update(['language' => $locale]);
+        }
+
+        // Set application locale
+        app()->setLocale($locale);
+        Carbon::setLocale($locale);
+
+        if ($this->expectsJson($request)) {
+            return $this->successResponse([
+                'locale' => $locale,
+                'direction' => get_text_direction($locale),
+            ], 'تم تغيير اللغة بنجاح.');
+        }
+
+        return back()->with('success', 'تم تغيير اللغة بنجاح.');
+    }
+
+    /**
+     * Get current locale information
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getLocaleInfo(Request $request)
+    {
+        $locale = app()->getLocale();
+
+        return $this->successResponse([
+            'locale' => $locale,
+            'direction' => get_text_direction($locale),
+            'is_rtl' => is_rtl_locale($locale),
+            'supported_locales' => [
+                ['code' => 'ar', 'name' => 'العربية', 'native' => 'العربية'],
+                ['code' => 'en', 'name' => 'English', 'native' => 'English'],
+                ['code' => 'fr', 'name' => 'Français', 'native' => 'Français'],
+                ['code' => 'tr', 'name' => 'Türkçe', 'native' => 'Türkçe'],
+                ['code' => 'ur', 'name' => 'اردو', 'native' => 'اردو'],
+            ],
+        ]);
     }
 }

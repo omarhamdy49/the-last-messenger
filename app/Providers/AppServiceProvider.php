@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Domain\Shared\Models\Language;
 use App\Observers\LanguageObserver;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 
@@ -24,6 +25,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Set default locale to Arabic
+        app()->setLocale(config('app.locale', 'ar'));
+
+        // Configure Carbon to use Arabic locale
+        Carbon::setLocale(config('app.locale', 'ar'));
+
         // Register observers
         Language::observe(LanguageObserver::class);
 
