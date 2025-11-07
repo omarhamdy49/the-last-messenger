@@ -4,859 +4,314 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
-use App\Domain\Blog\Services\ArticleService;
-use App\Domain\Shared\Services\AdminLoggerService;
+use App\Domain\Blog\Models\Category;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\StoreArticleRequest;
-use App\Http\Requests\Admin\UpdateArticleRequest;
 use App\Models\Article;
-use Illuminate\Http\JsonResponse;
+use App\Models\ArticleLocale;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
-/**
- * Admin Article Controller
- *
- * Handles comprehensive article management for The Last Messenger admin dashboard.
- * Provides full CRUD operations, workflow management (publish/review/approve/reject),
- * multi-language support, bulk operations, and activity logging.
- *
- * @package App\Http\Controllers\Admin
- */
 class ArticleController extends Controller
 {
     /**
-     * Constructor
-     *
-     * @param ArticleService $articleService Service layer for article business logic
-     * @param AdminLoggerService $logger Service for logging all admin actions
+     * Supported locales
      */
-    public function __construct(
-        protected ArticleService $articleService,
-        protected AdminLoggerService $logger
-    ) {
-        // Apply authorization middleware via route (admin.php already has auth middleware)
-        // No additional middleware needed here as routes/admin.php handles it
-    }
+    protected array $locales = ['ar', 'en', 'fr', 'tr', 'ur'];
 
     /**
-     * Display paginated list of articles with filters
-     *
-     * Supports filtering by:
-     * - Status (draft, under_review, published, archived, rejected)
-     * - Category ID
-     * - Author ID
-     * - Series ID
-     * - Tag ID
-     * - Date range (start_date, end_date)
-     * - Featured flag
-     * - Search query
-     *
-     * Returns JSON for AJAX requests or view for regular requests.
-     *
-     * GET /su/portal/v1/admin/articles
-     *
-     * @param Request $request HTTP request with filter parameters
-     * @return View|JsonResponse View with articles or JSON response for AJAX
+     * Display a listing of articles
      */
-    public function index(Request $request): View|JsonResponse
+    public function index(Request $request): View
     {
-        // Authorization is handled by middleware in routes/admin.php
-        $perPage = $request->integer('per_page', 50);
+        $query = Article::with(['locales', 'writer', 'category', 'categories'])
+            ->orderBy('created_at', 'desc');
 
-        // Build filters array from request
-        $filters = [
-            'status' => $request->input('status'),
-            'category_id' => $request->input('category_id'),
-            'author_id' => $request->input('author_id'),
-            'series_id' => $request->input('series_id'),
-            'tag_id' => $request->input('tag_id'),
-            'start_date' => $request->input('start_date'),
-            'end_date' => $request->input('end_date'),
-            'is_featured' => $request->input('is_featured'),
-            'search' => $request->input('search'),
-        ];
-
-        // Remove empty filters
-        $filters = array_filter($filters, fn ($value) => $value !== null && $value !== '');
-
-        // Get articles with filters
-        $query = Article::query()->with(['writerUser', 'category', 'categories', 'tags']);
-
-        if (!empty($filters)) {
-            if (isset($filters['status'])) {
-                $query->where('status', $filters['status']);
-            }
-            if (isset($filters['category_id'])) {
-                $query->where('category_id', $filters['category_id']);
-            }
-            if (isset($filters['is_featured'])) {
-                $query->where('is_featured', $filters['is_featured']);
-            }
-            if (isset($filters['search'])) {
-                $query->search($filters['search'], 'ar');
-            }
+        // Filter by featured
+        if ($request->has('featured')) {
+            $query->where('is_featured', true);
         }
 
-        $articles = $query->latest()->paginate($perPage);
-
-        // Calculate statistics
-        $stats = [
-            'total' => Article::count(),
-            'published' => Article::where('status', 'published')->count(),
-            'draft' => Article::where('status', 'draft')->count(),
-            'under_review' => Article::where('status', 'under_review')->count(),
-            'archived' => Article::where('status', 'archived')->count(),
-            'rejected' => Article::where('status', 'rejected')->count(),
-        ];
-
-        // Return JSON for AJAX requests
-        if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
-            $formattedArticles = $articles->map(function ($article) {
-                return [
-                    'id' => $article->id,
-                    'title' => $article->getTitle('ar') ?? $article->getTitle('en') ?? 'بدون عنوان',
-                    'excerpt' => $article->getExcerpt('ar') ?? $article->getExcerpt('en') ?? null,
-                    'slug' => $article->slug,
-                    'status' => $article->status,
-                    'views' => $article->views ?? 0,
-                    'featured_image' => $article->thumb ? asset('storage/' . $article->thumb) : null,
-                    'category' => $article->category ? $article->category->getTranslation('name', 'ar', false) : 'غير محدد',
-                    'category_id' => $article->category_id,
-                    'author' => $article->writerUser ? $article->writerUser->name : 'غير محدد',
-                    'author_id' => $article->writer,
-                    'is_featured' => $article->is_featured,
-                    'is_pinned' => $article->is_pinned,
-                    'created_at' => $article->created_at->format('Y-m-d'),
-                    'updated_at' => $article->updated_at->format('Y-m-d'),
-                    'published_at' => $article->published_at ? $article->published_at->format('Y-m-d') : null,
-                ];
-            });
-
-            return response()->json([
-                'success' => true,
-                'data' => $formattedArticles,
-                'stats' => $stats,
-                'meta' => [
-                    'current_page' => $articles->currentPage(),
-                    'per_page' => $articles->perPage(),
-                    'total' => $articles->total(),
-                    'last_page' => $articles->lastPage(),
-                ],
-            ]);
+        // Filter by pinned
+        if ($request->has('pinned')) {
+            $query->where('is_pinned', true);
         }
 
-        // Get categories and writers for filters
-        $categories = \App\Domain\Blog\Models\Category::where('type', 'blog')->get();
-        $writerIds = Article::pluck('writer')->unique()->filter();
-        $writers = \App\Models\User::whereIn('id', $writerIds)->get();
+        // Filter by category
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
 
-        return view('admin.articles.index', compact('articles', 'stats', 'filters', 'categories', 'writers'));
+        $articles = $query->paginate(20);
+
+        $categories = Category::all();
+
+        return view('admin.articles.index', compact('articles', 'categories'));
     }
 
     /**
      * Show the form for creating a new article
-     *
-     * GET /su/portal/v1/admin/articles/create
-     *
-     * @return View Article creation form
      */
     public function create(): View
     {
-        // Authorization is handled by middleware in routes/admin.php
-        $categories = \App\Domain\Blog\Models\Category::where('type', 'blog')->get();
-        $tags = \App\Domain\Blog\Models\Tag::all();
-        $writers = \App\Models\User::all();
+        $categories = Category::all();
+        $writers = User::all();
+        $locales = $this->locales;
 
-        return view('admin.articles.create', compact('categories', 'tags', 'writers'));
+        return view('admin.articles.create', compact('categories', 'writers', 'locales'));
     }
 
     /**
      * Store a newly created article
-     *
-     * Validates input using StoreArticleRequest, creates article,
-     * syncs tags, and logs the action.
-     *
-     * POST /su/portal/v1/admin/articles
-     *
-     * @param StoreArticleRequest $request Validated request
-     * @return RedirectResponse Redirect to articles index with success message
      */
-    public function store(StoreArticleRequest $request): RedirectResponse
+    public function store(Request $request): RedirectResponse
     {
+        $validated = $request->validate([
+            'thumb' => 'nullable|image|max:5120',
+            'writer_id' => 'nullable|exists:users,id',
+            'read_time' => 'required|integer|min:0',
+            'is_featured' => 'boolean',
+            'is_pinned' => 'boolean',
+            'category_id' => 'nullable|exists:categories,id',
+            'hijri_date' => 'nullable|string|max:255',
+            'categories' => 'nullable|array',
+            'categories.*' => 'exists:categories,id',
+
+            // Locales
+            'locales' => 'required|array',
+            'locales.*.locale' => 'required|in:' . implode(',', $this->locales),
+            'locales.*.title' => 'required|string|max:500',
+            'locales.*.description' => 'nullable|string',
+            'locales.*.excerpt' => 'nullable|string',
+            'locales.*.body' => 'nullable|string',
+            'locales.*.summary' => 'nullable|string',
+            'locales.*.is_ready' => 'boolean',
+        ]);
+
+        DB::beginTransaction();
         try {
+            // Handle thumbnail upload
+            $thumbPath = null;
+            if ($request->hasFile('thumb')) {
+                $thumbPath = $request->file('thumb')->store('articles/thumbs', 'public');
+            }
+
             // Create article
-            $article = $this->articleService->createArticle($request->validated());
+            $article = Article::create([
+                'thumb' => $thumbPath,
+                'writer_id' => $validated['writer_id'] ?? null,
+                'read_time' => $validated['read_time'],
+                'views' => 0,
+                'is_featured' => $request->boolean('is_featured'),
+                'is_pinned' => $request->boolean('is_pinned'),
+                'category_id' => $validated['category_id'] ?? null,
+                'hijri_date' => $validated['hijri_date'] ?? null,
+            ]);
 
-            // Handle featured image (file upload or media picker selection)
-            if ($request->hasFile('featured_image')) {
-                $this->articleService->handleFeaturedImage(
-                    $article,
-                    $request->file('featured_image')
-                );
-            } elseif ($request->has('featured_image_media_id')) {
-                $this->articleService->handleFeaturedImage(
-                    $article,
-                    null,
-                    $request->input('featured_image_media_id')
-                );
+            // Create locales
+            foreach ($validated['locales'] as $localeData) {
+                $slug = Str::slug($localeData['title']) . '-' . Str::random(6);
+
+                $article->locales()->create([
+                    'locale' => $localeData['locale'],
+                    'title' => $localeData['title'],
+                    'slug' => $slug,
+                    'description' => $localeData['description'] ?? null,
+                    'excerpt' => $localeData['excerpt'] ?? null,
+                    'content' => [
+                        'body' => $localeData['body'] ?? null,
+                        'toc' => [],
+                        'summary' => $localeData['summary'] ?? null,
+                    ],
+                    'is_ready' => $localeData['is_ready'] ?? false,
+                ]);
             }
 
-            // Handle OG image (file upload or media picker selection)
-            if ($request->hasFile('og_image')) {
-                $this->articleService->handleOgImage(
-                    $article,
-                    $request->file('og_image')
-                );
-            } elseif ($request->has('og_image_media_id')) {
-                $this->articleService->handleOgImage(
-                    $article,
-                    null,
-                    $request->input('og_image_media_id')
-                );
+            // Attach categories
+            if (!empty($validated['categories'])) {
+                $article->categories()->attach($validated['categories']);
             }
 
-            // Handle gallery images (file uploads or media picker selections)
-            if ($request->hasFile('gallery')) {
-                $this->articleService->handleGalleryImages(
-                    $article,
-                    $request->file('gallery')
-                );
-            }
-            if ($request->has('gallery_media_ids')) {
-                $this->articleService->handleGalleryImages(
-                    $article,
-                    null,
-                    $request->input('gallery_media_ids')
-                );
-            }
-
-            // Sync tags if provided
-            if ($request->has('tags')) {
-                $this->articleService->syncTags($article->id, $request->input('tags'));
-            }
-
-            // Log the creation
-            $this->logger->logCreate($article, $request->user());
+            DB::commit();
 
             return redirect()
                 ->route('admin.articles.index')
-                ->with('success', __('Article created successfully'));
+                ->with('success', 'Article created successfully!');
+
         } catch (\Exception $e) {
-            return redirect()
-                ->back()
+            DB::rollBack();
+
+            // Delete uploaded thumbnail if exists
+            if ($thumbPath) {
+                Storage::disk('public')->delete($thumbPath);
+            }
+
+            return back()
                 ->withInput()
-                ->with('error', __('Failed to create article: :message', ['message' => $e->getMessage()]));
+                ->with('error', 'Failed to create article: ' . $e->getMessage());
         }
     }
 
     /**
-     * Display the specified article with full details
-     *
-     * GET /su/portal/v1/admin/articles/{article}
-     *
-     * @param Article $article Article model (route model binding)
-     * @return View Article details view
+     * Display the specified article
      */
     public function show(Article $article): View
     {
-        // Authorization is handled by middleware in routes/admin.php
-        // Load relationships
-        $article->load(['writerUser', 'category', 'categories', 'tags', 'gallery', 'metadata']);
+        $article->load(['locales', 'writer', 'category', 'categories', 'gallery']);
 
         return view('admin.articles.show', compact('article'));
     }
 
     /**
-     * Show the form for editing the specified article
-     *
-     * GET /su/portal/v1/admin/articles/{article}/edit
-     *
-     * @param Article $article Article model (route model binding)
-     * @return View Article edit form
+     * Show the form for editing the article
      */
     public function edit(Article $article): View
     {
-        // Authorization is handled by middleware in routes/admin.php
-        // Load relationships for form population
-        $article->load(['writerUser', 'category', 'categories', 'tags', 'gallery']);
+        $article->load(['locales', 'categories']);
 
-        // Get categories, tags, and writers for form
-        $categories = \App\Domain\Blog\Models\Category::where('type', 'blog')->get();
-        $tags = \App\Domain\Blog\Models\Tag::all();
-        $writers = \App\Models\User::all();
+        $categories = Category::all();
+        $writers = User::all();
+        $locales = $this->locales;
 
-        return view('admin.articles.edit', compact('article', 'categories', 'tags', 'writers'));
+        return view('admin.articles.edit', compact('article', 'categories', 'writers', 'locales'));
     }
 
     /**
      * Update the specified article
-     *
-     * Validates input, updates article, syncs tags, logs the action.
-     * Captures old values for audit trail.
-     *
-     * PUT/PATCH /su/portal/v1/admin/articles/{article}
-     *
-     * @param UpdateArticleRequest $request Validated request
-     * @param Article $article Article model (route model binding)
-     * @return RedirectResponse Redirect to articles index with success message
      */
-    public function update(UpdateArticleRequest $request, Article $article): RedirectResponse
+    public function update(Request $request, Article $article): RedirectResponse
     {
-        // Authorization check
+        $validated = $request->validate([
+            'thumb' => 'nullable|image|max:5120',
+            'writer_id' => 'nullable|exists:users,id',
+            'read_time' => 'required|integer|min:0',
+            'is_featured' => 'boolean',
+            'is_pinned' => 'boolean',
+            'category_id' => 'nullable|exists:categories,id',
+            'hijri_date' => 'nullable|string|max:255',
+            'categories' => 'nullable|array',
+            'categories.*' => 'exists:categories,id',
 
-        try {
-            // Capture old values before update
-            $oldValues = $article->toArray();
-
-            // Perform update
-            $this->articleService->updateArticle($article->id, $request->validated());
-
-            // Reload article with fresh data for media operations
-            $article->refresh();
-
-            // Handle featured image (file upload or media picker selection)
-            if ($request->hasFile('featured_image')) {
-                $this->articleService->handleFeaturedImage(
-                    $article,
-                    $request->file('featured_image')
-                );
-            } elseif ($request->has('featured_image_media_id')) {
-                $this->articleService->handleFeaturedImage(
-                    $article,
-                    null,
-                    $request->input('featured_image_media_id')
-                );
-            }
-
-            // Handle OG image (file upload or media picker selection)
-            if ($request->hasFile('og_image')) {
-                $this->articleService->handleOgImage(
-                    $article,
-                    $request->file('og_image')
-                );
-            } elseif ($request->has('og_image_media_id')) {
-                $this->articleService->handleOgImage(
-                    $article,
-                    null,
-                    $request->input('og_image_media_id')
-                );
-            }
-
-            // Handle gallery images (file uploads or media picker selections)
-            if ($request->hasFile('gallery')) {
-                $this->articleService->handleGalleryImages(
-                    $article,
-                    $request->file('gallery')
-                );
-            }
-            if ($request->has('gallery_media_ids')) {
-                $this->articleService->handleGalleryImages(
-                    $article,
-                    null,
-                    $request->input('gallery_media_ids')
-                );
-            }
-
-            // Sync tags if provided
-            if ($request->has('tags')) {
-                $this->articleService->syncTags($article->id, $request->input('tags'));
-            }
-
-            // Reload article with fresh data
-            $article->refresh();
-            $article->load(['author', 'category', 'tags']);
-
-            // Log the update with diff
-            $this->logger->logUpdate($article, $oldValues, $article->toArray(), $request->user());
-
-            return redirect()
-                ->route('admin.articles.index')
-                ->with('success', __('Article updated successfully'));
-        } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', __('Failed to update article: :message', ['message' => $e->getMessage()]));
-        }
-    }
-
-    /**
-     * Remove the specified article (soft delete)
-     *
-     * DELETE /su/portal/v1/admin/articles/{article}
-     *
-     * @param Article $article Article model (route model binding)
-     * @return RedirectResponse Redirect to articles index with success message
-     */
-    public function destroy(Article $article): RedirectResponse
-    {
-        // Authorization check
-
-        try {
-            // Clear all media collections before deletion
-            $this->articleService->clearMediaCollection($article, 'featured_image');
-            $this->articleService->clearMediaCollection($article, 'og_image');
-            $this->articleService->clearMediaCollection($article, 'gallery');
-
-            // Perform soft deletion
-            $this->articleService->deleteArticle($article->id);
-
-            // Log the deletion
-            $this->logger->logDelete($article, request()->user());
-
-            return redirect()
-                ->route('admin.articles.index')
-                ->with('success', __('Article deleted successfully'));
-        } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->with('error', __('Failed to delete article: :message', ['message' => $e->getMessage()]));
-        }
-    }
-
-    /**
-     * Publish an article
-     *
-     * Changes status to 'published' and sets publication date if not set.
-     * Only admins and editors can publish articles.
-     *
-     * POST /su/portal/v1/admin/articles/{article}/publish
-     *
-     * @param Article $article Article model (route model binding)
-     * @return RedirectResponse Redirect with success or error message
-     */
-    public function publish(Article $article): RedirectResponse
-    {
-        // Authorization check - only admins and editors can publish
-        if (! request()->user()->hasAnyRole(['admin', 'super_admin', 'editor'])) {
-            abort(403, __('Unauthorized to publish articles'));
-        }
-
-        try {
-            $this->articleService->publishArticle($article->id);
-
-            // Log the action
-            $this->logger->logCustomAction(
-                'published',
-                $article,
-                request()->user(),
-                ['status' => $article->status],
-                ['status' => 'published', 'published_at' => now()]
-            );
-
-            return redirect()
-                ->back()
-                ->with('success', __('Article published successfully'));
-        } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->with('error', __('Failed to publish article: :message', ['message' => $e->getMessage()]));
-        }
-    }
-
-    /**
-     * Send article to review
-     *
-     * Changes status from 'draft' to 'under_review'.
-     * Authors can submit their own articles for review.
-     *
-     * POST /su/portal/v1/admin/articles/{article}/send-to-review
-     *
-     * @param Article $article Article model (route model binding)
-     * @return RedirectResponse Redirect with success or error message
-     */
-    public function sendToReview(Article $article): RedirectResponse
-    {
-        try {
-            // Check if article is in draft status
-            if ($article->status !== Article::STATUS_DRAFT) {
-                return redirect()
-                    ->back()
-                    ->with('error', __('Only draft articles can be sent for review'));
-            }
-
-            // Check if user is the author or has admin role
-            $user = request()->user();
-            if ($article->user_id !== $user->id && ! $user->hasAnyRole(['admin', 'super_admin', 'editor'])) {
-                abort(403, __('Unauthorized to submit this article for review'));
-            }
-
-            // Send to review
-            $article->sendToReview();
-
-            // Log the action
-            $this->logger->logCustomAction(
-                'sent_to_review',
-                $article,
-                $user,
-                ['status' => Article::STATUS_DRAFT],
-                ['status' => Article::STATUS_UNDER_REVIEW]
-            );
-
-            return redirect()
-                ->back()
-                ->with('success', __('Article submitted for review successfully'));
-        } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->with('error', __('Failed to submit article for review: :message', ['message' => $e->getMessage()]));
-        }
-    }
-
-    /**
-     * Approve an article
-     *
-     * Changes status from 'under_review' to 'published'.
-     * Only admins and editors can approve articles.
-     * Sets reviewer_id to current user.
-     *
-     * POST /su/portal/v1/admin/articles/{article}/approve
-     *
-     * @param Article $article Article model (route model binding)
-     * @return RedirectResponse Redirect with success or error message
-     */
-    public function approve(Article $article): RedirectResponse
-    {
-        // Authorization check - only admins and editors can approve
-        $user = request()->user();
-        if (! $user->hasAnyRole(['admin', 'super_admin', 'editor'])) {
-            abort(403, __('Unauthorized to approve articles'));
-        }
-
-        try {
-            // Check if article is under review
-            if ($article->status !== Article::STATUS_UNDER_REVIEW) {
-                return redirect()
-                    ->back()
-                    ->with('error', __('Only articles under review can be approved'));
-            }
-
-            // Approve article
-            $article->approve($user);
-
-            // Log the action
-            $this->logger->logCustomAction(
-                'approved',
-                $article,
-                $user,
-                ['status' => Article::STATUS_UNDER_REVIEW, 'reviewer_id' => null],
-                ['status' => Article::STATUS_PUBLISHED, 'reviewer_id' => $user->id, 'published_at' => now()]
-            );
-
-            return redirect()
-                ->back()
-                ->with('success', __('Article approved and published successfully'));
-        } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->with('error', __('Failed to approve article: :message', ['message' => $e->getMessage()]));
-        }
-    }
-
-    /**
-     * Reject an article
-     *
-     * Changes status from 'under_review' to 'rejected'.
-     * Only admins and editors can reject articles.
-     * Sets reviewer_id to current user.
-     *
-     * POST /su/portal/v1/admin/articles/{article}/reject
-     *
-     * @param Request $request HTTP request with optional rejection reason
-     * @param Article $article Article model (route model binding)
-     * @return RedirectResponse Redirect with success or error message
-     */
-    public function reject(Request $request, Article $article): RedirectResponse
-    {
-        // Authorization check - only admins and editors can reject
-        $user = $request->user();
-        if (! $user->hasAnyRole(['admin', 'super_admin', 'editor'])) {
-            abort(403, __('Unauthorized to reject articles'));
-        }
-
-        try {
-            // Check if article is under review
-            if ($article->status !== Article::STATUS_UNDER_REVIEW) {
-                return redirect()
-                    ->back()
-                    ->with('error', __('Only articles under review can be rejected'));
-            }
-
-            // Reject article
-            $article->reject($user);
-
-            // Log the action with optional reason
-            $this->logger->logCustomAction(
-                'rejected',
-                $article,
-                $user,
-                ['status' => Article::STATUS_UNDER_REVIEW, 'reviewer_id' => null],
-                [
-                    'status' => Article::STATUS_REJECTED,
-                    'reviewer_id' => $user->id,
-                    'rejection_reason' => $request->input('reason'),
-                ]
-            );
-
-            return redirect()
-                ->back()
-                ->with('success', __('Article rejected successfully'));
-        } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->with('error', __('Failed to reject article: :message', ['message' => $e->getMessage()]));
-        }
-    }
-
-    /**
-     * Bulk delete multiple articles
-     *
-     * Soft deletes multiple articles at once.
-     * Requires 'ids' array in request.
-     *
-     * POST /su/portal/v1/admin/articles/bulk-delete
-     *
-     * @param Request $request HTTP request with article IDs
-     * @return RedirectResponse|JsonResponse Redirect or JSON response
-     */
-    public function bulkDelete(Request $request): RedirectResponse|JsonResponse
-    {
-        // Validate input
-        $request->validate([
-            'ids' => ['required', 'array', 'min:1'],
-            'ids.*' => ['integer', 'exists:articles,id'],
+            // Locales
+            'locales' => 'required|array',
+            'locales.*.id' => 'nullable|exists:article_locale,id',
+            'locales.*.locale' => 'required|in:' . implode(',', $this->locales),
+            'locales.*.title' => 'required|string|max:500',
+            'locales.*.description' => 'nullable|string',
+            'locales.*.excerpt' => 'nullable|string',
+            'locales.*.body' => 'nullable|string',
+            'locales.*.summary' => 'nullable|string',
+            'locales.*.is_ready' => 'boolean',
         ]);
 
+        DB::beginTransaction();
         try {
-            $ids = $request->input('ids');
-            $deleted = 0;
+            // Handle thumbnail upload
+            if ($request->hasFile('thumb')) {
+                // Delete old thumbnail
+                if ($article->thumb) {
+                    Storage::disk('public')->delete($article->thumb);
+                }
+                $validated['thumb'] = $request->file('thumb')->store('articles/thumbs', 'public');
+            }
 
-            foreach ($ids as $id) {
-                try {
-                    $article = Article::findOrFail($id);
+            // Update article
+            $article->update([
+                'thumb' => $validated['thumb'] ?? $article->thumb,
+                'writer_id' => $validated['writer_id'] ?? null,
+                'read_time' => $validated['read_time'],
+                'is_featured' => $request->boolean('is_featured'),
+                'is_pinned' => $request->boolean('is_pinned'),
+                'category_id' => $validated['category_id'] ?? null,
+                'hijri_date' => $validated['hijri_date'] ?? null,
+            ]);
 
-                    // Authorization check for each article
+            // Update or create locales
+            foreach ($validated['locales'] as $localeData) {
+                $slug = Str::slug($localeData['title']) . '-' . Str::random(6);
 
-                    $this->articleService->deleteArticle($id);
-                    $deleted++;
-                } catch (\Exception $e) {
-                    // Continue deleting other articles
-                    continue;
+                if (!empty($localeData['id'])) {
+                    // Update existing locale
+                    ArticleLocale::where('id', $localeData['id'])->update([
+                        'title' => $localeData['title'],
+                        'slug' => $slug,
+                        'description' => $localeData['description'] ?? null,
+                        'excerpt' => $localeData['excerpt'] ?? null,
+                        'content' => [
+                            'body' => $localeData['body'] ?? null,
+                            'toc' => [],
+                            'summary' => $localeData['summary'] ?? null,
+                        ],
+                        'is_ready' => $localeData['is_ready'] ?? false,
+                    ]);
+                } else {
+                    // Create new locale
+                    $article->locales()->create([
+                        'locale' => $localeData['locale'],
+                        'title' => $localeData['title'],
+                        'slug' => $slug,
+                        'description' => $localeData['description'] ?? null,
+                        'excerpt' => $localeData['excerpt'] ?? null,
+                        'content' => [
+                            'body' => $localeData['body'] ?? null,
+                            'toc' => [],
+                            'summary' => $localeData['summary'] ?? null,
+                        ],
+                        'is_ready' => $localeData['is_ready'] ?? false,
+                    ]);
                 }
             }
 
-            // Log bulk action
-            $this->logger->logBulkAction(
-                'bulk_delete',
-                Article::class,
-                $ids,
-                $request->user()
-            );
+            // Sync categories
+            $article->categories()->sync($validated['categories'] ?? []);
 
-            $message = __(':count article(s) deleted successfully', ['count' => $deleted]);
-
-            // Return JSON for AJAX requests
-            if ($request->wantsJson()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => $message,
-                    'deleted_count' => $deleted,
-                ]);
-            }
+            DB::commit();
 
             return redirect()
                 ->route('admin.articles.index')
-                ->with('success', $message);
-        } catch (\Exception $e) {
-            if ($request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => __('Failed to delete articles: :message', ['message' => $e->getMessage()]),
-                ], 500);
-            }
+                ->with('success', 'Article updated successfully!');
 
-            return redirect()
-                ->back()
-                ->with('error', __('Failed to delete articles: :message', ['message' => $e->getMessage()]));
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()
+                ->withInput()
+                ->with('error', 'Failed to update article: ' . $e->getMessage());
         }
     }
 
     /**
-     * Restore a soft-deleted article
-     *
-     * POST /su/portal/v1/admin/articles/{id}/restore
-     *
-     * @param int $id Article ID to restore
-     * @return RedirectResponse Redirect with success or error message
+     * Remove the specified article
      */
-    public function restore(int $id): RedirectResponse
+    public function destroy(Article $article): RedirectResponse
     {
         try {
-            $article = Article::withTrashed()->findOrFail($id);
+            // Delete thumbnail if exists
+            if ($article->thumb) {
+                Storage::disk('public')->delete($article->thumb);
+            }
 
-            // Authorization check
+            // Delete gallery images
+            foreach ($article->gallery as $galleryItem) {
+                if ($galleryItem->image) {
+                    Storage::disk('public')->delete($galleryItem->image);
+                }
+            }
 
-            // Restore the article
-            $article->restore();
-
-            // Log the restoration
-            $this->logger->logRestore($article, request()->user());
+            // Delete article (cascade will handle related records)
+            $article->delete();
 
             return redirect()
                 ->route('admin.articles.index')
-                ->with('success', __('Article restored successfully'));
+                ->with('success', 'Article deleted successfully!');
+
         } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->with('error', __('Failed to restore article: :message', ['message' => $e->getMessage()]));
-        }
-    }
-
-    /**
-     * Search articles (AJAX endpoint)
-     *
-     * GET /su/portal/v1/admin/articles/search
-     *
-     * @param Request $request HTTP request with search query
-     * @return JsonResponse JSON response with search results
-     */
-    public function search(Request $request): JsonResponse
-    {
-        $request->validate([
-            'q' => ['required', 'string', 'min:2'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
-        ]);
-
-        try {
-            $query = $request->input('q');
-            $perPage = $request->integer('per_page', 15);
-
-            $articles = $this->articleService->searchArticles($query, $perPage);
-
-            return response()->json([
-                'success' => true,
-                'data' => $articles->items(),
-                'meta' => [
-                    'current_page' => $articles->currentPage(),
-                    'per_page' => $articles->perPage(),
-                    'total' => $articles->total(),
-                    'last_page' => $articles->lastPage(),
-                ],
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => __('Search failed: :message', ['message' => $e->getMessage()]),
-            ], 500);
-        }
-    }
-
-    /**
-     * Get all categories for selector (AJAX endpoint)
-     *
-     * GET /su/portal/v1/admin/articles/categories
-     *
-     * @return JsonResponse JSON response with categories
-     */
-    public function getCategories(): JsonResponse
-    {
-        try {
-            $categories = \App\Models\Category::select('id', 'name', 'parent_id')
-                ->orderBy('name')
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'data' => $categories,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => __('Failed to fetch categories'),
-            ], 500);
-        }
-    }
-
-    /**
-     * Get all tags for selector (AJAX endpoint)
-     *
-     * GET /su/portal/v1/admin/articles/tags
-     *
-     * @return JsonResponse JSON response with tags
-     */
-    public function getTags(): JsonResponse
-    {
-        try {
-            $tags = \App\Models\Tag::select('id', 'name')
-                ->orderBy('name')
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'data' => $tags,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => __('Failed to fetch tags'),
-            ], 500);
-        }
-    }
-
-    /**
-     * Get all series for selector (AJAX endpoint)
-     *
-     * GET /su/portal/v1/admin/articles/series
-     *
-     * @return JsonResponse JSON response with series
-     */
-    public function getSeries(): JsonResponse
-    {
-        try {
-            $series = \App\Models\Series::select('id', 'title', 'slug')
-                ->orderBy('title')
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'data' => $series,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => __('Failed to fetch series'),
-            ], 500);
-        }
-    }
-
-    /**
-     * Get all authors (users with editor/admin roles) for selector (AJAX endpoint)
-     *
-     * GET /su/portal/v1/admin/articles/authors
-     *
-     * @return JsonResponse JSON response with authors
-     */
-    public function getAuthors(): JsonResponse
-    {
-        try {
-            $authors = \App\Models\User::select('id', 'name', 'email')
-                ->whereHas('roles', function ($query) {
-                    $query->whereIn('name', ['admin', 'super_admin', 'editor']);
-                })
-                ->orderBy('name')
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'data' => $authors,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => __('Failed to fetch authors'),
-            ], 500);
+            return back()
+                ->with('error', 'Failed to delete article: ' . $e->getMessage());
         }
     }
 }

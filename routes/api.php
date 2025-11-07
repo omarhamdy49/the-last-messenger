@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Http\Controllers\Api\ArticleController;
+// use App\Http\Controllers\Api\ArticleController; // Temporarily disabled - no API controller yet
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\FilterController;
@@ -44,29 +44,29 @@ Route::prefix('categories')->group(function () {
     Route::get('/{slug}', [CategoryController::class, 'show'])->name('categories.show');
 });
 
-// Articles routes
-Route::prefix('articles')->group(function () {
-    // Public routes
-    Route::get('/', [ArticleController::class, 'index'])->name('articles.index');
-    Route::get('/featured', [ArticleController::class, 'featured'])->name('articles.featured');
-    Route::get('/popular', [ArticleController::class, 'popular'])->name('articles.popular');
-    Route::get('/recent', [ArticleController::class, 'recent'])->name('articles.recent');
-    Route::get('/search', [ArticleController::class, 'search'])->name('articles.search');
-    Route::get('/{slug}', [ArticleController::class, 'show'])->name('articles.show');
+// Articles routes - Temporarily disabled (no API controller yet)
+// Route::prefix('articles')->group(function () {
+//     // Public routes
+//     Route::get('/', [ArticleController::class, 'index'])->name('articles.index');
+//     Route::get('/featured', [ArticleController::class, 'featured'])->name('articles.featured');
+//     Route::get('/popular', [ArticleController::class, 'popular'])->name('articles.popular');
+//     Route::get('/recent', [ArticleController::class, 'recent'])->name('articles.recent');
+//     Route::get('/search', [ArticleController::class, 'search'])->name('articles.search');
+//     Route::get('/{slug}', [ArticleController::class, 'show'])->name('articles.show');
 
-    // Protected routes (requires authentication)
-    Route::middleware('auth:sanctum')->group(function () {
-        Route::post('/', [ArticleController::class, 'store'])->name('articles.store');
-        Route::put('/{article}', [ArticleController::class, 'update'])->name('articles.update');
-        Route::delete('/{article}', [ArticleController::class, 'destroy'])->name('articles.destroy');
+//     // Protected routes (requires authentication)
+//     Route::middleware('auth:sanctum')->group(function () {
+//         Route::post('/', [ArticleController::class, 'store'])->name('articles.store');
+//         Route::put('/{article}', [ArticleController::class, 'update'])->name('articles.update');
+//         Route::delete('/{article}', [ArticleController::class, 'destroy'])->name('articles.destroy');
 
-        // Article actions
-        Route::post('/{article}/favorite', [ArticleController::class, 'toggleFavorite'])->name('articles.favorite');
-        Route::post('/{article}/publish', [ArticleController::class, 'publish'])->name('articles.publish');
-        Route::post('/{article}/unpublish', [ArticleController::class, 'unpublish'])->name('articles.unpublish');
-        Route::post('/{article}/archive', [ArticleController::class, 'archive'])->name('articles.archive');
-    });
-});
+//         // Article actions
+//         Route::post('/{article}/favorite', [ArticleController::class, 'toggleFavorite'])->name('articles.favorite');
+//         Route::post('/{article}/publish', [ArticleController::class, 'publish'])->name('articles.publish');
+//         Route::post('/{article}/unpublish', [ArticleController::class, 'unpublish'])->name('articles.unpublish');
+//         Route::post('/{article}/archive', [ArticleController::class, 'archive'])->name('articles.archive');
+//     });
+// });
 
 // Hadith routes
 Route::prefix('hadith')->group(function () {

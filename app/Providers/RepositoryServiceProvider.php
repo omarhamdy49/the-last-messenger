@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Domain\Blog\Repositories\ArticleRepository;
-use App\Domain\Blog\Repositories\ArticleRepositoryInterface;
+// use App\Domain\Blog\Repositories\ArticleRepository; // Temporarily disabled
+// use App\Domain\Blog\Repositories\ArticleRepositoryInterface; // Temporarily disabled
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -20,7 +20,7 @@ class RepositoryServiceProvider extends ServiceProvider
     public function register(): void
     {
         // Blog Module Repositories
-        $this->app->bind(ArticleRepositoryInterface::class, ArticleRepository::class);
+        // $this->app->bind(ArticleRepositoryInterface::class, ArticleRepository::class); // Temporarily disabled
         $this->app->bind(
             \App\Domain\Blog\Repositories\CategoryRepositoryInterface::class,
             \App\Domain\Blog\Repositories\CategoryRepository::class
