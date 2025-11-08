@@ -460,13 +460,10 @@
                                            :class="darkMode ? 'text-white' : 'text-gray-900'">
                                         {{ __('articles.fields.description') }}
                                     </label>
+                                    <div id="description_{{ $locale }}_editor" class="quill-editor" style="height: 150px;"></div>
                                     <textarea name="description[{{ $locale }}]"
                                               id="description_{{ $locale }}"
-                                              class="tinymce w-full px-4 py-2.5 rounded-lg border"
-                                              :class="darkMode ?
-                                                  'bg-gray-700 border-gray-600 text-white' :
-                                                  'bg-white border-gray-300 text-gray-900'"
-                                              rows="4">{{ old("description.{$locale}", $article && $article->getLocale($locale) ? $article->getLocale($locale)->description : '') }}</textarea>
+                                              class="hidden">{{ old("description.{$locale}", $article && $article->getLocale($locale) ? $article->getLocale($locale)->description : '') }}</textarea>
                                 </div>
 
                                 {{-- Content Body (WYSIWYG) --}}
@@ -476,13 +473,10 @@
                                         {{ __('articles.fields.body') }}
                                         <span class="text-red-500">*</span>
                                     </label>
+                                    <div id="content_{{ $locale }}_editor" class="quill-editor" style="height: 400px;"></div>
                                     <textarea name="content[{{ $locale }}]"
                                               id="content_{{ $locale }}"
-                                              class="tinymce w-full px-4 py-2.5 rounded-lg border"
-                                              :class="darkMode ?
-                                                  'bg-gray-700 border-gray-600 text-white' :
-                                                  'bg-white border-gray-300 text-gray-900'"
-                                              rows="15"
+                                              class="hidden"
                                               required>{{ old("content.{$locale}", $article && $article->getLocale($locale) ? ($article->getLocale($locale)->content['body'] ?? '') : '') }}</textarea>
                                 </div>
 
@@ -501,13 +495,10 @@
                                            :class="darkMode ? 'text-white' : 'text-gray-900'">
                                         {{ __('articles.fields.summary') }}
                                     </label>
+                                    <div id="summary_{{ $locale }}_editor" class="quill-editor" style="height: 150px;"></div>
                                     <textarea name="summary[{{ $locale }}]"
                                               id="summary_{{ $locale }}"
-                                              class="tinymce w-full px-4 py-2.5 rounded-lg border"
-                                              :class="darkMode ?
-                                                  'bg-gray-700 border-gray-600 text-white' :
-                                                  'bg-white border-gray-300 text-gray-900'"
-                                              rows="5">{{ old("summary.{$locale}", $article && $article->getLocale($locale) ? ($article->getLocale($locale)->content['summary'] ?? '') : '') }}</textarea>
+                                              class="hidden">{{ old("summary.{$locale}", $article && $article->getLocale($locale) ? ($article->getLocale($locale)->content['summary'] ?? '') : '') }}</textarea>
                                 </div>
 
                                 {{-- Excerpt --}}
@@ -718,9 +709,159 @@
 </form>
 
 @push('scripts')
+<!-- jQuery (Required for Select2) -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<!-- Select2 -->
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script src="https://cdn.tiny.cloud/1/YOUR_TINYMCE_API_KEY/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+<!-- Quill Editor (Open Source Alternative) -->
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.js"></script>
 <script>
+// Component Functions (Must be defined before Alpine initializes)
+window.tocManager = function(config) {
+    return {
+        name: config.name,
+        locale: config.locale,
+        items: config.values || [],
+        content: config.content || '',
+        nextId: 1,
+
+        init() {
+            if (this.items.length > 0) {
+                this.items = this.items.map(value => ({
+                    ...value,
+                    id: this.nextId++,
+                    level: value.level || 2
+                }));
+            }
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        addItem() {
+            this.items.push({
+                id: this.nextId++,
+                title: '',
+                link: '',
+                level: 2
+            });
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        removeItem(index) {
+            this.items.splice(index, 1);
+        },
+
+        autoGenerateTOC() {
+            const editorContainer = document.querySelector(`#content_${this.locale}_editor`);
+            let contentHtml = '';
+
+            if (editorContainer && editorContainer.querySelector('.ql-editor')) {
+                contentHtml = editorContainer.querySelector('.ql-editor').innerHTML;
+            }
+
+            if (!contentHtml) {
+                alert('الرجاء كتابة المحتوى أولاً');
+                return;
+            }
+
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(contentHtml, 'text/html');
+            const headings = doc.querySelectorAll('h2, h3');
+
+            if (headings.length === 0) {
+                alert('لم يتم العثور على عناوين (H2, H3) في المحتوى');
+                return;
+            }
+
+            this.items = [];
+            headings.forEach((heading) => {
+                const text = heading.textContent.trim();
+                const level = parseInt(heading.tagName.substring(1));
+                const link = this.slugify(text);
+
+                if (!heading.id) heading.id = link;
+
+                this.items.push({
+                    id: this.nextId++,
+                    title: text,
+                    link: link,
+                    level: level
+                });
+            });
+
+            if (editorContainer && editorContainer.querySelector('.ql-editor')) {
+                editorContainer.querySelector('.ql-editor').innerHTML = doc.body.innerHTML;
+                const textarea = document.getElementById(`content_${this.locale}`);
+                if (textarea) textarea.value = doc.body.innerHTML;
+            }
+
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        slugify(text) {
+            return text.toString().toLowerCase().trim()
+                .replace(/\s+/g, '-')
+                .replace(/[^\w\u0600-\u06FF\-]+/g, '')
+                .replace(/\-\-+/g, '-')
+                .replace(/^-+/, '')
+                .replace(/-+$/, '');
+        }
+    };
+};
+
+window.repeatableField = function(config) {
+    return {
+        name: config.name,
+        fields: config.fields,
+        items: config.values || [],
+        minItems: config.minItems || 0,
+        maxItems: config.maxItems || 999,
+        nextId: 1,
+
+        init() {
+            if (this.items.length > 0) {
+                this.items = this.items.map((value) => ({
+                    ...value,
+                    id: this.nextId++
+                }));
+            } else {
+                for (let i = 0; i < this.minItems; i++) {
+                    this.addItem();
+                }
+            }
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        addItem() {
+            if (this.items.length >= this.maxItems) return;
+
+            const newItem = { id: this.nextId++ };
+            this.fields.forEach(field => {
+                newItem[field.name] = field.default || '';
+            });
+            this.items.push(newItem);
+
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        removeItem(index) {
+            if (this.items.length <= this.minItems) return;
+            this.items.splice(index, 1);
+        }
+    };
+};
+
+// Article Form
 function articleForm(article, locales) {
     return {
         activeTab: 'main',
@@ -759,10 +900,15 @@ function articleForm(article, locales) {
                 this.formData.is_ready[locale] = article?.locales?.[locale]?.is_ready || false;
             });
 
+            // Listen for media selection events
+            window.addEventListener('media-selected', (event) => {
+                this.handleMediaSelected(event.detail);
+            });
+
             // Initialize Select2
             this.$nextTick(() => {
                 this.initializeSelect2();
-                this.initializeTinyMCE();
+                this.initializeQuill();
                 this.setupUnsavedChangesWarning();
                 lucide.createIcons();
             });
@@ -779,44 +925,110 @@ function articleForm(article, locales) {
             });
         },
 
-        initializeTinyMCE() {
-            const isDark = document.documentElement.classList.contains('dark');
+        initializeQuill() {
+            const self = this;
 
             locales.forEach(locale => {
-                // Initialize description editors
-                tinymce.init({
-                    selector: `#description_${locale}`,
-                    height: 200,
-                    menubar: false,
-                    plugins: 'link lists code',
-                    toolbar: 'undo redo | bold italic | bullist numlist | link | code',
-                    skin: isDark ? 'oxide-dark' : 'oxide',
-                    content_css: isDark ? 'dark' : 'default',
-                    directionality: ['ar', 'ur'].includes(locale) ? 'rtl' : 'ltr'
+                const isRtl = ['ar', 'ur'].includes(locale);
+
+                // Description editor (simple toolbar)
+                const descEditor = new Quill(`#description_${locale}_editor`, {
+                    theme: 'snow',
+                    placeholder: 'أدخل الوصف...',
+                    modules: {
+                        toolbar: [
+                            ['bold', 'italic', 'underline'],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            ['link'],
+                            ['clean']
+                        ]
+                    }
                 });
 
-                // Initialize content editors
-                tinymce.init({
-                    selector: `#content_${locale}`,
-                    height: 500,
-                    menubar: true,
-                    plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
-                    toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat',
-                    skin: isDark ? 'oxide-dark' : 'oxide',
-                    content_css: isDark ? 'dark' : 'default',
-                    directionality: ['ar', 'ur'].includes(locale) ? 'rtl' : 'ltr'
+                // Set RTL if needed
+                if (isRtl) {
+                    descEditor.format('direction', 'rtl');
+                    descEditor.format('align', 'right');
+                }
+
+                // Load initial content
+                const descTextarea = document.getElementById(`description_${locale}`);
+                if (descTextarea.value) {
+                    descEditor.root.innerHTML = descTextarea.value;
+                }
+
+                // Sync to textarea on change
+                descEditor.on('text-change', () => {
+                    descTextarea.value = descEditor.root.innerHTML;
+                    self.hasUnsavedChanges = true;
                 });
 
-                // Initialize summary editors
-                tinymce.init({
-                    selector: `#summary_${locale}`,
-                    height: 200,
-                    menubar: false,
-                    plugins: 'link lists',
-                    toolbar: 'undo redo | bold italic | bullist numlist | link',
-                    skin: isDark ? 'oxide-dark' : 'oxide',
-                    content_css: isDark ? 'dark' : 'default',
-                    directionality: ['ar', 'ur'].includes(locale) ? 'rtl' : 'ltr'
+                // Content editor (full toolbar)
+                const contentEditor = new Quill(`#content_${locale}_editor`, {
+                    theme: 'snow',
+                    placeholder: 'أدخل محتوى المقال...',
+                    modules: {
+                        toolbar: [
+                            [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                            ['bold', 'italic', 'underline', 'strike'],
+                            [{ 'color': [] }, { 'background': [] }],
+                            [{ 'align': [] }],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            [{ 'indent': '-1'}, { 'indent': '+1' }],
+                            ['blockquote', 'code-block'],
+                            ['link', 'image', 'video'],
+                            ['clean']
+                        ]
+                    }
+                });
+
+                // Set RTL if needed
+                if (isRtl) {
+                    contentEditor.format('direction', 'rtl');
+                    contentEditor.format('align', 'right');
+                }
+
+                // Load initial content
+                const contentTextarea = document.getElementById(`content_${locale}`);
+                if (contentTextarea.value) {
+                    contentEditor.root.innerHTML = contentTextarea.value;
+                }
+
+                // Sync to textarea on change
+                contentEditor.on('text-change', () => {
+                    contentTextarea.value = contentEditor.root.innerHTML;
+                    self.hasUnsavedChanges = true;
+                });
+
+                // Summary editor (simple toolbar)
+                const summaryEditor = new Quill(`#summary_${locale}_editor`, {
+                    theme: 'snow',
+                    placeholder: 'أدخل الملخص...',
+                    modules: {
+                        toolbar: [
+                            ['bold', 'italic'],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            ['link']
+                        ]
+                    }
+                });
+
+                // Set RTL if needed
+                if (isRtl) {
+                    summaryEditor.format('direction', 'rtl');
+                    summaryEditor.format('align', 'right');
+                }
+
+                // Load initial content
+                const summaryTextarea = document.getElementById(`summary_${locale}`);
+                if (summaryTextarea.value) {
+                    summaryEditor.root.innerHTML = summaryTextarea.value;
+                }
+
+                // Sync to textarea on change
+                summaryEditor.on('text-change', () => {
+                    summaryTextarea.value = summaryEditor.root.innerHTML;
+                    self.hasUnsavedChanges = true;
                 });
             });
         },
@@ -868,6 +1080,42 @@ function articleForm(article, locales) {
                     e.returnValue = '';
                 }
             });
+        },
+
+        handleMediaSelected(detail) {
+            const { target, media, multiple } = detail;
+
+            if (target === 'thumbnail') {
+                // Handle thumbnail selection
+                this.formData.thumb_id = media.id;
+                this.thumbnailPreview = media.url;
+                this.hasUnsavedChanges = true;
+            } else if (target === 'gallery') {
+                // Handle gallery selection
+                if (multiple) {
+                    // Add multiple images to gallery
+                    media.forEach(item => {
+                        if (!this.formData.gallery.find(g => g.id === item.id)) {
+                            this.formData.gallery.push(item);
+                        }
+                    });
+                } else {
+                    // Add single image to gallery
+                    if (!this.formData.gallery.find(g => g.id === media.id)) {
+                        this.formData.gallery.push(media);
+                    }
+                }
+                this.hasUnsavedChanges = true;
+            }
+
+            this.$nextTick(() => {
+                lucide.createIcons();
+            });
+        },
+
+        removeGalleryImage(index) {
+            this.formData.gallery.splice(index, 1);
+            this.hasUnsavedChanges = true;
         },
 
         saveDraft() {

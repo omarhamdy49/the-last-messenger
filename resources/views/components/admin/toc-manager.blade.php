@@ -10,7 +10,7 @@
     name: '{{ $name }}[{{ $locale }}]',
     locale: '{{ $locale }}',
     values: {{ json_encode($values) }},
-    content: @entangle($content).defer
+    content: '{{ $content }}'
 })" class="toc-manager">
 
     <!-- Header with Auto-Generate Button -->
@@ -131,9 +131,14 @@
     </div>
 </div>
 
+{{-- TOC Manager script moved to _form-new.blade.php to prevent loading order issues --}}
+@if(false)
+@once
 @push('scripts')
 <script>
-function tocManager(config) {
+// TOC Manager Component (DISABLED - Defined in main form)
+if (typeof tocManager === 'undefined') {
+    window.tocManager = function(config) {
     return {
         name: config.name,
         locale: config.locale,
@@ -178,13 +183,13 @@ function tocManager(config) {
         },
 
         autoGenerateTOC() {
-            // Get content from TinyMCE editor if available
+            // Get content from Quill editor
             let contentHtml = this.content;
 
-            // Try to get from TinyMCE editor
-            const editorId = `content_${this.locale}`;
-            if (typeof tinymce !== 'undefined' && tinymce.get(editorId)) {
-                contentHtml = tinymce.get(editorId).getContent();
+            // Try to get from Quill editor (Quill stores editors globally or we can access via DOM)
+            const editorContainer = document.querySelector(`#content_${this.locale}_editor`);
+            if (editorContainer && editorContainer.querySelector('.ql-editor')) {
+                contentHtml = editorContainer.querySelector('.ql-editor').innerHTML;
             }
 
             if (!contentHtml) {
@@ -224,9 +229,14 @@ function tocManager(config) {
                 });
             });
 
-            // Update the content in TinyMCE with IDs added to headings
-            if (typeof tinymce !== 'undefined' && tinymce.get(editorId)) {
-                tinymce.get(editorId).setContent(doc.body.innerHTML);
+            // Update the content in Quill with IDs added to headings
+            if (editorContainer && editorContainer.querySelector('.ql-editor')) {
+                editorContainer.querySelector('.ql-editor').innerHTML = doc.body.innerHTML;
+                // Also update the hidden textarea
+                const textarea = document.getElementById(`content_${this.locale}`);
+                if (textarea) {
+                    textarea.value = doc.body.innerHTML;
+                }
             }
 
             this.$nextTick(() => {
@@ -267,6 +277,9 @@ function tocManager(config) {
             }, 3000);
         }
     };
+    };
 }
 </script>
 @endpush
+@endonce
+@endif

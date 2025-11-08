@@ -15,7 +15,8 @@
 <div x-data="mediaPickerModal()"
      x-show="isOpen"
      x-cloak
-     @media-picker-open.window="handleOpen($event.detail)"
+     @open-media-library.window="handleOpen($event.detail)"
+     @open-media-episodes-modal.window="handleOpen($event.detail)"
      @keydown.escape.window="close()"
      class="fixed inset-0 z-50 overflow-hidden"
      style="display: none;">
@@ -253,7 +254,7 @@
             <div x-show="activeTab === 'upload'" class="flex-1 overflow-y-auto custom-scrollbar px-6 py-6">
                 <div class="max-w-2xl mx-auto">
                     <!-- Upload Area -->
-                    <div x-data="fileUploader()" class="space-y-6">
+                    <div class="space-y-6">
                         <!-- Drag and Drop Zone -->
                         <div @drop.prevent="handleDrop($event)"
                              @dragover.prevent="dragOver = true"
@@ -267,7 +268,7 @@
                                    x-ref="fileInput"
                                    @change="handleFileSelect($event)"
                                    :accept="getAcceptedTypes()"
-                                   :multiple="$parent.selectionMode === 'multiple'"
+                                   :multiple="selectionMode === 'multiple'"
                                    class="hidden">
 
                             <div class="flex flex-col items-center gap-4">
@@ -282,9 +283,9 @@
                                     </h3>
                                     <p class="text-sm"
                                        :class="$root.darkMode ? 'text-gray-400' : 'text-gray-600'">
-                                        <span x-show="$parent.filterType === 'image'">Supports: JPG, PNG, GIF, WebP</span>
-                                        <span x-show="$parent.filterType === 'video'">Supports: MP4, WebM, MOV</span>
-                                        <span x-show="$parent.filterType === 'all'">Supports: Images and Videos</span>
+                                        <span x-show="filterType === 'image'">Supports: JPG, PNG, GIF, WebP</span>
+                                        <span x-show="filterType === 'video'">Supports: MP4, WebM, MOV</span>
+                                        <span x-show="filterType === 'all'">Supports: Images and Videos</span>
                                         <span class="block mt-1">Maximum file size: 100MB</span>
                                     </p>
                                 </div>
@@ -399,6 +400,11 @@ function mediaPickerModal() {
         currentPage: 1,
         hasMorePages: false,
         onSelectCallback: null,
+        currentTarget: null, // 'thumbnail', 'gallery', etc.
+
+        // File Upload Properties
+        dragOver: false,
+        uploadQueue: [],
 
         init() {
             // Set up global MediaPicker API
@@ -416,7 +422,16 @@ function mediaPickerModal() {
         },
 
         handleOpen(options = {}) {
-            this.selectionMode = options.mode || 'single';
+            // Convert 'multiple' boolean to 'mode' string
+            if (options.multiple !== undefined) {
+                this.selectionMode = options.multiple ? 'multiple' : 'single';
+            } else {
+                this.selectionMode = options.mode || 'single';
+            }
+
+            // Store target for callback
+            this.currentTarget = options.target || null;
+
             this.filterType = options.type || 'all';
             this.onSelectCallback = options.onSelect || null;
             this.selectedItems = [];
@@ -534,9 +549,13 @@ function mediaPickerModal() {
                 this.onSelectCallback(result);
             }
 
-            // Dispatch event for other components
+            // Dispatch event for other components with target information
             window.dispatchEvent(new CustomEvent('media-selected', {
-                detail: result
+                detail: {
+                    target: this.currentTarget,
+                    media: result,
+                    multiple: this.selectionMode === 'multiple'
+                }
             }));
 
             this.close();
@@ -548,15 +567,9 @@ function mediaPickerModal() {
             const sizes = ['Bytes', 'KB', 'MB', 'GB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-        }
-    };
-}
+        },
 
-function fileUploader() {
-    return {
-        dragOver: false,
-        uploadQueue: [],
-
+        // File Upload Methods
         handleDrop(event) {
             this.dragOver = false;
             const files = Array.from(event.dataTransfer.files);
@@ -570,10 +583,9 @@ function fileUploader() {
         },
 
         getAcceptedTypes() {
-            const parent = this.$parent;
-            if (parent.filterType === 'image') {
+            if (this.filterType === 'image') {
                 return 'image/jpeg,image/png,image/gif,image/webp';
-            } else if (parent.filterType === 'video') {
+            } else if (this.filterType === 'video') {
                 return 'video/mp4,video/webm,video/quicktime';
             }
             return 'image/*,video/*';
@@ -625,11 +637,11 @@ function fileUploader() {
                         const response = JSON.parse(xhr.responseText);
 
                         // Add to media grid
-                        this.$parent.mediaItems.unshift(response.data);
+                        this.mediaItems.unshift(response.data);
 
                         // Auto-select if single mode
-                        if (this.$parent.selectionMode === 'single') {
-                            this.$parent.selectedItems = [response.data];
+                        if (this.selectionMode === 'single') {
+                            this.selectedItems = [response.data];
                         }
 
                         // Remove from queue after 2 seconds

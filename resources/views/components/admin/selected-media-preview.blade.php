@@ -8,7 +8,7 @@
 --}}
 
 <div class="p-4 space-y-3">
-    <template x-for="(media, index) in $parent.selectedItems" :key="media.id">
+    <template x-for="(media, index) in selectedItems" :key="media.id">
         <div class="group relative rounded-lg overflow-hidden border transition-all duration-300 hover:shadow-lg"
              :class="$root.darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'"
              x-data="{ showControls: false }">

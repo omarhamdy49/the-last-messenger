@@ -72,6 +72,10 @@
     ])
 
 </div>
+
+{{-- Media Picker Modal --}}
+<x-admin.media-picker-modal />
+
 @endsection
 
 @push('scripts')

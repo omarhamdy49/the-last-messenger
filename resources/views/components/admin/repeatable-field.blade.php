@@ -163,67 +163,75 @@
     </div>
 </div>
 
+{{-- Repeatable Field script moved to _form-new.blade.php to prevent loading order issues --}}
+@if(false)
+@once
 @push('scripts')
 <script>
-function repeatableField(config) {
-    return {
-        name: config.name,
-        fields: config.fields,
-        items: [],
-        minItems: config.minItems || 0,
-        maxItems: config.maxItems || 999,
-        nextId: 1,
+// Repeatable Field Component (DISABLED - Defined in main form)
+if (typeof repeatableField === 'undefined') {
+    window.repeatableField = function(config) {
+        return {
+            name: config.name,
+            fields: config.fields,
+            items: [],
+            minItems: config.minItems || 0,
+            maxItems: config.maxItems || 999,
+            nextId: 1,
 
-        init() {
-            // Initialize with existing values or create minimum items
-            if (config.values && config.values.length > 0) {
-                this.items = config.values.map((value, index) => ({
-                    ...value,
-                    id: this.nextId++
-                }));
-            } else {
-                // Create minimum required items
-                for (let i = 0; i < this.minItems; i++) {
-                    this.addItem();
+            init() {
+                // Initialize with existing values or create minimum items
+                if (config.values && config.values.length > 0) {
+                    this.items = config.values.map((value, index) => ({
+                        ...value,
+                        id: this.nextId++
+                    }));
+                } else {
+                    // Create minimum required items
+                    for (let i = 0; i < this.minItems; i++) {
+                        this.addItem();
+                    }
                 }
-            }
 
-            this.$nextTick(() => {
-                if (typeof lucide !== 'undefined') {
-                    lucide.createIcons();
+                this.$nextTick(() => {
+                    if (typeof lucide !== 'undefined') {
+                        lucide.createIcons();
+                    }
+                });
+            },
+
+            addItem() {
+                if (this.items.length >= this.maxItems) {
+                    return;
                 }
-            });
-        },
 
-        addItem() {
-            if (this.items.length >= this.maxItems) {
-                return;
-            }
+                const newItem = { id: this.nextId++ };
 
-            const newItem = { id: this.nextId++ };
+                // Initialize all fields with empty values
+                this.fields.forEach(field => {
+                    newItem[field.name] = field.default || '';
+                });
 
-            // Initialize all fields with empty values
-            this.fields.forEach(field => {
-                newItem[field.name] = field.default || '';
-            });
+                this.items.push(newItem);
 
-            this.items.push(newItem);
+                this.$nextTick(() => {
+                    if (typeof lucide !== 'undefined') {
+                        lucide.createIcons();
+                    }
+                });
+            },
 
-            this.$nextTick(() => {
-                if (typeof lucide !== 'undefined') {
-                    lucide.createIcons();
+            removeItem(index) {
+                if (this.items.length <= this.minItems) {
+                    return;
                 }
-            });
-        },
 
-        removeItem(index) {
-            if (this.items.length <= this.minItems) {
-                return;
+                this.items.splice(index, 1);
             }
-
-            this.items.splice(index, 1);
-        }
+        };
     };
 }
 </script>
 @endpush
+@endonce
+@endif
