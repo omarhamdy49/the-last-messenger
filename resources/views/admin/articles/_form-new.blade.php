@@ -445,6 +445,7 @@
                                     <input type="text"
                                            name="slug[{{ $locale }}]"
                                            x-model="formData.slug.{{ $locale }}"
+                                           @input="onSlugManualEdit('{{ $locale }}')"
                                            class="w-full px-4 py-2.5 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
                                            :class="darkMode ?
                                                'bg-gray-700 border-gray-600 text-white' :
@@ -973,6 +974,7 @@ function articleForm(article, locales) {
         activeLang: 'ar',
         hasUnsavedChanges: false,
         thumbnailPreview: article?.thumb ? '{{ asset('storage') }}/' + article.thumb : null,
+        manualSlugEdit: {}, // Track which locales have manually edited slugs
         formData: {
             thumb_id: article?.thumb_id || null,
             writer_id: article?.writer_id || '',
@@ -1007,6 +1009,9 @@ function articleForm(article, locales) {
                 this.formData.seo_title[locale] = article?.locales?.[locale]?.seo?.title || '';
                 this.formData.seo_description[locale] = article?.locales?.[locale]?.seo?.description || '';
                 this.formData.is_ready[locale] = article?.locales?.[locale]?.is_ready || false;
+
+                // Mark slug as manually edited if article already has a slug
+                this.manualSlugEdit[locale] = !!article?.locales?.[locale]?.slug;
             });
 
             // Listen for media selection events
@@ -1143,21 +1148,37 @@ function articleForm(article, locales) {
         },
 
         generateSlug(locale) {
-            if (!this.formData.slug[locale]) {
-                this.formData.slug[locale] = this.slugify(this.formData.title[locale]);
+            // Only auto-generate if user hasn't manually edited the slug
+            if (!this.manualSlugEdit[locale]) {
+                const title = this.formData.title[locale] || '';
+                this.formData.slug[locale] = this.slugify(title);
             }
         },
 
+        onSlugManualEdit(locale) {
+            // Mark this locale's slug as manually edited
+            this.manualSlugEdit[locale] = true;
+        },
+
         slugify(text) {
+            if (!text) return '';
+
             return text
                 .toString()
-                .toLowerCase()
                 .trim()
-                .replace(/\s+/g, '-')
+                // Remove Arabic diacritics (tashkeel)
+                .replace(/[\u064B-\u065F\u0670]/g, '')
+                // Replace spaces and special chars with hyphens
+                .replace(/[\s\/_]+/g, '-')
+                // Keep only Arabic letters, English letters, numbers, and hyphens
                 .replace(/[^\w\u0600-\u06FF\-]+/g, '')
+                // Remove multiple consecutive hyphens
                 .replace(/\-\-+/g, '-')
+                // Remove leading/trailing hyphens
                 .replace(/^-+/, '')
-                .replace(/-+$/, '');
+                .replace(/-+$/, '')
+                // Convert to lowercase (for English parts)
+                .toLowerCase();
         },
 
         handleThumbnailUpload(event) {
