@@ -541,15 +541,120 @@
 
                     {{-- TAB 2: SEO Metadata --}}
                     <div x-show="activeTab === 'seo'" x-transition class="space-y-6">
-                        <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                            {{ __('articles.help.seo') }}
-                        </p>
-
-                        {{-- SEO will continue in next block due to length... --}}
-                        <div class="text-center py-12 text-gray-400">
-                            SEO Metadata fields for each language (meta title, description, keywords, OG tags)
-                            - Implementation continues below -
+                        <div class="rounded-lg border p-4"
+                             :class="darkMode ? 'bg-blue-900/10 border-blue-800' : 'bg-blue-50 border-blue-200'">
+                            <div class="flex items-start gap-3">
+                                <i data-lucide="info" class="w-5 h-5 flex-shrink-0 mt-0.5"
+                                   :class="darkMode ? 'text-blue-400' : 'text-blue-600'"></i>
+                                <div>
+                                    <h4 class="font-semibold mb-1"
+                                        :class="darkMode ? 'text-blue-400' : 'text-blue-600'">
+                                        {{ __('articles.seo.title') }}
+                                    </h4>
+                                    <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                        تحسين المقال لمحركات البحث (SEO) يساعد في ظهور المحتوى في نتائج البحث. الحقول أدناه اختيارية.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
+
+                        {{-- Language Tabs for SEO --}}
+                        <div class="flex gap-2 border-b"
+                             :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
+                            @foreach($locales as $locale)
+                            <button type="button"
+                                    @click="activeLang = '{{ $locale }}'"
+                                    class="px-4 py-2 font-medium transition-colors"
+                                    :class="activeLang === '{{ $locale }}' ?
+                                        'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' :
+                                        'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'">
+                                {{ strtoupper($locale) }}
+                            </button>
+                            @endforeach
+                        </div>
+
+                        {{-- SEO Fields per Language --}}
+                        @foreach($locales as $locale)
+                        <div x-show="activeLang === '{{ $locale }}'" x-transition class="space-y-6">
+
+                            {{-- SEO Title --}}
+                            <div>
+                                <label class="block text-sm font-semibold mb-2"
+                                       :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                    {{ __('articles.seo.title') }}
+                                    <span class="text-gray-400 font-normal">({{ __('common.optional') }})</span>
+                                </label>
+                                <input type="text"
+                                       name="seo_title[{{ $locale }}]"
+                                       x-model="formData.seo_title['{{ $locale }}']"
+                                       maxlength="70"
+                                       placeholder="{{ __('articles.fields.title') }}"
+                                       class="w-full px-4 py-2 rounded-lg border transition-colors focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                       :class="darkMode ?
+                                           'bg-gray-700 border-gray-600 text-white placeholder-gray-400' :
+                                           'bg-white border-gray-300 text-gray-900 placeholder-gray-500'">
+                                <div class="flex items-center justify-between mt-1">
+                                    <p class="text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
+                                        يظهر كعنوان في نتائج البحث. الطول المثالي: 50-60 حرف
+                                    </p>
+                                    <span class="text-xs"
+                                          :class="(formData.seo_title['{{ $locale }}']?.length || 0) > 60 ? 'text-orange-500' : (darkMode ? 'text-gray-500' : 'text-gray-400')">
+                                        <span x-text="formData.seo_title['{{ $locale }}']?.length || 0"></span>/70
+                                    </span>
+                                </div>
+                            </div>
+
+                            {{-- SEO Description --}}
+                            <div>
+                                <label class="block text-sm font-semibold mb-2"
+                                       :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                    {{ __('articles.seo.description') }}
+                                    <span class="text-gray-400 font-normal">({{ __('common.optional') }})</span>
+                                </label>
+                                <textarea name="seo_description[{{ $locale }}]"
+                                          x-model="formData.seo_description['{{ $locale }}']"
+                                          rows="3"
+                                          maxlength="160"
+                                          placeholder="{{ __('articles.placeholders.excerpt') }}"
+                                          class="w-full px-4 py-2 rounded-lg border transition-colors focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                          :class="darkMode ?
+                                              'bg-gray-700 border-gray-600 text-white placeholder-gray-400' :
+                                              'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"></textarea>
+                                <div class="flex items-center justify-between mt-1">
+                                    <p class="text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
+                                        يظهر كوصف في نتائج البحث. الطول المثالي: 150-160 حرف
+                                    </p>
+                                    <span class="text-xs"
+                                          :class="(formData.seo_description['{{ $locale }}']?.length || 0) > 155 ? 'text-orange-500' : (darkMode ? 'text-gray-500' : 'text-gray-400')">
+                                        <span x-text="formData.seo_description['{{ $locale }}']?.length || 0"></span>/160
+                                    </span>
+                                </div>
+                            </div>
+
+                            {{-- Preview Card --}}
+                            <div class="rounded-lg border p-4"
+                                 :class="darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                                <h4 class="text-xs font-semibold mb-3 uppercase tracking-wide"
+                                    :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                    معاينة نتائج البحث
+                                </h4>
+                                <div class="space-y-1">
+                                    <div class="text-blue-600 text-lg font-medium hover:underline cursor-pointer">
+                                        <span x-text="formData.seo_title['{{ $locale }}'] || formData.title['{{ $locale }}'] || 'عنوان المقال'"></span>
+                                    </div>
+                                    <div class="text-sm text-green-700 flex items-center gap-1">
+                                        <span>{{ config('app.url') }}</span>
+                                        <i data-lucide="chevron-right" class="w-3 h-3"></i>
+                                        <span x-text="formData.slug['{{ $locale }}'] || 'article-slug'"></span>
+                                    </div>
+                                    <div class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                        <span x-text="formData.seo_description['{{ $locale }}'] || formData.excerpt['{{ $locale }}'] || formData.description['{{ $locale }}']?.substring(0, 160) || 'وصف المقال سيظهر هنا...'"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                        @endforeach
                     </div>
 
                     {{-- TAB 3: Gallery Management --}}
@@ -883,6 +988,8 @@ function articleForm(article, locales) {
             content: {},
             summary: {},
             excerpt: {},
+            seo_title: {},
+            seo_description: {},
             is_ready: {},
             gallery: article?.gallery || [],
             media_items: article?.media_items || []
@@ -897,6 +1004,8 @@ function articleForm(article, locales) {
                 this.formData.content[locale] = article?.locales?.[locale]?.content?.body || '';
                 this.formData.summary[locale] = article?.locales?.[locale]?.content?.summary || '';
                 this.formData.excerpt[locale] = article?.locales?.[locale]?.excerpt || '';
+                this.formData.seo_title[locale] = article?.locales?.[locale]?.seo?.title || '';
+                this.formData.seo_description[locale] = article?.locales?.[locale]?.seo?.description || '';
                 this.formData.is_ready[locale] = article?.locales?.[locale]?.is_ready || false;
             });
 
