@@ -145,6 +145,37 @@ class UpdateArticleRequest extends FormRequest
             'thumb' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:5120',
             'gallery' => 'nullable|array',
             'gallery.*' => 'exists:media,id',
+            'media_items' => 'nullable|array',
+            'media_items.*' => 'exists:media,id',
+
+            // TOC (Table of Contents)
+            'toc' => 'nullable|array',
+            'toc.ar' => 'nullable|array',
+            'toc.ar.*.title' => 'nullable|string|max:200',
+            'toc.ar.*.link' => 'nullable|string|max:255',
+            'toc.en' => 'nullable|array',
+            'toc.en.*.title' => 'nullable|string|max:200',
+            'toc.en.*.link' => 'nullable|string|max:255',
+            'toc.fr' => 'nullable|array',
+            'toc.fr.*.title' => 'nullable|string|max:200',
+            'toc.fr.*.link' => 'nullable|string|max:255',
+            'toc.tr' => 'nullable|array',
+            'toc.tr.*.title' => 'nullable|string|max:200',
+            'toc.tr.*.link' => 'nullable|string|max:255',
+            'toc.ur' => 'nullable|array',
+            'toc.ur.*.title' => 'nullable|string|max:200',
+            'toc.ur.*.link' => 'nullable|string|max:255',
+
+            // References
+            'references' => 'nullable|array',
+            'references.*.name' => 'required_with:references|string|max:200',
+            'references.*.url' => 'nullable|url|max:500',
+            'references.*.type' => 'nullable|string|max:50',
+
+            // Statistics
+            'statistics' => 'nullable|array',
+            'statistics.*.name' => 'required_with:statistics|string|max:200',
+            'statistics.*.value' => 'required_with:statistics|string|max:200',
 
             // Advanced
             'writer_id' => 'nullable|exists:users,id',

@@ -95,23 +95,27 @@
     <x-admin.data-table
         :columns="[
             ['key' => 'id', 'label' => __('articles.fields.id'), 'sortable' => true, 'width' => '80px', 'type' => 'number'],
-            ['key' => 'thumb', 'label' => __('articles.fields.image'), 'type' => 'image', 'width' => '100px'],
+            ['key' => 'thumb', 'label' => __('articles.fields.thumb'), 'type' => 'image', 'width' => '100px'],
             ['key' => 'title', 'label' => __('articles.fields.title'), 'sortable' => true, 'truncate' => 50],
+            ['key' => 'writer', 'label' => __('articles.fields.writer'), 'sortable' => true],
             ['key' => 'category', 'label' => __('articles.fields.category'), 'sortable' => true],
-            ['key' => 'status', 'label' => __('articles.fields.status'), 'badge' => true],
-            ['key' => 'writer', 'label' => __('articles.fields.author'), 'sortable' => true],
+            ['key' => 'read_time', 'label' => __('articles.fields.read_time'), 'sortable' => true, 'type' => 'time'],
             ['key' => 'views', 'label' => __('articles.fields.views'), 'sortable' => true, 'type' => 'number'],
+            ['key' => 'is_featured', 'label' => __('articles.fields.is_featured'), 'type' => 'boolean'],
+            ['key' => 'is_pinned', 'label' => __('articles.fields.is_pinned'), 'type' => 'boolean'],
+            ['key' => 'status', 'label' => __('articles.fields.status'), 'badge' => true],
             ['key' => 'created_at', 'label' => __('articles.fields.created_at'), 'sortable' => true, 'type' => 'date'],
+            ['key' => 'updated_at', 'label' => __('articles.fields.updated_at'), 'sortable' => true, 'type' => 'date'],
         ]"
         :data="$articles"
         :actions="['view', 'edit', 'delete', 'duplicate']"
-        :bulkActions="['delete', 'publish', 'export']"
+        :bulkActions="['delete', 'publish', 'archive', 'export']"
         :searchable="true"
         :filterable="true"
         :exportable="true"
-        :perPageOptions="[10, 25, 50, 100]"
+        :perPageOptions="[15, 25, 50, 100]"
         :emptyTitle="__('articles.empty.title')"
-        :emptyMessage="__('articles.empty.message')"
+        :emptyMessage="__('articles.empty.description')"
         emptyIcon="file-text"
         editRoute="admin.articles.edit"
         deleteRoute="admin.articles.destroy"

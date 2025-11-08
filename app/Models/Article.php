@@ -112,12 +112,29 @@ class Article extends Model
     }
 
     /**
-     * Get all media attachments (many-to-many)
+     * Get all media attachments (many-to-many) - for videos/episodes
      */
-    public function media(): BelongsToMany
+    public function mediaItems(): BelongsToMany
     {
-        return $this->belongsToMany(\Spatie\MediaLibrary\MediaCollections\Models\Media::class, 'articles_media')
-            ->withTimestamps();
+        return $this->belongsToMany(Media::class, 'articles_media', 'article_id', 'media_id')
+            ->withTimestamps()
+            ->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Get only video/episode media items
+     */
+    public function videoEpisodes(): BelongsToMany
+    {
+        return $this->mediaItems()->whereIn('type', ['video', 'episode']);
+    }
+
+    /**
+     * Get thumbnail URL
+     */
+    public function getThumbUrlAttribute(): string
+    {
+        return $this->thumb ? asset('storage/' . $this->thumb) : asset('images/default-article-thumb.jpg');
     }
 
     /**

@@ -117,6 +117,8 @@ class ArticleController extends AdminController
                 'is_pinned' => $request->boolean('is_pinned'),
                 'category_id' => $validated['category_id'] ?? null,
                 'hijri_date' => $validated['hijri_date'] ?? null,
+                'statistics' => $validated['statistics'] ?? null,
+                'references' => $validated['references'] ?? null,
             ]);
 
             // Create locales
@@ -132,7 +134,7 @@ class ArticleController extends AdminController
                         'excerpt' => $validated['excerpt'][$locale] ?? null,
                         'content' => [
                             'body' => $validated['content'][$locale] ?? null,
-                            'toc' => $this->generateTableOfContents($validated['content'][$locale] ?? ''),
+                            'toc' => $validated['toc'][$locale] ?? $this->generateTableOfContents($validated['content'][$locale] ?? ''),
                             'summary' => $validated['summary'][$locale] ?? null,
                         ],
                         'seo_title' => $validated['seo_title'][$locale] ?? null,
@@ -160,6 +162,11 @@ class ArticleController extends AdminController
             // Attach gallery media
             if (!empty($validated['gallery'])) {
                 $article->media()->syncWithoutDetaching($validated['gallery']);
+            }
+
+            // Sync media items (videos/episodes)
+            if (!empty($validated['media_items'])) {
+                $article->mediaItems()->sync($validated['media_items']);
             }
 
             // Handle scheduled publishing
@@ -277,6 +284,8 @@ class ArticleController extends AdminController
                 'is_pinned' => $request->boolean('is_pinned'),
                 'category_id' => $validated['category_id'] ?? null,
                 'hijri_date' => $validated['hijri_date'] ?? null,
+                'statistics' => $validated['statistics'] ?? $article->statistics,
+                'references' => $validated['references'] ?? $article->references,
             ]);
 
             // Update or create locales
@@ -293,7 +302,7 @@ class ArticleController extends AdminController
                             'excerpt' => $validated['excerpt'][$locale] ?? null,
                             'content' => [
                                 'body' => $validated['content'][$locale] ?? null,
-                                'toc' => $this->generateTableOfContents($validated['content'][$locale] ?? ''),
+                                'toc' => $validated['toc'][$locale] ?? $this->generateTableOfContents($validated['content'][$locale] ?? ''),
                                 'summary' => $validated['summary'][$locale] ?? null,
                             ],
                             'seo_title' => $validated['seo_title'][$locale] ?? null,
@@ -316,6 +325,11 @@ class ArticleController extends AdminController
 
             // Sync gallery media
             $article->media()->sync($validated['gallery'] ?? []);
+
+            // Sync media items (videos/episodes)
+            if (isset($validated['media_items'])) {
+                $article->mediaItems()->sync($validated['media_items']);
+            }
 
             // Create version
             $this->versionService->createVersion(

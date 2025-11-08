@@ -1,0 +1,1 @@
+- in whole project make it support arabic and english now only
