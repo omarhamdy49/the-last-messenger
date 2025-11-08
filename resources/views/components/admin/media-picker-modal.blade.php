@@ -146,9 +146,9 @@
                         </div>
 
                         <!-- Media Grid -->
-                        <div x-show="!isLoading && mediaItems.length > 0"
+                        <div x-show="!isLoading && (mediaItems?.length || 0) > 0"
                              class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                            <template x-for="media in mediaItems" :key="media.id">
+                            <template x-for="media in (mediaItems || [])" :key="media.id">
                                 <div @click="toggleSelection(media)"
                                      class="group relative aspect-square rounded-lg overflow-hidden cursor-pointer transition-all duration-300 border-2"
                                      :class="isSelected(media.id) ?
@@ -191,7 +191,7 @@
                         </div>
 
                         <!-- Empty State -->
-                        <div x-show="!isLoading && mediaItems.length === 0"
+                        <div x-show="!isLoading && (mediaItems?.length || 0) === 0"
                              class="flex flex-col items-center justify-center h-full py-12">
                             <div class="w-20 h-20 rounded-full flex items-center justify-center mb-4"
                                  :class="$root.darkMode ? 'bg-gray-800' : 'bg-gray-100'">
@@ -222,7 +222,7 @@
                 </div>
 
                 <!-- Selected Items Sidebar -->
-                <div x-show="selectedItems.length > 0"
+                <div x-show="(selectedItems?.length || 0) > 0"
                      x-transition:enter="transition ease-out duration-200"
                      x-transition:enter-start="translate-x-full"
                      x-transition:enter-end="translate-x-0"
@@ -237,7 +237,7 @@
                         <div class="flex items-center justify-between mb-2">
                             <h3 class="font-bold"
                                 :class="$root.darkMode ? 'text-white' : 'text-gray-900'">
-                                Selected (<span x-text="selectedItems.length"></span>)
+                                Selected (<span x-text="selectedItems?.length || 0"></span>)
                             </h3>
                             <button @click="clearSelection()"
                                     class="text-sm font-medium text-red-500 hover:text-red-600 transition-colors">
@@ -299,13 +299,13 @@
                         </div>
 
                         <!-- Upload Queue -->
-                        <div x-show="uploadQueue.length > 0" class="space-y-3">
+                        <div x-show="(uploadQueue?.length || 0) > 0" class="space-y-3">
                             <h4 class="font-bold"
                                 :class="$root.darkMode ? 'text-white' : 'text-gray-900'">
-                                Uploading (<span x-text="uploadQueue.length"></span>)
+                                Uploading (<span x-text="uploadQueue?.length || 0"></span>)
                             </h4>
 
-                            <template x-for="(file, index) in uploadQueue" :key="index">
+                            <template x-for="(file, index) in (uploadQueue || [])" :key="index">
                                 <div class="p-4 rounded-lg border"
                                      :class="$root.darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'">
                                     <div class="flex items-center gap-4">
@@ -356,10 +356,10 @@
                  :class="$root.darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-gray-50'">
                 <div class="text-sm"
                      :class="$root.darkMode ? 'text-gray-400' : 'text-gray-600'">
-                    <span x-show="selectedItems.length > 0">
-                        <span x-text="selectedItems.length"></span> item<span x-show="selectedItems.length > 1">s</span> selected
+                    <span x-show="(selectedItems?.length || 0) > 0">
+                        <span x-text="selectedItems?.length || 0"></span> item<span x-show="(selectedItems?.length || 0) > 1">s</span> selected
                     </span>
-                    <span x-show="selectedItems.length === 0">
+                    <span x-show="(selectedItems?.length || 0) === 0">
                         No items selected
                     </span>
                 </div>
@@ -374,9 +374,9 @@
                     </button>
 
                     <button @click="confirmSelection()"
-                            :disabled="selectedItems.length === 0"
+                            :disabled="(selectedItems?.length || 0) === 0"
                             class="px-6 py-2 rounded-lg font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 disabled:hover:scale-100"
-                            :class="selectedItems.length > 0 ? 'shadow-accent/30' : ''">
+                            :class="(selectedItems?.length || 0) > 0 ? 'shadow-accent/30' : ''">
                         Confirm Selection
                     </button>
                 </div>

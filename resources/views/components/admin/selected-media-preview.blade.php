@@ -8,14 +8,14 @@
 --}}
 
 <div class="p-4 space-y-3">
-    <template x-for="(media, index) in selectedItems" :key="media.id">
+    <template x-for="(media, index) in (selectedItems || [])" :key="media.id">
         <div class="group relative rounded-lg overflow-hidden border transition-all duration-300 hover:shadow-lg"
              :class="$root.darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'"
              x-data="{ showControls: false }">
 
             <div class="flex gap-3 p-3">
                 <!-- Reorder Handle (Multiple Mode Only) -->
-                <div x-show="$parent.selectionMode === 'multiple'"
+                <div x-show="selectionMode === 'multiple'"
                      class="flex-shrink-0 cursor-move flex items-center"
                      :class="$root.darkMode ? 'text-gray-500' : 'text-gray-400'">
                     <i data-lucide="grip-vertical" class="w-5 h-5"></i>
@@ -58,7 +58,7 @@
                         <!-- File Size -->
                         <span class="text-xs"
                               :class="$root.darkMode ? 'text-gray-500' : 'text-gray-600'"
-                              x-text="$parent.formatFileSize(media.size)">
+                              x-text="formatFileSize(media.size)">
                         </span>
                     </div>
 
@@ -72,7 +72,7 @@
 
                 <!-- Remove Button -->
                 <div class="flex-shrink-0 flex items-start">
-                    <button @click="$parent.removeFromSelection(media.id)"
+                    <button @click="removeFromSelection(media.id)"
                             class="p-1.5 rounded-lg transition-all hover:scale-110"
                             :class="$root.darkMode ?
                                 'hover:bg-red-500/20 text-gray-400 hover:text-red-400' :
