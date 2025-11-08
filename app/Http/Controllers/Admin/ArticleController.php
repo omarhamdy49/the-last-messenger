@@ -14,6 +14,7 @@ use App\Models\Article;
 use App\Models\ArticleLocale;
 use App\Models\User;
 use App\Repositories\ArticleRepository;
+use App\Utils\DateUtil;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -89,8 +90,9 @@ class ArticleController extends AdminController
         $writers = User::role('writer')->get();
         $tags = Tag::where('type', 'article')->get();
         $locales = $this->locales;
+        $currentHijriDate = DateUtil::getCurrentHijriDate();
 
-        return view('admin.articles.create', compact('categories', 'writers', 'tags', 'locales'));
+        return view('admin.articles.create', compact('categories', 'writers', 'tags', 'locales', 'currentHijriDate'));
     }
 
     /**
@@ -253,8 +255,9 @@ class ArticleController extends AdminController
         $writers = User::role('writer')->get();
         $tags = Tag::where('type', 'article')->get();
         $locales = $this->locales;
+        $currentHijriDate = DateUtil::getCurrentHijriDate();
 
-        return view('admin.articles.edit', compact('article', 'categories', 'writers', 'tags', 'locales'));
+        return view('admin.articles.edit', compact('article', 'categories', 'writers', 'tags', 'locales', 'currentHijriDate'));
     }
 
     /**

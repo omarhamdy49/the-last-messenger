@@ -281,7 +281,7 @@
                     <input type="text"
                            name="hijri_date"
                            x-model="formData.hijri_date"
-                           placeholder="1446-05-15"
+                           placeholder="{{ __('articles.help.hijri_date') }}"
                            class="w-full px-3 py-2 rounded-lg border"
                            :class="darkMode ?
                                'bg-gray-700 border-gray-600 text-white' :
@@ -980,7 +980,7 @@ function articleForm(article, locales) {
             is_featured: article?.is_featured || false,
             is_pinned: article?.is_pinned || false,
             status: article?.status || 'draft',
-            hijri_date: article?.hijri_date || '',
+            hijri_date: article?.hijri_date || '{{ $currentHijriDate ?? '' }}',
             read_time: article?.read_time || '',
             title: {},
             slug: {},
