@@ -11,7 +11,7 @@
 ])
 
 @php
-    $languages = ['ar', 'en', 'fr', 'tr', 'ur'];
+    $languages = array_keys(config('app.supported_locales', ['ar' => [], 'en' => []]));
     $isEdit = $article && $article->exists;
 @endphp
 

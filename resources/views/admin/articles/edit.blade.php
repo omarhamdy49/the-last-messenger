@@ -127,7 +127,7 @@
         'categories' => $categories,
         'writers' => $writers,
         'tags' => $tags,
-        'locales' => ['ar', 'en', 'fr', 'tr', 'ur']
+        'locales' => $locales
     ])
 
 </div>

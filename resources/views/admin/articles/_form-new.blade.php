@@ -9,7 +9,7 @@
     'categories' => [],
     'writers' => [],
     'tags' => [],
-    'locales' => ['ar', 'en', 'fr', 'tr', 'ur']
+    'locales' => array_keys(config('app.supported_locales', ['ar' => [], 'en' => []]))
 ])
 
 @php

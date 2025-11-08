@@ -25,15 +25,18 @@ use Illuminate\View\View;
 class ArticleController extends AdminController
 {
     /**
-     * Supported locales
+     * Supported locales (loaded from config)
      */
-    protected array $locales = ['ar', 'en', 'fr', 'tr', 'ur'];
+    protected array $locales;
 
     public function __construct(
         protected ArticleRepository $repository,
         protected VersionService $versionService
     ) {
         parent::__construct();
+
+        // Load supported locales from config
+        $this->locales = array_keys(config('app.supported_locales', ['ar', 'en']));
     }
 
     /**

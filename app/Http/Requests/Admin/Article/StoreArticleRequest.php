@@ -24,127 +24,77 @@ class StoreArticleRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            // Multi-language fields (required for at least ar and en)
-            'title' => 'required|array',
-            'title.ar' => 'required|string|max:200',
-            'title.en' => 'required|string|max:200',
-            'title.fr' => 'nullable|string|max:200',
-            'title.tr' => 'nullable|string|max:200',
-            'title.ur' => 'nullable|string|max:200',
+        $locales = array_keys(config('app.supported_locales', ['ar' => [], 'en' => []]));
+        $rules = [];
 
-            'slug' => 'nullable|array',
-            'slug.ar' => ['nullable', 'string', 'max:255', Rule::unique('article_locale', 'slug')->where('locale', 'ar')],
-            'slug.en' => ['nullable', 'string', 'max:255', Rule::unique('article_locale', 'slug')->where('locale', 'en')],
-            'slug.fr' => ['nullable', 'string', 'max:255', Rule::unique('article_locale', 'slug')->where('locale', 'fr')],
-            'slug.tr' => ['nullable', 'string', 'max:255', Rule::unique('article_locale', 'slug')->where('locale', 'tr')],
-            'slug.ur' => ['nullable', 'string', 'max:255', Rule::unique('article_locale', 'slug')->where('locale', 'ur')],
+        // Multi-language fields
+        $rules['title'] = 'required|array';
+        $rules['slug'] = 'nullable|array';
+        $rules['excerpt'] = 'nullable|array';
+        $rules['description'] = 'nullable|array';
+        $rules['content'] = 'required|array';
+        $rules['summary'] = 'nullable|array';
+        $rules['seo_title'] = 'nullable|array';
+        $rules['seo_description'] = 'nullable|array';
+        $rules['is_ready'] = 'nullable|array';
 
-            'excerpt' => 'nullable|array',
-            'excerpt.ar' => 'nullable|string|max:500',
-            'excerpt.en' => 'nullable|string|max:500',
-            'excerpt.fr' => 'nullable|string|max:500',
-            'excerpt.tr' => 'nullable|string|max:500',
-            'excerpt.ur' => 'nullable|string|max:500',
+        foreach ($locales as $locale) {
+            $rules["title.{$locale}"] = 'required|string|max:200';
+            $rules["slug.{$locale}"] = ['nullable', 'string', 'max:255', Rule::unique('article_locale', 'slug')->where('locale', $locale)];
+            $rules["excerpt.{$locale}"] = 'nullable|string|max:500';
+            $rules["description.{$locale}"] = 'nullable|string';
+            $rules["content.{$locale}"] = 'required|string';
+            $rules["summary.{$locale}"] = 'nullable|string';
+            $rules["seo_title.{$locale}"] = 'nullable|string|max:70';
+            $rules["seo_description.{$locale}"] = 'nullable|string|max:160';
+            $rules["is_ready.{$locale}"] = 'nullable|boolean';
+        }
 
-            'description' => 'nullable|array',
-            'description.ar' => 'nullable|string',
-            'description.en' => 'nullable|string',
-            'description.fr' => 'nullable|string',
-            'description.tr' => 'nullable|string',
-            'description.ur' => 'nullable|string',
+        // TOC (Table of Contents) - dynamic per locale
+        $rules['toc'] = 'nullable|array';
+        foreach ($locales as $locale) {
+            $rules["toc.{$locale}"] = 'nullable|array';
+            $rules["toc.{$locale}.*.title"] = 'nullable|string|max:200';
+            $rules["toc.{$locale}.*.link"] = 'nullable|string|max:255';
+        }
 
-            'content' => 'required|array',
-            'content.ar' => 'required|string',
-            'content.en' => 'required|string',
-            'content.fr' => 'nullable|string',
-            'content.tr' => 'nullable|string',
-            'content.ur' => 'nullable|string',
+        // Metadata
+        $rules['category_id'] = 'nullable|exists:categories,id';
+        $rules['additional_categories'] = 'nullable|array';
+        $rules['additional_categories.*'] = 'exists:categories,id';
+        $rules['tags'] = 'nullable|array';
+        $rules['tags.*'] = 'exists:tags,id';
 
-            'summary' => 'nullable|array',
-            'summary.ar' => 'nullable|string',
-            'summary.en' => 'nullable|string',
-            'summary.fr' => 'nullable|string',
-            'summary.tr' => 'nullable|string',
-            'summary.ur' => 'nullable|string',
+        // Publishing
+        $rules['status'] = 'required|in:draft,published,scheduled,archived';
+        $rules['published_at'] = 'nullable|date|after:now';
+        $rules['is_featured'] = 'nullable|boolean';
+        $rules['is_pinned'] = 'nullable|boolean';
 
-            // SEO fields
-            'seo_title' => 'nullable|array',
-            'seo_title.ar' => 'nullable|string|max:70',
-            'seo_title.en' => 'nullable|string|max:70',
-            'seo_title.fr' => 'nullable|string|max:70',
-            'seo_title.tr' => 'nullable|string|max:70',
-            'seo_title.ur' => 'nullable|string|max:70',
+        // Media
+        $rules['thumb'] = 'nullable|image|mimes:jpeg,jpg,png,webp|max:5120';
+        $rules['gallery'] = 'nullable|array';
+        $rules['gallery.*'] = 'exists:media,id';
+        $rules['media_items'] = 'nullable|array';
+        $rules['media_items.*'] = 'exists:media,id';
 
-            'seo_description' => 'nullable|array',
-            'seo_description.ar' => 'nullable|string|max:160',
-            'seo_description.en' => 'nullable|string|max:160',
-            'seo_description.fr' => 'nullable|string|max:160',
-            'seo_description.tr' => 'nullable|string|max:160',
-            'seo_description.ur' => 'nullable|string|max:160',
+        // References
+        $rules['references'] = 'nullable|array';
+        $rules['references.*.name'] = 'required_with:references|string|max:200';
+        $rules['references.*.url'] = 'nullable|url|max:500';
+        $rules['references.*.type'] = 'nullable|string|max:50';
 
-            // Locale readiness
-            'is_ready' => 'nullable|array',
-            'is_ready.ar' => 'nullable|boolean',
-            'is_ready.en' => 'nullable|boolean',
-            'is_ready.fr' => 'nullable|boolean',
-            'is_ready.tr' => 'nullable|boolean',
-            'is_ready.ur' => 'nullable|boolean',
+        // Statistics
+        $rules['statistics'] = 'nullable|array';
+        $rules['statistics.*.name'] = 'required_with:statistics|string|max:200';
+        $rules['statistics.*.value'] = 'required_with:statistics|string|max:200';
 
-            // Metadata
-            'category_id' => 'nullable|exists:categories,id',
-            'additional_categories' => 'nullable|array',
-            'additional_categories.*' => 'exists:categories,id',
-            'tags' => 'nullable|array',
-            'tags.*' => 'exists:tags,id',
+        // Advanced
+        $rules['writer_id'] = 'nullable|exists:users,id';
+        $rules['read_time'] = 'nullable|integer|min:1|max:999';
+        $rules['hijri_date'] = 'nullable|string|max:50';
 
-            // Publishing
-            'status' => 'required|in:draft,published,scheduled,archived',
-            'published_at' => 'nullable|date|after:now',
-            'is_featured' => 'nullable|boolean',
-            'is_pinned' => 'nullable|boolean',
-
-            // Media
-            'thumb' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:5120',
-            'gallery' => 'nullable|array',
-            'gallery.*' => 'exists:media,id',
-            'media_items' => 'nullable|array',
-            'media_items.*' => 'exists:media,id',
-
-            // TOC (Table of Contents)
-            'toc' => 'nullable|array',
-            'toc.ar' => 'nullable|array',
-            'toc.ar.*.title' => 'nullable|string|max:200',
-            'toc.ar.*.link' => 'nullable|string|max:255',
-            'toc.en' => 'nullable|array',
-            'toc.en.*.title' => 'nullable|string|max:200',
-            'toc.en.*.link' => 'nullable|string|max:255',
-            'toc.fr' => 'nullable|array',
-            'toc.fr.*.title' => 'nullable|string|max:200',
-            'toc.fr.*.link' => 'nullable|string|max:255',
-            'toc.tr' => 'nullable|array',
-            'toc.tr.*.title' => 'nullable|string|max:200',
-            'toc.tr.*.link' => 'nullable|string|max:255',
-            'toc.ur' => 'nullable|array',
-            'toc.ur.*.title' => 'nullable|string|max:200',
-            'toc.ur.*.link' => 'nullable|string|max:255',
-
-            // References
-            'references' => 'nullable|array',
-            'references.*.name' => 'required_with:references|string|max:200',
-            'references.*.url' => 'nullable|url|max:500',
-            'references.*.type' => 'nullable|string|max:50',
-
-            // Statistics
-            'statistics' => 'nullable|array',
-            'statistics.*.name' => 'required_with:statistics|string|max:200',
-            'statistics.*.value' => 'required_with:statistics|string|max:200',
-
-            // Advanced
-            'writer_id' => 'nullable|exists:users,id',
-            'read_time' => 'nullable|integer|min:1|max:999',
-            'hijri_date' => 'nullable|string|max:50',
-        ];
+        return $rules;
     }
 
     /**
@@ -214,10 +164,11 @@ class StoreArticleRequest extends FormRequest
             ]);
         }
 
-        // Prepare is_ready array
+        // Prepare is_ready array using supported locales from config
         if ($this->has('is_ready')) {
             $isReady = [];
-            foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $locale) {
+            $locales = array_keys(config('app.supported_locales', ['ar' => [], 'en' => []]));
+            foreach ($locales as $locale) {
                 $isReady[$locale] = filter_var($this->input("is_ready.{$locale}", false), FILTER_VALIDATE_BOOLEAN);
             }
             $this->merge(['is_ready' => $isReady]);
