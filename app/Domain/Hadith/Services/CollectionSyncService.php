@@ -90,6 +90,11 @@ class CollectionSyncService
                             if ($progressCallback) {
                                 $progressCallback($successCount, $totalCollections);
                             }
+
+                            // Add delay after each collection (3 seconds)
+                            $delayMs = config('sunnah.api.rate_limit.delay_after_book', 3000);
+                            Log::info("Waiting {$delayMs}ms before next collection");
+                            usleep($delayMs * 1000); // Convert to microseconds
                         } catch (\Exception $e) {
                             Log::error("Error syncing collection {$collectionData->name}", [
                                 'error' => $e->getMessage(),
@@ -224,22 +229,16 @@ class CollectionSyncService
                 'hasChapters' => $hasChapters,
             ]);
 
-            // Sync based on collection structure
-            if ($hasBooks) {
-                // Collection has a books structure - sync books with collection_id
-                Log::info('Collection has books structure - syncing books', ['collection' => $collectionName]);
-                $result = $this->bookSyncService->syncCollectionBooks(
-                    $collectionName,
-                    $hadithCollection?->id,
-                    $syncLog,
-                    $dryRun,
-                    fn ($count) => Log::info("Progress: Synced {$count} books from collection {$collectionName}")
-                );
-            } else {
-                // Collection has no books structure - sync hadiths directly with pagination
-                Log::info('Collection has no books structure - syncing hadiths directly', ['collection' => $collectionName]);
-                $result = $this->syncCollectionHadithsDirectly($collectionName, $hadithCollection?->id, $syncLog, $dryRun);
-            }
+            // Always try to sync books first (API hasBooks flag is unreliable)
+            // The /hadiths endpoint requires authentication we don't have
+            Log::info('Attempting to sync books (hasBooks flag may be unreliable)', ['collection' => $collectionName]);
+            $result = $this->bookSyncService->syncCollectionBooks(
+                $collectionName,
+                $hadithCollection?->id,
+                $syncLog,
+                $dryRun,
+                fn ($count) => Log::info("Progress: Synced {$count} books from collection {$collectionName}")
+            );
 
             $syncLog->update([
                 'total_records' => $result['success_count'] ?? 0,
@@ -309,16 +308,10 @@ class CollectionSyncService
                     'name' => [
                         'ar' => $collectionName,
                         'en' => $collectionName,
-                        'fr' => $collectionName,
-                        'tr' => $collectionName,
-                        'ur' => $collectionName,
                     ],
                     'description' => [
                         'ar' => '',
                         'en' => '',
-                        'fr' => '',
-                        'tr' => '',
-                        'ur' => '',
                     ],
                     'author_name' => null,
                     'total_hadith_count' => 0,
@@ -328,7 +321,26 @@ class CollectionSyncService
             }
 
             if (! $book && $dryRun) {
-                throw new \Exception("HadithBook record not found for collection {$collectionName}");
+                // For dry-run mode, create a temporary book object (not saved to DB)
+                $book = new HadithBook([
+                    'id' => 999999, // Temporary ID for dry-run
+                    'slug' => $collectionName,
+                    'collection_id' => $collectionId,
+                    'name' => [
+                        'ar' => $collectionName,
+                        'en' => $collectionName,
+                    ],
+                    'description' => [
+                        'ar' => '',
+                        'en' => '',
+                    ],
+                    'author_name' => null,
+                    'total_hadith_count' => 0,
+                    'display_order' => 0,
+                    'active' => true,
+                ]);
+                // Set exists flag to prevent save attempts
+                $book->exists = true;
             }
 
             $totalHadiths = 0;

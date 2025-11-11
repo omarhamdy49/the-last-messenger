@@ -49,41 +49,9 @@ class BookSyncService
         Log::info("Starting book sync for collection {$collectionName}", ['collection_id' => $collectionId]);
 
         try {
-            // Check if collection has books
-            $collectionData = $this->apiClient->getCollection($collectionName);
-
-            if (! $collectionData->hasBooks) {
-                Log::info("Collection {$collectionName} has no books structure, attempting to sync hadiths");
-
-                // For collections without books, treat the whole collection as a single "book"
-                $book = HadithBook::where('slug', $collectionName)->first();
-                if ($book) {
-                    try {
-                        $this->hadithSyncService->syncBookHadiths(
-                            $book,
-                            $collectionName,
-                            '1',
-                            $syncLog,
-                            $dryRun,
-                            true // isDirectSync = true for collections without books
-                        );
-                    } catch (\Exception $e) {
-                        Log::warning("Failed to sync hadiths for collection {$collectionName} without books", [
-                            'error' => $e->getMessage(),
-                        ]);
-                        // For collections without books/chapters, the API may not expose hadiths
-                        // This is a known limitation of the Sunnah API
-                        if ($syncLog) {
-                            $syncLog->markPartial('Collection has no books/chapters structure - hadiths not accessible via API');
-                        }
-                    }
-                }
-
-                return [
-                    'total_books' => 1,
-                    'success_count' => 1,
-                ];
-            }
+            // Always try to fetch books from API
+            // The hasBooks flag is unreliable - some collections report false but have books
+            // Example: 'virtues' reports hasBooks: false but has book #1
 
             $page = 1;
             $hasMore = true;
@@ -125,6 +93,11 @@ class BookSyncService
                             if ($progressCallback) {
                                 $progressCallback($totalBooks);
                             }
+
+                            // Add delay after each book (3 seconds)
+                            $delayMs = config('sunnah.api.rate_limit.delay_after_book', 3000);
+                            Log::debug("Waiting {$delayMs}ms before next book", ['current_book' => $bookNumber]);
+                            usleep($delayMs * 1000); // Convert to microseconds
                         } catch (\Exception $e) {
                             Log::error("Error syncing book {$bookData->bookNumber}", [
                                 'error' => $e->getMessage(),

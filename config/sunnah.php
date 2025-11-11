@@ -10,8 +10,10 @@ return [
         'retry_attempts' => env('SUNNAH_API_RETRY_ATTEMPTS', 3),
         'retry_delay' => env('SUNNAH_API_RETRY_DELAY', 1000), // milliseconds
         'rate_limit' => [
-            'requests_per_minute' => env('SUNNAH_API_RATE_LIMIT', 100),
-            'delay_between_requests' => env('SUNNAH_API_DELAY', 600), // milliseconds
+            'requests_per_minute' => env('SUNNAH_API_RATE_LIMIT', 60),
+            'delay_between_requests' => env('SUNNAH_API_DELAY', 2000), // milliseconds (2 seconds)
+            'delay_after_book' => env('SUNNAH_API_DELAY_AFTER_BOOK', 3000), // milliseconds (3 seconds after each book)
+            'delay_on_429' => env('SUNNAH_API_DELAY_ON_429', 30000), // milliseconds (30 seconds when rate limited)
         ],
     ],
 

@@ -12,7 +12,7 @@ class SunnahDataTransformer
     /**
      * Supported languages from our system
      */
-    private const SUPPORTED_LANGUAGES = ['ar', 'en', 'fr', 'tr', 'ur'];
+    private const SUPPORTED_LANGUAGES = ['ar', 'en'];
 
     /**
      * Transform collection from Sunnah API to our database format
@@ -256,10 +256,7 @@ class SunnahDataTransformer
     {
         // Accept if we have a chapter number and at least one language name
         $hasName = !empty($data['name']['ar']) ||
-                  !empty($data['name']['en']) ||
-                  !empty($data['name']['fr']) ||
-                  !empty($data['name']['tr']) ||
-                  !empty($data['name']['ur']);
+                  !empty($data['name']['en']);
 
         return isset($data['chapter_number']) && $hasName;
     }
@@ -271,10 +268,7 @@ class SunnahDataTransformer
     {
         // Accept if we have at least one language translation and a hadith number
         $hasTranslation = !empty($data['translations']['ar']) ||
-                         !empty($data['translations']['en']) ||
-                         !empty($data['translations']['fr']) ||
-                         !empty($data['translations']['tr']) ||
-                         !empty($data['translations']['ur']);
+                         !empty($data['translations']['en']);
 
         return $hasTranslation && $data['hadith_number'] > 0;
     }

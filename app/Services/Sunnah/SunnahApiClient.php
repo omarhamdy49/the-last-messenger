@@ -19,6 +19,7 @@ class SunnahApiClient
     private string $apiKey;
     private int $rateLimitDelay = 5000; // milliseconds (5 seconds)
     private float $lastRequestTime = 0;
+    private int $delayOn429 = 30000; // milliseconds (30 seconds when rate limited)
 
     /**
      * List of common user agents to rotate through
@@ -39,7 +40,8 @@ class SunnahApiClient
     {
         $this->baseUrl = config('sunnah.api.base_url');
         $this->apiKey = config('sunnah.api.key');
-        $this->rateLimitDelay = config('sunnah.api.rate_limit.delay_between_requests', 5000);
+        $this->rateLimitDelay = config('sunnah.api.rate_limit.delay_between_requests', 2000);
+        $this->delayOn429 = config('sunnah.api.rate_limit.delay_on_429', 30000);
 
         // Create Guzzle client with retry middleware
         $this->client = new Client([
@@ -67,16 +69,12 @@ class SunnahApiClient
      */
     public function getCollections(int $limit = 50, int $page = 1): stdClass
     {
-        $this->applyRateLimit();
-
-        $response = $this->client->get('collections', [
+        return $this->makeRequestWithRetry('GET', 'collections', [
             'query' => [
                 'limit' => $limit,
                 'page' => $page,
             ],
         ]);
-
-        return json_decode((string) $response->getBody());
     }
 
     /**
@@ -84,11 +82,7 @@ class SunnahApiClient
      */
     public function getCollection(string $collectionName): stdClass
     {
-        $this->applyRateLimit();
-
-        $response = $this->client->get("collections/{$collectionName}");
-
-        return json_decode((string) $response->getBody());
+        return $this->makeRequestWithRetry('GET', "collections/{$collectionName}");
     }
 
     /**
@@ -96,16 +90,12 @@ class SunnahApiClient
      */
     public function getBooks(string $collectionName, int $limit = 50, int $page = 1): stdClass
     {
-        $this->applyRateLimit();
-
-        $response = $this->client->get("collections/{$collectionName}/books", [
+        return $this->makeRequestWithRetry('GET', "collections/{$collectionName}/books", [
             'query' => [
                 'limit' => $limit,
                 'page' => $page,
             ],
         ]);
-
-        return json_decode((string) $response->getBody());
     }
 
     /**
@@ -113,11 +103,7 @@ class SunnahApiClient
      */
     public function getBook(string $collectionName, string $bookNumber): stdClass
     {
-        $this->applyRateLimit();
-
-        $response = $this->client->get("collections/{$collectionName}/books/{$bookNumber}");
-
-        return json_decode((string) $response->getBody());
+        return $this->makeRequestWithRetry('GET', "collections/{$collectionName}/books/{$bookNumber}");
     }
 
     /**
@@ -125,16 +111,12 @@ class SunnahApiClient
      */
     public function getChapters(string $collectionName, string $bookNumber, int $limit = 50, int $page = 1): stdClass
     {
-        $this->applyRateLimit();
-
-        $response = $this->client->get("collections/{$collectionName}/books/{$bookNumber}/chapters", [
+        return $this->makeRequestWithRetry('GET', "collections/{$collectionName}/books/{$bookNumber}/chapters", [
             'query' => [
                 'limit' => $limit,
                 'page' => $page,
             ],
         ]);
-
-        return json_decode((string) $response->getBody());
     }
 
     /**
@@ -142,11 +124,7 @@ class SunnahApiClient
      */
     public function getChapter(string $collectionName, string $bookNumber, string|float $chapterId): stdClass
     {
-        $this->applyRateLimit();
-
-        $response = $this->client->get("collections/{$collectionName}/books/{$bookNumber}/chapters/{$chapterId}");
-
-        return json_decode((string) $response->getBody());
+        return $this->makeRequestWithRetry('GET', "collections/{$collectionName}/books/{$bookNumber}/chapters/{$chapterId}");
     }
 
     /**
@@ -154,16 +132,12 @@ class SunnahApiClient
      */
     public function getHadithsByBook(string $collectionName, string $bookNumber, int $limit = 50, int $page = 1): stdClass
     {
-        $this->applyRateLimit();
-
-        $response = $this->client->get("collections/{$collectionName}/books/{$bookNumber}/hadiths", [
+        return $this->makeRequestWithRetry('GET', "collections/{$collectionName}/books/{$bookNumber}/hadiths", [
             'query' => [
                 'limit' => $limit,
                 'page' => $page,
             ],
         ]);
-
-        return json_decode((string) $response->getBody());
     }
 
     /**
@@ -171,11 +145,7 @@ class SunnahApiClient
      */
     public function getHadithByUrn(int|string $urn): stdClass
     {
-        $this->applyRateLimit();
-
-        $response = $this->client->get("hadiths/{$urn}");
-
-        return json_decode((string) $response->getBody());
+        return $this->makeRequestWithRetry('GET', "hadiths/{$urn}");
     }
 
     /**
@@ -183,11 +153,7 @@ class SunnahApiClient
      */
     public function getHadith(string $collectionName, string $hadithNumber): stdClass
     {
-        $this->applyRateLimit();
-
-        $response = $this->client->get("collections/{$collectionName}/hadiths/{$hadithNumber}");
-
-        return json_decode((string) $response->getBody());
+        return $this->makeRequestWithRetry('GET', "collections/{$collectionName}/hadiths/{$hadithNumber}");
     }
 
     /**
@@ -201,8 +167,6 @@ class SunnahApiClient
         int $limit = 50,
         int $page = 1
     ): stdClass {
-        $this->applyRateLimit();
-
         $query = [
             'limit' => $limit,
             'page' => $page,
@@ -221,9 +185,7 @@ class SunnahApiClient
             $query['hadithNumber'] = $hadithNumber;
         }
 
-        $response = $this->client->get('hadiths', ['query' => $query]);
-
-        return json_decode((string) $response->getBody());
+        return $this->makeRequestWithRetry('GET', 'hadiths', ['query' => $query]);
     }
 
     /**
@@ -231,11 +193,7 @@ class SunnahApiClient
      */
     public function getRandomHadith(): stdClass
     {
-        $this->applyRateLimit();
-
-        $response = $this->client->get('hadiths/random');
-
-        return json_decode((string) $response->getBody());
+        return $this->makeRequestWithRetry('GET', 'hadiths/random');
     }
 
     /**
@@ -253,6 +211,47 @@ class SunnahApiClient
         }
 
         $this->lastRequestTime = microtime(true) * 1000;
+    }
+
+    /**
+     * Make API request with retry logic for 429 errors
+     */
+    private function makeRequestWithRetry(string $method, string $endpoint, array $options = [], int $maxRetries = 3): mixed
+    {
+        $attempt = 0;
+        $lastException = null;
+
+        while ($attempt < $maxRetries) {
+            try {
+                $this->applyRateLimit();
+                $response = $this->client->request($method, $endpoint, $options);
+                return json_decode((string) $response->getBody());
+            } catch (RequestException $e) {
+                $lastException = $e;
+                $statusCode = $e->hasResponse() ? $e->getResponse()->getStatusCode() : 0;
+
+                if ($statusCode === 429) {
+                    // Rate limited - exponential backoff
+                    $attempt++;
+                    $delay = $this->delayOn429 * pow(2, $attempt - 1); // Exponential backoff: 30s, 60s, 120s
+                    $delaySec = round($delay / 1000, 1);
+
+                    Log::warning("429 Too Many Requests - Waiting {$delaySec}s before retry (attempt {$attempt}/{$maxRetries})", [
+                        'endpoint' => $endpoint,
+                        'attempt' => $attempt,
+                        'delay_ms' => $delay,
+                    ]);
+
+                    usleep((int) ($delay * 1000)); // Convert to microseconds
+                } else {
+                    // Other error - don't retry
+                    throw $e;
+                }
+            }
+        }
+
+        // All retries exhausted
+        throw $lastException;
     }
 
     /**

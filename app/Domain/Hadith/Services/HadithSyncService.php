@@ -55,22 +55,50 @@ class HadithSyncService
             $page = 1;
             $hasMore = true;
             $totalFetched = 0;
+            $consecutiveFailures = 0;
+            $maxConsecutiveFailures = 3; // Stop after 3 consecutive failed pages
 
-            while ($hasMore) {
+            while ($hasMore && $consecutiveFailures < $maxConsecutiveFailures) {
                 try {
                     // For collections without books, fetch hadiths directly by collection
+                    // API has a maximum page size limit of 14 hadiths per request
+                    $pageSize = 14;
+
                     if ($isDirectSync) {
                         Log::info("Fetching hadiths directly for collection {$collectionName}", ['page' => $page]);
-                        $response = $this->apiClient->getHadiths($collectionName, null, null, null, 100, $page);
+                        $response = $this->apiClient->getHadiths($collectionName, null, null, null, $pageSize, $page);
                     } else {
                         // Fetch hadiths from API by book
-                        $response = $this->apiClient->getHadithsByBook($collectionName, $bookNumber, 100, $page);
+                        $response = $this->apiClient->getHadithsByBook($collectionName, $bookNumber, $pageSize, $page);
+                    }
+
+                    Log::debug("API Response", [
+                        'has_data' => isset($response->data),
+                        'data_count' => isset($response->data) ? count($response->data) : 0,
+                        'has_next' => isset($response->next),
+                        'has_error' => isset($response->error),
+                        'page' => $page
+                    ]);
+
+                    // Check if API returned an error (returns 200 status with error in body)
+                    if (isset($response->error)) {
+                        $consecutiveFailures++;
+                        Log::warning("API returned error for page {$page}, trying next page ({$consecutiveFailures}/{$maxConsecutiveFailures})", [
+                            'error' => $response->error->details ?? 'Unknown error',
+                            'code' => $response->error->code ?? 'unknown',
+                            'page' => $page,
+                        ]);
+                        $page++;
+                        continue;
                     }
 
                     if (! isset($response->data) || empty($response->data)) {
                         $hasMore = false;
                         break;
                     }
+
+                    // Reset consecutive failures on successful page fetch
+                    $consecutiveFailures = 0;
 
                     $totalFetched += count($response->data);
 
@@ -84,17 +112,23 @@ class HadithSyncService
                         $page = $response->next;
                     }
                 } catch (\Exception $e) {
-                    Log::error("Error fetching hadiths page {$page} for book {$bookNumber}", [
+                    $consecutiveFailures++;
+
+                    Log::warning("Error fetching hadiths page {$page} for book {$bookNumber}, trying next page ({$consecutiveFailures}/{$maxConsecutiveFailures})", [
                         'error' => $e->getMessage(),
                         'collection' => $collectionName,
                         'book' => $bookNumber,
+                        'page' => $page,
+                        'consecutive_failures' => $consecutiveFailures,
                     ]);
 
                     if ($this->syncLog) {
                         $this->syncLog->incrementFailed();
                     }
 
-                    $hasMore = false;
+                    // Continue to next page instead of stopping (API has buggy pagination)
+                    $page++;
+                    continue;
                 }
             }
 
@@ -163,12 +197,6 @@ class HadithSyncService
                     if (! empty($transformed['translations']['ar'])) {
                         $transformed['translations']['ar'] = TextSanitizer::cleanText($transformed['translations']['ar'], normalize_arabic: false);
                     }
-                    // Sanitize other languages too for consistency
-                    foreach (['fr', 'tr', 'ur'] as $lang) {
-                        if (! empty($transformed['translations'][$lang])) {
-                            $transformed['translations'][$lang] = TextSanitizer::cleanText($transformed['translations'][$lang]);
-                        }
-                    }
                 }
 
                 // Keep URN from transformer (it's now stored in database)
@@ -221,10 +249,9 @@ class HadithSyncService
             }
         }
 
-        // Batch insert and update
+        // Batch upsert (insert + update combined)
         if (! $this->dryRun) {
-            $this->batchInsert($toInsert);
-            $this->batchUpdate($toUpdate);
+            $this->batchUpsert($toInsert, $toUpdate);
         }
 
         $recordsProcessed = count($toInsert) + count($toUpdate);
@@ -239,70 +266,110 @@ class HadithSyncService
     }
 
     /**
-     * Batch insert hadiths
+     * Batch upsert hadiths (combined insert + update)
+     * Uses single upsert query for better performance
      */
-    private function batchInsert(array $hadiths): void
+    private function batchUpsert(array $toInsert, array $toUpdate): void
     {
-        if (empty($hadiths)) {
+        if (empty($toInsert) && empty($toUpdate)) {
             return;
         }
 
-        foreach (array_chunk($hadiths, $this->batchSize) as $chunk) {
+        // Combine inserts and updates into single dataset
+        $allRecords = array_merge(
+            $toInsert,
+            array_map(fn ($u) => $u['data'], $toUpdate)
+        );
+
+        if (empty($allRecords)) {
+            return;
+        }
+
+        // Process in chunks with transaction wrapping
+        foreach (array_chunk($allRecords, $this->batchSize) as $chunk) {
             try {
-                // Ensure translations are properly JSON encoded
-                foreach ($chunk as &$hadith) {
-                    if (is_array($hadith['translations'])) {
-                        $hadith['translations'] = json_encode($hadith['translations']);
-                    }
-                }
-
-                DB::table('hadith')->insertOrIgnore($chunk);
-                Log::info('Batch insert succeeded', ['count' => count($chunk)]);
-            } catch (\Exception $e) {
-                Log::error('Batch insert failed', [
-                    'error' => $e->getMessage(),
-                    'count' => count($chunk),
-                ]);
-
-                // Try inserting individually to identify problematic records
-                foreach ($chunk as $hadith) {
-                    try {
-                        // Ensure translations are JSON encoded for individual insert
+                // Wrap in transaction for atomic operation
+                DB::transaction(function () use ($chunk) {
+                    // Prepare JSON fields
+                    $prepared = array_map(function ($hadith) {
                         if (is_array($hadith['translations'])) {
                             $hadith['translations'] = json_encode($hadith['translations']);
                         }
 
-                        DB::table('hadith')->insertOrIgnore([$hadith]);
-                    } catch (\Exception $individualError) {
-                        Log::error('Individual insert failed for hadith', [
-                            'hadith_number' => $hadith['hadith_number'],
-                            'error' => $individualError->getMessage(),
-                        ]);
-                        // Don't increment failed - insertOrIgnore silently fails for duplicates
-                    }
-                }
+                        // Ensure timestamps
+                        if (!isset($hadith['created_at'])) {
+                            $hadith['created_at'] = now();
+                        }
+                        $hadith['updated_at'] = now();
+
+                        return $hadith;
+                    }, $chunk);
+
+                    // Single upsert query instead of N insert/update queries
+                    DB::table('hadith')->upsert(
+                        $prepared,
+                        uniqueBy: ['book_id', 'hadith_number'], // Unique constraint
+                        update: [
+                            'arabic_text',
+                            'translations',
+                            'grade',
+                            'urn',
+                            'chapter_id',
+                            'synced_at',
+                            'updated_at',
+                        ]
+                    );
+                }, attempts: 3);
+
+                Log::info('Bulk upsert succeeded', ['count' => count($chunk)]);
+            } catch (\Exception $e) {
+                Log::error('Bulk upsert failed', [
+                    'error' => $e->getMessage(),
+                    'count' => count($chunk),
+                ]);
+
+                // Fallback to individual inserts
+                $this->fallbackIndividualUpserts($chunk);
             }
         }
     }
 
     /**
-     * Batch update hadiths
+     * Fallback to individual upserts when bulk operation fails
      */
-    private function batchUpdate(array $updates): void
+    private function fallbackIndividualUpserts(array $hadiths): void
     {
-        if (empty($updates)) {
-            return;
-        }
-
-        foreach ($updates as $update) {
+        foreach ($hadiths as $hadith) {
             try {
-                Hadith::where('id', $update['id'])->update($update['data']);
-            } catch (\Exception $e) {
-                Log::error('Update failed for hadith', [
-                    'id' => $update['id'],
-                    'error' => $e->getMessage(),
+                // Prepare data
+                if (is_array($hadith['translations'])) {
+                    $hadith['translations'] = json_encode($hadith['translations']);
+                }
+
+                if (!isset($hadith['created_at'])) {
+                    $hadith['created_at'] = now();
+                }
+                $hadith['updated_at'] = now();
+
+                // Try upsert
+                DB::table('hadith')->upsert(
+                    [$hadith],
+                    uniqueBy: ['book_id', 'hadith_number'],
+                    update: [
+                        'arabic_text',
+                        'translations',
+                        'grade',
+                        'urn',
+                        'chapter_id',
+                        'synced_at',
+                        'updated_at',
+                    ]
+                );
+            } catch (\Exception $individualError) {
+                Log::error('Individual upsert failed for hadith', [
+                    'hadith_number' => $hadith['hadith_number'] ?? 'unknown',
+                    'error' => $individualError->getMessage(),
                 ]);
-                // Don't increment failed - we already counted this as synced in processBatch
             }
         }
     }

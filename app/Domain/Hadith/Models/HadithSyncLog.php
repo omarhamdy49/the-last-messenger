@@ -49,6 +49,8 @@ class HadithSyncLog extends Model
         'skipped_records',
         'error_message',
         'error_details',
+        'checkpoint',
+        'metadata',
         'started_at',
         'completed_at',
         'duration_seconds',
@@ -68,6 +70,8 @@ class HadithSyncLog extends Model
             'failed_records' => 'integer',
             'skipped_records' => 'integer',
             'error_details' => 'array',
+            'checkpoint' => 'array',
+            'metadata' => 'array',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
             'duration_seconds' => 'integer',
@@ -165,5 +169,39 @@ class HadithSyncLog extends Model
         }
 
         return ($this->synced_records / $this->total_records) * 100;
+    }
+
+    /**
+     * Update checkpoint data for resume capability
+     */
+    public function updateCheckpoint(array $checkpointData): void
+    {
+        $this->update([
+            'checkpoint' => array_merge($this->checkpoint ?? [], $checkpointData),
+        ]);
+    }
+
+    /**
+     * Clear checkpoint data
+     */
+    public function clearCheckpoint(): void
+    {
+        $this->update(['checkpoint' => null]);
+    }
+
+    /**
+     * Check if sync has checkpoint data
+     */
+    public function hasCheckpoint(): bool
+    {
+        return ! empty($this->checkpoint);
+    }
+
+    /**
+     * Get checkpoint value by key
+     */
+    public function getCheckpoint(string $key, mixed $default = null): mixed
+    {
+        return $this->checkpoint[$key] ?? $default;
     }
 }

@@ -173,7 +173,18 @@ class ChapterSyncService
 
         foreach (array_chunk($chapters, 500) as $chunk) {
             try {
-                DB::table('hadith_chapters')->insertOrIgnore($chunk);
+                // Encode JSON fields for database insert
+                $prepared = array_map(function ($chapter) {
+                    if (is_array($chapter['name'])) {
+                        $chapter['name'] = json_encode($chapter['name']);
+                    }
+                    if (is_array($chapter['description'])) {
+                        $chapter['description'] = json_encode($chapter['description']);
+                    }
+                    return $chapter;
+                }, $chunk);
+
+                DB::table('hadith_chapters')->insertOrIgnore($prepared);
             } catch (\Exception $e) {
                 Log::error("Batch chapter insert failed", [
                     'error' => $e->getMessage(),
@@ -183,6 +194,14 @@ class ChapterSyncService
                 // Try inserting individually
                 foreach ($chunk as $chapter) {
                     try {
+                        // Encode JSON fields
+                        if (is_array($chapter['name'])) {
+                            $chapter['name'] = json_encode($chapter['name']);
+                        }
+                        if (is_array($chapter['description'])) {
+                            $chapter['description'] = json_encode($chapter['description']);
+                        }
+
                         DB::table('hadith_chapters')->insertOrIgnore([$chapter]);
                     } catch (\Exception $individualError) {
                         Log::error("Individual chapter insert failed", [
