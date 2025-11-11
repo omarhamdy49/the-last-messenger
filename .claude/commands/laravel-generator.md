@@ -27,7 +27,7 @@ Generic         → Buy/integrate (commodity services)
 
 ### 2. Bounded Context Rules
 - Each model lives within clear boundaries
-- Same term can mean different things in different contexts
+- The Same term can mean different things in different contexts
 - Always create context maps to visualize relationships
 
 ### 3. Context Relationships

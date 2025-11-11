@@ -11,6 +11,8 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ExportController;
 use App\Http\Controllers\Admin\GenealogyController;
+use App\Http\Controllers\Admin\HadithBookController;
+use App\Http\Controllers\Admin\HadithChapterController;
 use App\Http\Controllers\Admin\HadithController;
 use App\Http\Controllers\Admin\HadithNarratorController;
 use App\Http\Controllers\Admin\ImportController;
@@ -417,6 +419,40 @@ Route::prefix('su/portal/v1/admin')
             'edit' => 'admin.hadith-narrators.edit',
             'update' => 'admin.hadith-narrators.update',
             'destroy' => 'admin.hadith-narrators.destroy',
+        ]);
+
+        // Hadith Book Routes
+        Route::prefix('hadith-books')->group(function (): void {
+            Route::get('/search', [HadithBookController::class, 'search'])->name('admin.hadith-books.search');
+            Route::post('/bulk-delete', [HadithBookController::class, 'bulkDelete'])->name('admin.hadith-books.bulk-delete');
+            Route::post('/{id}/toggle-active', [HadithBookController::class, 'toggleActive'])->name('admin.hadith-books.toggle-active');
+            Route::post('/{id}/update-count', [HadithBookController::class, 'updateCount'])->name('admin.hadith-books.update-count');
+        });
+        Route::resource('hadith-books', HadithBookController::class)->names([
+            'index' => 'admin.hadith-books.index',
+            'create' => 'admin.hadith-books.create',
+            'store' => 'admin.hadith-books.store',
+            'show' => 'admin.hadith-books.show',
+            'edit' => 'admin.hadith-books.edit',
+            'update' => 'admin.hadith-books.update',
+            'destroy' => 'admin.hadith-books.destroy',
+        ]);
+
+        // Hadith Chapter Routes
+        Route::prefix('hadith-chapters')->group(function (): void {
+            Route::get('/search', [HadithChapterController::class, 'search'])->name('admin.hadith-chapters.search');
+            Route::post('/bulk-delete', [HadithChapterController::class, 'bulkDelete'])->name('admin.hadith-chapters.bulk-delete');
+            Route::post('/reorder', [HadithChapterController::class, 'reorder'])->name('admin.hadith-chapters.reorder');
+            Route::get('/by-book/{bookId}', [HadithChapterController::class, 'byBook'])->name('admin.hadith-chapters.by-book');
+        });
+        Route::resource('hadith-chapters', HadithChapterController::class)->names([
+            'index' => 'admin.hadith-chapters.index',
+            'create' => 'admin.hadith-chapters.create',
+            'store' => 'admin.hadith-chapters.store',
+            'show' => 'admin.hadith-chapters.show',
+            'edit' => 'admin.hadith-chapters.edit',
+            'update' => 'admin.hadith-chapters.update',
+            'destroy' => 'admin.hadith-chapters.destroy',
         ]);
 
         // DISABLED: Media Program Routes

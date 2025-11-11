@@ -156,15 +156,63 @@
             </div>
 
             <!-- Hadith Management -->
-            <a href="{{ route('admin.hadith.index') }}"
-               @click="activeMenu = 'hadith'"
-               :class="isActive('hadith') ?
-                   'bg-gradient-primary text-white shadow-lg' :
-                   (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
-                <i data-lucide="book-open" class="w-5 h-5"></i>
-                <span class="font-semibold">{{ __('admin.hadith') }}</span>
-            </a>
+            <div x-data="{ open: false }">
+                <button @click="toggleSubmenu('hadith')"
+                        :class="openSubmenu === 'hadith' || activeMenu.includes('hadith') ?
+                            'bg-gradient-primary text-white shadow-lg' :
+                            (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+                        class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="book-open" class="w-5 h-5"></i>
+                        <span class="font-semibold">{{ __('admin.hadith') }}</span>
+                    </div>
+                    <i data-lucide="chevron-down"
+                       class="w-4 h-4 transition-transform"
+                       :class="openSubmenu === 'hadith' ? 'rotate-180' : ''"></i>
+                </button>
+
+                <!-- Hadith Submenu -->
+                <div x-show="openSubmenu === 'hadith'"
+                     x-collapse
+                     class="mt-2 ms-6 space-y-1">
+                    <a href="{{ route('admin.hadith-books.index') }}"
+                       @click="activeMenu = 'hadith-books'"
+                       :class="isActive('hadith-books') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="book" class="w-4 h-4"></i>
+                        <span>كتب الحديث</span>
+                    </a>
+                    <a href="{{ route('admin.hadith-chapters.index') }}"
+                       @click="activeMenu = 'hadith-chapters'"
+                       :class="isActive('hadith-chapters') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="bookmark" class="w-4 h-4"></i>
+                        <span>الأبواب</span>
+                    </a>
+                    <a href="{{ route('admin.hadith.index') }}"
+                       @click="activeMenu = 'hadith'"
+                       :class="isActive('hadith') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="scroll-text" class="w-4 h-4"></i>
+                        <span>الأحاديث</span>
+                    </a>
+                    <a href="{{ route('admin.hadith-narrators.index') }}"
+                       @click="activeMenu = 'hadith-narrators'"
+                       :class="isActive('hadith-narrators') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                        <span>الرواة</span>
+                    </a>
+                </div>
+            </div>
 
             <!-- Quran Management -->
             <a href="{{ route('admin.quran.index') }}"
