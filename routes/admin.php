@@ -11,10 +11,10 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ExportController;
 use App\Http\Controllers\Admin\GenealogyController;
-use App\Http\Controllers\Admin\HadithBookController;
-use App\Http\Controllers\Admin\HadithChapterController;
-use App\Http\Controllers\Admin\HadithController;
-use App\Http\Controllers\Admin\HadithNarratorController;
+// use App\Http\Controllers\Admin\HadithBookController; // DISABLED: Hadith module removed
+// use App\Http\Controllers\Admin\HadithChapterController; // DISABLED: Hadith module removed
+// use App\Http\Controllers\Admin\HadithController; // DISABLED: Hadith module removed
+// use App\Http\Controllers\Admin\HadithNarratorController; // DISABLED: Hadith module removed
 use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\LanguageSettingsController;
 // use App\Http\Controllers\Admin\MediaCategoryController;
@@ -386,74 +386,74 @@ Route::prefix('su/portal/v1/admin')
         // ]);
 
 
-        // Hadith Routes
-        Route::prefix('hadith')->group(function (): void {
-            Route::get('/search', [HadithController::class, 'search'])->name('admin.hadith.search');
-            Route::post('/bulk-delete', [HadithController::class, 'bulkDelete'])->name('admin.hadith.bulk-delete');
-        });
-        Route::resource('hadith', HadithController::class)->names([
-            'index' => 'admin.hadith.index',
-            'create' => 'admin.hadith.create',
-            'store' => 'admin.hadith.store',
-            'show' => 'admin.hadith.show',
-            'edit' => 'admin.hadith.edit',
-            'update' => 'admin.hadith.update',
-            'destroy' => 'admin.hadith.destroy',
-        ]);
+        // DISABLED: Hadith Routes (module removed - use API endpoints instead)
+        // Route::prefix('hadith')->group(function (): void {
+        //     Route::get('/search', [HadithController::class, 'search'])->name('admin.hadith.search');
+        //     Route::post('/bulk-delete', [HadithController::class, 'bulkDelete'])->name('admin.hadith.bulk-delete');
+        // });
+        // Route::resource('hadith', HadithController::class)->names([
+        //     'index' => 'admin.hadith.index',
+        //     'create' => 'admin.hadith.create',
+        //     'store' => 'admin.hadith.store',
+        //     'show' => 'admin.hadith.show',
+        //     'edit' => 'admin.hadith.edit',
+        //     'update' => 'admin.hadith.update',
+        //     'destroy' => 'admin.hadith.destroy',
+        // ]);
 
-        // Hadith Narrator Routes
-        Route::prefix('hadith-narrators')->group(function (): void {
-            Route::get('/search', [HadithNarratorController::class, 'search'])->name('admin.hadith-narrators.search');
-            Route::post('/bulk-delete', [HadithNarratorController::class, 'bulkDelete'])->name('admin.hadith-narrators.bulk-delete');
-            Route::get('/by-grade/{grade}', [HadithNarratorController::class, 'byGrade'])->name('admin.hadith-narrators.by-grade');
-            Route::get('/by-era/{era}', [HadithNarratorController::class, 'byEra'])->name('admin.hadith-narrators.by-era');
-            Route::get('/by-country/{country}', [HadithNarratorController::class, 'byCountry'])->name('admin.hadith-narrators.by-country');
-            Route::get('/{id}/teachers', [HadithNarratorController::class, 'teachers'])->name('admin.hadith-narrators.teachers');
-            Route::get('/{id}/students', [HadithNarratorController::class, 'students'])->name('admin.hadith-narrators.students');
-        });
-        Route::resource('hadith-narrators', HadithNarratorController::class)->names([
-            'index' => 'admin.hadith-narrators.index',
-            'create' => 'admin.hadith-narrators.create',
-            'store' => 'admin.hadith-narrators.store',
-            'show' => 'admin.hadith-narrators.show',
-            'edit' => 'admin.hadith-narrators.edit',
-            'update' => 'admin.hadith-narrators.update',
-            'destroy' => 'admin.hadith-narrators.destroy',
-        ]);
+        // DISABLED: Hadith Narrator Routes (module removed)
+        // Route::prefix('hadith-narrators')->group(function (): void {
+        //     Route::get('/search', [HadithNarratorController::class, 'search'])->name('admin.hadith-narrators.search');
+        //     Route::post('/bulk-delete', [HadithNarratorController::class, 'bulkDelete'])->name('admin.hadith-narrators.bulk-delete');
+        //     Route::get('/by-grade/{grade}', [HadithNarratorController::class, 'byGrade'])->name('admin.hadith-narrators.by-grade');
+        //     Route::get('/by-era/{era}', [HadithNarratorController::class, 'byEra'])->name('admin.hadith-narrators.by-era');
+        //     Route::get('/by-country/{country}', [HadithNarratorController::class, 'byCountry'])->name('admin.hadith-narrators.by-country');
+        //     Route::get('/{id}/teachers', [HadithNarratorController::class, 'teachers'])->name('admin.hadith-narrators.teachers');
+        //     Route::get('/{id}/students', [HadithNarratorController::class, 'students'])->name('admin.hadith-narrators.students');
+        // });
+        // Route::resource('hadith-narrators', HadithNarratorController::class)->names([
+        //     'index' => 'admin.hadith-narrators.index',
+        //     'create' => 'admin.hadith-narrators.create',
+        //     'store' => 'admin.hadith-narrators.store',
+        //     'show' => 'admin.hadith-narrators.show',
+        //     'edit' => 'admin.hadith-narrators.edit',
+        //     'update' => 'admin.hadith-narrators.update',
+        //     'destroy' => 'admin.hadith-narrators.destroy',
+        // ]);
 
-        // Hadith Book Routes
-        Route::prefix('hadith-books')->group(function (): void {
-            Route::get('/search', [HadithBookController::class, 'search'])->name('admin.hadith-books.search');
-            Route::post('/bulk-delete', [HadithBookController::class, 'bulkDelete'])->name('admin.hadith-books.bulk-delete');
-            Route::post('/{id}/toggle-active', [HadithBookController::class, 'toggleActive'])->name('admin.hadith-books.toggle-active');
-            Route::post('/{id}/update-count', [HadithBookController::class, 'updateCount'])->name('admin.hadith-books.update-count');
-        });
-        Route::resource('hadith-books', HadithBookController::class)->names([
-            'index' => 'admin.hadith-books.index',
-            'create' => 'admin.hadith-books.create',
-            'store' => 'admin.hadith-books.store',
-            'show' => 'admin.hadith-books.show',
-            'edit' => 'admin.hadith-books.edit',
-            'update' => 'admin.hadith-books.update',
-            'destroy' => 'admin.hadith-books.destroy',
-        ]);
+        // DISABLED: Hadith Book Routes (module removed)
+        // Route::prefix('hadith-books')->group(function (): void {
+        //     Route::get('/search', [HadithBookController::class, 'search'])->name('admin.hadith-books.search');
+        //     Route::post('/bulk-delete', [HadithBookController::class, 'bulkDelete'])->name('admin.hadith-books.bulk-delete');
+        //     Route::post('/{id}/toggle-active', [HadithBookController::class, 'toggleActive'])->name('admin.hadith-books.toggle-active');
+        //     Route::post('/{id}/update-count', [HadithBookController::class, 'updateCount'])->name('admin.hadith-books.update-count');
+        // });
+        // Route::resource('hadith-books', HadithBookController::class)->names([
+        //     'index' => 'admin.hadith-books.index',
+        //     'create' => 'admin.hadith-books.create',
+        //     'store' => 'admin.hadith-books.store',
+        //     'show' => 'admin.hadith-books.show',
+        //     'edit' => 'admin.hadith-books.edit',
+        //     'update' => 'admin.hadith-books.update',
+        //     'destroy' => 'admin.hadith-books.destroy',
+        // ]);
 
-        // Hadith Chapter Routes
-        Route::prefix('hadith-chapters')->group(function (): void {
-            Route::get('/search', [HadithChapterController::class, 'search'])->name('admin.hadith-chapters.search');
-            Route::post('/bulk-delete', [HadithChapterController::class, 'bulkDelete'])->name('admin.hadith-chapters.bulk-delete');
-            Route::post('/reorder', [HadithChapterController::class, 'reorder'])->name('admin.hadith-chapters.reorder');
-            Route::get('/by-book/{bookId}', [HadithChapterController::class, 'byBook'])->name('admin.hadith-chapters.by-book');
-        });
-        Route::resource('hadith-chapters', HadithChapterController::class)->names([
-            'index' => 'admin.hadith-chapters.index',
-            'create' => 'admin.hadith-chapters.create',
-            'store' => 'admin.hadith-chapters.store',
-            'show' => 'admin.hadith-chapters.show',
-            'edit' => 'admin.hadith-chapters.edit',
-            'update' => 'admin.hadith-chapters.update',
-            'destroy' => 'admin.hadith-chapters.destroy',
-        ]);
+        // DISABLED: Hadith Chapter Routes (module removed)
+        // Route::prefix('hadith-chapters')->group(function (): void {
+        //     Route::get('/search', [HadithChapterController::class, 'search'])->name('admin.hadith-chapters.search');
+        //     Route::post('/bulk-delete', [HadithChapterController::class, 'bulkDelete'])->name('admin.hadith-chapters.bulk-delete');
+        //     Route::post('/reorder', [HadithChapterController::class, 'reorder'])->name('admin.hadith-chapters.reorder');
+        //     Route::get('/by-book/{bookId}', [HadithChapterController::class, 'byBook'])->name('admin.hadith-chapters.by-book');
+        // });
+        // Route::resource('hadith-chapters', HadithChapterController::class)->names([
+        //     'index' => 'admin.hadith-chapters.index',
+        //     'create' => 'admin.hadith-chapters.create',
+        //     'store' => 'admin.hadith-chapters.store',
+        //     'show' => 'admin.hadith-chapters.show',
+        //     'edit' => 'admin.hadith-chapters.edit',
+        //     'update' => 'admin.hadith-chapters.update',
+        //     'destroy' => 'admin.hadith-chapters.destroy',
+        // ]);
 
         // DISABLED: Media Program Routes
         // Route::prefix('media-programs')->group(function (): void {
