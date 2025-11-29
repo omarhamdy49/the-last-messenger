@@ -18,9 +18,10 @@ interface ReciterRepositoryInterface
      * Get paginated reciters
      *
      * @param int $perPage
+     * @param bool $activeOnly
      * @return LengthAwarePaginator
      */
-    public function paginate(int $perPage = 15): LengthAwarePaginator;
+    public function paginate(int $perPage = 15, bool $activeOnly = true): LengthAwarePaginator;
 
     /**
      * Get reciter by ID
@@ -31,35 +32,54 @@ interface ReciterRepositoryInterface
     public function getById(int $id): ?Reciter;
 
     /**
+     * Get reciter by slug
+     *
+     * @param string $slug
+     * @return Reciter|null
+     */
+    public function getBySlug(string $slug): ?Reciter;
+
+    /**
      * Get reciters by country
      *
      * @param string $country
+     * @param bool $activeOnly
      * @return Collection
      */
-    public function getByCountry(string $country): Collection;
+    public function getByCountry(string $country, bool $activeOnly = true): Collection;
 
     /**
      * Get reciters by recitation style
      *
      * @param string $style
+     * @param bool $activeOnly
      * @return Collection
      */
-    public function getByStyle(string $style): Collection;
+    public function getByStyle(string $style, bool $activeOnly = true): Collection;
 
     /**
      * Get featured reciters
      *
+     * @param bool $activeOnly
      * @return Collection
      */
-    public function getFeatured(): Collection;
+    public function getFeatured(bool $activeOnly = true): Collection;
+
+    /**
+     * Get active reciters
+     *
+     * @return Collection
+     */
+    public function getActive(): Collection;
 
     /**
      * Search reciters by name (multi-language)
      *
      * @param string $query
+     * @param bool $activeOnly
      * @return Collection
      */
-    public function search(string $query): Collection;
+    public function search(string $query, bool $activeOnly = true): Collection;
 
     /**
      * Create new reciter
@@ -112,8 +132,16 @@ interface ReciterRepositoryInterface
     public function updateFeatured(Reciter $reciter, bool $featured): bool;
 
     /**
+     * Update active status
+     *
+     * @param Reciter $reciter
+     * @param bool $active
+     * @return bool
+     */
+    public function updateActive(Reciter $reciter, bool $active): bool;
+
+    /**
      * Count recitations for reciter
-     * (This will be implemented when recitations table exists)
      *
      * @param Reciter $reciter
      * @return int

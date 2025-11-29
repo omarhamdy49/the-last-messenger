@@ -24,13 +24,18 @@ class ReciterRepository implements ReciterRepositoryInterface
      * Get paginated reciters
      *
      * @param int $perPage
+     * @param bool $activeOnly
      * @return LengthAwarePaginator
      */
-    public function paginate(int $perPage = 15): LengthAwarePaginator
+    public function paginate(int $perPage = 15, bool $activeOnly = true): LengthAwarePaginator
     {
-        return Reciter::query()
-            ->ordered()
-            ->paginate($perPage);
+        $query = Reciter::query()->ordered();
+
+        if ($activeOnly) {
+            $query->active();
+        }
+
+        return $query->paginate($perPage);
     }
 
     /**
@@ -49,19 +54,43 @@ class ReciterRepository implements ReciterRepositoryInterface
     }
 
     /**
+     * Get reciter by slug
+     *
+     * @param string $slug
+     * @return Reciter|null
+     */
+    public function getBySlug(string $slug): ?Reciter
+    {
+        return Cache::tags(['reciters'])->remember(
+            "reciter:slug:$slug",
+            now()->addMinutes(self::CACHE_TTL),
+            fn () => Reciter::where('slug', $slug)->first()
+        );
+    }
+
+    /**
      * Get reciters by country
      *
      * @param string $country
+     * @param bool $activeOnly
      * @return Collection
      */
-    public function getByCountry(string $country): Collection
+    public function getByCountry(string $country, bool $activeOnly = true): Collection
     {
+        $cacheKey = "reciters:country:$country:" . ($activeOnly ? 'active' : 'all');
+
         return Cache::tags(['reciters'])->remember(
-            "reciters:country:$country",
+            $cacheKey,
             now()->addMinutes(self::CACHE_TTL),
-            fn () => Reciter::where('country', $country)
-                ->ordered()
-                ->get()
+            function () use ($country, $activeOnly) {
+                $query = Reciter::where('country', $country)->ordered();
+
+                if ($activeOnly) {
+                    $query->active();
+                }
+
+                return $query->get();
+            }
         );
     }
 
@@ -69,32 +98,64 @@ class ReciterRepository implements ReciterRepositoryInterface
      * Get reciters by recitation style
      *
      * @param string $style
+     * @param bool $activeOnly
      * @return Collection
      */
-    public function getByStyle(string $style): Collection
+    public function getByStyle(string $style, bool $activeOnly = true): Collection
     {
+        $cacheKey = "reciters:style:$style:" . ($activeOnly ? 'active' : 'all');
+
         return Cache::tags(['reciters'])->remember(
-            "reciters:style:$style",
+            $cacheKey,
             now()->addMinutes(self::CACHE_TTL),
-            fn () => Reciter::where('style', $style)
-                ->ordered()
-                ->get()
+            function () use ($style, $activeOnly) {
+                $query = Reciter::where('style', $style)->ordered();
+
+                if ($activeOnly) {
+                    $query->active();
+                }
+
+                return $query->get();
+            }
         );
     }
 
     /**
      * Get featured reciters
      *
+     * @param bool $activeOnly
      * @return Collection
      */
-    public function getFeatured(): Collection
+    public function getFeatured(bool $activeOnly = true): Collection
+    {
+        $cacheKey = 'reciters:featured:' . ($activeOnly ? 'active' : 'all');
+
+        return Cache::tags(['reciters'])->remember(
+            $cacheKey,
+            now()->addMinutes(self::CACHE_TTL),
+            function () use ($activeOnly) {
+                $query = Reciter::featured()->ordered();
+
+                if ($activeOnly) {
+                    $query->active();
+                }
+
+                return $query->get();
+            }
+        );
+    }
+
+    /**
+     * Get active reciters
+     *
+     * @return Collection
+     */
+    public function getActive(): Collection
     {
         return Cache::tags(['reciters'])->remember(
-            'reciters:featured',
+            'reciters:active',
             now()->addMinutes(self::CACHE_TTL),
-            fn () => Reciter::featured()
-                ->ordered()
-                ->get()
+            fn () => Reciter::active()->ordered()->get()
         );
     }
 
@@ -102,19 +163,24 @@ class ReciterRepository implements ReciterRepositoryInterface
      * Search reciters by name (multi-language)
      *
      * @param string $query
+     * @param bool $activeOnly
      * @return Collection
      */
-    public function search(string $query): Collection
+    public function search(string $query, bool $activeOnly = true): Collection
     {
-        return Reciter::where(function ($q) use ($query) {
-            $q->whereJsonContains('name->ar', $query)
-                ->orWhereJsonContains('name->en', $query)
-                ->orWhereJsonContains('name->fr', $query)
-                ->orWhereJsonContains('name->tr', $query)
-                ->orWhereJsonContains('name->ur', $query);
-        })
-            ->ordered()
-            ->get();
+        $searchQuery = Reciter::where(function ($q) use ($query) {
+            $q->whereRaw("JSON_EXTRACT(name, '$.ar') LIKE ?", ["%{$query}%"])
+                ->orWhereRaw("JSON_EXTRACT(name, '$.en') LIKE ?", ["%{$query}%"])
+                ->orWhereRaw("JSON_EXTRACT(name, '$.fr') LIKE ?", ["%{$query}%"])
+                ->orWhereRaw("JSON_EXTRACT(name, '$.tr') LIKE ?", ["%{$query}%"])
+                ->orWhereRaw("JSON_EXTRACT(name, '$.ur') LIKE ?", ["%{$query}%"]);
+        })->ordered();
+
+        if ($activeOnly) {
+            $searchQuery->active();
+        }
+
+        return $searchQuery->get();
     }
 
     /**
@@ -207,8 +273,22 @@ class ReciterRepository implements ReciterRepositoryInterface
     }
 
     /**
+     * Update active status
+     *
+     * @param Reciter $reciter
+     * @param bool $active
+     * @return bool
+     */
+    public function updateActive(Reciter $reciter, bool $active): bool
+    {
+        $updated = $reciter->update(['is_active' => $active]);
+        $this->clearCache();
+
+        return $updated;
+    }
+
+    /**
      * Count recitations for reciter
-     * (This will be implemented when recitations table exists)
      *
      * @param Reciter $reciter
      * @return int
