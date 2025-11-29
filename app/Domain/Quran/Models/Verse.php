@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Models;
 
-use App\Domain\Quran\Enums\SajdaType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Spatie\Translatable\HasTranslations;
 
 /**
  * Verse Model (Quran Ayah)
@@ -17,32 +15,23 @@ use Spatie\Translatable\HasTranslations;
  * @property int $id
  * @property int $surah_id
  * @property int $verse_number
- * @property int $verse_key
- * @property string $text_uthmani
- * @property string $text_simple
- * @property string|null $text_imlaei
- * @property array $translations
- * @property string|null $transliteration
+ * @property string $verse_key
  * @property int $juz_number
- * @property int|null $hizb_number
+ * @property int $hizb_number
+ * @property int $rub_el_hizb_number
+ * @property int $ruku_number
+ * @property int|null $manzil_number
+ * @property int|null $sajdah_number
  * @property int $page_number
- * @property int|null $rub_number
- * @property bool $is_sajda
- * @property SajdaType|null $sajda_type
- * @property array|null $audio_urls
- * @property int|null $words_count
- * @property int|null $letters_count
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  */
 class Verse extends Model
 {
-    use HasFactory, HasTranslations;
+    use HasFactory;
 
     /**
      * The table associated with the model.
-     *
-     * @var string
      */
     protected $table = 'quran_verses';
 
@@ -55,20 +44,13 @@ class Verse extends Model
         'surah_id',
         'verse_number',
         'verse_key',
-        'text_uthmani',
-        'text_simple',
-        'text_imlaei',
-        'translations',
-        'transliteration',
         'juz_number',
         'hizb_number',
+        'rub_el_hizb_number',
+        'ruku_number',
+        'manzil_number',
+        'sajdah_number',
         'page_number',
-        'rub_number',
-        'is_sajda',
-        'sajda_type',
-        'audio_urls',
-        'words_count',
-        'letters_count',
     ];
 
     /**
@@ -79,25 +61,14 @@ class Verse extends Model
     protected $casts = [
         'surah_id' => 'integer',
         'verse_number' => 'integer',
-        'verse_key' => 'integer',
-        'translations' => 'array',
         'juz_number' => 'integer',
         'hizb_number' => 'integer',
+        'rub_el_hizb_number' => 'integer',
+        'ruku_number' => 'integer',
+        'manzil_number' => 'integer',
+        'sajdah_number' => 'integer',
         'page_number' => 'integer',
-        'rub_number' => 'integer',
-        'is_sajda' => 'boolean',
-        'sajda_type' => SajdaType::class,
-        'audio_urls' => 'array',
-        'words_count' => 'integer',
-        'letters_count' => 'integer',
     ];
-
-    /**
-     * Translatable attributes
-     *
-     * @var array<string>
-     */
-    public array $translatable = ['translations'];
 
     /**
      * Get the surah this verse belongs to
@@ -108,31 +79,76 @@ class Verse extends Model
     }
 
     /**
-     * Get tafseer for this verse
+     * Get translations for this verse
      */
-    public function tafseer(): HasMany
+    public function translations(): HasMany
     {
-        return $this->hasMany(Tafseer::class, 'verse_id');
+        return $this->hasMany(VerseTranslation::class, 'verse_id');
     }
 
     /**
-     * Get translation in specific language
+     * Get tafsirs for this verse
      */
-    public function getTranslation(string $language = 'en'): ?string
+    public function tafsirs(): HasMany
     {
-        return $this->translations[$language] ?? null;
+        return $this->hasMany(VerseTafsir::class, 'verse_id');
     }
 
     /**
-     * Get verse reference (e.g., "2:255" for Ayat Al-Kursi)
+     * Get translation for specific language
+     */
+    public function getTranslation(string $lang = 'ar'): ?VerseTranslation
+    {
+        return $this->translations()->where('lang', $lang)->first();
+    }
+
+    /**
+     * Get translation text for specific language
+     */
+    public function getTranslationText(string $lang = 'ar'): ?string
+    {
+        $translation = $this->getTranslation($lang);
+
+        return $translation?->text;
+    }
+
+    /**
+     * Get tafsir for specific language
+     */
+    public function getTafsir(string $lang = 'ar'): ?VerseTafsir
+    {
+        return $this->tafsirs()->where('lang', $lang)->where('active', true)->first();
+    }
+
+    /**
+     * Check if this verse has sajdah (prostration)
+     */
+    public function hasSajdah(): bool
+    {
+        return $this->sajdah_number !== null;
+    }
+
+    /**
+     * Get verse reference (e.g., "2:255")
      */
     public function getReference(): string
     {
-        return "{$this->surah->number}:{$this->verse_number}";
+        return $this->verse_key;
     }
 
     /**
-     * Scope: Filter by Juz
+     * Scope: Filter by surah
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeBySurah($query, int $surahId)
+    {
+        return $query->where('surah_id', $surahId);
+    }
+
+    /**
+     * Scope: Filter by juz
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -154,41 +170,46 @@ class Verse extends Model
     }
 
     /**
-     * Scope: Only Sajda verses
+     * Scope: Filter by hizb
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function scopeSajda($query)
+    public function scopeByHizb($query, int $hizb)
     {
-        return $query->where('is_sajda', true);
+        return $query->where('hizb_number', $hizb);
     }
 
     /**
-     * Scope: Search in Arabic text
+     * Scope: Filter sajdah verses only
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function scopeSearchArabic($query, string $searchTerm)
+    public function scopeSajdah($query)
     {
-        return $query->where(function ($q) use ($searchTerm) {
-            $q->where('text_simple', 'like', "%{$searchTerm}%")
-                ->orWhere('text_uthmani', 'like', "%{$searchTerm}%");
-        });
+        return $query->whereNotNull('sajdah_number');
     }
 
     /**
-     * Scope: Search in translations
+     * Scope: Filter by ruku
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function scopeSearchTranslation($query, string $searchTerm, string $language = 'en')
+    public function scopeByRuku($query, int $ruku)
     {
-        return $query->whereRaw(
-            "JSON_EXTRACT(translations, '$.{$language}') LIKE ?",
-            ["%{$searchTerm}%"]
-        );
+        return $query->where('ruku_number', $ruku);
+    }
+
+    /**
+     * Scope: Filter by manzil
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeByManzil($query, int $manzil)
+    {
+        return $query->where('manzil_number', $manzil);
     }
 }

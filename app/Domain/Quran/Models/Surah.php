@@ -4,40 +4,31 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Models;
 
-use App\Domain\Quran\Enums\RevelationPlace;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Spatie\Translatable\HasTranslations;
 
 /**
  * Surah Model (Quran Chapter)
  *
  * @property int $id
- * @property int $number
- * @property array $name
- * @property array|null $meaning
- * @property RevelationPlace $revelation_place
- * @property int|null $revelation_order
+ * @property string $revelation_place
+ * @property int $revelation_order
+ * @property bool $bismillah_pre
+ * @property string $name_ar
+ * @property string $name_en
+ * @property string|null $transliteration
  * @property int $verses_count
- * @property int|null $words_count
- * @property int|null $letters_count
- * @property array|null $juz
- * @property array|null $description
- * @property array|null $theme
- * @property array|null $audio_urls
- * @property int|null $page_number
+ * @property array|null $pages
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  */
 class Surah extends Model
 {
-    use HasFactory, HasTranslations;
+    use HasFactory;
 
     /**
      * The table associated with the model.
-     *
-     * @var string
      */
     protected $table = 'quran_surahs';
 
@@ -47,19 +38,14 @@ class Surah extends Model
      * @var array<string>
      */
     protected $fillable = [
-        'number',
-        'name',
-        'meaning',
         'revelation_place',
         'revelation_order',
+        'bismillah_pre',
+        'name_ar',
+        'name_en',
+        'transliteration',
         'verses_count',
-        'words_count',
-        'letters_count',
-        'juz',
-        'description',
-        'theme',
-        'audio_urls',
-        'page_number',
+        'pages',
     ];
 
     /**
@@ -68,31 +54,10 @@ class Surah extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'number' => 'integer',
-        'name' => 'array',
-        'meaning' => 'array',
-        'revelation_place' => RevelationPlace::class,
         'revelation_order' => 'integer',
+        'bismillah_pre' => 'boolean',
         'verses_count' => 'integer',
-        'words_count' => 'integer',
-        'letters_count' => 'integer',
-        'juz' => 'array',
-        'description' => 'array',
-        'theme' => 'array',
-        'audio_urls' => 'array',
-        'page_number' => 'integer',
-    ];
-
-    /**
-     * Translatable attributes
-     *
-     * @var array<string>
-     */
-    public array $translatable = [
-        'name',
-        'meaning',
-        'description',
-        'theme',
+        'pages' => 'array',
     ];
 
     /**
@@ -104,11 +69,27 @@ class Surah extends Model
     }
 
     /**
+     * Get surah info translations
+     */
+    public function info(): HasMany
+    {
+        return $this->hasMany(SurahInfo::class, 'surah_id');
+    }
+
+    /**
+     * Get surah info for specific language
+     */
+    public function getInfo(string $lang = 'ar'): ?SurahInfo
+    {
+        return $this->info()->where('lang', $lang)->where('active', true)->first();
+    }
+
+    /**
      * Check if surah is Makkan
      */
     public function isMakkan(): bool
     {
-        return $this->revelation_place === RevelationPlace::MAKKAH;
+        return strtolower($this->revelation_place) === 'makkah';
     }
 
     /**
@@ -116,7 +97,7 @@ class Surah extends Model
      */
     public function isMadinan(): bool
     {
-        return $this->revelation_place === RevelationPlace::MADINAH;
+        return strtolower($this->revelation_place) === 'madinah';
     }
 
     /**
@@ -124,7 +105,7 @@ class Surah extends Model
      */
     public function getDisplayName(string $language = 'ar'): string
     {
-        return $this->name[$language] ?? $this->name['ar'] ?? '';
+        return $language === 'ar' ? $this->name_ar : $this->name_en;
     }
 
     /**
@@ -133,11 +114,9 @@ class Surah extends Model
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function scopeByRevelationPlace($query, RevelationPlace|string $place)
+    public function scopeByRevelationPlace($query, string $place)
     {
-        $placeValue = $place instanceof RevelationPlace ? $place->value : $place;
-
-        return $query->where('revelation_place', $placeValue);
+        return $query->where('revelation_place', $place);
     }
 
     /**
@@ -152,13 +131,24 @@ class Surah extends Model
     }
 
     /**
-     * Scope: Filter by Juz
+     * Scope: Makkan surahs
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function scopeByJuz($query, int $juz)
+    public function scopeMakkan($query)
     {
-        return $query->whereJsonContains('juz', (string) $juz);
+        return $query->where('revelation_place', 'makkah');
+    }
+
+    /**
+     * Scope: Madinan surahs
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeMadinan($query)
+    {
+        return $query->where('revelation_place', 'madinah');
     }
 }
