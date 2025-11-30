@@ -5,11 +5,14 @@ namespace App\Domain\Quran\Services;
 use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Models\SurahInfo;
 use App\Domain\Quran\Models\Verse;
+use App\Domain\Quran\Models\VerseTafsir;
 use App\Domain\Quran\Models\VerseTranslation;
 use App\Utils\HttpUtil;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class QuranSyncService
 {
@@ -28,7 +31,9 @@ class QuranSyncService
     /** @var callable|null */
     private mixed $onProgress = null;
 
-    public function __construct() {}
+    public function __construct()
+    {
+    }
 
     public function syncSurah(?callable $onProgress = null, int $fromChapter = 1, int $toChapter = 114): array
     {
@@ -36,11 +41,11 @@ class QuranSyncService
 
         $this->notify($onProgress, 'Fetching chapters list...', 'info');
 
-        $response = $this->requestWithRetry(fn () => $this->quranClient()->get('chapters'));
+        $response = $this->requestWithRetry(fn() => $this->quranClient()->get('chapters'));
 
-        if (! $response->isSuccessful()) {
+        if (!$response->isSuccessful()) {
             throw new \RuntimeException(
-                'Failed to fetch surahs from Quran API: '.$response->getBody()
+                'Failed to fetch surahs from Quran API: ' . $response->getBody()
             );
         }
 
@@ -55,7 +60,7 @@ class QuranSyncService
         $allChapters = $response->json()['chapters'];
 
         // Filter chapters based on from/to range
-        $chapters = array_filter($allChapters, fn ($ch) => $ch['id'] >= $fromChapter && $ch['id'] <= $toChapter);
+        $chapters = array_filter($allChapters, fn($ch) => $ch['id'] >= $fromChapter && $ch['id'] <= $toChapter);
         $totalSurahs = count($chapters);
 
         $this->notify($onProgress, "Found {$totalSurahs} chapters to sync", 'info');
@@ -79,6 +84,7 @@ class QuranSyncService
                 $this->saveSurahInfo($surah->id, $infoData);
                 $result['surah_info']++;
 
+                $tafsir = $this->getAllSurahTafsir($surahData['id']);
                 // Step 3: Get and save verses with translations
                 $this->notify($onProgress, "[{$surahNumber}/{$toChapter}] Fetching verses ({$surahData['verses_count']} verses)...", 'substep');
                 $versesData = $this->getSurahVerses($surahData['id']);
@@ -86,11 +92,14 @@ class QuranSyncService
                 $versesCount = count($versesData);
                 foreach ($versesData as $verseData) {
                     $verse = $this->saveVerse($surah->id, $verseData);
+                    // save verse tafsir
+                    $this->saveVerseTafsir($verse->id, $verse->getVerseKey(), $tafsir);
                     $result['verses']++;
 
                     // Save translations
                     foreach ($verseData['quran_verse_translation'] as $translationData) {
                         $this->saveVerseTranslation($verse->id, $translationData);
+
                         $result['translations']++;
                     }
                 }
@@ -106,11 +115,11 @@ class QuranSyncService
                 // Pause every N chapters to avoid rate limiting
                 $processedCount++;
                 if ($processedCount % self::CHAPTERS_BEFORE_PAUSE === 0 && $surahNumber < $toChapter) {
-                    $this->notify($onProgress, "Pausing for ".self::PAUSE_DURATION_SECONDS." seconds after {$processedCount} chapters...", 'info');
+                    $this->notify($onProgress, "Pausing for " . self::PAUSE_DURATION_SECONDS . " seconds after {$processedCount} chapters...", 'info');
                     sleep(self::PAUSE_DURATION_SECONDS);
                 }
 
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 DB::rollBack();
                 $result['errors'][] = "Surah {$surahData['id']}: {$e->getMessage()}";
                 $this->notify($onProgress, "[{$surahNumber}/{$toChapter}] Failed to save surah {$surahData['name_simple']}: {$e->getMessage()}", 'error');
@@ -132,7 +141,7 @@ class QuranSyncService
     {
         $surah = Surah::find($data['id']);
 
-        if (! $surah) {
+        if (!$surah) {
             $surah = new Surah;
             $surah->id = $data['id'];
         }
@@ -203,15 +212,55 @@ class QuranSyncService
         );
     }
 
+    private function saveVerseTafsir(int $verseId, string $verseKey, array $tafsirData): void
+    {
+        $arVerseTafsir = $tafsirData['ar']->firstWhere('verse_key', $verseKey);
+        $enVerseTafsir = $tafsirData['en']->firstWhere('verse_key', $verseKey);
+
+        if ($arVerseTafsir) {
+            VerseTafsir::updateOrCreate(
+                [
+                    'verse_id' => $verseId,
+                    'lang' => $arVerseTafsir["language"],
+                ],
+                [
+                    'lang' => $arVerseTafsir["language"],
+                    'verse_key' => $verseKey,
+                    'text' => $arVerseTafsir['text'],
+                    'active' => true
+                ]
+            );
+        } else {
+            Log::warning("Arabic tafsir not found for verse_key: {$verseKey}");
+        }
+
+        if ($enVerseTafsir) {
+            VerseTafsir::updateOrCreate(
+                [
+                    'verse_id' => $verseId,
+                    'lang' => $enVerseTafsir["language"],
+                ],
+                [
+                    'lang' => $enVerseTafsir["language"],
+                    'verse_key' => $verseKey,
+                    'text' => $enVerseTafsir['text'],
+                    'active' => true
+                ]
+            );
+        } else {
+            Log::warning("English tafsir not found for verse_key: {$verseKey}");
+        }
+    }
+
     public function getSurahInfo(int $surahNumber): array
     {
         $response = $this->requestWithRetry(
-            fn () => $this->quranClient()->get("chapters/{$surahNumber}/info")
+            fn() => $this->quranClient()->get("chapters/{$surahNumber}/info")
         );
 
-        if (! $response->isSuccessful()) {
+        if (!$response->isSuccessful()) {
             throw new \RuntimeException(
-                'Failed to fetch surah info from Quran API: '.$response->getBody()
+                'Failed to fetch surah info from Quran API: ' . $response->getBody()
             );
         }
 
@@ -226,19 +275,59 @@ class QuranSyncService
         ];
     }
 
+    /**
+     * @throws Throwable
+     */
+    public function getAllSurahTafsir(int $surahNumber): array
+    {
+        $arabic_tafsir_id = 15;
+        $english_tafsir_id = 169;
+
+        $arTafsir = $this->getSurahTafsir($surahNumber, $arabic_tafsir_id);
+        $enTafsir = $this->getSurahTafsir($surahNumber, $english_tafsir_id);
+        return [
+            "ar" => collect($arTafsir),
+            "en" => collect($enTafsir),
+        ];
+
+    }
+
+    /**
+     * @throws Throwable
+     */
+    public function getSurahTafsir(int $surahNumber, int $tafsir_id): array
+    {
+
+        $response = $this->requestWithRetry(
+            fn() => $this->quranClient()->get("tafsirs/{$tafsir_id}/by_chapter/{$surahNumber}",["per_page"=>2000])
+        );
+
+        if (!$response->isSuccessful()) {
+            throw new \RuntimeException(
+                'Failed to fetch surah tafsir from Quran API: ' . $response->getBody()
+            );
+        }
+
+        return array_map(function ($item) {
+            $item["language"] = ($item["language_id"] == 9) ? "ar" : "en";
+            return $item;
+        }, $response->json()['tafsirs']);
+
+    }
+
     public function getSurahVerses(int $surahNumber): array
     {
         $response = $this->requestWithRetry(
-            fn () => $this->quranClient()->get("verses/by_chapter/{$surahNumber}", [
+            fn() => $this->quranClient()->get("verses/by_chapter/{$surahNumber}", [
                 'fields' => 'text_uthmani,chapter_id,hizb_number,text_imlaei_simple',
                 'per_page' => '1000',
-                'translations' => '85,57',
+                'translations' => '20,57',
             ])
         );
 
-        if (! $response->isSuccessful()) {
+        if (!$response->isSuccessful()) {
             throw new \RuntimeException(
-                'Failed to fetch surah verses from Quran API: '.$response->getBody()
+                'Failed to fetch surah verses from Quran API: ' . $response->getBody()
             );
         }
 
@@ -317,15 +406,15 @@ class QuranSyncService
             'Content-Type' => 'application/x-www-form-urlencoded',
         ]);
 
-        if (! $response->isSuccessful()) {
+        if (!$response->isSuccessful()) {
             throw new \RuntimeException(
-                'Failed to authenticate with Quran API: '.$response->getBody()
+                'Failed to authenticate with Quran API: ' . $response->getBody()
             );
         }
 
         $data = $response->json();
 
-        if (! isset($data['access_token'])) {
+        if (!isset($data['access_token'])) {
             throw new \RuntimeException('Access token not found in authentication response');
         }
 
@@ -342,7 +431,7 @@ class QuranSyncService
         for ($attempt = 1; $attempt <= self::MAX_RETRIES; $attempt++) {
             try {
                 return $request();
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 $lastException = $e;
                 $message = $e->getMessage();
 
@@ -361,7 +450,7 @@ class QuranSyncService
 
                     $this->notify(
                         $this->onProgress,
-                        "Connection error, retrying in ".self::RETRY_DELAY_SECONDS." seconds... (attempt {$attempt}/".self::MAX_RETRIES.')',
+                        "Connection error, retrying in " . self::RETRY_DELAY_SECONDS . " seconds... (attempt {$attempt}/" . self::MAX_RETRIES . ')',
                         'warning'
                     );
 

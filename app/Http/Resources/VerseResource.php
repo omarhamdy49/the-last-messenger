@@ -26,7 +26,7 @@ class VerseResource extends JsonResource
             'verse_key' => $this->verse_key,
             'reference' => $this->when(
                 $this->relationLoaded('surah'),
-                fn () => $this->getReference()
+                fn () => $this->getVerseKey()
             ),
             'text_uthmani' => $this->text_uthmani,
             'text_simple' => $this->text_simple,

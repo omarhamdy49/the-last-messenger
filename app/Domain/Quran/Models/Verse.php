@@ -131,7 +131,7 @@ class Verse extends Model
     /**
      * Get verse reference (e.g., "2:255")
      */
-    public function getReference(): string
+    public function getVerseKey(): string
     {
         return $this->verse_key;
     }
