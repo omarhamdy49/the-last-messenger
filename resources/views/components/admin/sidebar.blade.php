@@ -155,7 +155,8 @@
                 </div>
             </div>
 
-            <!-- Hadith Management -->
+            {{-- DISABLED: Hadith Management (routes disabled in admin.php) --}}
+            {{--
             <div x-data="{ open: false }">
                 <button @click="toggleSubmenu('hadith')"
                         :class="openSubmenu === 'hadith' || activeMenu.includes('hadith') ?
@@ -213,17 +214,66 @@
                     </a>
                 </div>
             </div>
+            --}}
 
             <!-- Quran Management -->
-            <a href="{{ route('admin.quran.index') }}"
-               @click="activeMenu = 'quran'"
-               :class="isActive('quran') ?
-                   'bg-gradient-primary text-white shadow-lg' :
-                   (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
-                <i data-lucide="book-marked" class="w-5 h-5"></i>
-                <span class="font-semibold">{{ __('admin.quran') }}</span>
-            </a>
+            <div x-data="{ open: false }">
+                <button @click="toggleSubmenu('quran')"
+                        :class="openSubmenu === 'quran' || activeMenu.includes('quran') || activeMenu.includes('surahs') || activeMenu.includes('verses') || activeMenu.includes('tafseer') || activeMenu.includes('reciters') ?
+                            'bg-gradient-primary text-white shadow-lg' :
+                            (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+                        class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="book-marked" class="w-5 h-5"></i>
+                        <span class="font-semibold">{{ __('admin.quran') }}</span>
+                    </div>
+                    <i data-lucide="chevron-down"
+                       class="w-4 h-4 transition-transform"
+                       :class="openSubmenu === 'quran' ? 'rotate-180' : ''"></i>
+                </button>
+
+                <!-- Quran Submenu -->
+                <div x-show="openSubmenu === 'quran'"
+                     x-collapse
+                     class="mt-2 ms-6 space-y-1">
+                    <a href="{{ route('admin.surahs.index') }}"
+                       @click="activeMenu = 'surahs'"
+                       :class="isActive('surahs') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="book-open" class="w-4 h-4"></i>
+                        <span>{{ __('quran.surahs.title') }}</span>
+                    </a>
+                    <a href="{{ route('admin.verses.index') }}"
+                       @click="activeMenu = 'verses'"
+                       :class="isActive('verses') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="text" class="w-4 h-4"></i>
+                        <span>{{ __('quran.verses.title') }}</span>
+                    </a>
+                    <a href="{{ route('admin.tafseer.index') }}"
+                       @click="activeMenu = 'tafseer'"
+                       :class="isActive('tafseer') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="message-square-text" class="w-4 h-4"></i>
+                        <span>{{ __('quran.tafseer.title') }}</span>
+                    </a>
+                    <a href="{{ route('admin.reciters.index') }}"
+                       @click="activeMenu = 'reciters'"
+                       :class="isActive('reciters') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="mic" class="w-4 h-4"></i>
+                        <span>{{ __('quran.reciters.title') }}</span>
+                    </a>
+                </div>
+            </div>
 
             <!-- Genealogy -->
             <a href="{{ route('admin.genealogy.index') }}"

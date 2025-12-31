@@ -8,7 +8,6 @@ use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Models\VerseTafsir;
 use App\Domain\Quran\Models\VerseTranslation;
 use App\Utils\HttpUtil;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -20,19 +19,53 @@ class QuranSyncService
 
     private const TOKEN_TTL = 3500; // Cache for slightly less than 1 hour
 
-    private const MAX_RETRIES = 3;
+    private const MAX_RETRIES = 5;
 
-    private const RETRY_DELAY_SECONDS = 4;
+    private const RETRY_DELAY_SECONDS = 5;
 
-    private const CHAPTERS_BEFORE_PAUSE = 20;
+    private const CHAPTERS_BEFORE_PAUSE = 10;
 
-    private const PAUSE_DURATION_SECONDS = 10;
+    private const PAUSE_DURATION_SECONDS = 15;
+
+    private const MIN_REQUEST_DELAY_MS = 800;
+
+    private const MAX_REQUEST_DELAY_MS = 2500;
+
+    private const TAFSIR_PAGE_SIZE = 50; // Paginate tafsir requests
+
+    private const DEFAULT_TIMEOUT = 30;
+
+    private const LARGE_REQUEST_TIMEOUT = 120; // 2 minutes for large requests
+
+    private const USER_AGENTS = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:121.0) Gecko/20100101 Firefox/121.0',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1',
+    ];
 
     /** @var callable|null */
     private mixed $onProgress = null;
 
-    public function __construct()
+    private int $requestCount = 0;
+
+    public function __construct() {}
+
+    private function getRandomUserAgent(): string
     {
+        return self::USER_AGENTS[array_rand(self::USER_AGENTS)];
+    }
+
+    private function randomDelay(): void
+    {
+        $delay = random_int(self::MIN_REQUEST_DELAY_MS, self::MAX_REQUEST_DELAY_MS);
+        usleep($delay * 1000);
     }
 
     public function syncSurah(?callable $onProgress = null, int $fromChapter = 1, int $toChapter = 114): array
@@ -41,11 +74,11 @@ class QuranSyncService
 
         $this->notify($onProgress, 'Fetching chapters list...', 'info');
 
-        $response = $this->requestWithRetry(fn() => $this->quranClient()->get('chapters'));
+        $response = $this->requestWithRetry(fn () => $this->quranClient()->get('chapters'));
 
-        if (!$response->isSuccessful()) {
+        if (! $response->isSuccessful()) {
             throw new \RuntimeException(
-                'Failed to fetch surahs from Quran API: ' . $response->getBody()
+                'Failed to fetch surahs from Quran API: '.$response->getBody()
             );
         }
 
@@ -60,7 +93,7 @@ class QuranSyncService
         $allChapters = $response->json()['chapters'];
 
         // Filter chapters based on from/to range
-        $chapters = array_filter($allChapters, fn($ch) => $ch['id'] >= $fromChapter && $ch['id'] <= $toChapter);
+        $chapters = array_filter($allChapters, fn ($ch) => $ch['id'] >= $fromChapter && $ch['id'] <= $toChapter);
         $totalSurahs = count($chapters);
 
         $this->notify($onProgress, "Found {$totalSurahs} chapters to sync", 'info');
@@ -84,8 +117,10 @@ class QuranSyncService
                 $this->saveSurahInfo($surah->id, $infoData);
                 $result['surah_info']++;
 
-                $tafsir = $this->getAllSurahTafsir($surahData['id']);
-                // Step 3: Get and save verses with translations
+                // Step 3: Get tafsir data (paginated to avoid timeout)
+                $tafsir = $this->getAllSurahTafsir($surahData['id'], $surahData['verses_count']);
+
+                // Step 4: Get and save verses with translations
                 $this->notify($onProgress, "[{$surahNumber}/{$toChapter}] Fetching verses ({$surahData['verses_count']} verses)...", 'substep');
                 $versesData = $this->getSurahVerses($surahData['id']);
 
@@ -115,7 +150,7 @@ class QuranSyncService
                 // Pause every N chapters to avoid rate limiting
                 $processedCount++;
                 if ($processedCount % self::CHAPTERS_BEFORE_PAUSE === 0 && $surahNumber < $toChapter) {
-                    $this->notify($onProgress, "Pausing for " . self::PAUSE_DURATION_SECONDS . " seconds after {$processedCount} chapters...", 'info');
+                    $this->notify($onProgress, 'Pausing for '.self::PAUSE_DURATION_SECONDS." seconds after {$processedCount} chapters...", 'info');
                     sleep(self::PAUSE_DURATION_SECONDS);
                 }
 
@@ -141,7 +176,7 @@ class QuranSyncService
     {
         $surah = Surah::find($data['id']);
 
-        if (!$surah) {
+        if (! $surah) {
             $surah = new Surah;
             $surah->id = $data['id'];
         }
@@ -221,13 +256,13 @@ class QuranSyncService
             VerseTafsir::updateOrCreate(
                 [
                     'verse_id' => $verseId,
-                    'lang' => $arVerseTafsir["language"],
+                    'lang' => $arVerseTafsir['language'],
                 ],
                 [
-                    'lang' => $arVerseTafsir["language"],
+                    'lang' => $arVerseTafsir['language'],
                     'verse_key' => $verseKey,
                     'text' => $arVerseTafsir['text'],
-                    'active' => true
+                    'active' => true,
                 ]
             );
         } else {
@@ -238,13 +273,13 @@ class QuranSyncService
             VerseTafsir::updateOrCreate(
                 [
                     'verse_id' => $verseId,
-                    'lang' => $enVerseTafsir["language"],
+                    'lang' => $enVerseTafsir['language'],
                 ],
                 [
-                    'lang' => $enVerseTafsir["language"],
+                    'lang' => $enVerseTafsir['language'],
                     'verse_key' => $verseKey,
                     'text' => $enVerseTafsir['text'],
-                    'active' => true
+                    'active' => true,
                 ]
             );
         } else {
@@ -255,12 +290,12 @@ class QuranSyncService
     public function getSurahInfo(int $surahNumber): array
     {
         $response = $this->requestWithRetry(
-            fn() => $this->quranClient()->get("chapters/{$surahNumber}/info")
+            fn () => $this->quranClient()->get("chapters/{$surahNumber}/info")
         );
 
-        if (!$response->isSuccessful()) {
+        if (! $response->isSuccessful()) {
             throw new \RuntimeException(
-                'Failed to fetch surah info from Quran API: ' . $response->getBody()
+                'Failed to fetch surah info from Quran API: '.$response->getBody()
             );
         }
 
@@ -278,56 +313,104 @@ class QuranSyncService
     /**
      * @throws Throwable
      */
-    public function getAllSurahTafsir(int $surahNumber): array
+    public function getAllSurahTafsir(int $surahNumber, int $versesCount): array
     {
         $arabic_tafsir_id = 15;
         $english_tafsir_id = 169;
 
-        $arTafsir = $this->getSurahTafsir($surahNumber, $arabic_tafsir_id);
-        $enTafsir = $this->getSurahTafsir($surahNumber, $english_tafsir_id);
-        return [
-            "ar" => collect($arTafsir),
-            "en" => collect($enTafsir),
-        ];
+        $this->notify($this->onProgress, "   ├─ Fetching Arabic tafsir ({$versesCount} verses)...", 'substep');
+        $arTafsir = $this->getSurahTafsirPaginated($surahNumber, $arabic_tafsir_id, $versesCount);
 
+        $this->notify($this->onProgress, "   ├─ Fetching English tafsir ({$versesCount} verses)...", 'substep');
+        $enTafsir = $this->getSurahTafsirPaginated($surahNumber, $english_tafsir_id, $versesCount);
+
+        return [
+            'ar' => collect($arTafsir),
+            'en' => collect($enTafsir),
+        ];
     }
 
     /**
+     * Fetch tafsir with pagination to avoid timeout on large surahs
+     *
+     * @throws Throwable
+     */
+    public function getSurahTafsirPaginated(int $surahNumber, int $tafsirId, int $totalVerses): array
+    {
+        $allTafsirs = [];
+        $page = 1;
+        $perPage = self::TAFSIR_PAGE_SIZE;
+        $totalPages = (int) ceil($totalVerses / $perPage);
+
+        while ($page <= $totalPages) {
+            $response = $this->requestWithRetry(
+                fn () => $this->quranClient(self::LARGE_REQUEST_TIMEOUT)->get(
+                    "tafsirs/{$tafsirId}/by_chapter/{$surahNumber}",
+                    [
+                        'per_page' => $perPage,
+                        'page' => $page,
+                    ]
+                )
+            );
+
+            if (! $response->isSuccessful()) {
+                throw new \RuntimeException(
+                    "Failed to fetch tafsir page {$page} from Quran API: ".$response->getBody()
+                );
+            }
+
+            $data = $response->json();
+            $tafsirs = $data['tafsirs'] ?? [];
+
+            if (empty($tafsirs)) {
+                break;
+            }
+
+            foreach ($tafsirs as $item) {
+                $item['language'] = ($item['language_id'] == 9) ? 'ar' : 'en';
+                $allTafsirs[] = $item;
+            }
+
+            // Check if we got all items
+            $pagination = $data['pagination'] ?? null;
+            if ($pagination) {
+                $totalPages = $pagination['total_pages'] ?? $totalPages;
+            }
+
+            $page++;
+
+            // Small delay between pages to avoid rate limiting
+            if ($page <= $totalPages) {
+                usleep(300000); // 300ms delay between pages
+            }
+        }
+
+        return $allTafsirs;
+    }
+
+    /**
+     * Legacy method for backward compatibility
+     *
      * @throws Throwable
      */
     public function getSurahTafsir(int $surahNumber, int $tafsir_id): array
     {
-
-        $response = $this->requestWithRetry(
-            fn() => $this->quranClient()->get("tafsirs/{$tafsir_id}/by_chapter/{$surahNumber}",["per_page"=>2000])
-        );
-
-        if (!$response->isSuccessful()) {
-            throw new \RuntimeException(
-                'Failed to fetch surah tafsir from Quran API: ' . $response->getBody()
-            );
-        }
-
-        return array_map(function ($item) {
-            $item["language"] = ($item["language_id"] == 9) ? "ar" : "en";
-            return $item;
-        }, $response->json()['tafsirs']);
-
+        return $this->getSurahTafsirPaginated($surahNumber, $tafsir_id, 300);
     }
 
     public function getSurahVerses(int $surahNumber): array
     {
         $response = $this->requestWithRetry(
-            fn() => $this->quranClient()->get("verses/by_chapter/{$surahNumber}", [
+            fn () => $this->quranClient()->get("verses/by_chapter/{$surahNumber}", [
                 'fields' => 'text_uthmani,chapter_id,hizb_number,text_imlaei_simple',
                 'per_page' => '1000',
                 'translations' => '20,57',
             ])
         );
 
-        if (!$response->isSuccessful()) {
+        if (! $response->isSuccessful()) {
             throw new \RuntimeException(
-                'Failed to fetch surah verses from Quran API: ' . $response->getBody()
+                'Failed to fetch surah verses from Quran API: '.$response->getBody()
             );
         }
 
@@ -363,15 +446,30 @@ class QuranSyncService
 
     }
 
-    private function quranClient(): HttpUtil
+    private function quranClient(int $timeout = self::DEFAULT_TIMEOUT): HttpUtil
     {
+        // Add random delay before each request to avoid detection
+        $this->randomDelay();
+
         $accessToken = $this->getAccessToken();
         $clientId = config('services.quran.client_id');
+        $userAgent = $this->getRandomUserAgent();
 
-        $client = new HttpUtil(config('services.quran.api_url'));
+        $this->requestCount++;
+        Log::debug("Request #{$this->requestCount} using User-Agent: ".substr($userAgent, 0, 50).'...');
+
+        $client = new HttpUtil(config('services.quran.api_url'), [
+            'timeout' => $timeout,
+            'connect_timeout' => 30,
+        ]);
         $client->setDefaultHeaders([
             'x-auth-token' => $accessToken,
             'x-client-id' => $clientId,
+            'User-Agent' => $userAgent,
+            'Accept-Language' => 'en-US,en;q=0.9,ar;q=0.8',
+            'Accept-Encoding' => 'gzip, deflate, br',
+            'Connection' => 'keep-alive',
+            'Cache-Control' => 'no-cache',
         ]);
 
         return $client;
@@ -406,15 +504,15 @@ class QuranSyncService
             'Content-Type' => 'application/x-www-form-urlencoded',
         ]);
 
-        if (!$response->isSuccessful()) {
+        if (! $response->isSuccessful()) {
             throw new \RuntimeException(
-                'Failed to authenticate with Quran API: ' . $response->getBody()
+                'Failed to authenticate with Quran API: '.$response->getBody()
             );
         }
 
         $data = $response->json();
 
-        if (!isset($data['access_token'])) {
+        if (! isset($data['access_token'])) {
             throw new \RuntimeException('Access token not found in authentication response');
         }
 
@@ -436,25 +534,37 @@ class QuranSyncService
                 $message = $e->getMessage();
 
                 // Check if it's a retryable error
-                $isRetryable = str_contains($message, 'cURL error 6')
-                    || str_contains($message, 'cURL error 7')
-                    || str_contains($message, 'cURL error 28')
+                $isRetryable = str_contains($message, 'cURL error 6')   // Could not resolve host
+                    || str_contains($message, 'cURL error 7')           // Connection refused
+                    || str_contains($message, 'cURL error 28')          // Operation timed out
+                    || str_contains($message, 'cURL error 35')          // SSL connect error
+                    || str_contains($message, 'cURL error 52')          // Empty reply from server
+                    || str_contains($message, 'cURL error 56')          // Recv failure
                     || str_contains($message, 'Could not resolve host')
                     || str_contains($message, 'Connection refused')
+                    || str_contains($message, 'Connection reset')
                     || str_contains($message, 'timed out')
+                    || str_contains($message, 'Operation timed out')
                     || str_contains($message, 'rate limit')
-                    || str_contains($message, '429');
+                    || str_contains($message, '429')
+                    || str_contains($message, '502')                    // Bad Gateway
+                    || str_contains($message, '503')                    // Service Unavailable
+                    || str_contains($message, '504');                   // Gateway Timeout
 
                 if ($isRetryable && $attempt < self::MAX_RETRIES) {
                     Log::warning("API request failed (attempt {$attempt}): {$message}");
 
+                    // Exponential backoff: 5s, 10s, 20s, 40s...
+                    $delay = self::RETRY_DELAY_SECONDS * pow(2, $attempt - 1);
+                    $delay = min($delay, 60); // Cap at 60 seconds
+
                     $this->notify(
                         $this->onProgress,
-                        "Connection error, retrying in " . self::RETRY_DELAY_SECONDS . " seconds... (attempt {$attempt}/" . self::MAX_RETRIES . ')',
+                        "⚠️  Retry in {$delay}s... (attempt {$attempt}/".self::MAX_RETRIES.')',
                         'warning'
                     );
 
-                    sleep(self::RETRY_DELAY_SECONDS);
+                    sleep($delay);
 
                     continue;
                 }
