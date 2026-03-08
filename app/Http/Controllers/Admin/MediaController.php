@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Requests\Admin\Media\BulkUploadMediaRequest;
+use App\Http\Requests\Admin\Media\CropMediaRequest;
 use App\Http\Requests\Admin\Media\StoreMediaRequest;
 use App\Http\Requests\Admin\Media\UpdateMediaRequest;
 use App\Http\Resources\MediaResource;
@@ -11,523 +13,307 @@ use App\Models\Media;
 use App\Repositories\MediaRepository;
 use App\Services\MediaService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
-/**
- * Media Controller
- *
- * Manages media uploads, updates, and deletions using Spatie Media Library
- */
 class MediaController extends AdminController
 {
-    protected MediaRepository $repository;
-    protected MediaService $mediaService;
-
-    public function __construct(MediaRepository $repository, MediaService $mediaService)
-    {
+    public function __construct(
+        protected MediaRepository $repository,
+        protected MediaService $mediaService
+    ) {
         parent::__construct();
-        $this->repository = $repository;
-        $this->mediaService = $mediaService;
     }
 
-    /**
-     * Display a listing of the media
-     *
-     * GET /admin/media
-     *
-     * Query Parameters:
-     * - search: Search by filename, alt text, caption
-     * - type: Filter by type (image, video, document)
-     * - collection: Filter by collection name
-     * - mime_type: Filter by mime type
-     * - tag: Filter by tag
-     * - date_from, date_to: Date range filter
-     * - size_min, size_max: Size range filter (bytes)
-     * - unused: Show only unused media (true/false)
-     * - images_only, videos_only, documents_only: Type filters
-     * - sort: Sort field (default: created_at)
-     * - order: Sort order (asc/desc, default: desc)
-     * - per_page: Items per page (default: 15, max: 100)
-     *
-     * @param Request $request
-     * @return JsonResponse|\Illuminate\View\View
-     */
     public function index(Request $request)
     {
         $this->authorizeAdmin('view media');
 
-        // Get pagination and filter parameters
         $params = $this->getPaginationParams($request);
-        $filters = $this->getFilters($request, [
-            'search',
-            'type',
-            'collection',
-            'mime_type',
-            'tag',
-            'date_from',
-            'date_to',
-            'size_min',
-            'size_max',
-            'unused',
-            'images_only',
-            'videos_only',
-            'documents_only',
-        ]);
-
-        // Merge pagination params with filters
-        $filters = array_merge($filters, [
-            'sort' => $params['sort'],
-            'order' => $params['order'],
-        ]);
+        $filters = array_merge(
+            $this->getFilters($request, [
+                'search',
+                'type',
+                'collection',
+                'mime_type',
+                'tag',
+                'date_from',
+                'date_to',
+                'size_min',
+                'size_max',
+                'unused',
+            ]),
+            [
+                'sort' => $params['sort'],
+                'order' => $params['order'],
+            ]
+        );
 
         $media = $this->repository->getAllWithFilters($filters, $params['per_page']);
 
-        // For AJAX/JSON requests
         if ($this->expectsJson($request)) {
-            return $this->successResponse([
-                'media' => MediaResource::collection($media),
+            return response()->json([
+                'success' => true,
+                'message' => __('media.messages.library_loaded'),
+                'data' => MediaResource::collection($media->getCollection())->resolve(),
                 'meta' => [
                     'current_page' => $media->currentPage(),
                     'last_page' => $media->lastPage(),
                     'per_page' => $media->perPage(),
                     'total' => $media->total(),
+                    'from' => $media->firstItem(),
+                    'to' => $media->lastItem(),
                 ],
             ]);
         }
 
-        // For web requests, return view
-        return view('admin.simple-media.index', [
-            'media' => $media,
-            'filters' => $filters,
+        return view('admin.media.index', [
+            'collections' => $this->repository->getAllCollections(),
+            'tags' => $this->repository->getAllTags(),
+            'stats' => $this->repository->getStatistics(),
+            'initialFilters' => $filters,
         ]);
     }
 
-    /**
-     * Upload a new media file
-     *
-     * POST /admin/media
-     *
-     * Request Body:
-     * - file: The file to upload (required)
-     * - collection_name: Collection name (optional)
-     * - alt_text: Alt text for images (optional)
-     * - caption: Media caption (optional)
-     * - tags: Array of tags (optional)
-     * - optimize: Optimize images (default: true)
-     * - generate_thumbnails: Generate thumbnails (default: true)
-     *
-     * @param StoreMediaRequest $request
-     * @return JsonResponse
-     */
     public function store(StoreMediaRequest $request): JsonResponse
     {
-        try {
-            $file = $request->file('file');
+        $media = $this->mediaService->upload(
+            $request->file('file'),
+            $request->validated()
+        );
 
-            // Upload media using service
-            $media = $this->mediaService->upload($file, [
-                'collection_name' => $request->input('collection_name', 'default'),
-                'alt_text' => $request->input('alt_text'),
-                'caption' => $request->input('caption'),
-                'tags' => $request->input('tags', []),
-                'optimize' => $request->boolean('optimize', true),
-                'generate_thumbnails' => $request->boolean('generate_thumbnails', true),
-            ]);
+        $this->logActivity('created', 'Media', $media->id, [
+            'filename' => $media->filename,
+            'type' => $media->type,
+            'collection' => $media->collection_name,
+        ]);
 
-            // Log activity
-            $this->logActivity('created', 'Media', $media->id, [
-                'filename' => $media->filename,
-                'size' => $media->size,
-                'type' => $media->type,
-            ]);
-
-            return $this->successResponse(
-                new MediaResource($media),
-                'Media uploaded successfully',
-                201
-            );
-        } catch (\Exception $e) {
-            Log::error('Media upload failed', [
-                'error' => $e->getMessage(),
-                'user_id' => auth()->id(),
-            ]);
-
-            return $this->errorResponse(
-                'Upload failed: ' . $e->getMessage(),
-                500
-            );
-        }
+        return $this->createdResponse(
+            new MediaResource($media),
+            __('media.messages.media_uploaded')
+        );
     }
 
-    /**
-     * Display the specified media
-     *
-     * GET /admin/media/{id}
-     *
-     * @param int $id
-     * @return JsonResponse
-     */
-    public function show(int $id): JsonResponse
+    public function bulkUpload(BulkUploadMediaRequest $request): JsonResponse
+    {
+        $mediaItems = $this->mediaService->bulkUpload(
+            $request->file('files', []),
+            $request->validated()
+        );
+
+        $this->logActivity('bulk_upload', 'Media', $mediaItems->pluck('id')->all(), [
+            'count' => $mediaItems->count(),
+            'collection' => $request->input('collection_name', 'general'),
+        ]);
+
+        return $this->createdResponse(
+            MediaResource::collection($mediaItems)->resolve(),
+            __('media.messages.media_files_uploaded')
+        );
+    }
+
+    public function show(Request $request, Media $media): JsonResponse|RedirectResponse
     {
         $this->authorizeAdmin('view media');
 
-        try {
-            $media = $this->repository->findById($id);
-
-            return $this->successResponse(new MediaResource($media));
-        } catch (\Exception $e) {
-            return $this->errorResponse('Media not found', 404);
+        if (! $this->expectsJson($request)) {
+            return redirect()->route('admin.media-library.index', ['open' => $media->id]);
         }
+
+        return $this->successResponse(new MediaResource($media));
     }
 
-    /**
-     * Update the specified media metadata
-     *
-     * PUT/PATCH /admin/media/{id}
-     *
-     * Request Body:
-     * - alt_text: Alt text (optional)
-     * - caption: Caption (optional)
-     * - collection_name: Collection (optional)
-     * - tags: Array of tags (optional)
-     * - metadata: Additional metadata (optional)
-     *
-     * @param UpdateMediaRequest $request
-     * @param int $id
-     * @return JsonResponse
-     */
-    public function update(UpdateMediaRequest $request, int $id): JsonResponse
+    public function update(UpdateMediaRequest $request, Media $media): JsonResponse
     {
-        try {
-            $media = $this->repository->update($id, $request->validated());
+        $this->authorizeAdmin('edit media');
 
-            // Log activity
-            $this->logActivity('updated', 'Media', $media->id, [
-                'changes' => $request->validated(),
-            ]);
+        $updated = $this->mediaService->updateMetadata($media, $request->validated());
 
-            return $this->successResponse(
-                new MediaResource($media),
-                'Media updated successfully'
-            );
-        } catch (\Exception $e) {
-            return $this->errorResponse(
-                'Update failed: ' . $e->getMessage(),
-                500
-            );
-        }
+        $this->logActivity('updated', 'Media', $updated->id, [
+            'changes' => $request->validated(),
+        ]);
+
+        return $this->successResponse(
+            new MediaResource($updated),
+            __('media.messages.media_updated')
+        );
     }
 
-    /**
-     * Remove the specified media
-     *
-     * DELETE /admin/media/{id}
-     *
-     * @param int $id
-     * @return JsonResponse
-     */
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, Media $media): JsonResponse
     {
         $this->authorizeAdmin('delete media');
 
-        try {
-            $media = $this->repository->findById($id);
+        $mediaId = $media->id;
+        $filename = $media->filename;
+        $media->delete();
 
-            // Check if media is in use
-            $usage = $this->repository->getMediaUsage($id);
-            if ($usage['total_count'] > 0) {
-                return $this->errorResponse(
-                    'Cannot delete media that is currently in use. Remove it from ' .
-                    $usage['total_count'] . ' location(s) first.',
-                    422
-                );
-            }
+        $this->logActivity('deleted', 'Media', $mediaId, [
+            'filename' => $filename,
+        ]);
 
-            $filename = $media->filename;
-            $this->repository->delete($id);
-
-            // Log activity
-            $this->logActivity('deleted', 'Media', $id, [
-                'filename' => $filename,
-            ]);
-
-            return $this->successResponse(
-                null,
-                'Media deleted successfully'
-            );
-        } catch (\Exception $e) {
-            return $this->errorResponse(
-                'Delete failed: ' . $e->getMessage(),
-                500
-            );
-        }
+        return $this->successResponse(null, __('media.messages.media_deleted'));
     }
 
-    /**
-     * Bulk delete media files
-     *
-     * POST /admin/media/bulk-destroy
-     *
-     * Request Body:
-     * - ids: Array of media IDs to delete
-     *
-     * @param Request $request
-     * @return JsonResponse
-     */
     public function bulkDestroy(Request $request): JsonResponse
     {
         $this->authorizeAdmin('delete media');
 
-        $request->validate([
-            'ids' => ['required', 'array'],
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['integer', 'exists:media,id'],
         ]);
 
-        $results = $this->repository->bulkDelete($request->input('ids'));
+        $results = $this->repository->bulkDelete($validated['ids']);
 
-        // Log activity
-        $this->logActivity('bulk_deleted', 'Media', $request->input('ids'), [
-            'success' => $results['success'],
-            'failed' => $results['failed'],
-        ]);
+        $this->logActivity('bulk_deleted', 'Media', $validated['ids'], $results);
 
-        return $this->successResponse($results, [
-            'Deleted ' . $results['success'] . ' media file(s).',
-            $results['failed'] > 0 ? 'Failed to delete ' . $results['failed'] . ' file(s).' : null,
-        ]);
+        return $this->successResponse($results, __('media.messages.bulk_delete_completed'));
     }
 
-    /**
-     * Bulk update tags for media files
-     *
-     * POST /admin/media/update-tags
-     *
-     * Request Body:
-     * - ids: Array of media IDs
-     * - tags: Array of tags to apply
-     *
-     * @param Request $request
-     * @return JsonResponse
-     */
     public function updateTags(Request $request): JsonResponse
     {
         $this->authorizeAdmin('edit media');
 
-        $request->validate([
-            'ids' => ['required', 'array'],
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['integer', 'exists:media,id'],
-            'tags' => ['required', 'array'],
+            'tags' => ['nullable', 'array'],
             'tags.*' => ['string', 'max:50'],
         ]);
 
         $results = $this->repository->bulkUpdateTags(
-            $request->input('ids'),
-            $request->input('tags')
+            $validated['ids'],
+            $validated['tags'] ?? []
         );
 
-        // Log activity
-        $this->logActivity('bulk_updated_tags', 'Media', $request->input('ids'), [
-            'tags' => $request->input('tags'),
-            'success' => $results['success'],
-            'failed' => $results['failed'],
+        $this->logActivity('bulk_updated_tags', 'Media', $validated['ids'], [
+            'tags' => $validated['tags'] ?? [],
         ]);
 
-        return $this->successResponse($results, [
-            'Updated tags for ' . $results['success'] . ' media file(s).',
-            $results['failed'] > 0 ? 'Failed to update ' . $results['failed'] . ' file(s).' : null,
-        ]);
+        return $this->successResponse($results, __('media.messages.bulk_tags_updated'));
     }
 
-    /**
-     * Search media (AJAX endpoint)
-     *
-     * GET /admin/media/search
-     *
-     * Query Parameters:
-     * - q: Search query (required)
-     * - type: Filter by type (optional)
-     * - limit: Max results (default: 20, max: 100)
-     *
-     * @param Request $request
-     * @return JsonResponse
-     */
     public function search(Request $request): JsonResponse
     {
         $this->authorizeAdmin('view media');
 
-        $request->validate([
+        $validated = $request->validate([
             'q' => ['required', 'string', 'min:2'],
-            'type' => ['nullable', 'string', 'in:image,video,document'],
+            'type' => ['nullable', 'string', 'in:image,video,audio,document'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
         $results = $this->repository->searchMedia(
-            $request->input('q'),
-            $request->input('type'),
-            $request->integer('limit', 20)
+            $validated['q'],
+            $validated['type'] ?? null,
+            (int) ($validated['limit'] ?? 20)
         );
 
-        return $this->successResponse(MediaResource::collection($results));
+        return $this->successResponse(
+            MediaResource::collection($results)->resolve(),
+            __('media.messages.search_results_loaded')
+        );
     }
 
-    /**
-     * Get media usage information
-     *
-     * GET /admin/media/{id}/usage
-     *
-     * @param int $id
-     * @return JsonResponse
-     */
-    public function usage(int $id): JsonResponse
+    public function usage(Media $media): JsonResponse
     {
         $this->authorizeAdmin('view media');
 
-        try {
-            $usage = $this->repository->getMediaUsage($id);
-
-            return $this->successResponse($usage);
-        } catch (\Exception $e) {
-            return $this->errorResponse('Media not found', 404);
-        }
+        return $this->successResponse($this->repository->getMediaUsage($media->id));
     }
 
-    /**
-     * Optimize an existing media file
-     *
-     * POST /admin/media/{id}/optimize
-     *
-     * @param int $id
-     * @return JsonResponse
-     */
-    public function optimize(int $id): JsonResponse
+    public function optimize(Media $media): JsonResponse
     {
         $this->authorizeAdmin('edit media');
 
-        try {
-            $media = $this->repository->findById($id);
-
-            $success = $this->mediaService->optimizeImage($media);
-
-            if ($success) {
-                // Log activity
-                $this->logActivity('optimized', 'Media', $media->id, [
-                    'filename' => $media->filename,
-                ]);
-
-                return $this->successResponse(
-                    new MediaResource($media->fresh()),
-                    'Media optimized successfully'
-                );
-            }
-
-            return $this->errorResponse(
-                'Optimization failed or not applicable',
-                400
-            );
-        } catch (\Exception $e) {
-            return $this->errorResponse(
-                'Optimization failed: ' . $e->getMessage(),
-                500
-            );
+        $success = $this->mediaService->optimizeImage($media);
+        if (! $success) {
+            return $this->errorResponse(__('media.messages.image_only_optimize'), 422);
         }
-    }
 
-    /**
-     * Generate thumbnail for media file
-     *
-     * POST /admin/media/{id}/thumbnail
-     *
-     * Request Body:
-     * - width: Thumbnail width (optional, default: 300)
-     * - height: Thumbnail height (optional, default: 300)
-     *
-     * @param Request $request
-     * @param int $id
-     * @return JsonResponse
-     */
-    public function thumbnail(Request $request, int $id): JsonResponse
-    {
-        $this->authorizeAdmin('edit media');
-
-        $request->validate([
-            'width' => ['nullable', 'integer', 'min:50', 'max:2000'],
-            'height' => ['nullable', 'integer', 'min:50', 'max:2000'],
+        $this->logActivity('optimized', 'Media', $media->id, [
+            'filename' => $media->filename,
         ]);
 
-        try {
-            $media = $this->repository->findById($id);
-
-            $thumbnailPath = $this->mediaService->createThumbnail(
-                $media,
-                $request->integer('width', 300),
-                $request->integer('height', 300)
-            );
-
-            if ($thumbnailPath) {
-                return $this->successResponse([
-                    'thumbnail_path' => $thumbnailPath,
-                    'thumbnail_url' => asset('storage/' . $thumbnailPath),
-                ], 'Thumbnail created successfully');
-            }
-
-            return $this->errorResponse(
-                'Thumbnail creation failed or not applicable',
-                400
-            );
-        } catch (\Exception $e) {
-            return $this->errorResponse(
-                'Thumbnail creation failed: ' . $e->getMessage(),
-                500
-            );
-        }
+        return $this->successResponse(
+            new MediaResource($media->fresh()),
+            __('media.messages.media_optimized')
+        );
     }
 
-    /**
-     * Get media statistics
-     *
-     * GET /admin/media/statistics
-     *
-     * @return JsonResponse
-     */
+    public function crop(CropMediaRequest $request, Media $media): JsonResponse
+    {
+        $this->authorizeAdmin('edit media');
+
+        $cropped = $this->mediaService->crop($media, $request->validated());
+
+        $this->logActivity('cropped', 'Media', $media->id, $request->validated());
+
+        return $this->successResponse(
+            new MediaResource($cropped),
+            __('media.messages.media_cropped')
+        );
+    }
+
+    public function regenerateVariants(Request $request, Media $media): JsonResponse
+    {
+        $this->authorizeAdmin('edit media');
+
+        $validated = $request->validate([
+            'generate_sizes' => ['nullable', 'boolean'],
+        ]);
+
+        $updated = $this->mediaService->regenerateVariants(
+            $media,
+            (bool) ($validated['generate_sizes'] ?? true)
+        );
+
+        return $this->successResponse(
+            new MediaResource($updated),
+            __('media.messages.variants_regenerated')
+        );
+    }
+
     public function statistics(): JsonResponse
     {
         $this->authorizeAdmin('view media');
 
-        $stats = $this->repository->getStatistics();
-
-        return $this->successResponse($stats);
+        return $this->successResponse($this->repository->getStatistics());
     }
 
-    /**
-     * Get all collections
-     *
-     * GET /admin/media/collections
-     *
-     * @return JsonResponse
-     */
     public function collections(): JsonResponse
     {
         $this->authorizeAdmin('view media');
 
-        $collections = $this->repository->getAllCollections();
-
-        return $this->successResponse($collections);
+        return $this->successResponse($this->repository->getAllCollections());
     }
 
-    /**
-     * Get all tags
-     *
-     * GET /admin/media/tags
-     *
-     * @return JsonResponse
-     */
     public function tags(): JsonResponse
     {
         $this->authorizeAdmin('view media');
 
-        $tags = $this->repository->getAllTags();
+        return $this->successResponse($this->repository->getAllTags());
+    }
 
-        return $this->successResponse($tags);
+    public function file(Media $media)
+    {
+        $this->authorizeAdmin('view media');
+
+        return $this->mediaService->stream($media);
+    }
+
+    public function variant(Media $media, string $variant)
+    {
+        $this->authorizeAdmin('view media');
+
+        return $this->mediaService->stream($media, $variant);
+    }
+
+    public function download(Media $media)
+    {
+        $this->authorizeAdmin('view media');
+
+        return $this->mediaService->download($media);
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Blog\Models;
 
+use App\Models\Article;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -34,7 +35,10 @@ class Tag extends Model
     protected $fillable = [
         'slug',
         'name',
+        'description',
         'type',
+        'color',
+        'usage_count',
     ];
 
     /**
@@ -44,7 +48,7 @@ class Tag extends Model
      *
      * @var array<string>
      */
-    public array $translatable = ['name'];
+    public array $translatable = ['name', 'description'];
 
     /**
      * Boot the model

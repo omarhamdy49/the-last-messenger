@@ -57,10 +57,10 @@
                         <h2 id="upload-modal-title"
                             class="text-xl font-bold"
                             :class="darkMode ? 'text-white' : 'text-gray-900'">
-                            Upload Media Files
+                            {{ __('media.upload_modal.title') }}
                         </h2>
                         <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                            <span x-text="files.length"></span> file(s) selected - Max 10 files, 10MB for images, 100MB for videos
+                            <span x-text="files.length"></span> {{ __('media.upload_modal.selection_summary') }} - {{ __('media.upload_modal.limits_summary') }}
                         </p>
                     </div>
                 </div>
@@ -73,6 +73,77 @@
 
             <!-- Content -->
             <div class="p-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                <div class="mb-6 grid gap-4 lg:grid-cols-2">
+                    <div class="rounded-2xl p-4 border"
+                         :class="darkMode ? 'bg-gray-950 border-gray-800' : 'bg-gray-50 border-gray-200'">
+                        <h3 class="font-bold mb-3"
+                            :class="darkMode ? 'text-white' : 'text-gray-900'">
+                            {{ __('media.upload_modal.options') }}
+                        </h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-semibold mb-2"
+                                       :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                                    {{ __('media.upload_modal.collection') }}
+                                </label>
+                                <input type="text"
+                                       x-model="collectionName"
+                                       placeholder="{{ __('media.upload_modal.collection_placeholder') }}"
+                                       class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent"
+                                       :class="darkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold mb-2"
+                                       :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                                    {{ __('media.upload_modal.shared_tags') }}
+                                </label>
+                                <input type="text"
+                                       x-model="tagsText"
+                                       placeholder="{{ __('media.upload_modal.tags_placeholder') }}"
+                                       class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent"
+                                       :class="darkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl p-4 border"
+                         :class="darkMode ? 'bg-gray-950 border-gray-800' : 'bg-gray-50 border-gray-200'">
+                        <h3 class="font-bold mb-3"
+                            :class="darkMode ? 'text-white' : 'text-gray-900'">
+                            {{ __('media.upload_modal.image_processing') }}
+                        </h3>
+                        <div class="space-y-4">
+                            <label class="flex items-start gap-3 p-4 rounded-xl border cursor-pointer"
+                                   :class="darkMode ? 'border-gray-800 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-900'">
+                                <input type="checkbox"
+                                       x-model="generateSizes"
+                                       class="mt-1 rounded border-gray-300 text-[#0056b3] focus:ring-[#64CCC5]">
+                                <div>
+                                    <div class="font-semibold text-sm">{{ __('media.upload_modal.generate_sizes') }}</div>
+                                    <div class="text-xs mt-1"
+                                         :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                        {{ __('media.upload_modal.generate_sizes_help') }}
+                                    </div>
+                                </div>
+                            </label>
+
+                            <label class="flex items-start gap-3 p-4 rounded-xl border cursor-pointer"
+                                   :class="darkMode ? 'border-gray-800 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-900'">
+                                <input type="checkbox"
+                                       x-model="optimizeOriginals"
+                                       class="mt-1 rounded border-gray-300 text-[#0056b3] focus:ring-[#64CCC5]">
+                                <div>
+                                    <div class="font-semibold text-sm">{{ __('media.upload_modal.optimize_originals') }}</div>
+                                    <div class="text-xs mt-1"
+                                         :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                        {{ __('media.upload_modal.optimize_originals_help') }}
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Drop Zone -->
                 <div x-show="files.length === 0"
@@ -98,11 +169,11 @@
 
                     <h3 class="text-2xl font-bold mb-2"
                         :class="darkMode ? 'text-white' : 'text-gray-900'">
-                        Drag & Drop Files Here
+                        {{ __('media.upload_modal.drop_title') }}
                     </h3>
                     <p class="text-sm mb-4"
                        :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                        or click to browse your files
+                        {{ __('media.upload_modal.drop_help') }}
                     </p>
 
                     <!-- Accepted File Types -->
@@ -110,17 +181,22 @@
                         <span class="px-4 py-2 rounded-full text-xs font-semibold"
                               :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
                             <i data-lucide="image" class="w-3 h-3 inline me-1"></i>
-                            JPG, PNG, GIF, WEBP
+                            {{ __('media.upload_modal.accepted_images') }}
                         </span>
                         <span class="px-4 py-2 rounded-full text-xs font-semibold"
                               :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
                             <i data-lucide="video" class="w-3 h-3 inline me-1"></i>
-                            MP4, WEBM
+                            {{ __('media.upload_modal.accepted_videos') }}
+                        </span>
+                        <span class="px-4 py-2 rounded-full text-xs font-semibold"
+                              :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
+                            <i data-lucide="music-4" class="w-3 h-3 inline me-1"></i>
+                            {{ __('media.upload_modal.accepted_audio') }}
                         </span>
                         <span class="px-4 py-2 rounded-full text-xs font-semibold"
                               :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
                             <i data-lucide="file-text" class="w-3 h-3 inline me-1"></i>
-                            PDF
+                            {{ __('media.upload_modal.accepted_documents') }}
                         </span>
                     </div>
 
@@ -128,7 +204,7 @@
                     <input type="file"
                            x-ref="fileInput"
                            @change="handleFileSelect($event)"
-                           accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,application/pdf"
+                           accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/avi,video/quicktime,audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/ogg,audio/mp4,application/pdf"
                            multiple
                            class="hidden">
                 </div>
@@ -142,13 +218,13 @@
                                 class="px-4 py-2 rounded-lg font-semibold transition-all hover:scale-105"
                                 :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
                             <i data-lucide="plus" class="w-4 h-4 inline me-2"></i>
-                            Add More Files
+                            {{ __('media.upload_modal.add_more_files') }}
                         </button>
                         <button @click="clearAll()"
                                 class="px-4 py-2 rounded-lg font-semibold transition-all hover:scale-105"
                                 :class="darkMode ? 'bg-red-900/20 text-red-400 hover:bg-red-900/30' : 'bg-red-50 text-red-600 hover:bg-red-100'">
                             <i data-lucide="trash-2" class="w-4 h-4 inline me-2"></i>
-                            Clear All
+                            {{ __('media.actions.clear_all') }}
                         </button>
                     </div>
 
@@ -169,7 +245,7 @@
                         <div class="flex items-center gap-2">
                             <div class="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
                             <span class="text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                                Uploading <span x-text="uploadingCount"></span> of <span x-text="files.length"></span> files...
+                                <span x-text="uploadingText()"></span>
                             </span>
                         </div>
                     </template>
@@ -177,7 +253,7 @@
                         <div class="flex items-center gap-2 text-green-500">
                             <i data-lucide="check-circle" class="w-5 h-5"></i>
                             <span class="text-sm font-semibold">
-                                <span x-text="successCount"></span> file(s) uploaded successfully!
+                                <span x-text="successCount"></span> {{ __('media.upload_modal.upload_success') }}
                             </span>
                         </div>
                     </template>
@@ -186,13 +262,13 @@
                     <button @click="closeModal()"
                             class="px-6 py-2 rounded-lg font-semibold transition-all"
                             :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'">
-                        Cancel
+                        {{ __('admin.cancel') }}
                     </button>
                     <button @click="startUpload()"
                             :disabled="files.length === 0 || uploadingCount > 0"
                             class="px-6 py-2 rounded-lg font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white transition-all hover:shadow-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
                         <i data-lucide="upload" class="w-4 h-4 inline me-2"></i>
-                        Upload <span x-text="files.length"></span> File(s)
+                        <span x-text="uploadButtonText()"></span>
                     </button>
                 </div>
             </div>
@@ -202,14 +278,32 @@
 
 @push('scripts')
 <script>
-function mediaUploadModal() {
-    return {
+const mediaUploadModal = () => ({
+        translations: {
+            closeWhileUploading: @json(__('media.upload_modal.close_while_uploading')),
+            clearWhileUploading: @json(__('media.upload_modal.clear_while_uploading')),
+            maxFilesError: @json(__('media.upload_modal.max_files_error')),
+            invalidType: @json(__('media.upload_modal.invalid_type')),
+            imageSizeExceeded: @json(__('media.upload_modal.image_size_exceeded')),
+            videoSizeExceeded: @json(__('media.upload_modal.video_size_exceeded')),
+            audioSizeExceeded: @json(__('media.upload_modal.audio_size_exceeded')),
+            pdfSizeExceeded: @json(__('media.upload_modal.pdf_size_exceeded')),
+            uploadFailed: @json(__('media.upload_modal.upload_failed')),
+            uploadCancelled: @json(__('media.upload_modal.upload_cancelled')),
+            networkError: @json(__('media.upload_modal.network_error')),
+            uploadingProgress: @json(__('media.upload_modal.uploading_progress')),
+            uploadButton: @json(__('media.upload_modal.upload_button')),
+        },
         isOpen: false,
         isDragging: false,
         files: [],
         uploadingCount: 0,
         successCount: 0,
         fileIdCounter: 0,
+        collectionName: '',
+        tagsText: '',
+        generateSizes: true,
+        optimizeOriginals: true,
 
         openModal() {
             this.isOpen = true;
@@ -218,17 +312,20 @@ function mediaUploadModal() {
 
         closeModal() {
             if (this.uploadingCount > 0) {
-                if (!confirm('Files are still uploading. Are you sure you want to close?')) {
+                if (!confirm(this.translations.closeWhileUploading)) {
                     return;
                 }
+
+                this.files.forEach((file) => {
+                    if (file.xhr) {
+                        file.xhr.abort();
+                    }
+                });
             }
             this.isOpen = false;
-            // Auto-close after all successful uploads
-            if (this.successCount === this.files.length && this.files.length > 0) {
-                setTimeout(() => {
-                    this.reset();
-                }, 300);
-            }
+            setTimeout(() => {
+                this.reset();
+            }, 150);
         },
 
         reset() {
@@ -236,6 +333,10 @@ function mediaUploadModal() {
             this.uploadingCount = 0;
             this.successCount = 0;
             this.isDragging = false;
+            this.collectionName = '';
+            this.tagsText = '';
+            this.generateSizes = true;
+            this.optimizeOriginals = true;
         },
 
         handleDrop(event) {
@@ -253,7 +354,7 @@ function mediaUploadModal() {
         addFiles(newFiles) {
             // Validate max files
             if (this.files.length + newFiles.length > 10) {
-                alert('Maximum 10 files allowed at once');
+                alert(this.translations.maxFilesError);
                 return;
             }
 
@@ -287,26 +388,32 @@ function mediaUploadModal() {
         validateFile(file) {
             const maxImageSize = 10 * 1024 * 1024; // 10MB
             const maxVideoSize = 100 * 1024 * 1024; // 100MB
+            const maxAudioSize = 30 * 1024 * 1024; // 30MB
             const allowedTypes = [
                 'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-                'video/mp4', 'video/webm',
+                'video/mp4', 'video/webm', 'video/avi', 'video/quicktime',
+                'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/ogg', 'audio/mp4',
                 'application/pdf'
             ];
 
             if (!allowedTypes.includes(file.type)) {
-                return { valid: false, error: 'Invalid file type' };
+                return { valid: false, error: this.translations.invalidType };
             }
 
             if (file.type.startsWith('image/') && file.size > maxImageSize) {
-                return { valid: false, error: 'Image size exceeds 10MB' };
+                return { valid: false, error: this.translations.imageSizeExceeded };
             }
 
             if (file.type.startsWith('video/') && file.size > maxVideoSize) {
-                return { valid: false, error: 'Video size exceeds 100MB' };
+                return { valid: false, error: this.translations.videoSizeExceeded };
+            }
+
+            if (file.type.startsWith('audio/') && file.size > maxAudioSize) {
+                return { valid: false, error: this.translations.audioSizeExceeded };
             }
 
             if (file.type === 'application/pdf' && file.size > maxImageSize) {
-                return { valid: false, error: 'PDF size exceeds 10MB' };
+                return { valid: false, error: this.translations.pdfSizeExceeded };
             }
 
             return { valid: true };
@@ -344,7 +451,7 @@ function mediaUploadModal() {
 
         clearAll() {
             if (this.uploadingCount > 0) {
-                if (!confirm('Files are still uploading. Are you sure you want to clear all?')) {
+                if (!confirm(this.translations.clearWhileUploading)) {
                     return;
                 }
             }
@@ -392,6 +499,10 @@ function mediaUploadModal() {
 
                 const formData = new FormData();
                 formData.append('file', fileData.file);
+                formData.append('collection_name', this.collectionName || 'general');
+                formData.append('tags', this.tagsText);
+                formData.append('generate_sizes', this.generateSizes ? '1' : '0');
+                formData.append('optimize', this.optimizeOriginals ? '1' : '0');
                 formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
 
                 const xhr = new XMLHttpRequest();
@@ -406,7 +517,7 @@ function mediaUploadModal() {
 
                 // Success handler
                 xhr.addEventListener('load', () => {
-                    this.uploadingCount--;
+                    this.uploadingCount = Math.max(0, this.uploadingCount - 1);
 
                     if (xhr.status === 200 || xhr.status === 201) {
                         fileData.status = 'success';
@@ -424,12 +535,12 @@ function mediaUploadModal() {
                         }
                     } else {
                         fileData.status = 'error';
-                        fileData.error = 'Upload failed';
+                        fileData.error = this.translations.uploadFailed;
                         try {
                             const response = JSON.parse(xhr.responseText);
-                            fileData.error = response.message || 'Upload failed';
+                            fileData.error = response.message || this.translations.uploadFailed;
                         } catch (e) {
-                            fileData.error = `Upload failed (${xhr.status})`;
+                            fileData.error = `${this.translations.uploadFailed} (${xhr.status})`;
                         }
                     }
 
@@ -438,22 +549,23 @@ function mediaUploadModal() {
 
                 // Error handler
                 xhr.addEventListener('error', () => {
-                    this.uploadingCount--;
+                    this.uploadingCount = Math.max(0, this.uploadingCount - 1);
                     fileData.status = 'error';
-                    fileData.error = 'Network error';
+                    fileData.error = this.translations.networkError;
                     resolve();
                 });
 
                 // Abort handler
                 xhr.addEventListener('abort', () => {
-                    this.uploadingCount--;
+                    this.uploadingCount = Math.max(0, this.uploadingCount - 1);
                     fileData.status = 'error';
-                    fileData.error = 'Upload cancelled';
+                    fileData.error = this.translations.uploadCancelled;
                     resolve();
                 });
 
                 // Send request
-                xhr.open('POST', '/admin/media/upload', true);
+                xhr.open('POST', @json(route('admin.media-library.store')), true);
+                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
                 xhr.send(formData);
             });
         },
@@ -471,8 +583,25 @@ function mediaUploadModal() {
             if (type.startsWith('video/')) return 'video';
             if (type === 'application/pdf') return 'file-text';
             return 'file';
+        },
+
+        uploadingText() {
+            return this.translations.uploadingProgress
+                .replace(':current', this.uploadingCount)
+                .replace(':total', this.files.length);
+        },
+
+        uploadButtonText() {
+            return this.translations.uploadButton.replace(':count', this.files.length);
         }
-    };
+    });
+
+if (window.Alpine) {
+    window.Alpine.data('mediaUploadModal', mediaUploadModal);
+} else {
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('mediaUploadModal', mediaUploadModal);
+    }, { once: true });
 }
 </script>
 @endpush

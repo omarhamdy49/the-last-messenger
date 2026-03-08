@@ -11,7 +11,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 /**
@@ -21,15 +20,9 @@ use Illuminate\View\View;
  */
 class ScholarController extends AdminController
 {
-    /**
-     * Supported locales
-     */
-    protected array $locales;
-
     public function __construct()
     {
         parent::__construct();
-        $this->locales = array_keys(config('app.supported_locales', ['ar', 'en']));
     }
 
     /**
@@ -40,9 +33,8 @@ class ScholarController extends AdminController
         $this->authorizeAdmin('view scholars');
 
         $filters = $this->getFilters($request, [
-            'era',
-            'country',
-            'status',
+            'region',
+            'school',
         ]);
 
         $search = $this->getSearchQuery($request);
@@ -52,21 +44,22 @@ class ScholarController extends AdminController
         $query = HadithNarrator::query();
 
         // Apply filters
-        if (isset($filters['era'])) {
-            $query->where('era', $filters['era']);
+        if (isset($filters['region'])) {
+            $query->where('region', $filters['region']);
         }
 
-        if (isset($filters['country'])) {
-            $query->where('country', $filters['country']);
-        }
-
-        if (isset($filters['status'])) {
-            $query->where('status', $filters['status']);
+        if (isset($filters['school'])) {
+            $query->where('school', $filters['school']);
         }
 
         // Apply search
         if ($search) {
-            $query->search($search);
+            $query->where(function ($q) use ($search) {
+                $q->where('name_ar', 'LIKE', "%{$search}%")
+                  ->orWhere('name_en', 'LIKE', "%{$search}%")
+                  ->orWhere('full_name_ar', 'LIKE', "%{$search}%")
+                  ->orWhere('full_name_en', 'LIKE', "%{$search}%");
+            });
         }
 
         // Apply sorting
@@ -88,9 +81,7 @@ class ScholarController extends AdminController
     {
         $this->authorizeAdmin('create scholars');
 
-        $locales = $this->locales;
-
-        return view('admin.hadith.scholars.create', compact('locales'));
+        return view('admin.hadith.scholars.create');
     }
 
     /**
@@ -106,21 +97,23 @@ class ScholarController extends AdminController
 
             // Create scholar using HadithNarrator model
             $scholar = HadithNarrator::create([
-                'slug' => $validated['slug'] ?? Str::slug($validated['name']['ar']),
-                'name' => $validated['name'],
-                'biography_json' => $validated['biography_json'] ?? null,
-                'reliability_grade' => $validated['reliability_grade'] ?? 'thiqah',
-                'era' => $validated['era'] ?? null,
-                'country' => $validated['country'] ?? null,
-                'birth_hijri' => $validated['birth_hijri'] ?? null,
-                'death_hijri' => $validated['death_hijri'] ?? null,
-                'status' => $validated['status'] ?? 'active',
+                'name_ar' => $validated['name_ar'],
+                'name_en' => $validated['name_en'] ?? null,
+                'full_name_ar' => $validated['full_name_ar'] ?? null,
+                'full_name_en' => $validated['full_name_en'] ?? null,
+                'kunya' => $validated['kunya'] ?? null,
+                'biography' => $validated['biography'] ?? null,
+                'reliability_grade' => $validated['reliability_grade'] ?? null,
+                'birth_year_hijri' => $validated['birth_year_hijri'] ?? null,
+                'death_year_hijri' => $validated['death_year_hijri'] ?? null,
+                'school' => $validated['school'] ?? null,
+                'region' => $validated['region'] ?? null,
             ]);
 
             DB::commit();
 
             $this->logActivity('created', 'Scholar', $scholar->id, [
-                'name' => $validated['name']['ar'],
+                'name' => $validated['name_ar'],
             ]);
 
             if ($this->expectsJson(request())) {
@@ -131,7 +124,7 @@ class ScholarController extends AdminController
             }
 
             return redirect()
-                ->route('admin.scholars.index')
+                ->route('admin.hadith.scholars.index')
                 ->with('success', 'تم إنشاء العالم بنجاح!');
 
         } catch (\Exception $e) {
@@ -171,9 +164,7 @@ class ScholarController extends AdminController
     {
         $this->authorizeAdmin('edit scholars');
 
-        $locales = $this->locales;
-
-        return view('admin.hadith.scholars.edit', compact('scholar', 'locales'));
+        return view('admin.hadith.scholars.edit', compact('scholar'));
     }
 
     /**
@@ -189,20 +180,23 @@ class ScholarController extends AdminController
 
             // Update scholar
             $scholar->update([
-                'slug' => $validated['slug'] ?? $scholar->slug,
-                'name' => $validated['name'],
-                'biography_json' => $validated['biography_json'] ?? $scholar->biography_json,
-                'era' => $validated['era'] ?? $scholar->era,
-                'country' => $validated['country'] ?? $scholar->country,
-                'birth_hijri' => $validated['birth_hijri'] ?? $scholar->birth_hijri,
-                'death_hijri' => $validated['death_hijri'] ?? $scholar->death_hijri,
-                'status' => $validated['status'] ?? $scholar->status,
+                'name_ar' => $validated['name_ar'],
+                'name_en' => $validated['name_en'] ?? $scholar->name_en,
+                'full_name_ar' => $validated['full_name_ar'] ?? $scholar->full_name_ar,
+                'full_name_en' => $validated['full_name_en'] ?? $scholar->full_name_en,
+                'kunya' => $validated['kunya'] ?? $scholar->kunya,
+                'biography' => $validated['biography'] ?? $scholar->biography,
+                'reliability_grade' => $validated['reliability_grade'] ?? $scholar->reliability_grade,
+                'birth_year_hijri' => $validated['birth_year_hijri'] ?? $scholar->birth_year_hijri,
+                'death_year_hijri' => $validated['death_year_hijri'] ?? $scholar->death_year_hijri,
+                'school' => $validated['school'] ?? $scholar->school,
+                'region' => $validated['region'] ?? $scholar->region,
             ]);
 
             DB::commit();
 
             $this->logActivity('updated', 'Scholar', $scholar->id, [
-                'name' => $validated['name']['ar'],
+                'name' => $validated['name_ar'],
             ]);
 
             if ($this->expectsJson(request())) {
@@ -213,7 +207,7 @@ class ScholarController extends AdminController
             }
 
             return redirect()
-                ->route('admin.scholars.index')
+                ->route('admin.hadith.scholars.index')
                 ->with('success', 'تم تحديث العالم بنجاح!');
 
         } catch (\Exception $e) {
@@ -240,7 +234,7 @@ class ScholarController extends AdminController
             $scholar->delete();
 
             $this->logActivity('deleted', 'Scholar', $scholar->id, [
-                'name' => $scholar->name['ar'] ?? 'N/A',
+                'name' => $scholar->name_ar ?? 'N/A',
             ]);
 
             if ($this->expectsJson(request())) {
@@ -248,7 +242,7 @@ class ScholarController extends AdminController
             }
 
             return redirect()
-                ->route('admin.scholars.index')
+                ->route('admin.hadith.scholars.index')
                 ->with('success', 'تم حذف العالم بنجاح!');
 
         } catch (\Exception $e) {
@@ -290,10 +284,12 @@ class ScholarController extends AdminController
 
         $search = $request->get('q', '');
 
-        $scholars = HadithNarrator::active()
-            ->search($search)
+        $scholars = HadithNarrator::where(function ($q) use ($search) {
+                $q->where('name_ar', 'LIKE', "%{$search}%")
+                  ->orWhere('name_en', 'LIKE', "%{$search}%");
+            })
             ->limit(10)
-            ->get(['id', 'slug', 'name', 'era', 'country']);
+            ->get(['id', 'name_ar', 'name_en', 'school', 'region']);
 
         return $this->successResponse($scholars, 'تم جلب العلماء بنجاح');
     }

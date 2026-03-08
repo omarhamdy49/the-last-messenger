@@ -9,7 +9,7 @@ namespace App\Http\Controllers\Admin;
 use App\Domain\Hadith\Exporters\HadithExporter;
 use App\Domain\Hadith\Exporters\HadithNarratorExporter;
 use App\Domain\Hadith\Repositories\HadithRepositoryInterface;
-use App\Domain\Hadith\Repositories\HadithNarratorRepositoryInterface;
+use App\Domain\Hadith\Repositories\NarratorRepositoryInterface as HadithNarratorRepositoryInterface;
 // use App\Domain\Media\Exporters\MediaProgramExporter;
 // use App\Domain\Media\Repositories\MediaProgramRepositoryInterface;
 use App\Domain\Quran\Exporters\ReciterExporter;

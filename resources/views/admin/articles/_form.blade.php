@@ -646,7 +646,7 @@ function articleForm(article) {
                         formData.append('collection_name', 'articles');
 
                         const xhr = new XMLHttpRequest();
-                        xhr.open('POST', '/admin/media');
+                        xhr.open('POST', @json(route('admin.media-library.store')));
                         xhr.setRequestHeader('X-CSRF-TOKEN', document.querySelector('meta[name="csrf-token"]').content);
 
                         xhr.upload.addEventListener('progress', (e) => {

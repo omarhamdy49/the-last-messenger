@@ -98,6 +98,22 @@ class ArticleLocale extends Model
     }
 
     /**
+     * Get the localized SEO title from the metadata payload.
+     */
+    public function getSeoTitleAttribute(): ?string
+    {
+        return $this->seo_metadata['title'] ?? null;
+    }
+
+    /**
+     * Get the localized SEO description from the metadata payload.
+     */
+    public function getSeoDescriptionAttribute(): ?string
+    {
+        return $this->seo_metadata['description'] ?? null;
+    }
+
+    /**
      * Set content with structure
      */
     public function setContent(?string $body, ?array $toc = null, ?string $summary = null): void

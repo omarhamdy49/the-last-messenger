@@ -52,7 +52,7 @@ const MediaUploadConfig = {
     },
 
     // Upload endpoint
-    uploadUrl: '/admin/media/upload',
+    uploadUrl: window.mediaLibraryUploadUrl || '/su/portal/v1/admin/media-library',
 
     // Auto-close delay after successful upload (ms)
     autoCloseDelay: 2000

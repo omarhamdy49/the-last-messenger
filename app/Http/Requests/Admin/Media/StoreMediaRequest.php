@@ -32,54 +32,16 @@ class StoreMediaRequest extends FormRequest
             'file' => [
                 'required',
                 'file',
-                function ($attribute, $value, $fail) {
-                    $mimeType = $value->getMimeType();
-                    $size = $value->getSize();
-
-                    // Validate based on file type
-                    if (str_starts_with($mimeType, 'image/')) {
-                        // Images: jpg, png, gif, webp - max 10MB
-                        $allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-                        $maxSize = 10 * 1024 * 1024; // 10MB
-
-                        if (!in_array($mimeType, $allowedMimes)) {
-                            $fail('The file must be an image (jpg, png, gif, webp).');
-                        }
-
-                        if ($size > $maxSize) {
-                            $fail('The image must not exceed 10MB.');
-                        }
-                    } elseif (str_starts_with($mimeType, 'video/')) {
-                        // Videos: mp4, webm - max 100MB
-                        $allowedMimes = ['video/mp4', 'video/webm', 'video/avi'];
-                        $maxSize = 100 * 1024 * 1024; // 100MB
-
-                        if (!in_array($mimeType, $allowedMimes)) {
-                            $fail('The file must be a video (mp4, webm, avi).');
-                        }
-
-                        if ($size > $maxSize) {
-                            $fail('The video must not exceed 100MB.');
-                        }
-                    } elseif ($mimeType === 'application/pdf') {
-                        // Documents: pdf - max 5MB
-                        $maxSize = 5 * 1024 * 1024; // 5MB
-
-                        if ($size > $maxSize) {
-                            $fail('The document must not exceed 5MB.');
-                        }
-                    } else {
-                        $fail('The file type is not supported. Allowed: images (jpg, png, gif, webp), videos (mp4, webm), documents (pdf).');
-                    }
-                },
+                $this->validateMediaFile(),
             ],
+            'title' => ['nullable', 'string', 'max:255'],
             'collection_name' => ['nullable', 'string', 'max:255'],
             'alt_text' => ['nullable', 'string', 'max:500'],
             'caption' => ['nullable', 'string', 'max:1000'],
             'tags' => ['nullable', 'array'],
             'tags.*' => ['string', 'max:50'],
             'optimize' => ['nullable', 'boolean'],
-            'generate_thumbnails' => ['nullable', 'boolean'],
+            'generate_sizes' => ['nullable', 'boolean'],
         ];
     }
 
@@ -93,6 +55,7 @@ class StoreMediaRequest extends FormRequest
         return [
             'file.required' => 'Please select a file to upload.',
             'file.file' => 'The uploaded item must be a valid file.',
+            'title.max' => 'Title cannot exceed 255 characters.',
             'collection_name.string' => 'Collection name must be text.',
             'collection_name.max' => 'Collection name cannot exceed 255 characters.',
             'alt_text.string' => 'Alt text must be text.',
@@ -103,7 +66,7 @@ class StoreMediaRequest extends FormRequest
             'tags.*.string' => 'Each tag must be text.',
             'tags.*.max' => 'Each tag cannot exceed 50 characters.',
             'optimize.boolean' => 'Optimize must be true or false.',
-            'generate_thumbnails.boolean' => 'Generate thumbnails must be true or false.',
+            'generate_sizes.boolean' => 'Generate sizes must be true or false.',
         ];
     }
 
@@ -116,12 +79,13 @@ class StoreMediaRequest extends FormRequest
     {
         return [
             'file' => 'media file',
+            'title' => 'title',
             'collection_name' => 'collection',
             'alt_text' => 'alternative text',
             'caption' => 'caption',
             'tags' => 'tags',
             'optimize' => 'optimization',
-            'generate_thumbnails' => 'thumbnail generation',
+            'generate_sizes' => 'generated sizes',
         ];
     }
 
@@ -140,7 +104,57 @@ class StoreMediaRequest extends FormRequest
         // Set defaults
         $this->merge([
             'optimize' => $this->boolean('optimize', true),
-            'generate_thumbnails' => $this->boolean('generate_thumbnails', true),
+            'generate_sizes' => $this->boolean(
+                'generate_sizes',
+                $this->boolean('generate_thumbnails', true)
+            ),
         ]);
+    }
+
+    protected function validateMediaFile(): \Closure
+    {
+        return function ($attribute, $value, $fail): void {
+            $mimeType = (string) $value->getMimeType();
+            $size = (int) $value->getSize();
+
+            $allowedImages = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            $allowedVideos = ['video/mp4', 'video/webm', 'video/avi', 'video/quicktime'];
+            $allowedAudio = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/ogg', 'audio/mp4'];
+            $allowedDocuments = ['application/pdf'];
+
+            if (in_array($mimeType, $allowedImages, true)) {
+                if ($size > 10 * 1024 * 1024) {
+                    $fail('The image must not exceed 10MB.');
+                }
+
+                return;
+            }
+
+            if (in_array($mimeType, $allowedVideos, true)) {
+                if ($size > 100 * 1024 * 1024) {
+                    $fail('The video must not exceed 100MB.');
+                }
+
+                return;
+            }
+
+            if (in_array($mimeType, $allowedAudio, true)) {
+                if ($size > 30 * 1024 * 1024) {
+                    $fail('The audio file must not exceed 30MB.');
+                }
+
+                return;
+            }
+
+            if (in_array($mimeType, $allowedDocuments, true)) {
+                if ($size > 10 * 1024 * 1024) {
+                    $fail('The document must not exceed 10MB.');
+                }
+
+                return;
+            }
+
+            $fail('The file type is not supported. Allowed: images, videos, audio files, and PDF documents.');
+        };
     }
 }

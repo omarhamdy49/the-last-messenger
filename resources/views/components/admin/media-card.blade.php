@@ -65,17 +65,17 @@
             <div class="absolute bottom-3 right-3 flex items-center gap-2">
                 <button @click.stop="viewMedia(item)"
                         class="p-2 rounded-lg bg-white/90 backdrop-blur-sm hover:bg-white transition-colors shadow-lg"
-                        title="View">
+                        title="{{ __('media.actions.view') }}">
                     <i data-lucide="eye" class="w-4 h-4 text-gray-700"></i>
                 </button>
                 <button @click.stop="editMedia(item)"
                         class="p-2 rounded-lg bg-white/90 backdrop-blur-sm hover:bg-white transition-colors shadow-lg"
-                        title="Edit">
+                        title="{{ __('media.actions.edit') }}">
                     <i data-lucide="edit" class="w-4 h-4 text-gray-700"></i>
                 </button>
                 <button @click.stop="deleteMedia(item)"
                         class="p-2 rounded-lg bg-red-500/90 backdrop-blur-sm hover:bg-red-600 transition-colors shadow-lg"
-                        title="Delete">
+                        title="{{ __('media.actions.delete') }}">
                     <i data-lucide="trash-2" class="w-4 h-4 text-white"></i>
                 </button>
             </div>
@@ -90,7 +90,7 @@
                       'bg-green-500/90 text-white': item.type === 'audio',
                       'bg-orange-500/90 text-white': item.type === 'document'
                   }"
-                  x-text="item.type.toUpperCase()"></span>
+                  x-text="item.type_label || item.type"></span>
         </div>
 
         <!-- Shimmer Effect on Hover -->
@@ -161,7 +161,7 @@
     <!-- Click Handler for Card -->
     <button @click="viewMedia(item)"
             class="absolute inset-0 z-0"
-            aria-label="View media">
+            aria-label="{{ __('media.actions.view') }}">
     </button>
 </div>
 

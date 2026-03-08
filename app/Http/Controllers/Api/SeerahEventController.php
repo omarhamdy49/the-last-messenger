@@ -30,7 +30,7 @@ class SeerahEventController extends Controller
         $perPage = $request->integer('per_page', 15);
         $events = $this->timelineEventService->getAllEvents($perPage);
 
-        return $this->success(
+        return $this->successResponse(
             SeerahEventResource::collection($events)->response()->getData(true)
         );
     }
@@ -43,11 +43,11 @@ class SeerahEventController extends Controller
         try {
             $event = $this->timelineEventService->getEventBySlug($slug);
 
-            return $this->success(
+            return $this->successResponse(
                 new SeerahEventResource($event)
             );
         } catch (\Exception $e) {
-            return $this->notFound($e->getMessage());
+            return $this->notFoundResponse($e->getMessage());
         }
     }
 
@@ -59,7 +59,7 @@ class SeerahEventController extends Controller
         $perPage = $request->integer('per_page', 15);
         $events = $this->timelineEventService->getEventsByType($type, $perPage);
 
-        return $this->success(
+        return $this->successResponse(
             SeerahEventResource::collection($events)->response()->getData(true)
         );
     }
@@ -72,7 +72,7 @@ class SeerahEventController extends Controller
         $perPage = $request->integer('per_page', 15);
         $events = $this->timelineEventService->getEventsByHijriYear($year, $perPage);
 
-        return $this->success(
+        return $this->successResponse(
             SeerahEventResource::collection($events)->response()->getData(true)
         );
     }
@@ -85,7 +85,7 @@ class SeerahEventController extends Controller
         $perPage = $request->integer('per_page', 15);
         $events = $this->timelineEventService->getEventsByGregorianYear($year, $perPage);
 
-        return $this->success(
+        return $this->successResponse(
             SeerahEventResource::collection($events)->response()->getData(true)
         );
     }
@@ -98,7 +98,7 @@ class SeerahEventController extends Controller
         $limit = $request->integer('limit', 10);
         $events = $this->timelineEventService->getFeaturedEvents($limit);
 
-        return $this->success(
+        return $this->successResponse(
             SeerahEventResource::collection($events)
         );
     }
@@ -110,7 +110,7 @@ class SeerahEventController extends Controller
     {
         $events = $this->timelineEventService->getEventsWithLocation();
 
-        return $this->success(
+        return $this->successResponse(
             SeerahEventResource::collection($events)
         );
     }
@@ -124,12 +124,12 @@ class SeerahEventController extends Controller
         $perPage = $request->integer('per_page', 15);
 
         if (empty($query)) {
-            return $this->error('Search query is required', 400);
+            return $this->errorResponse('Search query is required', 400);
         }
 
         $events = $this->timelineEventService->searchEvents($query, $perPage);
 
-        return $this->success(
+        return $this->successResponse(
             SeerahEventResource::collection($events)->response()->getData(true)
         );
     }

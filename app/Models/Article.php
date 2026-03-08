@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Models\Tag;
+use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Shared\Traits\HasVersions;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -169,5 +170,13 @@ class Article extends Model
     {
         $localeModel = $this->getLocale($locale);
         return $localeModel && $localeModel->is_ready;
+    }
+
+    /**
+     * Get Seerah events linked to this article.
+     */
+    public function seerahEvents(): HasMany
+    {
+        return $this->hasMany(SeerahEvent::class, 'related_article_id');
     }
 }

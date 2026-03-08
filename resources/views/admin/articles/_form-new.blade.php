@@ -6,6 +6,7 @@
 
 @props([
     'article' => null,
+    'formArticle' => null,
     'categories' => [],
     'writers' => [],
     'tags' => [],
@@ -56,7 +57,7 @@
 <form action="{{ $actionUrl }}"
       method="POST"
       enctype="multipart/form-data"
-      x-data="articleForm(@js($article ?? null), @js($locales))"
+      x-data="articleForm(@js($formArticle ?? $article ?? null), @js($locales))"
       @submit.prevent="handleSubmit"
       class="article-form">
 

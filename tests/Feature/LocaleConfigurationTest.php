@@ -48,7 +48,7 @@ class LocaleConfigurationTest extends TestCase
      */
     public function test_admin_routes_use_arabic_locale(): void
     {
-        $response = $this->get('/admin');
+        $response = $this->get('/su/portal/v1/admin/login');
 
         // Should redirect to login or dashboard
         $this->assertTrue(
@@ -158,5 +158,16 @@ class LocaleConfigurationTest extends TestCase
         // In English
         $this->assertEquals('Arabic', get_locale_name('ar', 'en'));
         $this->assertEquals('English', get_locale_name('en', 'en'));
+    }
+
+    /**
+     * Test supported content locales are configured for multilingual modules
+     */
+    public function test_supported_locales_include_all_content_languages(): void
+    {
+        $supportedLocales = config('app.supported_locales');
+
+        $this->assertIsArray($supportedLocales);
+        $this->assertSame(['ar', 'en', 'fr', 'tr', 'ur'], array_keys($supportedLocales));
     }
 }

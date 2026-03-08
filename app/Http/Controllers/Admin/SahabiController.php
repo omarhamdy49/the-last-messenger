@@ -95,7 +95,12 @@ class SahabiController extends Controller
      */
     public function store(StoreSahabiRequest $request): RedirectResponse
     {
-        $sahabi = $this->sahabiService->create($request->validated());
+        $data = $request->validated();
+
+        // Handle is_featured checkbox (unchecked checkboxes are not sent)
+        $data['is_featured'] = $request->boolean('is_featured');
+
+        $sahabi = $this->sahabiService->create($data);
 
         // Handle profile image (file upload or media picker selection)
         if ($request->hasFile('profile_image')) {
@@ -166,8 +171,13 @@ class SahabiController extends Controller
 
         $oldValues = $oldSahabi->toArray();
 
+        $data = $request->validated();
+
+        // Handle is_featured checkbox (unchecked checkboxes are not sent)
+        $data['is_featured'] = $request->boolean('is_featured');
+
         // Perform update
-        $this->sahabiService->update($id, $request->validated());
+        $this->sahabiService->update($id, $data);
 
         $sahabi = $this->sahabiService->find($id);
 

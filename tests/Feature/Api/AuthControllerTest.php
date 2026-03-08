@@ -13,6 +13,13 @@ class AuthControllerTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seedRolesAndPermissions();
+    }
+
     /**
      * Test user registration
      */
@@ -25,14 +32,17 @@ class AuthControllerTest extends TestCase
             'password_confirmation' => 'password123',
         ]);
 
-        $response->assertStatus(200)
+        $response->assertStatus(201)
             ->assertJsonStructure([
-                'status',
+                'success',
+                'message',
                 'data' => [
                     'user',
                     'token',
                 ],
-            ]);
+            ])
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.user.email', 'test@example.com');
 
         $this->assertDatabaseHas('users', [
             'email' => 'test@example.com',
@@ -56,12 +66,15 @@ class AuthControllerTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure([
-                'status',
+                'success',
+                'message',
                 'data' => [
                     'user',
                     'token',
                 ],
-            ]);
+            ])
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.user.email', 'test@example.com');
     }
 
     /**
@@ -77,8 +90,7 @@ class AuthControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-            ->assertJson([
-                'status' => 'success',
-            ]);
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('message', 'Logged out successfully');
     }
 }

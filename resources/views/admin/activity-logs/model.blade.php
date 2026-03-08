@@ -1,0 +1,147 @@
+@extends('layouts.admin')
+
+@section('page-header')
+<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <!-- Page Title -->
+    <div>
+        <div class="flex items-center gap-2 text-sm mb-2" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+            <a href="{{ route('admin.activity-logs.index') }}" class="hover:text-accent transition-colors">سجل النشاطات</a>
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            <span>سجل {{ $modelName }} #{{ $id }}</span>
+        </div>
+        <h1 class="text-3xl font-bold gradient-text flex items-center gap-3">
+            <div class="p-3 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] shadow-lg">
+                <i data-lucide="history" class="w-7 h-7 text-white"></i>
+            </div>
+            سجل تغييرات {{ $modelName }}
+        </h1>
+        <p class="mt-2 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+            جميع العمليات التي تمت على {{ $modelName }} رقم #{{ $id }}
+        </p>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex items-center gap-3">
+        <a href="{{ route('admin.activity-logs.index') }}"
+           class="px-4 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 border-2"
+           :class="darkMode ? 'border-gray-700 bg-gray-800 text-white hover:bg-gray-700' : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'">
+            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+            <span>جميع السجلات</span>
+        </a>
+    </div>
+</div>
+@endsection
+
+@section('content')
+
+    <!-- Model Info Card -->
+    <div class="rounded-2xl border p-6 mb-6"
+         :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+        <div class="flex items-center gap-4">
+            <div class="p-3 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838]">
+                <i data-lucide="database" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+                <h2 class="text-lg font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                    {{ $modelName }}
+                </h2>
+                <div class="flex items-center gap-3 mt-1">
+                    <span class="text-sm font-mono" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                        المعرف: #{{ $id }}
+                    </span>
+                    <span class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                        إجمالي التغييرات: {{ $logs->total() }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline View -->
+    <div class="space-y-4">
+        @forelse($logs as $log)
+        <div class="rounded-2xl border p-6 transition-all hover:scale-[1.01]"
+             :class="darkMode ? 'bg-gray-900/50 border-gray-800 hover:border-gray-700' : 'bg-white border-gray-200 hover:border-gray-300'">
+            <div class="flex items-start gap-4">
+                <!-- Action Icon -->
+                <div class="flex-shrink-0">
+                    @php
+                        $iconMap = [
+                            'created' => ['icon' => 'plus-circle', 'color' => 'text-green-500 bg-green-100 dark:bg-green-900/30'],
+                            'updated' => ['icon' => 'edit', 'color' => 'text-blue-500 bg-blue-100 dark:bg-blue-900/30'],
+                            'deleted' => ['icon' => 'trash-2', 'color' => 'text-red-500 bg-red-100 dark:bg-red-900/30'],
+                            'login' => ['icon' => 'log-in', 'color' => 'text-purple-500 bg-purple-100 dark:bg-purple-900/30'],
+                            'logout' => ['icon' => 'log-out', 'color' => 'text-gray-500 bg-gray-100 dark:bg-gray-700'],
+                        ];
+                        $iconData = $iconMap[$log->action] ?? ['icon' => 'activity', 'color' => 'text-gray-500 bg-gray-100 dark:bg-gray-700'];
+                    @endphp
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center {{ $iconData['color'] }}">
+                        <i data-lucide="{{ $iconData['icon'] }}" class="w-5 h-5"></i>
+                    </div>
+                </div>
+
+                <!-- Content -->
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-3">
+                            @php
+                                $actionLabels = [
+                                    'created' => 'إنشاء', 'updated' => 'تحديث', 'deleted' => 'حذف',
+                                    'login' => 'تسجيل دخول', 'logout' => 'تسجيل خروج',
+                                    'bulk_delete' => 'حذف جماعي', 'bulk_publish' => 'نشر جماعي',
+                                ];
+                            @endphp
+                            <span class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                {{ $actionLabels[$log->action] ?? $log->action }}
+                            </span>
+                            <span class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                بواسطة {{ $log->user?->name ?? 'غير معروف' }}
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
+                                {{ $log->created_at?->format('Y/m/d H:i') }}
+                            </span>
+                            <a href="{{ route('admin.activity-logs.show', $log->id) }}"
+                               class="p-1.5 rounded-lg transition-colors"
+                               :class="darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-600'">
+                                <i data-lucide="eye" class="w-4 h-4"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    @if($log->details)
+                    <div class="p-3 rounded-xl text-sm" :class="darkMode ? 'bg-gray-800/50 text-gray-400' : 'bg-gray-50 text-gray-600'">
+                        {{ is_array($log->details) ? json_encode($log->details, JSON_UNESCAPED_UNICODE) : $log->details }}
+                    </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+        @empty
+        <div class="rounded-2xl border p-12 text-center"
+             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+            <i data-lucide="history" class="w-16 h-16 mx-auto mb-4" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
+            <p class="text-lg font-medium" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                لا يوجد سجل تغييرات لهذا المحتوى
+            </p>
+        </div>
+        @endforelse
+    </div>
+
+    <!-- Pagination -->
+    @if($logs->hasPages())
+    <div class="mt-8">
+        {{ $logs->links() }}
+    </div>
+    @endif
+
+@endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        lucide.createIcons();
+    });
+</script>
+@endpush

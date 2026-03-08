@@ -106,7 +106,7 @@ class UserController extends Controller
     public function store(StoreUserRequest $request): JsonResponse
     {
         $data = $request->validated();
-        $data['password'] = Hash::make($data['password']);
+        // Note: password hashing is handled by the User model's 'hashed' cast
 
         $user = User::create($data);
 
@@ -156,9 +156,11 @@ class UserController extends Controller
         $oldValues = $user->toArray();
 
         $data = $request->validated();
+        // Note: password hashing is handled by the User model's 'hashed' cast
 
-        if (isset($data['password'])) {
-            $data['password'] = Hash::make($data['password']);
+        // Remove password from data if not provided (to avoid setting null)
+        if (empty($data['password'])) {
+            unset($data['password']);
         }
 
         $user->update($data);

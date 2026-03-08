@@ -1,377 +1,289 @@
 @extends('layouts.admin')
 
+@php
+    $defaultLocale = $article->locales->firstWhere('locale', 'ar')?->locale
+        ?? $article->locales->first()?->locale
+        ?? 'ar';
+    $primaryLocale = $article->locales->firstWhere('locale', $defaultLocale) ?? $article->locales->first();
+@endphp
+
 @section('page-header')
-    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <!-- Back Button & Title -->
-        <div class="flex items-center gap-4">
-            <a href="{{ route('admin.articles.index') }}"
-               class="p-2 rounded-xl hover:bg-accent/10 transition-colors group"
-               :class="darkMode ? 'text-gray-400 hover:text-accent' : 'text-gray-600 hover:text-accent'">
-                <i data-lucide="arrow-left" class="w-6 h-6"></i>
-            </a>
-
-            <div>
-                <h1 class="text-3xl font-bold gradient-text mb-1">
-                    {{ $article->translations->where('language', app()->getLocale())->first()->title ?? 'Article Details' }}
-                </h1>
-                <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Created {{ $article->created_at->diffForHumans() }}
-                </p>
-            </div>
+<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div>
+        <div class="flex items-center gap-2 text-sm mb-2" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+            <a href="{{ route('admin.articles.index') }}" class="hover:text-accent transition-colors">المقالات</a>
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            <span>{{ $primaryLocale?->title ?? 'Article' }}</span>
         </div>
-
-        <!-- Action Buttons -->
-        <div class="flex items-center gap-3 flex-wrap">
-            <!-- Status Badge -->
-            <span class="px-4 py-2 rounded-full text-sm font-semibold
-                         @if($article->status === 'published') bg-gradient-to-r from-brand to-secondary text-white
-                         @elseif($article->status === 'draft') bg-gray-500 text-white
-                         @elseif($article->status === 'scheduled') bg-yellow-500 text-white
-                         @else bg-red-500 text-white
-                         @endif">
-                <i data-lucide="{{ $article->status === 'published' ? 'check-circle' : ($article->status === 'scheduled' ? 'clock' : 'file-text') }}"
-                   class="w-4 h-4 inline-block -mt-1"></i>
-                {{ ucfirst($article->status) }}
-            </span>
-
-            <!-- Preview Button -->
-            <button @click="$dispatch('open-preview-modal', { articleId: {{ $article->id }} })"
-                    class="px-6 py-2.5 rounded-xl font-semibold transition-all hover:shadow-lg
-                           glass border"
-                    :class="darkMode ? 'glass-dark text-white hover:border-accent' : 'glass-light text-gray-900 hover:border-accent'">
-                <i data-lucide="eye" class="w-4 h-4 inline-block -mt-1 me-2"></i>
-                Preview
-            </button>
-
-            <!-- Edit Button -->
-            <a href="{{ route('admin.articles.edit', $article->id) }}"
-               class="px-6 py-2.5 rounded-xl font-semibold transition-all hover:shadow-lg
-                      bg-gradient-to-r from-brand to-secondary text-white hover:opacity-90">
-                <i data-lucide="edit" class="w-4 h-4 inline-block -mt-1 me-2"></i>
-                Edit
-            </a>
-
-            <!-- More Actions Dropdown -->
-            <div x-data="{ open: false }" class="relative">
-                <button @click="open = !open"
-                        class="p-2.5 rounded-xl glass border transition-all"
-                        :class="darkMode ? 'glass-dark hover:border-accent' : 'glass-light hover:border-accent'">
-                    <i data-lucide="more-vertical" class="w-5 h-5"></i>
-                </button>
-
-                <!-- Dropdown Menu -->
-                <div x-show="open"
-                     @click.away="open = false"
-                     x-cloak
-                     x-transition:enter="transition ease-out duration-200"
-                     x-transition:enter-start="opacity-0 scale-95"
-                     x-transition:enter-end="opacity-100 scale-100"
-                     x-transition:leave="transition ease-in duration-150"
-                     x-transition:leave-start="opacity-100 scale-100"
-                     x-transition:leave-end="opacity-0 scale-95"
-                     class="absolute end-0 mt-2 w-56 rounded-xl shadow-xl overflow-hidden z-50 glass border"
-                     :class="darkMode ? 'glass-dark' : 'glass-light'">
-
-                    <a href="{{ route('admin.articles.duplicate', $article->id) }}"
-                       class="flex items-center gap-3 px-4 py-3 hover:bg-accent/10 transition-colors"
-                       :class="darkMode ? 'text-gray-300 hover:text-accent' : 'text-gray-700 hover:text-accent'">
-                        <i data-lucide="copy" class="w-4 h-4"></i>
-                        <span>Duplicate</span>
-                    </a>
-
-                    <a href="{{ route('admin.articles.export', $article->id) }}"
-                       class="flex items-center gap-3 px-4 py-3 hover:bg-accent/10 transition-colors"
-                       :class="darkMode ? 'text-gray-300 hover:text-accent' : 'text-gray-700 hover:text-accent'">
-                        <i data-lucide="download" class="w-4 h-4"></i>
-                        <span>Export</span>
-                    </a>
-
-                    <div class="border-t" :class="darkMode ? 'border-gray-800' : 'border-gray-200'"></div>
-
-                    <form action="{{ route('admin.articles.destroy', $article->id) }}" method="POST">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit"
-                                onclick="return confirm('Are you sure you want to delete this article?')"
-                                class="flex items-center gap-3 px-4 py-3 hover:bg-red-500/10 text-red-500 w-full transition-colors">
-                            <i data-lucide="trash-2" class="w-4 h-4"></i>
-                            <span>Delete</span>
-                        </button>
-                    </form>
-                </div>
+        <h1 class="text-3xl font-bold gradient-text flex items-center gap-3">
+            <div class="p-3 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] shadow-lg">
+                <i data-lucide="file-text" class="w-7 h-7 text-white"></i>
             </div>
-        </div>
+            {{ $primaryLocale?->title ?? 'Article' }}
+        </h1>
     </div>
+
+    <div class="flex items-center gap-3 flex-wrap">
+        @if($primaryLocale)
+        <a href="{{ route('admin.articles.preview', ['article' => $article->id, 'locale' => $primaryLocale->locale]) }}"
+           class="px-4 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 border-2"
+           :class="darkMode ? 'border-gray-700 bg-gray-800 text-white hover:bg-gray-700' : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'">
+            <i data-lucide="eye" class="w-5 h-5"></i>
+            <span>معاينة</span>
+        </a>
+        @endif
+
+        <a href="{{ route('admin.articles.edit', $article) }}"
+           class="px-6 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 shadow-lg bg-gradient-to-r from-[#0056b3] to-[#218838] text-white">
+            <i data-lucide="edit-2" class="w-5 h-5"></i>
+            <span>{{ __('admin.edit') }}</span>
+        </a>
+
+        <a href="{{ route('admin.articles.index') }}"
+           class="px-4 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 border-2"
+           :class="darkMode ? 'border-gray-700 bg-gray-800 text-white hover:bg-gray-700' : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'">
+            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+            <span>رجوع</span>
+        </a>
+    </div>
+</div>
 @endsection
 
 @section('content')
-    <div class="max-w-7xl mx-auto">
-        <!-- Statistics Widget -->
-        <x-admin.article-stats :article="$article" />
-
-        <!-- Main Content Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
-            <!-- Left Column - Article Content -->
-            <div class="lg:col-span-2 space-y-6">
-                <!-- Featured Image Card -->
-                @if($article->featured_image)
-                    <div class="rounded-2xl overflow-hidden shadow-lg glass border"
-                         :class="darkMode ? 'glass-dark' : 'glass-light'">
-                        <div class="aspect-video relative group">
-                            <img src="{{ $article->featured_image }}"
-                                 alt="{{ $article->translations->first()->title }}"
-                                 class="w-full h-full object-cover">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        </div>
-                    </div>
-                @endif
-
-                <!-- Language Tabs for Content -->
-                <div class="rounded-2xl overflow-hidden shadow-lg glass border"
-                     :class="darkMode ? 'glass-dark' : 'glass-light'"
-                     x-data="{ activeTab: '{{ app()->getLocale() }}' }">
-
-                    <!-- Tab Headers -->
-                    <div class="flex gap-2 p-4 border-b overflow-x-auto custom-scrollbar"
-                         :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
-                        @foreach($article->translations as $translation)
-                            <button @click="activeTab = '{{ $translation->language }}'"
-                                    class="px-6 py-2 rounded-xl font-semibold whitespace-nowrap transition-all"
-                                    :class="activeTab === '{{ $translation->language }}' ?
-                                        'bg-gradient-to-r from-brand to-secondary text-white shadow-lg' :
-                                        (darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')">
-                                {{ strtoupper($translation->language) }}
-                            </button>
-                        @endforeach
-                    </div>
-
-                    <!-- Tab Content -->
-                    <div class="p-6">
-                        @foreach($article->translations as $translation)
-                            <div x-show="activeTab === '{{ $translation->language }}'"
-                                 x-cloak
-                                 x-transition:enter="transition ease-out duration-300"
-                                 x-transition:enter-start="opacity-0 transform translate-y-4"
-                                 x-transition:enter-end="opacity-100 transform translate-y-0">
-
-                                <!-- Title -->
-                                <h2 class="text-2xl font-bold mb-4"
-                                    :class="darkMode ? 'text-white' : 'text-gray-900'">
-                                    {{ $translation->title }}
-                                </h2>
-
-                                <!-- Excerpt -->
-                                @if($translation->excerpt)
-                                    <div class="mb-6 p-4 rounded-xl"
-                                         :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-100'">
-                                        <p class="text-lg leading-relaxed"
-                                           :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                                            {{ $translation->excerpt }}
-                                        </p>
-                                    </div>
-                                @endif
-
-                                <!-- Content -->
-                                <div class="prose prose-lg max-w-none"
-                                     :class="darkMode ? 'prose-invert' : 'prose-gray'">
-                                    {!! $translation->content !!}
-                                </div>
-
-                                <!-- SEO Meta -->
-                                @if($translation->meta_title || $translation->meta_description)
-                                    <div class="mt-6 pt-6 border-t"
-                                         :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
-                                        <h3 class="text-sm font-semibold mb-3 uppercase tracking-wide"
-                                            :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                                            SEO Metadata
-                                        </h3>
-                                        @if($translation->meta_title)
-                                            <p class="mb-2">
-                                                <span class="font-semibold"
-                                                      :class="darkMode ? 'text-gray-300' : 'text-gray-700'">Title:</span>
-                                                <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ $translation->meta_title }}</span>
-                                            </p>
-                                        @endif
-                                        @if($translation->meta_description)
-                                            <p>
-                                                <span class="font-semibold"
-                                                      :class="darkMode ? 'text-gray-300' : 'text-gray-700'">Description:</span>
-                                                <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ $translation->meta_description }}</span>
-                                            </p>
-                                        @endif
-                                    </div>
-                                @endif
-                            </div>
-                        @endforeach
-                    </div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6" x-data="{ activeLocale: '{{ $defaultLocale }}' }">
+    <div class="lg:col-span-2 space-y-6">
+        <div class="rounded-2xl border overflow-hidden"
+             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+            @if($article->thumb)
+            <div class="relative aspect-video">
+                <img src="{{ asset('storage/' . $article->thumb) }}"
+                     alt="{{ $primaryLocale?->title ?? 'Article thumbnail' }}"
+                     class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent"></div>
+                <div class="absolute bottom-4 start-4 flex flex-wrap items-center gap-2">
+                    @if($article->is_featured)
+                    <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500 text-white">
+                        <i data-lucide="star" class="w-3.5 h-3.5"></i>
+                        مميز
+                    </span>
+                    @endif
+                    @if($article->is_pinned)
+                    <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-sky-500 text-white">
+                        <i data-lucide="pin" class="w-3.5 h-3.5"></i>
+                        مثبت
+                    </span>
+                    @endif
+                    @if($article->read_time)
+                    <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/40 text-white backdrop-blur-sm">
+                        <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                        {{ $article->read_time }} دقيقة
+                    </span>
+                    @endif
                 </div>
             </div>
+            @endif
 
-            <!-- Right Column - Sidebar -->
-            <div class="space-y-6">
-                <!-- Publishing Info Card -->
-                <div class="rounded-2xl overflow-hidden shadow-lg glass border p-6"
-                     :class="darkMode ? 'glass-dark' : 'glass-light'">
-                    <h3 class="text-lg font-bold mb-4"
-                        :class="darkMode ? 'text-white' : 'text-gray-900'">
-                        Publishing Details
-                    </h3>
+            <div class="p-6">
+                <div class="flex flex-wrap gap-2 border-b pb-4 mb-6" :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
+                    @foreach($article->locales as $locale)
+                    <button type="button"
+                            @click="activeLocale = '{{ $locale->locale }}'"
+                            class="px-4 py-2 rounded-lg font-medium transition-all"
+                            :class="activeLocale === '{{ $locale->locale }}'
+                                ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white'
+                                : (darkMode ? 'bg-gray-800 text-gray-400 hover:text-white' : 'bg-gray-100 text-gray-600 hover:text-gray-900')">
+                        {{ strtoupper($locale->locale) }}
+                    </button>
+                    @endforeach
+                </div>
 
-                    <div class="space-y-4">
-                        <!-- Author -->
-                        <div class="flex items-center gap-3">
-                            <div class="p-2 rounded-lg bg-gradient-to-br from-brand to-secondary">
-                                <i data-lucide="user" class="w-4 h-4 text-white"></i>
-                            </div>
-                            <div>
-                                <p class="text-xs" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">Author</p>
-                                <p class="font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                                    {{ $article->author->name ?? 'Unknown' }}
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- Published Date -->
-                        @if($article->published_at)
-                            <div class="flex items-center gap-3">
-                                <div class="p-2 rounded-lg bg-gradient-to-br from-brand to-secondary">
-                                    <i data-lucide="calendar" class="w-4 h-4 text-white"></i>
-                                </div>
-                                <div>
-                                    <p class="text-xs" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">Published</p>
-                                    <p class="font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                                        {{ $article->published_at->format('M d, Y') }}
-                                    </p>
-                                </div>
-                            </div>
+                @foreach($article->locales as $locale)
+                <div x-show="activeLocale === '{{ $locale->locale }}'" x-cloak class="space-y-6" dir="{{ in_array($locale->locale, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">
+                    <div>
+                        <h2 class="text-3xl font-bold mb-3" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                            {{ $locale->title }}
+                        </h2>
+                        @if($locale->excerpt)
+                        <p class="text-lg leading-relaxed" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            {{ $locale->excerpt }}
+                        </p>
                         @endif
+                    </div>
 
-                        <!-- Last Updated -->
-                        <div class="flex items-center gap-3">
-                            <div class="p-2 rounded-lg bg-gradient-to-br from-brand to-secondary">
-                                <i data-lucide="clock" class="w-4 h-4 text-white"></i>
-                            </div>
-                            <div>
-                                <p class="text-xs" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">Last Updated</p>
-                                <p class="font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                                    {{ $article->updated_at->diffForHumans() }}
-                                </p>
-                            </div>
+                    @if($locale->description)
+                    <div class="p-4 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                        <h3 class="text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">الوصف</h3>
+                        <p class="leading-relaxed" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            {{ $locale->description }}
+                        </p>
+                    </div>
+                    @endif
+
+                    <div class="prose max-w-none" :class="darkMode ? 'prose-invert' : ''">
+                        {!! $locale->content['body'] ?? '' !!}
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                            <p class="text-xs font-semibold mb-1" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">Slug</p>
+                            <p class="font-mono text-sm" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $locale->slug }}</p>
+                        </div>
+                        <div class="p-4 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                            <p class="text-xs font-semibold mb-1" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">الحالة</p>
+                            <p class="text-sm font-semibold {{ $locale->is_ready ? 'text-green-500' : 'text-amber-500' }}">
+                                {{ $locale->is_ready ? 'جاهز' : 'مسودة' }}
+                            </p>
+                        </div>
+                        <div class="p-4 rounded-xl md:col-span-2" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                            <p class="text-xs font-semibold mb-1" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">SEO</p>
+                            <p class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                {{ $locale->seo_title ?? $locale->title }}
+                            </p>
+                            <p class="text-sm mt-2" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                {{ $locale->seo_description ?? \Illuminate\Support\Str::limit(strip_tags($locale->content['body'] ?? ''), 160) }}
+                            </p>
                         </div>
                     </div>
                 </div>
-
-                <!-- Category Card -->
-                @if($article->category)
-                    <div class="rounded-2xl overflow-hidden shadow-lg glass border p-6"
-                         :class="darkMode ? 'glass-dark' : 'glass-light'">
-                        <h3 class="text-lg font-bold mb-4"
-                            :class="darkMode ? 'text-white' : 'text-gray-900'">
-                            Category
-                        </h3>
-                        <a href="{{ route('admin.categories.show', $article->category->id) }}"
-                           class="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/10 transition-colors group">
-                            <div class="p-2 rounded-lg bg-gradient-to-br from-brand to-secondary">
-                                <i data-lucide="folder" class="w-4 h-4 text-white"></i>
-                            </div>
-                            <span class="font-semibold group-hover:text-accent transition-colors"
-                                  :class="darkMode ? 'text-white' : 'text-gray-900'">
-                                {{ $article->category->name }}
-                            </span>
-                        </a>
-                    </div>
-                @endif
-
-                <!-- Tags Card -->
-                @if($article->tags->count() > 0)
-                    <div class="rounded-2xl overflow-hidden shadow-lg glass border p-6"
-                         :class="darkMode ? 'glass-dark' : 'glass-light'">
-                        <h3 class="text-lg font-bold mb-4"
-                            :class="darkMode ? 'text-white' : 'text-gray-900'">
-                            Tags
-                        </h3>
-                        <div class="flex flex-wrap gap-2">
-                            @foreach($article->tags as $tag)
-                                <a href="{{ route('admin.tags.show', $tag->id) }}"
-                                   class="px-4 py-2 rounded-full text-sm font-semibold hover:shadow-lg transition-all
-                                          bg-gradient-to-r from-brand to-secondary text-white hover:opacity-90">
-                                    {{ $tag->name }}
-                                </a>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
-
-                <!-- Publish Scheduler -->
-                <x-admin.publish-scheduler :article="$article" />
+                @endforeach
             </div>
         </div>
     </div>
 
-    <!-- Preview Modal -->
-    <x-admin.article-preview-modal :article="$article" />
+    <div class="space-y-6">
+        <div class="rounded-2xl border p-6"
+             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+            <h3 class="text-lg font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                <i data-lucide="info" class="w-5 h-5 text-accent"></i>
+                معلومات المقال
+            </h3>
+
+            <div class="space-y-3">
+                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">الكاتب</span>
+                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $article->writer?->name ?? '-' }}</span>
+                </div>
+                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">التصنيف الرئيسي</span>
+                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                        {{ $article->category?->getNameInLanguage('ar') ?? '-' }}
+                    </span>
+                </div>
+                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">المشاهدات</span>
+                    <span class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ number_format($article->views) }}</span>
+                </div>
+                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">التاريخ الهجري</span>
+                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $article->hijri_date ?? '-' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="rounded-2xl border p-6"
+             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+            <h3 class="text-lg font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                <i data-lucide="folder-tree" class="w-5 h-5 text-accent"></i>
+                العلاقات
+            </h3>
+
+            <div class="space-y-4">
+                <div>
+                    <p class="text-xs font-semibold mb-2" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">التصنيفات</p>
+                    <div class="flex flex-wrap gap-2">
+                        @forelse($article->categories as $category)
+                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium"
+                              :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
+                            {{ $category->getNameInLanguage('ar') ?? $category->slug }}
+                        </span>
+                        @empty
+                        <span class="text-sm" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">لا توجد تصنيفات مرتبطة</span>
+                        @endforelse
+                    </div>
+                </div>
+
+                <div>
+                    <p class="text-xs font-semibold mb-2" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">الوسوم</p>
+                    <div class="flex flex-wrap gap-2">
+                        @forelse($article->tags as $tag)
+                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium"
+                              :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
+                            {{ $tag->getTranslation('name', 'ar') }}
+                        </span>
+                        @empty
+                        <span class="text-sm" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">لا توجد وسوم مرتبطة</span>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="rounded-2xl border p-6"
+             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+            <h3 class="text-lg font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                <i data-lucide="image-plus" class="w-5 h-5 text-accent"></i>
+                الوسائط المرفقة
+            </h3>
+
+            <div class="space-y-3">
+                @forelse($article->mediaItems as $media)
+                <div class="p-3 rounded-xl flex items-center gap-3" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <div class="w-14 h-14 rounded-lg overflow-hidden flex items-center justify-center bg-gradient-to-br from-[#0056b3] to-[#218838]">
+                        @if($media->thumbnail_url || str_starts_with((string) $media->mime_type, 'image/'))
+                        <img src="{{ $media->thumbnail_url ?: $media->url }}" alt="{{ $media->filename }}" class="w-full h-full object-cover">
+                        @else
+                        <i data-lucide="file" class="w-6 h-6 text-white"></i>
+                        @endif
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="font-medium truncate" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $media->filename }}</p>
+                        <p class="text-xs truncate" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ $media->mime_type }}</p>
+                    </div>
+                    <a href="{{ route('admin.media-library.show', $media) }}"
+                       class="p-2 rounded-lg transition-colors"
+                       :class="darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-gray-200 text-gray-600 hover:text-gray-900'">
+                        <i data-lucide="external-link" class="w-4 h-4"></i>
+                    </a>
+                </div>
+                @empty
+                <p class="text-sm" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">لا توجد وسائط مرتبطة بهذا المقال</p>
+                @endforelse
+            </div>
+        </div>
+
+        <div class="rounded-2xl border p-6"
+             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+            <h3 class="text-lg font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                <i data-lucide="calendar-range" class="w-5 h-5 text-accent"></i>
+                أحداث السيرة المرتبطة
+            </h3>
+
+            <div class="space-y-3">
+                @forelse($article->seerahEvents as $event)
+                <a href="{{ route('admin.seerah-events.show', $event->id) }}"
+                   class="block p-4 rounded-xl transition-colors"
+                   :class="darkMode ? 'bg-gray-800/50 hover:bg-gray-800 text-white' : 'bg-gray-50 hover:bg-gray-100 text-gray-900'">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <p class="font-semibold">{{ $event->getTranslation('title', 'ar') ?: $event->slug }}</p>
+                            <p class="text-xs mt-1" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ $event->slug }}</p>
+                        </div>
+                        <i data-lucide="arrow-up-left" class="w-4 h-4 text-accent"></i>
+                    </div>
+                </a>
+                @empty
+                <p class="text-sm" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">لا توجد أحداث سيرة مرتبطة بهذا المقال</p>
+                @endforelse
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
-@push('styles')
-<style>
-    /* Prose styles for article content */
-    .prose {
-        color: inherit;
-    }
-
-    .prose h1,
-    .prose h2,
-    .prose h3,
-    .prose h4,
-    .prose h5,
-    .prose h6 {
-        color: inherit;
-        font-weight: 700;
-    }
-
-    .prose strong {
-        font-weight: 600;
-    }
-
-    .prose a {
-        color: #64CCC5;
-        text-decoration: underline;
-    }
-
-    .prose a:hover {
-        color: #0056b3;
-    }
-
-    .prose img {
-        border-radius: 1rem;
-        margin: 2rem auto;
-    }
-
-    .prose blockquote {
-        border-left: 4px solid #64CCC5;
-        padding-left: 1rem;
-        font-style: italic;
-    }
-
-    .dark .prose blockquote {
-        border-left-color: #64CCC5;
-    }
-
-    .prose code {
-        background: rgba(100, 204, 197, 0.1);
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.375rem;
-        font-size: 0.875em;
-    }
-
-    .prose pre {
-        background: rgba(0, 0, 0, 0.05);
-        border-radius: 0.75rem;
-        padding: 1rem;
-    }
-
-    .dark .prose pre {
-        background: rgba(255, 255, 255, 0.05);
-    }
-</style>
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        lucide.createIcons();
+    });
+</script>
 @endpush

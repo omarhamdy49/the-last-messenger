@@ -5,7 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
@@ -21,6 +23,7 @@ class Media extends Model implements HasMedia
      * @var array<int, string>
      */
     protected $fillable = [
+        'public_key',
         'filename',
         'original_filename',
         'path',
@@ -60,6 +63,7 @@ class Media extends Model implements HasMedia
     protected $appends = [
         'url',
         'thumbnail_url',
+        'preview_url',
         'human_readable_size',
     ];
 
@@ -95,7 +99,7 @@ class Media extends Model implements HasMedia
     /**
      * Register media conversions
      */
-    public function registerMediaConversions(SpatieMedia $media = null): void
+    public function registerMediaConversions(?SpatieMedia $media = null): void
     {
         $this->addMediaConversion('thumb')
             ->width(300)
@@ -121,7 +125,11 @@ class Media extends Model implements HasMedia
      */
     public function getUrlAttribute(): string
     {
-        return Storage::disk($this->disk ?? 'public')->url($this->path);
+        if (app('router')->has('admin.media-library.file')) {
+            return route('admin.media-library.file', ['media' => $this->publicRouteKey()]);
+        }
+
+        return Storage::disk($this->disk ?? 'local')->url($this->path);
     }
 
     /**
@@ -129,13 +137,36 @@ class Media extends Model implements HasMedia
      */
     public function getThumbnailUrlAttribute(): ?string
     {
-        if ($this->isImage()) {
-            $thumbnailPath = $this->metadata['thumbnail_path'] ?? null;
-            if ($thumbnailPath) {
-                return Storage::disk($this->disk ?? 'public')->url($thumbnailPath);
+        if ($this->isImage() && app('router')->has('admin.media-library.variant')) {
+            if (Arr::has($this->metadata ?? [], 'variants.thumbnail')) {
+                return route('admin.media-library.variant', ['media' => $this->publicRouteKey(), 'variant' => 'thumbnail']);
+            }
+
+            if (Arr::has($this->metadata ?? [], 'variants.medium')) {
+                return route('admin.media-library.variant', ['media' => $this->publicRouteKey(), 'variant' => 'medium']);
             }
         }
-        return null;
+
+        return match ($this->type) {
+            'audio' => asset('images/audio-placeholder.png'),
+            'document' => asset('images/pdf-placeholder.png'),
+            default => asset('images/placeholder.png'),
+        };
+    }
+
+    public function getPreviewUrlAttribute(): ?string
+    {
+        if ($this->isImage() && app('router')->has('admin.media-library.variant')) {
+            if (Arr::has($this->metadata ?? [], 'variants.medium')) {
+                return route('admin.media-library.variant', ['media' => $this->publicRouteKey(), 'variant' => 'medium']);
+            }
+
+            if (Arr::has($this->metadata ?? [], 'variants.large')) {
+                return route('admin.media-library.variant', ['media' => $this->publicRouteKey(), 'variant' => 'large']);
+            }
+        }
+
+        return $this->url;
     }
 
     /**
@@ -228,7 +259,9 @@ class Media extends Model implements HasMedia
             $q->where('filename', 'like', "%{$searchTerm}%")
                 ->orWhere('original_filename', 'like', "%{$searchTerm}%")
                 ->orWhere('alt_text', 'like', "%{$searchTerm}%")
-                ->orWhere('caption', 'like', "%{$searchTerm}%");
+                ->orWhere('caption', 'like', "%{$searchTerm}%")
+                ->orWhere('metadata', 'like', "%{$searchTerm}%")
+                ->orWhere('tags', 'like', "%{$searchTerm}%");
         });
     }
 
@@ -299,6 +332,17 @@ class Media extends Model implements HasMedia
         return 1; // Can be enhanced to check multiple relationships
     }
 
+    public function publicRouteKey(): string
+    {
+        if (filled($this->public_key)) {
+            return $this->public_key;
+        }
+
+        $this->forceFill(['public_key' => (string) Str::ulid()])->saveQuietly();
+
+        return (string) $this->public_key;
+    }
+
     /**
      * Delete the media file from storage when the model is deleted
      */
@@ -306,16 +350,33 @@ class Media extends Model implements HasMedia
     {
         parent::boot();
 
+        static::creating(function (self $media): void {
+            if (blank($media->public_key)) {
+                $media->public_key = (string) Str::ulid();
+            }
+        });
+
         static::deleting(function ($media) {
-            // Delete physical file
-            if (Storage::disk($media->disk ?? 'public')->exists($media->path)) {
-                Storage::disk($media->disk ?? 'public')->delete($media->path);
+            $disk = $media->disk ?? 'local';
+
+            if (Storage::disk($disk)->exists($media->path)) {
+                Storage::disk($disk)->delete($media->path);
             }
 
-            // Delete thumbnail if exists
-            $thumbnailPath = $media->metadata['thumbnail_path'] ?? null;
-            if ($thumbnailPath && Storage::disk($media->disk ?? 'public')->exists($thumbnailPath)) {
-                Storage::disk($media->disk ?? 'public')->delete($thumbnailPath);
+            foreach (($media->metadata['variants'] ?? []) as $variant) {
+                $variantPath = $variant['path'] ?? null;
+
+                if ($variantPath && Storage::disk($disk)->exists($variantPath)) {
+                    Storage::disk($disk)->delete($variantPath);
+                }
+            }
+
+            foreach (($media->metadata['custom_variants'] ?? []) as $variant) {
+                $variantPath = $variant['path'] ?? null;
+
+                if ($variantPath && Storage::disk($disk)->exists($variantPath)) {
+                    Storage::disk($disk)->delete($variantPath);
+                }
             }
         });
     }

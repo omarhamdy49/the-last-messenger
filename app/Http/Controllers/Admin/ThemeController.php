@@ -55,7 +55,7 @@ class ThemeController extends AdminController
         // Apply sorting
         $query->orderBy($pagination['sort'], $pagination['order']);
 
-        $themes = $query->withCount('articles')->paginate($pagination['per_page']);
+        $themes = $query->paginate($pagination['per_page']);
 
         if ($this->expectsJson($request)) {
             return $this->paginatedResponse($themes, 'تم جلب المواضيع بنجاح');
@@ -94,7 +94,6 @@ class ThemeController extends AdminController
                 'description' => $validated['description'] ?? null,
                 'type' => 'hadith',
                 'color' => $validated['color'] ?? '#0056b3',
-                'icon' => $validated['icon'] ?? 'tag',
             ]);
 
             DB::commit();
@@ -111,7 +110,7 @@ class ThemeController extends AdminController
             }
 
             return redirect()
-                ->route('admin.themes.index')
+                ->route('admin.hadith.themes.index')
                 ->with('success', 'تم إنشاء الموضوع بنجاح!');
 
         } catch (\Exception $e) {
@@ -175,7 +174,6 @@ class ThemeController extends AdminController
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? $theme->description,
                 'color' => $validated['color'] ?? $theme->color,
-                'icon' => $validated['icon'] ?? $theme->icon,
             ]);
 
             DB::commit();
@@ -192,7 +190,7 @@ class ThemeController extends AdminController
             }
 
             return redirect()
-                ->route('admin.themes.index')
+                ->route('admin.hadith.themes.index')
                 ->with('success', 'تم تحديث الموضوع بنجاح!');
 
         } catch (\Exception $e) {
@@ -236,7 +234,7 @@ class ThemeController extends AdminController
             }
 
             return redirect()
-                ->route('admin.themes.index')
+                ->route('admin.hadith.themes.index')
                 ->with('success', 'تم حذف الموضوع بنجاح!');
 
         } catch (\Exception $e) {

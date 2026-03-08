@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * Save Size Preset Request
@@ -28,11 +29,22 @@ class SaveSizePresetRequest extends FormRequest
      */
     public function rules(): array
     {
+        $presetId = $this->route('preset')?->id ?? $this->route('preset');
+
         return [
-            'name' => 'required|string|max:50|regex:/^[a-z0-9_]+$/',
+            'name' => [
+                'required',
+                'string',
+                'max:50',
+                'regex:/^[a-z0-9_]+$/',
+                Rule::unique('media_size_presets', 'name')->ignore($presetId),
+            ],
             'width' => 'required|integer|min:1|max:10000',
             'height' => 'required|integer|min:1|max:10000',
             'method' => 'required|in:crop,fit,resize',
+            'quality' => 'nullable|integer|min:1|max:100',
+            'enabled' => 'nullable|boolean',
+            'sort_order' => 'nullable|integer|min:0|max:10000',
         ];
     }
 
@@ -44,16 +56,27 @@ class SaveSizePresetRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'Preset name is required',
-            'name.regex' => 'Preset name can only contain lowercase letters, numbers, and underscores',
-            'width.required' => 'Width is required',
-            'width.min' => 'Width must be at least 1 pixel',
-            'width.max' => 'Width cannot exceed 10000 pixels',
-            'height.required' => 'Height is required',
-            'height.min' => 'Height must be at least 1 pixel',
-            'height.max' => 'Height cannot exceed 10000 pixels',
-            'method.required' => 'Resize method is required',
-            'method.in' => 'Method must be one of: crop, fit, or resize',
+            'name.required' => __('media.validation.preset_name_required'),
+            'name.regex' => __('media.validation.preset_name_format'),
+            'width.required' => __('media.validation.preset_width_required'),
+            'width.min' => __('media.validation.preset_width_min'),
+            'width.max' => __('media.validation.preset_width_max'),
+            'height.required' => __('media.validation.preset_height_required'),
+            'height.min' => __('media.validation.preset_height_min'),
+            'height.max' => __('media.validation.preset_height_max'),
+            'method.required' => __('media.validation.preset_method_required'),
+            'method.in' => __('media.validation.preset_method_invalid'),
+            'quality.min' => __('media.validation.preset_quality_min'),
+            'quality.max' => __('media.validation.preset_quality_max'),
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'enabled' => $this->boolean('enabled', true),
+            'quality' => $this->integer('quality', 85),
+            'sort_order' => $this->integer('sort_order', 0),
+        ]);
     }
 }

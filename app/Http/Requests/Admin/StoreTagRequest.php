@@ -39,8 +39,17 @@ class StoreTagRequest extends FormRequest
             'name.tr' => 'nullable|string|max:100',
             'name.ur' => 'nullable|string|max:100',
 
+            // Multi-language description
+            'description' => 'nullable|array',
+            'description.ar' => 'nullable|string',
+            'description.en' => 'nullable|string',
+            'description.fr' => 'nullable|string',
+            'description.tr' => 'nullable|string',
+            'description.ur' => 'nullable|string',
+
             // Other fields
             'type' => 'required|in:article,hadith,program,event',
+            'color' => 'nullable|string|max:7',
             'slug' => 'nullable|string|max:150|unique:tags,slug',
         ];
     }

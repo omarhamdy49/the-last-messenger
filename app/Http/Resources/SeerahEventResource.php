@@ -22,9 +22,12 @@ class SeerahEventResource extends JsonResource
         return [
             'id' => $this->id,
             'slug' => $this->slug,
-            'title' => $this->title,
-            'description' => $this->description,
-            'content' => $this->when($request->route('slug'), $this->content),
+            'title' => $this->getTranslations('title'),
+            'description' => $this->getTranslations('description'),
+            'content' => $this->when(
+                $request->route('slug'),
+                fn (): array => $this->getTranslations('content')
+            ),
             'hijri_date' => $this->hijri_date,
             'hijri_year' => $this->hijri_year,
             'hijri_month' => $this->hijri_month,
@@ -44,7 +47,7 @@ class SeerahEventResource extends JsonResource
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
             'has_location' => $this->hasLocation(),
-            'featured_image' => $this->featured_image,
+            'featured_image' => $this->getFirstMediaUrl('featured_image') ?: $this->featured_image,
             'gallery' => $this->gallery,
             'views_count' => $this->views_count,
             'display_order' => $this->display_order,

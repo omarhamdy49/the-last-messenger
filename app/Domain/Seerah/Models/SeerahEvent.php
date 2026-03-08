@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Domain\Seerah\Models;
 
-use App\Domain\Blog\Models\Article;
 use App\Domain\Seerah\Enums\EventImportance;
 use App\Domain\Seerah\Enums\EventType;
+use App\Domain\Shared\Traits\HasInteractions;
+use App\Models\Article;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Domain\Shared\Traits\HasInteractions;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Translatable\HasTranslations;
@@ -46,7 +48,9 @@ use Spatie\Translatable\HasTranslations;
  */
 class SeerahEvent extends Model implements HasMedia
 {
-    use HasFactory, HasTranslations, InteractsWithMedia, HasInteractions;
+    use HasFactory, HasTranslations, InteractsWithMedia, HasInteractions {
+        getFirstMediaUrl as protected spatieGetFirstMediaUrl;
+    }
 
     /**
      * The table associated with the model.
@@ -330,6 +334,34 @@ class SeerahEvent extends Model implements HasMedia
     public function getFeaturedImageUrlAttribute(): ?string
     {
         return $this->getFirstMediaUrl('featured_image') ?: $this->featured_image;
+    }
+
+    /**
+     * Get the first media URL for a collection.
+     *
+     * The admin Seerah flow stores featured images in the dedicated
+     * `featured_image` column, so fall back to that value before querying
+     * attached Spatie media records.
+     */
+    public function getFirstMediaUrl(string $collectionName = 'default', string $conversionName = ''): string
+    {
+        if ($collectionName === 'featured_image' && ! empty($this->featured_image)) {
+            if (Str::startsWith($this->featured_image, ['http://', 'https://'])) {
+                return $this->featured_image;
+            }
+
+            return Storage::disk('public')->url($this->featured_image);
+        }
+
+        return $this->spatieGetFirstMediaUrl($collectionName, $conversionName);
+    }
+
+    /**
+     * The admin Seerah flow manages files outside Spatie's `media` table.
+     */
+    public function shouldDeletePreservingMedia(): bool
+    {
+        return true;
     }
 
     /**

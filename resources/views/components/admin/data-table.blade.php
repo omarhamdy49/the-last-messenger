@@ -55,7 +55,10 @@
 ])
 
 @php
-    $dataCollection = collect($data);
+    $dataCollection = $data instanceof \Illuminate\Contracts\Pagination\Paginator
+        || $data instanceof \Illuminate\Contracts\Pagination\LengthAwarePaginator
+        ? collect($data->items())
+        : collect($data);
     $totalRecords = $dataCollection->count();
 @endphp
 

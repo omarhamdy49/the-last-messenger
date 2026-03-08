@@ -90,7 +90,7 @@
                             <span class="px-3 py-1 rounded-full text-xs font-semibold"
                                   :class="darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'">
                                 <i data-lucide="clock" class="w-3 h-3 inline me-1"></i>
-                                Pending
+                                {{ __('media.upload_progress.pending') }}
                             </span>
                         </template>
 
@@ -108,7 +108,7 @@
                             <span class="px-3 py-1 rounded-full text-xs font-semibold"
                                   :class="darkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-600'">
                                 <i data-lucide="check-circle" class="w-3 h-3 inline me-1"></i>
-                                Uploaded
+                                {{ __('media.upload_progress.uploaded') }}
                             </span>
                         </template>
 
@@ -117,7 +117,7 @@
                             <span class="px-3 py-1 rounded-full text-xs font-semibold"
                                   :class="darkMode ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-600'">
                                 <i data-lucide="alert-circle" class="w-3 h-3 inline me-1"></i>
-                                Failed
+                                {{ __('media.upload_progress.failed') }}
                             </span>
                         </template>
                     </div>
@@ -161,7 +161,7 @@
                                 class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-105"
                                 :class="darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'">
                             <i data-lucide="trash-2" class="w-3 h-3 inline me-1"></i>
-                            Remove
+                            {{ __('media.upload_progress.remove') }}
                         </button>
                     </template>
 
@@ -171,7 +171,7 @@
                                 class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-105"
                                 :class="darkMode ? 'bg-red-900/30 text-red-400 hover:bg-red-900/40' : 'bg-red-100 text-red-600 hover:bg-red-200'">
                             <i data-lucide="x" class="w-3 h-3 inline me-1"></i>
-                            Cancel
+                            {{ __('media.upload_progress.cancel') }}
                         </button>
                     </template>
 
@@ -180,13 +180,13 @@
                         <button @click="retryUpload(file.id)"
                                 class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white transition-all hover:scale-105 hover:shadow-lg">
                             <i data-lucide="rotate-cw" class="w-3 h-3 inline me-1"></i>
-                            Retry
+                            {{ __('media.upload_progress.retry') }}
                         </button>
                         <button @click="removeFile(file.id)"
                                 class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-105"
                                 :class="darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'">
                             <i data-lucide="trash-2" class="w-3 h-3 inline me-1"></i>
-                            Remove
+                            {{ __('media.upload_progress.remove') }}
                         </button>
                     </template>
 
@@ -195,7 +195,7 @@
                         <span class="px-3 py-1.5 rounded-lg text-xs font-semibold"
                               :class="darkMode ? 'bg-green-900/20 text-green-400' : 'bg-green-100 text-green-600'">
                             <i data-lucide="check-circle-2" class="w-3 h-3 inline me-1"></i>
-                            Upload Complete
+                            {{ __('media.upload_progress.upload_complete') }}
                         </span>
                     </template>
                 </div>

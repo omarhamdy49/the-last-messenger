@@ -118,7 +118,7 @@
             <!-- Media & Programs -->
             <div x-data="{ open: false }">
                 <button @click="toggleSubmenu('media')"
-                        :class="openSubmenu === 'media' || activeMenu.includes('programs') || activeMenu.includes('episodes') ?
+                        :class="openSubmenu === 'media' || activeMenu.includes('programs') || activeMenu.includes('episodes') || activeMenu.includes('media-library') || activeMenu.includes('media-settings') ?
                             'bg-gradient-primary text-white shadow-lg' :
                             (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
                         class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
@@ -134,6 +134,15 @@
                 <div x-show="openSubmenu === 'media'"
                      x-collapse
                      class="mt-2 ms-6 space-y-1">
+                    <a href="{{ route('admin.media-library.index') }}"
+                       @click="activeMenu = 'media-library'"
+                       :class="isActive('media-library') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="images" class="w-4 h-4"></i>
+                        <span>{{ __('media.title') }}</span>
+                    </a>
                     <a href="{{ route('admin.programs.index') }}"
                        @click="activeMenu = 'programs'"
                        :class="isActive('programs') ?
@@ -155,8 +164,7 @@
                 </div>
             </div>
 
-            {{-- DISABLED: Hadith Management (routes disabled in admin.php) --}}
-            {{--
+            <!-- Hadith Management -->
             <div x-data="{ open: false }">
                 <button @click="toggleSubmenu('hadith')"
                         :class="openSubmenu === 'hadith' || activeMenu.includes('hadith') ?
@@ -165,45 +173,26 @@
                         class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
                     <div class="flex items-center gap-3">
                         <i data-lucide="book-open" class="w-5 h-5"></i>
-                        <span class="font-semibold">{{ __('admin.hadith') }}</span>
+                        <span class="font-semibold">الحديث الشريف</span>
                     </div>
                     <i data-lucide="chevron-down"
                        class="w-4 h-4 transition-transform"
                        :class="openSubmenu === 'hadith' ? 'rotate-180' : ''"></i>
                 </button>
 
-                <!-- Hadith Submenu -->
                 <div x-show="openSubmenu === 'hadith'"
                      x-collapse
                      class="mt-2 ms-6 space-y-1">
-                    <a href="{{ route('admin.hadith-books.index') }}"
-                       @click="activeMenu = 'hadith-books'"
-                       :class="isActive('hadith-books') ?
+                    <a href="{{ route('admin.hadith.collections.index') }}"
+                       @click="activeMenu = 'hadith-collections'"
+                       :class="isActive('hadith-collections') ?
                            'text-accent font-semibold' :
                            (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
                        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
-                        <i data-lucide="book" class="w-4 h-4"></i>
-                        <span>كتب الحديث</span>
+                        <i data-lucide="library" class="w-4 h-4"></i>
+                        <span>المجموعات</span>
                     </a>
-                    <a href="{{ route('admin.hadith-chapters.index') }}"
-                       @click="activeMenu = 'hadith-chapters'"
-                       :class="isActive('hadith-chapters') ?
-                           'text-accent font-semibold' :
-                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
-                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
-                        <i data-lucide="bookmark" class="w-4 h-4"></i>
-                        <span>الأبواب</span>
-                    </a>
-                    <a href="{{ route('admin.hadith.index') }}"
-                       @click="activeMenu = 'hadith'"
-                       :class="isActive('hadith') ?
-                           'text-accent font-semibold' :
-                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
-                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
-                        <i data-lucide="scroll-text" class="w-4 h-4"></i>
-                        <span>الأحاديث</span>
-                    </a>
-                    <a href="{{ route('admin.hadith-narrators.index') }}"
+                    <a href="{{ route('admin.hadith.narrators.index') }}"
                        @click="activeMenu = 'hadith-narrators'"
                        :class="isActive('hadith-narrators') ?
                            'text-accent font-semibold' :
@@ -212,9 +201,68 @@
                         <i data-lucide="users" class="w-4 h-4"></i>
                         <span>الرواة</span>
                     </a>
+                    <a href="{{ route('admin.hadith.scholars.index') }}"
+                       @click="activeMenu = 'hadith-scholars'"
+                       :class="isActive('hadith-scholars') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="graduation-cap" class="w-4 h-4"></i>
+                        <span>العلماء</span>
+                    </a>
+                    <a href="{{ route('admin.hadith.themes.index') }}"
+                       @click="activeMenu = 'hadith-themes'"
+                       :class="isActive('hadith-themes') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="tags" class="w-4 h-4"></i>
+                        <span>الموضوعات</span>
+                    </a>
+                    <a href="{{ route('admin.hadith.grading-levels.index') }}"
+                       @click="activeMenu = 'hadith-grading'"
+                       :class="isActive('hadith-grading') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="award" class="w-4 h-4"></i>
+                        <span>درجات التصنيف</span>
+                    </a>
                 </div>
             </div>
-            --}}
+
+            <!-- Seerah (Timeline & Events) -->
+            <a href="{{ route('admin.seerah-events.index') }}"
+               @click="activeMenu = 'seerah-events'"
+               :class="isActive('seerah-events') ?
+                   'bg-gradient-primary text-white shadow-lg' :
+                   (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
+                <i data-lucide="clock" class="w-5 h-5"></i>
+                <span class="font-semibold">أحداث السيرة</span>
+            </a>
+
+            <!-- Sahaba (Companions) -->
+            <a href="{{ route('admin.sahaba.index') }}"
+               @click="activeMenu = 'sahaba'"
+               :class="isActive('sahaba') ?
+                   'bg-gradient-primary text-white shadow-lg' :
+                   (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
+                <i data-lucide="heart-handshake" class="w-5 h-5"></i>
+                <span class="font-semibold">الصحابة</span>
+            </a>
+
+            <!-- Series -->
+            <a href="{{ route('admin.series.index') }}"
+               @click="activeMenu = 'series'"
+               :class="isActive('series') ?
+                   'bg-gradient-primary text-white shadow-lg' :
+                   (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
+                <i data-lucide="layers" class="w-5 h-5"></i>
+                <span class="font-semibold">السلاسل</span>
+            </a>
 
             <!-- Quran Management -->
             <div x-data="{ open: false }">
@@ -320,6 +368,28 @@
                class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
                 <i data-lucide="bar-chart" class="w-5 h-5"></i>
                 <span class="font-semibold">{{ __('admin.analytics') }}</span>
+            </a>
+
+            <!-- Activity Logs -->
+            <a href="{{ route('admin.activity-logs.index') }}"
+               @click="activeMenu = 'activity-logs'"
+               :class="isActive('activity-logs') ?
+                   'bg-gradient-primary text-white shadow-lg' :
+                   (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
+                <i data-lucide="activity" class="w-5 h-5"></i>
+                <span class="font-semibold">سجل النشاطات</span>
+            </a>
+
+            <!-- Scheduler -->
+            <a href="{{ route('admin.scheduler.index') }}"
+               @click="activeMenu = 'scheduler'"
+               :class="isActive('scheduler') ?
+                   'bg-gradient-primary text-white shadow-lg' :
+                   (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
+                <i data-lucide="calendar-clock" class="w-5 h-5"></i>
+                <span class="font-semibold">جدولة المحتوى</span>
             </a>
 
             <!-- Settings -->

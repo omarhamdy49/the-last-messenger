@@ -1,0 +1,169 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - link "خاتم المرسلین لوحة الإدارة" [ref=e5] [cursor=pointer]:
+      - /url: http://127.0.0.1:8010/su/portal/v1/admin/dashboard
+      - img [ref=e7]
+      - generic [ref=e9]:
+        - generic [ref=e10]: خاتم المرسلین
+        - generic [ref=e11]: لوحة الإدارة
+    - navigation [ref=e12]:
+      - generic [ref=e13]:
+        - link "لوحة التحكم" [ref=e14] [cursor=pointer]:
+          - /url: http://127.0.0.1:8010/su/portal/v1/admin/dashboard
+          - img [ref=e15]
+          - generic [ref=e20]: لوحة التحكم
+        - button "المحتوى" [ref=e22] [cursor=pointer]:
+          - generic [ref=e23]:
+            - img [ref=e24]
+            - generic [ref=e27]: المحتوى
+          - img [ref=e28]
+        - button "الوسائط" [ref=e31] [cursor=pointer]:
+          - generic [ref=e32]:
+            - img [ref=e33]
+            - generic [ref=e36]: الوسائط
+          - img [ref=e37]
+        - button "الحديث الشريف" [ref=e40] [cursor=pointer]:
+          - generic [ref=e41]:
+            - img [ref=e42]
+            - generic [ref=e44]: الحديث الشريف
+          - img [ref=e45]
+        - link "أحداث السيرة" [ref=e47] [cursor=pointer]:
+          - /url: http://127.0.0.1:8010/su/portal/v1/admin/seerah-events
+          - img [ref=e48]
+          - generic [ref=e51]: أحداث السيرة
+        - link "الصحابة" [ref=e52] [cursor=pointer]:
+          - /url: http://127.0.0.1:8010/su/portal/v1/admin/sahaba
+          - img [ref=e53]
+          - generic [ref=e55]: الصحابة
+        - link "السلاسل" [ref=e56] [cursor=pointer]:
+          - /url: http://127.0.0.1:8010/su/portal/v1/admin/series
+          - img [ref=e57]
+          - generic [ref=e61]: السلاسل
+        - button "القرآن الكريم" [ref=e63] [cursor=pointer]:
+          - generic [ref=e64]:
+            - img [ref=e65]
+            - generic [ref=e68]: القرآن الكريم
+          - img [ref=e69]
+        - link "شجرة العائلة" [ref=e71] [cursor=pointer]:
+          - /url: http://127.0.0.1:8010/su/portal/v1/admin/genealogy
+          - img [ref=e72]
+          - generic [ref=e76]: شجرة العائلة
+        - link "المستخدمون" [ref=e78] [cursor=pointer]:
+          - /url: http://127.0.0.1:8010/su/portal/v1/admin/users
+          - img [ref=e79]
+          - generic [ref=e84]: المستخدمون
+        - link "الصلاحيات" [ref=e85] [cursor=pointer]:
+          - /url: http://127.0.0.1:8010/su/portal/v1/admin/roles
+          - img [ref=e86]
+          - generic [ref=e88]: الصلاحيات
+        - link "التحليلات" [ref=e89] [cursor=pointer]:
+          - /url: http://127.0.0.1:8010/su/portal/v1/admin/analytics
+          - img [ref=e90]
+          - generic [ref=e91]: التحليلات
+        - link "سجل النشاطات" [ref=e92] [cursor=pointer]:
+          - /url: http://127.0.0.1:8010/su/portal/v1/admin/activity-logs
+          - img [ref=e93]
+          - generic [ref=e95]: سجل النشاطات
+        - link "جدولة المحتوى" [ref=e96] [cursor=pointer]:
+          - /url: http://127.0.0.1:8010/su/portal/v1/admin/scheduler
+          - img [ref=e97]
+          - generic [ref=e101]: جدولة المحتوى
+        - link "الإعدادات" [ref=e102] [cursor=pointer]:
+          - /url: http://127.0.0.1:8010/su/portal/v1/admin/settings
+          - img [ref=e103]
+          - generic [ref=e106]: الإعدادات
+    - generic [ref=e108]:
+      - generic [ref=e110]: AD
+      - generic [ref=e111]:
+        - paragraph [ref=e112]: Admin User
+        - paragraph [ref=e113]: su@dwit.com
+  - generic [ref=e114]:
+    - banner [ref=e115]:
+      - generic [ref=e116]:
+        - generic [ref=e117]:
+          - button [ref=e118] [cursor=pointer]:
+            - img [ref=e119]
+          - navigation [ref=e120]:
+            - link "لوحة التحكم" [ref=e121] [cursor=pointer]:
+              - /url: http://127.0.0.1:8010/su/portal/v1/admin/dashboard
+            - img [ref=e122]
+            - generic [ref=e124]: لوحة التحكم
+        - generic [ref=e125]:
+          - generic [ref=e127]:
+            - textbox "بحث..." [ref=e128]
+            - img [ref=e129]
+          - button "ar" [ref=e133] [cursor=pointer]:
+            - img [ref=e134]
+            - generic [ref=e138]: ar
+            - img [ref=e139]
+          - button [ref=e141] [cursor=pointer]:
+            - img [ref=e142]
+          - button [ref=e149] [cursor=pointer]:
+            - img [ref=e150]
+          - button "AD" [ref=e155] [cursor=pointer]:
+            - generic [ref=e157]: AD
+    - main [ref=e158]:
+      - generic [ref=e159]:
+        - generic [ref=e161]:
+          - generic [ref=e162]:
+            - heading "أحداث السيرة النبوية" [level=1] [ref=e163]:
+              - img [ref=e165]
+              - text: أحداث السيرة النبوية
+            - paragraph [ref=e167]: إدارة أحداث السيرة النبوية والتسلسل الزمني
+          - generic [ref=e168]:
+            - button "التصفيات" [ref=e169] [cursor=pointer]:
+              - img [ref=e170]
+              - generic [ref=e172]: التصفيات
+            - link "إضافة حدث" [ref=e173] [cursor=pointer]:
+              - /url: http://127.0.0.1:8010/su/portal/v1/admin/seerah-events/create
+              - img [ref=e174]
+              - generic [ref=e175]: إضافة حدث
+        - generic [ref=e176]:
+          - generic [ref=e177]:
+            - generic [ref=e179]:
+              - img [ref=e182]
+              - heading "0" [level=3] [ref=e185]
+              - paragraph [ref=e186]: إجمالي الأحداث
+            - generic [ref=e188]:
+              - img [ref=e191]
+              - heading "0" [level=3] [ref=e195]
+              - paragraph [ref=e196]: birth
+            - generic [ref=e198]:
+              - img [ref=e201]
+              - heading "0" [level=3] [ref=e205]
+              - paragraph [ref=e206]: death
+            - generic [ref=e208]:
+              - img [ref=e211]
+              - heading "0" [level=3] [ref=e215]
+              - paragraph [ref=e216]: battle
+          - table [ref=e219]:
+            - rowgroup [ref=e220]:
+              - row "# العنوان النوع الأهمية التاريخ الهجري الموقع الإجراءات" [ref=e221]:
+                - columnheader "#" [ref=e222]
+                - columnheader "العنوان" [ref=e223]
+                - columnheader "النوع" [ref=e224]
+                - columnheader "الأهمية" [ref=e225]
+                - columnheader "التاريخ الهجري" [ref=e226]
+                - columnheader "الموقع" [ref=e227]
+                - columnheader "الإجراءات" [ref=e228]
+            - rowgroup [ref=e229]:
+              - row "لا توجد أحداث حالياً إضافة حدث جديد" [ref=e230]:
+                - cell "لا توجد أحداث حالياً إضافة حدث جديد" [ref=e231]:
+                  - img [ref=e232]
+                  - paragraph [ref=e234]: لا توجد أحداث حالياً
+                  - link "إضافة حدث جديد" [ref=e235] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8010/su/portal/v1/admin/seerah-events/create
+                    - img [ref=e236]
+                    - text: إضافة حدث جديد
+    - contentinfo [ref=e237]:
+      - generic [ref=e238]:
+        - paragraph [ref=e239]: © 2026 خاتم المرسلین. جميع الحقوق محفوظة لامة محمد ﷺ.
+        - generic [ref=e240]:
+          - link "التوثيق" [ref=e241] [cursor=pointer]:
+            - /url: "#"
+          - generic [ref=e242]: "|"
+          - link "الدعم" [ref=e243] [cursor=pointer]:
+            - /url: "#"
+          - generic [ref=e244]: "|"
+          - link "توثيق API" [ref=e245] [cursor=pointer]:
+            - /url: "#"

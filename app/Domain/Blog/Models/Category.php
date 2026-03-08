@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Blog\Models;
 
 use App\Domain\Blog\Enums\CategoryType;
+use App\Models\Article;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

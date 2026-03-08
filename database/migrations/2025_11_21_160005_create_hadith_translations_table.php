@@ -15,7 +15,7 @@ return new class extends Migration
         Schema::create('hadith_translations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('hadith_id')->constrained('hadith_hadiths')->onDelete('cascade')->comment('Reference to hadith');
-            $table->string('language_code', 10)->comment('Language code (ar, en, tr, fr, ur)');
+            $table->string('language_code', 20)->comment('Language code (ar, ar_notashkeel, en, tr, fr, ur)');
             $table->longText('text')->comment('Hadith text');
             $table->text('notes')->nullable()->comment('Translation notes');
             $table->timestamp('created_at')->useCurrent();

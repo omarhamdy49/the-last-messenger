@@ -68,38 +68,25 @@ Route::prefix('categories')->group(function () {
 //     });
 // });
 
-// Hadith API Routes - Comprehensive hadith management
-Route::prefix('hadith')->group(function () {
-    // Public routes - Hadith
-    Route::get('/', [HadithController::class, 'index'])->name('hadith.index');
-    Route::get('/search', [HadithController::class, 'search'])->name('hadith.search');
-    Route::get('/sahih', [HadithController::class, 'sahih'])->name('hadith.sahih');
-    Route::get('/reliable', [HadithController::class, 'reliable'])->name('hadith.reliable');
-
-    // Collections routes
-    Route::get('/collections', [HadithController::class, 'collections'])->name('hadith.collections');
-    Route::get('/collections/{id}', [HadithController::class, 'collectionShow'])->name('hadith.collections.show');
-    Route::get('/collections/{id}/books', [HadithController::class, 'collectionBooks'])->name('hadith.collections.books');
-
-    // Books routes
-    Route::get('/books', [HadithController::class, 'books'])->name('hadith.books');
-    Route::get('/books/{slug}', [HadithController::class, 'bookShow'])->name('hadith.books.show');
-    Route::get('/books/{bookId}/hadith/{number}', [HadithController::class, 'byBookAndNumber'])->name('hadith.by-book-number');
-
-    // Chapters routes
-    Route::get('/chapters/{id}', [HadithController::class, 'chapterShow'])->name('hadith.chapters.show');
-
-    // Narrators routes
-    Route::get('/narrators', [HadithController::class, 'narrators'])->name('hadith.narrators');
-    Route::get('/narrators/{id}', [HadithController::class, 'narratorShow'])->name('hadith.narrators.show');
-    Route::get('/narrators/{id}/hadiths', [HadithController::class, 'narratorHadiths'])->name('hadith.narrators.hadiths');
-
-    // Theme/topic routes
-    Route::get('/by-theme/{theme}', [HadithController::class, 'byTheme'])->name('hadith.by-theme');
-
-    // Single hadith (must be last to avoid route conflicts)
-    Route::get('/{id}', [HadithController::class, 'show'])->name('hadith.show');
-});
+// DISABLED: Hadith API Routes - Needs Api\HadithController to be created
+// Route::prefix('hadith')->group(function () {
+//     Route::get('/', [HadithController::class, 'index'])->name('hadith.index');
+//     Route::get('/search', [HadithController::class, 'search'])->name('hadith.search');
+//     Route::get('/sahih', [HadithController::class, 'sahih'])->name('hadith.sahih');
+//     Route::get('/reliable', [HadithController::class, 'reliable'])->name('hadith.reliable');
+//     Route::get('/collections', [HadithController::class, 'collections'])->name('hadith.collections');
+//     Route::get('/collections/{id}', [HadithController::class, 'collectionShow'])->name('hadith.collections.show');
+//     Route::get('/collections/{id}/books', [HadithController::class, 'collectionBooks'])->name('hadith.collections.books');
+//     Route::get('/books', [HadithController::class, 'books'])->name('hadith.books');
+//     Route::get('/books/{slug}', [HadithController::class, 'bookShow'])->name('hadith.books.show');
+//     Route::get('/books/{bookId}/hadith/{number}', [HadithController::class, 'byBookAndNumber'])->name('hadith.by-book-number');
+//     Route::get('/chapters/{id}', [HadithController::class, 'chapterShow'])->name('hadith.chapters.show');
+//     Route::get('/narrators', [HadithController::class, 'narrators'])->name('hadith.narrators');
+//     Route::get('/narrators/{id}', [HadithController::class, 'narratorShow'])->name('hadith.narrators.show');
+//     Route::get('/narrators/{id}/hadiths', [HadithController::class, 'narratorHadiths'])->name('hadith.narrators.hadiths');
+//     Route::get('/by-theme/{theme}', [HadithController::class, 'byTheme'])->name('hadith.by-theme');
+//     Route::get('/{id}', [HadithController::class, 'show'])->name('hadith.show');
+// });
 
 // Media/Programs routes - Temporarily disabled until controller is recreated
 // Route::prefix('media')->group(function () {

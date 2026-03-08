@@ -1,0 +1,40 @@
+- generic [ref=e4]:
+  - generic [ref=e5]:
+    - img [ref=e8]
+    - heading "مرحباً بعودتك" [level=1] [ref=e10]
+    - paragraph [ref=e11]: سجل الدخول للوصول إلى لوحة التحكم
+  - generic [ref=e13]:
+    - generic [ref=e14]:
+      - generic [ref=e15]: البريد الإلكتروني
+      - generic [ref=e16]:
+        - generic:
+          - img
+        - textbox "البريد الإلكتروني" [active] [ref=e17]:
+          - /placeholder: example@domain.com
+    - generic [ref=e18]:
+      - generic [ref=e19]: كلمة المرور
+      - generic [ref=e20]:
+        - generic:
+          - img
+        - textbox "كلمة المرور" [ref=e21]:
+          - /placeholder: ••••••••
+        - button [ref=e22] [cursor=pointer]:
+          - img [ref=e23]
+    - generic [ref=e27] [cursor=pointer]:
+      - checkbox "تذكرني" [ref=e28]
+      - generic [ref=e29]: تذكرني
+    - button "تسجيل الدخول" [ref=e30] [cursor=pointer]:
+      - generic [ref=e31]:
+        - img [ref=e32]
+        - text: تسجيل الدخول
+  - generic [ref=e35]:
+    - paragraph [ref=e36]: © 2026 خاتم المرسلین. جميع الحقوق محفوظة
+    - generic [ref=e37]:
+      - link "سياسة الخصوصية" [ref=e38] [cursor=pointer]:
+        - /url: "#"
+      - text: •
+      - link "شروط الخدمة" [ref=e39] [cursor=pointer]:
+        - /url: "#"
+      - text: •
+      - link "الدعم" [ref=e40] [cursor=pointer]:
+        - /url: "#"

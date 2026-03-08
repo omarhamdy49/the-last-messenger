@@ -66,8 +66,6 @@ class StoreArticleRequest extends FormRequest
         $rules['tags.*'] = 'exists:tags,id';
 
         // Publishing
-        $rules['status'] = 'required|in:draft,published,scheduled,archived';
-        $rules['published_at'] = 'nullable|date|after:now';
         $rules['is_featured'] = 'nullable|boolean';
         $rules['is_pinned'] = 'nullable|boolean';
 

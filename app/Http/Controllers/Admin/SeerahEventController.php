@@ -9,9 +9,12 @@ use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreSeerahEventRequest;
 use App\Http\Requests\Admin\UpdateSeerahEventRequest;
+use App\Models\Article;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 /**
@@ -68,7 +71,12 @@ class SeerahEventController extends Controller
      */
     public function create(): View
     {
-        return view('admin.seerah-events.create');
+        $articles = Article::query()
+            ->with('locales')
+            ->orderByDesc('id')
+            ->get();
+
+        return view('admin.seerah-events.create', compact('articles'));
     }
 
     /**
@@ -78,7 +86,17 @@ class SeerahEventController extends Controller
      */
     public function store(StoreSeerahEventRequest $request): RedirectResponse
     {
-        $event = $this->seerahEventService->create($request->validated());
+        $data = $request->validated();
+
+        // Handle is_featured checkbox (unchecked checkboxes are not sent)
+        $data['is_featured'] = $request->boolean('is_featured');
+
+        if ($request->hasFile('featured_image')) {
+            $data['featured_image'] = $request->file('featured_image')
+                ->store('seerah-events/featured-images', 'public');
+        }
+
+        $event = $this->seerahEventService->create($data);
 
         // Log the creation
         $this->logger->logCreate($event, $request->user());
@@ -100,6 +118,8 @@ class SeerahEventController extends Controller
             abort(404, 'Seerah event not found');
         }
 
+        $event->loadMissing(['article.locales', 'article.mediaItems', 'participants']);
+
         return view('admin.seerah-events.show', compact('event'));
     }
 
@@ -116,7 +136,13 @@ class SeerahEventController extends Controller
             abort(404, 'Seerah event not found');
         }
 
-        return view('admin.seerah-events.edit', compact('event'));
+        $event->loadMissing('article.locales');
+        $articles = Article::query()
+            ->with('locales')
+            ->orderByDesc('id')
+            ->get();
+
+        return view('admin.seerah-events.edit', compact('event', 'articles'));
     }
 
     /**
@@ -135,8 +161,19 @@ class SeerahEventController extends Controller
 
         $oldValues = $oldEvent->toArray();
 
+        $data = $request->validated();
+
+        // Handle is_featured checkbox (unchecked checkboxes are not sent)
+        $data['is_featured'] = $request->boolean('is_featured');
+
+        if ($request->hasFile('featured_image')) {
+            $this->deleteFeaturedImage($oldEvent->featured_image);
+            $data['featured_image'] = $request->file('featured_image')
+                ->store('seerah-events/featured-images', 'public');
+        }
+
         // Perform update
-        $this->seerahEventService->update($id, $request->validated());
+        $this->seerahEventService->update($id, $data);
 
         $event = $this->seerahEventService->find($id);
 
@@ -154,12 +191,9 @@ class SeerahEventController extends Controller
      */
     public function destroy(int $id): RedirectResponse
     {
-        // Get model before deletion
-        $event = $this->seerahEventService->find($id);
+        $event = $this->seerahEventService->findOrFail($id);
 
-        if (! $event) {
-            abort(404, 'Seerah event not found');
-        }
+        $this->deleteFeaturedImage($event->featured_image);
 
         // Perform deletion
         $this->seerahEventService->delete($id);
@@ -187,6 +221,8 @@ class SeerahEventController extends Controller
         $deleted = 0;
         foreach ($ids as $id) {
             try {
+                $event = $this->seerahEventService->findOrFail((int) $id);
+                $this->deleteFeaturedImage($event->featured_image);
                 $this->seerahEventService->delete($id);
                 $deleted++;
             } catch (\Exception $e) {
@@ -233,5 +269,16 @@ class SeerahEventController extends Controller
                 'total' => $events->total(),
             ],
         ]);
+    }
+
+    private function deleteFeaturedImage(?string $path): void
+    {
+        if (! $path || Str::startsWith($path, ['http://', 'https://'])) {
+            return;
+        }
+
+        if (Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
+        }
     }
 }

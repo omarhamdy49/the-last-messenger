@@ -23,13 +23,18 @@ class JsonDataTransformer
      * Detect JSON structure type
      *
      * @param array $jsonData The complete JSON data
-     * @return string 'collection_based' or 'single_hadith'
+     * @return string 'collection_based', 'single_hadith', or 'nested_hadith'
      */
     public function detectStructureType(array $jsonData): string
     {
         // Single-hadith format: has 'hadith_text' and 'collections' array
         if (isset($jsonData['hadith_text']) && isset($jsonData['collections']) && is_array($jsonData['collections'])) {
             return 'single_hadith';
+        }
+
+        // Nested-hadith format: has 'hadith' object with 'collection' and 'matn'
+        if (isset($jsonData['hadith']) && is_array($jsonData['hadith']) && isset($jsonData['hadith']['matn'])) {
+            return 'nested_hadith';
         }
 
         // Collection-based format: has 'metadata', 'chapters', and 'hadiths' arrays
@@ -52,6 +57,10 @@ class JsonDataTransformer
 
         if ($type === 'single_hadith') {
             return $this->validateSingleHadithFormat($data);
+        }
+
+        if ($type === 'nested_hadith') {
+            return $this->validateNestedHadithFormat($data);
         }
 
         if ($type === 'collection_based') {
@@ -94,6 +103,30 @@ class JsonDataTransformer
                 Log::warning("Invalid collection at index {$index}: missing name");
                 return false;
             }
+        }
+
+        return true;
+    }
+
+    /**
+     * Validate nested-hadith format (hadith.collection + hadith.matn)
+     */
+    protected function validateNestedHadithFormat(array $data): bool
+    {
+        $hadith = $data['hadith'] ?? null;
+        if (!is_array($hadith)) {
+            return false;
+        }
+
+        if (empty($hadith['matn'])) {
+            Log::warning('Invalid nested-hadith format: missing matn');
+            return false;
+        }
+
+        $matn = $hadith['matn'];
+        if (empty($matn['arabic']['full_text'] ?? '') && empty($matn['english']['translation'] ?? '')) {
+            Log::warning('Invalid nested-hadith format: missing text in both languages');
+            return false;
         }
 
         return true;
@@ -156,6 +189,10 @@ class JsonDataTransformer
 
         if ($type === 'single_hadith') {
             return $this->transformSingleHadith($jsonData);
+        }
+
+        if ($type === 'nested_hadith') {
+            return $this->transformNestedHadith($jsonData);
         }
 
         if ($type === 'collection_based') {
@@ -328,6 +365,158 @@ class JsonDataTransformer
             'book' => $book,
             'chapters' => $chapters,
             'hadiths' => $hadiths,
+        ];
+    }
+
+    /**
+     * Transform nested-hadith format to single_hadith records
+     *
+     * Converts the nested format (hadith.collection, hadith.matn, etc.)
+     * into the same output structure as transformSingleHadith.
+     */
+    protected function transformNestedHadith(array $jsonData): array
+    {
+        $hadith = $jsonData['hadith'];
+        $metadata = $jsonData['metadata'] ?? [];
+        $metadataCollection = $metadata['collection'] ?? [];
+
+        $collection = $hadith['collection'] ?? [];
+        $book = $hadith['book'] ?? [];
+        $chapter = $hadith['chapter'] ?? [];
+        $matn = $hadith['matn'] ?? [];
+        $grading = $hadith['grading']['primary'] ?? [];
+        $hadithNumber = $hadith['hadith_number'] ?? [];
+        $themes = $hadith['themes'] ?? [];
+        $keywords = $hadith['keywords'] ?? [];
+
+        $collectionNameEn = $metadataCollection['name_en'] ?? $collection['name'] ?? '';
+        $collectionNameAr = $metadataCollection['name_ar'] ?? $collection['arabic_name'] ?? '';
+
+        $collectionInfo = [
+            'name_ar' => $this->sanitizeText($collectionNameAr),
+            'name_en' => $this->sanitizeText($collectionNameEn),
+            'slug_ar' => \Illuminate\Support\Str::slug($this->sanitizeText($collectionNameAr), '-', 'ar'),
+            'slug_en' => \Illuminate\Support\Str::slug($this->sanitizeText($collectionNameEn)),
+            'description_ar' => null,
+            'description_en' => null,
+            'abbreviation' => null,
+            'total_hadiths' => $metadataCollection['total_hadiths'] ?? $collection['total_hadiths'] ?? 0,
+        ];
+
+        $bookTitleAr = $this->sanitizeText($book['arabic_name'] ?? $collectionNameAr);
+        $bookTitleEn = $this->sanitizeText($book['name'] ?? $collectionNameEn);
+
+        $bookInfo = [
+            'title_ar' => $bookTitleAr,
+            'title_en' => $bookTitleEn,
+            'slug_ar' => \Illuminate\Support\Str::slug($bookTitleAr, '-', 'ar'),
+            'slug_en' => \Illuminate\Support\Str::slug($bookTitleEn),
+            'chapter_title_ar' => null,
+            'chapter_title_en' => null,
+        ];
+
+        $chapterInfo = null;
+        if (!empty($chapter['number'])) {
+            $chapterInfo = [
+                'chapter_number' => $chapter['number'],
+                'name' => json_encode([
+                    'ar' => $this->sanitizeText($chapter['arabic_title'] ?? ''),
+                    'en' => $this->sanitizeText($chapter['title'] ?? ''),
+                ], JSON_UNESCAPED_UNICODE),
+                'description' => null,
+                'display_order' => $chapter['number'],
+            ];
+        }
+
+        $hadithNum = $hadithNumber['in_book'] ?? $hadithNumber['overall'] ?? $metadata['id_in_book'] ?? 0;
+
+        $hadithInfo = [
+            'hadith_number' => $hadithNum,
+            'grading_status' => $grading['grade'] ?? null,
+            'grading_agreement' => null,
+            'significance_ar' => '',
+            'significance_en' => '',
+            'historical_context_ar' => '',
+            'historical_context_en' => '',
+            'verification_status' => null,
+            'uncertainty_notes' => null,
+        ];
+
+        // Translations from matn
+        $translations = [];
+        if (!empty($matn['arabic']['full_text'])) {
+            $translations[] = [
+                'language_code' => 'ar',
+                'text' => $this->sanitizeText($matn['arabic']['full_text']),
+                'notes' => null,
+            ];
+        }
+        if (!empty($matn['arabic']['simplified'])) {
+            $translations[] = [
+                'language_code' => 'ar_notashkeel',
+                'text' => $this->sanitizeText($matn['arabic']['simplified']),
+                'notes' => 'Arabic text without diacritical marks',
+            ];
+        }
+        if (!empty($matn['english']['translation'])) {
+            $translations[] = [
+                'language_code' => 'en',
+                'text' => $this->sanitizeText($matn['english']['translation']),
+                'notes' => null,
+            ];
+        }
+
+        // Themes
+        $themesList = [];
+        foreach ($themes as $theme) {
+            $themesList[] = [
+                'name_ar' => '',
+                'name_en' => $this->sanitizeText($theme['theme'] ?? ''),
+                'description' => null,
+            ];
+        }
+
+        // Keywords
+        $keywordsList = [];
+        foreach ($keywords['arabic'] ?? [] as $kw) {
+            $keywordsList[] = ['keyword' => $this->sanitizeText($kw), 'language_code' => 'ar'];
+        }
+        foreach ($keywords['english'] ?? [] as $kw) {
+            $keywordsList[] = ['keyword' => $this->sanitizeText($kw), 'language_code' => 'en'];
+        }
+
+        // Grading
+        $gradingList = [];
+        if (!empty($grading['scholar'])) {
+            $gradingList[] = [
+                'scholar_name' => $this->sanitizeText($grading['scholar']),
+                'grading_level' => $grading['grade'] ?? null,
+                'notes_ar' => '',
+                'notes_en' => $this->sanitizeText($grading['explanation'] ?? ''),
+            ];
+        }
+
+        $record = [
+            'collection' => $collectionInfo,
+            'book' => $bookInfo,
+            'chapter' => $chapterInfo,
+            'hadith' => $hadithInfo,
+            'translations' => $translations,
+            'narrators' => [],
+            'companion' => null,
+            'themes' => $themesList,
+            'keywords' => $keywordsList,
+            'grading' => $gradingList,
+            'scholarly_comments' => [],
+            'related_verses' => [],
+            'applications' => [],
+            'fiqh_rulings' => [],
+            'historical_context' => null,
+        ];
+
+        return [
+            'type' => 'single_hadith',
+            'records' => [$record],
         ];
     }
 
@@ -788,6 +977,34 @@ class JsonDataTransformer
         return $translations;
     }
 
+    /**
+     * Detect collection name from file path based on parent directory name
+     */
+    public function detectCollectionFromFilename(string $filePath): ?string
+    {
+        $directory = basename(dirname($filePath));
+
+        $knownCollections = [
+            'nawawi40' => 'nawawi40',
+            'bukhari' => 'bukhari',
+            'muslim' => 'muslim',
+            'abudawud' => 'abudawud',
+            'tirmidhi' => 'tirmidhi',
+            'nasai' => 'nasai',
+            'ibnmajah' => 'ibnmajah',
+        ];
+
+        $normalized = strtolower(str_replace(['-', '_', ' '], '', $directory));
+
+        foreach ($knownCollections as $key => $value) {
+            if (str_contains($normalized, $key)) {
+                return $value;
+            }
+        }
+
+        return $directory ?: null;
+    }
+
     // ============================================================================
     // UTILITY METHODS
     // ============================================================================
@@ -846,6 +1063,16 @@ class JsonDataTransformer
                 'applications_count' => count($jsonData['applications'] ?? []),
                 'has_companion' => !empty($jsonData['companion']),
                 'has_grading' => !empty($jsonData['grading']),
+            ];
+        }
+
+        if ($type === 'nested_hadith') {
+            return [
+                'type' => 'nested_hadith',
+                'collections_count' => 1,
+                'themes_count' => count($jsonData['hadith']['themes'] ?? []),
+                'keywords_count' => count($jsonData['hadith']['keywords']['arabic'] ?? []) + count($jsonData['hadith']['keywords']['english'] ?? []),
+                'has_grading' => !empty($jsonData['hadith']['grading']),
             ];
         }
 

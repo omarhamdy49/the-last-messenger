@@ -152,7 +152,7 @@ class GenealogyService extends BaseService
      */
     public function getPerson(int $id): Person
     {
-        $person = $this->repository->find($id, ['father', 'mother', 'sahabi', 'childrenAsFather', 'childrenAsMother']);
+        $person = $this->repository->find($id, ['*'], ['father', 'mother', 'sahabi', 'childrenAsFather', 'childrenAsMother']);
 
         if (! $person) {
             throw new ResourceNotFoundException('Person', $id);

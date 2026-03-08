@@ -29,6 +29,7 @@ class UpdateMediaRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'title' => ['nullable', 'string', 'max:255'],
             'alt_text' => ['nullable', 'string', 'max:500'],
             'caption' => ['nullable', 'string', 'max:1000'],
             'collection_name' => ['nullable', 'string', 'max:255'],
@@ -47,6 +48,7 @@ class UpdateMediaRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'title.max' => 'Title cannot exceed 255 characters.',
             'alt_text.string' => 'Alt text must be text.',
             'alt_text.max' => 'Alt text cannot exceed 500 characters.',
             'caption.string' => 'Caption must be text.',
@@ -68,6 +70,7 @@ class UpdateMediaRequest extends FormRequest
     public function attributes(): array
     {
         return [
+            'title' => 'title',
             'alt_text' => 'alternative text',
             'caption' => 'caption',
             'collection_name' => 'collection',

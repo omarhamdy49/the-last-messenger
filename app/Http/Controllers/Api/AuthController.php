@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Role;
 
 /**
  * Authentication API Controller
@@ -44,6 +45,7 @@ class AuthController extends Controller
         ]);
 
         // Assign default role
+        Role::findOrCreate('user', 'web');
         $user->assignRole('user');
 
         // Create API token

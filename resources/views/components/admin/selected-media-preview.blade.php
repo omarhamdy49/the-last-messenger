@@ -25,7 +25,7 @@
                 <div class="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden"
                      :class="$root.darkMode ? 'bg-gray-900' : 'bg-gray-100'">
                     <template x-if="media.type === 'image' || media.mime_type.startsWith('image/')">
-                        <img :src="media.url"
+                        <img :src="media.thumbnail_url || media.url"
                              :alt="media.alt_text || media.filename"
                              class="w-full h-full object-cover">
                     </template>
@@ -52,7 +52,13 @@
                                   ($root.darkMode ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-700')">
                             <i :data-lucide="(media.type === 'image' || media.mime_type.startsWith('image/')) ? 'image' : 'video'"
                                class="w-3 h-3"></i>
-                            <span x-text="(media.type === 'image' || media.mime_type.startsWith('image/')) ? 'Image' : 'Video'"></span>
+                            <span x-text="(media.type === 'image' || media.mime_type.startsWith('image/'))
+                                ? @js(__('media.preview.image'))
+                                : ((media.type === 'audio' || media.mime_type.startsWith('audio/'))
+                                    ? @js(__('media.preview.audio'))
+                                    : ((media.type === 'document' || media.mime_type.startsWith('application/'))
+                                        ? @js(__('media.preview.document'))
+                                        : @js(__('media.preview.video')))"></span>
                         </span>
 
                         <!-- File Size -->
@@ -97,7 +103,7 @@
                 <div class="mt-2" x-show="media.alt_text">
                     <p class="text-xs font-medium mb-1"
                        :class="$root.darkMode ? 'text-gray-400' : 'text-gray-600'">
-                        Alt Text:
+                        {{ __('media.preview.alt_text') }}:
                     </p>
                     <p class="text-xs"
                        :class="$root.darkMode ? 'text-gray-300' : 'text-gray-700'"
@@ -109,7 +115,7 @@
                 <div class="mt-2" x-show="media.caption">
                     <p class="text-xs font-medium mb-1"
                        :class="$root.darkMode ? 'text-gray-400' : 'text-gray-600'">
-                        Caption:
+                        {{ __('media.preview.caption') }}:
                     </p>
                     <p class="text-xs"
                        :class="$root.darkMode ? 'text-gray-300' : 'text-gray-700'"
@@ -119,13 +125,13 @@
 
                 <!-- Quick Actions -->
                 <div class="mt-3 flex gap-2">
-                    <button @click="window.open(media.url, '_blank')"
+                    <button @click="$dispatch('media-preview', { media })"
                             class="flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 hover:scale-105"
                             :class="$root.darkMode ?
                                 'bg-gray-700 hover:bg-gray-600 text-white' :
                                 'bg-gray-100 hover:bg-gray-200 text-gray-900'">
-                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                        <span>View</span>
+                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                        <span>{{ __('media.preview.view') }}</span>
                     </button>
 
                     <button @click="copyToClipboard(media.url)"
@@ -134,7 +140,7 @@
                                 'bg-gray-700 hover:bg-gray-600 text-white' :
                                 'bg-gray-100 hover:bg-gray-200 text-gray-900'">
                         <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                        <span>Copy URL</span>
+                        <span>{{ __('media.preview.copy_url') }}</span>
                     </button>
                 </div>
             </div>

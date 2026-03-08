@@ -33,7 +33,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     public function getByType(EventType|string $type, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model
-            ->with(['article', 'participants'])
+            ->with($this->defaultRelations())
             ->byType($type)
             ->chronological()
             ->paginate($perPage);
@@ -45,7 +45,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     public function getByHijriYear(int $year, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model
-            ->with(['article', 'participants'])
+            ->with($this->defaultRelations())
             ->byHijriYear($year)
             ->chronological()
             ->paginate($perPage);
@@ -57,7 +57,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     public function getByGregorianYear(int $year, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model
-            ->with(['article', 'participants'])
+            ->with($this->defaultRelations())
             ->byGregorianYear($year)
             ->chronological()
             ->paginate($perPage);
@@ -72,7 +72,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
             "seerah_featured_{$limit}",
             self::CACHE_TTL,
             fn () => $this->model
-                ->with(['article', 'participants'])
+                ->with($this->defaultRelations())
                 ->featured()
                 ->chronological()
                 ->limit($limit)
@@ -101,7 +101,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     public function search(string $query, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model
-            ->with(['article', 'participants'])
+            ->with($this->defaultRelations())
             ->where(function ($q) use ($query) {
                 $q->whereRaw("JSON_SEARCH(title, 'one', ?) IS NOT NULL", ["%{$query}%"])
                     ->orWhereRaw("JSON_SEARCH(description, 'one', ?) IS NOT NULL", ["%{$query}%"])
@@ -117,7 +117,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     public function getChronological(int $perPage = 15): LengthAwarePaginator
     {
         return $this->model
-            ->with(['article', 'participants'])
+            ->with($this->defaultRelations())
             ->chronological()
             ->paginate($perPage);
     }
@@ -127,8 +127,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
      */
     public function findBySlug(string $slug, array $columns = ['*'], array $relations = []): ?Model
     {
-        $defaultRelations = ['article', 'participants'];
-        $relations = empty($relations) ? $defaultRelations : $relations;
+        $relations = empty($relations) ? $this->defaultRelations() : $relations;
 
         return Cache::remember(
             "seerah_event_slug_{$slug}",
@@ -138,6 +137,23 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
                 ->where('slug', $slug)
                 ->first($columns)
         );
+    }
+
+    /**
+     * Relations required for event detail responses.
+     *
+     * @return array<int, string>
+     */
+    private function defaultRelations(): array
+    {
+        return [
+            'article.locales',
+            'article.category',
+            'article.categories',
+            'article.tags',
+            'article.mediaItems',
+            'participants',
+        ];
     }
 
     /**

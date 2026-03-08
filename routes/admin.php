@@ -8,15 +8,19 @@ use App\Http\Controllers\Admin\ArticleController;
 use App\Http\Controllers\Admin\AuditController;
 use App\Http\Controllers\Admin\BulkOperationController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\CollectionController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ExportController;
 use App\Http\Controllers\Admin\GenealogyController;
+use App\Http\Controllers\Admin\GradingLevelController;
 // use App\Http\Controllers\Admin\HadithBookController; // DISABLED: Hadith module removed
 // use App\Http\Controllers\Admin\HadithChapterController; // DISABLED: Hadith module removed
 // use App\Http\Controllers\Admin\HadithController; // DISABLED: Hadith module removed
 // use App\Http\Controllers\Admin\HadithNarratorController; // DISABLED: Hadith module removed
 use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\LanguageSettingsController;
+use App\Http\Controllers\Admin\MediaSettingsController;
+use App\Http\Controllers\Admin\NarratorController;
 // use App\Http\Controllers\Admin\MediaCategoryController;
 // use App\Http\Controllers\Admin\MediaProgramController;
 use App\Http\Controllers\Admin\MediaController;
@@ -34,11 +38,13 @@ use App\Http\Controllers\Admin\ReciterController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SahabiController;
 use App\Http\Controllers\Admin\SchedulerController;
+use App\Http\Controllers\Admin\ScholarController;
 use App\Http\Controllers\Admin\SeerahEventController;
 use App\Http\Controllers\Admin\SeriesController;
 use App\Http\Controllers\Admin\SurahController;
 use App\Http\Controllers\Admin\TafseerController;
 use App\Http\Controllers\Admin\TagController;
+use App\Http\Controllers\Admin\ThemeController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VerseController;
 use App\Http\Controllers\Admin\VersionController;
@@ -180,106 +186,31 @@ Route::prefix('su/portal/v1/admin')
             return view('admin.components-demo');
         })->name('admin.components.demo');
 
-        // DISABLED: Old Media Upload Routes (Legacy - for backward compatibility)
-        // Route::prefix('media')->name('media.')->group(function (): void {
-        //     Route::post('/upload', [MediaUploadController::class, 'upload'])->name('upload');
-        //     Route::delete('/{id}', [MediaUploadController::class, 'delete'])->name('delete');
-        //     Route::get('/list', [MediaUploadController::class, 'list'])->name('list');
-        //     Route::post('/reorder', [MediaUploadController::class, 'reorder'])->name('reorder');
-        // });
-
-        // DISABLED: Media Library Web Pages
-        // Route::get('/media', function () {
-        //     return view('admin.media.index');
-        // })->name('admin.media.index');
-
-        // Route::get('/media/settings', function () {
-        //     return view('admin.media.settings');
-        // })->name('admin.media.settings');
-
-        // DISABLED: Media Library Routes (Comprehensive)
-        // Route::prefix('media-library')->name('media-library.')->group(function (): void {
-        //     // Main media endpoints (non-wildcard routes first)
-        //     Route::get('/', [MediaLibraryController::class, 'index'])->name('index');
-        //     Route::post('/', [MediaLibraryController::class, 'store'])->name('store');
-
-        //     // Stats endpoint
-        //     Route::get('/stats', [MediaLibraryController::class, 'stats'])->name('stats');
-
-        //     // Crop endpoints (must be before {id} routes)
-        //     Route::post('/crop', [MediaCropController::class, 'crop'])->name('crop');
-
-        //     // Usage endpoints
-        //     Route::get('/unused', [MediaUsageController::class, 'unused'])->name('unused');
-        //     Route::delete('/unused/cleanup', [MediaUsageController::class, 'cleanupUnused'])->name('unused.cleanup');
-
-        //     // Folder endpoints
-        //     Route::prefix('folders')->name('folders.')->group(function (): void {
-        //         Route::get('/', [MediaFolderController::class, 'index'])->name('index');
-        //         Route::post('/', [MediaFolderController::class, 'store'])->name('store');
-        //         Route::put('/{id}', [MediaFolderController::class, 'update'])->name('update');
-        //         Route::delete('/{id}', [MediaFolderController::class, 'destroy'])->name('destroy');
-        //         Route::post('/{id}/move', [MediaFolderController::class, 'move'])->name('move');
-        //         Route::get('/{id}/contents', [MediaFolderController::class, 'contents'])->name('contents');
-        //     });
-
-        //     // Tag endpoints
-        //     Route::prefix('tags')->name('tags.')->group(function (): void {
-        //         Route::get('/', [MediaTagController::class, 'index'])->name('index');
-        //         Route::post('/', [MediaTagController::class, 'store'])->name('store');
-        //         Route::put('/{id}', [MediaTagController::class, 'update'])->name('update');
-        //         Route::delete('/{id}', [MediaTagController::class, 'destroy'])->name('destroy');
-        //         Route::post('/attach', [MediaTagController::class, 'attachToMedia'])->name('attach');
-        //         Route::post('/detach', [MediaTagController::class, 'detachFromMedia'])->name('detach');
-        //     });
-
-        //     // Settings endpoints
-        //     Route::prefix('settings')->name('settings.')->group(function (): void {
-        //         Route::get('/', [MediaSettingsController::class, 'index'])->name('index');
-        //         Route::get('/{key}', [MediaSettingsController::class, 'show'])->name('show');
-        //         Route::put('/', [MediaSettingsController::class, 'update'])->name('update');
-        //         Route::post('/size-presets', [MediaSettingsController::class, 'saveSizePreset'])->name('size-presets.save');
-        //         Route::delete('/size-presets/{name}', [MediaSettingsController::class, 'deleteSizePreset'])->name('size-presets.delete');
-        //         Route::post('/reset', [MediaSettingsController::class, 'resetToDefaults'])->name('reset');
-        //     });
-
-        //     // Search endpoints
-        //     Route::prefix('search')->name('search.')->group(function (): void {
-        //         Route::get('/', [MediaSearchController::class, 'search'])->name('index');
-        //         Route::get('/suggestions', [MediaSearchController::class, 'suggestions'])->name('suggestions');
-        //     });
-
-        //     // Bulk endpoints
-        //     Route::prefix('bulk')->name('bulk.')->group(function (): void {
-        //         Route::post('/upload', [MediaBulkController::class, 'bulkUpload'])->name('upload');
-        //         Route::delete('/delete', [MediaBulkController::class, 'bulkDelete'])->name('delete');
-        //         Route::post('/tag', [MediaBulkController::class, 'bulkTag'])->name('tag');
-        //         Route::post('/move', [MediaBulkController::class, 'bulkMove'])->name('move');
-        //         Route::post('/download', [MediaBulkController::class, 'bulkDownload'])->name('download');
-        //         Route::post('/optimize', [MediaBulkController::class, 'bulkOptimize'])->name('optimize');
-        //     });
-
-        //     // Wildcard routes MUST be at the end to avoid conflicts
-        //     Route::get('/{id}', [MediaLibraryController::class, 'show'])->name('show');
-        //     Route::put('/{id}', [MediaLibraryController::class, 'update'])->name('update');
-        //     Route::delete('/{id}', [MediaLibraryController::class, 'destroy'])->name('destroy');
-        //     Route::get('/{id}/download', [MediaLibraryController::class, 'download'])->name('download');
-        //     Route::get('/{id}/conversions', [MediaLibraryController::class, 'conversions'])->name('conversions');
-        //     Route::post('/{id}/crop', [MediaCropController::class, 'crop'])->name('crop.media');
-        //     Route::post('/{id}/crop-replace', [MediaCropController::class, 'cropAndReplace'])->name('crop-replace');
-        //     Route::post('/{id}/crop-preview', [MediaCropController::class, 'previewCrop'])->name('crop-preview');
-        //     Route::get('/{id}/usage', [MediaUsageController::class, 'show'])->name('usage.show');
-        // });
-
-        // Simple Media Management Routes (ImageMagick)
-        Route::prefix('simple-media')->name('admin.simple-media.')->group(function (): void {
+        Route::prefix('media-library')->name('admin.media-library.')->group(function (): void {
             Route::get('/', [MediaController::class, 'index'])->name('index');
             Route::post('/', [MediaController::class, 'store'])->name('store');
+            Route::post('/bulk-upload', [MediaController::class, 'bulkUpload'])->name('bulk-upload');
+            Route::post('/bulk-delete', [MediaController::class, 'bulkDestroy'])->name('bulk-delete');
+            Route::post('/bulk-update-tags', [MediaController::class, 'updateTags'])->name('bulk-update-tags');
+            Route::get('/statistics', [MediaController::class, 'statistics'])->name('statistics');
+            Route::get('/collections', [MediaController::class, 'collections'])->name('collections');
+            Route::get('/tags', [MediaController::class, 'tags'])->name('tags');
+            Route::get('/search', [MediaController::class, 'search'])->name('search');
+            Route::get('/settings', [MediaSettingsController::class, 'index'])->name('settings');
+            Route::post('/settings/presets', [MediaSettingsController::class, 'storePreset'])->name('settings.presets.store');
+            Route::put('/settings/presets/{preset}', [MediaSettingsController::class, 'updatePreset'])->name('settings.presets.update');
+            Route::delete('/settings/presets/{preset}', [MediaSettingsController::class, 'destroyPreset'])->name('settings.presets.destroy');
+            Route::post('/settings/presets/reorder', [MediaSettingsController::class, 'reorder'])->name('settings.presets.reorder');
+            Route::get('/files/{media:public_key}', [MediaController::class, 'file'])->name('file');
+            Route::get('/files/{media:public_key}/variants/{variant}', [MediaController::class, 'variant'])->name('variant');
             Route::get('/{media}', [MediaController::class, 'show'])->name('show');
             Route::put('/{media}', [MediaController::class, 'update'])->name('update');
             Route::delete('/{media}', [MediaController::class, 'destroy'])->name('destroy');
+            Route::get('/{media}/usage', [MediaController::class, 'usage'])->name('usage');
             Route::post('/{media}/optimize', [MediaController::class, 'optimize'])->name('optimize');
-            Route::post('/{media}/thumbnail', [MediaController::class, 'thumbnail'])->name('thumbnail');
+            Route::post('/{media}/crop', [MediaController::class, 'crop'])->name('crop');
+            Route::post('/{media}/regenerate-variants', [MediaController::class, 'regenerateVariants'])->name('regenerate-variants');
+            Route::get('/{media:public_key}/download', [MediaController::class, 'download'])->name('download');
         });
 
         // Article Routes
@@ -308,6 +239,7 @@ Route::prefix('su/portal/v1/admin')
             'update' => 'admin.articles.update',
             'destroy' => 'admin.articles.destroy',
         ]);
+        Route::get('articles/{article}/preview', [ArticleController::class, 'preview'])->name('admin.articles.preview');
 
         // Article toggle routes (must be after resource to avoid route conflicts)
         Route::post('articles/{article}/toggle-feature', [ArticleController::class, 'toggleFeature'])->name('admin.articles.toggle-feature');
@@ -484,6 +416,76 @@ Route::prefix('su/portal/v1/admin')
             'update' => 'admin.quran.update',
             'destroy' => 'admin.quran.destroy',
         ]);
+
+        // Hadith Collection Routes
+        Route::prefix('hadith/collections')->group(function (): void {
+            Route::get('/search', [CollectionController::class, 'search'])->name('admin.hadith.collections.search');
+            Route::post('/bulk-delete', [CollectionController::class, 'bulkDelete'])->name('admin.hadith.collections.bulk-delete');
+            Route::post('/reorder', [CollectionController::class, 'reorder'])->name('admin.hadith.collections.reorder');
+            Route::post('/{id}/toggle-active', [CollectionController::class, 'toggleActive'])->name('admin.hadith.collections.toggle-active');
+            Route::post('/{id}/toggle-featured', [CollectionController::class, 'toggleFeatured'])->name('admin.hadith.collections.toggle-featured');
+        });
+        Route::resource('hadith/collections', CollectionController::class)->names([
+            'index' => 'admin.hadith.collections.index',
+            'create' => 'admin.hadith.collections.create',
+            'store' => 'admin.hadith.collections.store',
+            'show' => 'admin.hadith.collections.show',
+            'edit' => 'admin.hadith.collections.edit',
+            'update' => 'admin.hadith.collections.update',
+            'destroy' => 'admin.hadith.collections.destroy',
+        ]);
+
+        // Hadith Narrator Routes
+        Route::prefix('hadith/narrators')->group(function (): void {
+            Route::get('/search', [NarratorController::class, 'search'])->name('admin.hadith.narrators.search');
+            Route::post('/bulk-delete', [NarratorController::class, 'bulkDelete'])->name('admin.hadith.narrators.bulk-delete');
+        });
+        Route::resource('hadith/narrators', NarratorController::class)->names([
+            'index' => 'admin.hadith.narrators.index',
+            'create' => 'admin.hadith.narrators.create',
+            'store' => 'admin.hadith.narrators.store',
+            'show' => 'admin.hadith.narrators.show',
+            'edit' => 'admin.hadith.narrators.edit',
+            'update' => 'admin.hadith.narrators.update',
+            'destroy' => 'admin.hadith.narrators.destroy',
+        ]);
+
+        // Hadith Scholar Routes
+        Route::prefix('hadith/scholars')->group(function (): void {
+            Route::get('/search', [ScholarController::class, 'search'])->name('admin.hadith.scholars.search');
+            Route::post('/bulk-delete', [ScholarController::class, 'bulkDelete'])->name('admin.hadith.scholars.bulk-delete');
+        });
+        Route::resource('hadith/scholars', ScholarController::class)->names([
+            'index' => 'admin.hadith.scholars.index',
+            'create' => 'admin.hadith.scholars.create',
+            'store' => 'admin.hadith.scholars.store',
+            'show' => 'admin.hadith.scholars.show',
+            'edit' => 'admin.hadith.scholars.edit',
+            'update' => 'admin.hadith.scholars.update',
+            'destroy' => 'admin.hadith.scholars.destroy',
+        ]);
+
+        // Hadith Theme Routes
+        Route::prefix('hadith/themes')->group(function (): void {
+            Route::get('/search', [ThemeController::class, 'search'])->name('admin.hadith.themes.search');
+            Route::post('/bulk-delete', [ThemeController::class, 'bulkDelete'])->name('admin.hadith.themes.bulk-delete');
+        });
+        Route::resource('hadith/themes', ThemeController::class)->names([
+            'index' => 'admin.hadith.themes.index',
+            'create' => 'admin.hadith.themes.create',
+            'store' => 'admin.hadith.themes.store',
+            'show' => 'admin.hadith.themes.show',
+            'edit' => 'admin.hadith.themes.edit',
+            'update' => 'admin.hadith.themes.update',
+            'destroy' => 'admin.hadith.themes.destroy',
+        ]);
+
+        // Hadith Grading Level Routes (enum-based, not CRUD)
+        Route::prefix('hadith/grading-levels')->group(function (): void {
+            Route::get('/', [GradingLevelController::class, 'index'])->name('admin.hadith.grading-levels.index');
+            Route::get('/{grade}', [GradingLevelController::class, 'show'])->name('admin.hadith.grading-levels.show');
+            Route::get('/{grade}/statistics', [GradingLevelController::class, 'statistics'])->name('admin.hadith.grading-levels.statistics');
+        });
 
         // Quran Surah Routes (no create/store - 114 surahs are fixed)
         Route::prefix('surahs')->group(function (): void {

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Repositories;
 
-use App\Domain\Quran\Models\Tafseer;
+use App\Domain\Quran\Models\VerseTafsir as Tafseer;
 use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;

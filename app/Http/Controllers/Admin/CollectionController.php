@@ -21,48 +21,22 @@ use Illuminate\View\View;
 class CollectionController extends AdminController
 {
     /**
-     * Supported locales
-     */
-    protected array $locales;
-
-    public function __construct()
-    {
-        parent::__construct();
-        $this->locales = array_keys(config('app.supported_locales', ['ar', 'en']));
-    }
-
-    /**
      * Display a listing of collections
      */
     public function index(Request $request): View|JsonResponse
     {
         $this->authorizeAdmin('view collections');
 
-        $filters = $this->getFilters($request, [
-            'active',
-            'featured',
-        ]);
-
         $search = $this->getSearchQuery($request);
         $pagination = $this->getPaginationParams($request);
 
         $query = HadithCollection::query();
 
-        // Apply filters
-        if (isset($filters['active'])) {
-            $query->where('active', filter_var($filters['active'], FILTER_VALIDATE_BOOLEAN));
-        }
-
-        if (isset($filters['featured'])) {
-            $query->where('featured', filter_var($filters['featured'], FILTER_VALIDATE_BOOLEAN));
-        }
-
         // Apply search
         if ($search) {
             $query->where(function ($q) use ($search) {
-                foreach ($this->locales as $locale) {
-                    $q->orWhereRaw("JSON_EXTRACT(name, '$.{$locale}') LIKE ?", ["%{$search}%"]);
-                }
+                $q->where('name_ar', 'LIKE', "%{$search}%")
+                  ->orWhere('name_en', 'LIKE', "%{$search}%");
             });
         }
 
@@ -85,9 +59,7 @@ class CollectionController extends AdminController
     {
         $this->authorizeAdmin('create collections');
 
-        $locales = $this->locales;
-
-        return view('admin.hadith.collections.create', compact('locales'));
+        return view('admin.hadith.collections.create');
     }
 
     /**
@@ -103,19 +75,20 @@ class CollectionController extends AdminController
 
             // Create collection
             $collection = HadithCollection::create([
-                'slug' => $validated['slug'] ?? Str::slug($validated['name']['ar']),
-                'name' => $validated['name'],
-                'description' => $validated['description'] ?? null,
-                'author_name' => $validated['author_name'] ?? null,
-                'active' => $request->boolean('active', true),
-                'featured' => $request->boolean('featured', false),
-                'display_order' => $validated['display_order'] ?? 0,
+                'name_ar' => $validated['name_ar'],
+                'name_en' => $validated['name_en'] ?? '',
+                'slug_ar' => $validated['slug_ar'] ?? Str::slug($validated['name_ar']),
+                'slug_en' => $validated['slug_en'] ?? '',
+                'description_ar' => $validated['description_ar'] ?? null,
+                'description_en' => $validated['description_en'] ?? null,
+                'abbreviation' => $validated['abbreviation'] ?? null,
+                'total_hadiths' => $validated['total_hadiths'] ?? 0,
             ]);
 
             DB::commit();
 
             $this->logActivity('created', 'HadithCollection', $collection->id, [
-                'name' => $validated['name']['ar'],
+                'name' => $validated['name_ar'],
             ]);
 
             if ($this->expectsJson(request())) {
@@ -126,7 +99,7 @@ class CollectionController extends AdminController
             }
 
             return redirect()
-                ->route('admin.collections.index')
+                ->route('admin.hadith.collections.index')
                 ->with('success', 'تم إنشاء المجموعة بنجاح!');
 
         } catch (\Exception $e) {
@@ -168,9 +141,7 @@ class CollectionController extends AdminController
     {
         $this->authorizeAdmin('edit collections');
 
-        $locales = $this->locales;
-
-        return view('admin.hadith.collections.edit', compact('collection', 'locales'));
+        return view('admin.hadith.collections.edit', compact('collection'));
     }
 
     /**
@@ -186,19 +157,20 @@ class CollectionController extends AdminController
 
             // Update collection
             $collection->update([
-                'slug' => $validated['slug'] ?? $collection->slug,
-                'name' => $validated['name'],
-                'description' => $validated['description'] ?? $collection->description,
-                'author_name' => $validated['author_name'] ?? $collection->author_name,
-                'active' => $request->boolean('active', $collection->active),
-                'featured' => $request->boolean('featured', $collection->featured),
-                'display_order' => $validated['display_order'] ?? $collection->display_order,
+                'name_ar' => $validated['name_ar'],
+                'name_en' => $validated['name_en'] ?? $collection->name_en,
+                'slug_ar' => $validated['slug_ar'] ?? $collection->slug_ar,
+                'slug_en' => $validated['slug_en'] ?? $collection->slug_en,
+                'description_ar' => $validated['description_ar'] ?? $collection->description_ar,
+                'description_en' => $validated['description_en'] ?? $collection->description_en,
+                'abbreviation' => $validated['abbreviation'] ?? $collection->abbreviation,
+                'total_hadiths' => $validated['total_hadiths'] ?? $collection->total_hadiths,
             ]);
 
             DB::commit();
 
             $this->logActivity('updated', 'HadithCollection', $collection->id, [
-                'name' => $validated['name']['ar'],
+                'name' => $validated['name_ar'],
             ]);
 
             if ($this->expectsJson(request())) {
@@ -209,7 +181,7 @@ class CollectionController extends AdminController
             }
 
             return redirect()
-                ->route('admin.collections.index')
+                ->route('admin.hadith.collections.index')
                 ->with('success', 'تم تحديث المجموعة بنجاح!');
 
         } catch (\Exception $e) {
@@ -245,7 +217,7 @@ class CollectionController extends AdminController
             $collection->delete();
 
             $this->logActivity('deleted', 'HadithCollection', $collection->id, [
-                'name' => $collection->name['ar'] ?? 'N/A',
+                'name' => $collection->name_ar ?? 'N/A',
             ]);
 
             if ($this->expectsJson(request())) {
@@ -253,7 +225,7 @@ class CollectionController extends AdminController
             }
 
             return redirect()
-                ->route('admin.collections.index')
+                ->route('admin.hadith.collections.index')
                 ->with('success', 'تم حذف المجموعة بنجاح!');
 
         } catch (\Exception $e) {
@@ -264,34 +236,6 @@ class CollectionController extends AdminController
             return back()
                 ->withErrors(['error' => 'فشل حذف المجموعة: ' . $e->getMessage()]);
         }
-    }
-
-    /**
-     * Toggle active status
-     */
-    public function toggleActive(HadithCollection $collection): JsonResponse
-    {
-        $this->authorizeAdmin('edit collections');
-
-        $collection->update(['active' => !$collection->active]);
-
-        return $this->successResponse([
-            'active' => $collection->active
-        ], 'تم تحديث حالة المجموعة بنجاح');
-    }
-
-    /**
-     * Toggle featured status
-     */
-    public function toggleFeatured(HadithCollection $collection): JsonResponse
-    {
-        $this->authorizeAdmin('edit collections');
-
-        $collection->update(['featured' => !$collection->featured]);
-
-        return $this->successResponse([
-            'featured' => $collection->featured
-        ], 'تم تحديث حالة التمييز بنجاح');
     }
 
     /**
@@ -320,33 +264,4 @@ class CollectionController extends AdminController
         return $this->successResponse($results, "تم حذف {$results['success']} مجموعة بنجاح");
     }
 
-    /**
-     * Reorder collections
-     */
-    public function reorder(Request $request): JsonResponse
-    {
-        $this->authorizeAdmin('edit collections');
-
-        $request->validate([
-            'order' => 'required|array',
-            'order.*.id' => 'required|exists:hadith_collections,id',
-            'order.*.position' => 'required|integer|min:0',
-        ]);
-
-        DB::beginTransaction();
-        try {
-            foreach ($request->input('order') as $item) {
-                HadithCollection::where('id', $item['id'])
-                    ->update(['display_order' => $item['position']]);
-            }
-
-            DB::commit();
-
-            return $this->successResponse(null, 'تم تحديث ترتيب المجموعات بنجاح');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return $this->serverErrorResponse('فشل تحديث الترتيب: ' . $e->getMessage());
-        }
-    }
 }

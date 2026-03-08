@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Sahaba\Models;
 
-use App\Domain\Blog\Models\Article;
 use App\Domain\Genealogy\Models\Person;
 use App\Domain\Sahaba\Enums\CompanionStatus;
+use App\Models\Article;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;

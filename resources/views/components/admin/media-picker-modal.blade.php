@@ -17,6 +17,7 @@
      x-cloak
      @open-media-library.window="handleOpen($event.detail)"
      @open-media-episodes-modal.window="handleOpen($event.detail)"
+     @media-preview.window="openPreview($event.detail.media)"
      @keydown.escape.window="close()"
      class="fixed inset-0 z-50 overflow-hidden"
      style="display: none;">
@@ -52,13 +53,13 @@
                  :class="$root.darkMode ? 'border-gray-800' : 'border-gray-200'">
                 <div>
                     <h2 class="text-2xl font-bold gradient-text">
-                        Choose Media
+                        {{ __('media.picker.title') }}
                     </h2>
                     <p class="text-sm mt-1"
                        :class="$root.darkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <span x-text="selectionMode === 'multiple' ? 'Select one or more items' : 'Select an item'"></span>
+                        <span x-text="selectionHelp()"></span>
                         <span x-show="filterType !== 'all'" class="ms-1">
-                            (<span x-text="filterType"></span>s only)
+                            (<span x-text="typeLabel(filterType)"></span>)
                         </span>
                     </p>
                 </div>
@@ -79,7 +80,7 @@
                             'text-accent border-b-2 border-accent' :
                             ($root.darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900')">
                     <i data-lucide="image" class="w-5 h-5"></i>
-                    <span>Browse Library</span>
+                    <span>{{ __('media.picker.browse') }}</span>
                 </button>
 
                 <button @click="activeTab = 'upload'"
@@ -88,7 +89,7 @@
                             'text-accent border-b-2 border-accent' :
                             ($root.darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900')">
                     <i data-lucide="upload" class="w-5 h-5"></i>
-                    <span>Upload New</span>
+                    <span>{{ __('media.picker.upload_new') }}</span>
                 </button>
             </div>
 
@@ -109,7 +110,7 @@
                                 <input type="text"
                                        x-model="searchQuery"
                                        @input.debounce.300ms="searchMedia()"
-                                       placeholder="Search by filename..."
+                                       placeholder="{{ __('media.picker.search_placeholder') }}"
                                        class="w-full ps-10 pe-4 py-2 rounded-lg border focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all"
                                        :class="$root.darkMode ?
                                            'bg-gray-800 border-gray-700 text-white placeholder-gray-500' :
@@ -124,9 +125,11 @@
                                         :class="$root.darkMode ?
                                             'bg-gray-800 border-gray-700 text-white' :
                                             'bg-white border-gray-300 text-gray-900'">
-                                    <option value="all">All Types</option>
-                                    <option value="image">Images</option>
-                                    <option value="video">Videos</option>
+                                    <option value="all">{{ __('media.picker.all_types') }}</option>
+                                    <option value="image">{{ __('media.filter_panel.images') }}</option>
+                                    <option value="video">{{ __('media.filter_panel.videos') }}</option>
+                                    <option value="audio">{{ __('media.filter_panel.audio') }}</option>
+                                    <option value="document">{{ __('media.filter_panel.documents') }}</option>
                                 </select>
                             </div>
                         </div>
@@ -159,7 +162,7 @@
                                     <div class="w-full h-full relative"
                                          :class="$root.darkMode ? 'bg-gray-900' : 'bg-gray-100'">
                                         <template x-if="media.type === 'image' || media.mime_type.startsWith('image/')">
-                                            <img :src="media.url"
+                                            <img :src="media.thumbnail_url || media.url"
                                                  :alt="media.alt_text || media.filename"
                                                  class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300">
                                         </template>
@@ -168,6 +171,22 @@
                                             <div class="w-full h-full flex items-center justify-center"
                                                  :class="$root.darkMode ? 'bg-gray-800' : 'bg-gray-200'">
                                                 <i data-lucide="video" class="w-12 h-12"
+                                                   :class="$root.darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="media.type === 'audio'">
+                                            <div class="w-full h-full flex items-center justify-center"
+                                                 :class="$root.darkMode ? 'bg-gray-800' : 'bg-gray-200'">
+                                                <i data-lucide="music-4" class="w-12 h-12"
+                                                   :class="$root.darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="media.type === 'document'">
+                                            <div class="w-full h-full flex items-center justify-center"
+                                                 :class="$root.darkMode ? 'bg-gray-800' : 'bg-gray-200'">
+                                                <i data-lucide="file-text" class="w-12 h-12"
                                                    :class="$root.darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
                                             </div>
                                         </template>
@@ -200,11 +219,11 @@
                             </div>
                             <h3 class="text-xl font-bold mb-2"
                                 :class="$root.darkMode ? 'text-gray-400' : 'text-gray-600'">
-                                No media found
+                                {{ __('media.picker.empty_title') }}
                             </h3>
                             <p class="text-sm"
                                :class="$root.darkMode ? 'text-gray-500' : 'text-gray-500'">
-                                Try adjusting your search or upload new files
+                                {{ __('media.picker.empty_description') }}
                             </p>
                         </div>
 
@@ -215,7 +234,7 @@
                                     :class="$root.darkMode ?
                                         'bg-gray-800 hover:bg-gray-700 text-white' :
                                         'bg-gray-100 hover:bg-gray-200 text-gray-900'">
-                                Load More
+                                {{ __('media.actions.load_more') }}
                             </button>
                         </div>
                     </div>
@@ -237,11 +256,11 @@
                         <div class="flex items-center justify-between mb-2">
                             <h3 class="font-bold"
                                 :class="$root.darkMode ? 'text-white' : 'text-gray-900'">
-                                Selected (<span x-text="selectedItems?.length || 0"></span>)
+                                {{ __('media.picker.selected') }} (<span x-text="selectedItems?.length || 0"></span>)
                             </h3>
                             <button @click="clearSelection()"
                                     class="text-sm font-medium text-red-500 hover:text-red-600 transition-colors">
-                                Clear All
+                                {{ __('media.actions.clear_all') }}
                             </button>
                         </div>
                     </div>
@@ -255,6 +274,62 @@
                 <div class="max-w-2xl mx-auto">
                     <!-- Upload Area -->
                     <div class="space-y-6">
+                        <div class="grid gap-4 lg:grid-cols-2">
+                            <div class="p-4 rounded-2xl border"
+                                 :class="$root.darkMode ? 'bg-gray-950 border-gray-800' : 'bg-gray-50 border-gray-200'">
+                                <label class="block text-sm font-semibold mb-2"
+                                       :class="$root.darkMode ? 'text-gray-300' : 'text-gray-700'">
+                                    {{ __('media.picker.collection') }}
+                                </label>
+                                <input type="text"
+                                       x-model="collectionName"
+                                       placeholder="{{ __('media.picker.collection_placeholder') }}"
+                                       class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent"
+                                       :class="$root.darkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-900'">
+
+                                <label class="block text-sm font-semibold mt-4 mb-2"
+                                       :class="$root.darkMode ? 'text-gray-300' : 'text-gray-700'">
+                                    {{ __('media.picker.shared_tags') }}
+                                </label>
+                                <input type="text"
+                                       x-model="tagsText"
+                                       placeholder="{{ __('media.picker.tags_placeholder') }}"
+                                       class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent"
+                                       :class="$root.darkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                            </div>
+
+                            <div class="p-4 rounded-2xl border space-y-4"
+                                 :class="$root.darkMode ? 'bg-gray-950 border-gray-800' : 'bg-gray-50 border-gray-200'">
+                                <label class="flex items-start gap-3 p-4 rounded-xl border cursor-pointer"
+                                       :class="$root.darkMode ? 'border-gray-800 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-900'">
+                                    <input type="checkbox"
+                                           x-model="generateSizes"
+                                           class="mt-1 rounded border-gray-300 text-[#0056b3] focus:ring-[#64CCC5]">
+                                    <div>
+                                        <div class="font-semibold text-sm">{{ __('media.picker.generate_sizes') }}</div>
+                                        <div class="text-xs mt-1"
+                                             :class="$root.darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                            {{ __('media.picker.generate_sizes_help') }}
+                                        </div>
+                                    </div>
+                                </label>
+
+                                <label class="flex items-start gap-3 p-4 rounded-xl border cursor-pointer"
+                                       :class="$root.darkMode ? 'border-gray-800 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-900'">
+                                    <input type="checkbox"
+                                           x-model="optimizeOriginals"
+                                           class="mt-1 rounded border-gray-300 text-[#0056b3] focus:ring-[#64CCC5]">
+                                    <div>
+                                        <div class="font-semibold text-sm">{{ __('media.picker.optimize_originals') }}</div>
+                                        <div class="text-xs mt-1"
+                                             :class="$root.darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                            {{ __('media.picker.optimize_originals_help') }}
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
                         <!-- Drag and Drop Zone -->
                         <div @drop.prevent="handleDrop($event)"
                              @dragover.prevent="dragOver = true"
@@ -268,7 +343,7 @@
                                    x-ref="fileInput"
                                    @change="handleFileSelect($event)"
                                    :accept="getAcceptedTypes()"
-                                   :multiple="selectionMode === 'multiple'"
+                                   multiple
                                    class="hidden">
 
                             <div class="flex flex-col items-center gap-4">
@@ -279,21 +354,23 @@
                                 <div>
                                     <h3 class="text-lg font-bold mb-2"
                                         :class="$root.darkMode ? 'text-white' : 'text-gray-900'">
-                                        Drop files here or click to browse
+                                        {{ __('media.picker.drop_or_browse') }}
                                     </h3>
                                     <p class="text-sm"
                                        :class="$root.darkMode ? 'text-gray-400' : 'text-gray-600'">
-                                        <span x-show="filterType === 'image'">Supports: JPG, PNG, GIF, WebP</span>
-                                        <span x-show="filterType === 'video'">Supports: MP4, WebM, MOV</span>
-                                        <span x-show="filterType === 'all'">Supports: Images and Videos</span>
-                                        <span class="block mt-1">Maximum file size: 100MB</span>
+                                        <span x-show="filterType === 'image'">{{ __('media.picker.supports_images') }}</span>
+                                        <span x-show="filterType === 'video'">{{ __('media.picker.supports_videos') }}</span>
+                                        <span x-show="filterType === 'audio'">{{ __('media.picker.supports_audio') }}</span>
+                                        <span x-show="filterType === 'document'">{{ __('media.picker.supports_documents') }}</span>
+                                        <span x-show="filterType === 'all'">{{ __('media.picker.supports_all') }}</span>
+                                        <span class="block mt-1">{{ __('media.picker.max_file_size') }}</span>
                                     </p>
                                 </div>
 
                                 <button @click="$refs.fileInput.click()"
                                         type="button"
                                         class="px-6 py-3 rounded-lg font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white hover:scale-105 transition-all shadow-lg shadow-accent/30">
-                                    Choose Files
+                                    {{ __('media.picker.choose_files') }}
                                 </button>
                             </div>
                         </div>
@@ -302,7 +379,7 @@
                         <div x-show="(uploadQueue?.length || 0) > 0" class="space-y-3">
                             <h4 class="font-bold"
                                 :class="$root.darkMode ? 'text-white' : 'text-gray-900'">
-                                Uploading (<span x-text="uploadQueue?.length || 0"></span>)
+                                {{ __('media.picker.uploading') }} (<span x-text="uploadQueue?.length || 0"></span>)
                             </h4>
 
                             <template x-for="(file, index) in (uploadQueue || [])" :key="index">
@@ -341,7 +418,7 @@
 
                                         <div class="flex-shrink-0 text-sm font-medium"
                                              :class="file.status === 'error' ? 'text-red-500' : 'text-accent'"
-                                             x-text="file.status === 'error' ? 'Failed' : file.progress + '%'">
+                                             x-text="file.status === 'error' ? @js(__('media.upload_progress.failed')) : file.progress + '%'">
                                         </div>
                                     </div>
                                 </div>
@@ -355,12 +432,12 @@
             <div class="flex items-center justify-between px-6 py-4 border-t"
                  :class="$root.darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-gray-50'">
                 <div class="text-sm"
-                     :class="$root.darkMode ? 'text-gray-400' : 'text-gray-600'">
+                    :class="$root.darkMode ? 'text-gray-400' : 'text-gray-600'">
                     <span x-show="(selectedItems?.length || 0) > 0">
-                        <span x-text="selectedItems?.length || 0"></span> item<span x-show="(selectedItems?.length || 0) > 1">s</span> selected
+                        <span x-text="selectedItems?.length || 0"></span> {{ __('media.picker.selected_items') }}
                     </span>
                     <span x-show="(selectedItems?.length || 0) === 0">
-                        No items selected
+                        {{ __('media.picker.no_items_selected') }}
                     </span>
                 </div>
 
@@ -370,15 +447,125 @@
                             :class="$root.darkMode ?
                                 'bg-gray-800 hover:bg-gray-700 text-white' :
                                 'bg-gray-100 hover:bg-gray-200 text-gray-900'">
-                        Cancel
+                        {{ __('admin.cancel') }}
                     </button>
 
                     <button @click="confirmSelection()"
                             :disabled="(selectedItems?.length || 0) === 0"
                             class="px-6 py-2 rounded-lg font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 disabled:hover:scale-100"
                             :class="(selectedItems?.length || 0) > 0 ? 'shadow-accent/30' : ''">
-                        Confirm Selection
+                        {{ __('media.actions.confirm_selection') }}
                     </button>
+                </div>
+            </div>
+
+            <div x-show="previewModal.open"
+                 x-cloak
+                 class="absolute inset-0 z-10 flex items-center justify-center p-4">
+                <div class="absolute inset-0 bg-black/80" @click="closePreview()"></div>
+                <div class="relative w-full max-w-5xl rounded-2xl overflow-hidden shadow-2xl"
+                     :class="$root.darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'">
+                    <div class="flex items-center justify-between px-6 py-4 border-b"
+                         :class="$root.darkMode ? 'border-gray-800' : 'border-gray-200'">
+                        <div>
+                            <h3 class="text-xl font-bold" :class="$root.darkMode ? 'text-white' : 'text-gray-900'">{{ __('media.preview.title') }}</h3>
+                            <p class="text-sm" :class="$root.darkMode ? 'text-gray-400' : 'text-gray-600'" x-text="previewModal.media?.title || previewModal.media?.original_filename || ''"></p>
+                        </div>
+                        <button @click="closePreview()"
+                                class="p-2 rounded-lg transition-all"
+                                :class="$root.darkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100'">
+                            <i data-lucide="x" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+
+                    <div class="grid lg:grid-cols-[minmax(0,1fr)_280px]">
+                        <div class="p-6"
+                             :class="$root.darkMode ? 'bg-gray-950' : 'bg-gray-50'">
+                            <div class="rounded-2xl overflow-hidden flex items-center justify-center min-h-[420px]"
+                                 :class="$root.darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'">
+                                <template x-if="previewModal.media && previewModal.media.is_image">
+                                    <img :src="activePreviewSource()?.url || previewModal.media.preview_url || previewModal.media.src"
+                                         :alt="previewModal.media.title"
+                                         class="max-h-[70vh] w-full object-contain">
+                                </template>
+
+                                <template x-if="previewModal.media && previewModal.media.is_video">
+                                    <video :src="activePreviewSource()?.url || previewModal.media.src"
+                                           controls
+                                           class="max-h-[70vh] w-full bg-black"></video>
+                                </template>
+
+                                <template x-if="previewModal.media && previewModal.media.is_audio">
+                                    <div class="w-full max-w-xl px-8 py-10 text-center space-y-6">
+                                        <div class="w-20 h-20 mx-auto rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] flex items-center justify-center">
+                                            <i data-lucide="music-4" class="w-10 h-10 text-white"></i>
+                                        </div>
+                                        <audio :src="activePreviewSource()?.url || previewModal.media.src"
+                                               controls
+                                               class="w-full"></audio>
+                                    </div>
+                                </template>
+
+                                <template x-if="previewModal.media && previewModal.media.is_document">
+                                    <iframe :src="activePreviewSource()?.url || previewModal.media.src"
+                                            class="h-[70vh] w-full"
+                                            :title="previewModal.media.title"></iframe>
+                                </template>
+                            </div>
+                        </div>
+
+                        <aside class="p-6 border-t lg:border-t-0 lg:border-s space-y-5"
+                               :class="$root.darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'">
+                            <div>
+                                <h4 class="text-sm font-semibold uppercase tracking-[0.18em]"
+                                    :class="$root.darkMode ? 'text-gray-500' : 'text-gray-500'">
+                                    {{ __('media.preview.available_sizes') }}
+                                </h4>
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    <template x-for="source in previewSources(previewModal.media)" :key="source.key">
+                                        <button @click="previewModal.activeSource = source.key"
+                                                type="button"
+                                                class="px-3 py-2 rounded-xl text-sm font-semibold transition-all"
+                                                :class="previewModal.activeSource === source.key
+                                                    ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg'
+                                                    : ($root.darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')">
+                                            <span x-text="source.label"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <div class="space-y-3 text-sm">
+                                <div>
+                                    <p class="font-semibold" :class="$root.darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('media.preview.file_name') }}</p>
+                                    <p class="mt-1 break-all" :class="$root.darkMode ? 'text-gray-400' : 'text-gray-600'" x-text="previewModal.media?.original_filename || ''"></p>
+                                </div>
+                                <div>
+                                    <p class="font-semibold" :class="$root.darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('media.preview.dimensions') }}</p>
+                                    <p class="mt-1" :class="$root.darkMode ? 'text-gray-400' : 'text-gray-600'" x-text="activePreviewDimensions()"></p>
+                                </div>
+                                <div>
+                                    <p class="font-semibold" :class="$root.darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('media.fields.size') }}</p>
+                                    <p class="mt-1" :class="$root.darkMode ? 'text-gray-400' : 'text-gray-600'" x-text="activePreviewSize()"></p>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap gap-3 pt-2">
+                                <a :href="activePreviewSource()?.url || previewModal.media?.src || '#'"
+                                   target="_blank"
+                                   rel="noopener"
+                                   class="px-4 py-3 rounded-xl font-semibold transition-all"
+                                   :class="$root.darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
+                                    {{ __('media.preview.open_original') }}
+                                </a>
+                                <button @click="closePreview()"
+                                        type="button"
+                                        class="px-4 py-3 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-semibold shadow-lg">
+                                    {{ __('admin.cancel') }}
+                                </button>
+                            </div>
+                        </aside>
+                    </div>
                 </div>
             </div>
         </div>
@@ -389,6 +576,16 @@
 <script>
 function mediaPickerModal() {
     return {
+        translations: {
+            singleHelp: @json(__('media.picker.single_help')),
+            multipleHelp: @json(__('media.picker.multiple_help')),
+            typeLabels: {
+                image: @json(__('media.types.image')),
+                video: @json(__('media.types.video')),
+                audio: @json(__('media.types.audio')),
+                document: @json(__('media.types.document')),
+            },
+        },
         isOpen: false,
         activeTab: 'browse',
         selectionMode: 'single', // 'single' or 'multiple'
@@ -401,6 +598,15 @@ function mediaPickerModal() {
         hasMorePages: false,
         onSelectCallback: null,
         currentTarget: null, // 'thumbnail', 'gallery', etc.
+        collectionName: '',
+        tagsText: '',
+        generateSizes: true,
+        optimizeOriginals: true,
+        previewModal: {
+            open: false,
+            media: null,
+            activeSource: 'original',
+        },
 
         // File Upload Properties
         dragOver: false,
@@ -455,6 +661,99 @@ function mediaPickerModal() {
             this.isOpen = false;
             this.selectedItems = [];
             this.mediaItems = [];
+            this.uploadQueue = [];
+            this.collectionName = '';
+            this.tagsText = '';
+            this.generateSizes = true;
+            this.optimizeOriginals = true;
+            this.closePreview();
+        },
+
+        openPreview(media) {
+            if (!media) {
+                return;
+            }
+
+            this.previewModal.media = media;
+            this.previewModal.activeSource = this.defaultPreviewSource(media);
+            this.previewModal.open = true;
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        closePreview() {
+            this.previewModal.open = false;
+            this.previewModal.media = null;
+            this.previewModal.activeSource = 'original';
+        },
+
+        previewSources(media) {
+            if (!media) {
+                return [];
+            }
+
+            const sources = [{
+                key: 'original',
+                label: @json(__('media.preview.original')),
+                url: media.src,
+                width: media.width,
+                height: media.height,
+                size: media.human_readable_size,
+            }];
+
+            Object.entries(media.variants || {}).forEach(([key, variant]) => {
+                sources.push({
+                    key,
+                    label: key,
+                    url: variant.url,
+                    width: variant.width || null,
+                    height: variant.height || null,
+                    size: variant.human_readable_size || variant.size || null,
+                });
+            });
+
+            return sources;
+        },
+
+        defaultPreviewSource(media) {
+            if (!media) {
+                return 'original';
+            }
+
+            if (media.is_image && media.variants && media.variants.medium) {
+                return 'medium';
+            }
+
+            return 'original';
+        },
+
+        activePreviewSource() {
+            return this.previewSources(this.previewModal.media)
+                .find((source) => source.key === this.previewModal.activeSource) || null;
+        },
+
+        activePreviewDimensions() {
+            const source = this.activePreviewSource();
+            if (!source || !source.width || !source.height) {
+                return '-';
+            }
+
+            return `${source.width} × ${source.height}`;
+        },
+
+        activePreviewSize() {
+            const source = this.activePreviewSource();
+
+            return source?.size || this.previewModal.media?.human_readable_size || '-';
+        },
+
+        selectionHelp() {
+            return this.selectionMode === 'multiple'
+                ? this.translations.multipleHelp
+                : this.translations.singleHelp;
+        },
+
+        typeLabel(type) {
+            return this.translations.typeLabels[type] || type;
         },
 
         async loadMedia(page = 1) {
@@ -475,22 +774,29 @@ function mediaPickerModal() {
                     params.append('search', this.searchQuery);
                 }
 
-                const response = await fetch(`/admin/media?${params}`, {
+                const response = await fetch(`${@json(route('admin.media-library.index'))}?${params}`, {
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         'Accept': 'application/json'
                     }
                 });
 
-                const data = await response.json();
-
-                if (page === 1) {
-                    this.mediaItems = data.data;
-                } else {
-                    this.mediaItems = [...this.mediaItems, ...data.data];
+                const payload = await response.json();
+                if (!response.ok || payload.success === false) {
+                    throw new Error(payload.message || @json(__('media.library_page.messages.request_failed')));
                 }
 
-                this.hasMorePages = data.current_page < data.last_page;
+                const items = payload.data || [];
+                const meta = payload.meta || {};
+
+                if (page === 1) {
+                    this.mediaItems = items;
+                } else {
+                    this.mediaItems = [...this.mediaItems, ...items];
+                }
+
+                this.currentPage = meta.current_page || page;
+                this.hasMorePages = (meta.current_page || page) < (meta.last_page || page);
             } catch (error) {
                 console.error('Failed to load media:', error);
             } finally {
@@ -586,9 +892,13 @@ function mediaPickerModal() {
             if (this.filterType === 'image') {
                 return 'image/jpeg,image/png,image/gif,image/webp';
             } else if (this.filterType === 'video') {
-                return 'video/mp4,video/webm,video/quicktime';
+                return 'video/mp4,video/webm,video/avi,video/quicktime';
+            } else if (this.filterType === 'audio') {
+                return 'audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/ogg,audio/mp4';
+            } else if (this.filterType === 'document') {
+                return 'application/pdf';
             }
-            return 'image/*,video/*';
+            return 'image/*,video/*,audio/*,application/pdf';
         },
 
         async uploadFiles(files) {
@@ -618,7 +928,10 @@ function mediaPickerModal() {
         async uploadFile(file, queueItem) {
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('collection_name', 'general');
+            formData.append('collection_name', this.collectionName || 'general');
+            formData.append('tags', this.tagsText);
+            formData.append('generate_sizes', this.generateSizes ? '1' : '0');
+            formData.append('optimize', this.optimizeOriginals ? '1' : '0');
 
             try {
                 const xhr = new XMLHttpRequest();
@@ -664,7 +977,7 @@ function mediaPickerModal() {
                     queueItem.status = 'error';
                 });
 
-                xhr.open('POST', '/admin/media');
+                xhr.open('POST', @json(route('admin.media-library.store')));
                 xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
                 xhr.setRequestHeader('X-CSRF-TOKEN', document.querySelector('meta[name="csrf-token"]').content);
                 xhr.send(formData);

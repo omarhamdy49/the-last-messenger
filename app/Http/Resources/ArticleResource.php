@@ -6,6 +6,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Route;
 
 class ArticleResource extends JsonResource
 {
@@ -83,26 +84,23 @@ class ArticleResource extends JsonResource
                                 'toc' => $locale->content['toc'] ?? [],
                                 'summary' => $locale->content['summary'] ?? null,
                             ],
+                            'seo' => [
+                                'title' => $locale->seo_title,
+                                'description' => $locale->seo_description,
+                            ],
                             'seo_title' => $locale->seo_title,
                             'seo_description' => $locale->seo_description,
                             'is_ready' => $locale->is_ready,
-                            'url' => route('articles.show', ['locale' => $locale->locale, 'slug' => $locale->slug]),
+                            'url' => Route::has('articles.show')
+                                ? route('articles.show', ['locale' => $locale->locale, 'slug' => $locale->slug])
+                                : null,
                         ]
                     ];
                 });
             }),
 
-            // Media/Gallery
-            'media' => $this->when($this->relationLoaded('media'), function () {
-                return $this->media->map(function ($media) {
-                    return [
-                        'id' => $media->id,
-                        'file_name' => $media->file_name,
-                        'mime_type' => $media->mime_type,
-                        'size' => $media->size,
-                        'url' => $media->getUrl(),
-                    ];
-                });
+            'media_items' => $this->when($this->relationLoaded('mediaItems'), function () {
+                return MediaResource::collection($this->mediaItems);
             }),
 
             // Gallery (legacy support)
@@ -113,6 +111,17 @@ class ArticleResource extends JsonResource
                         'image' => $item->image ? asset('storage/' . $item->image) : null,
                         'caption' => $item->caption,
                         'order' => $item->order,
+                    ];
+                });
+            }),
+
+            'seerah_events' => $this->when($this->relationLoaded('seerahEvents'), function () {
+                return $this->seerahEvents->map(function ($event) {
+                    return [
+                        'id' => $event->id,
+                        'slug' => $event->slug,
+                        'title' => $event->getTranslations('title'),
+                        'featured_image' => $event->getFirstMediaUrl('featured_image') ?: $event->featured_image,
                     ];
                 });
             }),
@@ -143,7 +152,9 @@ class ArticleResource extends JsonResource
             'urls' => [
                 'admin_edit' => route('admin.articles.edit', $this->id),
                 'admin_show' => route('admin.articles.show', $this->id),
-                'preview' => route('admin.articles.preview', $this->id),
+                'preview' => Route::has('admin.articles.preview')
+                    ? route('admin.articles.preview', $this->id)
+                    : null,
             ],
         ];
     }

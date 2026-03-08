@@ -6,119 +6,76 @@ namespace App\Repositories;
 
 use App\Models\Media;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection as SupportCollection;
 
-/**
- * Media Repository
- *
- * Handles all database operations for media management
- */
 class MediaRepository
 {
-    /**
-     * Get all media with filters and pagination
-     *
-     * @param array $filters
-     * @param int $perPage
-     * @return LengthAwarePaginator
-     */
     public function getAllWithFilters(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $query = Media::query();
 
-        // Search by keyword
-        if (!empty($filters['search'])) {
-            $query->search($filters['search']);
+        if (! empty($filters['search'])) {
+            $query->search((string) $filters['search']);
         }
 
-        // Filter by type (image, video, document)
-        if (!empty($filters['type'])) {
-            $query->ofType($filters['type']);
+        if (! empty($filters['type'])) {
+            $query->ofType((string) $filters['type']);
         }
 
-        // Filter by collection
-        if (!empty($filters['collection'])) {
-            $query->inCollection($filters['collection']);
+        if (! empty($filters['collection'])) {
+            $query->inCollection((string) $filters['collection']);
         }
 
-        // Filter by mime type
-        if (!empty($filters['mime_type'])) {
-            $query->byMimeType($filters['mime_type']);
+        if (! empty($filters['mime_type'])) {
+            $query->byMimeType((string) $filters['mime_type']);
         }
 
-        // Filter by tag
-        if (!empty($filters['tag'])) {
+        if (! empty($filters['tag'])) {
             $query->withTag($filters['tag']);
         }
 
-        // Filter by date range
-        if (!empty($filters['date_from']) && !empty($filters['date_to'])) {
-            $query->createdBetween($filters['date_from'], $filters['date_to']);
+        if (! empty($filters['date_from'])) {
+            $query->whereDate('created_at', '>=', $filters['date_from']);
         }
 
-        // Filter by size range
-        if (!empty($filters['size_min']) && !empty($filters['size_max'])) {
-            $query->sizeBetween($filters['size_min'], $filters['size_max']);
+        if (! empty($filters['date_to'])) {
+            $query->whereDate('created_at', '<=', $filters['date_to']);
         }
 
-        // Filter unused media
-        if (!empty($filters['unused'])) {
+        if (! empty($filters['size_min'])) {
+            $query->where('size', '>=', (int) $filters['size_min']);
+        }
+
+        if (! empty($filters['size_max'])) {
+            $query->where('size', '<=', (int) $filters['size_max']);
+        }
+
+        if (! empty($filters['unused'])) {
             $query->unused();
         }
 
-        // Filter images only
-        if (!empty($filters['images_only'])) {
-            $query->images();
-        }
+        $this->applySorting($query, $filters);
 
-        // Filter videos only
-        if (!empty($filters['videos_only'])) {
-            $query->videos();
-        }
-
-        // Filter documents only
-        if (!empty($filters['documents_only'])) {
-            $query->documents();
-        }
-
-        // Sorting
-        $sortField = $filters['sort'] ?? 'created_at';
-        $sortOrder = $filters['order'] ?? 'desc';
-        $query->orderBy($sortField, $sortOrder);
-
-        return $query->paginate($perPage);
+        return $query->paginate($perPage)->withQueryString();
     }
 
-    /**
-     * Search media by query and optional type
-     *
-     * @param string $searchQuery
-     * @param string|null $type
-     * @param int $limit
-     * @return Collection
-     */
     public function searchMedia(string $searchQuery, ?string $type = null, int $limit = 20): Collection
     {
-        $query = Media::query();
-
-        $query->search($searchQuery);
+        $query = Media::query()->search($searchQuery);
 
         if ($type) {
             $query->ofType($type);
         }
 
-        return $query->limit($limit)->get();
+        return $query
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get();
     }
 
-    /**
-     * Get media usage information
-     *
-     * Returns where the media is being used across the application
-     *
-     * @param int $mediaId
-     * @return array
-     */
     public function getMediaUsage(int $mediaId): array
     {
         $media = Media::findOrFail($mediaId);
@@ -128,11 +85,10 @@ class MediaRepository
             'models' => [],
         ];
 
-        if (!$media->mediable_type || !$media->mediable_id) {
+        if (! $media->mediable_type || ! $media->mediable_id) {
             return $usage;
         }
 
-        // Get the model using this media
         try {
             $model = $media->mediable;
 
@@ -145,66 +101,13 @@ class MediaRepository
                 ];
                 $usage['total_count'] = 1;
             }
-        } catch (\Exception $e) {
-            // Model doesn't exist anymore
+        } catch (\Throwable) {
+            // Ignore broken morph references in usage reporting.
         }
 
         return $usage;
     }
 
-    /**
-     * Get model name for display
-     *
-     * @param mixed $model
-     * @return string
-     */
-    private function getModelName($model): string
-    {
-        if (method_exists($model, 'getTitle')) {
-            return $model->getTitle();
-        }
-
-        if (isset($model->title)) {
-            return $model->title;
-        }
-
-        if (isset($model->name)) {
-            return $model->name;
-        }
-
-        return class_basename($model) . ' #' . $model->id;
-    }
-
-    /**
-     * Get model URL for display
-     *
-     * @param mixed $model
-     * @return string|null
-     */
-    private function getModelUrl($model): ?string
-    {
-        $modelClass = class_basename($model);
-
-        $routes = [
-            'Article' => 'admin.articles.show',
-            'Sahabi' => 'admin.sahaba.show',
-            'SeerahEvent' => 'admin.seerah-events.show',
-            'Series' => 'admin.series.show',
-        ];
-
-        if (isset($routes[$modelClass])) {
-            return route($routes[$modelClass], $model->id);
-        }
-
-        return null;
-    }
-
-    /**
-     * Bulk delete media
-     *
-     * @param array $ids
-     * @return array
-     */
     public function bulkDelete(array $ids): array
     {
         $results = [
@@ -215,25 +118,18 @@ class MediaRepository
 
         foreach ($ids as $id) {
             try {
-                $media = Media::findOrFail($id);
+                $media = Media::query()->findOrFail($id);
                 $media->delete();
                 $results['success']++;
-            } catch (\Exception $e) {
+            } catch (\Throwable $exception) {
                 $results['failed']++;
-                $results['errors'][$id] = $e->getMessage();
+                $results['errors'][$id] = $exception->getMessage();
             }
         }
 
         return $results;
     }
 
-    /**
-     * Bulk update tags
-     *
-     * @param array $ids
-     * @param array $tags
-     * @return array
-     */
     public function bulkUpdateTags(array $ids, array $tags): array
     {
         $results = [
@@ -244,144 +140,125 @@ class MediaRepository
 
         foreach ($ids as $id) {
             try {
-                $media = Media::findOrFail($id);
-                $media->update(['tags' => $tags]);
+                $media = Media::query()->findOrFail($id);
+                $media->update(['tags' => array_values(array_unique($tags))]);
                 $results['success']++;
-            } catch (\Exception $e) {
+            } catch (\Throwable $exception) {
                 $results['failed']++;
-                $results['errors'][$id] = $e->getMessage();
+                $results['errors'][$id] = $exception->getMessage();
             }
         }
 
         return $results;
     }
 
-    /**
-     * Get media by ID
-     *
-     * @param int $id
-     * @return Media
-     */
     public function findById(int $id): Media
     {
-        return Media::findOrFail($id);
+        return Media::query()->findOrFail($id);
     }
 
-    /**
-     * Create new media record
-     *
-     * @param array $data
-     * @return Media
-     */
     public function create(array $data): Media
     {
-        return Media::create($data);
+        return Media::query()->create($data);
     }
 
-    /**
-     * Update media record
-     *
-     * @param int $id
-     * @param array $data
-     * @return Media
-     */
     public function update(int $id, array $data): Media
     {
-        $media = Media::findOrFail($id);
+        $media = $this->findById($id);
         $media->update($data);
+
         return $media->fresh();
     }
 
-    /**
-     * Delete media
-     *
-     * @param int $id
-     * @return bool
-     */
     public function delete(int $id): bool
     {
-        $media = Media::findOrFail($id);
-        return $media->delete();
+        return $this->findById($id)->delete();
     }
 
-    /**
-     * Get all collections
-     *
-     * @return Collection
-     */
-    public function getAllCollections(): Collection
+    public function getAllCollections(): SupportCollection
     {
-        return Media::select('collection_name')
-            ->distinct()
+        return Media::query()
+            ->select('collection_name')
             ->whereNotNull('collection_name')
+            ->distinct()
             ->orderBy('collection_name')
             ->pluck('collection_name');
     }
 
-    /**
-     * Get all tags
-     *
-     * @return array
-     */
     public function getAllTags(): array
     {
-        $tags = Media::whereNotNull('tags')
-            ->get()
+        return Media::query()
+            ->whereNotNull('tags')
             ->pluck('tags')
             ->flatten()
+            ->filter()
             ->unique()
             ->sort()
             ->values()
-            ->toArray();
-
-        return $tags;
+            ->all();
     }
 
-    /**
-     * Get media statistics
-     *
-     * @return array
-     */
     public function getStatistics(): array
     {
         return [
-            'total_count' => Media::count(),
-            'total_size' => Media::sum('size'),
-            'images_count' => Media::images()->count(),
-            'videos_count' => Media::videos()->count(),
-            'documents_count' => Media::documents()->count(),
-            'unused_count' => Media::unused()->count(),
-            'collections' => Media::select('collection_name', DB::raw('count(*) as count'))
+            'total_count' => Media::query()->count(),
+            'total_size' => Media::query()->sum('size'),
+            'images_count' => Media::query()->images()->count(),
+            'videos_count' => Media::query()->videos()->count(),
+            'audio_count' => Media::query()->where('type', 'audio')->count(),
+            'documents_count' => Media::query()->documents()->count(),
+            'unused_count' => Media::query()->unused()->count(),
+            'collections' => Media::query()
+                ->select('collection_name', DB::raw('count(*) as count'))
                 ->groupBy('collection_name')
-                ->get()
                 ->pluck('count', 'collection_name')
                 ->toArray(),
         ];
     }
 
-    /**
-     * Get recently uploaded media
-     *
-     * @param int $limit
-     * @return Collection
-     */
-    public function getRecentlyUploaded(int $limit = 10): Collection
+    protected function applySorting(Builder $query, array $filters): void
     {
-        return Media::orderBy('created_at', 'desc')
-            ->limit($limit)
-            ->get();
+        $allowedSorts = ['created_at', 'updated_at', 'size', 'filename', 'original_filename', 'type'];
+        $sortField = in_array($filters['sort'] ?? 'created_at', $allowedSorts, true)
+            ? $filters['sort']
+            : 'created_at';
+        $sortOrder = strtolower((string) ($filters['order'] ?? 'desc')) === 'asc' ? 'asc' : 'desc';
+
+        $query->orderBy($sortField, $sortOrder);
     }
 
-    /**
-     * Get largest media files
-     *
-     * @param int $limit
-     * @return Collection
-     */
-    public function getLargestFiles(int $limit = 10): Collection
+    private function getModelName(mixed $model): string
     {
-        return Media::orderBy('size', 'desc')
-            ->limit($limit)
-            ->get();
+        if (method_exists($model, 'getTitle')) {
+            return $model->getTitle();
+        }
+
+        if (isset($model->title)) {
+            return (string) $model->title;
+        }
+
+        if (isset($model->name)) {
+            return (string) $model->name;
+        }
+
+        return class_basename($model) . ' #' . $model->id;
+    }
+
+    private function getModelUrl(mixed $model): ?string
+    {
+        $routes = [
+            'Article' => 'admin.articles.show',
+            'Sahabi' => 'admin.sahaba.show',
+            'SeerahEvent' => 'admin.seerah-events.show',
+            'Series' => 'admin.series.show',
+        ];
+
+        $modelClass = class_basename($model);
+
+        if (! isset($routes[$modelClass])) {
+            return null;
+        }
+
+        return route($routes[$modelClass], $model->id);
     }
 }

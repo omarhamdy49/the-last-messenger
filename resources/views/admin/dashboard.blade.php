@@ -175,7 +175,7 @@
             <x-slot name="actions">
                 <button class="p-2 rounded-lg transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-800"
                         :class="darkMode ? 'text-gray-400' : 'text-gray-600'"
-                        :title="__('dashboard.compare')">
+                        title="{{ __('dashboard.compare') }}">
                     <i data-lucide="git-compare" class="w-5 h-5"></i>
                 </button>
             </x-slot>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -13,30 +14,33 @@ return new class extends Migration
      */
     public function up(): void
     {
+        $driver = DB::getDriverName();
+
         // Update user_interactions table to support more interaction types
-        Schema::table('user_interactions', function (Blueprint $table) {
-            // Drop old enum constraint if exists
-            if (Schema::hasColumn('user_interactions', 'interaction_type')) {
-                $table->dropColumn('interaction_type');
-            }
-        });
+        if ($driver !== 'sqlite') {
+            Schema::table('user_interactions', function (Blueprint $table) {
+                if (Schema::hasColumn('user_interactions', 'interaction_type')) {
+                    $table->dropColumn('interaction_type');
+                }
+            });
+
+            Schema::table('user_interactions', function (Blueprint $table) {
+                $table->enum('interaction_type', [
+                    'view',
+                    'like',
+                    'share',
+                    'bookmark',
+                    'comment',
+                    'download',
+                    'print',
+                    'search',
+                    'progress',
+                    'complete',
+                ])->default('view')->after('interactable_type');
+            });
+        }
 
         Schema::table('user_interactions', function (Blueprint $table) {
-            // Add new interaction_type with extended options
-            $table->enum('interaction_type', [
-                'view',
-                'like',
-                'share',
-                'bookmark',
-                'comment',
-                'download',
-                'print',
-                'search',
-                'progress',
-                'complete',
-            ])->default('view')->after('interactable_type');
-
-            // Add additional fields only if they don't exist
             if (! Schema::hasColumn('user_interactions', 'duration_seconds')) {
                 $table->integer('duration_seconds')->nullable()->after('metadata');
             }

@@ -1,272 +1,317 @@
 @extends('layouts.admin')
 
-@section('title', 'Media Library')
+@section('title', __('media.library_page.title'))
+
+@push('styles')
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
+@endpush
 
 @section('page-header')
-    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
-            <h1 class="text-3xl font-bold mb-2"
+            <p class="text-sm uppercase tracking-[0.25em]"
+               :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
+                {{ __('media.library_page.kicker') }}
+            </p>
+            <h1 class="text-3xl font-black mt-2"
                 :class="darkMode ? 'text-white' : 'text-gray-900'">
-                Media Library
+                {{ __('media.library_page.title') }}
             </h1>
-            <p class="text-sm"
+            <p class="mt-2 text-sm max-w-2xl"
                :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                Browse and manage your media files
+                {{ __('media.library_page.subtitle') }}
             </p>
         </div>
 
-        <div class="flex items-center gap-3">
-            <!-- Upload Button -->
+        <div class="flex flex-wrap items-center gap-3">
+            <a href="{{ route('admin.media-library.settings') }}"
+               class="px-5 py-3 rounded-xl font-semibold transition-all"
+            :class="darkMode ? 'bg-gray-900 border border-gray-800 text-white hover:bg-gray-800' : 'bg-white border border-gray-200 text-gray-900 hover:bg-gray-50'">
+                <i data-lucide="settings-2" class="w-4 h-4 inline me-2"></i>
+                {{ __('media.library_page.settings') }}
+            </a>
+
             <button @click="$dispatch('open-media-upload')"
-                    class="px-6 py-3 rounded-lg bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-semibold text-sm hover:shadow-lg hover:scale-105 transition-all duration-200">
-                <i data-lucide="upload" class="w-4 h-4 inline me-2"></i>
-                Upload Media
+                    class="px-5 py-3 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-semibold shadow-lg shadow-[#0056b3]/20 hover:scale-[1.02] transition-all">
+                <i data-lucide="upload-cloud" class="w-4 h-4 inline me-2"></i>
+                {{ __('media.library_page.upload_media') }}
             </button>
         </div>
     </div>
 @endsection
 
 @section('content')
-    <div x-data="mediaLibrary()" x-init="init()" @media-uploaded.window="handleUploadSuccess($event.detail)" class="space-y-6">
+    <div x-data="mediaLibraryPage()" class="space-y-6">
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <template x-for="card in statCards" :key="card.label">
+                <div class="rounded-2xl p-5 shadow-lg"
+                     :class="darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-xs uppercase tracking-[0.18em]"
+                               :class="darkMode ? 'text-gray-500' : 'text-gray-500'"
+                               x-text="card.label"></p>
+                            <p class="text-3xl font-black mt-3"
+                               :class="darkMode ? 'text-white' : 'text-gray-900'"
+                               x-text="card.value"></p>
+                        </div>
+                        <div class="w-11 h-11 rounded-2xl flex items-center justify-center"
+                             :class="card.iconBg">
+                            <i :data-lucide="card.icon" class="w-5 h-5 text-white"></i>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
 
-        <!-- Toolbar -->
-        <div class="rounded-2xl shadow-lg p-4 animate-fadeInUp"
+        <div class="rounded-2xl shadow-lg p-4"
              :class="darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'">
-
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-
-                <!-- Left Section: Search and View Toggle -->
-                <div class="flex items-center gap-3 flex-1">
-                    <!-- Search Bar -->
-                    <div class="relative flex-1 max-w-md">
-                        <input type="text"
-                               x-model="searchQuery"
-                               @input="debounceSearch()"
-                               placeholder="Search media files..."
-                               class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'">
-                        <i data-lucide="search"
-                           class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none"
+            <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div class="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+                    <div class="relative flex-1">
+                        <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5"
                            :class="darkMode ? 'text-gray-500' : 'text-gray-400'"></i>
+                        <input type="text"
+                               x-model="filters.search"
+                               @input="debounceSearch()"
+                               placeholder="{{ __('media.library_page.search_placeholder') }}"
+                               class="w-full ps-12 pe-4 py-3 rounded-xl border focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent"
+                               :class="darkMode ? 'bg-gray-950 border-gray-800 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'">
                     </div>
 
-                    <!-- View Toggle -->
-                    <div class="flex items-center gap-1 p-1 rounded-lg"
-                         :class="darkMode ? 'bg-gray-800' : 'bg-gray-100'">
-                        <button @click="viewMode = 'grid'"
-                                class="p-2 rounded transition-all duration-200"
-                                :class="viewMode === 'grid' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' : (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')">
-                            <i data-lucide="grid-3x3" class="w-5 h-5"></i>
-                        </button>
-                        <button @click="viewMode = 'list'"
-                                class="p-2 rounded transition-all duration-200"
-                                :class="viewMode === 'list' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' : (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')">
-                            <i data-lucide="list" class="w-5 h-5"></i>
-                        </button>
-                    </div>
-
-                    <!-- Filter Toggle (Mobile) -->
                     <button @click="showFilters = !showFilters"
-                            class="lg:hidden p-2 rounded-lg transition-colors"
-                            :class="darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">
-                        <i data-lucide="filter" class="w-5 h-5"></i>
+                            class="lg:hidden px-4 py-3 rounded-xl font-semibold transition-all"
+                            :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
+                        <i data-lucide="filter" class="w-4 h-4 inline me-2"></i>
+                        {{ __('media.library_page.filters') }}
                     </button>
                 </div>
 
-                <!-- Right Section: Bulk Actions -->
-                <div x-show="selectedItems.length > 0"
-                     x-transition
-                     class="flex items-center gap-2">
-                    <span class="text-sm font-medium"
-                          :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <span x-text="selectedItems.length"></span> selected
-                    </span>
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="inline-flex p-1 rounded-xl"
+                         :class="darkMode ? 'bg-gray-950 border border-gray-800' : 'bg-gray-100 border border-gray-200'">
+                        <button @click="viewMode = 'grid'"
+                                class="px-3 py-2 rounded-lg transition-all"
+                                :class="viewMode === 'grid'
+                                    ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-md'
+                                    : (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')">
+                            <i data-lucide="grid-3x3" class="w-4 h-4"></i>
+                        </button>
+                        <button @click="viewMode = 'list'"
+                                class="px-3 py-2 rounded-lg transition-all"
+                                :class="viewMode === 'list'
+                                    ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-md'
+                                    : (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')">
+                            <i data-lucide="list" class="w-4 h-4"></i>
+                        </button>
+                    </div>
 
-                    <button @click="bulkDownload"
-                            class="p-2 rounded-lg transition-colors"
-                            :class="darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                            title="Download Selected">
-                        <i data-lucide="download" class="w-5 h-5"></i>
+                    <select x-model="filters.sort"
+                            @change="applyFilters()"
+                            class="px-4 py-3 rounded-xl border"
+                            :class="darkMode ? 'bg-gray-950 border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                        <option value="created_at">{{ __('media.library_page.sort_newest') }}</option>
+                        <option value="updated_at">{{ __('media.library_page.sort_recently_updated') }}</option>
+                        <option value="size">{{ __('media.library_page.sort_largest_size') }}</option>
+                        <option value="filename">{{ __('media.library_page.sort_stored_filename') }}</option>
+                        <option value="original_filename">{{ __('media.library_page.sort_original_filename') }}</option>
+                    </select>
+
+                    <button x-show="selectedItems.length > 0"
+                            @click="bulkDownload()"
+                            class="px-4 py-3 rounded-xl font-semibold transition-all"
+                            :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
+                        <i data-lucide="download" class="w-4 h-4 inline me-2"></i>
+                        {{ __('media.actions.download') }}
                     </button>
 
-                    <button @click="bulkTag"
-                            class="p-2 rounded-lg transition-colors"
-                            :class="darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                            title="Tag Selected">
-                        <i data-lucide="tag" class="w-5 h-5"></i>
+                    <button x-show="selectedItems.length > 0"
+                            @click="bulkTag()"
+                            class="px-4 py-3 rounded-xl font-semibold transition-all"
+                            :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
+                        <i data-lucide="tags" class="w-4 h-4 inline me-2"></i>
+                        {{ __('media.library_page.bulk.tag_selected') }}
                     </button>
 
-                    <button @click="confirmBulkDelete"
-                            class="p-2 rounded-lg transition-colors bg-red-500 text-white hover:bg-red-600"
-                            title="Delete Selected">
-                        <i data-lucide="trash-2" class="w-5 h-5"></i>
-                    </button>
-
-                    <button @click="clearSelection"
-                            class="p-2 rounded-lg transition-colors"
-                            :class="darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                            title="Clear Selection">
-                        <i data-lucide="x" class="w-5 h-5"></i>
+                    <button x-show="selectedItems.length > 0"
+                            @click="confirmBulkDelete()"
+                            class="px-4 py-3 rounded-xl font-semibold bg-red-500 text-white hover:bg-red-600 transition-all">
+                        <i data-lucide="trash-2" class="w-4 h-4 inline me-2"></i>
+                        {{ __('media.actions.delete') }}
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Main Content Area -->
-        <div class="flex flex-col lg:flex-row gap-6">
-
-            <!-- Filter Sidebar -->
+        <div class="flex flex-col gap-6 lg:flex-row">
             <x-admin.media-filter />
 
-            <!-- Media Grid/List -->
-            <div class="flex-1">
-
-                <!-- Loading State -->
-                <div x-show="loading" class="text-center py-12">
-                    <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-[#64CCC5] border-t-transparent"></div>
-                    <p class="mt-4 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                        Loading media...
-                    </p>
-                </div>
-
-                <!-- Empty State -->
-                <div x-show="!loading && filteredMedia.length === 0"
-                     class="rounded-2xl shadow-lg p-12 text-center animate-fadeInUp"
+            <div class="flex-1 space-y-4">
+                <div x-show="loading"
+                     class="rounded-2xl p-10 text-center shadow-lg"
                      :class="darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'">
-                    <div class="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center">
-                        <i data-lucide="image" class="w-12 h-12 text-white"></i>
-                    </div>
-                    <h3 class="text-2xl font-bold mb-2"
-                        :class="darkMode ? 'text-white' : 'text-gray-900'">
-                        No Media Files Found
-                    </h3>
-                    <p class="mb-6"
-                       :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <span x-show="searchQuery || activeFilters.length > 0">
-                            Try adjusting your search or filters
-                        </span>
-                        <span x-show="!searchQuery && activeFilters.length === 0">
-                            Start by uploading your first media file
-                        </span>
-                    </p>
-                    <button @click="$dispatch('open-media-upload')"
-                            class="px-6 py-3 rounded-lg bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-semibold hover:shadow-lg transition-all duration-200">
-                        <i data-lucide="upload" class="w-4 h-4 inline me-2"></i>
-                        Upload Media
-                    </button>
+                    <div class="inline-flex w-14 h-14 rounded-full border-4 border-[#64CCC5] border-t-transparent animate-spin"></div>
+                    <p class="mt-4 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ __('media.library_page.loading') }}</p>
                 </div>
 
-                <!-- Grid View -->
-                <div x-show="!loading && filteredMedia.length > 0 && viewMode === 'grid'"
-                     class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    <template x-for="(item, index) in filteredMedia" :key="item.id">
-                        <x-admin.media-card :item="item" :index="index" />
+                <div x-show="!loading && items.length === 0"
+                     class="rounded-2xl p-12 text-center shadow-lg"
+                     :class="darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'">
+                    <div class="w-20 h-20 mx-auto rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] flex items-center justify-center">
+                        <i data-lucide="image-off" class="w-10 h-10 text-white"></i>
+                    </div>
+                    <h3 class="mt-6 text-2xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ __('media.library_page.empty_title') }}</h3>
+                    <p class="mt-2 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                        {{ __('media.library_page.empty_description') }}
+                    </p>
+                </div>
+
+                <div x-show="!loading && items.length > 0 && viewMode === 'grid'"
+                     class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                    <template x-for="item in items" :key="item.id">
+                        <article class="rounded-2xl overflow-hidden shadow-lg transition-all hover:-translate-y-1"
+                                 :class="darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'">
+                            <div class="relative aspect-video overflow-hidden"
+                                 :class="darkMode ? 'bg-gray-950' : 'bg-gray-100'">
+                                <template x-if="item.is_image">
+                                    <img :src="item.thumbnail_url || item.src"
+                                         :alt="item.title"
+                                         class="w-full h-full object-cover transition-transform duration-500 hover:scale-105">
+                                </template>
+
+                                <template x-if="!item.is_image">
+                                    <div class="w-full h-full flex items-center justify-center">
+                                        <i :data-lucide="item.type === 'video' ? 'video' : (item.type === 'audio' ? 'music-4' : 'file-text')"
+                                           class="w-12 h-12"
+                                           :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
+                                    </div>
+                                </template>
+
+                                <div class="absolute top-3 left-3">
+                                    <label class="w-8 h-8 rounded-full bg-black/45 backdrop-blur text-white flex items-center justify-center cursor-pointer">
+                                        <input type="checkbox"
+                                               class="hidden"
+                                               :value="item.id"
+                                               x-model="selectedItems">
+                                        <i data-lucide="check" class="w-4 h-4"></i>
+                                    </label>
+                                </div>
+
+                                <div class="absolute top-3 right-3">
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold capitalize"
+                                          :class="typeBadge(item.type)"
+                                          x-text="item.type_label || item.type"></span>
+                                </div>
+                            </div>
+
+                            <div class="p-5 space-y-4">
+                                <div>
+                                    <h3 class="font-bold truncate"
+                                        :class="darkMode ? 'text-white' : 'text-gray-900'"
+                                        x-text="item.title"></h3>
+                                    <p class="text-xs mt-1 truncate"
+                                       :class="darkMode ? 'text-gray-500' : 'text-gray-500'"
+                                       x-text="item.original_filename"></p>
+                                </div>
+
+                                <div class="flex items-center justify-between text-xs"
+                                     :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                    <span x-text="item.human_readable_size"></span>
+                                    <span x-text="item.width && item.height ? `${item.width}×${item.height}` : '-'"></span>
+                                </div>
+
+                                <div class="flex flex-wrap gap-2">
+                                    <button @click="viewMedia(item)"
+                                            class="px-3 py-2 rounded-lg text-xs font-semibold transition-all"
+                                            :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
+                                        {{ __('media.actions.view') }}
+                                    </button>
+                                    <button @click="openEdit(item)"
+                                            class="px-3 py-2 rounded-lg text-xs font-semibold transition-all"
+                                            :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
+                                        {{ __('media.actions.edit') }}
+                                    </button>
+                                    <button x-show="item.is_image"
+                                            @click="openCrop(item)"
+                                            class="px-3 py-2 rounded-lg text-xs font-semibold transition-all"
+                                            :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
+                                        {{ __('media.actions.crop') }}
+                                    </button>
+                                    <button @click="deleteMedia(item)"
+                                            class="px-3 py-2 rounded-lg text-xs font-semibold bg-red-500 text-white hover:bg-red-600 transition-all">
+                                        {{ __('media.actions.delete') }}
+                                    </button>
+                                </div>
+                            </div>
+                        </article>
                     </template>
                 </div>
 
-                <!-- List View -->
-                <div x-show="!loading && filteredMedia.length > 0 && viewMode === 'list'"
-                     class="rounded-2xl shadow-lg overflow-hidden animate-fadeInUp"
+                <div x-show="!loading && items.length > 0 && viewMode === 'list'"
+                     class="rounded-2xl shadow-lg overflow-hidden"
                      :class="darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'">
                     <div class="overflow-x-auto">
-                        <table class="w-full">
+                        <table class="min-w-full">
                             <thead>
-                                <tr class="border-b"
-                                    :class="darkMode ? 'border-gray-800 bg-gray-800/50' : 'border-gray-200 bg-gray-50'">
-                                    <th class="px-4 py-3 text-left w-12">
+                                <tr :class="darkMode ? 'bg-gray-950 text-gray-300' : 'bg-gray-50 text-gray-700'">
+                                    <th class="px-4 py-4 text-left">
                                         <input type="checkbox"
-                                               @change="toggleSelectAll"
-                                               :checked="selectAll"
+                                               @change="toggleSelectAll()"
+                                               :checked="currentPageSelected()"
                                                class="rounded border-gray-300 text-[#0056b3] focus:ring-[#64CCC5]">
                                     </th>
-                                    <th class="px-4 py-3 text-left text-sm font-semibold"
-                                        :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                                        Preview
-                                    </th>
-                                    <th class="px-4 py-3 text-left text-sm font-semibold"
-                                        :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                                        Name
-                                    </th>
-                                    <th class="px-4 py-3 text-left text-sm font-semibold"
-                                        :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                                        Type
-                                    </th>
-                                    <th class="px-4 py-3 text-left text-sm font-semibold"
-                                        :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                                        Size
-                                    </th>
-                                    <th class="px-4 py-3 text-left text-sm font-semibold"
-                                        :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                                        Dimensions
-                                    </th>
-                                    <th class="px-4 py-3 text-left text-sm font-semibold"
-                                        :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                                        Uploaded
-                                    </th>
-                                    <th class="px-4 py-3 text-right text-sm font-semibold"
-                                        :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                                        Actions
-                                    </th>
+                                    <th class="px-4 py-4 text-left text-xs uppercase tracking-[0.18em]">{{ __('media.library_page.table.media') }}</th>
+                                    <th class="px-4 py-4 text-left text-xs uppercase tracking-[0.18em]">{{ __('media.library_page.table.title') }}</th>
+                                    <th class="px-4 py-4 text-left text-xs uppercase tracking-[0.18em]">{{ __('media.library_page.table.collection') }}</th>
+                                    <th class="px-4 py-4 text-left text-xs uppercase tracking-[0.18em]">{{ __('media.library_page.table.size') }}</th>
+                                    <th class="px-4 py-4 text-left text-xs uppercase tracking-[0.18em]">{{ __('media.library_page.table.uploaded') }}</th>
+                                    <th class="px-4 py-4 text-right text-xs uppercase tracking-[0.18em]">{{ __('media.library_page.table.actions') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <template x-for="item in filteredMedia" :key="item.id">
-                                    <tr class="border-b transition-colors duration-200"
-                                        :class="darkMode ? 'border-gray-800 hover:bg-gray-800/50' : 'border-gray-200 hover:bg-gray-50'">
-                                        <td class="px-4 py-3">
+                                <template x-for="item in items" :key="item.id">
+                                    <tr class="border-t"
+                                        :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
+                                        <td class="px-4 py-4">
                                             <input type="checkbox"
                                                    :value="item.id"
                                                    x-model="selectedItems"
                                                    class="rounded border-gray-300 text-[#0056b3] focus:ring-[#64CCC5]">
                                         </td>
-                                        <td class="px-4 py-3">
-                                            <div class="w-16 h-16 rounded-lg overflow-hidden"
-                                                 :class="darkMode ? 'bg-gray-800' : 'bg-gray-100'">
-                                                <img :src="item.thumbnail"
-                                                     :alt="item.name"
-                                                     class="w-full h-full object-cover"
-                                                     onerror="this.src='/images/placeholder.png'">
+                                        <td class="px-4 py-4">
+                                            <div class="w-16 h-16 rounded-xl overflow-hidden"
+                                                 :class="darkMode ? 'bg-gray-950' : 'bg-gray-100'">
+                                                <template x-if="item.is_image">
+                                                    <img :src="item.thumbnail_url || item.src" :alt="item.title" class="w-full h-full object-cover">
+                                                </template>
+                                                <template x-if="!item.is_image">
+                                                    <div class="w-full h-full flex items-center justify-center">
+                                                        <i :data-lucide="item.type === 'video' ? 'video' : (item.type === 'audio' ? 'music-4' : 'file-text')"
+                                                           class="w-6 h-6"
+                                                           :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
+                                                    </div>
+                                                </template>
                                             </div>
                                         </td>
-                                        <td class="px-4 py-3">
-                                            <div class="font-medium text-sm"
-                                                 :class="darkMode ? 'text-white' : 'text-gray-900'"
-                                                 x-text="item.name"></div>
-                                            <div class="text-xs mt-1"
-                                                 :class="darkMode ? 'text-gray-500' : 'text-gray-500'"
-                                                 x-text="item.filename"></div>
+                                        <td class="px-4 py-4">
+                                            <div class="font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="item.title"></div>
+                                            <div class="text-xs mt-1" :class="darkMode ? 'text-gray-500' : 'text-gray-500'" x-text="item.original_filename"></div>
                                         </td>
-                                        <td class="px-4 py-3">
-                                            <span class="px-2 py-1 rounded-full text-xs font-medium"
-                                                  :class="getTypeBadgeClass(item.type)"
-                                                  x-text="item.type"></span>
-                                        </td>
-                                        <td class="px-4 py-3 text-sm"
-                                            :class="darkMode ? 'text-gray-400' : 'text-gray-600'"
-                                            x-text="item.size"></td>
-                                        <td class="px-4 py-3 text-sm"
-                                            :class="darkMode ? 'text-gray-400' : 'text-gray-600'"
-                                            x-text="item.dimensions || '-'"></td>
-                                        <td class="px-4 py-3 text-sm"
-                                            :class="darkMode ? 'text-gray-400' : 'text-gray-600'"
-                                            x-text="item.uploaded"></td>
-                                        <td class="px-4 py-3">
+                                        <td class="px-4 py-4 text-sm capitalize" :class="darkMode ? 'text-gray-300' : 'text-gray-700'" x-text="item.collection_name"></td>
+                                        <td class="px-4 py-4 text-sm" :class="darkMode ? 'text-gray-300' : 'text-gray-700'" x-text="item.human_readable_size"></td>
+                                        <td class="px-4 py-4 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'" x-text="formatDate(item.created_at)"></td>
+                                        <td class="px-4 py-4">
                                             <div class="flex items-center justify-end gap-2">
-                                                <button @click="viewMedia(item)"
-                                                        class="p-1.5 rounded-lg transition-colors"
-                                                        :class="darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
-                                                        title="View">
+                                                <button @click="viewMedia(item)" class="p-2 rounded-lg transition-all" :class="darkMode ? 'hover:bg-gray-800 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'">
                                                     <i data-lucide="eye" class="w-4 h-4"></i>
                                                 </button>
-                                                <button @click="editMedia(item)"
-                                                        class="p-1.5 rounded-lg transition-colors"
-                                                        :class="darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
-                                                        title="Edit">
-                                                    <i data-lucide="edit" class="w-4 h-4"></i>
+                                                <button @click="openEdit(item)" class="p-2 rounded-lg transition-all" :class="darkMode ? 'hover:bg-gray-800 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'">
+                                                    <i data-lucide="edit-3" class="w-4 h-4"></i>
                                                 </button>
-                                                <button @click="deleteMedia(item)"
-                                                        class="p-1.5 rounded-lg transition-colors text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                                        title="Delete">
+                                                <button x-show="item.is_image" @click="openCrop(item)" class="p-2 rounded-lg transition-all" :class="darkMode ? 'hover:bg-gray-800 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'">
+                                                    <i data-lucide="crop" class="w-4 h-4"></i>
+                                                </button>
+                                                <button @click="deleteMedia(item)" class="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all">
                                                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                                                 </button>
                                             </div>
@@ -278,321 +323,1017 @@
                     </div>
                 </div>
 
-                <!-- Pagination -->
-                <div x-show="!loading && filteredMedia.length > 0"
-                     class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div class="text-sm"
-                         :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                        Showing <span class="font-medium" x-text="((currentPage - 1) * perPage) + 1"></span>
-                        to <span class="font-medium" x-text="Math.min(currentPage * perPage, totalItems)"></span>
-                        of <span class="font-medium" x-text="totalItems"></span> items
-                    </div>
+                <div x-show="!loading && pagination.total > 0"
+                     class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="text-sm"
+                       :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                        {{ __('media.library_page.pagination.showing') }} <span class="font-semibold" x-text="pagination.from || 0"></span>
+                        {{ __('admin.to') }} <span class="font-semibold" x-text="pagination.to || 0"></span>
+                        {{ __('admin.of') }} <span class="font-semibold" x-text="pagination.total || 0"></span> {{ __('media.library_page.pagination.items') }}
+                    </p>
 
                     <div class="flex items-center gap-2">
-                        <button @click="prevPage"
-                                :disabled="currentPage === 1"
-                                class="p-2 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                :class="darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'">
-                            <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                        <button @click="changePage(pagination.current_page - 1)"
+                                :disabled="pagination.current_page <= 1"
+                                class="px-4 py-2 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                :class="darkMode ? 'bg-gray-900 border border-gray-800 text-white hover:bg-gray-800' : 'bg-white border border-gray-200 text-gray-900 hover:bg-gray-50'">
+                            {{ __('admin.previous') }}
                         </button>
-
-                        <template x-for="page in totalPages" :key="page">
-                            <button @click="goToPage(page)"
-                                    class="px-4 py-2 rounded-lg font-medium transition-all duration-200"
-                                    :class="page === currentPage ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' : (darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200')"
-                                    x-text="page"></button>
-                        </template>
-
-                        <button @click="nextPage"
-                                :disabled="currentPage === totalPages"
-                                class="p-2 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                :class="darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'">
-                            <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                        <span class="px-4 py-2 rounded-xl"
+                              :class="darkMode ? 'bg-gray-900 border border-gray-800 text-gray-300' : 'bg-white border border-gray-200 text-gray-700'">
+                            {{ __('media.library_page.pagination.page') }} <span x-text="pagination.current_page || 1"></span> / <span x-text="pagination.last_page || 1"></span>
+                        </span>
+                        <button @click="changePage(pagination.current_page + 1)"
+                                :disabled="pagination.current_page >= pagination.last_page"
+                                class="px-4 py-2 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                :class="darkMode ? 'bg-gray-900 border border-gray-800 text-white hover:bg-gray-800' : 'bg-white border border-gray-200 text-gray-900 hover:bg-gray-50'">
+                            {{ __('admin.next') }}
                         </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Media Upload Modal Component -->
         <x-admin.media-upload-modal />
+
+        <div class="fixed inset-x-0 top-4 z-[60] pointer-events-none px-4">
+            <div class="mx-auto flex max-w-xl flex-col gap-3">
+                <template x-for="toast in toasts" :key="toast.id">
+                    <div class="pointer-events-auto rounded-2xl border shadow-2xl overflow-hidden"
+                         :class="toast.type === 'error'
+                            ? (darkMode ? 'bg-red-950/95 border-red-900 text-red-100' : 'bg-white border-red-200 text-red-900')
+                            : (darkMode ? 'bg-gray-900/95 border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900')">
+                        <div class="flex items-start gap-4 p-4">
+                            <div class="mt-0.5 w-10 h-10 rounded-2xl flex items-center justify-center"
+                                 :class="toast.type === 'error'
+                                    ? 'bg-red-500 text-white'
+                                    : 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white'">
+                                <i :data-lucide="toast.type === 'error' ? 'shield-alert' : 'check-check'" class="w-5 h-5"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm font-semibold"
+                                   x-text="toast.title || (toast.type === 'error' ? config.i18n.toastErrorTitle : config.i18n.toastSuccessTitle)"></p>
+                                <p class="mt-1 text-sm"
+                                   :class="toast.type === 'error'
+                                      ? (darkMode ? 'text-red-200' : 'text-red-700')
+                                      : (darkMode ? 'text-gray-300' : 'text-gray-600')"
+                                   x-text="toast.message"></p>
+                            </div>
+                            <button @click="dismissToast(toast.id)"
+                                    type="button"
+                                    class="p-2 rounded-lg transition-all"
+                                    :class="darkMode ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-gray-100 text-gray-500'">
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <div x-show="confirmDialog.open"
+             x-cloak
+             class="fixed inset-0 z-[55] flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-black/75 backdrop-blur-sm" @click="closeConfirmDialog()"></div>
+            <div class="relative w-full max-w-md rounded-3xl overflow-hidden shadow-2xl"
+                 :class="darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'">
+                <div class="p-6">
+                    <div class="w-16 h-16 rounded-[1.5rem] mx-auto flex items-center justify-center bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/25">
+                        <i data-lucide="trash-2" class="w-8 h-8"></i>
+                    </div>
+                    <h3 class="mt-5 text-2xl font-black text-center"
+                        :class="darkMode ? 'text-white' : 'text-gray-900'"
+                        x-text="confirmDialog.title"></h3>
+                    <p class="mt-3 text-sm text-center leading-6"
+                       :class="darkMode ? 'text-gray-400' : 'text-gray-600'"
+                       x-text="confirmDialog.message"></p>
+
+                    <div class="mt-6 flex items-center justify-center gap-2 flex-wrap">
+                        <template x-for="pill in confirmDialog.meta" :key="pill.label">
+                            <span class="px-3 py-1.5 rounded-full text-xs font-semibold"
+                                  :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
+                                <span x-text="pill.label"></span>: <span x-text="pill.value"></span>
+                            </span>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 p-4 border-t"
+                     :class="darkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-gray-50'">
+                    <button @click="closeConfirmDialog()"
+                            type="button"
+                            class="px-4 py-3 rounded-2xl font-semibold transition-all"
+                            :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-white border border-gray-200 text-gray-900 hover:bg-gray-100'">
+                        {{ __('admin.cancel') }}
+                    </button>
+                    <button @click="runConfirmAction()"
+                            type="button"
+                            class="px-4 py-3 rounded-2xl font-semibold text-white bg-gradient-to-r from-red-500 to-rose-600 shadow-lg shadow-red-500/20 hover:scale-[1.01] transition-all"
+                            x-text="confirmDialog.confirmLabel"></button>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="previewModal.open"
+             x-cloak
+             class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-black/80" @click="closePreview()"></div>
+            <div class="relative w-full max-w-6xl rounded-2xl overflow-hidden shadow-2xl"
+                 :class="darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'">
+                <div class="flex items-center justify-between px-6 py-4 border-b"
+                     :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
+                    <div>
+                        <h2 class="text-xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ __('media.preview.title') }}</h2>
+                        <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'" x-text="previewModal.media?.title || ''"></p>
+                    </div>
+                    <button @click="closePreview()" class="p-2 rounded-lg" :class="darkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100'">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <div class="grid gap-0 lg:grid-cols-[minmax(0,1fr)_320px]">
+                    <div class="min-h-[420px] p-6"
+                         :class="darkMode ? 'bg-gray-950' : 'bg-gray-50'">
+                        <div class="h-full rounded-2xl overflow-hidden flex items-center justify-center"
+                             :class="darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'">
+                            <template x-if="previewModal.media && previewModal.media.is_image">
+                                <img :src="activePreviewSource()?.url || previewModal.media.preview_url || previewModal.media.src"
+                                     :alt="previewModal.media.title"
+                                     class="max-h-[70vh] w-full object-contain">
+                            </template>
+
+                            <template x-if="previewModal.media && previewModal.media.is_video">
+                                <video :src="activePreviewSource()?.url || previewModal.media.src"
+                                       controls
+                                       class="max-h-[70vh] w-full bg-black"></video>
+                            </template>
+
+                            <template x-if="previewModal.media && previewModal.media.is_audio">
+                                <div class="w-full max-w-xl px-8 py-10 text-center space-y-6">
+                                    <div class="w-20 h-20 mx-auto rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] flex items-center justify-center">
+                                        <i data-lucide="music-4" class="w-10 h-10 text-white"></i>
+                                    </div>
+                                    <audio :src="activePreviewSource()?.url || previewModal.media.src"
+                                           controls
+                                           class="w-full"></audio>
+                                </div>
+                            </template>
+
+                            <template x-if="previewModal.media && previewModal.media.is_document">
+                                <iframe :src="activePreviewSource()?.url || previewModal.media.src"
+                                        class="h-[70vh] w-full"
+                                        :title="previewModal.media.title"></iframe>
+                            </template>
+                        </div>
+                    </div>
+
+                    <aside class="p-6 border-t lg:border-t-0 lg:border-s space-y-5"
+                           :class="darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'">
+                        <div>
+                            <h3 class="text-sm font-semibold uppercase tracking-[0.18em]"
+                                :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
+                                {{ __('media.preview.available_sizes') }}
+                            </h3>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <template x-for="source in previewSources(previewModal.media)" :key="source.key">
+                                    <button @click="previewModal.activeSource = source.key"
+                                            type="button"
+                                            class="px-3 py-2 rounded-xl text-sm font-semibold transition-all"
+                                            :class="previewModal.activeSource === source.key
+                                                ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg'
+                                                : (darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')">
+                                        <span x-text="source.label"></span>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3 text-sm">
+                            <div>
+                                <p class="font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('media.preview.file_name') }}</p>
+                                <p class="mt-1 break-all" :class="darkMode ? 'text-gray-400' : 'text-gray-600'" x-text="previewModal.media?.original_filename || ''"></p>
+                            </div>
+
+                            <div>
+                                <p class="font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('media.preview.dimensions') }}</p>
+                                <p class="mt-1" :class="darkMode ? 'text-gray-400' : 'text-gray-600'" x-text="activePreviewDimensions()"></p>
+                            </div>
+
+                            <div>
+                                <p class="font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('media.fields.size') }}</p>
+                                <p class="mt-1" :class="darkMode ? 'text-gray-400' : 'text-gray-600'" x-text="activePreviewSize()"></p>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-3 pt-2">
+                            <a :href="activePreviewSource()?.url || previewModal.media?.src || '#'"
+                               target="_blank"
+                               rel="noopener"
+                               class="px-4 py-3 rounded-xl font-semibold transition-all"
+                               :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
+                                {{ __('media.preview.open_original') }}
+                            </a>
+                            <a :href="previewModal.media?.download_url || '#'"
+                               class="px-4 py-3 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-semibold shadow-lg">
+                                {{ __('media.actions.download') }}
+                            </a>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="editModal.open"
+             x-cloak
+             class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-black/70" @click="closeEdit()"></div>
+            <div class="relative w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden"
+                 :class="darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'">
+                <div class="flex items-center justify-between px-6 py-4 border-b"
+                     :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
+                    <div>
+                        <h2 class="text-xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ __('media.library_page.edit.title') }}</h2>
+                        <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ __('media.library_page.edit.subtitle') }}</p>
+                    </div>
+                    <button @click="closeEdit()" class="p-2 rounded-lg" :class="darkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100'">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <div class="grid gap-6 lg:grid-cols-[220px_1fr] p-6">
+                    <div class="rounded-2xl overflow-hidden"
+                         :class="darkMode ? 'bg-gray-950 border border-gray-800' : 'bg-gray-100 border border-gray-200'">
+                        <template x-if="editModal.form.is_image">
+                            <img :src="editModal.form.preview_url || editModal.form.src" :alt="editModal.form.title" class="w-full h-full object-cover">
+                        </template>
+                        <template x-if="!editModal.form.is_image">
+                            <div class="min-h-[220px] flex items-center justify-center">
+                                <i :data-lucide="editModal.form.type === 'video' ? 'video' : (editModal.form.type === 'audio' ? 'music-4' : 'file-text')"
+                                   class="w-12 h-12"
+                                   :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('media.fields.title') }}</label>
+                            <input type="text"
+                                   x-model="editModal.form.title"
+                                   class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent"
+                                   :class="darkMode ? 'bg-gray-950 border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                        </div>
+
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('media.fields.collection') }}</label>
+                                <input type="text"
+                                       x-model="editModal.form.collection_name"
+                                       class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent"
+                                       :class="darkMode ? 'bg-gray-950 border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('media.fields.tags') }}</label>
+                                <input type="text"
+                                       x-model="editModal.form.tagsText"
+                                       placeholder="{{ __('media.library_page.edit.tags_placeholder') }}"
+                                       class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent"
+                                       :class="darkMode ? 'bg-gray-950 border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('media.fields.alt_text') }}</label>
+                            <textarea x-model="editModal.form.alt_text"
+                                      rows="3"
+                                      class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent resize-none"
+                                      :class="darkMode ? 'bg-gray-950 border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-900'"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('media.fields.caption') }}</label>
+                            <textarea x-model="editModal.form.caption"
+                                      rows="4"
+                                      class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent resize-none"
+                                      :class="darkMode ? 'bg-gray-950 border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-900'"></textarea>
+                        </div>
+
+                        <div class="flex flex-wrap gap-3">
+                            <button x-show="editModal.form.is_image"
+                                    @click="optimizeMedia(editModal.form)"
+                                    class="px-4 py-3 rounded-xl font-semibold transition-all"
+                                    :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
+                                <i data-lucide="sparkles" class="w-4 h-4 inline me-2"></i>
+                                {{ __('media.library_page.edit.optimize') }}
+                            </button>
+
+                            <button x-show="editModal.form.is_image"
+                                    @click="regenerateVariants(editModal.form)"
+                                    class="px-4 py-3 rounded-xl font-semibold transition-all"
+                                    :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
+                                <i data-lucide="refresh-cw" class="w-4 h-4 inline me-2"></i>
+                                {{ __('media.library_page.edit.regenerate_sizes') }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 px-6 py-4 border-t"
+                     :class="darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-gray-50'">
+                    <button @click="closeEdit()"
+                            class="px-4 py-3 rounded-xl font-semibold transition-all"
+                            :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-white border border-gray-200 text-gray-900 hover:bg-gray-50'">
+                        {{ __('admin.cancel') }}
+                    </button>
+                    <button @click="saveEdit()"
+                            class="px-4 py-3 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-semibold shadow-lg">
+                        {{ __('media.library_page.edit.save') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="cropModal.open"
+             x-cloak
+             class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-black/80" @click="closeCrop()"></div>
+            <div class="relative w-full max-w-5xl rounded-2xl overflow-hidden shadow-2xl"
+                 :class="darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'">
+                <div class="flex items-center justify-between px-6 py-4 border-b"
+                     :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
+                    <div>
+                        <h2 class="text-xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ __('media.library_page.crop.title') }}</h2>
+                        <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ __('media.library_page.crop.subtitle') }}</p>
+                    </div>
+                    <button @click="closeCrop()" class="p-2 rounded-lg" :class="darkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100'">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <div class="p-6">
+                    <div class="max-h-[70vh] overflow-hidden rounded-2xl"
+                         :class="darkMode ? 'bg-gray-950' : 'bg-gray-100'">
+                        <img x-ref="cropperImage"
+                             :src="cropModal.media ? cropModal.media.src : ''"
+                             alt="{{ __('media.library_page.crop.target_alt') }}"
+                             class="max-w-full">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 px-6 py-4 border-t"
+                     :class="darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-gray-50'">
+                    <button @click="closeCrop()"
+                            class="px-4 py-3 rounded-xl font-semibold transition-all"
+                            :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-white border border-gray-200 text-gray-900 hover:bg-gray-50'">
+                        {{ __('admin.cancel') }}
+                    </button>
+                    <button @click="saveCrop()"
+                            class="px-4 py-3 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-semibold shadow-lg">
+                        {{ __('media.library_page.crop.apply') }}
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 @endsection
 
 @push('scripts')
-<script src="{{ asset('js/admin/media-upload.js') }}"></script>
-<script>
-function mediaLibrary() {
-    return {
-        // View state
-        viewMode: 'grid', // 'grid' or 'list'
-        loading: false,
-        showFilters: window.innerWidth >= 1024,
-
-        // Search and filters
-        searchQuery: '',
-        searchTimeout: null,
-        activeFilters: [],
-
-        // Selection
-        selectedItems: [],
-        selectAll: false,
-
-        // Pagination
-        currentPage: 1,
-        perPage: 24,
-        totalItems: 0,
-
-        // Sample data (replace with API call)
-        mediaItems: [
-            {
-                id: 1,
-                name: 'Battle of Badr Hero Image',
-                filename: 'badr-battle-hero.jpg',
-                type: 'image',
-                size: '2.4 MB',
-                dimensions: '1920x1080',
-                thumbnail: 'https://picsum.photos/seed/badr/400/300',
-                uploaded: '2 hours ago',
-                tags: ['seerah', 'battle', 'hero']
+    <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
+    <script>
+        window.mediaLibraryConfig = {
+            baseUrl: @json(url('/su/portal/v1/admin/media-library')),
+            indexUrl: @json(route('admin.media-library.index')),
+            statisticsUrl: @json(route('admin.media-library.statistics')),
+            collectionsUrl: @json(route('admin.media-library.collections')),
+            tagsUrl: @json(route('admin.media-library.tags')),
+            bulkDeleteUrl: @json(route('admin.media-library.bulk-delete')),
+            bulkUpdateTagsUrl: @json(route('admin.media-library.bulk-update-tags')),
+            settingsUrl: @json(route('admin.media-library.settings')),
+            openMediaId: @json(request('open')),
+            initialFilters: @json($initialFilters),
+            initialCollections: @json($collections),
+            initialTags: @json($tags),
+            initialStats: @json($stats),
+            i18n: {
+                statTotalFiles: @json(__('media.library_page.stats.total_files')),
+                statImages: @json(__('media.library_page.stats.images')),
+                statVideosAudio: @json(__('media.library_page.stats.videos_audio')),
+                statUnused: @json(__('media.library_page.stats.unused')),
+                confirmDeleteSingle: @json(__('media.library_page.messages.delete_single')),
+                confirmDeleteMultiple: @json(__('media.library_page.messages.delete_multiple')),
+                replaceTagsPrompt: @json(__('media.library_page.messages.replace_tags')),
+                requestFailed: @json(__('media.library_page.messages.request_failed')),
+                deleteDialogTitle: @json(__('media.library_page.confirm.delete_title')),
+                bulkDeleteDialogTitle: @json(__('media.library_page.confirm.bulk_delete_title')),
+                deleteAction: @json(__('media.library_page.confirm.delete_action')),
+                bulkDeleteAction: @json(__('media.library_page.confirm.bulk_delete_action')),
+                toastSuccessTitle: @json(__('media.library_page.toast.success_title')),
+                toastErrorTitle: @json(__('media.library_page.toast.error_title')),
+                metaType: @json(__('media.library_page.confirm.meta_type')),
+                metaSize: @json(__('media.library_page.confirm.meta_size')),
+                metaSelected: @json(__('media.library_page.confirm.meta_selected')),
+                deleteSuccess: @json(__('media.messages.media_deleted')),
+                bulkDeleteSuccess: @json(__('media.messages.bulk_delete_completed')),
+                tagsUpdated: @json(__('media.messages.bulk_tags_updated')),
+                cropSaved: @json(__('media.messages.media_cropped')),
+                optimizeSaved: @json(__('media.messages.media_optimized')),
+                variantsSaved: @json(__('media.messages.variants_regenerated')),
             },
-            {
-                id: 2,
-                name: 'Stories of the Prophets Episode 1',
-                filename: 'prophets-ep01.mp4',
-                type: 'video',
-                size: '124.5 MB',
-                dimensions: '1280x720',
-                thumbnail: 'https://picsum.photos/seed/prophets/400/300',
-                uploaded: '1 day ago',
-                tags: ['video', 'series', 'prophets']
-            },
-            {
-                id: 3,
-                name: 'Quran Recitation Audio',
-                filename: 'surah-albaqarah.mp3',
-                type: 'audio',
-                size: '15.3 MB',
-                dimensions: null,
-                thumbnail: '/images/audio-placeholder.png',
-                uploaded: '3 days ago',
-                tags: ['quran', 'audio', 'recitation']
-            },
-            {
-                id: 4,
-                name: 'Hadith Collection PDF',
-                filename: 'sahih-bukhari-chapter1.pdf',
-                type: 'document',
-                size: '4.7 MB',
-                dimensions: null,
-                thumbnail: '/images/pdf-placeholder.png',
-                uploaded: '1 week ago',
-                tags: ['hadith', 'document', 'bukhari']
-            },
-            {
-                id: 5,
-                name: 'Kaaba Aerial View',
-                filename: 'kaaba-aerial.jpg',
-                type: 'image',
-                size: '3.2 MB',
-                dimensions: '2560x1440',
-                thumbnail: 'https://picsum.photos/seed/kaaba/400/300',
-                uploaded: '2 weeks ago',
-                tags: ['mecca', 'kaaba', 'holy']
-            },
-            {
-                id: 6,
-                name: 'Islamic Calligraphy',
-                filename: 'bismillah-calligraphy.png',
-                type: 'image',
-                size: '1.8 MB',
-                dimensions: '1200x800',
-                thumbnail: 'https://picsum.photos/seed/calligraphy/400/300',
-                uploaded: '3 weeks ago',
-                tags: ['art', 'calligraphy']
-            },
-            {
-                id: 7,
-                name: 'Sahaba Documentary',
-                filename: 'sahaba-documentary.mp4',
-                type: 'video',
-                size: '256.4 MB',
-                dimensions: '1920x1080',
-                thumbnail: 'https://picsum.photos/seed/sahaba/400/300',
-                uploaded: '1 month ago',
-                tags: ['video', 'documentary', 'sahaba']
-            },
-            {
-                id: 8,
-                name: 'Medina Mosque Interior',
-                filename: 'medina-mosque.jpg',
-                type: 'image',
-                size: '4.1 MB',
-                dimensions: '3840x2160',
-                thumbnail: 'https://picsum.photos/seed/medina/400/300',
-                uploaded: '1 month ago',
-                tags: ['medina', 'mosque', 'holy']
-            }
-        ],
+        };
 
-        // Initialize
-        init() {
-            this.totalItems = this.mediaItems.length;
-            setTimeout(() => lucide.createIcons(), 100);
-        },
+        function mediaLibraryPage() {
+            return {
+                config: window.mediaLibraryConfig,
+                items: [],
+                loading: false,
+                viewMode: 'grid',
+                showFilters: window.innerWidth >= 1024,
+                collections: window.mediaLibraryConfig.initialCollections || [],
+                tags: window.mediaLibraryConfig.initialTags || [],
+                stats: window.mediaLibraryConfig.initialStats || {},
+                selectedItems: [],
+                searchTimer: null,
+                cropper: null,
+                toasts: [],
+                pagination: {
+                    current_page: 1,
+                    last_page: 1,
+                    per_page: 24,
+                    total: 0,
+                    from: 0,
+                    to: 0,
+                },
+                filters: {
+                    search: window.mediaLibraryConfig.initialFilters.search || '',
+                    type: window.mediaLibraryConfig.initialFilters.type || '',
+                    collection: window.mediaLibraryConfig.initialFilters.collection || '',
+                    tag: window.mediaLibraryConfig.initialFilters.tag || '',
+                    date_from: window.mediaLibraryConfig.initialFilters.date_from || '',
+                    date_to: window.mediaLibraryConfig.initialFilters.date_to || '',
+                    size_min_kb: window.mediaLibraryConfig.initialFilters.size_min ? Math.round(window.mediaLibraryConfig.initialFilters.size_min / 1024) : '',
+                    size_max_kb: window.mediaLibraryConfig.initialFilters.size_max ? Math.round(window.mediaLibraryConfig.initialFilters.size_max / 1024) : '',
+                    unused: Boolean(window.mediaLibraryConfig.initialFilters.unused),
+                    sort: window.mediaLibraryConfig.initialFilters.sort || 'created_at',
+                    order: window.mediaLibraryConfig.initialFilters.order || 'desc',
+                },
+                editModal: {
+                    open: false,
+                    form: {},
+                },
+                cropModal: {
+                    open: false,
+                    media: null,
+                },
+                confirmDialog: {
+                    open: false,
+                    title: '',
+                    message: '',
+                    confirmLabel: '',
+                    meta: [],
+                    action: null,
+                },
+                previewModal: {
+                    open: false,
+                    media: null,
+                    activeSource: 'original',
+                },
 
-        // Computed filtered media
-        get filteredMedia() {
-            let filtered = this.mediaItems;
+                init() {
+                    this.loadMedia();
+                    this.loadAuxiliaryData();
 
-            // Apply search filter
-            if (this.searchQuery) {
-                const query = this.searchQuery.toLowerCase();
-                filtered = filtered.filter(item =>
-                    item.name.toLowerCase().includes(query) ||
-                    item.filename.toLowerCase().includes(query) ||
-                    item.tags.some(tag => tag.toLowerCase().includes(query))
-                );
-            }
+                    window.addEventListener('media-uploaded', () => {
+                        this.loadMedia(1);
+                        this.loadAuxiliaryData();
+                    });
+                },
 
-            // Apply type filters (from sidebar)
-            if (this.activeFilters.length > 0) {
-                filtered = filtered.filter(item =>
-                    this.activeFilters.includes(item.type)
-                );
-            }
+                get statCards() {
+                    return [
+                        {
+                            label: this.config.i18n.statTotalFiles,
+                            value: this.stats.total_count || 0,
+                            icon: 'database',
+                            iconBg: 'bg-gradient-to-r from-[#0056b3] to-[#218838]',
+                        },
+                        {
+                            label: this.config.i18n.statImages,
+                            value: this.stats.images_count || 0,
+                            icon: 'image',
+                            iconBg: 'bg-gradient-to-r from-[#0056b3] to-[#64CCC5]',
+                        },
+                        {
+                            label: this.config.i18n.statVideosAudio,
+                            value: (this.stats.videos_count || 0) + (this.stats.audio_count || 0),
+                            icon: 'clapperboard',
+                            iconBg: 'bg-gradient-to-r from-[#218838] to-[#64CCC5]',
+                        },
+                        {
+                            label: this.config.i18n.statUnused,
+                            value: this.stats.unused_count || 0,
+                            icon: 'shield',
+                            iconBg: 'bg-gradient-to-r from-[#0f172a] to-[#334155]',
+                        },
+                    ];
+                },
 
-            this.totalItems = filtered.length;
-            return filtered.slice(
-                (this.currentPage - 1) * this.perPage,
-                this.currentPage * this.perPage
-            );
-        },
+                async loadMedia(page = 1) {
+                    this.loading = true;
 
-        // Pagination
-        get totalPages() {
-            return Math.ceil(this.totalItems / this.perPage);
-        },
+                    try {
+                        const params = new URLSearchParams();
+                        params.set('page', page);
+                        params.set('per_page', this.pagination.per_page || 24);
+                        params.set('sort', this.filters.sort || 'created_at');
+                        params.set('order', this.filters.order || 'desc');
 
-        goToPage(page) {
-            this.currentPage = page;
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        },
+                        if (this.filters.search) params.set('search', this.filters.search);
+                        if (this.filters.type) params.set('type', this.filters.type);
+                        if (this.filters.collection) params.set('collection', this.filters.collection);
+                        if (this.filters.tag) params.set('tag', this.filters.tag);
+                        if (this.filters.date_from) params.set('date_from', this.filters.date_from);
+                        if (this.filters.date_to) params.set('date_to', this.filters.date_to);
+                        if (this.filters.size_min_kb) params.set('size_min', String(Number(this.filters.size_min_kb) * 1024));
+                        if (this.filters.size_max_kb) params.set('size_max', String(Number(this.filters.size_max_kb) * 1024));
+                        if (this.filters.unused) params.set('unused', '1');
 
-        nextPage() {
-            if (this.currentPage < this.totalPages) {
-                this.currentPage++;
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        },
+                        const response = await this.request(`${this.config.indexUrl}?${params.toString()}`);
+                        this.items = response.data || [];
+                        this.pagination = response.meta || this.pagination;
+                        this.selectedItems = this.selectedItems.filter((id) => this.items.some((item) => item.id === id));
 
-        prevPage() {
-            if (this.currentPage > 1) {
-                this.currentPage--;
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        },
+                        if (this.config.openMediaId) {
+                            this.openRequestedMedia();
+                        }
+                    } finally {
+                        this.loading = false;
+                        this.$nextTick(() => lucide.createIcons());
+                    }
+                },
 
-        // Search
-        debounceSearch() {
-            clearTimeout(this.searchTimeout);
-            this.searchTimeout = setTimeout(() => {
-                this.currentPage = 1;
-            }, 300);
-        },
+                async loadAuxiliaryData() {
+                    try {
+                        const [statsResponse, collectionsResponse, tagsResponse] = await Promise.all([
+                            this.request(this.config.statisticsUrl),
+                            this.request(this.config.collectionsUrl),
+                            this.request(this.config.tagsUrl),
+                        ]);
 
-        // Selection
-        toggleSelectAll() {
-            if (this.selectAll) {
-                this.selectedItems = [];
-            } else {
-                this.selectedItems = this.filteredMedia.map(item => item.id);
-            }
-            this.selectAll = !this.selectAll;
-        },
+                        this.stats = statsResponse.data || {};
+                        this.collections = collectionsResponse.data || [];
+                        this.tags = tagsResponse.data || [];
+                    } catch (error) {
+                        console.error(error);
+                    } finally {
+                        this.$nextTick(() => lucide.createIcons());
+                    }
+                },
 
-        clearSelection() {
-            this.selectedItems = [];
-            this.selectAll = false;
-        },
+                debounceSearch() {
+                    clearTimeout(this.searchTimer);
+                    this.searchTimer = setTimeout(() => this.applyFilters(), 300);
+                },
 
-        // Bulk actions
-        bulkDownload() {
-            alert(`Downloading ${this.selectedItems.length} files...`);
-            // Implement download logic
-        },
+                applyFilters() {
+                    this.selectedItems = [];
+                    this.loadMedia(1);
+                },
 
-        bulkTag() {
-            const tags = prompt('Enter tags (comma-separated):');
-            if (tags) {
-                alert(`Adding tags to ${this.selectedItems.length} files: ${tags}`);
-                // Implement tagging logic
-            }
-        },
+                clearFilters() {
+                    this.filters = {
+                        search: '',
+                        type: '',
+                        collection: '',
+                        tag: '',
+                        date_from: '',
+                        date_to: '',
+                        size_min_kb: '',
+                        size_max_kb: '',
+                        unused: false,
+                        sort: 'created_at',
+                        order: 'desc',
+                    };
+                    this.applyFilters();
+                },
 
-        confirmBulkDelete() {
-            if (confirm(`Are you sure you want to delete ${this.selectedItems.length} files?`)) {
-                alert(`Deleting ${this.selectedItems.length} files...`);
-                // Implement delete logic
-                this.clearSelection();
-            }
-        },
+                changePage(page) {
+                    if (page < 1 || page > this.pagination.last_page) {
+                        return;
+                    }
 
-        // Single item actions
-        viewMedia(item) {
-            alert(`Viewing: ${item.name}`);
-            // Implement view modal
-        },
+                    this.loadMedia(page);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                },
 
-        editMedia(item) {
-            alert(`Editing: ${item.name}`);
-            // Navigate to edit page or open modal
-        },
+                currentPageSelected() {
+                    return this.items.length > 0 && this.items.every((item) => this.selectedItems.includes(item.id));
+                },
 
-        deleteMedia(item) {
-            if (confirm(`Are you sure you want to delete "${item.name}"?`)) {
-                alert(`Deleting: ${item.name}`);
-                // Implement delete logic
-            }
-        },
+                toggleSelectAll() {
+                    if (this.currentPageSelected()) {
+                        this.selectedItems = this.selectedItems.filter((id) => !this.items.some((item) => item.id === id));
+                        return;
+                    }
 
-        // Helpers
-        getTypeBadgeClass(type) {
-            const classes = {
-                'image': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-                'video': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-                'audio': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-                'document': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                    const next = new Set(this.selectedItems);
+                    this.items.forEach((item) => next.add(item.id));
+                    this.selectedItems = Array.from(next);
+                },
+
+                typeBadge(type) {
+                    const map = {
+                        image: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                        video: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+                        audio: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+                        document: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+                    };
+
+                    return map[type] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
+                },
+
+                formatDate(value) {
+                    if (!value) return '-';
+
+                    return new Intl.DateTimeFormat(undefined, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                    }).format(new Date(value));
+                },
+
+                viewMedia(item) {
+                    this.previewModal.media = item;
+                    this.previewModal.activeSource = this.defaultPreviewSource(item);
+                    this.previewModal.open = true;
+                    this.$nextTick(() => lucide.createIcons());
+                },
+
+                closePreview() {
+                    this.previewModal.open = false;
+                    this.previewModal.media = null;
+                    this.previewModal.activeSource = 'original';
+                },
+
+                previewSources(media) {
+                    if (!media) {
+                        return [];
+                    }
+
+                    const sources = [{
+                        key: 'original',
+                        label: @js(__('media.preview.original')),
+                        url: media.src,
+                        width: media.width,
+                        height: media.height,
+                        size: media.human_readable_size,
+                    }];
+
+                    Object.entries(media.variants || {}).forEach(([key, variant]) => {
+                        sources.push({
+                            key,
+                            label: key,
+                            url: variant.url,
+                            width: variant.width || null,
+                            height: variant.height || null,
+                            size: variant.human_readable_size || variant.size || null,
+                        });
+                    });
+
+                    return sources;
+                },
+
+                defaultPreviewSource(media) {
+                    if (!media) {
+                        return 'original';
+                    }
+
+                    if (media.is_image && media.variants && media.variants.medium) {
+                        return 'medium';
+                    }
+
+                    return 'original';
+                },
+
+                activePreviewSource() {
+                    return this.previewSources(this.previewModal.media)
+                        .find((source) => source.key === this.previewModal.activeSource) || null;
+                },
+
+                activePreviewDimensions() {
+                    const source = this.activePreviewSource();
+                    if (!source || !source.width || !source.height) {
+                        return '-';
+                    }
+
+                    return `${source.width} × ${source.height}`;
+                },
+
+                activePreviewSize() {
+                    const source = this.activePreviewSource();
+
+                    return source?.size || this.previewModal.media?.human_readable_size || '-';
+                },
+
+                openEdit(item) {
+                    this.editModal.form = {
+                        ...item,
+                        tagsText: (item.tags || []).join(', '),
+                    };
+                    this.editModal.open = true;
+                    this.$nextTick(() => lucide.createIcons());
+                },
+
+                closeEdit() {
+                    this.editModal.open = false;
+                    this.editModal.form = {};
+                },
+
+                async saveEdit() {
+                    const body = {
+                        title: this.editModal.form.title,
+                        alt_text: this.editModal.form.alt_text,
+                        caption: this.editModal.form.caption,
+                        collection_name: this.editModal.form.collection_name,
+                        tags: this.editModal.form.tagsText
+                            ? this.editModal.form.tagsText.split(',').map((tag) => tag.trim()).filter(Boolean)
+                            : [],
+                    };
+
+                    await this.request(`${this.config.baseUrl}/${this.editModal.form.id}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(body),
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    });
+
+                    this.closeEdit();
+                    await this.loadMedia(this.pagination.current_page);
+                    await this.loadAuxiliaryData();
+                },
+
+                async deleteMedia(item) {
+                    this.openConfirmDialog({
+                        title: this.config.i18n.deleteDialogTitle,
+                        message: this.config.i18n.confirmDeleteSingle.replace(':title', item.title),
+                        confirmLabel: this.config.i18n.deleteAction,
+                        meta: [
+                            { label: this.config.i18n.metaType, value: item.type_label || item.type },
+                            { label: this.config.i18n.metaSize, value: item.human_readable_size },
+                        ],
+                        action: async () => {
+                            const response = await this.request(`${this.config.baseUrl}/${item.id}`, {
+                                method: 'DELETE',
+                            });
+
+                            this.showToast(response.message || this.config.i18n.deleteSuccess, 'success');
+                            await this.loadMedia(this.pagination.current_page);
+                            await this.loadAuxiliaryData();
+                        },
+                    });
+                },
+
+                async confirmBulkDelete() {
+                    if (!this.selectedItems.length) {
+                        return;
+                    }
+
+                    this.openConfirmDialog({
+                        title: this.config.i18n.bulkDeleteDialogTitle,
+                        message: this.config.i18n.confirmDeleteMultiple.replace(':count', this.selectedItems.length),
+                        confirmLabel: this.config.i18n.bulkDeleteAction,
+                        meta: [
+                            { label: this.config.i18n.metaSelected, value: this.selectedItems.length },
+                        ],
+                        action: async () => {
+                            const response = await this.request(this.config.bulkDeleteUrl, {
+                                method: 'POST',
+                                body: JSON.stringify({ ids: this.selectedItems }),
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                            });
+
+                            this.selectedItems = [];
+                            this.showToast(response.message || this.config.i18n.bulkDeleteSuccess, 'success');
+                            await this.loadMedia(this.pagination.current_page);
+                            await this.loadAuxiliaryData();
+                        },
+                    });
+                },
+
+                async bulkTag() {
+                    const tagInput = prompt(this.config.i18n.replaceTagsPrompt);
+                    if (tagInput === null) {
+                        return;
+                    }
+
+                    const tags = tagInput.split(',').map((tag) => tag.trim()).filter(Boolean);
+
+                    await this.request(this.config.bulkUpdateTagsUrl, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            ids: this.selectedItems,
+                            tags,
+                        }),
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    });
+
+                    this.showToast(this.config.i18n.tagsUpdated, 'success');
+                    await this.loadMedia(this.pagination.current_page);
+                    await this.loadAuxiliaryData();
+                },
+
+                bulkDownload() {
+                    this.items
+                        .filter((item) => this.selectedItems.includes(item.id))
+                        .forEach((item) => {
+                            const link = document.createElement('a');
+                            link.href = item.download_url;
+                            link.target = '_blank';
+                            link.rel = 'noopener';
+                            document.body.appendChild(link);
+                            link.click();
+                            link.remove();
+                        });
+                },
+
+                openCrop(item) {
+                    this.cropModal.media = item;
+                    this.cropModal.open = true;
+
+                    this.$nextTick(() => {
+                        if (this.cropper) {
+                            this.cropper.destroy();
+                        }
+
+                        this.cropper = new Cropper(this.$refs.cropperImage, {
+                            viewMode: 1,
+                            autoCropArea: 1,
+                            responsive: true,
+                            background: false,
+                        });
+                    });
+                },
+
+                closeCrop() {
+                    this.cropModal.open = false;
+                    this.cropModal.media = null;
+
+                    if (this.cropper) {
+                        this.cropper.destroy();
+                        this.cropper = null;
+                    }
+                },
+
+                async saveCrop() {
+                    if (!this.cropModal.media || !this.cropper) {
+                        return;
+                    }
+
+                    const data = this.cropper.getData(true);
+
+                    await this.request(`${this.config.baseUrl}/${this.cropModal.media.id}/crop`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            x: data.x,
+                            y: data.y,
+                            width: data.width,
+                            height: data.height,
+                        }),
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    });
+
+                    this.closeCrop();
+                    this.showToast(this.config.i18n.cropSaved, 'success');
+                    await this.loadMedia(this.pagination.current_page);
+                },
+
+                async optimizeMedia(item) {
+                    await this.request(`${this.config.baseUrl}/${item.id}/optimize`, {
+                        method: 'POST',
+                    });
+
+                    this.showToast(this.config.i18n.optimizeSaved, 'success');
+                    await this.loadMedia(this.pagination.current_page);
+                },
+
+                async regenerateVariants(item) {
+                    await this.request(`${this.config.baseUrl}/${item.id}/regenerate-variants`, {
+                        method: 'POST',
+                    });
+
+                    this.showToast(this.config.i18n.variantsSaved, 'success');
+                    await this.loadMedia(this.pagination.current_page);
+                },
+
+                async openRequestedMedia() {
+                    const mediaId = this.config.openMediaId;
+                    this.config.openMediaId = null;
+
+                    if (!mediaId) {
+                        return;
+                    }
+
+                    const existing = this.items.find((item) => item.id === Number(mediaId));
+                    if (existing) {
+                        this.openEdit(existing);
+                        return;
+                    }
+
+                    const response = await this.request(`${this.config.baseUrl}/${mediaId}`);
+                    if (response.data) {
+                        this.openEdit(response.data);
+                    }
+                },
+
+                openConfirmDialog(config) {
+                    this.confirmDialog = {
+                        open: true,
+                        title: config.title || '',
+                        message: config.message || '',
+                        confirmLabel: config.confirmLabel || this.config.i18n.deleteAction,
+                        meta: config.meta || [],
+                        action: config.action || null,
+                    };
+                    this.$nextTick(() => lucide.createIcons());
+                },
+
+                closeConfirmDialog() {
+                    this.confirmDialog = {
+                        open: false,
+                        title: '',
+                        message: '',
+                        confirmLabel: '',
+                        meta: [],
+                        action: null,
+                    };
+                },
+
+                async runConfirmAction() {
+                    const action = this.confirmDialog.action;
+                    this.closeConfirmDialog();
+
+                    if (!action) {
+                        return;
+                    }
+
+                    try {
+                        await action();
+                    } catch (error) {
+                        this.showToast(error.message || this.config.i18n.requestFailed, 'error');
+                    }
+                },
+
+                showToast(message, type = 'success', title = '') {
+                    const toast = {
+                        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                        type,
+                        title,
+                        message,
+                    };
+
+                    this.toasts.unshift(toast);
+                    this.$nextTick(() => lucide.createIcons());
+
+                    window.setTimeout(() => this.dismissToast(toast.id), 4500);
+                },
+
+                dismissToast(toastId) {
+                    this.toasts = this.toasts.filter((toast) => toast.id !== toastId);
+                },
+
+                async request(url, options = {}) {
+                    const token = document.querySelector('meta[name="csrf-token"]')?.content;
+                    const response = await fetch(url, {
+                        method: options.method || 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': token,
+                            ...(options.headers || {}),
+                        },
+                        body: options.body || null,
+                    });
+
+                    const data = await response.json().catch(() => ({}));
+
+                    if (!response.ok || data.success === false) {
+                        const errorMessage = data.message
+                            || Object.values(data.errors || {}).flat().find(Boolean)
+                            || this.config.i18n.requestFailed;
+
+                        throw new Error(errorMessage);
+                    }
+
+                    return data;
+                },
             };
-            return classes[type] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
-        },
-
-        // Handle upload success
-        handleUploadSuccess(data) {
-            console.log('Upload success:', data);
-
-            // Add new media to the list if response contains media data
-            if (data.response && data.response.media) {
-                const newMedia = {
-                    id: data.response.media.id || Date.now(),
-                    name: data.response.media.name || data.file.name,
-                    filename: data.file.name,
-                    type: data.file.type.split('/')[0],
-                    size: formatBytes(data.file.size),
-                    dimensions: data.response.media.dimensions || null,
-                    thumbnail: data.response.media.thumbnail || data.file.thumbnail || '/images/placeholder.png',
-                    uploaded: 'Just now',
-                    tags: data.response.media.tags || []
-                };
-
-                this.mediaItems.unshift(newMedia);
-                this.totalItems = this.mediaItems.length;
-            }
-
-            // Refresh icons
-            this.$nextTick(() => lucide.createIcons());
         }
-    };
-}
-</script>
+    </script>
 @endpush

@@ -142,8 +142,10 @@ class ArticleController extends AdminController
                             'toc' => $validated['toc'][$locale] ?? $this->generateTableOfContents($validated['content'][$locale] ?? ''),
                             'summary' => $validated['summary'][$locale] ?? null,
                         ],
-                        'seo_title' => $validated['seo_title'][$locale] ?? null,
-                        'seo_description' => $validated['seo_description'][$locale] ?? null,
+                        'seo_metadata' => [
+                            'title' => $validated['seo_title'][$locale] ?? null,
+                            'description' => $validated['seo_description'][$locale] ?? null,
+                        ],
                         'is_ready' => $validated['is_ready'][$locale] ?? false,
                     ]);
                 }
@@ -164,20 +166,9 @@ class ArticleController extends AdminController
                 $article->tags()->attach($validated['tags']);
             }
 
-            // Attach gallery media
-            if (!empty($validated['gallery'])) {
-                $article->media()->syncWithoutDetaching($validated['gallery']);
-            }
-
             // Sync media items (videos/episodes)
             if (!empty($validated['media_items'])) {
                 $article->mediaItems()->sync($validated['media_items']);
-            }
-
-            // Handle scheduled publishing
-            if ($validated['status'] === 'scheduled' && isset($validated['published_at'])) {
-                // Queue the publishing job
-                \App\Jobs\PublishScheduledContent::dispatch($article, $validated['published_at']);
             }
 
             // Create initial version
@@ -193,6 +184,8 @@ class ArticleController extends AdminController
             $this->logActivity('created', 'Article', $article->id, [
                 'title' => $validated['title']['ar'] ?? $validated['title']['en'],
             ]);
+
+            $article->load($this->articleRelations());
 
             if ($this->expectsJson(request())) {
                 return $this->createdResponse(
@@ -230,7 +223,7 @@ class ArticleController extends AdminController
     {
         $this->authorizeAdmin('view articles');
 
-        $article->load(['locales', 'writer', 'category', 'categories', 'tags', 'media', 'versions']);
+        $article->load($this->articleRelations());
 
         if ($this->expectsJson(request())) {
             return $this->successResponse(
@@ -249,15 +242,16 @@ class ArticleController extends AdminController
     {
         $this->authorizeAdmin('edit articles');
 
-        $article->load(['locales', 'categories', 'tags']);
+        $article->load(['locales', 'categories', 'tags', 'mediaItems', 'gallery']);
 
         $categories = Category::all();
         $writers = User::role('writer')->get();
         $tags = Tag::where('type', 'article')->get();
         $locales = $this->locales;
         $currentHijriDate = DateUtil::getCurrentHijriDate();
+        $formArticle = $this->transformArticleForForm($article);
 
-        return view('admin.articles.edit', compact('article', 'categories', 'writers', 'tags', 'locales', 'currentHijriDate'));
+        return view('admin.articles.edit', compact('article', 'categories', 'writers', 'tags', 'locales', 'currentHijriDate', 'formArticle'));
     }
 
     /**
@@ -311,8 +305,10 @@ class ArticleController extends AdminController
                                 'toc' => $validated['toc'][$locale] ?? $this->generateTableOfContents($validated['content'][$locale] ?? ''),
                                 'summary' => $validated['summary'][$locale] ?? null,
                             ],
-                            'seo_title' => $validated['seo_title'][$locale] ?? null,
-                            'seo_description' => $validated['seo_description'][$locale] ?? null,
+                            'seo_metadata' => [
+                                'title' => $validated['seo_title'][$locale] ?? null,
+                                'description' => $validated['seo_description'][$locale] ?? null,
+                            ],
                             'is_ready' => $validated['is_ready'][$locale] ?? false,
                         ]
                     );
@@ -328,9 +324,6 @@ class ArticleController extends AdminController
 
             // Sync tags
             $article->tags()->sync($validated['tags'] ?? []);
-
-            // Sync gallery media
-            $article->media()->sync($validated['gallery'] ?? []);
 
             // Sync media items (videos/episodes)
             if (isset($validated['media_items'])) {
@@ -350,6 +343,8 @@ class ArticleController extends AdminController
             $this->logActivity('updated', 'Article', $article->id, [
                 'title' => $validated['title']['ar'] ?? $validated['title']['en'],
             ]);
+
+            $article->load($this->articleRelations());
 
             if ($this->expectsJson(request())) {
                 return $this->successResponse(
@@ -699,6 +694,75 @@ class ArticleController extends AdminController
     {
         $wordCount = str_word_count(strip_tags($content));
         return max(1, (int) ceil($wordCount / 200)); // Assuming 200 words per minute
+    }
+
+    /**
+     * Relations required for admin article detail responses.
+     *
+     * @return array<int, string>
+     */
+    protected function articleRelations(): array
+    {
+        return [
+            'locales',
+            'writer',
+            'category',
+            'categories',
+            'tags',
+            'mediaItems',
+            'gallery',
+            'versions',
+            'seerahEvents',
+        ];
+    }
+
+    /**
+     * Normalize an article for the Alpine edit form payload.
+     *
+     * @return array<string, mixed>
+     */
+    protected function transformArticleForForm(Article $article): array
+    {
+        return [
+            'id' => $article->id,
+            'thumb' => $article->thumb,
+            'writer_id' => $article->writer_id,
+            'category_id' => $article->category_id,
+            'is_featured' => $article->is_featured,
+            'is_pinned' => $article->is_pinned,
+            'hijri_date' => $article->hijri_date,
+            'read_time' => $article->read_time,
+            'gallery' => $article->gallery->map(fn ($item) => [
+                'id' => $item->id,
+                'image' => $item->image,
+                'caption' => $item->caption,
+                'order' => $item->order,
+            ])->values()->all(),
+            'media_items' => $article->mediaItems->map(fn ($media) => [
+                'id' => $media->id,
+                'filename' => $media->filename,
+                'original_filename' => $media->original_filename,
+                'url' => $media->url,
+                'thumbnail_url' => $media->thumbnail_url,
+                'mime_type' => $media->mime_type,
+                'size' => $media->size,
+                'type' => $media->type,
+            ])->values()->all(),
+            'locales' => $article->locales->mapWithKeys(fn (ArticleLocale $locale) => [
+                $locale->locale => [
+                    'title' => $locale->title,
+                    'slug' => $locale->slug,
+                    'description' => $locale->description,
+                    'excerpt' => $locale->excerpt,
+                    'content' => $locale->content,
+                    'seo' => [
+                        'title' => $locale->seo_title,
+                        'description' => $locale->seo_description,
+                    ],
+                    'is_ready' => $locale->is_ready,
+                ],
+            ])->all(),
+        ];
     }
 
     /**

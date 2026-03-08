@@ -124,6 +124,7 @@
     {{-- Article Form --}}
     @include('admin.articles._form-new', [
         'article' => $article,
+        'formArticle' => $formArticle,
         'categories' => $categories,
         'writers' => $writers,
         'tags' => $tags,

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Blog\Models;
 
+use App\Models\Article;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;

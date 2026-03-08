@@ -4,16 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
-use App\Domain\Hadith\Enums\NarratorGrade;
+use App\Domain\Hadith\Enums\HadithGrade;
 use App\Domain\Hadith\Models\HadithNarrator;
-use App\Domain\Hadith\Repositories\HadithNarratorRepositoryInterface;
+use App\Domain\Hadith\Repositories\NarratorRepositoryInterface;
 use App\Http\Requests\Admin\Hadith\StoreNarratorRequest;
 use App\Http\Requests\Admin\Hadith\UpdateNarratorRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 /**
@@ -22,16 +21,10 @@ use Illuminate\View\View;
  */
 class NarratorController extends AdminController
 {
-    /**
-     * Supported locales
-     */
-    protected array $locales;
-
     public function __construct(
-        protected HadithNarratorRepositoryInterface $repository
+        protected NarratorRepositoryInterface $repository
     ) {
         parent::__construct();
-        $this->locales = array_keys(config('app.supported_locales', ['ar', 'en']));
     }
 
     /**
@@ -43,9 +36,8 @@ class NarratorController extends AdminController
 
         $filters = $this->getFilters($request, [
             'reliability_grade',
-            'era',
-            'country',
-            'status',
+            'region',
+            'school',
         ]);
 
         $search = $this->getSearchQuery($request);
@@ -58,36 +50,36 @@ class NarratorController extends AdminController
             $query->where('reliability_grade', $filters['reliability_grade']);
         }
 
-        if (isset($filters['era'])) {
-            $query->where('era', $filters['era']);
+        if (isset($filters['region'])) {
+            $query->where('region', $filters['region']);
         }
 
-        if (isset($filters['country'])) {
-            $query->where('country', $filters['country']);
-        }
-
-        if (isset($filters['status'])) {
-            $query->where('status', $filters['status']);
+        if (isset($filters['school'])) {
+            $query->where('school', $filters['school']);
         }
 
         // Apply search
         if ($search) {
-            $query->search($search);
+            $query->where(function ($q) use ($search) {
+                $q->where('name_ar', 'LIKE', "%{$search}%")
+                  ->orWhere('name_en', 'LIKE', "%{$search}%")
+                  ->orWhere('full_name_ar', 'LIKE', "%{$search}%")
+                  ->orWhere('full_name_en', 'LIKE', "%{$search}%");
+            });
         }
 
         // Apply sorting
         $query->orderBy($pagination['sort'], $pagination['order']);
 
-        $narrators = $query->withCount('hadiths')->paginate($pagination['per_page']);
+        $narrators = $query->paginate($pagination['per_page']);
 
         if ($this->expectsJson($request)) {
             return $this->paginatedResponse($narrators, 'تم جلب الرواة بنجاح');
         }
 
-        $grades = NarratorGrade::cases();
-        $eras = ['صحابي', 'تابعي', 'تابع التابعين', 'القرن الثاني', 'القرن الثالث', 'القرن الرابع', 'القرن الخامس'];
+        $grades = HadithGrade::cases();
 
-        return view('admin.hadith.narrators.index', compact('narrators', 'grades', 'eras'));
+        return view('admin.hadith.narrators.index', compact('narrators', 'grades'));
     }
 
     /**
@@ -97,11 +89,9 @@ class NarratorController extends AdminController
     {
         $this->authorizeAdmin('create narrators');
 
-        $grades = NarratorGrade::cases();
-        $locales = $this->locales;
-        $narrators = HadithNarrator::active()->orderBy('name->ar')->get(); // For teachers/students
+        $grades = HadithGrade::cases();
 
-        return view('admin.hadith.narrators.create', compact('grades', 'locales', 'narrators'));
+        return view('admin.hadith.narrators.create', compact('grades'));
     }
 
     /**
@@ -117,23 +107,23 @@ class NarratorController extends AdminController
 
             // Create narrator
             $narrator = HadithNarrator::create([
-                'slug' => $validated['slug'] ?? Str::slug($validated['name']['ar']),
-                'name' => $validated['name'],
-                'biography_json' => $validated['biography_json'] ?? null,
-                'reliability_grade' => NarratorGrade::from($validated['reliability_grade']),
-                'era' => $validated['era'] ?? null,
-                'country' => $validated['country'] ?? null,
-                'birth_hijri' => $validated['birth_hijri'] ?? null,
-                'death_hijri' => $validated['death_hijri'] ?? null,
-                'teachers' => $validated['teachers'] ?? null,
-                'students' => $validated['students'] ?? null,
-                'status' => $validated['status'] ?? 'active',
+                'name_ar' => $validated['name_ar'],
+                'name_en' => $validated['name_en'] ?? null,
+                'full_name_ar' => $validated['full_name_ar'] ?? null,
+                'full_name_en' => $validated['full_name_en'] ?? null,
+                'kunya' => $validated['kunya'] ?? null,
+                'biography' => $validated['biography'] ?? null,
+                'reliability_grade' => $validated['reliability_grade'] ?? null,
+                'birth_year_hijri' => $validated['birth_year_hijri'] ?? null,
+                'death_year_hijri' => $validated['death_year_hijri'] ?? null,
+                'school' => $validated['school'] ?? null,
+                'region' => $validated['region'] ?? null,
             ]);
 
             DB::commit();
 
             $this->logActivity('created', 'HadithNarrator', $narrator->id, [
-                'name' => $validated['name']['ar'],
+                'name' => $validated['name_ar'],
             ]);
 
             if ($this->expectsJson(request())) {
@@ -144,7 +134,7 @@ class NarratorController extends AdminController
             }
 
             return redirect()
-                ->route('admin.narrators.index')
+                ->route('admin.hadith.narrators.index')
                 ->with('success', 'تم إنشاء الراوي بنجاح!');
 
         } catch (\Exception $e) {
@@ -167,7 +157,7 @@ class NarratorController extends AdminController
     {
         $this->authorizeAdmin('view narrators');
 
-        $narrator->loadCount('hadiths');
+        // Note: hadiths() returns Collection not Relationship, so loadCount unavailable
 
         if ($this->expectsJson(request())) {
             return $this->successResponse(
@@ -186,14 +176,9 @@ class NarratorController extends AdminController
     {
         $this->authorizeAdmin('edit narrators');
 
-        $grades = NarratorGrade::cases();
-        $locales = $this->locales;
-        $narrators = HadithNarrator::active()
-            ->where('id', '!=', $narrator->id)
-            ->orderBy('name->ar')
-            ->get();
+        $grades = HadithGrade::cases();
 
-        return view('admin.hadith.narrators.edit', compact('narrator', 'grades', 'locales', 'narrators'));
+        return view('admin.hadith.narrators.edit', compact('narrator', 'grades'));
     }
 
     /**
@@ -209,23 +194,23 @@ class NarratorController extends AdminController
 
             // Update narrator
             $narrator->update([
-                'slug' => $validated['slug'] ?? $narrator->slug,
-                'name' => $validated['name'],
-                'biography_json' => $validated['biography_json'] ?? $narrator->biography_json,
-                'reliability_grade' => NarratorGrade::from($validated['reliability_grade']),
-                'era' => $validated['era'] ?? $narrator->era,
-                'country' => $validated['country'] ?? $narrator->country,
-                'birth_hijri' => $validated['birth_hijri'] ?? $narrator->birth_hijri,
-                'death_hijri' => $validated['death_hijri'] ?? $narrator->death_hijri,
-                'teachers' => $validated['teachers'] ?? $narrator->teachers,
-                'students' => $validated['students'] ?? $narrator->students,
-                'status' => $validated['status'] ?? $narrator->status,
+                'name_ar' => $validated['name_ar'],
+                'name_en' => $validated['name_en'] ?? $narrator->name_en,
+                'full_name_ar' => $validated['full_name_ar'] ?? $narrator->full_name_ar,
+                'full_name_en' => $validated['full_name_en'] ?? $narrator->full_name_en,
+                'kunya' => $validated['kunya'] ?? $narrator->kunya,
+                'biography' => $validated['biography'] ?? $narrator->biography,
+                'reliability_grade' => $validated['reliability_grade'] ?? $narrator->reliability_grade,
+                'birth_year_hijri' => $validated['birth_year_hijri'] ?? $narrator->birth_year_hijri,
+                'death_year_hijri' => $validated['death_year_hijri'] ?? $narrator->death_year_hijri,
+                'school' => $validated['school'] ?? $narrator->school,
+                'region' => $validated['region'] ?? $narrator->region,
             ]);
 
             DB::commit();
 
             $this->logActivity('updated', 'HadithNarrator', $narrator->id, [
-                'name' => $validated['name']['ar'],
+                'name' => $validated['name_ar'],
             ]);
 
             if ($this->expectsJson(request())) {
@@ -236,7 +221,7 @@ class NarratorController extends AdminController
             }
 
             return redirect()
-                ->route('admin.narrators.index')
+                ->route('admin.hadith.narrators.index')
                 ->with('success', 'تم تحديث الراوي بنجاح!');
 
         } catch (\Exception $e) {
@@ -272,7 +257,7 @@ class NarratorController extends AdminController
             $narrator->delete();
 
             $this->logActivity('deleted', 'HadithNarrator', $narrator->id, [
-                'name' => $narrator->name['ar'] ?? 'N/A',
+                'name' => $narrator->name_ar ?? 'N/A',
             ]);
 
             if ($this->expectsJson(request())) {
@@ -280,7 +265,7 @@ class NarratorController extends AdminController
             }
 
             return redirect()
-                ->route('admin.narrators.index')
+                ->route('admin.hadith.narrators.index')
                 ->with('success', 'تم حذف الراوي بنجاح!');
 
         } catch (\Exception $e) {
@@ -314,7 +299,7 @@ class NarratorController extends AdminController
             }
 
             return redirect()
-                ->route('admin.narrators.index')
+                ->route('admin.hadith.narrators.index')
                 ->with('success', 'تم استعادة الراوي بنجاح!');
 
         } catch (\Exception $e) {
@@ -354,21 +339,6 @@ class NarratorController extends AdminController
     }
 
     /**
-     * Toggle narrator status
-     */
-    public function toggleStatus(HadithNarrator $narrator): JsonResponse
-    {
-        $this->authorizeAdmin('edit narrators');
-
-        $newStatus = $narrator->status === 'active' ? 'inactive' : 'active';
-        $narrator->update(['status' => $newStatus]);
-
-        return $this->successResponse([
-            'status' => $narrator->status
-        ], 'تم تحديث حالة الراوي بنجاح');
-    }
-
-    /**
      * Get narrator statistics
      */
     public function statistics(HadithNarrator $narrator): JsonResponse
@@ -377,10 +347,6 @@ class NarratorController extends AdminController
 
         $stats = [
             'hadith_count' => $narrator->hadiths()->count(),
-            'sahih_count' => $narrator->hadiths()->sahih()->count(),
-            'reliable_count' => $narrator->hadiths()->reliable()->count(),
-            'teachers_count' => is_array($narrator->teachers) ? count($narrator->teachers) : 0,
-            'students_count' => is_array($narrator->students) ? count($narrator->students) : 0,
         ];
 
         return $this->successResponse($stats, 'تم جلب إحصائيات الراوي بنجاح');
@@ -395,10 +361,12 @@ class NarratorController extends AdminController
 
         $search = $request->get('q', '');
 
-        $narrators = HadithNarrator::active()
-            ->search($search)
+        $narrators = HadithNarrator::where(function ($q) use ($search) {
+                $q->where('name_ar', 'LIKE', "%{$search}%")
+                  ->orWhere('name_en', 'LIKE', "%{$search}%");
+            })
             ->limit(10)
-            ->get(['id', 'slug', 'name', 'reliability_grade']);
+            ->get(['id', 'name_ar', 'name_en', 'reliability_grade']);
 
         return $this->successResponse($narrators, 'تم جلب الرواة بنجاح');
     }

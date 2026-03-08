@@ -94,10 +94,10 @@ class GenealogyController extends Controller
      */
     public function show(int $id): View
     {
-        $person = $this->genealogyService->getPerson($id);
-
-        if (! $person) {
-            abort(404, 'Person not found');
+        try {
+            $person = $this->genealogyService->getPerson($id);
+        } catch (\App\Exceptions\Domain\ResourceNotFoundException $e) {
+            abort(404, $e->getMessage());
         }
 
         return view('admin.genealogy.show', compact('person'));
@@ -110,10 +110,10 @@ class GenealogyController extends Controller
      */
     public function edit(int $id): View
     {
-        $person = $this->genealogyService->getPerson($id);
-
-        if (! $person) {
-            abort(404, 'Person not found');
+        try {
+            $person = $this->genealogyService->getPerson($id);
+        } catch (\App\Exceptions\Domain\ResourceNotFoundException $e) {
+            abort(404, $e->getMessage());
         }
 
         return view('admin.genealogy.edit', compact('person'));
