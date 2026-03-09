@@ -128,6 +128,8 @@ return [
         'add_toc_item' => 'إضافة عنصر',
         'remove_toc_item' => 'حذف العنصر',
         'auto_generate_toc' => 'إنشاء تلقائي من المحتوى',
+        'meta_description' => 'وصف الميتا (للبحث)',
+        'blocks' => 'عدد كتل المحتوى',
     ],
 
     // Status Types
@@ -389,9 +391,4 @@ return [
     'hints' => [
         'meta_length' => 'الطول المثالي: 120-160 حرف',
     ],
-
-    'fields' => array_merge($this['fields'] ?? [], [
-        'meta_description' => 'وصف الميتا (للبحث)',
-        'blocks' => 'عدد كتل المحتوى',
-    ]),
 ];
