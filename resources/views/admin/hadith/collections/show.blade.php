@@ -18,7 +18,7 @@
     </div>
 
     <!-- Action Buttons -->
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
         <a href="{{ route('admin.hadith.collections.edit', $collection->id) }}"
            class="px-6 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 shadow-lg
                   bg-gradient-to-r from-[#0056b3] to-[#218838] text-white">
@@ -166,7 +166,7 @@
                 @foreach($collection->books as $book)
                 <div class="flex items-center justify-between p-4 rounded-xl transition-all"
                      :class="darkMode ? 'bg-gray-800/50 hover:bg-gray-800' : 'bg-gray-50 hover:bg-gray-100'">
-                    <div class="flex items-center gap-3">
+                    <div class="flex flex-wrap items-center gap-3">
                         <div class="w-10 h-10 rounded-lg bg-gradient-to-r from-[#0056b3] to-[#218838] flex items-center justify-center">
                             <i data-lucide="book" class="w-5 h-5 text-white"></i>
                         </div>

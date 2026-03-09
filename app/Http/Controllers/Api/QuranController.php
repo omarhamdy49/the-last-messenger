@@ -11,6 +11,7 @@ use App\Support\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Validation\ValidationException;
 
 class QuranController extends Controller
 {
@@ -48,7 +49,7 @@ class QuranController extends Controller
             return $this->success(
                 new SurahResource($surah)
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return $this->notFound($e->getMessage());
         }
     }
@@ -64,7 +65,7 @@ class QuranController extends Controller
             return $this->success(
                 SurahResource::collection($surahs)
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return $this->error($e->getMessage(), 400);
         }
     }
@@ -82,7 +83,7 @@ class QuranController extends Controller
             return $this->success(
                 VerseResource::collection($verses)
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return $this->notFound($e->getMessage());
         }
     }
@@ -98,7 +99,7 @@ class QuranController extends Controller
             return $this->success(
                 new VerseResource($verse)
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return $this->notFound($e->getMessage());
         }
     }
@@ -109,13 +110,14 @@ class QuranController extends Controller
     public function versesByJuz(Request $request, int $juz): JsonResponse
     {
         try {
-            $perPage = $request->integer('per_page', 50);
-            $verses = $this->quranService->getVersesByJuz($juz, $perPage);
+            $perPage = max(1, min(100, $request->integer('per_page', 50)));
+            $paginator = $this->quranService->getVersesByJuz($juz, $perPage);
 
-            return $this->success(
-                VerseResource::collection($verses)->response()->getData(true)
-            );
-        } catch (\Exception $e) {
+            /** @var \Illuminate\Pagination\LengthAwarePaginator $paginator */
+            $paginator->through(fn ($verse) => new VerseResource($verse));
+
+            return $this->paginatedResponse($paginator);
+        } catch (\Throwable $e) {
             return $this->notFound($e->getMessage());
         }
     }
@@ -131,7 +133,7 @@ class QuranController extends Controller
             return $this->success(
                 VerseResource::collection($verses)
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return $this->notFound($e->getMessage());
         }
     }
@@ -155,6 +157,10 @@ class QuranController extends Controller
     {
         $verse = $this->quranService->getRandomVerse();
 
+        if ($verse === null) {
+            return $this->notFound(__('quran.no_verses_available'));
+        }
+
         return $this->success(
             new VerseResource($verse)
         );
@@ -164,17 +170,30 @@ class QuranController extends Controller
 
     /**
      * Search in Quran (Arabic or Translation)
+     *
+     * Query params:
+     *   q         string  required  min:2, max:200
+     *   lang      string  optional  default 'ar'   used when type=translation
+     *   type      string  optional  'arabic' | 'translation'  default 'translation'
+     *   per_page  int     optional  1–100  default 20
      */
     public function search(Request $request): JsonResponse
     {
-        $query = $request->input('q', '');
-        $language = $request->input('lang', 'en');
-        $searchType = $request->input('type', 'translation'); // 'arabic' or 'translation'
-        $perPage = $request->integer('per_page', 20);
-
-        if (empty($query)) {
-            return $this->error('Search query is required', 400);
+        try {
+            $validated = $request->validate([
+                'q'        => 'required|string|min:2|max:200',
+                'lang'     => 'sometimes|string|in:ar,en,fr,tr,ur',
+                'type'     => 'sometimes|string|in:arabic,translation',
+                'per_page' => 'sometimes|integer|min:1|max:100',
+            ]);
+        } catch (ValidationException $e) {
+            return $this->validationErrorResponse($e->errors());
         }
+
+        $query      = $validated['q'];
+        $language   = $validated['lang'] ?? 'ar';
+        $searchType = $validated['type'] ?? 'translation';
+        $perPage    = isset($validated['per_page']) ? (int) $validated['per_page'] : 20;
 
         try {
             if ($searchType === 'arabic') {
@@ -183,11 +202,12 @@ class QuranController extends Controller
                 $verses = $this->quranService->searchTranslation($query, $language, $perPage);
             }
 
-            return $this->success(
-                VerseResource::collection($verses)->response()->getData(true)
-            );
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            /** @var \Illuminate\Pagination\LengthAwarePaginator $verses */
+            $verses->through(fn ($verse) => new VerseResource($verse));
+
+            return $this->paginatedResponse($verses);
+        } catch (\Throwable $e) {
+            return $this->serverErrorResponse('Search failed. Please try again.');
         }
     }
 }

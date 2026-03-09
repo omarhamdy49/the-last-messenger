@@ -85,6 +85,7 @@ class CollectionRepository extends BaseRepository implements CollectionRepositor
             'hadith_collections_with_books_count',
             self::CACHE_TTL,
             fn () => $this->model
+                ->select(['id', 'name_ar', 'name_en', 'abbreviation', 'is_active'])
                 ->withCount('books')
                 ->orderBy('id')
                 ->get()
@@ -100,7 +101,7 @@ class CollectionRepository extends BaseRepository implements CollectionRepositor
             "hadith_collection_{$id}_with_books",
             self::CACHE_TTL,
             fn () => $this->model
-                ->with(['books' => fn ($q) => $q->orderBy('id')])
+                ->with(['books' => fn ($q) => $q->select(['id', 'collection_id', 'title_ar', 'title_en', 'book_number'])->orderBy('id')])
                 ->find($id)
         );
     }
@@ -126,6 +127,7 @@ class CollectionRepository extends BaseRepository implements CollectionRepositor
             'hadith_collections_statistics',
             self::CACHE_TTL,
             fn () => $this->model
+                ->select(['id', 'name_ar', 'name_en', 'abbreviation', 'is_active'])
                 ->withCount(['books'])
                 ->withCount(['books as hadiths_count' => function ($query) {
                     $query->selectRaw('(SELECT COUNT(*) FROM hadith_hadiths WHERE hadith_hadiths.book_id = hadith_books.id)');

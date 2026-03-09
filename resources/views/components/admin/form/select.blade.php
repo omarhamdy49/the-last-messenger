@@ -130,7 +130,7 @@
         <button type="button"
                 @click="isOpen = !isOpen; isFocused = !isOpen"
                 @if($disabled) disabled @endif
-                class="w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 font-cairo text-left flex items-center justify-between"
+                class="w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 font-cairo text-start text-base sm:text-sm flex items-center justify-between"
                 :class="[
                     darkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900',
                     isFocused ? 'border-[#64CCC5] shadow-glow ring-4 ring-[#64CCC5]/20' : '',
@@ -176,9 +176,9 @@
                     <input type="text"
                            x-model="searchQuery"
                            @input="filterOptions()"
-                           placeholder="Search..."
-                           class="w-full px-3 py-2 rounded-lg border transition-colors font-cairo"
-                           :class="darkMode ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'">
+                           placeholder="{{ __('admin.search') }}"
+                           class="w-full px-3 py-2 rounded-lg border transition-colors font-cairo text-base sm:text-sm"
+                           :class="darkMode ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'">
                 </div>
             @endif
 
@@ -187,7 +187,7 @@
                 <template x-for="(optionLabel, optionValue) in filteredOptions" :key="optionValue">
                     <button type="button"
                             @click="selectOption(optionValue)"
-                            class="w-full px-4 py-3 text-left flex items-center justify-between transition-colors"
+                            class="w-full px-4 py-3 text-start flex items-center justify-between transition-colors"
                             :class="[
                                 isSelected(optionValue)
                                     ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white'
@@ -205,7 +205,7 @@
                      class="px-4 py-8 text-center"
                      :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
                     <i data-lucide="search-x" class="w-12 h-12 mx-auto mb-2 opacity-50"></i>
-                    <p>No options found</p>
+                    <p>{{ __('admin.no_results') }}</p>
                 </div>
             </div>
         </div>

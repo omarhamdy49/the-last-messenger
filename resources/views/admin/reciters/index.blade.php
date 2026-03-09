@@ -16,7 +16,7 @@
     </div>
 
     <!-- Action Buttons -->
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
         <!-- Filter Toggle Button -->
         <button @click="$dispatch('toggle-filters')"
                 x-data
@@ -145,103 +145,110 @@
         </form>
     </div>
 
-    <!-- Reciters Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <!-- Reciters Rows -->
+    <div class="space-y-4">
         @forelse($reciters ?? [] as $reciter)
-        <div class="rounded-2xl border overflow-hidden transition-all hover:scale-105 hover:shadow-xl"
-             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            <!-- Image -->
-            <div class="relative aspect-square">
-                @if($reciter->profile_image)
-                    <img src="{{ asset('storage/' . $reciter->profile_image) }}"
-                         alt="{{ $reciter->getTranslation('name', 'ar') }}"
-                         class="w-full h-full object-cover">
-                @else
-                    <div class="w-full h-full bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center">
-                        <i data-lucide="mic" class="w-16 h-16 text-white/30"></i>
+            <div class="group rounded-xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.01]"
+                 :class="darkMode ? 'bg-gray-800/60 border border-gray-700 hover:bg-gray-800' : 'bg-white border border-gray-200 hover:shadow-xl'"
+                 style="box-shadow: 0 1px 3px rgba(0,0,0,0.1)">
+
+                <div class="p-5 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
+                    <!-- Reciter Image/Avatar -->
+                    <div class="flex-shrink-0">
+                        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2"
+                             :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
+                            @if($reciter->profile_image)
+                                <img src="{{ asset('storage/' . $reciter->profile_image) }}"
+                                     alt="{{ $reciter->getTranslation('name', 'ar') }}"
+                                     class="w-full h-full object-cover">
+                            @else
+                                <div class="w-full h-full bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center">
+                                    <i data-lucide="mic" class="w-8 h-8 text-white/50"></i>
+                                </div>
+                            @endif
+                        </div>
+
+                        <!-- Status Badge -->
+                        @if($reciter->is_active)
+                            <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500 text-white border-2 border-white"
+                                  :class="darkMode ? 'dark:border-gray-800' : ''"
+                                  style="margin-top: -10px; margin-start: 35px; position: relative;">
+                                <i data-lucide="check" class="w-3 h-3"></i>
+                            </span>
+                        @endif
                     </div>
-                @endif
 
-                <!-- Featured Badge -->
-                @if($reciter->is_featured)
-                <div class="absolute top-3 start-3">
-                    <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500 text-white shadow-lg">
-                        <i data-lucide="star" class="w-3.5 h-3.5"></i>
-                        مميز
-                    </span>
-                </div>
-                @endif
+                    <!-- Main Content: Reciter Info -->
+                    <div class="flex-1 min-w-0">
+                        <a href="{{ route('admin.reciters.show', $reciter->id) }}"
+                           class="block group">
+                            <h3 class="text-lg sm:text-xl font-bold group-hover:text-[#64CCC5] transition-colors"
+                                :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                {{ $reciter->getTranslation('name', 'ar') }}
+                            </h3>
+                            <p class="text-sm sm:text-base mt-0.5" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                {{ $reciter->getTranslation('name', 'en') }}
+                            </p>
+                        </a>
 
-                <!-- Status Badge -->
-                <div class="absolute top-3 end-3">
-                    @if($reciter->is_active)
-                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-green-500 text-white">
-                            <i data-lucide="check" class="w-3 h-3"></i>
-                        </span>
-                    @else
-                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-gray-500 text-white">
-                            <i data-lucide="x" class="w-3 h-3"></i>
-                        </span>
-                    @endif
-                </div>
+                        <!-- Bottom Info: Country, Style, Featured -->
+                        <div class="flex flex-wrap gap-2 mt-3 items-center">
+                            @if($reciter->country)
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs sm:text-sm font-medium"
+                                      :class="darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'">
+                                    <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+                                    {{ $reciter->country }}
+                                </span>
+                            @endif
 
-                <!-- Actions Overlay -->
-                <div class="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                    <a href="{{ route('admin.reciters.show', $reciter->id) }}"
-                       class="p-3 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
-                       title="{{ __('admin.view') }}">
-                        <i data-lucide="eye" class="w-5 h-5"></i>
-                    </a>
-                    <a href="{{ route('admin.reciters.edit', $reciter->id) }}"
-                       class="p-3 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
-                       title="{{ __('admin.edit') }}">
-                        <i data-lucide="edit-2" class="w-5 h-5"></i>
-                    </a>
-                    <form action="{{ route('admin.reciters.destroy', $reciter->id) }}"
-                          method="POST"
-                          class="inline"
-                          onsubmit="return confirm('{{ __('admin.confirm_delete') }}')">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit"
-                                class="p-3 rounded-full bg-white/20 hover:bg-red-500/50 text-white transition-colors"
-                                title="{{ __('admin.delete') }}">
-                            <i data-lucide="trash-2" class="w-5 h-5"></i>
-                        </button>
-                    </form>
-                </div>
-            </div>
+                            @if($reciter->style)
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs sm:text-sm font-medium"
+                                      :class="darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-800'">
+                                    <i data-lucide="music" class="w-3.5 h-3.5"></i>
+                                    {{ $reciter->style }}
+                                </span>
+                            @endif
 
-            <!-- Info -->
-            <div class="p-4">
-                <h3 class="text-lg font-bold mb-1" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                    {{ $reciter->getTranslation('name', 'ar') }}
-                </h3>
-                <p class="text-sm mb-3" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                    {{ $reciter->getTranslation('name', 'en') }}
-                </p>
+                            @if($reciter->is_featured)
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs sm:text-sm font-semibold bg-amber-500 text-white">
+                                    <i data-lucide="star" class="w-3.5 h-3.5"></i>
+                                    مميز
+                                </span>
+                            @endif
+                        </div>
+                    </div>
 
-                <div class="flex flex-wrap gap-2">
-                    @if($reciter->country)
-                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs"
-                          :class="darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'">
-                        <i data-lucide="map-pin" class="w-3 h-3"></i>
-                        {{ $reciter->country }}
-                    </span>
-                    @endif
-                    @if($reciter->style)
-                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs"
-                          :class="darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-800'">
-                        <i data-lucide="music" class="w-3 h-3"></i>
-                        {{ $reciter->style }}
-                    </span>
-                    @endif
+                    <!-- Action Buttons -->
+                    <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 self-end sm:self-auto">
+                        <a href="{{ route('admin.reciters.show', $reciter->id) }}"
+                           class="p-2.5 rounded-lg transition-all"
+                           :class="darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white hover:text-[#64CCC5]' : 'hover:bg-gray-100 text-gray-600 hover:text-[#0056b3]'"
+                           title="{{ __('admin.view') }}">
+                            <i data-lucide="eye" class="w-5 h-5"></i>
+                        </a>
+                        <a href="{{ route('admin.reciters.edit', $reciter->id) }}"
+                           class="p-2.5 rounded-lg transition-all"
+                           :class="darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white hover:text-[#64CCC5]' : 'hover:bg-gray-100 text-gray-600 hover:text-[#0056b3]'"
+                           title="{{ __('admin.edit') }}">
+                            <i data-lucide="edit-2" class="w-5 h-5"></i>
+                        </a>
+                        <form action="{{ route('admin.reciters.destroy', $reciter->id) }}"
+                              method="POST"
+                              class="inline"
+                              onsubmit="return confirm('{{ __('admin.confirm_delete') }}')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit"
+                                    class="p-2.5 rounded-lg transition-all text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700"
+                                    title="{{ __('admin.delete') }}">
+                                <i data-lucide="trash-2" class="w-5 h-5"></i>
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
-        </div>
         @empty
-        <div class="col-span-full">
-            <div class="rounded-2xl border p-12 text-center"
+            <div class="text-center py-12 px-6 rounded-2xl border"
                  :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
                 <i data-lucide="mic" class="w-16 h-16 mx-auto mb-4" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
                 <p class="text-lg font-medium mb-4" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
@@ -253,7 +260,6 @@
                     إضافة قارئ جديد
                 </a>
             </div>
-        </div>
         @endforelse
     </div>
 

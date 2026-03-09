@@ -25,7 +25,7 @@ class AuthControllerTest extends TestCase
      */
     public function test_user_can_register(): void
     {
-        $response = $this->postJson('/api/auth/register', [
+        $response = $this->postJson('/api/v1/auth/register', [
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => 'password123',
@@ -59,7 +59,7 @@ class AuthControllerTest extends TestCase
             'password' => Hash::make('password123'),
         ]);
 
-        $response = $this->postJson('/api/auth/login', [
+        $response = $this->postJson('/api/v1/auth/login', [
             'email' => 'test@example.com',
             'password' => 'password123',
         ]);
@@ -85,7 +85,7 @@ class AuthControllerTest extends TestCase
         $user = User::factory()->create();
         $token = $user->createToken('test-token')->plainTextToken;
 
-        $response = $this->postJson('/api/auth/logout', [], [
+        $response = $this->postJson('/api/v1/auth/logout', [], [
             'Authorization' => 'Bearer '.$token,
         ]);
 

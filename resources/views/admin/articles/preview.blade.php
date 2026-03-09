@@ -20,7 +20,7 @@
     </div>
 
     <!-- Action Buttons -->
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
         <!-- Language Switcher -->
         <div class="flex items-center gap-1 p-1 rounded-xl border"
              :class="darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-300 bg-white'">

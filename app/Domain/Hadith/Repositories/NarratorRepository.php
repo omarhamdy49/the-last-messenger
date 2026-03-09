@@ -36,10 +36,12 @@ class NarratorRepository extends BaseRepository implements NarratorRepositoryInt
      */
     public function getByName(string $name, string $locale = 'ar'): ?HadithNarrator
     {
-        $nameField = 'name_' . $locale;
+        $allowedLocales = ['ar', 'en', 'fr', 'tr', 'ur'];
+        $safeLocale = in_array($locale, $allowedLocales, true) ? $locale : 'ar';
+        $nameField = 'name_' . $safeLocale;
 
         return Cache::remember(
-            "hadith_narrator_name_{$locale}_{$name}",
+            "hadith_narrator_name_{$safeLocale}_{$name}",
             self::CACHE_TTL,
             fn () => $this->model
                 ->where($nameField, $name)
@@ -56,6 +58,7 @@ class NarratorRepository extends BaseRepository implements NarratorRepositoryInt
             'hadith_narrators_with_count',
             self::CACHE_TTL,
             fn () => $this->model
+                ->select(['id', 'name_ar', 'name_en', 'kunya', 'death_year_hijri', 'reliability_grade'])
                 ->withCount('hadiths')
                 ->orderBy('hadiths_count', 'desc')
                 ->get()
@@ -82,6 +85,7 @@ class NarratorRepository extends BaseRepository implements NarratorRepositoryInt
             "hadith_narrators_top_{$limit}",
             self::CACHE_TTL,
             fn () => $this->model
+                ->select(['id', 'name_ar', 'name_en', 'kunya', 'death_year_hijri', 'reliability_grade'])
                 ->withCount('hadiths')
                 ->orderBy('hadiths_count', 'desc')
                 ->limit($limit)

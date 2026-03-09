@@ -61,6 +61,8 @@ class Hadith extends Model
         'historical_context_en',
         'verification_status',
         'uncertainty_notes',
+        'text_hash',
+        'merged_into_id',
     ];
 
     /**
@@ -120,6 +122,26 @@ class Hadith extends Model
     public function companion(): BelongsTo
     {
         return $this->belongsTo(Companion::class, 'companion_id');
+    }
+
+    /**
+     * Get the hadith this one was merged into (for deduplication).
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function mergedInto(): BelongsTo
+    {
+        return $this->belongsTo(Hadith::class, 'merged_into_id');
+    }
+
+    /**
+     * Get hadiths that were merged into this one.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function mergedDuplicates(): HasMany
+    {
+        return $this->hasMany(Hadith::class, 'merged_into_id');
     }
 
     /**

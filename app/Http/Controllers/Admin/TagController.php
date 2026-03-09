@@ -109,7 +109,7 @@ class TagController extends Controller
             if ($duplicate) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'A similar tag already exists',
+                    'message' => __('admin.tag_duplicate_exists'),
                     'duplicate' => $duplicate,
                 ], 422);
             }
@@ -118,14 +118,18 @@ class TagController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Tag created successfully',
+                'message' => __('admin.tag_created'),
                 'data' => $tag,
             ], 201);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            \Log::error('admin.tag.create_failed', [
+                'user_id' => auth()->id(),
+                'error'   => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create tag',
-                'error' => $e->getMessage(),
+                'message' => __('admin.operation_failed'),
             ], 422);
         }
     }
@@ -162,14 +166,19 @@ class TagController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Tag updated successfully',
+                'message' => __('admin.tag_updated'),
                 'data' => $tag,
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            \Log::error('admin.tag.update_failed', [
+                'user_id' => auth()->id(),
+                'tag_id'  => $id,
+                'error'   => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update tag',
-                'error' => $e->getMessage(),
+                'message' => __('admin.operation_failed'),
             ], 422);
         }
     }
@@ -209,13 +218,18 @@ class TagController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Tag deleted successfully',
+                'message' => __('admin.tag_deleted'),
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            \Log::error('admin.tag.delete_failed', [
+                'user_id' => auth()->id(),
+                'tag_id'  => $id,
+                'error'   => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete tag',
-                'error' => $e->getMessage(),
+                'message' => __('admin.operation_failed'),
             ], 422);
         }
     }
@@ -245,14 +259,20 @@ class TagController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => "Successfully merged tags. {$mergedCount} articles moved.",
+                'message' => __('admin.tags_merged', ['count' => $mergedCount]),
                 'count' => $mergedCount,
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            \Log::error('admin.tag.merge_failed', [
+                'user_id'          => auth()->id(),
+                'source_tag_id'    => $validated['source_tag_id'],
+                'destination_tag_id' => $validated['destination_tag_id'],
+                'error'            => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to merge tags',
-                'error' => $e->getMessage(),
+                'message' => __('admin.operation_failed'),
             ], 422);
         }
     }
@@ -277,14 +297,18 @@ class TagController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => "$count tags deleted successfully",
+                'message' => __('admin.tags_bulk_deleted', ['count' => $count]),
                 'count' => $count,
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            \Log::error('admin.tag.bulk_delete_failed', [
+                'user_id' => auth()->id(),
+                'error'   => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete tags',
-                'error' => $e->getMessage(),
+                'message' => __('admin.operation_failed'),
             ], 422);
         }
     }

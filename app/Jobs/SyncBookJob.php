@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Jobs;
 
 use App\Domain\Hadith\Models\HadithBook;
@@ -23,22 +25,22 @@ class SyncBookJob implements ShouldQueue
     /**
      * The number of seconds the job can run before timing out.
      */
-    public $timeout = 3600; // 1 hour
+    public int $timeout = 120;
 
     /**
      * The number of times the job may be attempted.
      */
-    public $tries = 3;
+    public int $tries = 3;
 
     /**
      * The number of seconds to wait before retrying the job.
      */
-    public $backoff = 30;
+    public array $backoff = [30, 60, 120];
 
     /**
      * Delete the job if its models no longer exist.
      */
-    public $deleteWhenMissingModels = true;
+    public bool $deleteWhenMissingModels = true;
 
     /**
      * Create a new job instance.
@@ -63,7 +65,7 @@ class SyncBookJob implements ShouldQueue
         ChapterSyncService $chapterSync,
         HadithSyncService $hadithSync
     ): void {
-        Log::info("SyncBookJob started", [
+        Log::info('sync_book_job.started', [
             'collection' => $this->collectionName,
             'book' => $this->bookNumber,
             'collection_id' => $this->collectionId,
@@ -127,14 +129,14 @@ class SyncBookJob implements ShouldQueue
                 $hadithCount = $book->hadiths()->count();
                 $book->update(['total_hadith_count' => $hadithCount]);
 
-                Log::info("SyncBookJob completed", [
+                Log::info('sync_book_job.completed', [
                     'collection' => $this->collectionName,
                     'book' => $this->bookNumber,
                     'hadith_count' => $hadithCount,
                 ]);
             }
         } catch (\Exception $e) {
-            Log::error("SyncBookJob failed", [
+            Log::error('sync_book_job.failed', [
                 'collection' => $this->collectionName,
                 'book' => $this->bookNumber,
                 'error' => $e->getMessage(),
@@ -155,9 +157,12 @@ class SyncBookJob implements ShouldQueue
      */
     public function failed(\Throwable $exception): void
     {
-        Log::error("SyncBookJob permanently failed", [
+        Log::error('sync_book_job.permanently_failed', [
+            'job' => static::class,
             'collection' => $this->collectionName,
             'book' => $this->bookNumber,
+            'collection_id' => $this->collectionId,
+            'sync_log_id' => $this->syncLogId,
             'attempts' => $this->attempts(),
             'error' => $exception->getMessage(),
         ]);

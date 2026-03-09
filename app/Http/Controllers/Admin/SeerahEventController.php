@@ -13,6 +13,7 @@ use App\Models\Article;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -41,9 +42,16 @@ class SeerahEventController extends Controller
         $perPage = $request->integer('per_page', 15);
         $events = $this->seerahEventService->paginate($perPage, ['*'], []);
 
+        // Single aggregate query to replace N+1 count-per-category queries
+        $eventCountRows = DB::table('seerah_events')
+            ->selectRaw('event_type, COUNT(*) as count')
+            ->whereNull('deleted_at')
+            ->groupBy('event_type')
+            ->pluck('count', 'event_type');
+
         $stats = [
-            'total' => $this->seerahEventService->count(),
-            'categories' => $this->seerahEventService->countByCategory(),
+            'total'      => $eventCountRows->sum(),
+            'categories' => $eventCountRows->toArray(),
         ];
 
         // Return JSON for AJAX requests

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Jobs;
 
 use App\Domain\Hadith\Models\HadithSyncLog;
@@ -18,22 +20,22 @@ class SyncCollectionJob implements ShouldQueue
     /**
      * The number of seconds the job can run before timing out.
      */
-    public $timeout = 7200; // 2 hours
+    public int $timeout = 180;
 
     /**
      * The number of times the job may be attempted.
      */
-    public $tries = 3;
+    public int $tries = 3;
 
     /**
      * The number of seconds to wait before retrying the job.
      */
-    public $backoff = 60;
+    public array $backoff = [30, 60, 120];
 
     /**
      * Delete the job if its models no longer exist.
      */
-    public $deleteWhenMissingModels = true;
+    public bool $deleteWhenMissingModels = true;
 
     /**
      * Create a new job instance.
@@ -52,7 +54,7 @@ class SyncCollectionJob implements ShouldQueue
      */
     public function handle(CollectionSyncService $syncService): void
     {
-        Log::info("SyncCollectionJob started", [
+        Log::info('sync_collection_job.started', [
             'collection' => $this->collectionName,
             'sync_log_id' => $this->syncLogId,
             'dry_run' => $this->dryRun,
@@ -71,14 +73,14 @@ class SyncCollectionJob implements ShouldQueue
                 $this->dryRun
             );
 
-            Log::info("SyncCollectionJob completed", [
+            Log::info('sync_collection_job.completed', [
                 'collection' => $this->collectionName,
                 'synced' => $result->synced_records,
                 'failed' => $result->failed_records,
                 'status' => $result->status,
             ]);
         } catch (\Exception $e) {
-            Log::error("SyncCollectionJob failed", [
+            Log::error('sync_collection_job.failed', [
                 'collection' => $this->collectionName,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -94,8 +96,10 @@ class SyncCollectionJob implements ShouldQueue
      */
     public function failed(\Throwable $exception): void
     {
-        Log::error("SyncCollectionJob permanently failed", [
+        Log::error('sync_collection_job.permanently_failed', [
+            'job' => static::class,
             'collection' => $this->collectionName,
+            'sync_log_id' => $this->syncLogId,
             'attempts' => $this->attempts(),
             'error' => $exception->getMessage(),
         ]);
@@ -105,7 +109,7 @@ class SyncCollectionJob implements ShouldQueue
             $syncLog = HadithSyncLog::find($this->syncLogId);
             if ($syncLog && $syncLog->status === 'in_progress') {
                 $syncLog->markFailed(
-                    "Job failed after {$this->attempts()} attempts: {$exception->getMessage()}",
+                    'Job failed after ' . $this->attempts() . ' attempts: ' . $exception->getMessage(),
                     ['exception' => get_class($exception)]
                 );
             }

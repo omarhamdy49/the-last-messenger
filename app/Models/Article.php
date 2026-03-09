@@ -52,6 +52,8 @@ class Article extends Model
         'is_pinned',
         'category_id',
         'hijri_date',
+        'status',
+        'scheduled_at',
         'statistics',
         'references',
     ];

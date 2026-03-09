@@ -56,7 +56,8 @@ class ScholarRepository extends BaseRepository implements ScholarRepositoryInter
             'hadith_scholars_by_era',
             self::CACHE_TTL,
             fn () => $this->model
-                ->orderBy('death_year')
+                ->select(['id', 'name_ar', 'name_en', 'kunya', 'school', 'death_year_hijri', 'region'])
+                ->orderBy('death_year_hijri')
                 ->get()
         );
     }
@@ -81,6 +82,7 @@ class ScholarRepository extends BaseRepository implements ScholarRepositoryInter
             'hadith_scholars_with_grading_count',
             self::CACHE_TTL,
             fn () => $this->model
+                ->select(['id', 'name_ar', 'name_en', 'kunya', 'school', 'death_year_hijri'])
                 ->withCount('gradings')
                 ->orderBy('gradings_count', 'desc')
                 ->get()

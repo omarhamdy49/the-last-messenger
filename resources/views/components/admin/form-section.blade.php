@@ -39,7 +39,7 @@
 
                         @if($description)
                             <p class="text-sm mt-1"
-                               :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                               :class="darkMode ? 'text-gray-300' : 'text-gray-600'">
                                 {{ $description }}
                             </p>
                         @endif
@@ -50,7 +50,7 @@
                     <button type="button"
                             class="p-2 rounded-lg transition-transform duration-300"
                             :class="[
-                                darkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600',
+                                darkMode ? 'hover:bg-gray-800 text-gray-300' : 'hover:bg-gray-100 text-gray-600',
                                 isCollapsed ? '' : 'rotate-180'
                             ]">
                         <i data-lucide="chevron-down" class="w-5 h-5"></i>

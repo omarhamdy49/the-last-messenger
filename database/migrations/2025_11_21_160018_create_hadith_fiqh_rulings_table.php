@@ -26,11 +26,15 @@ return new class extends Migration
             $table->index('display_order');
         });
 
-        // Set charset and collation
-        DB::statement('ALTER TABLE hadith_fiqh_rulings ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci');
+        if (config('database.default') === 'mysql') {
+            // Set charset and collation
+            DB::statement('ALTER TABLE hadith_fiqh_rulings ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci');
+        }
 
         // Add FULLTEXT index
-        DB::statement('ALTER TABLE hadith_fiqh_rulings ADD FULLTEXT INDEX ft_hadith_fiqh_rulings_principle (principle)');
+        if (config('database.default') === 'mysql') {
+            DB::statement('ALTER TABLE hadith_fiqh_rulings ADD FULLTEXT INDEX ft_hadith_fiqh_rulings_principle (principle)');
+        }
     }
 
     /**

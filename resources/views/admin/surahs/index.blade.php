@@ -16,7 +16,7 @@
     </div>
 
     <!-- Action Buttons -->
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
         <!-- Filter Toggle Button -->
         <button @click="$dispatch('toggle-filters')"
                 x-data
@@ -146,121 +146,97 @@
         </form>
     </div>
 
-    <!-- Surahs Table -->
-    <div class="rounded-2xl border overflow-hidden"
-         :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+    <!-- Surahs Rows -->
+    <div class="space-y-4">
+        @forelse($surahs as $surah)
+            <div class="group rounded-xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.01]"
+                 :class="darkMode ? 'bg-gray-800/60 border border-gray-700 hover:bg-gray-800' : 'bg-white border border-gray-200 hover:shadow-xl'"
+                 style="box-shadow: 0 1px 3px rgba(0,0,0,0.1)">
 
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead>
-                    <tr :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                        <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            #
-                        </th>
-                        <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            {{ __('quran.surahs.name') }}
-                        </th>
-                        <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            {{ __('quran.surahs.name_transliteration') }}
-                        </th>
-                        <th class="px-6 py-4 text-center text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            {{ __('quran.surahs.revelation_place') }}
-                        </th>
-                        <th class="px-6 py-4 text-center text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            {{ __('quran.surahs.revelation_order') }}
-                        </th>
-                        <th class="px-6 py-4 text-center text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            {{ __('quran.surahs.verses_count') }}
-                        </th>
-                        <th class="px-6 py-4 text-center text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            {{ __('admin.actions') }}
-                        </th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y" :class="darkMode ? 'divide-gray-800' : 'divide-gray-200'">
-                    @forelse($surahs as $surah)
-                    <tr class="hover:bg-opacity-50 transition-colors"
-                        :class="darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'">
-                        <td class="px-6 py-4">
-                            <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-bold text-sm">
-                                {{ $surah->number }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="flex flex-col">
-                                <span class="text-xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                                    {{ $surah->name_ar }}
-                                </span>
-                                <span class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
-                                    {{ $surah->name_en }}
-                                </span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            {{ $surah->transliteration }}
-                        </td>
-                        <td class="px-6 py-4 text-center">
-                            @if($surah->revelation_place === 'makkah')
-                                <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                <div class="p-5 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
+                    <!-- Surah Number Badge -->
+                    <div class="flex-shrink-0">
+                        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center flex-shrink-0">
+                            <span class="text-base sm:text-lg font-bold text-white">{{ $surah->number }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Main Content: Surah Name -->
+                    <div class="flex-1 min-w-0">
+                        <a href="{{ route('admin.surahs.show', $surah->id) }}"
+                           class="block group">
+                            <h3 class="text-lg sm:text-xl font-bold group-hover:text-[#64CCC5] transition-colors"
+                                :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                {{ $surah->name_ar }}
+                            </h3>
+                            <p class="text-sm sm:text-base mt-1" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                {{ $surah->name_en }}
+                            </p>
+                        </a>
+
+                        <!-- Bottom Info: Revelation & Metadata -->
+                        <div class="flex flex-wrap gap-3 mt-3 items-center">
+                            <!-- Revelation Type -->
+                            @if($surah->revelation_place === 'Mecca')
+                                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
                                     <i data-lucide="sunrise" class="w-3.5 h-3.5"></i>
                                     {{ __('quran.surahs.makkah') }}
                                 </span>
                             @else
-                                <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+                                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
                                     <i data-lucide="sunset" class="w-3.5 h-3.5"></i>
                                     {{ __('quran.surahs.madinah') }}
                                 </span>
                             @endif
-                        </td>
-                        <td class="px-6 py-4 text-center font-medium" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            {{ $surah->revelation_order }}
-                        </td>
-                        <td class="px-6 py-4 text-center">
-                            <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold"
-                                  :class="darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-800'">
-                                {{ $surah->verses_count }} {{ __('quran.verses.singular') }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center justify-center gap-2">
-                                <a href="{{ route('admin.surahs.show', $surah->id) }}"
-                                   class="p-2 rounded-lg transition-all hover:scale-110"
-                                   :class="darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'"
-                                   title="{{ __('admin.view') }}">
-                                    <i data-lucide="eye" class="w-5 h-5"></i>
-                                </a>
-                                <a href="{{ route('admin.surahs.edit', $surah->id) }}"
-                                   class="p-2 rounded-lg transition-all hover:scale-110"
-                                   :class="darkMode ? 'hover:bg-blue-900/30 text-blue-400' : 'hover:bg-blue-100 text-blue-600'"
-                                   title="{{ __('admin.edit') }}">
-                                    <i data-lucide="edit-2" class="w-5 h-5"></i>
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="7" class="px-6 py-12 text-center">
-                            <div class="flex flex-col items-center gap-3">
-                                <i data-lucide="book-open" class="w-12 h-12" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
-                                <p class="text-lg font-medium" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                                    {{ __('quran.empty.no_surahs') }}
-                                </p>
-                            </div>
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
 
-        <!-- Pagination -->
-        @if($surahs->hasPages())
-        <div class="px-6 py-4 border-t" :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
-            {{ $surahs->withQueryString()->links() }}
-        </div>
-        @endif
+                            <!-- Revelation Order -->
+                            <span class="text-xs sm:text-sm font-medium px-3 py-1 rounded-full"
+                                  :class="darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'">
+                                ترتيب النزول: {{ $surah->revelation_order }}
+                            </span>
+
+                            <!-- Verses Count -->
+                            <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs sm:text-sm font-semibold"
+                                  :class="darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-800'">
+                                📖 {{ $surah->verses_count }} {{ __('quran.verses.singular') }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 self-end sm:self-auto">
+                        <a href="{{ route('admin.surahs.show', $surah->id) }}"
+                           class="p-2.5 rounded-lg transition-all"
+                           :class="darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white hover:text-[#64CCC5]' : 'hover:bg-gray-100 text-gray-600 hover:text-[#0056b3]'"
+                           title="{{ __('admin.view') }}">
+                            <i data-lucide="eye" class="w-5 h-5"></i>
+                        </a>
+                        <a href="{{ route('admin.surahs.edit', $surah->id) }}"
+                           class="p-2.5 rounded-lg transition-all"
+                           :class="darkMode ? 'hover:bg-blue-900/30 text-blue-400' : 'hover:bg-blue-100 text-blue-600'"
+                           title="{{ __('admin.edit') }}">
+                            <i data-lucide="edit-2" class="w-5 h-5"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        @empty
+            <div class="text-center py-12 px-6 rounded-2xl border"
+                 :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+                <i data-lucide="book-open" class="w-16 h-16 mx-auto mb-4" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
+                <p class="text-lg font-medium" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                    {{ __('quran.empty.no_surahs') }}
+                </p>
+            </div>
+        @endforelse
     </div>
+
+    <!-- Pagination -->
+    @if($surahs->hasPages())
+    <div class="mt-8">
+        {{ $surahs->withQueryString()->links() }}
+    </div>
+    @endif
 
 </div>
 @endsection

@@ -91,10 +91,10 @@ class TafseerService extends BaseService
      */
     public function create(array $data): Model
     {
-        // Check for duplicates
-        if ($this->repository->checkDuplicate($data['verse_reference'], $data['source'])) {
+        // Check for duplicates - combination of verse_key and language must be unique
+        if ($this->repository->checkDuplicate($data['verse_key'], $data['lang'])) {
             throw new DuplicateResourceException(
-                "Tafseer already exists for verse {$data['verse_reference']} from source {$data['source']}"
+                "Tafseer already exists for verse {$data['verse_key']} in language {$data['lang']}"
             );
         }
 
@@ -112,10 +112,10 @@ class TafseerService extends BaseService
     public function updateTafseer(Tafseer $tafseer, array $data): Model
     {
         // Check for duplicates (excluding current record)
-        if (isset($data['verse_reference']) && isset($data['source'])) {
-            if ($this->repository->checkDuplicate($data['verse_reference'], $data['source'], $tafseer->id)) {
+        if (isset($data['verse_key']) && isset($data['lang'])) {
+            if ($this->repository->checkDuplicate($data['verse_key'], $data['lang'], $tafseer->id)) {
                 throw new DuplicateResourceException(
-                    "Tafseer already exists for verse {$data['verse_reference']} from source {$data['source']}"
+                    "Tafseer already exists for verse {$data['verse_key']} in language {$data['lang']}"
                 );
             }
         }

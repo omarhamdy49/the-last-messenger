@@ -4,47 +4,55 @@ declare(strict_types=1);
 
 namespace App\Domain\Shared\Services;
 
-use App\Domain\Blog\Models\Article;
-use App\Domain\Hadith\Models\Hadith;
-use App\Domain\Media\Models\MediaProgram;
-use App\Domain\Quran\Models\Verse;
-use App\Domain\Sahaba\Models\Sahabi;
-use App\Domain\Seerah\Models\SeerahEvent;
+use App\Domain\Shared\Contracts\BulkOperationHandlerInterface;
 use App\Domain\Shared\Enums\BulkOperationStatusEnum;
 use App\Domain\Shared\Enums\BulkOperationTypeEnum;
 use App\Domain\Shared\Models\BulkOperation;
 use App\Domain\Shared\Repositories\BulkOperationRepositoryInterface;
 use App\Jobs\ProcessBulkOperation;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
  * Bulk Operation Service
- * Handles all bulk operations for content management
+ *
+ * Orchestrates bulk operations across all content modules.
+ * Domain knowledge lives exclusively in registered BulkOperationHandlerInterface
+ * implementations — this service has no direct dependency on domain models.
  */
 class BulkOperationService extends BaseService
 {
-    private const QUEUE_THRESHOLD = 500; // Queue if more than 500 items
-    private const CHUNK_SIZE = 100; // Process 100 items per chunk
+    private const QUEUE_THRESHOLD = 500;
+
+    private const CHUNK_SIZE = 100;
+
+    /** @var array<string, BulkOperationHandlerInterface> Keyed by module string */
+    private array $handlers = [];
 
     /**
-     * Constructor
+     * @param  BulkOperationHandlerInterface[]  $handlers
      */
     public function __construct(
         BulkOperationRepositoryInterface $repository,
-        private readonly AdminLoggerService $adminLogger
+        private readonly AdminLoggerService $adminLogger,
+        array $handlers = [],
     ) {
         $this->repository = $repository;
+
+        foreach ($handlers as $handler) {
+            $this->handlers[$handler->getSupportedModule()] = $handler;
+        }
     }
 
+    // -------------------------------------------------------------------------
+    // Public API
+    // -------------------------------------------------------------------------
+
     /**
-     * Create and start bulk operation
+     * Create and immediately start (or queue) a bulk operation.
      *
-     * @param  array<int>  $itemIds
+     * @param  int[]                 $itemIds
      * @param  array<string, mixed>  $parameters
      */
     public function createOperation(
@@ -53,36 +61,33 @@ class BulkOperationService extends BaseService
         array $itemIds,
         int $userId,
         array $parameters = [],
-        bool $dryRun = false
+        bool $dryRun = false,
     ): BulkOperation {
         $operation = $this->repository->create([
             'operation_type' => $operationType,
-            'module' => $module,
-            'status' => BulkOperationStatusEnum::PENDING->value,
-            'total_items' => count($itemIds),
-            'item_ids' => $itemIds,
-            'parameters' => $parameters,
-            'created_by' => $userId,
-            'dry_run' => $dryRun,
+            'module'         => $module,
+            'status'         => BulkOperationStatusEnum::PENDING->value,
+            'total_items'    => count($itemIds),
+            'item_ids'       => $itemIds,
+            'parameters'     => $parameters,
+            'created_by'     => $userId,
+            'dry_run'        => $dryRun,
         ]);
 
-        // Log operation creation
         $this->adminLogger->logCustomAction(
             action: 'bulk_operation_created',
             model: $operation,
             user: $operation->creator,
             newValues: [
                 'operation_type' => $operationType,
-                'module' => $module,
-                'total_items' => count($itemIds),
+                'module'         => $module,
+                'total_items'    => count($itemIds),
             ]
         );
 
-        // Dispatch to queue if large operation
         if (count($itemIds) > self::QUEUE_THRESHOLD) {
             ProcessBulkOperation::dispatch($operation);
         } else {
-            // Process immediately for smaller operations
             $this->processOperation($operation);
         }
 
@@ -90,7 +95,7 @@ class BulkOperationService extends BaseService
     }
 
     /**
-     * Process bulk operation
+     * Process a bulk operation record — called directly or from the queue job.
      */
     public function processOperation(BulkOperation $operation): void
     {
@@ -105,47 +110,33 @@ class BulkOperationService extends BaseService
         try {
             $operationType = BulkOperationTypeEnum::from($operation->operation_type);
 
-            match ($operationType) {
-                BulkOperationTypeEnum::UPDATE => $this->processBulkUpdate($operation),
-                BulkOperationTypeEnum::DELETE => $this->processBulkDelete($operation, false),
-                BulkOperationTypeEnum::SOFT_DELETE => $this->processBulkDelete($operation, true),
-                BulkOperationTypeEnum::RESTORE => $this->processBulkRestore($operation),
-                BulkOperationTypeEnum::PUBLISH => $this->processBulkPublish($operation),
-                BulkOperationTypeEnum::UNPUBLISH => $this->processBulkUnpublish($operation),
-                BulkOperationTypeEnum::ARCHIVE => $this->processBulkArchive($operation),
-                BulkOperationTypeEnum::CHANGE_CATEGORY => $this->processBulkChangeCategory($operation),
-                BulkOperationTypeEnum::ADD_TAGS => $this->processBulkAddTags($operation),
-                BulkOperationTypeEnum::REMOVE_TAGS => $this->processBulkRemoveTags($operation),
-                BulkOperationTypeEnum::CHANGE_STATUS => $this->processBulkChangeStatus($operation),
-                BulkOperationTypeEnum::CHANGE_AUTHOR => $this->processBulkChangeAuthor($operation),
-                BulkOperationTypeEnum::ASSIGN_USER => $this->processBulkAssignUser($operation),
-                BulkOperationTypeEnum::EXPORT => $this->processBulkExport($operation),
-                default => throw new \InvalidArgumentException("Unsupported operation type: {$operation->operation_type}"),
-            };
+            if ($operationType === BulkOperationTypeEnum::EXPORT) {
+                $this->processExport($operation);
+            } else {
+                $this->dispatchToHandler($operation);
+            }
 
             $operation->markAsCompleted();
 
-            // Clear module cache
             $this->clearModuleCache($operation->module);
 
-            // Log completion
             $this->adminLogger->logCustomAction(
                 action: 'bulk_operation_completed',
                 model: $operation,
                 user: $operation->creator,
                 newValues: [
                     'success_count' => $operation->success_count,
-                    'failed_count' => $operation->failed_count,
-                    'success_rate' => $operation->getSuccessRate(),
+                    'failed_count'  => $operation->failed_count,
+                    'success_rate'  => $operation->getSuccessRate(),
                 ]
             );
         } catch (\Throwable $e) {
             $operation->markAsFailed($e->getMessage());
 
-            Log::error('Bulk operation failed', [
+            Log::error('bulk_operation.failed', [
                 'operation_id' => $operation->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'module'       => $operation->module,
+                'error'        => $e->getMessage(),
             ]);
 
             throw $e;
@@ -153,464 +144,86 @@ class BulkOperationService extends BaseService
     }
 
     /**
-     * Process bulk update
+     * Cancel a pending or running operation.
      */
-    private function processBulkUpdate(BulkOperation $operation): void
+    public function cancelOperation(int $operationId): bool
     {
-        $model = $this->getModelClass($operation->module);
-        $fields = $operation->parameters['fields'] ?? [];
+        $operation = $this->repository->findOrFail($operationId);
 
-        if (empty($fields)) {
-            throw new \InvalidArgumentException('No fields provided for update');
+        if (! $operation->canBeCancelled()) {
+            throw new \RuntimeException('Operation cannot be cancelled in its current state.');
         }
 
-        $itemIds = $operation->item_ids;
-        $chunks = array_chunk($itemIds, self::CHUNK_SIZE);
+        return $operation->markAsCancelled();
+    }
+
+    /**
+     * Return current status for an operation.
+     */
+    public function getOperationStatus(int $operationId): BulkOperation
+    {
+        return $this->repository->findOrFail($operationId, ['*'], ['creator']);
+    }
+
+    /**
+     * Return paginated operation history for a user.
+     */
+    public function getOperationHistory(int $userId, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->getByUser($userId, $perPage);
+    }
+
+    // -------------------------------------------------------------------------
+    // Private orchestration
+    // -------------------------------------------------------------------------
+
+    /**
+     * Route non-export operations to the registered domain handler in chunks.
+     */
+    private function dispatchToHandler(BulkOperation $operation): void
+    {
+        $handler = $this->resolveHandler($operation->module);
+        $chunks  = array_chunk($operation->item_ids, self::CHUNK_SIZE);
 
         foreach ($chunks as $chunk) {
-            $successCount = 0;
-            $failedCount = 0;
+            $result = $handler->handle(
+                $operation->operation_type,
+                $chunk,
+                $operation->parameters ?? [],
+            );
 
-            foreach ($chunk as $itemId) {
-                try {
-                    $model::where('id', $itemId)->update($fields);
-                    $successCount++;
-                } catch (\Throwable $e) {
-                    $failedCount++;
-                    $operation->addError($itemId, $e->getMessage());
-                }
+            $operation->updateProgress($result['successCount'], $result['failedCount']);
+
+            foreach ($result['errors'] as $itemId => $message) {
+                $operation->addError($itemId, $message);
             }
-
-            $operation->updateProgress($successCount, $failedCount);
         }
     }
 
     /**
-     * Process bulk delete
+     * Handle export operations — delegates serialization to the handler.
      */
-    private function processBulkDelete(BulkOperation $operation, bool $softDelete): void
+    private function processExport(BulkOperation $operation): void
     {
-        $model = $this->getModelClass($operation->module);
-        $itemIds = $operation->item_ids;
-        $chunks = array_chunk($itemIds, self::CHUNK_SIZE);
-
-        foreach ($chunks as $chunk) {
-            $successCount = 0;
-            $failedCount = 0;
-
-            foreach ($chunk as $itemId) {
-                try {
-                    $item = $model::find($itemId);
-
-                    if ($item) {
-                        if ($softDelete) {
-                            $item->delete(); // Soft delete
-                        } else {
-                            $item->forceDelete(); // Permanent delete
-                        }
-                        $successCount++;
-                    } else {
-                        $failedCount++;
-                        $operation->addError($itemId, 'Item not found');
-                    }
-                } catch (\Throwable $e) {
-                    $failedCount++;
-                    $operation->addError($itemId, $e->getMessage());
-                }
-            }
-
-            $operation->updateProgress($successCount, $failedCount);
-        }
-    }
-
-    /**
-     * Process bulk restore
-     */
-    private function processBulkRestore(BulkOperation $operation): void
-    {
-        $model = $this->getModelClass($operation->module);
-        $itemIds = $operation->item_ids;
-        $chunks = array_chunk($itemIds, self::CHUNK_SIZE);
-
-        foreach ($chunks as $chunk) {
-            $successCount = 0;
-            $failedCount = 0;
-
-            foreach ($chunk as $itemId) {
-                try {
-                    $item = $model::withTrashed()->find($itemId);
-
-                    if ($item && $item->trashed()) {
-                        $item->restore();
-                        $successCount++;
-                    } else {
-                        $failedCount++;
-                        $operation->addError($itemId, 'Item not found or not trashed');
-                    }
-                } catch (\Throwable $e) {
-                    $failedCount++;
-                    $operation->addError($itemId, $e->getMessage());
-                }
-            }
-
-            $operation->updateProgress($successCount, $failedCount);
-        }
-    }
-
-    /**
-     * Process bulk publish
-     */
-    private function processBulkPublish(BulkOperation $operation): void
-    {
-        $model = $this->getModelClass($operation->module);
-        $itemIds = $operation->item_ids;
-        $chunks = array_chunk($itemIds, self::CHUNK_SIZE);
-
-        foreach ($chunks as $chunk) {
-            $successCount = 0;
-            $failedCount = 0;
-
-            foreach ($chunk as $itemId) {
-                try {
-                    $item = $model::find($itemId);
-
-                    if ($item && method_exists($item, 'publish')) {
-                        $item->publish();
-                        $successCount++;
-                    } else {
-                        // Fallback to status update
-                        $model::where('id', $itemId)->update([
-                            'status' => 'published',
-                            'published_at' => now(),
-                        ]);
-                        $successCount++;
-                    }
-                } catch (\Throwable $e) {
-                    $failedCount++;
-                    $operation->addError($itemId, $e->getMessage());
-                }
-            }
-
-            $operation->updateProgress($successCount, $failedCount);
-        }
-    }
-
-    /**
-     * Process bulk unpublish
-     */
-    private function processBulkUnpublish(BulkOperation $operation): void
-    {
-        $model = $this->getModelClass($operation->module);
-        $itemIds = $operation->item_ids;
-        $chunks = array_chunk($itemIds, self::CHUNK_SIZE);
-
-        foreach ($chunks as $chunk) {
-            $successCount = 0;
-            $failedCount = 0;
-
-            foreach ($chunk as $itemId) {
-                try {
-                    $item = $model::find($itemId);
-
-                    if ($item && method_exists($item, 'unpublish')) {
-                        $item->unpublish();
-                        $successCount++;
-                    } else {
-                        // Fallback to status update
-                        $model::where('id', $itemId)->update([
-                            'status' => 'draft',
-                        ]);
-                        $successCount++;
-                    }
-                } catch (\Throwable $e) {
-                    $failedCount++;
-                    $operation->addError($itemId, $e->getMessage());
-                }
-            }
-
-            $operation->updateProgress($successCount, $failedCount);
-        }
-    }
-
-    /**
-     * Process bulk archive
-     */
-    private function processBulkArchive(BulkOperation $operation): void
-    {
-        $model = $this->getModelClass($operation->module);
-        $itemIds = $operation->item_ids;
-        $chunks = array_chunk($itemIds, self::CHUNK_SIZE);
-
-        foreach ($chunks as $chunk) {
-            $successCount = 0;
-            $failedCount = 0;
-
-            foreach ($chunk as $itemId) {
-                try {
-                    $item = $model::find($itemId);
-
-                    if ($item && method_exists($item, 'archive')) {
-                        $item->archive();
-                        $successCount++;
-                    } else {
-                        // Fallback to status update
-                        $model::where('id', $itemId)->update([
-                            'status' => 'archived',
-                        ]);
-                        $successCount++;
-                    }
-                } catch (\Throwable $e) {
-                    $failedCount++;
-                    $operation->addError($itemId, $e->getMessage());
-                }
-            }
-
-            $operation->updateProgress($successCount, $failedCount);
-        }
-    }
-
-    /**
-     * Process bulk change category
-     */
-    private function processBulkChangeCategory(BulkOperation $operation): void
-    {
-        $categoryId = $operation->parameters['category_id'] ?? null;
-
-        if (! $categoryId) {
-            throw new \InvalidArgumentException('Category ID is required');
-        }
-
-        $model = $this->getModelClass($operation->module);
-        $itemIds = $operation->item_ids;
-        $chunks = array_chunk($itemIds, self::CHUNK_SIZE);
-
-        foreach ($chunks as $chunk) {
-            $successCount = 0;
-            $failedCount = 0;
-
-            foreach ($chunk as $itemId) {
-                try {
-                    $model::where('id', $itemId)->update(['category_id' => $categoryId]);
-                    $successCount++;
-                } catch (\Throwable $e) {
-                    $failedCount++;
-                    $operation->addError($itemId, $e->getMessage());
-                }
-            }
-
-            $operation->updateProgress($successCount, $failedCount);
-        }
-    }
-
-    /**
-     * Process bulk add tags
-     */
-    private function processBulkAddTags(BulkOperation $operation): void
-    {
-        $tagIds = $operation->parameters['tag_ids'] ?? [];
-
-        if (empty($tagIds)) {
-            throw new \InvalidArgumentException('Tag IDs are required');
-        }
-
-        $model = $this->getModelClass($operation->module);
-        $itemIds = $operation->item_ids;
-        $chunks = array_chunk($itemIds, self::CHUNK_SIZE);
-
-        foreach ($chunks as $chunk) {
-            $successCount = 0;
-            $failedCount = 0;
-
-            foreach ($chunk as $itemId) {
-                try {
-                    $item = $model::find($itemId);
-
-                    if ($item && method_exists($item, 'tags')) {
-                        $item->tags()->syncWithoutDetaching($tagIds);
-                        $successCount++;
-                    } else {
-                        $failedCount++;
-                        $operation->addError($itemId, 'Item does not support tags');
-                    }
-                } catch (\Throwable $e) {
-                    $failedCount++;
-                    $operation->addError($itemId, $e->getMessage());
-                }
-            }
-
-            $operation->updateProgress($successCount, $failedCount);
-        }
-    }
-
-    /**
-     * Process bulk remove tags
-     */
-    private function processBulkRemoveTags(BulkOperation $operation): void
-    {
-        $tagIds = $operation->parameters['tag_ids'] ?? [];
-
-        if (empty($tagIds)) {
-            throw new \InvalidArgumentException('Tag IDs are required');
-        }
-
-        $model = $this->getModelClass($operation->module);
-        $itemIds = $operation->item_ids;
-        $chunks = array_chunk($itemIds, self::CHUNK_SIZE);
-
-        foreach ($chunks as $chunk) {
-            $successCount = 0;
-            $failedCount = 0;
-
-            foreach ($chunk as $itemId) {
-                try {
-                    $item = $model::find($itemId);
-
-                    if ($item && method_exists($item, 'tags')) {
-                        $item->tags()->detach($tagIds);
-                        $successCount++;
-                    } else {
-                        $failedCount++;
-                        $operation->addError($itemId, 'Item does not support tags');
-                    }
-                } catch (\Throwable $e) {
-                    $failedCount++;
-                    $operation->addError($itemId, $e->getMessage());
-                }
-            }
-
-            $operation->updateProgress($successCount, $failedCount);
-        }
-    }
-
-    /**
-     * Process bulk change status
-     */
-    private function processBulkChangeStatus(BulkOperation $operation): void
-    {
-        $status = $operation->parameters['status'] ?? null;
-
-        if (! $status) {
-            throw new \InvalidArgumentException('Status is required');
-        }
-
-        $model = $this->getModelClass($operation->module);
-        $itemIds = $operation->item_ids;
-        $chunks = array_chunk($itemIds, self::CHUNK_SIZE);
-
-        foreach ($chunks as $chunk) {
-            $successCount = 0;
-            $failedCount = 0;
-
-            foreach ($chunk as $itemId) {
-                try {
-                    $model::where('id', $itemId)->update(['status' => $status]);
-                    $successCount++;
-                } catch (\Throwable $e) {
-                    $failedCount++;
-                    $operation->addError($itemId, $e->getMessage());
-                }
-            }
-
-            $operation->updateProgress($successCount, $failedCount);
-        }
-    }
-
-    /**
-     * Process bulk change author
-     */
-    private function processBulkChangeAuthor(BulkOperation $operation): void
-    {
-        $authorId = $operation->parameters['author_id'] ?? null;
-
-        if (! $authorId) {
-            throw new \InvalidArgumentException('Author ID is required');
-        }
-
-        $model = $this->getModelClass($operation->module);
-        $itemIds = $operation->item_ids;
-        $chunks = array_chunk($itemIds, self::CHUNK_SIZE);
-
-        foreach ($chunks as $chunk) {
-            $successCount = 0;
-            $failedCount = 0;
-
-            foreach ($chunk as $itemId) {
-                try {
-                    $model::where('id', $itemId)->update(['author_id' => $authorId]);
-                    $successCount++;
-                } catch (\Throwable $e) {
-                    $failedCount++;
-                    $operation->addError($itemId, $e->getMessage());
-                }
-            }
-
-            $operation->updateProgress($successCount, $failedCount);
-        }
-    }
-
-    /**
-     * Process bulk assign user
-     */
-    private function processBulkAssignUser(BulkOperation $operation): void
-    {
-        $userId = $operation->parameters['user_id'] ?? null;
-
-        if (! $userId) {
-            throw new \InvalidArgumentException('User ID is required');
-        }
-
-        $model = $this->getModelClass($operation->module);
-        $itemIds = $operation->item_ids;
-        $chunks = array_chunk($itemIds, self::CHUNK_SIZE);
-
-        foreach ($chunks as $chunk) {
-            $successCount = 0;
-            $failedCount = 0;
-
-            foreach ($chunk as $itemId) {
-                try {
-                    $model::where('id', $itemId)->update(['assigned_to' => $userId]);
-                    $successCount++;
-                } catch (\Throwable $e) {
-                    $failedCount++;
-                    $operation->addError($itemId, $e->getMessage());
-                }
-            }
-
-            $operation->updateProgress($successCount, $failedCount);
-        }
-    }
-
-    /**
-     * Process bulk export
-     */
-    private function processBulkExport(BulkOperation $operation): void
-    {
-        $format = $operation->parameters['format'] ?? 'json';
-        $model = $this->getModelClass($operation->module);
-        $itemIds = $operation->item_ids;
+        $handler  = $this->resolveHandler($operation->module);
+        $format   = $operation->parameters['format'] ?? 'json';
+        $itemIds  = $operation->item_ids;
 
         try {
-            $items = $model::whereIn('id', $itemIds)->get();
-
-            $exportData = match ($format) {
-                'json' => $items->toJson(),
-                'csv' => $this->convertToCsv($items),
-                default => throw new \InvalidArgumentException("Unsupported export format: {$format}"),
-            };
+            $exportData = $handler->export($itemIds, $format);
 
             $operation->update([
                 'result_data' => [
-                    'format' => $format,
+                    'format'    => $format,
                     'file_size' => strlen($exportData),
-                    'data' => $exportData,
+                    'data'      => $exportData,
                 ],
-                'success_count' => count($itemIds),
+                'success_count'   => count($itemIds),
                 'processed_count' => count($itemIds),
             ]);
         } catch (\Throwable $e) {
             $operation->update([
-                'failed_count' => count($itemIds),
+                'failed_count'    => count($itemIds),
                 'processed_count' => count($itemIds),
             ]);
             $operation->addError(0, $e->getMessage());
@@ -620,115 +233,57 @@ class BulkOperationService extends BaseService
     }
 
     /**
-     * Process dry run (preview mode)
+     * Preview mode: record what would be affected without performing any writes.
      */
     private function processDryRun(BulkOperation $operation): void
     {
-        $model = $this->getModelClass($operation->module);
-        $itemIds = $operation->item_ids;
-
-        // Get sample of items that would be affected
-        $sampleItems = $model::whereIn('id', array_slice($itemIds, 0, 10))->get();
+        $handler     = $this->resolveHandler($operation->module);
+        $itemIds     = $operation->item_ids;
+        $sampleItems = $handler->preview($itemIds);
 
         $operation->update([
-            'status' => BulkOperationStatusEnum::COMPLETED->value,
+            'status'      => BulkOperationStatusEnum::COMPLETED->value,
             'result_data' => [
-                'dry_run' => true,
+                'dry_run'      => true,
                 'would_affect' => count($itemIds),
-                'sample_items' => $sampleItems->map(fn ($item) => [
-                    'id' => $item->id,
-                    'title' => $item->title ?? $item->name ?? 'N/A',
-                ]),
+                'sample_items' => $sampleItems,
             ],
             'completed_at' => now(),
         ]);
     }
 
     /**
-     * Cancel bulk operation
+     * Resolve the handler for the given module or throw.
+     *
+     * @throws \InvalidArgumentException
      */
-    public function cancelOperation(int $operationId): bool
+    private function resolveHandler(string $module): BulkOperationHandlerInterface
     {
-        $operation = $this->repository->findOrFail($operationId);
-
-        if (! $operation->canBeCancelled()) {
-            throw new \RuntimeException('Operation cannot be cancelled');
-        }
-
-        return $operation->markAsCancelled();
+        return $this->handlers[$module]
+            ?? throw new \InvalidArgumentException(
+                "No bulk operation handler registered for module [{$module}]."
+            );
     }
 
     /**
-     * Get operation status
-     */
-    public function getOperationStatus(int $operationId): BulkOperation
-    {
-        return $this->repository->findOrFail($operationId, ['*'], ['creator']);
-    }
-
-    /**
-     * Get operation history
-     */
-    public function getOperationHistory(int $userId, int $perPage = 15): LengthAwarePaginator
-    {
-        return $this->repository->getByUser($userId, $perPage);
-    }
-
-    /**
-     * Get model class for module
-     */
-    private function getModelClass(string $module): string
-    {
-        return match ($module) {
-            'articles' => Article::class,
-            'hadith' => Hadith::class,
-            'media_programs' => MediaProgram::class,
-            'seerah_events' => SeerahEvent::class,
-            'sahaba' => Sahabi::class,
-            'quran_verses' => Verse::class,
-            default => throw new \InvalidArgumentException("Unsupported module: {$module}"),
-        };
-    }
-
-    /**
-     * Clear module cache
+     * Flush cache tags associated with the given module after a successful operation.
      */
     private function clearModuleCache(string $module): void
     {
-        $cacheKeys = [
-            'articles' => ['articles'],
-            'hadith' => ['hadith'],
-            'media_programs' => ['media_programs'],
+        $tagMap = [
+            'articles'     => ['articles'],
+            'hadith'       => ['hadith'],
             'seerah_events' => ['seerah_events'],
-            'sahaba' => ['sahaba'],
+            'sahaba'       => ['sahaba'],
             'quran_verses' => ['verses'],
         ];
 
-        if (isset($cacheKeys[$module])) {
-            foreach ($cacheKeys[$module] as $key) {
-                Cache::tags([$key])->flush();
-            }
-        }
-    }
-
-    /**
-     * Convert collection to CSV
-     */
-    private function convertToCsv(Collection $items): string
-    {
-        if ($items->isEmpty()) {
-            return '';
+        if (! isset($tagMap[$module])) {
+            return;
         }
 
-        $csv = '';
-        $headers = array_keys($items->first()->toArray());
-        $csv .= implode(',', $headers)."\n";
-
-        foreach ($items as $item) {
-            $row = array_map(fn ($value) => is_array($value) ? json_encode($value) : $value, $item->toArray());
-            $csv .= implode(',', $row)."\n";
+        foreach ($tagMap[$module] as $tag) {
+            Cache::tags([$tag])->flush();
         }
-
-        return $csv;
     }
 }

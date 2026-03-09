@@ -459,7 +459,7 @@
                             <template x-if="previewModal.media && previewModal.media.is_image">
                                 <img :src="activePreviewSource()?.url || previewModal.media.preview_url || previewModal.media.src"
                                      :alt="previewModal.media.title"
-                                     class="max-h-[70vh] w-full object-contain">
+                                     class="max-h-[70vh] max-w-full h-auto w-auto object-contain">
                             </template>
 
                             <template x-if="previewModal.media && previewModal.media.is_video">

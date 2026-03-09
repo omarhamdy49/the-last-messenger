@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Repositories;
 
+use App\Domain\Quran\Models\Recitation;
 use App\Domain\Quran\Models\Reciter;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -295,9 +296,7 @@ class ReciterRepository implements ReciterRepositoryInterface
      */
     public function countRecitations(Reciter $reciter): int
     {
-        // TODO: Implement when quran_recitations table is created
-        // return $reciter->recitations()->count();
-        return 0;
+        return Recitation::where('reciter_id', $reciter->id)->count();
     }
 
     /**

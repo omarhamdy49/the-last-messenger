@@ -20,7 +20,7 @@
     </div>
 
     <!-- Action Buttons -->
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
         <a href="{{ route('admin.sahaba.show', $sahabi->id) }}"
            class="px-4 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 border-2"
            :class="darkMode ? 'border-gray-700 bg-gray-800 text-white hover:bg-gray-700' : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'">

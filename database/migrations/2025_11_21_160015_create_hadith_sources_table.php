@@ -27,8 +27,10 @@ return new class extends Migration
             $table->index('source_type');
         });
 
-        // Set charset and collation
-        DB::statement('ALTER TABLE hadith_sources ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci');
+        if (config('database.default') === 'mysql') {
+            // Set charset and collation
+            DB::statement('ALTER TABLE hadith_sources ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci');
+        }
     }
 
     /**

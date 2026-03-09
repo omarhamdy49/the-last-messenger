@@ -16,7 +16,7 @@
     </div>
 
     <!-- Action Buttons -->
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
         <!-- Date Range Picker -->
         <div class="flex items-center gap-2 px-4 py-2.5 rounded-xl border"
              :class="darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-300 bg-white'">
@@ -177,7 +177,7 @@
                 <template x-for="(data, module) in stats.modules || {}" :key="module">
                     <div class="flex items-center justify-between p-3 rounded-xl"
                          :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                        <div class="flex items-center gap-3">
+                        <div class="flex flex-wrap items-center gap-3">
                             <div class="w-3 h-3 rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838]"></div>
                             <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="module"></span>
                         </div>

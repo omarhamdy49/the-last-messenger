@@ -173,27 +173,26 @@ class ReciterController extends Controller
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Reciter created successfully',
+                    'message' => __('admin.reciter_created'),
                     'data' => $reciter,
                 ], 201);
             }
 
             return redirect()
                 ->route('admin.reciters.index')
-                ->with('success', 'تم إنشاء القارئ بنجاح');
+                ->with('success', __('admin.reciter_created'));
         } catch (\Exception $e) {
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to create reciter',
-                    'error' => $e->getMessage(),
+                    'message' => __('admin.reciter_create_failed'),
                 ], 422);
             }
 
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['error' => 'فشل إنشاء القارئ: ' . $e->getMessage()]);
+                ->withErrors(['error' => __('admin.reciter_create_failed')]);
         }
     }
 
@@ -274,27 +273,26 @@ class ReciterController extends Controller
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Reciter updated successfully',
+                    'message' => __('admin.reciter_updated'),
                     'data' => $reciter,
                 ]);
             }
 
             return redirect()
                 ->route('admin.reciters.index')
-                ->with('success', 'تم تحديث القارئ بنجاح');
+                ->with('success', __('admin.reciter_updated'));
         } catch (\Exception $e) {
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to update reciter',
-                    'error' => $e->getMessage(),
+                    'message' => __('admin.reciter_update_failed'),
                 ], 422);
             }
 
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['error' => 'فشل تحديث القارئ: ' . $e->getMessage()]);
+                ->withErrors(['error' => __('admin.reciter_update_failed')]);
         }
     }
 
@@ -323,25 +321,24 @@ class ReciterController extends Controller
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Reciter deleted successfully',
+                    'message' => __('admin.reciter_deleted'),
                 ]);
             }
 
             return redirect()
                 ->route('admin.reciters.index')
-                ->with('success', 'تم حذف القارئ بنجاح');
+                ->with('success', __('admin.reciter_deleted'));
         } catch (\Exception $e) {
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to delete reciter',
-                    'error' => $e->getMessage(),
+                    'message' => __('admin.reciter_delete_failed'),
                 ], 422);
             }
 
             return redirect()
                 ->back()
-                ->withErrors(['error' => 'فشل حذف القارئ: ' . $e->getMessage()]);
+                ->withErrors(['error' => __('admin.reciter_delete_failed')]);
         }
     }
 
@@ -378,26 +375,25 @@ class ReciterController extends Controller
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => true,
-                    'message' => "$deleted reciters deleted successfully",
+                    'message' => __('admin.reciters_bulk_deleted', ['count' => $deleted]),
                     'count' => $deleted,
                 ]);
             }
 
             return redirect()
                 ->route('admin.reciters.index')
-                ->with('success', "تم حذف {$deleted} قارئ بنجاح");
+                ->with('success', __('admin.reciters_bulk_deleted', ['count' => $deleted]));
         } catch (\Exception $e) {
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to delete reciters',
-                    'error' => $e->getMessage(),
+                    'message' => __('admin.reciters_bulk_delete_failed'),
                 ], 422);
             }
 
             return redirect()
                 ->back()
-                ->withErrors(['error' => 'فشل حذف القراء: ' . $e->getMessage()]);
+                ->withErrors(['error' => __('admin.reciters_bulk_delete_failed')]);
         }
     }
 
@@ -433,13 +429,12 @@ class ReciterController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Reciters reordered successfully',
+                'message' => __('admin.reciters_reordered'),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to reorder reciters',
-                'error' => $e->getMessage(),
+                'message' => __('admin.reciters_reorder_failed'),
             ], 422);
         }
     }
@@ -472,7 +467,7 @@ class ReciterController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Featured status updated successfully',
+                'message' => __('admin.reciter_featured_toggled'),
                 'data' => [
                     'is_featured' => $reciter->is_featured,
                 ],
@@ -480,8 +475,7 @@ class ReciterController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to toggle featured status',
-                'error' => $e->getMessage(),
+                'message' => __('admin.reciter_featured_toggle_failed'),
             ], 422);
         }
     }
@@ -512,8 +506,7 @@ class ReciterController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to search reciters',
-                'error' => $e->getMessage(),
+                'message' => __('admin.reciter_search_failed'),
             ], 422);
         }
     }

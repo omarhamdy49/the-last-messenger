@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Quran\Services\SurahService;
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
@@ -11,6 +12,7 @@ use App\Http\Requests\Admin\UpdateSurahRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 /**
@@ -78,7 +80,7 @@ class SurahController extends Controller
     }
 
     /**
-     * Show surah details with verses
+     * Show surah details with verses and tafseer tabs
      *
      * GET /su/portal/v1/admin/surahs/{id}
      */
@@ -93,7 +95,24 @@ class SurahController extends Controller
             'letters_count' => $surah->letters_count ?? 0,
         ];
 
-        return view('admin.surahs.show', compact('surah', 'stats'));
+        // Get verses for this surah (paginated for performance)
+        $verses = \App\Domain\Quran\Models\Verse::select(['id', 'surah_id', 'verse_number', 'verse_key'])
+            ->where('surah_id', $id)
+            ->with(['translations:id,verse_id,lang,text'])
+            ->orderBy('verse_number')
+            ->paginate(10);
+
+        // Get tafseer entries for this surah (active only)
+        $tafseer = \App\Domain\Quran\Models\VerseTafsir::select(['id', 'verse_id', 'verse_key', 'lang', 'text', 'active'])
+            ->whereHas('verse', function ($q) use ($id) {
+                $q->where('surah_id', $id);
+            })
+            ->with(['verse:id,surah_id,verse_key'])
+            ->where('active', true)
+            ->orderBy('verse_key')
+            ->paginate(10);
+
+        return view('admin.surahs.show', compact('surah', 'stats', 'verses', 'tafseer'));
     }
 
     /**
@@ -122,6 +141,13 @@ class SurahController extends Controller
 
             // Perform update
             $surah = $this->surahService->update($id, $request->validated());
+
+            // Invalidate surah caches so public reads reflect the change
+            Cache::forget(QuranCacheKeys::surahAll());
+            Cache::forget(QuranCacheKeys::surahByNumber($surah->revelation_order));
+            Cache::forget(QuranCacheKeys::surahsByRevelationPlace($surah->revelation_place));
+            Cache::forget(QuranCacheKeys::surahSelector());
+            Cache::forget(QuranCacheKeys::surahTotalVerses());
 
             // Log the update with diff
             $this->logger->logUpdate($surah, $oldValues, $surah->toArray(), $request->user());

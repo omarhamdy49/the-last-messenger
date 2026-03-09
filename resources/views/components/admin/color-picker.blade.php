@@ -68,7 +68,7 @@
          x-transition:leave="transition ease-in duration-150"
          x-transition:leave-start="opacity-100 scale-100"
          x-transition:leave-end="opacity-0 scale-95"
-         class="absolute z-50 w-full mt-2 rounded-xl shadow-2xl border overflow-hidden"
+         class="absolute z-50 w-full mt-2 rounded-xl shadow-2xl border overflow-hidden max-h-[80vh] overflow-y-auto custom-scrollbar"
          :class="darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'">
 
         <!-- Brand Colors Section -->

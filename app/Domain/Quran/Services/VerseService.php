@@ -103,7 +103,7 @@ class VerseService extends BaseService
     public function getWithRelations(int $id): Verse
     {
         /** @var Verse */
-        return $this->repository->findOrFail($id, ['*'], ['surah', 'tafseer']);
+        return $this->repository->findOrFail($id, ['*'], ['surah', 'tafsirs']);
     }
 
     /**

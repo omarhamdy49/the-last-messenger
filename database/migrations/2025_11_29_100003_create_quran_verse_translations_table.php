@@ -27,8 +27,10 @@ return new class extends Migration
             $table->index('lang');
             $table->unique(['verse_id', 'lang']);
 
-            // Full-text index for search
-            $table->fullText(['text', 'text_notashkeel']);
+            // Full-text index for search (MySQL only)
+            if (config('database.default') === 'mysql') {
+                $table->fullText(['text', 'text_notashkeel']);
+            }
         });
     }
 

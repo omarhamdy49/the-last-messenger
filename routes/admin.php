@@ -15,7 +15,7 @@ use App\Http\Controllers\Admin\GenealogyController;
 use App\Http\Controllers\Admin\GradingLevelController;
 // use App\Http\Controllers\Admin\HadithBookController; // DISABLED: Hadith module removed
 // use App\Http\Controllers\Admin\HadithChapterController; // DISABLED: Hadith module removed
-// use App\Http\Controllers\Admin\HadithController; // DISABLED: Hadith module removed
+use App\Http\Controllers\Admin\HadithController;
 // use App\Http\Controllers\Admin\HadithNarratorController; // DISABLED: Hadith module removed
 use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\LanguageSettingsController;
@@ -91,7 +91,7 @@ Route::middleware(['web'])->group(function () {
         return redirect()->back()->withErrors([
             'email' => 'بيانات الدخول غير صحيحة. يرجى المحاولة مرة أخرى.',
         ])->withInput($request->only('email'));
-    })->name('admin.web.login.submit');
+    })->name('admin.web.login.submit')->middleware('throttle:5,1');
 
     Route::post('su/portal/v1/admin/logout', function (\Illuminate\Http\Request $request) {
         Auth::logout();
@@ -319,19 +319,19 @@ Route::prefix('su/portal/v1/admin')
 
 
         // DISABLED: Hadith Routes (module removed - use API endpoints instead)
-        // Route::prefix('hadith')->group(function (): void {
-        //     Route::get('/search', [HadithController::class, 'search'])->name('admin.hadith.search');
-        //     Route::post('/bulk-delete', [HadithController::class, 'bulkDelete'])->name('admin.hadith.bulk-delete');
-        // });
-        // Route::resource('hadith', HadithController::class)->names([
-        //     'index' => 'admin.hadith.index',
-        //     'create' => 'admin.hadith.create',
-        //     'store' => 'admin.hadith.store',
-        //     'show' => 'admin.hadith.show',
-        //     'edit' => 'admin.hadith.edit',
-        //     'update' => 'admin.hadith.update',
-        //     'destroy' => 'admin.hadith.destroy',
-        // ]);
+        Route::prefix('hadith')->group(function (): void {
+            Route::get('/search', [HadithController::class, 'search'])->name('admin.hadith.search');
+            Route::post('/bulk-delete', [HadithController::class, 'bulkDelete'])->name('admin.hadith.bulk-delete');
+        });
+        Route::resource('hadith', HadithController::class)->names([
+            'index' => 'admin.hadith.index',
+            'create' => 'admin.hadith.create',
+            'store' => 'admin.hadith.store',
+            'show' => 'admin.hadith.show',
+            'edit' => 'admin.hadith.edit',
+            'update' => 'admin.hadith.update',
+            'destroy' => 'admin.hadith.destroy',
+        ]);
 
         // DISABLED: Hadith Narrator Routes (module removed)
         // Route::prefix('hadith-narrators')->group(function (): void {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Quran\Services\SurahService;
 use App\Domain\Quran\Services\VerseService;
 use App\Domain\Shared\Services\AdminLoggerService;
@@ -13,6 +14,7 @@ use App\Http\Requests\Admin\UpdateVerseRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 /**
@@ -104,6 +106,14 @@ class VerseController extends Controller
         try {
             $verse = $this->verseService->create($request->validated());
 
+            // Invalidate verse caches affected by the new verse
+            Cache::forget(QuranCacheKeys::versesBySurah($verse->surah_id));
+            Cache::forget(QuranCacheKeys::surahTotalVerses());
+            Cache::forget(QuranCacheKeys::sajdaVersesCount());
+            if ($verse->is_sajda) {
+                Cache::forget(QuranCacheKeys::sajdaVerses());
+            }
+
             // Log the creation
             $this->logger->logCreate($verse, $request->user());
 
@@ -131,7 +141,7 @@ class VerseController extends Controller
         $stats = [
             'words_count' => $verse->words_count ?? 0,
             'letters_count' => $verse->letters_count ?? 0,
-            'tafseer_count' => $verse->tafseer()->count(),
+            'tafseer_count' => $verse->tafsirs()->count(),
         ];
 
         return view('admin.verses.show', compact('verse', 'stats'));
@@ -165,6 +175,14 @@ class VerseController extends Controller
             // Perform update
             $verse = $this->verseService->update($id, $request->validated());
 
+            // Invalidate verse caches affected by the update
+            Cache::forget(QuranCacheKeys::versesBySurah($verse->surah_id));
+            if ($verse->surah_id !== ($oldValues['surah_id'] ?? $verse->surah_id)) {
+                Cache::forget(QuranCacheKeys::versesBySurah($oldValues['surah_id']));
+            }
+            Cache::forget(QuranCacheKeys::sajdaVerses());
+            Cache::forget(QuranCacheKeys::sajdaVersesCount());
+
             // Log the update with diff
             $this->logger->logUpdate($verse, $oldValues, $verse->toArray(), $request->user());
 
@@ -192,6 +210,12 @@ class VerseController extends Controller
 
             // Perform deletion
             $this->verseService->delete($id);
+
+            // Invalidate verse caches affected by the deletion
+            Cache::forget(QuranCacheKeys::versesBySurah($verse->surah_id));
+            Cache::forget(QuranCacheKeys::surahTotalVerses());
+            Cache::forget(QuranCacheKeys::sajdaVerses());
+            Cache::forget(QuranCacheKeys::sajdaVersesCount());
 
             // Log the deletion
             $this->logger->logDelete($verse, request()->user());
@@ -299,9 +323,9 @@ class VerseController extends Controller
      */
     protected function getSurahsForSelector()
     {
-        return cache()->remember('surahs:selector', now()->addMinutes(30), function () {
-            return \App\Domain\Quran\Models\Surah::select(['id', 'number', 'name'])
-                ->orderBy('number')
+        return cache()->remember(QuranCacheKeys::surahSelector(), now()->addMinutes(30), function () {
+            return \App\Domain\Quran\Models\Surah::select(['id', 'revelation_order', 'name_ar'])
+                ->orderBy('revelation_order')
                 ->get();
         });
     }

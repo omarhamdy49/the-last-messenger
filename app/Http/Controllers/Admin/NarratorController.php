@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Domain\Hadith\Enums\HadithGrade;
+use App\Domain\Hadith\Exceptions\HadithOperationException;
 use App\Domain\Hadith\Models\HadithNarrator;
 use App\Domain\Hadith\Repositories\NarratorRepositoryInterface;
 use App\Http\Requests\Admin\Hadith\StoreNarratorRequest;
@@ -74,7 +75,7 @@ class NarratorController extends AdminController
         $narrators = $query->paginate($pagination['per_page']);
 
         if ($this->expectsJson($request)) {
-            return $this->paginatedResponse($narrators, 'تم جلب الرواة بنجاح');
+            return $this->paginatedResponse($narrators, __('admin.narrator_fetched'));
         }
 
         $grades = HadithGrade::cases();
@@ -129,24 +130,29 @@ class NarratorController extends AdminController
             if ($this->expectsJson(request())) {
                 return $this->createdResponse(
                     $narrator,
-                    'تم إنشاء الراوي بنجاح'
+                    __('admin.narrator_created')
                 );
             }
 
             return redirect()
                 ->route('admin.hadith.narrators.index')
-                ->with('success', 'تم إنشاء الراوي بنجاح!');
+                ->with('success', __('admin.narrator_created'));
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
 
+            \Log::error('admin.narrator.create_failed', [
+                'user_id' => auth()->id(),
+                'error'   => $e->getMessage(),
+            ]);
+
             if ($this->expectsJson(request())) {
-                return $this->serverErrorResponse('فشل إنشاء الراوي: ' . $e->getMessage());
+                return $this->serverErrorResponse(__('admin.operation_failed'));
             }
 
             return back()
                 ->withInput()
-                ->withErrors(['error' => 'فشل إنشاء الراوي: ' . $e->getMessage()]);
+                ->withErrors(['error' => __('admin.operation_failed')]);
         }
     }
 
@@ -162,7 +168,7 @@ class NarratorController extends AdminController
         if ($this->expectsJson(request())) {
             return $this->successResponse(
                 $narrator,
-                'تم جلب الراوي بنجاح'
+                __('admin.narrator_fetched')
             );
         }
 
@@ -216,24 +222,30 @@ class NarratorController extends AdminController
             if ($this->expectsJson(request())) {
                 return $this->successResponse(
                     $narrator,
-                    'تم تحديث الراوي بنجاح'
+                    __('admin.narrator_updated')
                 );
             }
 
             return redirect()
                 ->route('admin.hadith.narrators.index')
-                ->with('success', 'تم تحديث الراوي بنجاح!');
+                ->with('success', __('admin.narrator_updated'));
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
 
+            \Log::error('admin.narrator.update_failed', [
+                'user_id'     => auth()->id(),
+                'narrator_id' => $narrator->id,
+                'error'       => $e->getMessage(),
+            ]);
+
             if ($this->expectsJson(request())) {
-                return $this->serverErrorResponse('فشل تحديث الراوي: ' . $e->getMessage());
+                return $this->serverErrorResponse(__('admin.operation_failed'));
             }
 
             return back()
                 ->withInput()
-                ->withErrors(['error' => 'فشل تحديث الراوي: ' . $e->getMessage()]);
+                ->withErrors(['error' => __('admin.operation_failed')]);
         }
     }
 
@@ -248,10 +260,10 @@ class NarratorController extends AdminController
             // Check if narrator is used in any hadith
             if ($narrator->hadiths()->count() > 0) {
                 if ($this->expectsJson(request())) {
-                    return $this->errorResponse('لا يمكن حذف راوي مرتبط بأحاديث', 422);
+                    return $this->errorResponse(__('admin.narrator_has_hadiths'), 422);
                 }
 
-                return back()->withErrors(['error' => 'لا يمكن حذف راوي مرتبط بأحاديث']);
+                return back()->withErrors(['error' => __('admin.narrator_has_hadiths')]);
             }
 
             $narrator->delete();
@@ -261,20 +273,26 @@ class NarratorController extends AdminController
             ]);
 
             if ($this->expectsJson(request())) {
-                return $this->successResponse(null, 'تم حذف الراوي بنجاح');
+                return $this->successResponse(null, __('admin.narrator_deleted'));
             }
 
             return redirect()
                 ->route('admin.hadith.narrators.index')
-                ->with('success', 'تم حذف الراوي بنجاح!');
+                ->with('success', __('admin.narrator_deleted'));
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            \Log::error('admin.narrator.delete_failed', [
+                'user_id'     => auth()->id(),
+                'narrator_id' => $narrator->id,
+                'error'       => $e->getMessage(),
+            ]);
+
             if ($this->expectsJson(request())) {
-                return $this->serverErrorResponse('فشل حذف الراوي: ' . $e->getMessage());
+                return $this->serverErrorResponse(__('admin.operation_failed'));
             }
 
             return back()
-                ->withErrors(['error' => 'فشل حذف الراوي: ' . $e->getMessage()]);
+                ->withErrors(['error' => __('admin.operation_failed')]);
         }
     }
 
@@ -294,21 +312,27 @@ class NarratorController extends AdminController
             if ($this->expectsJson(request())) {
                 return $this->successResponse(
                     $narrator,
-                    'تم استعادة الراوي بنجاح'
+                    __('admin.narrator_restored')
                 );
             }
 
             return redirect()
                 ->route('admin.hadith.narrators.index')
-                ->with('success', 'تم استعادة الراوي بنجاح!');
+                ->with('success', __('admin.narrator_restored'));
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            \Log::error('admin.narrator.restore_failed', [
+                'user_id'     => auth()->id(),
+                'narrator_id' => $id,
+                'error'       => $e->getMessage(),
+            ]);
+
             if ($this->expectsJson(request())) {
-                return $this->serverErrorResponse('فشل استعادة الراوي: ' . $e->getMessage());
+                return $this->serverErrorResponse(__('admin.operation_failed'));
             }
 
             return back()
-                ->withErrors(['error' => 'فشل استعادة الراوي: ' . $e->getMessage()]);
+                ->withErrors(['error' => __('admin.operation_failed')]);
         }
     }
 
@@ -329,13 +353,16 @@ class NarratorController extends AdminController
 
             // Check if narrator is used in any hadith
             if ($narrator->hadiths()->count() > 0) {
-                throw new \Exception('لا يمكن حذف راوي مرتبط بأحاديث');
+                throw new HadithOperationException(
+                    operation: 'delete_narrator',
+                    reason: __('admin.narrator_has_hadiths'),
+                );
             }
 
             $narrator->delete();
         });
 
-        return $this->successResponse($results, "تم حذف {$results['success']} راوي بنجاح");
+        return $this->successResponse($results, __('admin.narrator_bulk_deleted', ['count' => $results['success']]));
     }
 
     /**
@@ -349,7 +376,7 @@ class NarratorController extends AdminController
             'hadith_count' => $narrator->hadiths()->count(),
         ];
 
-        return $this->successResponse($stats, 'تم جلب إحصائيات الراوي بنجاح');
+        return $this->successResponse($stats, __('admin.narrator_statistics_fetched'));
     }
 
     /**
@@ -368,6 +395,6 @@ class NarratorController extends AdminController
             ->limit(10)
             ->get(['id', 'name_ar', 'name_en', 'reliability_grade']);
 
-        return $this->successResponse($narrators, 'تم جلب الرواة بنجاح');
+        return $this->successResponse($narrators, __('admin.narrator_fetched'));
     }
 }

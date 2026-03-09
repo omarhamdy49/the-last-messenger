@@ -200,7 +200,7 @@
             <span>Cancel</span>
         </a>
 
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center gap-3">
             @if($isEdit)
                 <button type="button"
                         @click="deleteTag"

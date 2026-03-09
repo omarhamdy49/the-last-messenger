@@ -20,7 +20,7 @@
             <button class="px-4 py-2 rounded-lg font-semibold text-sm transition-colors duration-200"
                     :class="darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'">
                 <i data-lucide="filter" class="w-4 h-4 inline {{ app()->getLocale() === 'ar' ? 'ms-2' : 'me-2' }}"></i>
-                {{ __('admin.actions.filter') }}
+                {{ __('admin.filter') }}
             </button>
 
             <a href="{{ route('admin.articles.create') }}" class="px-4 py-2 rounded-lg bg-gradient-to-r from-brand to-secondary text-white font-semibold text-sm hover:shadow-lg transition-all duration-200">

@@ -10,8 +10,6 @@ use App\Domain\Genealogy\Models\Person;
 use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithBook;
 use App\Domain\Hadith\Models\HadithNarrator;
-use App\Domain\Media\Models\MediaEpisode;
-use App\Domain\Media\Models\MediaProgram;
 use App\Domain\Quran\Models\Reciter;
 use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Models\Verse;
@@ -81,11 +79,6 @@ class AnalyticsService
                         'hadith_books' => [
                             'total' => $query(HadithBook::class)->count(),
                         ],
-                        'media' => [
-                            'programs' => $query(MediaProgram::class)->count(),
-                            'episodes' => $query(MediaEpisode::class)->count(),
-                            'total_views' => MediaProgram::sum('views_count') ?? 0,
-                        ],
                         'seerah' => [
                             'events' => $query(SeerahEvent::class)->count(),
                         ],
@@ -121,13 +114,11 @@ class AnalyticsService
             try {
                 // Total views across all modules
                 $totalViews = Article::sum('views_count')
-                    + Hadith::sum('views_count')
-                    + MediaProgram::sum('views_count');
+                    + Hadith::sum('views_count');
 
                 // Average engagement per module
                 $articlesCount = Article::where('status', 'published')->count();
                 $hadithCount = Hadith::count();
-                $mediaCount = MediaProgram::count();
 
                 return [
                     'total_views' => $totalViews,
@@ -147,12 +138,6 @@ class AnalyticsService
                             'total_views' => Hadith::sum('views_count') ?? 0,
                             'avg_views' => $hadithCount > 0
                                 ? round((Hadith::sum('views_count') ?? 0) / $hadithCount, 2)
-                                : 0,
-                        ],
-                        'media' => [
-                            'total_views' => MediaProgram::sum('views_count') ?? 0,
-                            'avg_views' => $mediaCount > 0
-                                ? round((MediaProgram::sum('views_count') ?? 0) / $mediaCount, 2)
                                 : 0,
                         ],
                     ],
@@ -198,9 +183,6 @@ class AnalyticsService
 
                 // Hadith trend
                 $trends['hadith'] = $this->getTrendData(Hadith::class, $startDate, $dateFormat);
-
-                // Media programs trend
-                $trends['media'] = $this->getTrendData(MediaProgram::class, $startDate, $dateFormat);
 
                 // Users trend
                 $trends['users'] = $this->getTrendData(User::class, $startDate, $dateFormat);
@@ -254,16 +236,6 @@ class AnalyticsService
                             'views' => $item->views_count ?? 0,
                             'created_at' => $item->created_at->format('Y-m-d'),
                         ]),
-                    'media' => MediaProgram::orderByDesc('views_count')
-                        ->take($limit)
-                        ->get(['id', 'title', 'views_count', 'type', 'created_at'])
-                        ->map(fn ($item) => [
-                            'id' => $item->id,
-                            'title' => $item->title['ar'] ?? $item->title['en'] ?? 'Untitled',
-                            'views' => $item->views_count ?? 0,
-                            'type' => $item->type,
-                            'created_at' => $item->created_at->format('Y-m-d'),
-                        ]),
                     'reciters' => Reciter::orderByDesc('order')
                         ->take($limit)
                         ->get(['id', 'name', 'style', 'is_featured'])
@@ -278,7 +250,6 @@ class AnalyticsService
                 return [
                     'articles' => collect(),
                     'hadith' => collect(),
-                    'media' => collect(),
                     'reciters' => collect(),
                 ];
             }
@@ -362,13 +333,6 @@ class AnalyticsService
                         'model' => Hadith::class,
                         'icon' => 'book',
                         'color' => '#218838',
-                    ],
-                    [
-                        'name' => 'Media Programs',
-                        'slug' => 'media',
-                        'model' => MediaProgram::class,
-                        'icon' => 'video',
-                        'color' => '#64CCC5',
                     ],
                     [
                         'name' => 'Sahaba',
@@ -502,8 +466,6 @@ class AnalyticsService
         $models = [
             Article::class,
             Hadith::class,
-            MediaProgram::class,
-            MediaEpisode::class,
             SeerahEvent::class,
             Sahabi::class,
             Verse::class,
@@ -596,7 +558,6 @@ class AnalyticsService
         return [
             'articles' => Article::whereBetween('created_at', [$startDate, $endDate])->count(),
             'hadith' => Hadith::whereBetween('created_at', [$startDate, $endDate])->count(),
-            'media' => MediaProgram::whereBetween('created_at', [$startDate, $endDate])->count(),
             'users' => User::whereBetween('created_at', [$startDate, $endDate])->count(),
             'activity' => AdminLog::whereBetween('created_at', [$startDate, $endDate])->count(),
         ];
@@ -668,7 +629,6 @@ class AnalyticsService
                 'hadith' => ['total' => 0, 'sahih' => 0, 'hasan' => 0, 'daif' => 0],
                 'hadith_narrators' => ['total' => 0, 'sahaba' => 0],
                 'hadith_books' => ['total' => 0],
-                'media' => ['programs' => 0, 'episodes' => 0, 'total_views' => 0],
                 'seerah' => ['events' => 0],
                 'sahaba' => ['total' => 0],
                 'quran' => ['surahs' => 0, 'verses' => 0, 'reciters' => 0],
@@ -691,7 +651,6 @@ class AnalyticsService
             'by_module' => [
                 'articles' => ['total_views' => 0, 'total_favorites' => 0, 'avg_views' => 0],
                 'hadith' => ['total_views' => 0, 'avg_views' => 0],
-                'media' => ['total_views' => 0, 'avg_views' => 0],
             ],
             'engagement_rate' => 0,
         ];

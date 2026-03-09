@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use Spatie\Translatable\HasTranslations;
 
@@ -89,6 +90,14 @@ class Reciter extends Model
                 $reciter->slug = Str::slug($name);
             }
         });
+    }
+
+    /**
+     * Get all recitations recorded by this reciter.
+     */
+    public function recitations(): HasMany
+    {
+        return $this->hasMany(Recitation::class, 'reciter_id');
     }
 
     /**

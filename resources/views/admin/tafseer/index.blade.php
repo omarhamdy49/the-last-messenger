@@ -1,5 +1,9 @@
 @extends('layouts.admin')
 
+@php
+use Illuminate\Support\Str;
+@endphp
+
 @section('page-header')
 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
     <!-- Page Title -->
@@ -16,7 +20,7 @@
     </div>
 
     <!-- Action Buttons -->
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
         <!-- Filter Toggle Button -->
         <button @click="$dispatch('toggle-filters')"
                 x-data
@@ -145,129 +149,112 @@
         </form>
     </div>
 
-    <!-- Tafseer Table -->
-    <div class="rounded-2xl border overflow-hidden"
-         :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+    <!-- Tafseer Rows -->
+    <div class="space-y-4">
+        @forelse($tafsirs ?? [] as $tafsir)
+            <div class="group rounded-xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.01]"
+                 :class="darkMode ? 'bg-gray-800/60 border border-gray-700 hover:bg-gray-800' : 'bg-white border border-gray-200 hover:shadow-xl'"
+                 style="box-shadow: 0 1px 3px rgba(0,0,0,0.1)">
 
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead>
-                    <tr :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                        <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            الآية
-                        </th>
-                        <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            السورة
-                        </th>
-                        <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'" style="max-width: 400px;">
-                            {{ __('quran.tafseer.text') }}
-                        </th>
-                        <th class="px-6 py-4 text-center text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            {{ __('quran.tafseer.language') }}
-                        </th>
-                        <th class="px-6 py-4 text-center text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            الحالة
-                        </th>
-                        <th class="px-6 py-4 text-center text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            {{ __('admin.actions') }}
-                        </th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y" :class="darkMode ? 'divide-gray-800' : 'divide-gray-200'">
-                    @forelse($tafsirs ?? [] as $tafsir)
-                    <tr class="hover:bg-opacity-50 transition-colors"
-                        :class="darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'">
-                        <td class="px-6 py-4">
-                            <span class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-bold text-sm">
-                                {{ $tafsir->verse_key }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <span class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                                {{ $tafsir->verse?->surah?->name_ar ?? '-' }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4" style="max-width: 400px;">
-                            <p class="leading-relaxed line-clamp-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'" dir="rtl">
-                                {{ Str::limit($tafsir->text, 150) }}
+                <div class="p-5 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
+                    <!-- Verse Key Badge -->
+                    <div class="flex-shrink-0">
+                        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center flex-shrink-0">
+                            <span class="text-sm sm:text-base font-bold text-white">{{ $tafsir->verse_key }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Main Content: Tafseer Text (Clickable) -->
+                    <div class="flex-1 min-w-0">
+                        <a href="{{ route('admin.tafseer.show', $tafsir->id) }}"
+                           class="block group">
+                            <p class="font-serif text-base leading-relaxed line-clamp-2 group-hover:text-[#64CCC5] transition-colors"
+                               :class="darkMode ? 'text-gray-100' : 'text-gray-900'"
+                               dir="rtl">
+                                {{ Str::limit($tafsir->text, 250, '...') }}
                             </p>
-                        </td>
-                        <td class="px-6 py-4 text-center">
-                            <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold"
-                                  :class="darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-800'">
-                                {{ strtoupper($tafsir->lang) }}
+                        </a>
+
+                        <!-- Bottom Info: Surah, Language, Status -->
+                        <div class="flex flex-wrap gap-2 mt-3 items-center">
+                            <!-- Surah Info -->
+                            <span class="text-xs sm:text-sm font-medium px-3 py-1 rounded-full"
+                                  :class="darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'">
+                                📖 {{ $tafsir->verse?->surah?->name_ar ?? '-' }}
                             </span>
-                        </td>
-                        <td class="px-6 py-4 text-center">
+
+                            <!-- Language Badge -->
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs sm:text-sm font-semibold"
+                                  :class="darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-800'">
+                                🌐 {{ strtoupper($tafsir->lang) }}
+                            </span>
+
+                            <!-- Status Badge -->
                             @if($tafsir->active)
-                                <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs sm:text-sm font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
                                     <i data-lucide="check" class="w-3.5 h-3.5"></i>
                                     نشط
                                 </span>
                             @else
-                                <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs sm:text-sm font-semibold bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
                                     <i data-lucide="x" class="w-3.5 h-3.5"></i>
                                     غير نشط
                                 </span>
                             @endif
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center justify-center gap-2">
-                                <a href="{{ route('admin.tafseer.show', $tafsir->id) }}"
-                                   class="p-2 rounded-lg transition-all hover:scale-110"
-                                   :class="darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'"
-                                   title="{{ __('admin.view') }}">
-                                    <i data-lucide="eye" class="w-5 h-5"></i>
-                                </a>
-                                <a href="{{ route('admin.tafseer.edit', $tafsir->id) }}"
-                                   class="p-2 rounded-lg transition-all hover:scale-110"
-                                   :class="darkMode ? 'hover:bg-blue-900/30 text-blue-400' : 'hover:bg-blue-100 text-blue-600'"
-                                   title="{{ __('admin.edit') }}">
-                                    <i data-lucide="edit-2" class="w-5 h-5"></i>
-                                </a>
-                                <form action="{{ route('admin.tafseer.destroy', $tafsir->id) }}"
-                                      method="POST"
-                                      class="inline"
-                                      onsubmit="return confirm('{{ __('admin.confirm_delete') }}')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit"
-                                            class="p-2 rounded-lg transition-all hover:scale-110"
-                                            :class="darkMode ? 'hover:bg-red-900/30 text-red-400' : 'hover:bg-red-100 text-red-600'"
-                                            title="{{ __('admin.delete') }}">
-                                        <i data-lucide="trash-2" class="w-5 h-5"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="6" class="px-6 py-12 text-center">
-                            <div class="flex flex-col items-center gap-3">
-                                <i data-lucide="message-square-text" class="w-12 h-12" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
-                                <p class="text-lg font-medium" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                                    {{ __('quran.empty.no_tafseer') }}
-                                </p>
-                                <a href="{{ route('admin.tafseer.create') }}"
-                                   class="mt-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-semibold hover:scale-105 transition-all">
-                                    {{ __('quran.actions.add_tafseer') }}
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                        </div>
+                    </div>
 
-        <!-- Pagination -->
-        @if(isset($tafsirs) && $tafsirs->hasPages())
-        <div class="px-6 py-4 border-t" :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
-            {{ $tafsirs->withQueryString()->links() }}
-        </div>
-        @endif
+                    <!-- Action Buttons -->
+                    <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 self-end sm:self-auto">
+                        <a href="{{ route('admin.tafseer.show', $tafsir->id) }}"
+                           class="p-2.5 rounded-lg transition-all"
+                           :class="darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white hover:text-[#64CCC5]' : 'hover:bg-gray-100 text-gray-600 hover:text-[#0056b3]'"
+                           title="{{ __('admin.view') }}">
+                            <i data-lucide="eye" class="w-5 h-5"></i>
+                        </a>
+                        <a href="{{ route('admin.tafseer.edit', $tafsir->id) }}"
+                           class="p-2.5 rounded-lg transition-all"
+                           :class="darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white hover:text-[#64CCC5]' : 'hover:bg-gray-100 text-gray-600 hover:text-[#0056b3]'"
+                           title="{{ __('admin.edit') }}">
+                            <i data-lucide="edit-2" class="w-5 h-5"></i>
+                        </a>
+                        <form action="{{ route('admin.tafseer.destroy', $tafsir->id) }}"
+                              method="POST"
+                              class="inline"
+                              onsubmit="return confirm('{{ __('admin.confirm_delete') }}')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit"
+                                    class="p-2.5 rounded-lg transition-all text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700"
+                                    title="{{ __('admin.delete') }}">
+                                <i data-lucide="trash-2" class="w-5 h-5"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        @empty
+            <div class="text-center py-12 px-6 rounded-2xl border"
+                 :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+                <i data-lucide="message-square-text" class="w-16 h-16 mx-auto mb-4" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
+                <p class="text-lg font-medium mb-4" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                    {{ __('quran.empty.no_tafseer') }}
+                </p>
+                <a href="{{ route('admin.tafseer.create') }}"
+                   class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-semibold hover:scale-105 transition-all">
+                    <i data-lucide="plus" class="w-5 h-5"></i>
+                    {{ __('quran.actions.add_tafseer') }}
+                </a>
+            </div>
+        @endforelse
     </div>
+
+    <!-- Pagination -->
+    @if(isset($tafsirs) && $tafsirs->hasPages())
+    <div class="mt-8">
+        {{ $tafsirs->withQueryString()->links() }}
+    </div>
+    @endif
 
 </div>
 @endsection

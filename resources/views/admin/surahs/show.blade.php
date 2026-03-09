@@ -1,5 +1,9 @@
 @extends('layouts.admin')
 
+@php
+use Illuminate\Support\Str;
+@endphp
+
 @section('page-header')
 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
     <!-- Page Title -->
@@ -21,7 +25,7 @@
     </div>
 
     <!-- Action Buttons -->
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
         <a href="{{ route('admin.surahs.edit', $surah->id) }}"
            class="px-6 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 shadow-lg
                   bg-gradient-to-r from-[#0056b3] to-[#218838] text-white">
@@ -39,10 +43,52 @@
 @endsection
 
 @section('content')
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div x-data="{
+    activeTab: 'details',
+    versesPage: 1,
+    tafseerPage: 1
+}"
+     @keydown.escape="activeTab = 'details'">
 
-    <!-- Main Info Card -->
-    <div class="lg:col-span-2 space-y-6">
+    <!-- Tab Navigation -->
+    <div class="mb-6 flex flex-wrap gap-2 border-b pb-4"
+         :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
+        <button @click="activeTab = 'details'; versesPage = 1; tafseerPage = 1"
+                class="px-6 py-3 rounded-t-xl font-semibold transition-all flex items-center gap-2"
+                :class="activeTab === 'details' ?
+                    'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' :
+                    (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')">
+            <i data-lucide="info" class="w-5 h-5"></i>
+            <span>{{ __('admin.details') }}</span>
+        </button>
+
+        <button @click="activeTab = 'verses'"
+                class="px-6 py-3 rounded-t-xl font-semibold transition-all flex items-center gap-2"
+                :class="activeTab === 'verses' ?
+                    'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' :
+                    (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')">
+            <i data-lucide="text" class="w-5 h-5"></i>
+            <span>الآيات ({{ $surah->verses_count }})</span>
+        </button>
+
+        <button @click="activeTab = 'tafseer'"
+                class="px-6 py-3 rounded-t-xl font-semibold transition-all flex items-center gap-2"
+                :class="activeTab === 'tafseer' ?
+                    'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' :
+                    (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')">
+            <i data-lucide="message-square-text" class="w-5 h-5"></i>
+            <span>التفاسير</span>
+        </button>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Main Content Area -->
+        <div class="lg:col-span-2">
+
+            <!-- TAB: DETAILS -->
+            <div x-show="activeTab === 'details'" x-transition class="space-y-6">
 
         <!-- Surah Details -->
         <div class="rounded-2xl border p-6"
@@ -224,10 +270,160 @@
             </div>
         </div>
         @endif
-    </div>
+            </div>
+            <!-- END TAB: DETAILS -->
 
-    <!-- Sidebar Stats -->
-    <div class="space-y-6">
+            <!-- TAB: VERSES -->
+            <div x-show="activeTab === 'verses'" x-transition class="space-y-4">
+                @forelse($verses as $verse)
+                    <div class="group rounded-xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.01] p-5 sm:p-6"
+                         :class="darkMode ? 'bg-gray-800/60 border border-gray-700 hover:bg-gray-800' : 'bg-white border border-gray-200 hover:shadow-xl'">
+
+                        <div class="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
+                            <!-- Verse Badge -->
+                            <div class="flex-shrink-0">
+                                <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center">
+                                    <span class="text-sm sm:text-base font-bold text-white">{{ $verse->verse_key }}</span>
+                                </div>
+                            </div>
+
+                            <!-- Verse Content -->
+                            <div class="flex-1 min-w-0">
+                                <a href="{{ route('admin.verses.show', $verse->id) }}" class="block group">
+                                    <!-- Arabic Text -->
+                                    @if($verse->translations)
+                                        @php
+                                            $arText = $verse->translations->where('lang', 'ar')->first();
+                                        @endphp
+                                        @if($arText)
+                                            <p class="font-serif text-lg leading-relaxed line-clamp-2 group-hover:text-[#64CCC5] transition-colors"
+                                               :class="darkMode ? 'text-gray-100' : 'text-gray-900'"
+                                               dir="rtl">
+                                                {{ $arText->text }}
+                                            </p>
+                                        @endif
+                                    @endif
+                                </a>
+
+                                <!-- Metadata -->
+                                <div class="flex flex-wrap gap-3 mt-3">
+                                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs sm:text-sm font-semibold"
+                                          :class="darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-800'">
+                                        📖 الآية {{ $verse->verse_number }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="flex gap-2">
+                                <a href="{{ route('admin.verses.show', $verse->id) }}"
+                                   class="p-2.5 rounded-lg transition-all"
+                                   :class="darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-[#64CCC5]' : 'hover:bg-gray-100 text-gray-600 hover:text-[#0056b3]'">
+                                    <i data-lucide="eye" class="w-5 h-5"></i>
+                                </a>
+                                <a href="{{ route('admin.verses.edit', $verse->id) }}"
+                                   class="p-2.5 rounded-lg transition-all"
+                                   :class="darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-[#64CCC5]' : 'hover:bg-gray-100 text-gray-600 hover:text-[#0056b3]'">
+                                    <i data-lucide="edit-2" class="w-5 h-5"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="text-center py-12 px-6 rounded-2xl border"
+                         :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+                        <i data-lucide="text" class="w-16 h-16 mx-auto mb-4" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
+                        <p class="text-lg font-medium" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                            لا توجد آيات
+                        </p>
+                    </div>
+                @endforelse
+
+                <!-- Pagination -->
+                @if($verses->hasPages())
+                <div class="mt-6">
+                    {{ $verses->links('pagination::tailwind') }}
+                </div>
+                @endif
+            </div>
+            <!-- END TAB: VERSES -->
+
+            <!-- TAB: TAFSEER -->
+            <div x-show="activeTab === 'tafseer'" x-transition class="space-y-4">
+                @forelse($tafseer as $tafsir)
+                    <div class="group rounded-xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.01] p-5 sm:p-6"
+                         :class="darkMode ? 'bg-gray-800/60 border border-gray-700 hover:bg-gray-800' : 'bg-white border border-gray-200 hover:shadow-xl'">
+
+                        <div class="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
+                            <!-- Verse Key Badge -->
+                            <div class="flex-shrink-0">
+                                <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center">
+                                    <span class="text-sm sm:text-base font-bold text-white">{{ $tafsir->verse_key }}</span>
+                                </div>
+                            </div>
+
+                            <!-- Tafseer Content -->
+                            <div class="flex-1 min-w-0">
+                                <a href="{{ route('admin.tafseer.show', $tafsir->id) }}" class="block group">
+                                    <p class="font-serif text-base leading-relaxed line-clamp-2 group-hover:text-[#64CCC5] transition-colors"
+                                       :class="darkMode ? 'text-gray-100' : 'text-gray-900'"
+                                       dir="rtl">
+                                        {{ Str::limit($tafsir->text, 250, '...') }}
+                                    </p>
+                                </a>
+
+                                <!-- Metadata -->
+                                <div class="flex flex-wrap gap-2 mt-3">
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs sm:text-sm font-semibold"
+                                          :class="darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-800'">
+                                        🌐 {{ strtoupper($tafsir->lang) }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="flex gap-2">
+                                <a href="{{ route('admin.tafseer.show', $tafsir->id) }}"
+                                   class="p-2.5 rounded-lg transition-all"
+                                   :class="darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-[#64CCC5]' : 'hover:bg-gray-100 text-gray-600 hover:text-[#0056b3]'">
+                                    <i data-lucide="eye" class="w-5 h-5"></i>
+                                </a>
+                                <a href="{{ route('admin.tafseer.edit', $tafsir->id) }}"
+                                   class="p-2.5 rounded-lg transition-all"
+                                   :class="darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-[#64CCC5]' : 'hover:bg-gray-100 text-gray-600 hover:text-[#0056b3]'">
+                                    <i data-lucide="edit-2" class="w-5 h-5"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="text-center py-12 px-6 rounded-2xl border"
+                         :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+                        <i data-lucide="message-square-text" class="w-16 h-16 mx-auto mb-4" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
+                        <p class="text-lg font-medium" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                            لا توجد تفاسير
+                        </p>
+                        <a href="{{ route('admin.tafseer.create', ['surah_id' => $surah->id]) }}"
+                           class="mt-4 inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-semibold hover:scale-105 transition-all">
+                            <i data-lucide="plus" class="w-5 h-5"></i>
+                            إضافة تفسير
+                        </a>
+                    </div>
+                @endforelse
+
+                <!-- Pagination -->
+                @if($tafseer->hasPages())
+                <div class="mt-6">
+                    {{ $tafseer->links('pagination::tailwind') }}
+                </div>
+                @endif
+            </div>
+            <!-- END TAB: TAFSEER -->
+
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
 
         <!-- Quick Stats -->
         <div class="rounded-2xl border p-6"

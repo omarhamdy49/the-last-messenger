@@ -16,7 +16,7 @@
     </div>
 
     <!-- Action Buttons -->
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
         <!-- Filter Toggle Button -->
         <button @click="$dispatch('toggle-filters')"
                 x-data
@@ -26,7 +26,7 @@
                     'border-gray-700 bg-gray-800 text-white hover:bg-gray-700' :
                     'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'">
             <i data-lucide="filter" class="w-5 h-5"></i>
-            <span class="hidden sm:inline">{{ __('admin.actions.filters') }}</span>
+            <span class="hidden sm:inline">{{ __('admin.filters') }}</span>
         </button>
 
         <!-- Trash Button -->
@@ -57,55 +57,45 @@
 }"
      @toggle-filters.window="filtersOpen = !filtersOpen">
 
-    <!-- Stats Cards Row -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Stats Row (compact) -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <x-admin.stats-card
             icon="file-text"
             :title="__('articles.stats.total')"
             :value="$stats['total'] ?? 0"
             :gradient="true"
-            href="{{ route('admin.articles.index') }}"
+            :compact="true"
         />
-
         <x-admin.stats-card
             icon="check-circle"
             :title="__('articles.stats.published')"
             :value="$stats['published'] ?? 0"
-            change="+{{ $stats['published_change'] ?? 0 }}%"
-            changeType="up"
-            delay="delay-100"
+            :compact="true"
         />
-
         <x-admin.stats-card
-            icon="edit"
+            icon="file-edit"
             :title="__('articles.stats.drafts')"
             :value="$stats['drafts'] ?? 0"
-            delay="delay-200"
+            :compact="true"
         />
-
         <x-admin.stats-card
             icon="clock"
             :title="__('articles.stats.scheduled')"
             :value="$stats['scheduled'] ?? 0"
-            delay="delay-300"
+            :compact="true"
         />
     </div>
 
     <!-- DataTable Component -->
     <x-admin.data-table
         :columns="[
-            ['key' => 'id', 'label' => __('articles.fields.id'), 'sortable' => true, 'width' => '80px', 'type' => 'number'],
-            ['key' => 'thumb', 'label' => __('articles.fields.thumb'), 'type' => 'image', 'width' => '100px'],
-            ['key' => 'title', 'label' => __('articles.fields.title'), 'sortable' => true, 'truncate' => 50],
-            ['key' => 'writer', 'label' => __('articles.fields.writer'), 'sortable' => true],
+            ['key' => 'title', 'type' => 'image_link', 'image_key' => 'thumb', 'label' => __('articles.fields.title'), 'sortable' => true, 'truncate' => 55, 'link' => true],
             ['key' => 'category', 'label' => __('articles.fields.category'), 'sortable' => true],
-            ['key' => 'read_time', 'label' => __('articles.fields.read_time'), 'sortable' => true, 'type' => 'time'],
+            ['key' => 'status', 'label' => __('articles.fields.status'), 'badge' => true],
             ['key' => 'views', 'label' => __('articles.fields.views'), 'sortable' => true, 'type' => 'number'],
             ['key' => 'is_featured', 'label' => __('articles.fields.is_featured'), 'type' => 'boolean'],
             ['key' => 'is_pinned', 'label' => __('articles.fields.is_pinned'), 'type' => 'boolean'],
-            ['key' => 'status', 'label' => __('articles.fields.status'), 'badge' => true],
             ['key' => 'created_at', 'label' => __('articles.fields.created_at'), 'sortable' => true, 'type' => 'date'],
-            ['key' => 'updated_at', 'label' => __('articles.fields.updated_at'), 'sortable' => true, 'type' => 'date'],
         ]"
         :data="$articles"
         :actions="['view', 'edit', 'delete', 'duplicate']"
@@ -126,9 +116,7 @@
 
     <!-- Advanced Filter Sidebar -->
     <x-admin.article-filter-sidebar
-        :categories="$categories"
-        :authors="$authors"
-        :statuses="['published', 'draft', 'scheduled', 'archived']"
+        :statuses="['published', 'pending', 'draft', 'scheduled', 'archived']"
     />
 
 </div>
@@ -207,79 +195,6 @@
         };
     });
 
-    // Enhanced DataTable with filter support
-    function dataTableWithFilters() {
-        return {
-            ...dataTable(),
-            appliedFilters: {},
-
-            init() {
-                // Call parent init
-                this.filteredData = [...this.rawData];
-                this.updatePagination();
-                this.$nextTick(() => lucide.createIcons());
-
-                // Listen for filter events
-                this.$watch('appliedFilters', () => {
-                    this.applyFiltersToData();
-                });
-            },
-
-            applyFiltersToData() {
-                this.loading = true;
-
-                setTimeout(() => {
-                    let filtered = [...this.rawData];
-
-                    // Apply category filter
-                    if (this.appliedFilters.category_id) {
-                        filtered = filtered.filter(row =>
-                            row.category_id == this.appliedFilters.category_id
-                        );
-                    }
-
-                    // Apply status filter
-                    if (this.appliedFilters.status && this.appliedFilters.status.length > 0) {
-                        filtered = filtered.filter(row =>
-                            this.appliedFilters.status.includes(row.status)
-                        );
-                    }
-
-                    // Apply author filter
-                    if (this.appliedFilters.author_id) {
-                        filtered = filtered.filter(row =>
-                            row.writer_id == this.appliedFilters.author_id
-                        );
-                    }
-
-                    // Apply date range filter
-                    if (this.appliedFilters.date_from) {
-                        filtered = filtered.filter(row =>
-                            new Date(row.created_at) >= new Date(this.appliedFilters.date_from)
-                        );
-                    }
-                    if (this.appliedFilters.date_to) {
-                        filtered = filtered.filter(row =>
-                            new Date(row.created_at) <= new Date(this.appliedFilters.date_to)
-                        );
-                    }
-
-                    // Apply feature filters
-                    if (this.appliedFilters.is_featured) {
-                        filtered = filtered.filter(row => row.is_featured);
-                    }
-                    if (this.appliedFilters.is_pinned) {
-                        filtered = filtered.filter(row => row.is_pinned);
-                    }
-
-                    this.filteredData = filtered;
-                    this.currentPage = 1;
-                    this.updatePagination();
-                    this.loading = false;
-                    this.$nextTick(() => lucide.createIcons());
-                }, 200);
-            }
-        };
-    }
+    // Filtering is handled by the data-table component via @filters-changed.window event.
 </script>
 @endpush

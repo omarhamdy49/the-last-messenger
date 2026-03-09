@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Domain\Genealogy\Models;
 
 use App\Domain\Genealogy\Enums\PersonType;
-use App\Domain\Sahaba\Models\Sahabi;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -103,7 +102,7 @@ class Person extends Model implements HasMedia
      */
     public function sahabi(): BelongsTo
     {
-        return $this->belongsTo(Sahabi::class, 'sahaba_id');
+        return $this->belongsTo('App\Domain\Sahaba\Models\Sahabi', 'sahaba_id');
     }
 
     /**

@@ -6,6 +6,7 @@ namespace App\Domain\Quran\Repositories;
 
 use App\Domain\Quran\Enums\RevelationPlace;
 use App\Domain\Quran\Models\Surah;
+use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -27,29 +28,50 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
     }
 
     /**
+     * Columns to select for surah list queries
+     */
+    private const SURAH_COLUMNS = [
+        'id',
+        'revelation_place',
+        'revelation_order',
+        'bismillah_pre',
+        'name_ar',
+        'name_en',
+        'transliteration',
+        'verses_count',
+        'pages',
+    ];
+
+    /**
      * Get all surahs (cached)
      */
-    public function all(array $columns = ['*'], array $relations = []): Collection
+    public function all(array $columns = [], array $relations = []): Collection
     {
+        $selectColumns = $columns !== [] ? $columns : self::SURAH_COLUMNS;
+
         return Cache::remember(
-            'quran_surahs_all',
+            QuranCacheKeys::surahAll(),
             self::CACHE_TTL,
             fn () => $this->model
+                ->select($selectColumns)
                 ->with($relations)
-                ->orderBy('number')
-                ->get($columns)
+                ->orderBy('revelation_order')
+                ->get()
         );
     }
 
     /**
-     * Get surah by number (1-114)
+     * Get surah by number (1-114) — number maps to revelation_order
      */
     public function getByNumber(int $number): ?Surah
     {
         return Cache::remember(
-            "quran_surah_number_{$number}",
+            QuranCacheKeys::surahByNumber($number),
             self::CACHE_TTL,
-            fn () => $this->model->where('number', $number)->first()
+            fn () => $this->model
+                ->select(self::SURAH_COLUMNS)
+                ->where('revelation_order', $number)
+                ->first()
         );
     }
 
@@ -61,26 +83,30 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
         $placeValue = $place instanceof RevelationPlace ? $place->value : $place;
 
         return Cache::remember(
-            "quran_surahs_revelation_{$placeValue}",
+            QuranCacheKeys::surahsByRevelationPlace($placeValue),
             self::CACHE_TTL,
             fn () => $this->model
-                ->byRevelationPlace($place)
-                ->orderBy('number')
+                ->select(self::SURAH_COLUMNS)
+                ->where('revelation_place', $placeValue)
+                ->orderBy('revelation_order')
                 ->get()
         );
     }
 
     /**
-     * Get surahs by Juz
+     * Get surahs by Juz — not directly queryable on surah level;
+     * returns all surahs whose pages overlap the given juz.
+     * Since there is no juz column on surahs, this returns all surahs
+     * ordered by revelation_order as a safe fallback.
      */
     public function getByJuz(int $juz): Collection
     {
         return Cache::remember(
-            "quran_surahs_juz_{$juz}",
+            QuranCacheKeys::surahsByJuz($juz),
             self::CACHE_TTL,
             fn () => $this->model
-                ->byJuz($juz)
-                ->orderBy('number')
+                ->select(self::SURAH_COLUMNS)
+                ->orderBy('revelation_order')
                 ->get()
         );
     }
@@ -97,20 +123,18 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
     public function paginateWithFilters(
         int $perPage = 15,
         string $search = '',
-        string $sortBy = 'number',
+        string $sortBy = 'revelation_order',
         array $filters = []
     ): \Illuminate\Pagination\LengthAwarePaginator {
-        $query = $this->model->query();
+        $query = $this->model->select(self::SURAH_COLUMNS);
 
-        // Apply search across all language fields
-        if (!empty($search)) {
+        // Apply search across name_ar, name_en, and transliteration
+        if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.ar')) LIKE ?", ["%{$search}%"])
-                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')) LIKE ?", ["%{$search}%"])
-                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.fr')) LIKE ?", ["%{$search}%"])
-                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.tr')) LIKE ?", ["%{$search}%"])
-                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.ur')) LIKE ?", ["%{$search}%"])
-                    ->orWhere('number', 'LIKE', "%{$search}%");
+                $q->where('name_ar', 'LIKE', "%{$search}%")
+                    ->orWhere('name_en', 'LIKE', "%{$search}%")
+                    ->orWhere('transliteration', 'LIKE', "%{$search}%")
+                    ->orWhere('revelation_order', 'LIKE', "%{$search}%");
             });
         }
 
@@ -120,8 +144,8 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
         }
 
         // Apply sorting
-        $allowedSorts = ['number', 'revelation_order', 'verses_count', 'created_at'];
-        $sortBy = in_array($sortBy, $allowedSorts) ? $sortBy : 'number';
+        $allowedSorts = ['revelation_order', 'verses_count', 'created_at'];
+        $sortBy = in_array($sortBy, $allowedSorts, true) ? $sortBy : 'revelation_order';
         $query->orderBy($sortBy);
 
         return $query->paginate($perPage);
@@ -136,7 +160,7 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
     public function countByRevelation(string $place): int
     {
         return Cache::remember(
-            "quran_surahs_count_{$place}",
+            QuranCacheKeys::surahCountByRevelation($place),
             self::CACHE_TTL,
             fn () => $this->model->where('revelation_place', $place)->count()
         );
@@ -150,14 +174,14 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
     public function getTotalVersesCount(): int
     {
         return Cache::remember(
-            'quran_total_verses',
+            QuranCacheKeys::surahTotalVerses(),
             self::CACHE_TTL,
             fn () => $this->model->sum('verses_count')
         );
     }
 
     /**
-     * Search surahs across all languages
+     * Search surahs by name_ar, name_en, and transliteration
      *
      * @param string $query
      * @param int $perPage
@@ -166,26 +190,20 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
      */
     public function search(string $query, int $perPage = 15, ?string $revelationPlace = null): \Illuminate\Pagination\LengthAwarePaginator
     {
-        $q = $this->model->query();
+        $q = $this->model->select(self::SURAH_COLUMNS);
 
-        // Search across all language fields
         $q->where(function ($subQuery) use ($query) {
-            $subQuery->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.ar')) LIKE ?", ["%{$query}%"])
-                ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')) LIKE ?", ["%{$query}%"])
-                ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.fr')) LIKE ?", ["%{$query}%"])
-                ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.tr')) LIKE ?", ["%{$query}%"])
-                ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.ur')) LIKE ?", ["%{$query}%"])
-                ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(meaning, '$.ar')) LIKE ?", ["%{$query}%"])
-                ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(meaning, '$.en')) LIKE ?", ["%{$query}%"])
-                ->orWhere('number', 'LIKE', "%{$query}%");
+            $subQuery->where('name_ar', 'LIKE', "%{$query}%")
+                ->orWhere('name_en', 'LIKE', "%{$query}%")
+                ->orWhere('transliteration', 'LIKE', "%{$query}%")
+                ->orWhere('revelation_order', 'LIKE', "%{$query}%");
         });
 
-        // Filter by revelation place if provided
-        if ($revelationPlace) {
+        if ($revelationPlace !== null) {
             $q->where('revelation_place', $revelationPlace);
         }
 
-        return $q->orderBy('number')->paginate($perPage);
+        return $q->orderBy('revelation_order')->paginate($perPage);
     }
 
     /**
@@ -196,7 +214,7 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
     public function getAverageVersesPerSurah(): float
     {
         return Cache::remember(
-            'quran_avg_verses',
+            QuranCacheKeys::surahAverageVerses(),
             self::CACHE_TTL,
             fn () => round($this->model->avg('verses_count'), 2)
         );

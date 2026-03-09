@@ -29,8 +29,10 @@ return new class extends Migration
             $table->index(['surah', 'ayah']);
         });
 
-        // Set charset and collation
-        DB::statement('ALTER TABLE hadith_related_verses ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci');
+        if (config('database.default') === 'mysql') {
+            // Set charset and collation
+            DB::statement('ALTER TABLE hadith_related_verses ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci');
+        }
     }
 
     /**

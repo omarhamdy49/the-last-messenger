@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Models\Tafseer;
+use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Quran\Services\TafseerService;
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
@@ -14,6 +15,7 @@ use App\Http\Requests\Admin\UpdateTafseerRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 /**
@@ -101,6 +103,11 @@ class TafseerController extends Controller
     {
         try {
             $tafseer = $this->tafseerService->create($request->validated());
+
+            // Invalidate tafseer caches affected by the new entry
+            Cache::forget(QuranCacheKeys::tafseerByVerseReference($tafseer->verse_reference));
+            Cache::forget(QuranCacheKeys::tafseerSources());
+            Cache::forget(QuranCacheKeys::tafseerUniqueSurahs());
 
             // Log the creation
             $this->logger->logCreate($tafseer, $request->user());
@@ -195,6 +202,14 @@ class TafseerController extends Controller
             // Perform update
             $tafseer = $this->tafseerService->updateTafseer($oldTafseer, $request->validated());
 
+            // Invalidate tafseer caches
+            Cache::forget(QuranCacheKeys::tafseerByVerseReference($tafseer->verse_reference));
+            if (($oldValues['verse_reference'] ?? null) !== $tafseer->verse_reference) {
+                Cache::forget(QuranCacheKeys::tafseerByVerseReference($oldValues['verse_reference'] ?? ''));
+            }
+            Cache::forget(QuranCacheKeys::tafseerSources());
+            Cache::forget(QuranCacheKeys::tafseerUniqueSurahs());
+
             // Log the update with diff
             $this->logger->logUpdate($tafseer, $oldValues, $tafseer->toArray(), $request->user());
 
@@ -250,6 +265,11 @@ class TafseerController extends Controller
 
             // Perform deletion
             $this->tafseerService->deleteTafseer($tafseer);
+
+            // Invalidate tafseer caches
+            Cache::forget(QuranCacheKeys::tafseerByVerseReference($tafseer->verse_reference));
+            Cache::forget(QuranCacheKeys::tafseerSources());
+            Cache::forget(QuranCacheKeys::tafseerUniqueSurahs());
 
             // Log the deletion
             $this->logger->logDelete($tafseer, request()->user());
@@ -359,9 +379,9 @@ class TafseerController extends Controller
      */
     private function getSurahsForSelector()
     {
-        return cache()->remember('surahs:selector', now()->addMinutes(30), function () {
-            return Surah::select(['id', 'number', 'name'])
-                ->orderBy('number')
+        return cache()->remember(QuranCacheKeys::surahSelector(), now()->addMinutes(30), function () {
+            return Surah::select(['id', 'revelation_order', 'name_ar'])
+                ->orderBy('revelation_order')
                 ->get();
         });
     }

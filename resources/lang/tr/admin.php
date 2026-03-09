@@ -16,6 +16,7 @@ return [
     'delete' => 'Sil',
     'edit' => 'Düzenle',
     'view' => 'Görüntüle',
+    'details' => 'Detaylar',
     'create' => 'Oluştur',
     'actions' => 'İşlemler',
     'status' => 'Durum',
@@ -31,6 +32,7 @@ return [
         'media' => 'Medya',
         'users' => 'Kullanıcılar',
         'settings' => 'Ayarlar',
+        'hadith' => 'Hadis',
     ],
 
     // Dashboard
@@ -219,4 +221,180 @@ return [
         'home' => 'Ana Sayfa',
         'dashboard' => 'Kontrol Paneli',
     ],
+
+    // Hadith Sub-modules
+    'hadith_collections' => 'Koleksiyonlar',
+    'collection' => 'Koleksiyon',
+    'hadith_narrators' => 'Raviler',
+    'hadith_scholars' => 'Alimler',
+    'hadith_themes' => 'Temalar',
+    'hadith_grading' => 'Derecelendirme',
+
+    // Hadith Management
+    'add_hadith' => 'Hadis Ekle',
+    'add_new_hadith' => 'Yeni Hadis Ekle',
+    'create_new_hadith' => 'Sistem\'e yeni hadis oluştur',
+    'hadith_information' => 'Hadis Bilgileri',
+    'manage_hadiths' => 'Hadisleri Yönet',
+    'hadith_number' => 'Hadis Numarası',
+    'select_book' => 'Bir kitap seçin',
+    'enter_hadith_number' => 'Hadis numarasını girin',
+    'narrator' => 'Ravi',
+    'select_narrator' => 'Bir ravi seçin',
+    'grading' => 'Derecelendirme',
+    'select_grading' => 'Derecelendirme seviyesini seçin',
+    'companion_id' => 'Sahabi ID',
+    'enter_companion_id' => 'Sahabi ID\'sini girin',
+    'create_hadith' => 'Hadis Oluştur',
+    'back' => 'Geri',
+    'edit_hadith' => 'Hadisi Düzenle',
+    'save_changes' => 'Değişiklikleri Kaydet',
+    'hadith_details' => 'Hadis Ayrıntıları',
+    'basic_information' => 'Temel Bilgiler',
+    'book' => 'Kitap',
+    'metadata' => 'Meta Veriler',
+    'id' => 'ID',
+    'total_hadiths' => 'Toplam Hadis',
+    'current_page' => 'Mevcut Sayfa',
+    'search_hadith_number' => 'Hadis numarasına göre ara...',
+    'no_hadiths_found' => 'Hadis bulunamadı',
+    'translations' => 'Çeviriler',
+    'confirm_delete_hadith' => 'Bu hadisi silmek istediğinizden emin misiniz?',
+    'ungraded' => 'Henüz derecelendirilmedi',
+    'delete_hadith' => 'Hadisi Sil',
+
+    // Additional Modules
+    'series' => 'Seriler',
+    'activity_logs' => 'Aktivite Günlükleri',
+    'scheduler' => 'Zamanlayıcı',
+
+    // Data Table
+    'data_table' => 'Veri Tablosu',
+    'records_found' => 'sonuç',
+    'export' => 'Dışa Aktar',
+    'export_csv' => 'CSV İndir',
+    'export_excel' => 'Excel İndir',
+    'export_pdf' => 'PDF İndir',
+    'selected' => 'seçili',
+    'rows_per_page' => 'Sayfa başına satır',
+    'no_data_message' => 'Gösterilecek veri yok',
+    'clear' => 'Temizle',
+    'publish' => 'Yayınla',
+    'trash' => 'Çöp Kutusu',
+    'view_details' => 'Ayrıntıları Görüntüle',
+    'search_placeholder' => 'Aramak için yazmaya başlayın...',
+
+    // Filter Sidebar
+    'advanced_filters' => 'Gelişmiş Filtreler',
+    'filters_active'   => 'aktif filtre',
+    'clear_all'        => 'Tümünü Temizle',
+    'date_range'       => 'Tarih Aralığı',
+    'from'             => 'Başlangıç',
+    'no_results'       => 'Sonuç bulunamadı',
+    'special_filters'  => 'Özel Filtreler',
+    'featured_only'    => 'Yalnızca Öne Çıkanlar',
+    'pinned_only'      => 'Yalnızca Sabitlenmişler',
+    'reset_all'        => 'Tümünü Sıfırla',
+    'apply_filters'    => 'Filtreleri Uygula',
+
+    // Category Not Found / Error Messages
+    'category_not_found'     => 'İstenen kategori bulunamadı.',
+    'category_delete_failed' => 'Kategori silinemedi. Lütfen tekrar deneyin.',
+
+    // Tag Not Found / Error Messages
+    'tag_not_found'    => 'İstenen etiket bulunamadı.',
+    'tag_delete_failed' => 'Etiket silinemedi. Lütfen tekrar deneyin.',
+
+    // Narrator Not Found / Error Messages
+    'narrator_not_found'     => 'İstenen ravî bulunamadı.',
+    'narrator_delete_failed' => 'Ravî silinemedi. Lütfen tekrar deneyin.',
+    'narrator_has_hadiths'   => 'Hadislerle ilişkili bir ravî silinemez.',
+
+    // Series Not Found / Error Messages
+    'series_not_found'     => 'İstenen seri bulunamadı.',
+    'series_delete_failed' => 'Seri silinemedi. Lütfen tekrar deneyin.',
+
+    // Category CRUD Messages
+    'category_created'                => 'Kategori başarıyla oluşturuldu.',
+    'category_updated'                => 'Kategori başarıyla güncellendi.',
+    'category_deleted'                => 'Kategori başarıyla silindi.',
+    'category_restored'               => 'Kategori başarıyla geri yüklendi.',
+    'category_duplicated'             => 'Kategori başarıyla kopyalandı.',
+    'category_duplicated_edit'        => 'Kategori başarıyla kopyalandı. Şimdi kopyayı düzenleyebilirsiniz.',
+    'categories_reordered'            => 'Kategoriler başarıyla yeniden sıralandı.',
+    'category_operation_failed'       => 'Kategori işlemi başarısız. Lütfen tekrar deneyin.',
+    'category_has_children'           => 'Alt kategorileri olan bir kategori silinemez. Lütfen önce alt kategorileri silin.',
+    'category_has_articles'           => ':count makale içeren kategori silinemez. Lütfen önce makaleleri yeniden atayın.',
+    'categories_bulk_deleted'         => ':deleted kategori başarıyla silindi.',
+    'categories_bulk_deleted_partial' => ':deleted kategori başarıyla silindi (:failed başarısız).',
+
+    // Tag CRUD Messages
+    'tag_created'          => 'Etiket başarıyla oluşturuldu.',
+    'tag_updated'          => 'Etiket başarıyla güncellendi.',
+    'tag_deleted'          => 'Etiket başarıyla silindi.',
+    'tag_duplicate_exists' => 'Benzer bir etiket zaten mevcut.',
+    'tags_merged'          => 'Etiketler başarıyla birleştirildi. :count makale taşındı.',
+    'tags_bulk_deleted'    => ':count etiket başarıyla silindi.',
+
+    // Series CRUD Messages
+    'series_created'            => 'Seri başarıyla oluşturuldu.',
+    'series_updated'            => 'Seri başarıyla güncellendi.',
+    'series_deleted'            => 'Seri başarıyla silindi.',
+    'series_articles_reordered' => 'Makaleler başarıyla yeniden sıralandı.',
+    'series_bulk_deleted'       => ':count seri başarıyla silindi.',
+
+    // Reciter CRUD Messages
+    'reciter_created'                => 'Okuyucu başarıyla oluşturuldu.',
+    'reciter_updated'                => 'Okuyucu başarıyla güncellendi.',
+    'reciter_deleted'                => 'Okuyucu başarıyla silindi.',
+    'reciter_create_failed'          => 'Okuyucu oluşturulamadı. Lütfen tekrar deneyin.',
+    'reciter_update_failed'          => 'Okuyucu güncellenemedi. Lütfen tekrar deneyin.',
+    'reciter_delete_failed'          => 'Okuyucu silinemedi. Lütfen tekrar deneyin.',
+    'reciters_reordered'             => 'Okuyucular başarıyla yeniden sıralandı.',
+    'reciters_reorder_failed'        => 'Okuyucular yeniden sıralanamadı. Lütfen tekrar deneyin.',
+    'reciters_bulk_deleted'          => ':count okuyucu başarıyla silindi.',
+    'reciters_bulk_delete_failed'    => 'Okuyucular silinemedi. Lütfen tekrar deneyin.',
+    'reciter_featured_toggled'       => 'Öne çıkarma durumu başarıyla güncellendi.',
+    'reciter_featured_toggle_failed' => 'Öne çıkarma durumu güncellenemedi. Lütfen tekrar deneyin.',
+    'reciter_search_failed'          => 'Okuyucu araması başarısız oldu. Lütfen tekrar deneyin.',
+
+    // Locale Switch Messages
+    'locale_unsupported' => 'Seçilen dil desteklenmiyor.',
+    'locale_changed'     => 'Dil başarıyla değiştirildi.',
+
+    // Narrator CRUD Messages
+    'narrator_fetched'             => 'Raviler başarıyla getirildi.',
+    'narrator_created'             => 'Ravi başarıyla oluşturuldu.',
+    'narrator_updated'             => 'Ravi başarıyla güncellendi.',
+    'narrator_deleted'             => 'Ravi başarıyla silindi.',
+    'narrator_restored'            => 'Ravi başarıyla geri yüklendi.',
+    'narrator_bulk_deleted'        => ':count ravi başarıyla silindi.',
+    'narrator_statistics_fetched'  => 'Ravi istatistikleri başarıyla getirildi.',
+
+    // Scholar CRUD Messages
+    'scholar_fetched'       => 'Alimler başarıyla getirildi.',
+    'scholar_created'       => 'Alim başarıyla oluşturuldu.',
+    'scholar_create_failed' => 'Alim oluşturulamadı. Lütfen tekrar deneyin.',
+    'scholar_updated'       => 'Alim başarıyla güncellendi.',
+    'scholar_update_failed' => 'Alim güncellenemedi. Lütfen tekrar deneyin.',
+    'scholar_deleted'       => 'Alim başarıyla silindi.',
+    'scholar_delete_failed' => 'Alim silinemedi. Lütfen tekrar deneyin.',
+    'scholar_bulk_deleted'  => ':count alim başarıyla silindi.',
+
+    // Grading Level Messages
+    'grading_levels_fetched'           => 'Derecelendirme seviyeleri başarıyla getirildi.',
+    'grading_level_not_found'          => 'Derecelendirme seviyesi bulunamadı.',
+    'grading_level_fetched'            => 'Derecelendirme seviyesi başarıyla getirildi.',
+    'grading_level_statistics_fetched' => 'Derecelendirme seviyesi istatistikleri başarıyla getirildi.',
+
+    // Theme CRUD Messages
+    'theme_fetched'       => 'Temalar başarıyla getirildi.',
+    'theme_created'       => 'Tema başarıyla oluşturuldu.',
+    'theme_create_failed' => 'Tema oluşturulamadı. Lütfen tekrar deneyin.',
+    'theme_updated'       => 'Tema başarıyla güncellendi.',
+    'theme_update_failed' => 'Tema güncellenemedi. Lütfen tekrar deneyin.',
+    'theme_has_content'   => 'İçerikle bağlantılı tema silinemez.',
+    'theme_deleted'       => 'Tema başarıyla silindi.',
+    'theme_delete_failed' => 'Tema silinemedi. Lütfen tekrar deneyin.',
+    'theme_bulk_deleted'  => ':count tema başarıyla silindi.',
 ];

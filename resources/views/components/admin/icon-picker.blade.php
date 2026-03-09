@@ -51,13 +51,13 @@
         <div class="p-4 border-b"
              :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
             <div class="relative">
-                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+                <i data-lucide="search" class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4"
                    :class="darkMode ? 'text-gray-500' : 'text-gray-400'"></i>
                 <input type="text"
                        x-model="searchQuery"
                        @input="filterIcons()"
-                       placeholder="Search icons..."
-                       class="w-full pl-10 pr-4 py-2 rounded-lg border transition-all text-sm focus:ring-2 focus:ring-accent/50"
+                       placeholder="{{ __('admin.search') }}"
+                       class="w-full ps-10 pe-4 py-2 rounded-lg border transition-all text-base sm:text-sm focus:ring-2 focus:ring-accent/50"
                        :class="darkMode ?
                            'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-accent' :
                            'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'">
@@ -65,8 +65,8 @@
         </div>
 
         <!-- Icon Grid -->
-        <div class="p-4 max-h-80 overflow-y-auto custom-scrollbar">
-            <div class="grid grid-cols-6 gap-2">
+        <div class="p-4 max-h-64 sm:max-h-80 overflow-y-auto custom-scrollbar">
+            <div class="grid grid-cols-5 sm:grid-cols-6 gap-2">
                 <template x-for="icon in filteredIcons" :key="icon">
                     <button type="button"
                             @click="selectIcon(icon)"
@@ -87,7 +87,7 @@
                 <i data-lucide="search-x" class="w-8 h-8 mx-auto mb-2"
                    :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
                 <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                    No icons found
+                    {{ __('admin.no_results') }}
                 </p>
             </div>
         </div>

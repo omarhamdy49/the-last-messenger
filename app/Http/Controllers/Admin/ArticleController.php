@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Blog\Actions\CreateArticleAction;
+use App\Domain\Blog\Actions\UpdateArticleAction;
+use App\Domain\Blog\DTOs\CreateArticleData;
+use App\Domain\Blog\DTOs\UpdateArticleData;
 use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Models\Tag;
 use App\Domain\Shared\Services\VersionService;
@@ -19,46 +23,37 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class ArticleController extends AdminController
 {
-    /**
-     * Supported locales (loaded from config)
-     */
     protected array $locales;
 
     public function __construct(
         protected ArticleRepository $repository,
-        protected VersionService $versionService
+        protected VersionService $versionService,
+        private readonly CreateArticleAction $createAction,
+        private readonly UpdateArticleAction $updateAction,
     ) {
         parent::__construct();
 
-        // Load supported locales from config
         $this->locales = array_keys(config('app.supported_locales', ['ar', 'en']));
     }
 
     /**
-     * Display a listing of articles
+     * Display a listing of articles.
      */
     public function index(Request $request): View|JsonResponse
     {
         $this->authorizeAdmin('view articles');
 
-        $filters = $this->getFilters($request, [
-            'status',
-            'category_id',
-            'author_id',
-            'is_featured',
-            'is_pinned',
-            'locale',
-            'date_from',
-            'date_to'
+        $filters    = $this->getFilters($request, [
+            'status', 'category_id', 'author_id', 'is_featured', 'is_pinned', 'locale', 'date_from', 'date_to',
         ]);
-
-        $search = $this->getSearchQuery($request);
+        $search     = $this->getSearchQuery($request);
         $pagination = $this->getPaginationParams($request);
 
         $articles = $this->repository->getAllWithFilters(
@@ -73,151 +68,102 @@ class ArticleController extends AdminController
             return $this->paginatedResponse($articles, 'Articles retrieved successfully');
         }
 
-        $categories = Category::all();
-        $authors = User::role('writer')->get();
+        if (method_exists($articles, 'getCollection')) {
+            $articles->getCollection()->load([
+                'locales:id,article_id,locale,title,slug,is_ready',
+                'writer:id,name',
+                'category:id,name,slug',
+            ]);
+        }
 
-        return view('admin.articles.index', compact('articles', 'categories', 'authors'));
+        $categories = Category::select(['id', 'name'])->orderBy('name')->get();
+        $authors    = User::role('writer')->select(['id', 'name'])->orderBy('name')->get();
+
+        $articleCounts = DB::table('articles')
+            ->selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'published' THEN 1 ELSE 0 END) as published,
+                SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) as drafts,
+                SUM(CASE WHEN status = 'scheduled' THEN 1 ELSE 0 END) as scheduled,
+                SUM(CASE WHEN is_featured = 1 THEN 1 ELSE 0 END) as featured
+            ")
+            ->whereNull('deleted_at')
+            ->first();
+
+        $stats = [
+            'total'            => (int) ($articleCounts->total ?? 0),
+            'published'        => (int) ($articleCounts->published ?? 0),
+            'published_change' => 0,
+            'drafts'           => (int) ($articleCounts->drafts ?? 0),
+            'scheduled'        => (int) ($articleCounts->scheduled ?? 0),
+            'featured'         => (int) ($articleCounts->featured ?? 0),
+        ];
+
+        $articles = $this->transformArticlesForTable($articles);
+
+        return view('admin.articles.index', compact('articles', 'categories', 'authors', 'stats'));
     }
 
     /**
-     * Show the form for creating a new article
+     * Show the form for creating a new article.
      */
     public function create(): View
     {
         $this->authorizeAdmin('create articles');
 
-        $categories = Category::all();
-        $writers = User::role('writer')->get();
-        $tags = Tag::where('type', 'article')->get();
-        $locales = $this->locales;
+        $categories      = Category::select(['id', 'name'])->orderBy('name')->get();
+        $writers         = User::role('writer')->select(['id', 'name'])->orderBy('name')->get();
+        $tags            = Tag::where('type', 'article')->select(['id', 'name'])->orderBy('name')->get();
+        $locales         = $this->locales;
         $currentHijriDate = DateUtil::getCurrentHijriDate();
 
         return view('admin.articles.create', compact('categories', 'writers', 'tags', 'locales', 'currentHijriDate'));
     }
 
     /**
-     * Store a newly created article
+     * Store a newly created article.
      */
     public function store(StoreArticleRequest $request): RedirectResponse|JsonResponse
     {
         $this->authorizeAdmin('create articles');
 
-        DB::beginTransaction();
         try {
-            $validated = $request->validated();
-
-            // Handle thumbnail upload
-            $thumbPath = null;
-            if ($request->hasFile('thumb')) {
-                $thumbPath = $request->file('thumb')->store('articles/thumbs', 'public');
-            }
-
-            // Create article
-            $article = Article::create([
-                'thumb' => $thumbPath,
-                'writer_id' => $validated['writer_id'] ?? auth()->id(),
-                'read_time' => $validated['read_time'] ?? $this->calculateReadTime($validated['content']['ar'] ?? ''),
-                'views' => 0,
-                'is_featured' => $request->boolean('is_featured'),
-                'is_pinned' => $request->boolean('is_pinned'),
-                'category_id' => $validated['category_id'] ?? null,
-                'hijri_date' => $validated['hijri_date'] ?? null,
-                'statistics' => $validated['statistics'] ?? null,
-                'references' => $validated['references'] ?? null,
-            ]);
-
-            // Create locales
-            foreach ($this->locales as $locale) {
-                if (isset($validated['title'][$locale])) {
-                    $slug = $this->generateUniqueSlug($validated['title'][$locale], $locale);
-
-                    $article->locales()->create([
-                        'locale' => $locale,
-                        'title' => $validated['title'][$locale],
-                        'slug' => $validated['slug'][$locale] ?? $slug,
-                        'description' => $validated['description'][$locale] ?? null,
-                        'excerpt' => $validated['excerpt'][$locale] ?? null,
-                        'content' => [
-                            'body' => $validated['content'][$locale] ?? null,
-                            'toc' => $validated['toc'][$locale] ?? $this->generateTableOfContents($validated['content'][$locale] ?? ''),
-                            'summary' => $validated['summary'][$locale] ?? null,
-                        ],
-                        'seo_metadata' => [
-                            'title' => $validated['seo_title'][$locale] ?? null,
-                            'description' => $validated['seo_description'][$locale] ?? null,
-                        ],
-                        'is_ready' => $validated['is_ready'][$locale] ?? false,
-                    ]);
-                }
-            }
-
-            // Attach primary category
-            if (!empty($validated['category_id'])) {
-                $article->categories()->attach($validated['category_id']);
-            }
-
-            // Attach additional categories
-            if (!empty($validated['additional_categories'])) {
-                $article->categories()->syncWithoutDetaching($validated['additional_categories']);
-            }
-
-            // Attach tags
-            if (!empty($validated['tags'])) {
-                $article->tags()->attach($validated['tags']);
-            }
-
-            // Sync media items (videos/episodes)
-            if (!empty($validated['media_items'])) {
-                $article->mediaItems()->sync($validated['media_items']);
-            }
-
-            // Create initial version
-            $this->versionService->createVersion(
-                $article,
-                $article->toArray(),
-                auth()->id(),
-                'Initial version created'
+            $article = $this->createAction->execute(
+                CreateArticleData::fromRequest($request),
+                $this->locales
             );
 
-            DB::commit();
-
             $this->logActivity('created', 'Article', $article->id, [
-                'title' => $validated['title']['ar'] ?? $validated['title']['en'],
+                'title' => $request->validated()['title']['ar'] ?? ($request->validated()['title']['en'] ?? null),
             ]);
 
             $article->load($this->articleRelations());
 
             if ($this->expectsJson(request())) {
-                return $this->createdResponse(
-                    new ArticleResource($article),
-                    'Article created successfully'
-                );
+                return $this->createdResponse(new ArticleResource($article), 'Article created successfully');
             }
 
             return redirect()
                 ->route('admin.articles.index')
                 ->with('success', 'Article created successfully!');
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            // Delete uploaded thumbnail if exists
-            if (isset($thumbPath) && $thumbPath) {
-                Storage::disk('public')->delete($thumbPath);
-            }
+        } catch (\Throwable $e) {
+            Log::error('article.create_failed', [
+                'user_id' => auth()->id(),
+                'error'   => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
+            ]);
 
             if ($this->expectsJson(request())) {
-                return $this->serverErrorResponse('Failed to create article: ' . $e->getMessage());
+                return $this->serverErrorResponse(__('admin.article_create_failed'));
             }
 
-            return back()
-                ->withInput()
-                ->withErrors(['error' => 'Failed to create article: ' . $e->getMessage()]);
+            return back()->withInput()->withErrors(['error' => __('admin.article_create_failed')]);
         }
     }
 
     /**
-     * Display the specified article
+     * Display the specified article.
      */
     public function show(Article $article): View|JsonResponse
     {
@@ -226,163 +172,95 @@ class ArticleController extends AdminController
         $article->load($this->articleRelations());
 
         if ($this->expectsJson(request())) {
-            return $this->successResponse(
-                new ArticleResource($article),
-                'Article retrieved successfully'
-            );
+            return $this->successResponse(new ArticleResource($article), 'Article retrieved successfully');
         }
 
         return view('admin.articles.show', compact('article'));
     }
 
     /**
-     * Show the form for editing the article
+     * Show the form for editing the article.
      */
     public function edit(Article $article): View
     {
         $this->authorizeAdmin('edit articles');
 
-        $article->load(['locales', 'categories', 'tags', 'mediaItems', 'gallery']);
+        $article->load([
+            'locales:id,article_id,locale,title,slug,description,excerpt,content,seo_metadata,is_ready',
+            'categories:id,name,slug',
+            'tags:id,name,slug',
+            'mediaItems:id,filename,url,thumbnail_url,mime_type,type',
+            'gallery:id,article_id,image,caption,order',
+        ]);
 
-        $categories = Category::all();
-        $writers = User::role('writer')->get();
-        $tags = Tag::where('type', 'article')->get();
-        $locales = $this->locales;
+        $categories      = Category::select(['id', 'name'])->orderBy('name')->get();
+        $writers         = User::role('writer')->select(['id', 'name'])->orderBy('name')->get();
+        $tags            = Tag::where('type', 'article')->select(['id', 'name'])->orderBy('name')->get();
+        $locales         = $this->locales;
         $currentHijriDate = DateUtil::getCurrentHijriDate();
-        $formArticle = $this->transformArticleForForm($article);
+        $formArticle     = $this->transformArticleForForm($article);
 
-        return view('admin.articles.edit', compact('article', 'categories', 'writers', 'tags', 'locales', 'currentHijriDate', 'formArticle'));
+        return view('admin.articles.edit', compact(
+            'article', 'categories', 'writers', 'tags', 'locales', 'currentHijriDate', 'formArticle'
+        ));
     }
 
     /**
-     * Update the specified article
+     * Update the specified article.
      */
     public function update(UpdateArticleRequest $request, Article $article): RedirectResponse|JsonResponse
     {
         $this->authorizeAdmin('edit articles');
 
-        DB::beginTransaction();
         try {
-            $validated = $request->validated();
-            $oldData = $article->toArray();
-
-            // Handle thumbnail upload
-            if ($request->hasFile('thumb')) {
-                // Delete old thumbnail
-                if ($article->thumb) {
-                    Storage::disk('public')->delete($article->thumb);
-                }
-                $validated['thumb'] = $request->file('thumb')->store('articles/thumbs', 'public');
-            }
-
-            // Update article
-            $article->update([
-                'thumb' => $validated['thumb'] ?? $article->thumb,
-                'writer_id' => $validated['writer_id'] ?? $article->writer_id,
-                'read_time' => $validated['read_time'] ?? $article->read_time,
-                'is_featured' => $request->boolean('is_featured'),
-                'is_pinned' => $request->boolean('is_pinned'),
-                'category_id' => $validated['category_id'] ?? null,
-                'hijri_date' => $validated['hijri_date'] ?? null,
-                'statistics' => $validated['statistics'] ?? $article->statistics,
-                'references' => $validated['references'] ?? $article->references,
-            ]);
-
-            // Update or create locales
-            foreach ($this->locales as $locale) {
-                if (isset($validated['title'][$locale])) {
-                    $slug = $validated['slug'][$locale] ?? $this->generateUniqueSlug($validated['title'][$locale], $locale, $article->id);
-
-                    $article->locales()->updateOrCreate(
-                        ['locale' => $locale],
-                        [
-                            'title' => $validated['title'][$locale],
-                            'slug' => $slug,
-                            'description' => $validated['description'][$locale] ?? null,
-                            'excerpt' => $validated['excerpt'][$locale] ?? null,
-                            'content' => [
-                                'body' => $validated['content'][$locale] ?? null,
-                                'toc' => $validated['toc'][$locale] ?? $this->generateTableOfContents($validated['content'][$locale] ?? ''),
-                                'summary' => $validated['summary'][$locale] ?? null,
-                            ],
-                            'seo_metadata' => [
-                                'title' => $validated['seo_title'][$locale] ?? null,
-                                'description' => $validated['seo_description'][$locale] ?? null,
-                            ],
-                            'is_ready' => $validated['is_ready'][$locale] ?? false,
-                        ]
-                    );
-                }
-            }
-
-            // Sync categories
-            $categoryIds = array_merge(
-                [$validated['category_id']],
-                $validated['additional_categories'] ?? []
-            );
-            $article->categories()->sync(array_filter($categoryIds));
-
-            // Sync tags
-            $article->tags()->sync($validated['tags'] ?? []);
-
-            // Sync media items (videos/episodes)
-            if (isset($validated['media_items'])) {
-                $article->mediaItems()->sync($validated['media_items']);
-            }
-
-            // Create version
-            $this->versionService->createVersion(
+            $this->updateAction->execute(
                 $article,
-                $article->toArray(),
-                auth()->id(),
-                'Article updated'
+                UpdateArticleData::fromRequest($request, $article),
+                $this->locales
             );
-
-            DB::commit();
 
             $this->logActivity('updated', 'Article', $article->id, [
-                'title' => $validated['title']['ar'] ?? $validated['title']['en'],
+                'title' => $request->validated()['title']['ar'] ?? ($request->validated()['title']['en'] ?? null),
             ]);
 
             $article->load($this->articleRelations());
 
             if ($this->expectsJson(request())) {
-                return $this->successResponse(
-                    new ArticleResource($article),
-                    'Article updated successfully'
-                );
+                return $this->successResponse(new ArticleResource($article), 'Article updated successfully');
             }
 
             return redirect()
                 ->route('admin.articles.index')
                 ->with('success', 'Article updated successfully!');
 
-        } catch (\Exception $e) {
-            DB::rollBack();
+        } catch (\Throwable $e) {
+            Log::error('article.update_failed', [
+                'user_id'    => auth()->id(),
+                'article_id' => $article->id,
+                'error'      => $e->getMessage(),
+                'trace'      => $e->getTraceAsString(),
+            ]);
 
             if ($this->expectsJson(request())) {
-                return $this->serverErrorResponse('Failed to update article: ' . $e->getMessage());
+                return $this->serverErrorResponse(__('admin.article_update_failed'));
             }
 
-            return back()
-                ->withInput()
-                ->withErrors(['error' => 'Failed to update article: ' . $e->getMessage()]);
+            return back()->withInput()->withErrors(['error' => __('admin.article_update_failed')]);
         }
     }
 
     /**
-     * Soft delete the specified article
+     * Soft delete the specified article.
      */
     public function destroy(Article $article): RedirectResponse|JsonResponse
     {
         $this->authorizeAdmin('delete articles');
 
         try {
+            $title = $article->locales->first()?->title ?? 'Untitled';
             $article->delete();
 
-            $this->logActivity('deleted', 'Article', $article->id, [
-                'title' => $article->locales->first()->title ?? 'Untitled',
-            ]);
+            $this->logActivity('deleted', 'Article', $article->id, ['title' => $title]);
 
             if ($this->expectsJson(request())) {
                 return $this->successResponse(null, 'Article deleted successfully');
@@ -392,123 +270,124 @@ class ArticleController extends AdminController
                 ->route('admin.articles.index')
                 ->with('success', 'Article deleted successfully!');
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            Log::error('article.delete_failed', [
+                'user_id'    => auth()->id(),
+                'article_id' => $article->id,
+                'error'      => $e->getMessage(),
+                'trace'      => $e->getTraceAsString(),
+            ]);
+
             if ($this->expectsJson(request())) {
-                return $this->serverErrorResponse('Failed to delete article: ' . $e->getMessage());
+                return $this->serverErrorResponse(__('admin.article_delete_failed'));
             }
 
-            return back()
-                ->withErrors(['error' => 'Failed to delete article: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => __('admin.article_delete_failed')]);
         }
     }
 
     /**
-     * Bulk delete multiple articles
+     * Bulk delete multiple articles.
      */
     public function bulkDestroy(Request $request): JsonResponse
     {
         $this->authorizeAdmin('delete articles');
 
         $request->validate([
-            'ids' => 'required|array',
+            'ids'   => 'required|array',
             'ids.*' => 'exists:articles,id',
         ]);
 
-        $results = $this->handleBulkOperation($request, 'delete', function ($id) {
-            $article = Article::findOrFail($id);
-            $article->delete();
+        $results = $this->handleBulkOperation($request, 'delete', function (int $id): void {
+            Article::findOrFail($id)->delete();
         });
 
         return $this->successResponse($results, "{$results['success']} articles deleted successfully");
     }
 
     /**
-     * Bulk publish multiple articles
+     * Bulk publish multiple articles.
      */
     public function bulkPublish(Request $request): JsonResponse
     {
         $this->authorizeAdmin('edit articles');
 
         $request->validate([
-            'ids' => 'required|array',
+            'ids'   => 'required|array',
             'ids.*' => 'exists:articles,id',
         ]);
 
-        $results = $this->handleBulkOperation($request, 'publish', function ($id) {
-            $article = Article::findOrFail($id);
-            $article->locales()->update(['is_ready' => true]);
+        $results = $this->handleBulkOperation($request, 'publish', function (int $id): void {
+            Article::findOrFail($id)->locales()->update(['is_ready' => true]);
         });
 
         return $this->successResponse($results, "{$results['success']} articles published successfully");
     }
 
     /**
-     * Duplicate an article
+     * Duplicate an article.
      */
     public function duplicate(Article $article): RedirectResponse|JsonResponse
     {
         $this->authorizeAdmin('create articles');
 
-        DB::beginTransaction();
         try {
-            // Create a copy of the article
-            $newArticle = $article->replicate();
+            $article->load(['locales', 'categories', 'tags']);
+
+            $newArticle             = $article->replicate();
             $newArticle->is_featured = false;
-            $newArticle->is_pinned = false;
-            $newArticle->views = 0;
+            $newArticle->is_pinned   = false;
+            $newArticle->views       = 0;
             $newArticle->save();
 
-            // Copy locales
             foreach ($article->locales as $locale) {
-                $newLocale = $locale->replicate();
+                $newLocale             = $locale->replicate();
                 $newLocale->article_id = $newArticle->id;
-                $newLocale->slug = $locale->slug . '-copy-' . Str::random(6);
-                $newLocale->is_ready = false;
+                $newLocale->slug       = $locale->slug . '-copy-' . Str::random(6);
+                $newLocale->is_ready   = false;
                 $newLocale->save();
             }
 
-            // Copy relationships
             $newArticle->categories()->sync($article->categories->pluck('id'));
             $newArticle->tags()->sync($article->tags->pluck('id'));
-
-            DB::commit();
 
             $this->logActivity('duplicated', 'Article', $newArticle->id, [
                 'original_id' => $article->id,
             ]);
 
             if ($this->expectsJson(request())) {
-                return $this->createdResponse(
-                    new ArticleResource($newArticle),
-                    'Article duplicated successfully'
-                );
+                return $this->createdResponse(new ArticleResource($newArticle), 'Article duplicated successfully');
             }
 
             return redirect()
                 ->route('admin.articles.edit', $newArticle)
                 ->with('success', 'Article duplicated successfully!');
 
-        } catch (\Exception $e) {
-            DB::rollBack();
+        } catch (\Throwable $e) {
+            Log::error('article.duplicate_failed', [
+                'user_id'    => auth()->id(),
+                'article_id' => $article->id,
+                'error'      => $e->getMessage(),
+                'trace'      => $e->getTraceAsString(),
+            ]);
 
             if ($this->expectsJson(request())) {
-                return $this->serverErrorResponse('Failed to duplicate article: ' . $e->getMessage());
+                return $this->serverErrorResponse(__('admin.article_duplicate_failed'));
             }
 
-            return back()
-                ->withErrors(['error' => 'Failed to duplicate article: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => __('admin.article_duplicate_failed')]);
         }
     }
 
     /**
-     * Preview an article (before publishing)
+     * Preview an article (before publishing).
      */
     public function preview(Article $article, Request $request): View
     {
-        $locale = $request->get('locale', 'ar');
+        $locale        = $request->get('locale', 'ar');
         $articleLocale = $article->locales()->where('locale', $locale)->first();
 
-        if (!$articleLocale) {
+        if (! $articleLocale) {
             abort(404, 'Article not available in this language');
         }
 
@@ -516,7 +395,7 @@ class ArticleController extends AdminController
     }
 
     /**
-     * Restore a soft-deleted article
+     * Restore a soft-deleted article.
      */
     public function restore(int $id): RedirectResponse|JsonResponse
     {
@@ -529,28 +408,31 @@ class ArticleController extends AdminController
             $this->logActivity('restored', 'Article', $article->id);
 
             if ($this->expectsJson(request())) {
-                return $this->successResponse(
-                    new ArticleResource($article),
-                    'Article restored successfully'
-                );
+                return $this->successResponse(new ArticleResource($article), 'Article restored successfully');
             }
 
             return redirect()
                 ->route('admin.articles.index')
                 ->with('success', 'Article restored successfully!');
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            Log::error('article.restore_failed', [
+                'user_id'    => auth()->id(),
+                'article_id' => $id,
+                'error'      => $e->getMessage(),
+                'trace'      => $e->getTraceAsString(),
+            ]);
+
             if ($this->expectsJson(request())) {
-                return $this->serverErrorResponse('Failed to restore article: ' . $e->getMessage());
+                return $this->serverErrorResponse(__('admin.article_restore_failed'));
             }
 
-            return back()
-                ->withErrors(['error' => 'Failed to restore article: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => __('admin.article_restore_failed')]);
         }
     }
 
     /**
-     * Permanently delete an article
+     * Permanently delete an article.
      */
     public function forceDelete(int $id): RedirectResponse|JsonResponse
     {
@@ -559,12 +441,10 @@ class ArticleController extends AdminController
         try {
             $article = Article::withTrashed()->findOrFail($id);
 
-            // Delete thumbnail
             if ($article->thumb) {
                 Storage::disk('public')->delete($article->thumb);
             }
 
-            // Delete gallery images
             foreach ($article->gallery as $galleryItem) {
                 if ($galleryItem->image) {
                     Storage::disk('public')->delete($galleryItem->image);
@@ -583,74 +463,79 @@ class ArticleController extends AdminController
                 ->route('admin.articles.index')
                 ->with('success', 'Article permanently deleted!');
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            Log::error('article.force_delete_failed', [
+                'user_id'    => auth()->id(),
+                'article_id' => $id,
+                'error'      => $e->getMessage(),
+                'trace'      => $e->getTraceAsString(),
+            ]);
+
             if ($this->expectsJson(request())) {
-                return $this->serverErrorResponse('Failed to permanently delete article: ' . $e->getMessage());
+                return $this->serverErrorResponse(__('admin.article_force_delete_failed'));
             }
 
-            return back()
-                ->withErrors(['error' => 'Failed to permanently delete article: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => __('admin.article_force_delete_failed')]);
         }
     }
 
     /**
-     * Get article statistics
+     * Get article statistics.
      */
     public function statistics(): JsonResponse
     {
         $stats = $this->repository->getStatistics();
+
         return $this->successResponse($stats, 'Statistics retrieved successfully');
     }
 
     /**
-     * Toggle featured status
+     * Toggle featured status.
      */
     public function toggleFeature(Article $article): JsonResponse
     {
         $this->authorizeAdmin('edit articles');
 
-        $article->update(['is_featured' => !$article->is_featured]);
+        $article->update(['is_featured' => ! $article->is_featured]);
 
-        return $this->successResponse([
-            'is_featured' => $article->is_featured
-        ], 'Featured status updated');
+        return $this->successResponse(['is_featured' => $article->is_featured], 'Featured status updated');
     }
 
     /**
-     * Toggle pinned status
+     * Toggle pinned status.
      */
     public function togglePin(Article $article): JsonResponse
     {
         $this->authorizeAdmin('edit articles');
 
-        $article->update(['is_pinned' => !$article->is_pinned]);
+        $article->update(['is_pinned' => ! $article->is_pinned]);
 
-        return $this->successResponse([
-            'is_pinned' => $article->is_pinned
-        ], 'Pinned status updated');
+        return $this->successResponse(['is_pinned' => $article->is_pinned], 'Pinned status updated');
     }
 
     /**
-     * Increment article views
+     * Increment article views.
      */
     public function incrementViews(Article $article): JsonResponse
     {
         $this->repository->incrementViews($article->id);
 
-        return $this->successResponse([
-            'views' => $article->fresh()->views
-        ], 'Views incremented');
+        return $this->successResponse(['views' => $article->fresh()->views], 'Views incremented');
     }
 
     /**
-     * Get trashed articles
+     * Get trashed articles.
      */
     public function trash(Request $request): View|JsonResponse
     {
         $this->authorizeAdmin('view articles');
 
         $articles = Article::onlyTrashed()
-            ->with(['locales', 'writer', 'category'])
+            ->with([
+                'locales:id,article_id,locale,title,slug,is_ready',
+                'writer:id,name',
+                'category:id,name,slug',
+            ])
             ->orderBy('deleted_at', 'desc')
             ->paginate(15);
 
@@ -661,40 +546,9 @@ class ArticleController extends AdminController
         return view('admin.articles.trash', compact('articles'));
     }
 
-    /**
-     * Generate unique slug
-     */
-    protected function generateUniqueSlug(string $title, string $locale, ?int $excludeArticleId = null): string
-    {
-        $slug = Str::slug($title);
-        $originalSlug = $slug;
-        $counter = 1;
-
-        while (true) {
-            $query = ArticleLocale::where('slug', $slug)->where('locale', $locale);
-
-            if ($excludeArticleId) {
-                $query->where('article_id', '!=', $excludeArticleId);
-            }
-
-            if (!$query->exists()) {
-                break;
-            }
-
-            $slug = $originalSlug . '-' . $counter++;
-        }
-
-        return $slug;
-    }
-
-    /**
-     * Calculate read time from content
-     */
-    protected function calculateReadTime(string $content): int
-    {
-        $wordCount = str_word_count(strip_tags($content));
-        return max(1, (int) ceil($wordCount / 200)); // Assuming 200 words per minute
-    }
+    // -------------------------------------------------------------------------
+    // Protected helpers (presentation / view-model concerns)
+    // -------------------------------------------------------------------------
 
     /**
      * Relations required for admin article detail responses.
@@ -704,16 +558,67 @@ class ArticleController extends AdminController
     protected function articleRelations(): array
     {
         return [
-            'locales',
-            'writer',
-            'category',
-            'categories',
-            'tags',
-            'mediaItems',
-            'gallery',
-            'versions',
-            'seerahEvents',
+            'locales:id,article_id,locale,title,slug,is_ready',
+            'writer:id,name',
+            'category:id,name,slug',
+            'categories:id,name,slug',
+            'tags:id,name,slug',
+            'mediaItems:id,filename,url,thumbnail_url,mime_type,type',
+            'gallery:id,article_id,image,caption,order',
+            'versions:id,versionable_id,versionable_type,created_at',
+            'seerahEvents:id,slug',
         ];
+    }
+
+    /**
+     * Transform articles paginator to flat format suitable for the data-table component.
+     */
+    protected function transformArticlesForTable(mixed $paginator): mixed
+    {
+        $currentLocale = app()->getLocale();
+
+        return $paginator->through(function (Article $article) use ($currentLocale): array {
+            $primaryLocale = $article->locales->firstWhere('locale', $currentLocale)
+                ?? $article->locales->firstWhere('locale', 'ar')
+                ?? $article->locales->first();
+
+            $categoryName = $this->resolveCategoryName($article, $currentLocale);
+
+            return [
+                'id'           => $article->id,
+                'title'        => $primaryLocale?->title ?? 'Untitled',
+                'thumb'        => $article->thumb ? asset('storage/' . $article->thumb) : null,
+                'writer'       => $article->writer?->name ?? '-',
+                'category'     => $categoryName,
+                'category_id'  => $article->category_id,
+                'read_time'    => $article->read_time,
+                'views'        => $article->views,
+                'is_featured'  => $article->is_featured,
+                'is_pinned'    => $article->is_pinned,
+                'status'       => $article->status ?? 'draft',
+                'scheduled_at' => $article->scheduled_at?->format('Y-m-d H:i'),
+                'created_at'   => $article->created_at?->toIso8601String(),
+                'updated_at'   => $article->updated_at?->toIso8601String(),
+            ];
+        });
+    }
+
+    /**
+     * Resolve a display-ready category name for the given article and locale.
+     */
+    private function resolveCategoryName(Article $article, string $locale): string
+    {
+        if (! $article->category) {
+            return '-';
+        }
+
+        if (method_exists($article->category, 'getNameInLanguage')) {
+            return $article->category->getNameInLanguage($locale)
+                ?? $article->category->getNameInLanguage('ar')
+                ?? '-';
+        }
+
+        return $article->category->name ?? $article->category->slug ?? '-';
     }
 
     /**
@@ -724,69 +629,44 @@ class ArticleController extends AdminController
     protected function transformArticleForForm(Article $article): array
     {
         return [
-            'id' => $article->id,
-            'thumb' => $article->thumb,
-            'writer_id' => $article->writer_id,
+            'id'          => $article->id,
+            'thumb'       => $article->thumb,
+            'writer_id'   => $article->writer_id,
             'category_id' => $article->category_id,
             'is_featured' => $article->is_featured,
-            'is_pinned' => $article->is_pinned,
-            'hijri_date' => $article->hijri_date,
-            'read_time' => $article->read_time,
-            'gallery' => $article->gallery->map(fn ($item) => [
-                'id' => $item->id,
-                'image' => $item->image,
+            'is_pinned'   => $article->is_pinned,
+            'hijri_date'  => $article->hijri_date,
+            'read_time'   => $article->read_time,
+            'gallery'     => $article->gallery->map(fn ($item) => [
+                'id'      => $item->id,
+                'image'   => $item->image,
                 'caption' => $item->caption,
-                'order' => $item->order,
+                'order'   => $item->order,
             ])->values()->all(),
             'media_items' => $article->mediaItems->map(fn ($media) => [
-                'id' => $media->id,
-                'filename' => $media->filename,
+                'id'                => $media->id,
+                'filename'          => $media->filename,
                 'original_filename' => $media->original_filename,
-                'url' => $media->url,
-                'thumbnail_url' => $media->thumbnail_url,
-                'mime_type' => $media->mime_type,
-                'size' => $media->size,
-                'type' => $media->type,
+                'url'               => $media->url,
+                'thumbnail_url'     => $media->thumbnail_url,
+                'mime_type'         => $media->mime_type,
+                'size'              => $media->size,
+                'type'              => $media->type,
             ])->values()->all(),
-            'locales' => $article->locales->mapWithKeys(fn (ArticleLocale $locale) => [
+            'locales'     => $article->locales->mapWithKeys(fn (ArticleLocale $locale) => [
                 $locale->locale => [
-                    'title' => $locale->title,
-                    'slug' => $locale->slug,
+                    'title'       => $locale->title,
+                    'slug'        => $locale->slug,
                     'description' => $locale->description,
-                    'excerpt' => $locale->excerpt,
-                    'content' => $locale->content,
-                    'seo' => [
-                        'title' => $locale->seo_title,
+                    'excerpt'     => $locale->excerpt,
+                    'content'     => $locale->content,
+                    'seo'         => [
+                        'title'       => $locale->seo_title,
                         'description' => $locale->seo_description,
                     ],
-                    'is_ready' => $locale->is_ready,
+                    'is_ready'    => $locale->is_ready,
                 ],
             ])->all(),
         ];
-    }
-
-    /**
-     * Generate table of contents from HTML content
-     */
-    protected function generateTableOfContents(string $content): array
-    {
-        $toc = [];
-
-        // Extract headings using regex
-        preg_match_all('/<h([2-3])[^>]*>(.*?)<\/h[2-3]>/i', $content, $matches, PREG_SET_ORDER);
-
-        foreach ($matches as $index => $match) {
-            $level = (int) $match[1];
-            $text = strip_tags($match[2]);
-            $id = Str::slug($text);
-
-            $toc[] = [
-                'id' => $id,
-                'text' => $text,
-                'level' => $level,
-            ];
-        }
-
-        return $toc;
     }
 }

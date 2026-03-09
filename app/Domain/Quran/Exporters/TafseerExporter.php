@@ -36,7 +36,7 @@ class TafseerExporter extends BaseExporter
                 ->with(['verse']);
 
             if (isset($this->filters['surah_id'])) {
-                $query->whereHas('verse', function ($q) use ($filters) {
+                $query->whereHas('verse', function ($q) {
                     $q->where('surah_id', $this->filters['surah_id']);
                 });
             }

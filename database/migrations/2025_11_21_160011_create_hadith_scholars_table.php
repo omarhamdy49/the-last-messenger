@@ -31,11 +31,15 @@ return new class extends Migration
             $table->index('death_year_hijri');
         });
 
-        // Set charset and collation
-        DB::statement('ALTER TABLE hadith_scholars ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci');
+        if (config('database.default') === 'mysql') {
+            // Set charset and collation
+            DB::statement('ALTER TABLE hadith_scholars ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci');
+        }
 
         // Add FULLTEXT index
-        DB::statement('ALTER TABLE hadith_scholars ADD FULLTEXT INDEX ft_hadith_scholars_names (name_ar, name_en, full_name)');
+        if (config('database.default') === 'mysql') {
+            DB::statement('ALTER TABLE hadith_scholars ADD FULLTEXT INDEX ft_hadith_scholars_names (name_ar, name_en, full_name)');
+        }
     }
 
     /**

@@ -4,16 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
-use App\Domain\Shared\Importers\ArticleImporter;
-use App\Domain\Shared\Importers\HadithImporter;
-use App\Domain\Shared\Importers\HadithNarratorImporter;
-use App\Domain\Shared\Importers\MediaProgramImporter;
-use App\Domain\Shared\Importers\QuranSurahImporter;
-use App\Domain\Shared\Importers\QuranVerseImporter;
-use App\Domain\Shared\Importers\ReciterImporter;
-use App\Domain\Shared\Importers\SahabiImporter;
-use App\Domain\Shared\Importers\SeerahEventImporter;
-use App\Domain\Shared\Importers\TafseerImporter;
+use App\Domain\Quran\Importers\QuranSurahImporter;
+use App\Domain\Quran\Importers\QuranVerseImporter;
+use App\Domain\Quran\Importers\ReciterImporter;
+use App\Domain\Quran\Importers\TafseerImporter;
+use App\Domain\Sahaba\Importers\SahabiImporter;
+use App\Domain\Seerah\Importers\SeerahEventImporter;
+use App\Domain\Blog\Importers\ArticleImporter;
+use App\Domain\Hadith\Importers\HadithImporter;
+use App\Domain\Hadith\Importers\HadithNarratorImporter;
 use App\Domain\Shared\Models\Import;
 use App\Domain\Shared\Repositories\ImportRepositoryInterface;
 use App\Domain\Shared\Services\AdminLoggerService;
@@ -395,7 +394,6 @@ class ImportController extends Controller
         return match ($import->module) {
             'articles' => new ArticleImporter($import),
             'hadith' => new HadithImporter($import),
-            'media_programs' => new MediaProgramImporter($import),
             'seerah_events' => new SeerahEventImporter($import),
             'sahaba' => new SahabiImporter($import),
             'quran_surahs' => new QuranSurahImporter($import),
@@ -415,7 +413,6 @@ class ImportController extends Controller
         return in_array($module, [
             'articles',
             'hadith',
-            'media_programs',
             'seerah_events',
             'sahaba',
             'quran_surahs',
@@ -441,10 +438,6 @@ class ImportController extends Controller
             'hadith' => [
                 'required' => ['arabic_text', 'english_text', 'book_name', 'chapter_name', 'hadith_number'],
                 'optional' => ['narrators', 'grade', 'reference'],
-            ],
-            'media_programs' => [
-                'required' => ['title_ar', 'title_en', 'description_ar', 'description_en'],
-                'optional' => ['title_fr', 'title_tr', 'title_ur', 'description_fr', 'description_tr', 'description_ur', 'category_name', 'status'],
             ],
             'seerah_events' => [
                 'required' => ['title_ar', 'title_en', 'description_ar', 'description_en', 'event_date'],

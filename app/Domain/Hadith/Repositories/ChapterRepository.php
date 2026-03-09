@@ -39,6 +39,7 @@ class ChapterRepository extends BaseRepository implements ChapterRepositoryInter
             "hadith_chapters_book_{$bookId}",
             self::CACHE_TTL,
             fn () => $this->model
+                ->select(['id', 'book_id', 'chapter_number', 'name', 'display_order'])
                 ->where('book_id', $bookId)
                 ->orderBy('id')
                 ->get()

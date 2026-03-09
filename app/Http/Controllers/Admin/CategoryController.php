@@ -10,6 +10,7 @@ use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreCategoryRequest;
 use App\Http\Requests\Admin\UpdateCategoryRequest;
+use App\Support\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,6 +22,8 @@ use Illuminate\View\View;
  */
 class CategoryController extends Controller
 {
+    use ApiResponse;
+
     /**
      * Constructor with dependency injection
      */
@@ -64,17 +67,16 @@ class CategoryController extends Controller
 
         // Return JSON for AJAX requests, HTML for page loads
         if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
-            return response()->json([
-                'success' => true,
-                'data' => $categories->items(),
+            return $this->successResponse([
+                'items' => $categories->items(),
                 'stats' => $stats,
                 'meta' => [
                     'current_page' => $categories->currentPage(),
-                    'per_page' => $categories->perPage(),
-                    'total' => $categories->total(),
-                    'last_page' => $categories->lastPage(),
-                ]
-            ]);
+                    'per_page'     => $categories->perPage(),
+                    'total'        => $categories->total(),
+                    'last_page'    => $categories->lastPage(),
+                ],
+            ], 'Categories retrieved successfully');
         }
 
         return view('admin.categories.index', compact('categories', 'stats'));
@@ -113,12 +115,17 @@ class CategoryController extends Controller
 
             return redirect()
                 ->route('admin.categories.index')
-                ->with('success', 'Category created successfully');
-        } catch (\Exception $e) {
+                ->with('success', __('admin.category_created'));
+        } catch (\Throwable $e) {
+            \Log::error('admin.category.create_failed', [
+                'user_id' => auth()->id(),
+                'error'   => $e->getMessage(),
+            ]);
+
             return redirect()
                 ->back()
                 ->withInput()
-                ->with('error', 'Failed to create category: ' . $e->getMessage());
+                ->with('error', __('admin.category_operation_failed'));
         }
     }
 
@@ -167,12 +174,18 @@ class CategoryController extends Controller
 
             return redirect()
                 ->route('admin.categories.index')
-                ->with('success', 'Category updated successfully');
-        } catch (\Exception $e) {
+                ->with('success', __('admin.category_updated'));
+        } catch (\Throwable $e) {
+            \Log::error('admin.category.update_failed', [
+                'user_id'     => auth()->id(),
+                'category_id' => $id,
+                'error'       => $e->getMessage(),
+            ]);
+
             return redirect()
                 ->back()
                 ->withInput()
-                ->with('error', 'Failed to update category: ' . $e->getMessage());
+                ->with('error', __('admin.category_operation_failed'));
         }
     }
 
@@ -215,14 +228,14 @@ class CategoryController extends Controller
             if ($category->hasChildren()) {
                 return redirect()
                     ->back()
-                    ->with('error', 'Cannot delete category with child categories. Please delete children first.');
+                    ->with('error', __('admin.category_has_children'));
             }
 
             $articlesCount = $category->articles()->count();
             if ($articlesCount > 0) {
                 return redirect()
                     ->back()
-                    ->with('error', "Cannot delete category with {$articlesCount} articles. Please reassign articles first.");
+                    ->with('error', __('admin.category_has_articles', ['count' => $articlesCount]));
             }
 
             // Perform deletion
@@ -233,11 +246,17 @@ class CategoryController extends Controller
 
             return redirect()
                 ->route('admin.categories.index')
-                ->with('success', 'Category deleted successfully');
-        } catch (\Exception $e) {
+                ->with('success', __('admin.category_deleted'));
+        } catch (\Throwable $e) {
+            \Log::error('admin.category.delete_failed', [
+                'user_id'     => auth()->id(),
+                'category_id' => $id,
+                'error'       => $e->getMessage(),
+            ]);
+
             return redirect()
                 ->back()
-                ->with('error', 'Failed to delete category: ' . $e->getMessage());
+                ->with('error', __('admin.category_operation_failed'));
         }
     }
 
@@ -272,7 +291,12 @@ class CategoryController extends Controller
 
                 $this->categoryService->delete($id);
                 $deleted++;
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
+                \Log::warning('admin.category.bulk_delete_item_failed', [
+                    'user_id'     => auth()->id(),
+                    'category_id' => $id,
+                    'error'       => $e->getMessage(),
+                ]);
                 $failed++;
             }
         }
@@ -285,18 +309,17 @@ class CategoryController extends Controller
             $request->user()
         );
 
-        $message = "Deleted {$deleted} categories successfully";
         if ($failed > 0) {
-            $message .= " ({$failed} failed)";
+            $message = __('admin.categories_bulk_deleted_partial', ['deleted' => $deleted, 'failed' => $failed]);
+        } else {
+            $message = __('admin.categories_bulk_deleted', ['deleted' => $deleted]);
         }
 
         if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => $message,
-                'deleted' => $deleted,
-                'failed' => $failed,
-            ]);
+            return $this->successResponse(
+                ['deleted' => $deleted, 'failed' => $failed],
+                $message
+            );
         }
 
         return redirect()
@@ -324,16 +347,14 @@ class CategoryController extends Controller
             $items = $request->input('items');
             $this->categoryService->reorder($items);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Categories reordered successfully',
+            return $this->successResponse(null, __('admin.categories_reordered'));
+        } catch (\Throwable $e) {
+            \Log::error('admin.category.reorder_failed', [
+                'user_id' => auth()->id(),
+                'error'   => $e->getMessage(),
             ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to reorder categories',
-                'error' => $e->getMessage(),
-            ], 422);
+
+            return $this->errorResponse(__('admin.category_operation_failed'), 422);
         }
     }
 
@@ -359,16 +380,7 @@ class CategoryController extends Controller
 
         $categories = $this->categoryService->search($query, $perPage, $type);
 
-        return response()->json([
-            'success' => true,
-            'data' => $categories->items(),
-            'meta' => [
-                'current_page' => $categories->currentPage(),
-                'per_page' => $categories->perPage(),
-                'total' => $categories->total(),
-                'last_page' => $categories->lastPage(),
-            ],
-        ]);
+        return $this->paginatedResponse($categories, 'Categories retrieved successfully');
     }
 
     /**
@@ -390,10 +402,7 @@ class CategoryController extends Controller
             $tree = array_filter($tree, fn($cat) => $cat['type'] === $type);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $tree,
-        ]);
+        return $this->successResponse($tree, 'Category tree retrieved successfully');
     }
 
     /**
@@ -414,28 +423,26 @@ class CategoryController extends Controller
             $this->logger->logRestore($category, $request->user());
 
             if ($request->wantsJson()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Category restored successfully',
-                    'data' => $category,
-                ]);
+                return $this->successResponse($category, __('admin.category_restored'));
             }
 
             return redirect()
                 ->route('admin.categories.index')
-                ->with('success', 'Category restored successfully');
-        } catch (\Exception $e) {
+                ->with('success', __('admin.category_restored'));
+        } catch (\Throwable $e) {
+            \Log::error('admin.category.restore_failed', [
+                'user_id'     => auth()->id(),
+                'category_id' => $id,
+                'error'       => $e->getMessage(),
+            ]);
+
             if ($request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to restore category',
-                    'error' => $e->getMessage(),
-                ], 422);
+                return $this->errorResponse(__('admin.category_operation_failed'), 422);
             }
 
             return redirect()
                 ->back()
-                ->with('error', 'Failed to restore category: ' . $e->getMessage());
+                ->with('error', __('admin.category_operation_failed'));
         }
     }
 
@@ -477,28 +484,26 @@ class CategoryController extends Controller
             $this->logger->logCreate($newCategory, $request->user());
 
             if ($request->wantsJson()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Category duplicated successfully',
-                    'data' => $newCategory,
-                ]);
+                return $this->successResponse($newCategory, __('admin.category_duplicated'));
             }
 
             return redirect()
                 ->route('admin.categories.edit', $newCategory->id)
-                ->with('success', 'Category duplicated successfully. You can now edit the copy.');
-        } catch (\Exception $e) {
+                ->with('success', __('admin.category_duplicated_edit'));
+        } catch (\Throwable $e) {
+            \Log::error('admin.category.duplicate_failed', [
+                'user_id'     => auth()->id(),
+                'category_id' => $id,
+                'error'       => $e->getMessage(),
+            ]);
+
             if ($request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to duplicate category',
-                    'error' => $e->getMessage(),
-                ], 422);
+                return $this->errorResponse(__('admin.category_operation_failed'), 422);
             }
 
             return redirect()
                 ->back()
-                ->with('error', 'Failed to duplicate category: ' . $e->getMessage());
+                ->with('error', __('admin.category_operation_failed'));
         }
     }
 }

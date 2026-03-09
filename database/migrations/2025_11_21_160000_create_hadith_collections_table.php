@@ -30,11 +30,13 @@ return new class extends Migration
             $table->index('abbreviation');
         });
 
-        // Set charset and collation
-        DB::statement('ALTER TABLE hadith_collections ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci');
+        // Set charset and collation (MySQL only)
+        if (config('database.default') === 'mysql') {
+            DB::statement('ALTER TABLE hadith_collections ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci');
 
-        // Add FULLTEXT index
-        DB::statement('ALTER TABLE hadith_collections ADD FULLTEXT INDEX ft_hadith_collections_names (name_ar, name_en)');
+            // Add FULLTEXT index
+            DB::statement('ALTER TABLE hadith_collections ADD FULLTEXT INDEX ft_hadith_collections_names (name_ar, name_en)');
+        }
     }
 
     /**

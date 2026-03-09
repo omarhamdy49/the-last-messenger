@@ -135,27 +135,31 @@ class SeriesController extends Controller
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Series created successfully',
+                    'message' => __('admin.series_created'),
                     'data' => $series,
                 ], 201);
             }
 
             return redirect()
                 ->route('admin.series.index')
-                ->with('success', 'تم إنشاء السلسلة بنجاح');
-        } catch (\Exception $e) {
+                ->with('success', __('admin.series_created'));
+        } catch (\Throwable $e) {
+            \Log::error('admin.series.create_failed', [
+                'user_id' => auth()->id(),
+                'error'   => $e->getMessage(),
+            ]);
+
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to create series',
-                    'error' => $e->getMessage(),
+                    'message' => __('admin.operation_failed'),
                 ], 422);
             }
 
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['error' => 'فشل إنشاء السلسلة: ' . $e->getMessage()]);
+                ->withErrors(['error' => __('admin.operation_failed')]);
         }
     }
 
@@ -235,27 +239,32 @@ class SeriesController extends Controller
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Series updated successfully',
+                    'message' => __('admin.series_updated'),
                     'data' => $series->fresh(),
                 ]);
             }
 
             return redirect()
                 ->route('admin.series.index')
-                ->with('success', 'تم تحديث السلسلة بنجاح');
-        } catch (\Exception $e) {
+                ->with('success', __('admin.series_updated'));
+        } catch (\Throwable $e) {
+            \Log::error('admin.series.update_failed', [
+                'user_id'   => auth()->id(),
+                'series_id' => $id,
+                'error'     => $e->getMessage(),
+            ]);
+
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to update series',
-                    'error' => $e->getMessage(),
+                    'message' => __('admin.operation_failed'),
                 ], 422);
             }
 
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['error' => 'فشل تحديث السلسلة: ' . $e->getMessage()]);
+                ->withErrors(['error' => __('admin.operation_failed')]);
         }
     }
 
@@ -292,25 +301,30 @@ class SeriesController extends Controller
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Series deleted successfully',
+                    'message' => __('admin.series_deleted'),
                 ]);
             }
 
             return redirect()
                 ->route('admin.series.index')
-                ->with('success', 'تم حذف السلسلة بنجاح');
-        } catch (\Exception $e) {
+                ->with('success', __('admin.series_deleted'));
+        } catch (\Throwable $e) {
+            \Log::error('admin.series.delete_failed', [
+                'user_id'   => auth()->id(),
+                'series_id' => $id,
+                'error'     => $e->getMessage(),
+            ]);
+
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to delete series',
-                    'error' => $e->getMessage(),
+                    'message' => __('admin.operation_failed'),
                 ], 422);
             }
 
             return redirect()
                 ->back()
-                ->withErrors(['error' => 'فشل حذف السلسلة: ' . $e->getMessage()]);
+                ->withErrors(['error' => __('admin.operation_failed')]);
         }
     }
 
@@ -353,13 +367,18 @@ class SeriesController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Articles reordered successfully',
+                'message' => __('admin.series_articles_reordered'),
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            \Log::error('admin.series.reorder_articles_failed', [
+                'user_id'   => auth()->id(),
+                'series_id' => $id,
+                'error'     => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to reorder articles',
-                'error' => $e->getMessage(),
+                'message' => __('admin.operation_failed'),
             ], 422);
         }
     }
@@ -401,8 +420,12 @@ class SeriesController extends Controller
                     // Delete series
                     $series->delete();
                     $deleted++;
-                } catch (\Exception $e) {
-                    // Continue deleting other series
+                } catch (\Throwable $e) {
+                    \Log::warning('admin.series.bulk_delete_item_failed', [
+                        'user_id'   => auth()->id(),
+                        'series_id' => $id,
+                        'error'     => $e->getMessage(),
+                    ]);
                     continue;
                 }
             }
@@ -419,26 +442,30 @@ class SeriesController extends Controller
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => true,
-                    'message' => "$deleted series deleted successfully",
+                    'message' => __('admin.series_bulk_deleted', ['count' => $deleted]),
                     'count' => $deleted,
                 ]);
             }
 
             return redirect()
                 ->route('admin.series.index')
-                ->with('success', "تم حذف {$deleted} سلسلة بنجاح");
-        } catch (\Exception $e) {
+                ->with('success', __('admin.series_bulk_deleted', ['count' => $deleted]));
+        } catch (\Throwable $e) {
+            \Log::error('admin.series.bulk_delete_failed', [
+                'user_id' => auth()->id(),
+                'error'   => $e->getMessage(),
+            ]);
+
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to delete series',
-                    'error' => $e->getMessage(),
+                    'message' => __('admin.operation_failed'),
                 ], 422);
             }
 
             return redirect()
                 ->back()
-                ->withErrors(['error' => 'فشل حذف السلاسل: ' . $e->getMessage()]);
+                ->withErrors(['error' => __('admin.operation_failed')]);
         }
     }
 }

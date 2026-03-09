@@ -58,7 +58,7 @@ class ThemeController extends AdminController
         $themes = $query->paginate($pagination['per_page']);
 
         if ($this->expectsJson($request)) {
-            return $this->paginatedResponse($themes, 'تم جلب المواضيع بنجاح');
+            return $this->paginatedResponse($themes, __('admin.theme_fetched'));
         }
 
         return view('admin.hadith.themes.index', compact('themes'));
@@ -105,24 +105,24 @@ class ThemeController extends AdminController
             if ($this->expectsJson(request())) {
                 return $this->createdResponse(
                     $theme,
-                    'تم إنشاء الموضوع بنجاح'
+                    __('admin.theme_created')
                 );
             }
 
             return redirect()
                 ->route('admin.hadith.themes.index')
-                ->with('success', 'تم إنشاء الموضوع بنجاح!');
+                ->with('success', __('admin.theme_created'));
 
         } catch (\Exception $e) {
             DB::rollBack();
 
             if ($this->expectsJson(request())) {
-                return $this->serverErrorResponse('فشل إنشاء الموضوع: ' . $e->getMessage());
+                return $this->serverErrorResponse(__('admin.theme_create_failed'));
             }
 
             return back()
                 ->withInput()
-                ->withErrors(['error' => 'فشل إنشاء الموضوع: ' . $e->getMessage()]);
+                ->withErrors(['error' => __('admin.theme_create_failed')]);
         }
     }
 
@@ -138,7 +138,7 @@ class ThemeController extends AdminController
         if ($this->expectsJson(request())) {
             return $this->successResponse(
                 $theme,
-                'تم جلب الموضوع بنجاح'
+                __('admin.theme_fetched')
             );
         }
 
@@ -185,24 +185,24 @@ class ThemeController extends AdminController
             if ($this->expectsJson(request())) {
                 return $this->successResponse(
                     $theme,
-                    'تم تحديث الموضوع بنجاح'
+                    __('admin.theme_updated')
                 );
             }
 
             return redirect()
                 ->route('admin.hadith.themes.index')
-                ->with('success', 'تم تحديث الموضوع بنجاح!');
+                ->with('success', __('admin.theme_updated'));
 
         } catch (\Exception $e) {
             DB::rollBack();
 
             if ($this->expectsJson(request())) {
-                return $this->serverErrorResponse('فشل تحديث الموضوع: ' . $e->getMessage());
+                return $this->serverErrorResponse(__('admin.theme_update_failed'));
             }
 
             return back()
                 ->withInput()
-                ->withErrors(['error' => 'فشل تحديث الموضوع: ' . $e->getMessage()]);
+                ->withErrors(['error' => __('admin.theme_update_failed')]);
         }
     }
 
@@ -217,10 +217,10 @@ class ThemeController extends AdminController
             // Check if theme is used
             if ($theme->articles()->count() > 0) {
                 if ($this->expectsJson(request())) {
-                    return $this->errorResponse('لا يمكن حذف موضوع مرتبط بمحتوى', 422);
+                    return $this->errorResponse(__('admin.theme_has_content'), 422);
                 }
 
-                return back()->withErrors(['error' => 'لا يمكن حذف موضوع مرتبط بمحتوى']);
+                return back()->withErrors(['error' => __('admin.theme_has_content')]);
             }
 
             $theme->delete();
@@ -230,20 +230,20 @@ class ThemeController extends AdminController
             ]);
 
             if ($this->expectsJson(request())) {
-                return $this->successResponse(null, 'تم حذف الموضوع بنجاح');
+                return $this->successResponse(null, __('admin.theme_deleted'));
             }
 
             return redirect()
                 ->route('admin.hadith.themes.index')
-                ->with('success', 'تم حذف الموضوع بنجاح!');
+                ->with('success', __('admin.theme_deleted'));
 
         } catch (\Exception $e) {
             if ($this->expectsJson(request())) {
-                return $this->serverErrorResponse('فشل حذف الموضوع: ' . $e->getMessage());
+                return $this->serverErrorResponse(__('admin.theme_delete_failed'));
             }
 
             return back()
-                ->withErrors(['error' => 'فشل حذف الموضوع: ' . $e->getMessage()]);
+                ->withErrors(['error' => __('admin.theme_delete_failed')]);
         }
     }
 
@@ -264,13 +264,13 @@ class ThemeController extends AdminController
 
             // Check if theme is used
             if ($theme->articles()->count() > 0) {
-                throw new \Exception('لا يمكن حذف موضوع مرتبط بمحتوى');
+                throw new \Exception(__('admin.theme_has_content'));
             }
 
             $theme->delete();
         });
 
-        return $this->successResponse($results, "تم حذف {$results['success']} موضوع بنجاح");
+        return $this->successResponse($results, __('admin.theme_bulk_deleted', ['count' => $results['success']]));
     }
 
     /**
@@ -291,6 +291,6 @@ class ThemeController extends AdminController
             ->limit(10)
             ->get(['id', 'slug', 'name', 'color']);
 
-        return $this->successResponse($themes, 'تم جلب المواضيع بنجاح');
+        return $this->successResponse($themes, __('admin.theme_fetched'));
     }
 }

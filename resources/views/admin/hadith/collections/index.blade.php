@@ -16,7 +16,7 @@
     </div>
 
     <!-- Action Buttons -->
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
         <!-- Filter Toggle Button -->
         <button @click="$dispatch('toggle-filters')"
                 x-data

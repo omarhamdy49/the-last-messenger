@@ -267,10 +267,33 @@
                                 'bg-gray-700 border-gray-600 text-white' :
                                 'bg-white border-gray-300 text-gray-900'">
                         <option value="draft">{{ __('articles.status.draft') }}</option>
+                        <option value="pending">{{ __('articles.status.pending') }}</option>
                         <option value="published">{{ __('articles.status.published') }}</option>
                         <option value="scheduled">{{ __('articles.status.scheduled') }}</option>
                         <option value="archived">{{ __('articles.status.archived') }}</option>
                     </select>
+                </div>
+
+                {{-- Scheduled Publish Date/Time (shown only when status = scheduled) --}}
+                <div x-show="formData.status === 'scheduled'"
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0 -translate-y-2"
+                     x-transition:enter-end="opacity-100 translate-y-0"
+                     x-cloak>
+                    <label class="block text-sm font-medium mb-1"
+                           :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                        {{ __('articles.fields.scheduled_at') }}
+                    </label>
+                    <input type="datetime-local"
+                           name="scheduled_at"
+                           x-model="formData.scheduled_at"
+                           class="w-full px-3 py-2 rounded-lg border"
+                           :class="darkMode ?
+                               'bg-gray-700 border-gray-600 text-white' :
+                               'bg-white border-gray-300 text-gray-900'">
+                    <p class="text-xs mt-1" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
+                        {{ __('articles.help.scheduled_at') }}
+                    </p>
                 </div>
 
                 {{-- Hijri Date --}}
@@ -983,6 +1006,7 @@ function articleForm(article, locales) {
             is_featured: article?.is_featured || false,
             is_pinned: article?.is_pinned || false,
             status: article?.status || 'draft',
+            scheduled_at: article?.scheduled_at || '',
             hijri_date: article?.hijri_date || '{{ $currentHijriDate ?? '' }}',
             read_time: article?.read_time || '',
             title: {},

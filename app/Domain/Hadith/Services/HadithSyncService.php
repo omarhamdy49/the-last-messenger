@@ -68,7 +68,7 @@ class HadithSyncService
         ?HadithSyncLog $syncLog = null,
         bool $dryRun = false
     ): int {
-        Log::info("Starting hadith sync for book {$bookNumber} in collection {$collectionName}", [
+        Log::info('hadith.sync.book.started', [
             'book_id' => $book->id,
             'collection' => $collectionName,
             'book_number' => $bookNumber,
@@ -91,7 +91,10 @@ class HadithSyncService
                 );
 
                 if (!isset($response->data) || empty($response->data)) {
-                    Log::debug("No more hadiths found for book {$bookNumber} on page {$page}");
+                    Log::debug('hadith.sync.book.no_more_data', [
+                        'book_number' => $bookNumber,
+                        'page' => $page,
+                    ]);
                     break;
                 }
 
@@ -160,7 +163,12 @@ class HadithSyncService
                         $syncLog->updateProgress($summary);
                     }
 
-                    Log::info("Processed batch: {$result['success']} hadiths (inserts: {$result['inserts']}, updates: {$result['updates']}, skipped: {$result['failed']})");
+                    Log::info('hadith.sync.book.batch_processed', [
+                        'success' => $result['success'],
+                        'inserts' => $result['inserts'],
+                        'updates' => $result['updates'],
+                        'skipped' => $result['failed'],
+                    ]);
                 }
 
                 // Check for next page
@@ -173,16 +181,19 @@ class HadithSyncService
                 }
             }
 
-            Log::info("Completed hadith sync for book {$bookNumber}. Total fetched: {$syncedCount}", [
+            Log::info('hadith.sync.book.completed', [
                 'book_id' => $book->id,
+                'book_number' => $bookNumber,
                 'synced' => $syncedCount,
                 'failed' => $failedCount,
             ]);
 
             return $syncedCount;
         } catch (\Exception $e) {
-            Log::error("Hadith sync failed for book {$bookNumber}", [
+            Log::error('hadith.sync.book.error', [
                 'book_id' => $book->id,
+                'book_number' => $bookNumber,
+                'collection' => $collectionName,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -272,9 +283,10 @@ class HadithSyncService
 
                     if ($attempt >= self::MAX_RETRIES) {
                         // Fallback to individual inserts
-                        Log::warning("Bulk upsert failed after {$attempt} attempts, falling back to individual inserts", [
-                            'error' => $e->getMessage(),
+                        Log::warning('hadith.sync.bulk_upsert.fallback', [
+                            'attempts' => $attempt,
                             'chunk_size' => count($chunk),
+                            'error' => $e->getMessage(),
                         ]);
 
                         $result = $this->fallbackIndividualInserts($chunk);
@@ -282,7 +294,8 @@ class HadithSyncService
                         $failedCount += $result['failed'];
                         $success = true; // Mark as handled
                     } else {
-                        Log::warning("Bulk upsert attempt {$attempt} failed, retrying", [
+                        Log::warning('hadith.sync.bulk_upsert.retry', [
+                            'attempt' => $attempt,
                             'error' => $e->getMessage(),
                         ]);
                         usleep(100000 * $attempt); // Exponential backoff

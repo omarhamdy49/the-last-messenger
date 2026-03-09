@@ -27,8 +27,10 @@ return new class extends Migration
             $table->unique(['hadith_id', 'narrator_id', 'position_in_chain']);
         });
 
-        // Set charset and collation
-        DB::statement('ALTER TABLE hadith_isnad ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci');
+        if (config('database.default') === 'mysql') {
+            // Set charset and collation
+            DB::statement('ALTER TABLE hadith_isnad ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci');
+        }
     }
 
     /**

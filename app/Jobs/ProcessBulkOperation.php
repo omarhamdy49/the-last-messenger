@@ -32,12 +32,12 @@ class ProcessBulkOperation implements ShouldQueue
     /**
      * The number of seconds the job can run before timing out.
      */
-    public int $timeout = 3600; // 1 hour
+    public int $timeout = 300;
 
     /**
      * The number of seconds to wait before retrying the job.
      */
-    public int $backoff = 60;
+    public array $backoff = [30, 60, 120];
 
     /**
      * Constructor
@@ -97,8 +97,11 @@ class ProcessBulkOperation implements ShouldQueue
      */
     public function failed(Throwable $exception): void
     {
-        Log::error('Bulk operation job failed permanently', [
+        Log::error('process_bulk_operation.failed', [
+            'job' => static::class,
             'operation_id' => $this->operation->id,
+            'operation_type' => $this->operation->operation_type,
+            'module' => $this->operation->module,
             'error' => $exception->getMessage(),
         ]);
 

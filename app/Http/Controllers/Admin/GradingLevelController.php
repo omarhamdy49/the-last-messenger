@@ -30,7 +30,7 @@ class GradingLevelController extends AdminController
             return $this->successResponse([
                 'type' => $type,
                 'grades' => $grades,
-            ], 'تم جلب مستويات التصنيف بنجاح');
+            ], __('admin.grading_levels_fetched'));
         }
 
         return view('admin.hadith.grading-levels.index', compact('grades', 'type'));
@@ -45,7 +45,7 @@ class GradingLevelController extends AdminController
 
         $gradeEnum = HadithGrade::tryFrom($grade);
         if (!$gradeEnum) {
-            abort(404, 'مستوى التصنيف غير موجود');
+            abort(404, __('admin.grading_level_not_found'));
         }
 
         $gradeData = [
@@ -57,7 +57,7 @@ class GradingLevelController extends AdminController
         $type = 'hadith';
 
         if ($this->expectsJson($request)) {
-            return $this->successResponse($gradeData, 'تم جلب مستوى التصنيف بنجاح');
+            return $this->successResponse($gradeData, __('admin.grading_level_fetched'));
         }
 
         return view('admin.hadith.grading-levels.show', compact('gradeData', 'type'));
@@ -72,7 +72,7 @@ class GradingLevelController extends AdminController
 
         $gradeEnum = HadithGrade::tryFrom($grade);
         if (!$gradeEnum) {
-            return $this->errorResponse('مستوى التصنيف غير موجود', 404);
+            return $this->errorResponse(__('admin.grading_level_not_found'), 404);
         }
 
         $stats = [
@@ -82,7 +82,7 @@ class GradingLevelController extends AdminController
             'hadith_count' => \App\Domain\Hadith\Models\Hadith::where('grade', $gradeEnum)->count(),
         ];
 
-        return $this->successResponse($stats, 'تم جلب إحصائيات مستوى التصنيف بنجاح');
+        return $this->successResponse($stats, __('admin.grading_level_statistics_fetched'));
     }
 
     /**

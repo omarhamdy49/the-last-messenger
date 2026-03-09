@@ -150,12 +150,12 @@ abstract class AdminController extends Controller
     protected function logActivity(string $action, string $model, mixed $modelId, array $metadata = []): void
     {
         // Log activity using Laravel's logging system
-        \Log::info("Admin Action: {$action}", [
+        \Log::info('admin.action', [
+            'action' => $action,
             'user_id' => auth()->id(),
             'user_email' => auth()->user()->email,
             'model' => $model,
             'model_id' => $modelId,
-            'action' => $action,
             'ip' => request()->ip(),
             'user_agent' => request()->userAgent(),
             'metadata' => $metadata,
@@ -282,7 +282,7 @@ abstract class AdminController extends Controller
         // Validate locale
         $supportedLocales = ['ar', 'en', 'fr', 'tr', 'ur'];
         if (!in_array($locale, $supportedLocales)) {
-            return $this->failure('اللغة المحددة غير مدعومة.', 400);
+            return $this->failure(__('admin.locale_unsupported'), 400);
         }
 
         // Store locale in session
@@ -301,10 +301,10 @@ abstract class AdminController extends Controller
             return $this->successResponse([
                 'locale' => $locale,
                 'direction' => get_text_direction($locale),
-            ], 'تم تغيير اللغة بنجاح.');
+            ], __('admin.locale_changed'));
         }
 
-        return back()->with('success', 'تم تغيير اللغة بنجاح.');
+        return back()->with('success', __('admin.locale_changed'));
     }
 
     /**

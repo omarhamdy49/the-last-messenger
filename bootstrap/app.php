@@ -26,8 +26,14 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
         ]);
 
+        $middleware->api(prepend: [
+            \Illuminate\Http\Middleware\HandleCors::class,
+            \App\Http\Middleware\AddRequestId::class,
+        ]);
+
         $middleware->api(append: [
             \App\Http\Middleware\SetLocale::class,
+            \App\Http\Middleware\LogApiRequest::class,
         ]);
 
         $middleware->web(append: [
@@ -35,5 +41,104 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Map EntityNotFoundException (404 not-found domain errors) to a 404 JSON response.
+        $exceptions->render(function (
+            \App\Domain\Shared\Exceptions\EntityNotFoundException $e,
+            \Illuminate\Http\Request $request,
+        ) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code'    => class_basename($e),
+                        'message' => __('errors.resource_not_found'),
+                    ],
+                ], 404);
+            }
+        });
+
+        // Map ArticleNotFoundException (a DomainException subtype) to a 404 JSON response.
+        $exceptions->render(function (
+            \App\Domain\Blog\Exceptions\ArticleNotFoundException $e,
+            \Illuminate\Http\Request $request,
+        ) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code'    => 'ARTICLE_NOT_FOUND',
+                        'message' => __('errors.resource_not_found'),
+                    ],
+                ], 404);
+            }
+            abort(404, $e->getMessage());
+        });
+
+        // Map CategoryNotFoundException to a 404 JSON response or 404 abort for web.
+        $exceptions->render(function (
+            \App\Domain\Blog\Exceptions\CategoryNotFoundException $e,
+            \Illuminate\Http\Request $request,
+        ) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code'    => 'CATEGORY_NOT_FOUND',
+                        'message' => __('errors.resource_not_found'),
+                    ],
+                ], 404);
+            }
+            abort(404, $e->getMessage());
+        });
+
+        // Map SeerahEventNotFoundException to a 404 JSON response or 404 abort for web.
+        $exceptions->render(function (
+            \App\Domain\Seerah\Exceptions\SeerahEventNotFoundException $e,
+            \Illuminate\Http\Request $request,
+        ) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code'    => 'SEERAH_EVENT_NOT_FOUND',
+                        'message' => __('errors.resource_not_found'),
+                    ],
+                ], 404);
+            }
+            abort(404, $e->getMessage());
+        });
+
+        // Map SahabiNotFoundException to a 404 JSON response or 404 abort for web.
+        $exceptions->render(function (
+            \App\Domain\Sahaba\Exceptions\SahabiNotFoundException $e,
+            \Illuminate\Http\Request $request,
+        ) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code'    => 'SAHABI_NOT_FOUND',
+                        'message' => __('errors.resource_not_found'),
+                    ],
+                ], 404);
+            }
+            abort(404, $e->getMessage());
+        });
+
+        // Map all remaining DomainException subclasses to a 422 JSON response with a
+        // generic user-facing message so that internal domain details are never leaked.
+        $exceptions->render(function (
+            \App\Domain\Shared\Exceptions\DomainException $e,
+            \Illuminate\Http\Request $request,
+        ) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code'    => class_basename($e),
+                        'message' => __('errors.general'),
+                    ],
+                ], 422);
+            }
+        });
     })->create();

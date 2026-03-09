@@ -163,6 +163,38 @@ class MediaCrudTest extends TestCase
         }
     }
 
+    public function test_fit_variants_are_generated_at_exact_configured_dimensions_for_wide_images(): void
+    {
+        Storage::fake('local');
+
+        $admin = $this->createAdminUser();
+        $this->actingAs($admin);
+
+        $response = $this->post(
+            route('admin.media-library.store'),
+            [
+                'file' => UploadedFile::fake()->image('banner.png', 1440, 386),
+                'collection_name' => 'gallery',
+                'optimize' => false,
+                'generate_sizes' => true,
+            ],
+            ['Accept' => 'application/json']
+        );
+
+        $response->assertCreated()
+            ->assertJsonPath('success', true);
+
+        $media = Media::query()->firstOrFail();
+        $variants = $media->metadata['variants'] ?? [];
+
+        $this->assertSame(150, $variants['thumbnail']['width'] ?? null);
+        $this->assertSame(150, $variants['thumbnail']['height'] ?? null);
+        $this->assertSame(400, $variants['medium']['width'] ?? null);
+        $this->assertSame(300, $variants['medium']['height'] ?? null);
+        $this->assertSame(1200, $variants['large']['width'] ?? null);
+        $this->assertSame(800, $variants['large']['height'] ?? null);
+    }
+
     public function test_crop_preserves_original_and_updates_generated_variants_only(): void
     {
         Storage::fake('local');
@@ -205,10 +237,10 @@ class MediaCrudTest extends TestCase
         $variants = $media->metadata['variants'] ?? [];
         $this->assertSame(150, $variants['thumbnail']['width'] ?? null);
         $this->assertSame(150, $variants['thumbnail']['height'] ?? null);
-        $this->assertSame(300, $variants['medium']['width'] ?? null);
+        $this->assertSame(400, $variants['medium']['width'] ?? null);
         $this->assertSame(300, $variants['medium']['height'] ?? null);
-        $this->assertSame(600, $variants['large']['width'] ?? null);
-        $this->assertSame(600, $variants['large']['height'] ?? null);
+        $this->assertSame(1200, $variants['large']['width'] ?? null);
+        $this->assertSame(800, $variants['large']['height'] ?? null);
 
         $originalResponse = $this->get(route('admin.media-library.file', ['media' => $media->public_key]));
         $originalResponse->assertOk();

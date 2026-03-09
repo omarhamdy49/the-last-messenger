@@ -12,6 +12,7 @@ use App\Http\Requests\Admin\UpdateSahabiRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -38,10 +39,19 @@ class SahabiController extends Controller
         $perPage = $request->integer('per_page', 15);
         $sahaba = $this->sahabiService->paginate($perPage, ['*'], []);
 
+        $sahabiCounts = DB::table('sahaba')
+            ->selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN gender = 'male' THEN 1 ELSE 0 END) as male,
+                SUM(CASE WHEN gender = 'female' THEN 1 ELSE 0 END) as female
+            ")
+            ->whereNull('deleted_at')
+            ->first();
+
         $stats = [
-            'total' => $this->sahabiService->count(),
-            'male' => $this->sahabiService->countByGender('male'),
-            'female' => $this->sahabiService->countByGender('female'),
+            'total'  => (int) ($sahabiCounts->total ?? 0),
+            'male'   => (int) ($sahabiCounts->male ?? 0),
+            'female' => (int) ($sahabiCounts->female ?? 0),
         ];
 
         // Return JSON for AJAX requests

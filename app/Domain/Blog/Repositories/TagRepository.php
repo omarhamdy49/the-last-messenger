@@ -272,7 +272,7 @@ class TagRepository implements TagRepositoryInterface
         $tag = $this->findOrFail($tagId);
 
         return $tag->articles()
-            ->with(['author', 'category'])
+            ->with(['writer:id,name', 'category:id,name,slug'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
@@ -351,7 +351,7 @@ class TagRepository implements TagRepositoryInterface
      */
     public function recalculateAllUsageCounts(): int
     {
-        $tags = $this->model::all();
+        $tags = $this->model::select(['id', 'usage_count'])->get();
         $updated = 0;
 
         foreach ($tags as $tag) {

@@ -239,9 +239,28 @@ class CollectionController extends AdminController
     }
 
     /**
+     * Search collections (autocomplete)
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $this->authorizeAdmin('view collections');
+
+        $search = $request->get('q', '');
+
+        $collections = HadithCollection::where(function ($q) use ($search) {
+                $q->where('name_ar', 'LIKE', "%{$search}%")
+                  ->orWhere('name_en', 'LIKE', "%{$search}%");
+            })
+            ->limit(10)
+            ->get(['id', 'name_ar', 'name_en', 'total_hadiths']);
+
+        return $this->successResponse($collections, __('admin.collections_fetched'));
+    }
+
+    /**
      * Bulk delete collections
      */
-    public function bulkDestroy(Request $request): JsonResponse
+    public function bulkDelete(Request $request): JsonResponse
     {
         $this->authorizeAdmin('delete collections');
 
@@ -253,7 +272,6 @@ class CollectionController extends AdminController
         $results = $this->handleBulkOperation($request, 'delete', function ($id) {
             $collection = HadithCollection::findOrFail($id);
 
-            // Check if collection has books
             if ($collection->books()->count() > 0) {
                 throw new \Exception('لا يمكن حذف مجموعة تحتوي على كتب');
             }
@@ -262,6 +280,58 @@ class CollectionController extends AdminController
         });
 
         return $this->successResponse($results, "تم حذف {$results['success']} مجموعة بنجاح");
+    }
+
+    /**
+     * Reorder collections
+     */
+    public function reorder(Request $request): JsonResponse
+    {
+        $this->authorizeAdmin('edit collections');
+
+        $request->validate([
+            'items' => 'required|array',
+            'items.*.id' => 'required|exists:hadith_collections,id',
+            'items.*.order' => 'required|integer|min:0',
+        ]);
+
+        foreach ($request->input('items') as $item) {
+            HadithCollection::where('id', $item['id'])->update(['display_order' => $item['order']]);
+        }
+
+        return $this->successResponse(null, 'تم إعادة ترتيب المجموعات بنجاح');
+    }
+
+    /**
+     * Toggle collection active status
+     */
+    public function toggleActive(int $id): JsonResponse
+    {
+        $this->authorizeAdmin('edit collections');
+
+        $collection = HadithCollection::findOrFail($id);
+        $collection->update(['active' => !$collection->active]);
+
+        return $this->successResponse(
+            ['active' => $collection->active],
+            $collection->active ? 'تم تفعيل المجموعة' : 'تم تعطيل المجموعة'
+        );
+    }
+
+    /**
+     * Toggle collection featured status
+     */
+    public function toggleFeatured(int $id): JsonResponse
+    {
+        $this->authorizeAdmin('edit collections');
+
+        $collection = HadithCollection::findOrFail($id);
+        $collection->update(['featured' => !$collection->featured]);
+
+        return $this->successResponse(
+            ['featured' => $collection->featured],
+            $collection->featured ? 'تم تمييز المجموعة' : 'تم إلغاء تمييز المجموعة'
+        );
     }
 
 }

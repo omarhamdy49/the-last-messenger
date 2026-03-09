@@ -4,118 +4,70 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
-// use App\Domain\Blog\Exporters\ArticleExporter; // Temporarily disabled
-// use App\Domain\Blog\Repositories\ArticleRepositoryInterface; // Temporarily disabled
-use App\Domain\Hadith\Exporters\HadithExporter;
-use App\Domain\Hadith\Exporters\HadithNarratorExporter;
-use App\Domain\Hadith\Repositories\HadithRepositoryInterface;
-use App\Domain\Hadith\Repositories\NarratorRepositoryInterface as HadithNarratorRepositoryInterface;
-// use App\Domain\Media\Exporters\MediaProgramExporter;
-// use App\Domain\Media\Repositories\MediaProgramRepositoryInterface;
-use App\Domain\Quran\Exporters\ReciterExporter;
-use App\Domain\Quran\Exporters\SurahExporter;
-use App\Domain\Quran\Exporters\TafseerExporter;
-use App\Domain\Quran\Exporters\VerseExporter;
-use App\Domain\Quran\Repositories\ReciterRepositoryInterface;
-use App\Domain\Quran\Repositories\SurahRepositoryInterface;
-use App\Domain\Quran\Repositories\TafseerRepositoryInterface;
-use App\Domain\Quran\Repositories\VerseRepositoryInterface;
-use App\Domain\Sahaba\Exporters\SahabiExporter;
-use App\Domain\Sahaba\Repositories\SahabiRepositoryInterface;
-use App\Domain\Seerah\Exporters\SeerahEventExporter;
-use App\Domain\Seerah\Repositories\SeerahEventRepositoryInterface;
 use App\Domain\Shared\Enums\ExportFormat;
 use App\Domain\Shared\Enums\ExportModule;
+use App\Domain\Shared\Exceptions\BusinessRuleViolationException;
 use App\Domain\Shared\Models\Export;
 use App\Domain\Shared\Services\AdminLoggerService;
+use App\Domain\Shared\Services\ExportGateway;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ExportRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * Export Controller
- * Handles bulk export of all modules to CSV/Excel
+ * Handles bulk export of all modules to CSV/Excel.
+ *
+ * Module resolution and exporter construction are fully delegated to
+ * ExportGateway, keeping this controller thin and free from domain
+ * repository imports.
  */
 class ExportController extends Controller
 {
-    /**
-     * Constructor
-     */
     public function __construct(
         protected AdminLoggerService $logger,
-        // protected ArticleRepositoryInterface $articleRepository, // Temporarily disabled
-        protected HadithRepositoryInterface $hadithRepository,
-        protected HadithNarratorRepositoryInterface $narratorRepository,
-        // protected MediaProgramRepositoryInterface $mediaProgramRepository,
-        protected SeerahEventRepositoryInterface $seerahEventRepository,
-        protected SahabiRepositoryInterface $sahabiRepository,
-        protected SurahRepositoryInterface $surahRepository,
-        protected VerseRepositoryInterface $verseRepository,
-        protected ReciterRepositoryInterface $reciterRepository,
-        protected TafseerRepositoryInterface $tafseerRepository
+        protected ExportGateway $exportGateway,
     ) {}
 
     /**
-     * Export data from specified module
+     * Export data from the specified module.
      *
      * POST /su/portal/v1/admin/export
      */
-    public function export(ExportRequest $request): StreamedResponse|JsonResponse
+    public function export(ExportRequest $request): BinaryFileResponse|JsonResponse
     {
+        $data = $request->validatedWithDefaults();
+
+        $exportRecord = Export::create([
+            'user_id'   => $request->user()->id,
+            'module'    => $data['module'],
+            'format'    => $data['format'],
+            'filters'   => $data['filters'],
+            'status'    => 'pending',
+            'file_name' => $this->generateFilename($data['module'], $data['format']),
+        ]);
+
         try {
-            $data = $request->validatedWithDefaults();
-
-            // Create export record
-            $exportRecord = Export::create([
-                'user_id' => $request->user()->id,
-                'module' => $data['module'],
-                'format' => $data['format'],
-                'filters' => $data['filters'],
-                'status' => 'pending',
-                'file_name' => $this->generateFilename($data['module'], $data['format']),
-            ]);
-
-            // Get exporter instance
-            $exporter = $this->getExporter(
-                ExportModule::from($data['module']),
-                $data['language'],
-                $data['filters'],
-                $data['columns']
+            $exporter = $this->exportGateway->buildExporter(
+                moduleKey: $data['module'],
+                format: $data['format'],
+                language: $data['language'],
+                filters: $data['filters'],
+                columns: $data['columns'],
             );
 
-            if (! $exporter) {
-                $exportRecord->markAsFailed();
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid module specified',
-                ], 400);
-            }
-
-            // Get record count
-            $collection = $exporter->collection();
-            $recordCount = $collection->count();
-
-            // Update export record with count
+            $recordCount = $exporter->collection()->count();
             $exportRecord->update(['record_count' => $recordCount]);
 
-            // Generate filename
             $filename = $this->generateFilename($data['module'], $data['format']);
-            $format = ExportFormat::from($data['format']);
-
-            // Export to file
+            $format   = ExportFormat::from($data['format']);
             $filePath = $exporter->exportToFile($format, pathinfo($filename, PATHINFO_FILENAME));
 
-            // Get file size
             $fileSize = file_exists($filePath) ? filesize($filePath) : 0;
-
-            // Mark export as completed
             $exportRecord->markAsCompleted($filePath, $fileSize);
 
-            // Log export action
             $this->logger->logBulkAction(
                 'export',
                 Export::class,
@@ -123,49 +75,56 @@ class ExportController extends Controller
                 $request->user()
             );
 
-            // Return file download
             return response()->download($filePath, $filename, [
-                'Content-Type' => $format->getMimeType(),
-                'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+                'Content-Type'        => $format->getMimeType(),
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
             ])->deleteFileAfterSend(true);
-        } catch (\Exception $e) {
-            if (isset($exportRecord)) {
-                $exportRecord->markAsFailed();
-            }
+        } catch (BusinessRuleViolationException $e) {
+            $exportRecord->markAsFailed();
 
             return response()->json([
                 'success' => false,
-                'message' => 'Export failed: '.$e->getMessage(),
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (\Throwable $e) {
+            $exportRecord->markAsFailed();
+
+            \Log::error('admin.export.failed', [
+                'module'    => $data['module'],
+                'format'    => $data['format'],
+                'user_id'   => $request->user()->id,
+                'error'     => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Export failed: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Get available columns for a module (AJAX)
+     * Get available columns for a module (AJAX).
      *
      * GET /su/portal/v1/admin/export/{module}/columns
      */
     public function getColumns(string $module): JsonResponse
     {
         try {
-            $moduleEnum = ExportModule::from($module);
-            $exporter = $this->getExporter($moduleEnum);
+            ExportModule::from($module); // validate the module key exists in the enum
 
-            if (! $exporter) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid module',
-                ], 400);
-            }
+            $columns = $this->exportGateway->getColumnsForModule($module);
 
             return response()->json([
                 'success' => true,
-                'data' => [
-                    'available_columns' => $exporter->getAvailableColumns(),
-                    'default_columns' => $exporter->getDefaultColumns(),
-                ],
+                'data'    => $columns,
             ]);
-        } catch (\Exception $e) {
+        } catch (\ValueError) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid module',
+            ], 400);
+        } catch (BusinessRuleViolationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -174,7 +133,7 @@ class ExportController extends Controller
     }
 
     /**
-     * Get export history
+     * Get export history for the authenticated user.
      *
      * GET /su/portal/v1/admin/export/history
      */
@@ -182,25 +141,26 @@ class ExportController extends Controller
     {
         $perPage = $request->integer('per_page', 20);
 
-        $exports = Export::with('user')
+        $exports = Export::with('user:id,name')
+            ->select(['id', 'user_id', 'module', 'format', 'status', 'record_count', 'file_size', 'file_name', 'created_at'])
             ->where('user_id', $request->user()->id)
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
         return response()->json([
             'success' => true,
-            'data' => $exports->items(),
-            'meta' => [
+            'data'    => $exports->items(),
+            'meta'    => [
                 'current_page' => $exports->currentPage(),
-                'per_page' => $exports->perPage(),
-                'total' => $exports->total(),
-                'last_page' => $exports->lastPage(),
+                'per_page'     => $exports->perPage(),
+                'total'        => $exports->total(),
+                'last_page'    => $exports->lastPage(),
             ],
         ]);
     }
 
     /**
-     * Get export statistics
+     * Get export statistics for the authenticated user.
      *
      * GET /su/portal/v1/admin/export/stats
      */
@@ -209,17 +169,17 @@ class ExportController extends Controller
         $userId = $request->user()->id;
 
         $stats = [
-            'total_exports' => Export::where('user_id', $userId)->count(),
-            'completed_exports' => Export::where('user_id', $userId)->where('status', 'completed')->count(),
-            'failed_exports' => Export::where('user_id', $userId)->where('status', 'failed')->count(),
+            'total_exports'          => Export::where('user_id', $userId)->count(),
+            'completed_exports'      => Export::where('user_id', $userId)->where('status', 'completed')->count(),
+            'failed_exports'         => Export::where('user_id', $userId)->where('status', 'failed')->count(),
             'total_records_exported' => Export::where('user_id', $userId)->where('status', 'completed')->sum('record_count'),
-            'total_file_size' => Export::where('user_id', $userId)->where('status', 'completed')->sum('file_size'),
-            'exports_by_module' => Export::where('user_id', $userId)
+            'total_file_size'        => Export::where('user_id', $userId)->where('status', 'completed')->sum('file_size'),
+            'exports_by_module'      => Export::where('user_id', $userId)
                 ->selectRaw('module, COUNT(*) as count')
                 ->groupBy('module')
                 ->get()
                 ->pluck('count', 'module'),
-            'exports_by_format' => Export::where('user_id', $userId)
+            'exports_by_format'      => Export::where('user_id', $userId)
                 ->selectRaw('format, COUNT(*) as count')
                 ->groupBy('format')
                 ->get()
@@ -228,22 +188,21 @@ class ExportController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $stats,
+            'data'    => $stats,
         ]);
     }
 
     /**
-     * Delete old export files
+     * Delete completed export files older than 24 hours.
      *
      * DELETE /su/portal/v1/admin/export/cleanup
      */
     public function cleanup(Request $request): JsonResponse
     {
         try {
-            // Delete export files older than 24 hours
-            $oldExports = Export::where('status', 'completed')
+            $oldExports   = Export::where('status', 'completed')
                 ->where('created_at', '<', now()->subDay())
-                ->get();
+                ->get(['id', 'file_path']);
 
             $deletedCount = 0;
             foreach ($oldExports as $export) {
@@ -253,7 +212,6 @@ class ExportController extends Controller
                 }
             }
 
-            // Update export records
             Export::where('status', 'completed')
                 ->where('created_at', '<', now()->subDay())
                 ->update(['file_path' => null]);
@@ -261,96 +219,20 @@ class ExportController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => "تم حذف {$deletedCount} ملف تصدير قديم",
-                'data' => ['deleted_count' => $deletedCount],
+                'data'    => ['deleted_count' => $deletedCount],
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'فشل تنظيف الملفات: '.$e->getMessage(),
+                'message' => 'فشل تنظيف الملفات: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Get exporter instance based on module
+     * Generate a timestamped filename for the export file.
      */
-    protected function getExporter(
-        ExportModule $module,
-        string $language = 'en',
-        array $filters = [],
-        array $columns = []
-    ): ?object {
-        return match ($module) {
-            // TEMPORARILY DISABLED: Articles export
-            // ExportModule::ARTICLES => new ArticleExporter(
-            //     $this->articleRepository,
-            //     $language,
-            //     $filters,
-            //     $columns
-            // ),
-            ExportModule::HADITH => new HadithExporter(
-                $this->hadithRepository,
-                $language,
-                $filters,
-                $columns
-            ),
-            ExportModule::HADITH_NARRATORS => new HadithNarratorExporter(
-                $this->narratorRepository,
-                $language,
-                $filters,
-                $columns
-            ),
-            // DISABLED: Media programs exporter
-            // ExportModule::MEDIA_PROGRAMS => new MediaProgramExporter(
-            //     $this->mediaProgramRepository,
-            //     $language,
-            //     $filters,
-            //     $columns
-            // ),
-            ExportModule::SEERAH_EVENTS => new SeerahEventExporter(
-                $this->seerahEventRepository,
-                $language,
-                $filters,
-                $columns
-            ),
-            ExportModule::SAHABA => new SahabiExporter(
-                $this->sahabiRepository,
-                $language,
-                $filters,
-                $columns
-            ),
-            ExportModule::QURAN_SURAHS => new SurahExporter(
-                $this->surahRepository,
-                $language,
-                $filters,
-                $columns
-            ),
-            ExportModule::QURAN_VERSES => new VerseExporter(
-                $this->verseRepository,
-                $language,
-                $filters,
-                $columns
-            ),
-            ExportModule::QURAN_RECITERS => new ReciterExporter(
-                $this->reciterRepository,
-                $language,
-                $filters,
-                $columns
-            ),
-            ExportModule::QURAN_TAFSEER => new TafseerExporter(
-                $this->tafseerRepository,
-                $language,
-                $filters,
-                $columns
-            ),
-            default => null,
-        };
-    }
-
-    /**
-     * Generate filename for export
-     */
-    protected function generateFilename(string $module, string $format): string
+    private function generateFilename(string $module, string $format): string
     {
         $timestamp = now()->format('Ymd_His');
 

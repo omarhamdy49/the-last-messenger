@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Quran\Repositories;
 
 use App\Domain\Quran\Models\Verse;
+use App\Domain\Quran\Services\QuranCacheKeys;
+use App\Domain\Quran\Models\VerseTranslation;
 use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -17,6 +19,33 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
      * Cache TTL in seconds (1 hour - Quran data rarely changes)
      */
     private const CACHE_TTL = 3600;
+
+    /**
+     * Columns to select for verse queries (no select * anywhere)
+     */
+    private const VERSE_COLUMNS = [
+        'id',
+        'surah_id',
+        'verse_number',
+        'verse_key',
+        'juz_number',
+        'hizb_number',
+        'rub_el_hizb_number',
+        'ruku_number',
+        'manzil_number',
+        'sajdah_number',
+        'page_number',
+    ];
+
+    /**
+     * Constrained surah eager load columns
+     */
+    private const SURAH_EAGER = 'surah:id,revelation_order,revelation_place,name_ar,name_en,transliteration,verses_count';
+
+    /**
+     * Constrained translations eager load columns
+     */
+    private const TRANSLATIONS_EAGER = 'translations:id,verse_id,lang,text,text_notashkeel';
 
     /**
      * Get model instance
@@ -32,29 +61,33 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
     public function getBySurah(int $surahId): Collection
     {
         return Cache::remember(
-            "quran_verses_surah_{$surahId}",
+            QuranCacheKeys::versesBySurah($surahId),
             self::CACHE_TTL,
             fn () => $this->model
+                ->select(self::VERSE_COLUMNS)
                 ->where('surah_id', $surahId)
+                ->with([self::TRANSLATIONS_EAGER])
                 ->orderBy('verse_number')
                 ->get()
         );
     }
 
     /**
-     * Get verse by surah number and verse number
+     * Get verse by surah number and verse number.
+     * surahNumber maps to quran_surahs.revelation_order.
      */
     public function getBySurahAndVerse(int $surahNumber, int $verseNumber): ?Verse
     {
         return Cache::remember(
-            "quran_verse_{$surahNumber}_{$verseNumber}",
+            QuranCacheKeys::verseBySurahAndNumber($surahNumber, $verseNumber),
             self::CACHE_TTL,
             fn () => $this->model
+                ->select(self::VERSE_COLUMNS)
                 ->whereHas('surah', function ($query) use ($surahNumber) {
-                    $query->where('number', $surahNumber);
+                    $query->where('revelation_order', $surahNumber);
                 })
                 ->where('verse_number', $verseNumber)
-                ->with(['surah', 'tafseer'])
+                ->with([self::SURAH_EAGER, self::TRANSLATIONS_EAGER])
                 ->first()
         );
     }
@@ -65,9 +98,11 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
     public function getByJuz(int $juz, int $perPage = 50): LengthAwarePaginator
     {
         return $this->model
-            ->byJuz($juz)
-            ->with('surah')
-            ->orderBy('verse_key')
+            ->select(self::VERSE_COLUMNS)
+            ->where('juz_number', $juz)
+            ->with([self::SURAH_EAGER])
+            ->orderBy('surah_id')
+            ->orderBy('verse_number')
             ->paginate($perPage);
     }
 
@@ -77,67 +112,90 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
     public function getByPage(int $page): Collection
     {
         return Cache::remember(
-            "quran_verses_page_{$page}",
+            QuranCacheKeys::versesByPage($page),
             self::CACHE_TTL,
             fn () => $this->model
-                ->byPage($page)
-                ->with('surah')
-                ->orderBy('verse_key')
+                ->select(self::VERSE_COLUMNS)
+                ->where('page_number', $page)
+                ->with([self::SURAH_EAGER])
+                ->orderBy('surah_id')
+                ->orderBy('verse_number')
                 ->get()
         );
     }
 
     /**
-     * Get all Sajda verses
+     * Get all Sajda verses — sajdah_number IS NOT NULL indicates a sajda verse
      */
     public function getSajdaVerses(): Collection
     {
         return Cache::remember(
-            'quran_sajda_verses',
+            QuranCacheKeys::sajdaVerses(),
             self::CACHE_TTL,
             fn () => $this->model
-                ->sajda()
-                ->with('surah')
-                ->orderBy('verse_key')
+                ->select(self::VERSE_COLUMNS)
+                ->whereNotNull('sajdah_number')
+                ->with([self::SURAH_EAGER])
+                ->orderBy('sajdah_number')
                 ->get()
         );
     }
 
     /**
-     * Search in Arabic text
+     * Search in Arabic text via quran_verse_translations (lang='ar')
      */
     public function searchArabic(string $query, int $perPage = 20): LengthAwarePaginator
     {
+        $matchingVerseIds = VerseTranslation::query()
+            ->select('verse_id')
+            ->where('lang', 'ar')
+            ->where(function ($q) use ($query) {
+                $q->where('text', 'LIKE', "%{$query}%")
+                    ->orWhere('text_notashkeel', 'LIKE', "%{$query}%");
+            })
+            ->pluck('verse_id');
+
         return $this->model
-            ->searchArabic($query)
-            ->with('surah')
-            ->orderBy('verse_key')
+            ->select(self::VERSE_COLUMNS)
+            ->whereIn('id', $matchingVerseIds)
+            ->with([self::SURAH_EAGER, self::TRANSLATIONS_EAGER])
+            ->orderBy('surah_id')
+            ->orderBy('verse_number')
             ->paginate($perPage);
     }
 
     /**
-     * Search in translations
+     * Search in translations for a given language
      */
     public function searchTranslation(string $query, string $language, int $perPage = 20): LengthAwarePaginator
     {
+        $matchingVerseIds = VerseTranslation::query()
+            ->select('verse_id')
+            ->where('lang', $language)
+            ->where(function ($q) use ($query) {
+                $q->where('text', 'LIKE', "%{$query}%")
+                    ->orWhere('text_notashkeel', 'LIKE', "%{$query}%");
+            })
+            ->pluck('verse_id');
+
         return $this->model
-            ->searchTranslation($query, $language)
-            ->with('surah')
-            ->orderBy('verse_key')
+            ->select(self::VERSE_COLUMNS)
+            ->whereIn('id', $matchingVerseIds)
+            ->with([self::SURAH_EAGER, self::TRANSLATIONS_EAGER])
+            ->orderBy('surah_id')
+            ->orderBy('verse_number')
             ->paginate($perPage);
     }
 
     /**
-     * Get random verse
+     * Get random verse — picks a random record using inRandomOrder
      */
     public function getRandomVerse(): ?Verse
     {
-        // Get random verse key (1-6236)
-        $randomKey = rand(1, 6236);
-
         return $this->model
-            ->where('verse_key', $randomKey)
-            ->with('surah')
+            ->select(self::VERSE_COLUMNS)
+            ->with([self::SURAH_EAGER, self::TRANSLATIONS_EAGER])
+            ->inRandomOrder()
             ->first();
     }
 
@@ -156,19 +214,23 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
         string $sortBy = 'verse_key',
         array $filters = []
     ): \Illuminate\Pagination\LengthAwarePaginator {
-        $query = $this->model->query()->with('surah');
+        $query = $this->model
+            ->select(self::VERSE_COLUMNS)
+            ->with([self::SURAH_EAGER]);
 
-        // Apply search across text and translations
-        if (!empty($search)) {
-            $query->where(function ($q) use ($search) {
-                $q->where('text_simple', 'LIKE', "%{$search}%")
-                    ->orWhere('text_uthmani', 'LIKE', "%{$search}%")
-                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(translations, '$.ar')) LIKE ?", ["%{$search}%"])
-                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(translations, '$.en')) LIKE ?", ["%{$search}%"])
-                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(translations, '$.fr')) LIKE ?", ["%{$search}%"])
-                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(translations, '$.tr')) LIKE ?", ["%{$search}%"])
-                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(translations, '$.ur')) LIKE ?", ["%{$search}%"]);
-            });
+        // Search via translations table (language defaults to Arabic)
+        if ($search !== '') {
+            $searchLang = $filters['search_lang'] ?? 'ar';
+            $matchingIds = VerseTranslation::query()
+                ->select('verse_id')
+                ->where('lang', $searchLang)
+                ->where(function ($q) use ($search) {
+                    $q->where('text', 'LIKE', "%{$search}%")
+                        ->orWhere('text_notashkeel', 'LIKE', "%{$search}%");
+                })
+                ->pluck('verse_id');
+
+            $query->whereIn('id', $matchingIds);
         }
 
         // Apply filters
@@ -185,12 +247,17 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
         }
 
         if (isset($filters['is_sajda']) && $filters['is_sajda'] !== '') {
-            $query->where('is_sajda', filter_var($filters['is_sajda'], FILTER_VALIDATE_BOOLEAN));
+            $isSajda = filter_var($filters['is_sajda'], FILTER_VALIDATE_BOOLEAN);
+            if ($isSajda) {
+                $query->whereNotNull('sajdah_number');
+            } else {
+                $query->whereNull('sajdah_number');
+            }
         }
 
         // Apply sorting
         $allowedSorts = ['verse_key', 'verse_number', 'juz_number', 'page_number', 'created_at'];
-        $sortBy = in_array($sortBy, $allowedSorts) ? $sortBy : 'verse_key';
+        $sortBy = in_array($sortBy, $allowedSorts, true) ? $sortBy : 'verse_key';
         $query->orderBy($sortBy);
 
         return $query->paginate($perPage);
@@ -220,36 +287,40 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
         string $query,
         int $perPage = 15,
         ?int $surahId = null,
-        string $language = 'en'
+        string $language = 'ar'
     ): \Illuminate\Pagination\LengthAwarePaginator {
-        $q = $this->model->query()->with('surah');
+        $matchingIds = VerseTranslation::query()
+            ->select('verse_id')
+            ->where('lang', $language)
+            ->where(function ($q) use ($query) {
+                $q->where('text', 'LIKE', "%{$query}%")
+                    ->orWhere('text_notashkeel', 'LIKE', "%{$query}%");
+            })
+            ->pluck('verse_id');
 
-        // Search in Arabic text and specific language translation
-        $q->where(function ($subQuery) use ($query, $language) {
-            $subQuery->where('text_simple', 'LIKE', "%{$query}%")
-                ->orWhere('text_uthmani', 'LIKE', "%{$query}%")
-                ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(translations, '$.{$language}')) LIKE ?", ["%{$query}%"]);
-        });
+        $q = $this->model
+            ->select(self::VERSE_COLUMNS)
+            ->with([self::SURAH_EAGER])
+            ->whereIn('id', $matchingIds);
 
-        // Filter by surah if provided
         if ($surahId !== null) {
             $q->where('surah_id', $surahId);
         }
 
-        return $q->orderBy('verse_key')->paginate($perPage);
+        return $q->orderBy('surah_id')->orderBy('verse_number')->paginate($perPage);
     }
 
     /**
-     * Count Sajda verses
+     * Count Sajda verses — sajdah_number IS NOT NULL
      *
      * @return int
      */
     public function countSajdaVerses(): int
     {
         return Cache::remember(
-            'quran_sajda_count',
+            QuranCacheKeys::sajdaVersesCount(),
             self::CACHE_TTL,
-            fn () => $this->model->where('is_sajda', true)->count()
+            fn () => $this->model->whereNotNull('sajdah_number')->count()
         );
     }
 }

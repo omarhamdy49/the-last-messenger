@@ -68,7 +68,7 @@ class ScholarController extends AdminController
         $scholars = $query->paginate($pagination['per_page']);
 
         if ($this->expectsJson($request)) {
-            return $this->paginatedResponse($scholars, 'تم جلب العلماء بنجاح');
+            return $this->paginatedResponse($scholars, __('admin.scholar_fetched'));
         }
 
         return view('admin.hadith.scholars.index', compact('scholars'));
@@ -119,24 +119,24 @@ class ScholarController extends AdminController
             if ($this->expectsJson(request())) {
                 return $this->createdResponse(
                     $scholar,
-                    'تم إنشاء العالم بنجاح'
+                    __('admin.scholar_created')
                 );
             }
 
             return redirect()
                 ->route('admin.hadith.scholars.index')
-                ->with('success', 'تم إنشاء العالم بنجاح!');
+                ->with('success', __('admin.scholar_created'));
 
         } catch (\Exception $e) {
             DB::rollBack();
 
             if ($this->expectsJson(request())) {
-                return $this->serverErrorResponse('فشل إنشاء العالم: ' . $e->getMessage());
+                return $this->serverErrorResponse(__('admin.scholar_create_failed'));
             }
 
             return back()
                 ->withInput()
-                ->withErrors(['error' => 'فشل إنشاء العالم: ' . $e->getMessage()]);
+                ->withErrors(['error' => __('admin.scholar_create_failed')]);
         }
     }
 
@@ -150,7 +150,7 @@ class ScholarController extends AdminController
         if ($this->expectsJson(request())) {
             return $this->successResponse(
                 $scholar,
-                'تم جلب العالم بنجاح'
+                __('admin.scholar_fetched')
             );
         }
 
@@ -202,24 +202,24 @@ class ScholarController extends AdminController
             if ($this->expectsJson(request())) {
                 return $this->successResponse(
                     $scholar,
-                    'تم تحديث العالم بنجاح'
+                    __('admin.scholar_updated')
                 );
             }
 
             return redirect()
                 ->route('admin.hadith.scholars.index')
-                ->with('success', 'تم تحديث العالم بنجاح!');
+                ->with('success', __('admin.scholar_updated'));
 
         } catch (\Exception $e) {
             DB::rollBack();
 
             if ($this->expectsJson(request())) {
-                return $this->serverErrorResponse('فشل تحديث العالم: ' . $e->getMessage());
+                return $this->serverErrorResponse(__('admin.scholar_update_failed'));
             }
 
             return back()
                 ->withInput()
-                ->withErrors(['error' => 'فشل تحديث العالم: ' . $e->getMessage()]);
+                ->withErrors(['error' => __('admin.scholar_update_failed')]);
         }
     }
 
@@ -238,20 +238,20 @@ class ScholarController extends AdminController
             ]);
 
             if ($this->expectsJson(request())) {
-                return $this->successResponse(null, 'تم حذف العالم بنجاح');
+                return $this->successResponse(null, __('admin.scholar_deleted'));
             }
 
             return redirect()
                 ->route('admin.hadith.scholars.index')
-                ->with('success', 'تم حذف العالم بنجاح!');
+                ->with('success', __('admin.scholar_deleted'));
 
         } catch (\Exception $e) {
             if ($this->expectsJson(request())) {
-                return $this->serverErrorResponse('فشل حذف العالم: ' . $e->getMessage());
+                return $this->serverErrorResponse(__('admin.scholar_delete_failed'));
             }
 
             return back()
-                ->withErrors(['error' => 'فشل حذف العالم: ' . $e->getMessage()]);
+                ->withErrors(['error' => __('admin.scholar_delete_failed')]);
         }
     }
 
@@ -272,7 +272,7 @@ class ScholarController extends AdminController
             $scholar->delete();
         });
 
-        return $this->successResponse($results, "تم حذف {$results['success']} عالم بنجاح");
+        return $this->successResponse($results, __('admin.scholar_bulk_deleted', ['count' => $results['success']]));
     }
 
     /**
@@ -291,6 +291,6 @@ class ScholarController extends AdminController
             ->limit(10)
             ->get(['id', 'name_ar', 'name_en', 'school', 'region']);
 
-        return $this->successResponse($scholars, 'تم جلب العلماء بنجاح');
+        return $this->successResponse($scholars, __('admin.scholar_fetched'));
     }
 }

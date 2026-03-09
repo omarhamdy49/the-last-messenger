@@ -16,6 +16,7 @@ return [
     'delete' => 'Delete',
     'edit' => 'Edit',
     'view' => 'View',
+    'details' => 'Details',
     'create' => 'Create',
     'actions' => 'Actions',
     'status' => 'Status',
@@ -31,6 +32,7 @@ return [
         'media' => 'Media',
         'users' => 'Users',
         'settings' => 'Settings',
+        'hadith' => 'Hadith',
     ],
 
     // Dashboard
@@ -138,7 +140,11 @@ return [
     'created_successfully' => 'Created successfully',
     'updated_successfully' => 'Updated successfully',
     'deleted_successfully' => 'Deleted successfully',
-    'operation_failed' => 'Operation failed',
+    'operation_failed'          => 'Operation failed. Please try again.',
+    'category_operation_failed' => 'Category operation failed. Please try again.',
+    'article_create_failed'     => 'Failed to create article. Please try again.',
+    'article_update_failed'     => 'Failed to update article. Please try again.',
+    'article_delete_failed'     => 'Failed to delete article. Please try again.',
 
     // Pagination
     'showing' => 'Showing',
@@ -219,4 +225,179 @@ return [
         'home' => 'Home',
         'dashboard' => 'Dashboard',
     ],
+
+    // Hadith Sub-modules
+    'hadith_collections' => 'Collections',
+    'collection' => 'Collection',
+    'hadith_narrators' => 'Narrators',
+    'hadith_scholars' => 'Scholars',
+    'hadith_themes' => 'Themes',
+    'hadith_grading' => 'Grading Levels',
+
+    // Hadith Management
+    'add_hadith' => 'Add Hadith',
+    'add_new_hadith' => 'Add New Hadith',
+    'create_new_hadith' => 'Create a new hadith in the system',
+    'hadith_information' => 'Hadith Information',
+    'manage_hadiths' => 'Manage Hadiths',
+    'hadith_number' => 'Hadith Number',
+    'select_book' => 'Select a book',
+    'enter_hadith_number' => 'Enter the hadith number',
+    'narrator' => 'Narrator',
+    'select_narrator' => 'Select a narrator',
+    'grading' => 'Grading',
+    'select_grading' => 'Select grading level',
+    'companion_id' => 'Companion ID',
+    'enter_companion_id' => 'Enter companion ID',
+    'create_hadith' => 'Create Hadith',
+    'back' => 'Back',
+    'edit_hadith' => 'Edit Hadith',
+    'save_changes' => 'Save Changes',
+    'hadith_details' => 'Hadith Details',
+    'basic_information' => 'Basic Information',
+    'book' => 'Book',
+    'metadata' => 'Metadata',
+    'id' => 'ID',
+    'total_hadiths' => 'Total Hadiths',
+    'current_page' => 'Current Page',
+    'search_hadith_number' => 'Search by hadith number...',
+    'no_hadiths_found' => 'No hadiths found',
+    'translations' => 'Translations',
+    'confirm_delete_hadith' => 'Are you sure you want to delete this hadith?',
+    'ungraded' => 'Not yet graded',
+    'delete_hadith' => 'Delete Hadith',
+
+    // Additional Modules
+    'series' => 'Series',
+    'activity_logs' => 'Activity Logs',
+    'scheduler' => 'Scheduler',
+
+    // Data Table
+    'data_table' => 'Data Table',
+    'records_found' => 'results found',
+    'export' => 'Export',
+    'export_csv' => 'Export CSV',
+    'export_excel' => 'Export Excel',
+    'export_pdf' => 'Export PDF',
+    'selected' => 'selected',
+    'rows_per_page' => 'Rows per page',
+    'no_data_message' => 'No data to display',
+    'clear' => 'Clear',
+    'publish' => 'Publish',
+    'trash' => 'Trash',
+    'view_details' => 'View Details',
+    'search_placeholder' => 'Start typing to search...',
+
+    // Filter Sidebar
+    'advanced_filters' => 'Advanced Filters',
+    'filters_active'   => 'filters active',
+    'clear_all'        => 'Clear All',
+    'date_range'       => 'Date Range',
+    'from'             => 'From',
+    'no_results'       => 'No results found',
+    'special_filters'  => 'Special Filters',
+    'featured_only'    => 'Featured Only',
+    'pinned_only'      => 'Pinned Only',
+    'reset_all'        => 'Reset All',
+    'apply_filters'    => 'Apply Filters',
+
+    // Category Not Found / Error Messages
+    'category_not_found'     => 'The requested category was not found.',
+    'category_delete_failed' => 'Failed to delete the category. Please try again.',
+
+    // Tag Not Found / Error Messages
+    'tag_not_found'    => 'The requested tag was not found.',
+    'tag_delete_failed' => 'Failed to delete the tag. Please try again.',
+
+    // Narrator Not Found / Error Messages
+    'narrator_not_found'     => 'The requested narrator was not found.',
+    'narrator_delete_failed' => 'Failed to delete the narrator. Please try again.',
+    'narrator_has_hadiths'   => 'Cannot delete a narrator linked to hadiths.',
+
+    // Series Not Found / Error Messages
+    'series_not_found'     => 'The requested series was not found.',
+    'series_delete_failed' => 'Failed to delete the series. Please try again.',
+
+    // Category CRUD Messages
+    'category_created'                => 'Category created successfully.',
+    'category_updated'                => 'Category updated successfully.',
+    'category_deleted'                => 'Category deleted successfully.',
+    'category_restored'               => 'Category restored successfully.',
+    'category_duplicated'             => 'Category duplicated successfully.',
+    'category_duplicated_edit'        => 'Category duplicated successfully. You can now edit the copy.',
+    'categories_reordered'            => 'Categories reordered successfully.',
+    'category_has_children'           => 'Cannot delete category with child categories. Please delete children first.',
+    'category_has_articles'           => 'Cannot delete category with :count article(s). Please reassign articles first.',
+    'categories_bulk_deleted'         => 'Deleted :deleted categories successfully.',
+    'categories_bulk_deleted_partial' => 'Deleted :deleted categories successfully (:failed failed).',
+
+    // Tag CRUD Messages
+    'tag_created'          => 'Tag created successfully.',
+    'tag_updated'          => 'Tag updated successfully.',
+    'tag_deleted'          => 'Tag deleted successfully.',
+    'tag_duplicate_exists' => 'A similar tag already exists.',
+    'tags_merged'          => 'Tags merged successfully. :count article(s) moved.',
+    'tags_bulk_deleted'    => ':count tag(s) deleted successfully.',
+
+    // Series CRUD Messages
+    'series_created'            => 'Series created successfully.',
+    'series_updated'            => 'Series updated successfully.',
+    'series_deleted'            => 'Series deleted successfully.',
+    'series_articles_reordered' => 'Articles reordered successfully.',
+    'series_bulk_deleted'       => ':count series deleted successfully.',
+
+    // Reciter CRUD Messages
+    'reciter_created'                => 'Reciter created successfully.',
+    'reciter_updated'                => 'Reciter updated successfully.',
+    'reciter_deleted'                => 'Reciter deleted successfully.',
+    'reciter_create_failed'          => 'Failed to create reciter. Please try again.',
+    'reciter_update_failed'          => 'Failed to update reciter. Please try again.',
+    'reciter_delete_failed'          => 'Failed to delete reciter. Please try again.',
+    'reciters_reordered'             => 'Reciters reordered successfully.',
+    'reciters_reorder_failed'        => 'Failed to reorder reciters. Please try again.',
+    'reciters_bulk_deleted'          => ':count reciter(s) deleted successfully.',
+    'reciters_bulk_delete_failed'    => 'Failed to delete reciters. Please try again.',
+    'reciter_featured_toggled'       => 'Featured status updated successfully.',
+    'reciter_featured_toggle_failed' => 'Failed to update featured status. Please try again.',
+    'reciter_search_failed'          => 'Failed to search reciters. Please try again.',
+
+    // Locale Switch Messages
+    'locale_unsupported' => 'The selected language is not supported.',
+    'locale_changed'     => 'Language changed successfully.',
+
+    // Narrator CRUD Messages
+    'narrator_fetched'             => 'Narrators retrieved successfully.',
+    'narrator_created'             => 'Narrator created successfully.',
+    'narrator_updated'             => 'Narrator updated successfully.',
+    'narrator_deleted'             => 'Narrator deleted successfully.',
+    'narrator_restored'            => 'Narrator restored successfully.',
+    'narrator_bulk_deleted'        => ':count narrator(s) deleted successfully.',
+    'narrator_statistics_fetched'  => 'Narrator statistics retrieved successfully.',
+
+    // Scholar CRUD Messages
+    'scholar_fetched'       => 'Scholars retrieved successfully.',
+    'scholar_created'       => 'Scholar created successfully.',
+    'scholar_create_failed' => 'Failed to create scholar. Please try again.',
+    'scholar_updated'       => 'Scholar updated successfully.',
+    'scholar_update_failed' => 'Failed to update scholar. Please try again.',
+    'scholar_deleted'       => 'Scholar deleted successfully.',
+    'scholar_delete_failed' => 'Failed to delete scholar. Please try again.',
+    'scholar_bulk_deleted'  => ':count scholar(s) deleted successfully.',
+
+    // Grading Level Messages
+    'grading_levels_fetched'           => 'Grading levels retrieved successfully.',
+    'grading_level_not_found'          => 'Grading level not found.',
+    'grading_level_fetched'            => 'Grading level retrieved successfully.',
+    'grading_level_statistics_fetched' => 'Grading level statistics retrieved successfully.',
+
+    // Theme CRUD Messages
+    'theme_fetched'       => 'Themes retrieved successfully.',
+    'theme_created'       => 'Theme created successfully.',
+    'theme_create_failed' => 'Failed to create theme. Please try again.',
+    'theme_updated'       => 'Theme updated successfully.',
+    'theme_update_failed' => 'Failed to update theme. Please try again.',
+    'theme_has_content'   => 'Cannot delete a theme linked to content.',
+    'theme_deleted'       => 'Theme deleted successfully.',
+    'theme_delete_failed' => 'Failed to delete theme. Please try again.',
+    'theme_bulk_deleted'  => ':count theme(s) deleted successfully.',
 ];

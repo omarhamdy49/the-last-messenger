@@ -82,6 +82,10 @@ class AuthController extends Controller
         // Update last login
         $user->updateLastLogin();
 
+        // Revoke all existing tokens before issuing a fresh one
+        // to prevent token accumulation across sessions.
+        $user->tokens()->delete();
+
         // Create API token
         $token = $user->createToken('api-token')->plainTextToken;
 
@@ -101,6 +105,18 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return $this->successResponse(null, 'Logged out successfully');
+    }
+
+    /**
+     * Logout user from all devices (revoke all tokens)
+     *
+     * POST /api/v1/auth/logout-all
+     */
+    public function logoutAll(Request $request): JsonResponse
+    {
+        $request->user()->tokens()->delete();
+
+        return $this->successResponse(null, __('auth.logged_out_all_devices'));
     }
 
     /**

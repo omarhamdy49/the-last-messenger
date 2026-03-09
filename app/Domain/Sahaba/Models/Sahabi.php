@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Domain\Sahaba\Models;
 
-use App\Domain\Genealogy\Models\Person;
 use App\Domain\Sahaba\Enums\CompanionStatus;
 use App\Models\Article;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -165,7 +164,7 @@ class Sahabi extends Model implements HasMedia
      */
     public function father(): BelongsTo
     {
-        return $this->belongsTo(Person::class, 'father_id');
+        return $this->belongsTo('App\Domain\Genealogy\Models\Person', 'father_id');
     }
 
     /**
@@ -173,7 +172,7 @@ class Sahabi extends Model implements HasMedia
      */
     public function mother(): BelongsTo
     {
-        return $this->belongsTo(Person::class, 'mother_id');
+        return $this->belongsTo('App\Domain\Genealogy\Models\Person', 'mother_id');
     }
 
     /**
@@ -181,7 +180,7 @@ class Sahabi extends Model implements HasMedia
      */
     public function people(): HasMany
     {
-        return $this->hasMany(Person::class, 'sahaba_id');
+        return $this->hasMany('App\Domain\Genealogy\Models\Person', 'sahaba_id');
     }
 
     /**

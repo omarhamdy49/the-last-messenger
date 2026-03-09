@@ -5,15 +5,13 @@
  * A powerful, feature-rich data table with sorting, filtering, pagination, and bulk actions.
  * Netflix-style design with glassmorphism, gradients, and premium UX.
  *
+ * Action menu: shared dropdown managed by the DataTable component (not per-row x-teleport).
+ * Filter sidebar: connected via filters-changed window event.
+ *
  * @props
  * - columns: array (required) - Column definitions
- *   [
- *     ['key' => 'id', 'label' => 'ID', 'sortable' => true, 'width' => '60px'],
- *     ['key' => 'title', 'label' => 'Title', 'sortable' => true],
- *     ['key' => 'status', 'label' => 'Status', 'badge' => true, 'badgeColors' => [...]]
- *   ]
  * - data: Collection|array (required) - Table data
- * - actions: array (optional) - Row actions ['edit', 'delete', 'view', 'custom']
+ * - actions: array (optional) - Row actions ['edit', 'delete', 'view', 'duplicate']
  * - bulkActions: array (optional) - Bulk actions ['delete', 'publish', 'export']
  * - searchable: bool (optional) - Enable search functionality
  * - filterable: bool (optional) - Enable filters sidebar
@@ -22,17 +20,6 @@
  * - emptyTitle: string (optional) - Empty state title
  * - emptyMessage: string (optional) - Empty state message
  * - emptyIcon: string (optional) - Empty state icon
- *
- * @example
- * <x-admin.data-table
- *     :columns="$columns"
- *     :data="$articles"
- *     :actions="['edit', 'delete', 'view']"
- *     :bulkActions="['delete', 'publish']"
- *     :searchable="true"
- *     :filterable="true"
- *     :exportable="true"
- * />
  */
 --}}
 
@@ -45,8 +32,8 @@
     'filterable' => false,
     'exportable' => true,
     'perPageOptions' => [10, 25, 50, 100],
-    'emptyTitle' => 'No Data Found',
-    'emptyMessage' => 'There are no records to display at the moment.',
+    'emptyTitle' => null,
+    'emptyMessage' => null,
     'emptyIcon' => 'inbox',
     'actionRoute' => null,
     'editRoute' => null,
@@ -60,34 +47,49 @@
         ? collect($data->items())
         : collect($data);
     $totalRecords = $dataCollection->count();
+
+    // Generate URL patterns with a placeholder ID replaced in JS
+    $routePlaceholder = 9999999;
+    try {
+        $editRouteUrl    = $editRoute    ? route($editRoute,    $routePlaceholder) : null;
+        $viewRouteUrl    = $viewRoute    ? route($viewRoute,    $routePlaceholder) : null;
+        $deleteRouteUrl  = $deleteRoute  ? route($deleteRoute,  $routePlaceholder) : null;
+    } catch (\Exception $e) {
+        $editRouteUrl = $viewRouteUrl = $deleteRouteUrl = null;
+    }
 @endphp
 
-<div x-data="dataTable()" x-init="init()" class="w-full">
+<div x-data="dataTable()"
+     x-init="init()"
+     class="w-full"
+     @open-row-menu="openRowMenu($event.detail)"
+     @open-delete-confirm="openDeleteConfirm($event.detail.row)"
+     @filters-changed.window="applyExternalFilters($event.detail)">
 
-    <!-- Table Header: Search, Filters, Export -->
+    <!-- Table Header: Search, Export -->
     <div class="mb-6 flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
 
         <!-- Left: Title & Bulk Actions -->
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-4 flex-wrap">
             <div>
                 <h2 class="text-2xl font-bold gradient-text">
-                    {{ $slot->isEmpty() ? 'Data Table' : $slot }}
+                    {{ $slot->isEmpty() ? __('admin.data_table') : $slot }}
                 </h2>
                 <p class="text-sm mt-1" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                    <span x-text="filteredData.length"></span> records found
+                    <span x-text="filteredData.length"></span> {{ __('admin.records_found') }}
                 </p>
             </div>
 
-            <!-- Bulk Actions Toolbar (Shows when items selected) -->
+            <!-- Bulk Actions Toolbar -->
             <div x-show="selectedRows.length > 0"
                  x-transition:enter="transition ease-out duration-200"
                  x-transition:enter-start="opacity-0 scale-95"
                  x-transition:enter-end="opacity-100 scale-100"
-                 class="flex items-center gap-3 px-4 py-2 rounded-lg glass"
+                 class="flex items-center gap-3 px-4 py-2 rounded-lg"
                  :class="darkMode ? 'bg-gray-800/50 border border-gray-700' : 'bg-white/80 border border-gray-300'">
 
                 <span class="text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                    <span x-text="selectedRows.length"></span> selected
+                    <span x-text="selectedRows.length"></span> {{ __('admin.selected') }}
                 </span>
 
                 @if(in_array('delete', $bulkActions))
@@ -95,7 +97,7 @@
                             class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:scale-105
                                    bg-red-500 text-white hover:bg-red-600">
                         <i data-lucide="trash-2" class="w-4 h-4 inline-block me-1"></i>
-                        Delete
+                        {{ __('admin.delete') }}
                     </button>
                 @endif
 
@@ -104,7 +106,7 @@
                             class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:scale-105
                                    bg-gradient-to-r from-[#0056b3] to-[#218838] text-white">
                         <i data-lucide="check-circle" class="w-4 h-4 inline-block me-1"></i>
-                        Publish
+                        {{ __('admin.publish') }}
                     </button>
                 @endif
 
@@ -113,14 +115,14 @@
                             class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:scale-105"
                             :class="darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'">
                         <i data-lucide="download" class="w-4 h-4 inline-block me-1"></i>
-                        Export
+                        {{ __('admin.export') }}
                     </button>
                 @endif
 
                 <button @click="clearSelection"
                         class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:scale-105"
                         :class="darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'">
-                    Clear
+                    {{ __('admin.clear') }}
                 </button>
             </div>
         </div>
@@ -129,22 +131,21 @@
         <div class="flex items-center gap-3 w-full lg:w-auto">
 
             @if($searchable)
-                <!-- Search Input -->
                 <div class="relative flex-1 lg:w-80">
                     <i data-lucide="search"
-                       class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5"
+                       class="absolute start-3 top-1/2 -translate-y-1/2 w-5 h-5"
                        :class="darkMode ? 'text-gray-400' : 'text-gray-500'"></i>
                     <input type="text"
                            x-model="searchQuery"
                            @input.debounce.300ms="filterData"
-                           placeholder="Search..."
-                           class="w-full pl-10 pr-10 py-2.5 rounded-xl border-2 transition-all duration-300 focus:ring-2 focus:ring-accent/50"
+                           placeholder="{{ __('admin.search_placeholder') }}"
+                           class="w-full ps-10 pe-10 py-2.5 rounded-xl border-2 transition-all duration-300 focus:ring-2 focus:ring-accent/50"
                            :class="darkMode ?
                                'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-accent' :
                                'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'">
                     <button x-show="searchQuery"
                             @click="searchQuery = ''; filterData();"
-                            class="absolute right-3 top-1/2 -translate-y-1/2 hover:scale-110 transition-transform"
+                            class="absolute end-3 top-1/2 -translate-y-1/2 hover:scale-110 transition-transform"
                             :class="darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'">
                         <i data-lucide="x" class="w-5 h-5"></i>
                     </button>
@@ -152,17 +153,15 @@
             @endif
 
             @if($exportable)
-                <!-- Export Dropdown -->
                 <div x-data="{ exportOpen: false }" class="relative">
                     <button @click="exportOpen = !exportOpen"
                             class="px-4 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 whitespace-nowrap
                                    bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg hover:shadow-xl">
                         <i data-lucide="download" class="w-5 h-5"></i>
-                        <span>Export</span>
+                        <span class="hidden sm:inline">{{ __('admin.export') }}</span>
                         <i data-lucide="chevron-down" class="w-4 h-4"></i>
                     </button>
 
-                    <!-- Export Menu -->
                     <div x-show="exportOpen"
                          @click.away="exportOpen = false"
                          x-transition:enter="transition ease-out duration-200"
@@ -171,28 +170,28 @@
                          x-transition:leave="transition ease-in duration-150"
                          x-transition:leave-start="opacity-100 scale-100"
                          x-transition:leave-end="opacity-0 scale-95"
-                         class="absolute right-0 mt-2 w-48 rounded-xl shadow-xl glass z-50 overflow-hidden"
-                         :class="darkMode ? 'bg-gray-800/95 border border-gray-700' : 'bg-white/95 border border-gray-200'">
+                         class="absolute end-0 mt-2 w-48 rounded-xl shadow-xl z-50 overflow-hidden border"
+                         :class="darkMode ? 'bg-gray-800/95 border-gray-700' : 'bg-white/95 border-gray-200'">
 
                         <button @click="exportData('csv'); exportOpen = false;"
-                                class="w-full px-4 py-3 text-left transition-colors flex items-center gap-3"
+                                class="w-full px-4 py-3 text-start transition-colors flex items-center gap-3"
                                 :class="darkMode ? 'hover:bg-gray-700 text-white' : 'hover:bg-gray-50 text-gray-900'">
                             <i data-lucide="file-text" class="w-5 h-5 text-accent"></i>
-                            <span class="font-medium">Export as CSV</span>
+                            <span class="font-medium">{{ __('admin.export_csv') }}</span>
                         </button>
 
                         <button @click="exportData('excel'); exportOpen = false;"
-                                class="w-full px-4 py-3 text-left transition-colors flex items-center gap-3"
+                                class="w-full px-4 py-3 text-start transition-colors flex items-center gap-3"
                                 :class="darkMode ? 'hover:bg-gray-700 text-white' : 'hover:bg-gray-50 text-gray-900'">
                             <i data-lucide="file-spreadsheet" class="w-5 h-5 text-green-500"></i>
-                            <span class="font-medium">Export as Excel</span>
+                            <span class="font-medium">{{ __('admin.export_excel') }}</span>
                         </button>
 
                         <button @click="exportData('pdf'); exportOpen = false;"
-                                class="w-full px-4 py-3 text-left transition-colors flex items-center gap-3"
+                                class="w-full px-4 py-3 text-start transition-colors flex items-center gap-3"
                                 :class="darkMode ? 'hover:bg-gray-700 text-white' : 'hover:bg-gray-50 text-gray-900'">
                             <i data-lucide="file" class="w-5 h-5 text-red-500"></i>
-                            <span class="font-medium">Export as PDF</span>
+                            <span class="font-medium">{{ __('admin.export_pdf') }}</span>
                         </button>
                     </div>
                 </div>
@@ -200,17 +199,18 @@
         </div>
     </div>
 
-    <!-- Table Container with Horizontal Scroll -->
-    <div class="rounded-2xl overflow-hidden shadow-xl border"
-         :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
+    <!-- Table Container -->
+    <div class="rounded-2xl shadow-xl border relative"
+         :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'"
+         style="overflow: clip;">
 
         <!-- Loading Overlay -->
         <div x-show="loading"
              x-transition
-             class="absolute inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+             class="absolute inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-2xl">
             <div class="text-center">
                 <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-accent border-t-transparent"></div>
-                <p class="mt-4 text-white font-semibold">Loading...</p>
+                <p class="mt-4 text-white font-semibold">{{ __('admin.loading') }}</p>
             </div>
         </div>
 
@@ -226,7 +226,7 @@
 
                 <!-- Table Body -->
                 <tbody>
-                    <!-- Show loading skeletons -->
+                    <!-- Loading skeletons -->
                     <template x-if="loading">
                         @for($i = 0; $i < 5; $i++)
                             <tr class="border-b" :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
@@ -249,16 +249,17 @@
                         @endfor
                     </template>
 
-                    <!-- Show actual data -->
+                    <!-- Actual data rows -->
                     <template x-if="!loading && paginatedData.length > 0">
                         <template x-for="(row, index) in paginatedData" :key="row.id || index">
                             <x-admin.table-row
                                 :columns="$columns"
                                 :actions="$actions"
                                 :has-bulk-select="!empty($bulkActions)"
-                                :edit-route="$editRoute"
-                                :delete-route="$deleteRoute"
-                                :view-route="$viewRoute"
+                                :edit-route-url="$editRouteUrl"
+                                :delete-route-url="$deleteRouteUrl"
+                                :view-route-url="$viewRouteUrl"
+                                :route-placeholder="$routePlaceholder"
                             />
                         </template>
                     </template>
@@ -275,10 +276,10 @@
                                            :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
                                     </div>
                                     <h3 class="text-xl font-bold mb-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                                        {{ $emptyTitle }}
+                                        {{ $emptyTitle ?? __('admin.no_data') }}
                                     </h3>
                                     <p :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                                        {{ $emptyMessage }}
+                                        {{ $emptyMessage ?? __('admin.no_data_message') }}
                                     </p>
                                 </div>
                             </td>
@@ -294,10 +295,9 @@
 
             <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
 
-                <!-- Per Page Selector -->
                 <div class="flex items-center gap-3">
                     <label class="text-sm font-medium" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                        Rows per page:
+                        {{ __('admin.rows_per_page') }}
                     </label>
                     <select x-model="perPage"
                             @change="changePage(1)"
@@ -311,36 +311,35 @@
                     </select>
                 </div>
 
-                <!-- Pagination Info -->
                 <div class="text-sm font-medium" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Showing
+                    {{ __('admin.showing') }}
                     <span class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="startIndex + 1"></span>
-                    to
+                    {{ __('admin.to') }}
                     <span class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="endIndex"></span>
-                    of
+                    {{ __('admin.of') }}
                     <span class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="filteredData.length"></span>
                 </div>
 
-                <!-- Pagination Buttons -->
-                <div class="flex items-center gap-2">
-                    <button @click="changePage(1)"
-                            :disabled="currentPage === 1"
-                            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105"
+                <div class="flex items-center gap-1 sm:gap-2">
+                    <button @click="changePage(1)" :disabled="currentPage === 1"
+                            class="p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105"
                             :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'">
-                        <i data-lucide="chevrons-left" class="w-4 h-4"></i>
+                        <i data-lucide="{{ in_array(app()->getLocale(), ['ar','ur']) ? 'chevrons-right' : 'chevrons-left' }}" class="w-4 h-4"></i>
                     </button>
 
-                    <button @click="changePage(currentPage - 1)"
-                            :disabled="currentPage === 1"
-                            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105"
+                    <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1"
+                            class="p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105"
                             :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'">
-                        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                        <i data-lucide="{{ in_array(app()->getLocale(), ['ar','ur']) ? 'chevron-right' : 'chevron-left' }}" class="w-4 h-4"></i>
                     </button>
 
-                    <!-- Page Numbers -->
+                    <span class="sm:hidden text-sm font-semibold px-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                        <span x-text="currentPage"></span> / <span x-text="totalPages"></span>
+                    </span>
+
                     <template x-for="page in pageNumbers" :key="page">
                         <button @click="changePage(page)"
-                                class="px-4 py-1.5 rounded-lg text-sm font-bold transition-all hover:scale-105"
+                                class="hidden sm:block px-3 py-1.5 rounded-lg text-sm font-bold transition-all hover:scale-105"
                                 :class="page === currentPage ?
                                     'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' :
                                     (darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-200 text-gray-900 hover:bg-gray-300')"
@@ -348,23 +347,130 @@
                         </button>
                     </template>
 
-                    <button @click="changePage(currentPage + 1)"
-                            :disabled="currentPage === totalPages"
-                            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105"
+                    <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages"
+                            class="p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105"
                             :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'">
-                        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                        <i data-lucide="{{ in_array(app()->getLocale(), ['ar','ur']) ? 'chevron-left' : 'chevron-right' }}" class="w-4 h-4"></i>
                     </button>
 
-                    <button @click="changePage(totalPages)"
-                            :disabled="currentPage === totalPages"
-                            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105"
+                    <button @click="changePage(totalPages)" :disabled="currentPage === totalPages"
+                            class="p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105"
                             :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'">
-                        <i data-lucide="chevrons-right" class="w-4 h-4"></i>
+                        <i data-lucide="{{ in_array(app()->getLocale(), ['ar','ur']) ? 'chevrons-left' : 'chevrons-right' }}" class="w-4 h-4"></i>
                     </button>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- ============================================================
+         SHARED ROW ACTIONS DROPDOWN (teleported once, outside x-for)
+         ============================================================ -->
+    @if(!empty($actions))
+        <template x-teleport="body">
+            <div x-show="activeMenuRow !== null"
+                 x-transition:enter="transition ease-out duration-150"
+                 x-transition:enter-start="opacity-0 scale-95 translate-y-1"
+                 x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                 x-transition:leave="transition ease-in duration-100"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95"
+                 @click.outside="closeRowMenu()"
+                 :style="`position: fixed; top: ${menuTop}px; left: ${menuLeft}px; width: 192px; z-index: 9999;`"
+                 class="rounded-xl shadow-2xl overflow-hidden border"
+                 :class="darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'">
+
+                @if(in_array('view', $actions) && $viewRouteUrl)
+                    <a :href="'{{ $viewRouteUrl }}'.replace('{{ $routePlaceholder }}', activeMenuRow?.id)"
+                       @click="closeRowMenu()"
+                       class="flex items-center gap-3 px-4 py-3 transition-colors group/item"
+                       :class="darkMode ? 'hover:bg-gray-700 text-white' : 'hover:bg-gray-50 text-gray-900'">
+                        <i data-lucide="eye" class="w-5 h-5 text-blue-500 group-hover/item:scale-110 transition-transform"></i>
+                        <span class="font-medium text-sm">{{ __('admin.view') }}</span>
+                    </a>
+                @endif
+
+                @if(in_array('edit', $actions) && $editRouteUrl)
+                    <a :href="'{{ $editRouteUrl }}'.replace('{{ $routePlaceholder }}', activeMenuRow?.id)"
+                       @click="closeRowMenu()"
+                       class="flex items-center gap-3 px-4 py-3 transition-colors group/item"
+                       :class="darkMode ? 'hover:bg-gray-700 text-white' : 'hover:bg-gray-50 text-gray-900'">
+                        <i data-lucide="edit" class="w-5 h-5 text-accent group-hover/item:scale-110 transition-transform"></i>
+                        <span class="font-medium text-sm">{{ __('admin.edit') }}</span>
+                    </a>
+                @endif
+
+                @if(in_array('duplicate', $actions))
+                    <button @click="duplicateRow(activeMenuRow?.id); closeRowMenu();"
+                            class="w-full flex items-center gap-3 px-4 py-3 transition-colors group/item"
+                            :class="darkMode ? 'hover:bg-gray-700 text-white' : 'hover:bg-gray-50 text-gray-900'">
+                        <i data-lucide="copy" class="w-5 h-5 text-green-500 group-hover/item:scale-110 transition-transform"></i>
+                        <span class="font-medium text-sm">{{ __('admin.create') }}</span>
+                    </button>
+                @endif
+
+                @if(in_array('delete', $actions) && $deleteRouteUrl)
+                    <div class="border-t" :class="darkMode ? 'border-gray-700' : 'border-gray-200'"></div>
+                    <button @click="openDeleteConfirm(activeMenuRow); closeRowMenu();"
+                            class="w-full flex items-center gap-3 px-4 py-3 transition-colors group/item"
+                            :class="darkMode ? 'hover:bg-red-900/30 text-red-400 hover:text-red-300' : 'hover:bg-red-50 text-red-600 hover:text-red-700'">
+                        <i data-lucide="trash-2" class="w-5 h-5 group-hover/item:scale-110 transition-transform"></i>
+                        <span class="font-medium text-sm">{{ __('admin.delete') }}</span>
+                    </button>
+                @endif
+            </div>
+        </template>
+    @endif
+
+    <!-- ============================================================
+         SHARED DELETE CONFIRMATION MODAL (teleported once)
+         ============================================================ -->
+    @if(in_array('delete', $actions) && $deleteRouteUrl)
+        <template x-teleport="body">
+            <div x-show="deleteConfirmRow !== null"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998] flex items-center justify-center p-4"
+                 @click.self="closeDeleteConfirm()">
+
+                <div class="rounded-2xl p-6 max-w-md w-full shadow-2xl"
+                     :class="darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white'"
+                     x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0 scale-95"
+                     x-transition:enter-end="opacity-100 scale-100">
+
+                    <div class="flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mx-auto mb-4">
+                        <i data-lucide="alert-triangle" class="w-8 h-8 text-red-600"></i>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-center mb-1" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                        {{ __('admin.confirm_delete') }}
+                    </h3>
+                    <p class="text-sm text-center mb-6" :class="darkMode ? 'text-gray-400' : 'text-gray-500'"
+                       x-text="deleteConfirmRow?.title || deleteConfirmRow?.name || ''">
+                    </p>
+
+                    <div class="flex gap-3">
+                        <button @click="closeDeleteConfirm()"
+                                class="flex-1 px-4 py-2.5 rounded-xl font-semibold transition-all hover:scale-105"
+                                :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'">
+                            {{ __('admin.cancel') }}
+                        </button>
+                        <button @click="handleDelete()"
+                                class="flex-1 px-4 py-2.5 rounded-xl font-semibold transition-all hover:scale-105
+                                       bg-red-600 text-white hover:bg-red-700 shadow-lg">
+                            {{ __('admin.delete') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
+    @endif
+
 </div>
 
 <script>
@@ -388,12 +494,21 @@ function dataTable() {
         perPage: {{ $perPageOptions[0] }},
         totalPages: 1,
 
-        // Search
+        // Search & Filters
         searchQuery: '',
+        externalFilters: {},
 
         // UI State
         loading: false,
         columnsCount: {{ count($columns) + (empty($actions) ? 0 : 1) + (empty($bulkActions) ? 0 : 1) }},
+
+        // Row action menu
+        activeMenuRow: null,
+        menuTop: 0,
+        menuLeft: 0,
+
+        // Delete confirmation
+        deleteConfirmRow: null,
 
         init() {
             this.filteredData = [...this.rawData];
@@ -401,30 +516,118 @@ function dataTable() {
             this.$nextTick(() => lucide.createIcons());
         },
 
-        // Filtering
+        // ── ROW MENU ─────────────────────────────────────────────
+        openRowMenu({ row, rect }) {
+            const menuWidth = 192;
+            const spaceRight = window.innerWidth - rect.right;
+            this.menuTop  = rect.bottom + 8;
+            this.menuLeft = spaceRight >= menuWidth ? rect.left : rect.right - menuWidth;
+            this.activeMenuRow = row;
+
+            const close = () => {
+                this.closeRowMenu();
+                window.removeEventListener('scroll', close, { passive: true });
+            };
+            window.addEventListener('scroll', close, { passive: true });
+
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        closeRowMenu() {
+            this.activeMenuRow = null;
+        },
+
+        // ── DELETE CONFIRMATION ──────────────────────────────────
+        openDeleteConfirm(row) {
+            this.deleteConfirmRow = row;
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        closeDeleteConfirm() {
+            this.deleteConfirmRow = null;
+        },
+
+        handleDelete() {
+            if (!this.deleteConfirmRow) return;
+            @if($deleteRouteUrl)
+            const url = '{{ $deleteRouteUrl }}'.replace('{{ $routePlaceholder }}', this.deleteConfirmRow.id);
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = url;
+            const csrf = document.querySelector('meta[name=csrf-token]');
+            form.innerHTML = '<input type="hidden" name="_token" value="' + (csrf ? csrf.content : '') + '">'
+                           + '<input type="hidden" name="_method" value="DELETE">';
+            document.body.appendChild(form);
+            form.submit();
+            @endif
+        },
+
+        // ── FILTERING ─────────────────────────────────────────────
+        applyExternalFilters(filters) {
+            this.externalFilters = filters || {};
+            this.filterData();
+        },
+
         filterData() {
             this.loading = true;
 
             setTimeout(() => {
-                if (!this.searchQuery) {
-                    this.filteredData = [...this.rawData];
-                } else {
+                let data = [...this.rawData];
+
+                // Text search
+                if (this.searchQuery) {
                     const query = this.searchQuery.toLowerCase();
-                    this.filteredData = this.rawData.filter(row => {
-                        return Object.values(row).some(value => {
-                            return String(value).toLowerCase().includes(query);
-                        });
-                    });
+                    data = data.filter(row =>
+                        Object.values(row).some(value =>
+                            String(value).toLowerCase().includes(query)
+                        )
+                    );
                 }
 
+                // Category filter
+                if (this.externalFilters.category_id) {
+                    data = data.filter(row => row.category_id == this.externalFilters.category_id);
+                }
+
+                // Status filter (array of selected statuses)
+                if (this.externalFilters.status && this.externalFilters.status.length > 0) {
+                    data = data.filter(row => this.externalFilters.status.includes(row.status));
+                }
+
+                // Author/writer filter
+                if (this.externalFilters.author_id) {
+                    data = data.filter(row => row.writer_id == this.externalFilters.author_id);
+                }
+
+                // Date range filter
+                if (this.externalFilters.date_from) {
+                    data = data.filter(row =>
+                        row.created_at && new Date(row.created_at) >= new Date(this.externalFilters.date_from)
+                    );
+                }
+                if (this.externalFilters.date_to) {
+                    data = data.filter(row =>
+                        row.created_at && new Date(row.created_at) <= new Date(this.externalFilters.date_to)
+                    );
+                }
+
+                // Feature toggles
+                if (this.externalFilters.is_featured) {
+                    data = data.filter(row => row.is_featured);
+                }
+                if (this.externalFilters.is_pinned) {
+                    data = data.filter(row => row.is_pinned);
+                }
+
+                this.filteredData = data;
                 this.currentPage = 1;
                 this.updatePagination();
                 this.loading = false;
                 this.$nextTick(() => lucide.createIcons());
-            }, 200);
+            }, 150);
         },
 
-        // Sorting
+        // ── SORTING ──────────────────────────────────────────────
         sortBy(column) {
             if (this.sortColumn === column) {
                 this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
@@ -437,32 +640,25 @@ function dataTable() {
                 let aVal = a[column];
                 let bVal = b[column];
 
-                // Handle null/undefined
                 if (aVal === null || aVal === undefined) return 1;
                 if (bVal === null || bVal === undefined) return -1;
 
-                // Numeric comparison
                 if (typeof aVal === 'number' && typeof bVal === 'number') {
                     return this.sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
                 }
 
-                // String comparison
                 aVal = String(aVal).toLowerCase();
                 bVal = String(bVal).toLowerCase();
-
-                if (this.sortDirection === 'asc') {
-                    return aVal > bVal ? 1 : -1;
-                } else {
-                    return aVal < bVal ? 1 : -1;
-                }
+                if (this.sortDirection === 'asc') return aVal > bVal ? 1 : -1;
+                return aVal < bVal ? 1 : -1;
             });
 
             this.updatePagination();
         },
 
-        // Pagination
+        // ── PAGINATION ───────────────────────────────────────────
         updatePagination() {
-            this.totalPages = Math.ceil(this.filteredData.length / this.perPage);
+            this.totalPages = Math.max(1, Math.ceil(this.filteredData.length / this.perPage));
             this.paginatedData = this.filteredData.slice(
                 (this.currentPage - 1) * this.perPage,
                 this.currentPage * this.perPage
@@ -480,43 +676,24 @@ function dataTable() {
             const pages = [];
             const maxVisible = 5;
             let start = Math.max(1, this.currentPage - Math.floor(maxVisible / 2));
-            let end = Math.min(this.totalPages, start + maxVisible - 1);
-
-            if (end - start < maxVisible - 1) {
-                start = Math.max(1, end - maxVisible + 1);
-            }
-
-            for (let i = start; i <= end; i++) {
-                pages.push(i);
-            }
-
+            let end   = Math.min(this.totalPages, start + maxVisible - 1);
+            if (end - start < maxVisible - 1) start = Math.max(1, end - maxVisible + 1);
+            for (let i = start; i <= end; i++) pages.push(i);
             return pages;
         },
 
-        get startIndex() {
-            return (this.currentPage - 1) * this.perPage;
-        },
+        get startIndex() { return (this.currentPage - 1) * this.perPage; },
+        get endIndex()   { return Math.min(this.startIndex + this.perPage, this.filteredData.length); },
 
-        get endIndex() {
-            return Math.min(this.startIndex + this.perPage, this.filteredData.length);
-        },
-
-        // Selection
+        // ── SELECTION ─────────────────────────────────────────────
         toggleSelectAll() {
-            if (this.selectAll) {
-                this.selectedRows = this.paginatedData.map(row => row.id);
-            } else {
-                this.selectedRows = [];
-            }
+            this.selectedRows = this.selectAll ? this.paginatedData.map(row => row.id) : [];
         },
 
         toggleRowSelection(id) {
-            const index = this.selectedRows.indexOf(id);
-            if (index > -1) {
-                this.selectedRows.splice(index, 1);
-            } else {
-                this.selectedRows.push(id);
-            }
+            const idx = this.selectedRows.indexOf(id);
+            if (idx > -1) this.selectedRows.splice(idx, 1);
+            else this.selectedRows.push(id);
             this.selectAll = this.selectedRows.length === this.paginatedData.length;
         },
 
@@ -525,47 +702,47 @@ function dataTable() {
             this.selectAll = false;
         },
 
-        // Bulk Actions
+        // ── BULK ACTIONS ──────────────────────────────────────────
         bulkDelete() {
             if (!confirm(`Are you sure you want to delete ${this.selectedRows.length} items?`)) return;
-
             this.loading = true;
-            // Simulate API call
             setTimeout(() => {
                 this.rawData = this.rawData.filter(row => !this.selectedRows.includes(row.id));
                 this.filterData();
                 this.clearSelection();
-                alert('Items deleted successfully!');
-            }, 1000);
+            }, 800);
         },
 
         bulkPublish() {
             this.loading = true;
-            // Simulate API call
             setTimeout(() => {
                 alert(`${this.selectedRows.length} items published successfully!`);
                 this.clearSelection();
                 this.loading = false;
-            }, 1000);
+            }, 800);
         },
 
-        // Export
+        // ── EXPORT ───────────────────────────────────────────────
         exportSelected() {
             const selectedData = this.rawData.filter(row => this.selectedRows.includes(row.id));
             this.downloadCSV(selectedData, 'selected-data.csv');
         },
 
         exportData(format) {
-            switch(format) {
-                case 'csv':
-                    this.downloadCSV(this.filteredData, 'data-export.csv');
-                    break;
-                case 'excel':
-                    alert('Excel export coming soon!');
-                    break;
-                case 'pdf':
-                    alert('PDF export coming soon!');
-                    break;
+            switch (format) {
+                case 'csv':   this.downloadCSV(this.filteredData, 'data-export.csv'); break;
+                case 'excel': alert('Excel export coming soon!'); break;
+                case 'pdf':   alert('PDF export coming soon!'); break;
+            }
+        },
+
+        duplicateRow(id) {
+            if (!id) id = this.activeMenuRow?.id;
+            const row = this.rawData.find(r => r.id === id);
+            if (row) {
+                const newRow = { ...row, id: Date.now() };
+                this.rawData.push(newRow);
+                this.filterData();
             }
         },
 
@@ -574,7 +751,6 @@ function dataTable() {
             const headers = @json(array_column($columns, 'label'));
 
             let csv = headers.join(',') + '\n';
-
             data.forEach(row => {
                 const values = columns.map(col => {
                     const value = row[col] || '';
@@ -584,8 +760,8 @@ function dataTable() {
             });
 
             const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
+            const url  = window.URL.createObjectURL(blob);
+            const a    = document.createElement('a');
             a.href = url;
             a.download = filename;
             a.click();

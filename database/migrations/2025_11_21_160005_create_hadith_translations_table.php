@@ -27,11 +27,15 @@ return new class extends Migration
             $table->unique(['hadith_id', 'language_code']);
         });
 
-        // Set charset and collation
-        DB::statement('ALTER TABLE hadith_translations ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci');
+        if (config('database.default') === 'mysql') {
+            // Set charset and collation
+            DB::statement('ALTER TABLE hadith_translations ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci');
+        }
 
         // Add FULLTEXT index for search
-        DB::statement('ALTER TABLE hadith_translations ADD FULLTEXT INDEX ft_hadith_translations_text (text)');
+        if (config('database.default') === 'mysql') {
+            DB::statement('ALTER TABLE hadith_translations ADD FULLTEXT INDEX ft_hadith_translations_text (text)');
+        }
     }
 
     /**

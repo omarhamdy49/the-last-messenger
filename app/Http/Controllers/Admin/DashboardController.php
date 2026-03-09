@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Shared\Services\DashboardAnalyticsService;
 use App\Domain\Shared\Services\DashboardService;
 use App\Http\Controllers\Controller;
 use App\Support\Traits\ApiResponse;
@@ -22,7 +23,8 @@ class DashboardController extends Controller
      * Constructor
      */
     public function __construct(
-        protected DashboardService $dashboardService
+        protected DashboardService $dashboardService,
+        protected DashboardAnalyticsService $analyticsService,
     ) {}
 
     /**
@@ -55,7 +57,7 @@ class DashboardController extends Controller
     public function contentGrowth(Request $request): JsonResponse
     {
         $days = $request->integer('days', 30);
-        $growth = $this->dashboardService->getContentGrowthChart($days);
+        $growth = $this->analyticsService->getContentGrowthChart($days);
 
         return $this->successResponse($growth, 'Content growth data retrieved successfully');
     }
@@ -67,7 +69,7 @@ class DashboardController extends Controller
      */
     public function moduleDistribution(): JsonResponse
     {
-        $distribution = $this->dashboardService->getModuleDistribution();
+        $distribution = $this->analyticsService->getModuleDistribution();
 
         return $this->successResponse($distribution, 'Module distribution retrieved successfully');
     }
@@ -80,7 +82,7 @@ class DashboardController extends Controller
     public function activityHeatmap(Request $request): JsonResponse
     {
         $days = $request->integer('days', 30);
-        $heatmap = $this->dashboardService->getActivityHeatmap($days);
+        $heatmap = $this->analyticsService->getActivityHeatmap($days);
 
         return $this->successResponse($heatmap, 'Activity heatmap retrieved successfully');
     }
@@ -141,7 +143,7 @@ class DashboardController extends Controller
      */
     public function performanceMetrics(): JsonResponse
     {
-        $metrics = $this->dashboardService->getPerformanceMetrics();
+        $metrics = $this->analyticsService->getPerformanceMetrics();
 
         return $this->successResponse($metrics, 'Performance metrics retrieved successfully');
     }
@@ -153,7 +155,7 @@ class DashboardController extends Controller
      */
     public function growth(): JsonResponse
     {
-        $growth = $this->dashboardService->getContentGrowth();
+        $growth = $this->analyticsService->getContentGrowth();
 
         return $this->successResponse($growth, 'Content growth data retrieved successfully');
     }
@@ -166,7 +168,7 @@ class DashboardController extends Controller
     public function popular(Request $request): JsonResponse
     {
         $limit = $request->integer('limit', 10);
-        $popular = $this->dashboardService->getPopularContent($limit);
+        $popular = $this->analyticsService->getPopularContent($limit);
 
         return $this->successResponse($popular, 'Popular content retrieved successfully');
     }
@@ -179,6 +181,7 @@ class DashboardController extends Controller
     public function clearCache(): JsonResponse
     {
         $this->dashboardService->clearCache();
+        $this->analyticsService->clearCache();
 
         return $this->successResponse(null, 'Dashboard cache cleared successfully');
     }

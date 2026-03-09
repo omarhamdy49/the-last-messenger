@@ -49,7 +49,7 @@
              :class="$root.darkMode ? 'bg-gray-900/95 border border-gray-800' : 'bg-white border border-gray-200'">
 
             <!-- Header -->
-            <div class="flex items-center justify-between px-6 py-4 border-b"
+            <div class="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b"
                  :class="$root.darkMode ? 'border-gray-800' : 'border-gray-200'">
                 <div>
                     <h2 class="text-2xl font-bold gradient-text">
@@ -486,7 +486,7 @@
                                 <template x-if="previewModal.media && previewModal.media.is_image">
                                     <img :src="activePreviewSource()?.url || previewModal.media.preview_url || previewModal.media.src"
                                          :alt="previewModal.media.title"
-                                         class="max-h-[70vh] w-full object-contain">
+                                         class="max-h-[70vh] max-w-full h-auto w-auto object-contain">
                                 </template>
 
                                 <template x-if="previewModal.media && previewModal.media.is_video">

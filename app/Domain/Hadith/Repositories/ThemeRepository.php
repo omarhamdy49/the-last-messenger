@@ -56,6 +56,7 @@ class ThemeRepository extends BaseRepository implements ThemeRepositoryInterface
             'hadith_themes_with_count',
             self::CACHE_TTL,
             fn () => $this->model
+                ->select(['id', 'theme_ar', 'theme_en', 'parent_id'])
                 ->withCount('hadiths')
                 ->orderBy('hadiths_count', 'desc')
                 ->get()
@@ -92,6 +93,7 @@ class ThemeRepository extends BaseRepository implements ThemeRepositoryInterface
             "hadith_themes_top_{$limit}",
             self::CACHE_TTL,
             fn () => $this->model
+                ->select(['id', 'theme_ar', 'theme_en', 'parent_id'])
                 ->withCount('hadiths')
                 ->orderBy('hadiths_count', 'desc')
                 ->limit($limit)
@@ -105,7 +107,7 @@ class ThemeRepository extends BaseRepository implements ThemeRepositoryInterface
     public function getChildrenIds(int $themeId): array
     {
         $ids = [];
-        $children = $this->model->where('parent_id', $themeId)->get();
+        $children = $this->model->select(['id', 'parent_id'])->where('parent_id', $themeId)->get();
 
         foreach ($children as $child) {
             $ids[] = $child->id;

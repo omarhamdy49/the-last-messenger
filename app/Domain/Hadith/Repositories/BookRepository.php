@@ -40,6 +40,7 @@ class BookRepository extends BaseRepository implements BookRepositoryInterface
             "hadith_books_collection_{$collectionId}",
             self::CACHE_TTL,
             fn () => $this->model
+                ->select(['id', 'collection_id', 'title_ar', 'title_en', 'book_number'])
                 ->byCollection($collectionId)
                 ->withCount('hadiths')
                 ->orderBy('id')
@@ -52,10 +53,12 @@ class BookRepository extends BaseRepository implements BookRepositoryInterface
      */
     public function getBySlug(int $collectionId, string $slug, string $locale = 'ar'): ?HadithBook
     {
-        $slugField = 'slug_' . $locale;
+        $allowedLocales = ['ar', 'en', 'fr', 'tr', 'ur'];
+        $safeLocale = in_array($locale, $allowedLocales, true) ? $locale : 'ar';
+        $slugField = 'slug_' . $safeLocale;
 
         return Cache::remember(
-            "hadith_book_slug_{$collectionId}_{$locale}_{$slug}",
+            "hadith_book_slug_{$collectionId}_{$safeLocale}_{$slug}",
             self::CACHE_TTL,
             fn () => $this->model
                 ->where('collection_id', $collectionId)
@@ -84,7 +87,10 @@ class BookRepository extends BaseRepository implements BookRepositoryInterface
     public function getWithHadiths(int $id): ?HadithBook
     {
         return $this->model
-            ->with(['hadiths' => fn ($q) => $q->orderBy('hadith_number'), 'hadiths.translations'])
+            ->with([
+                'hadiths' => fn ($q) => $q->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])->orderBy('hadith_number'),
+                'hadiths.translations',
+            ])
             ->find($id);
     }
 
@@ -95,9 +101,9 @@ class BookRepository extends BaseRepository implements BookRepositoryInterface
     {
         return $this->model
             ->with([
-                'collection',
-                'chapters',
-                'hadiths' => fn ($q) => $q->orderBy('hadith_number'),
+                'collection:id,name_ar,name_en,abbreviation',
+                'chapters:id,book_id,chapter_number,name,display_order',
+                'hadiths' => fn ($q) => $q->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])->orderBy('hadith_number'),
                 'hadiths.translations',
             ])
             ->find($id);
@@ -132,7 +138,8 @@ class BookRepository extends BaseRepository implements BookRepositoryInterface
         $sortBy = in_array($sortBy, $allowedSorts, true) ? $sortBy : 'id';
         $query->orderBy($sortBy);
 
-        return $query->with('collection')
+        return $query->select(['id', 'collection_id', 'title_ar', 'title_en', 'book_number', 'created_at'])
+            ->with('collection:id,name_ar,name_en,abbreviation')
             ->withCount('hadiths')
             ->paginate($perPage);
     }

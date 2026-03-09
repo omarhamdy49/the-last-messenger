@@ -146,6 +146,25 @@ class RepositoryServiceProvider extends ServiceProvider
             \App\Domain\Shared\Repositories\BulkOperationRepository::class
         );
 
+        // Bulk Operation Service — wired with all domain handlers
+        $this->app->singleton(
+            \App\Domain\Shared\Services\BulkOperationService::class,
+            function ($app) {
+                return new \App\Domain\Shared\Services\BulkOperationService(
+                    repository: $app->make(\App\Domain\Shared\Repositories\BulkOperationRepositoryInterface::class),
+                    adminLogger: $app->make(\App\Domain\Shared\Services\AdminLoggerService::class),
+                    handlers: [
+                        new \App\Domain\Blog\Services\ArticleBulkHandler(),
+                        new \App\Domain\Hadith\Services\HadithBulkHandler(),
+                        new \App\Domain\Quran\Services\VerseBulkHandler(),
+                        new \App\Domain\Sahaba\Services\SahabiBulkHandler(),
+                        new \App\Domain\Seerah\Services\SeerahEventBulkHandler(),
+                        new \App\Domain\Genealogy\Services\GenealogyBulkHandler(),
+                    ],
+                );
+            }
+        );
+
         // Content Scheduler Repository
         $this->app->bind(
             \App\Domain\Shared\Repositories\SchedulerRepositoryInterface::class,

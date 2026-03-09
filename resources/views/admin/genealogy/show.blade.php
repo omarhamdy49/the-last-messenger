@@ -18,7 +18,7 @@
     </div>
 
     <!-- Action Buttons -->
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
         <a href="{{ route('admin.genealogy.edit', $person->id) }}"
            class="px-6 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 shadow-lg
                   bg-gradient-to-r from-[#0056b3] to-[#218838] text-white">

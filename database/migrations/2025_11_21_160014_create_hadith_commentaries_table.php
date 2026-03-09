@@ -27,11 +27,15 @@ return new class extends Migration
             $table->index('author');
         });
 
-        // Set charset and collation
-        DB::statement('ALTER TABLE hadith_commentaries ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci');
+        if (config('database.default') === 'mysql') {
+            // Set charset and collation
+            DB::statement('ALTER TABLE hadith_commentaries ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci');
+        }
 
         // Add FULLTEXT index
-        DB::statement('ALTER TABLE hadith_commentaries ADD FULLTEXT INDEX ft_hadith_commentaries_text (commentary_text)');
+        if (config('database.default') === 'mysql') {
+            DB::statement('ALTER TABLE hadith_commentaries ADD FULLTEXT INDEX ft_hadith_commentaries_text (commentary_text)');
+        }
     }
 
     /**

@@ -6,77 +6,207 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **The Last Messenger Backend** is the Laravel-based API and admin panel for The Last Messenger platform - a comprehensive Islamic digital encyclopedia focused on Prophet Muhammad ﷺ. This backend provides RESTful APIs, admin CMS, and content management for Seerah (biography), Hadith, Quranic content, genealogy, media programs, and interactive maps.
 
-**Current Status:** Active development - Admin panel implemented, Articles module complete, additional modules in progress.
+**Current Status:** Active development - Admin panel implemented, Articles/Blog module complete, Hadith/Quran/Seerah/Sahaba/Genealogy modules implemented with DDD architecture.
 
 ## Project Structure
 
 ```
 the-last-messenger-be/
 ├── app/
+│   ├── Domain/                         # Domain-Driven Design modules
+│   │   ├── Blog/                       # Blog/Articles domain
+│   │   │   ├── Actions/
+│   │   │   ├── DTOs/
+│   │   │   ├── Enums/
+│   │   │   ├── Exporters/
+│   │   │   ├── Models/
+│   │   │   ├── Repositories/
+│   │   │   └── Services/
+│   │   ├── Hadith/                     # Hadith domain (CQRS pattern)
+│   │   │   ├── Application/
+│   │   │   │   ├── Commands/
+│   │   │   │   ├── DTOs/
+│   │   │   │   ├── Handlers/
+│   │   │   │   └── Queries/
+│   │   │   ├── Enums/
+│   │   │   ├── Events/
+│   │   │   ├── Exceptions/
+│   │   │   ├── Models/
+│   │   │   ├── Repositories/
+│   │   │   ├── Services/
+│   │   │   └── ValueObjects/
+│   │   ├── Quran/                      # Quran domain (CQRS pattern)
+│   │   │   ├── Application/
+│   │   │   │   ├── Commands/
+│   │   │   │   ├── DTOs/
+│   │   │   │   ├── Handlers/
+│   │   │   │   └── Queries/
+│   │   │   ├── Enums/
+│   │   │   ├── Events/
+│   │   │   ├── Exceptions/
+│   │   │   ├── Exporters/
+│   │   │   ├── Models/
+│   │   │   ├── Repositories/
+│   │   │   └── Services/
+│   │   ├── Seerah/                     # Seerah/Timeline domain
+│   │   │   ├── Enums/
+│   │   │   ├── Exporters/
+│   │   │   ├── Models/
+│   │   │   ├── Repositories/
+│   │   │   └── Services/
+│   │   ├── Sahaba/                     # Companions domain
+│   │   │   ├── Enums/
+│   │   │   ├── Exporters/
+│   │   │   ├── Models/
+│   │   │   ├── Repositories/
+│   │   │   └── Services/
+│   │   ├── Genealogy/                  # Family tree domain
+│   │   │   ├── Enums/
+│   │   │   ├── Models/
+│   │   │   ├── Repositories/
+│   │   │   └── Services/
+│   │   └── Shared/                     # Cross-cutting concerns
+│   │       ├── Application/
+│   │       │   ├── Commands/
+│   │       │   ├── DTOs/
+│   │       │   └── Queries/
+│   │       ├── Builders/
+│   │       ├── Contracts/
+│   │       ├── DTOs/
+│   │       ├── Enums/
+│   │       ├── Events/
+│   │       │   └── Traits/
+│   │       ├── Exceptions/
+│   │       ├── Exporters/
+│   │       ├── Importers/
+│   │       ├── Models/
+│   │       ├── Repositories/
+│   │       ├── Services/
+│   │       ├── Traits/
+│   │       └── ValueObjects/
 │   ├── Http/
 │   │   ├── Controllers/
-│   │   │   ├── Admin/          # Admin panel controllers
+│   │   │   ├── Admin/                  # 33+ admin panel controllers
+│   │   │   │   ├── ActivityLogController.php
+│   │   │   │   ├── AdminController.php
+│   │   │   │   ├── AnalyticsController.php
 │   │   │   │   ├── ArticleController.php
-│   │   │   │   ├── MediaController.php
+│   │   │   │   ├── AuditController.php
+│   │   │   │   ├── BulkOperationController.php
 │   │   │   │   ├── CategoryController.php
-│   │   │   │   └── TagController.php
-│   │   │   └── Api/            # Public API controllers
+│   │   │   │   ├── CollectionController.php
+│   │   │   │   ├── DashboardController.php
+│   │   │   │   ├── DashboardWebController.php
+│   │   │   │   ├── ExportController.php
+│   │   │   │   ├── GenealogyController.php
+│   │   │   │   ├── GradingLevelController.php
+│   │   │   │   ├── ImportController.php
+│   │   │   │   ├── LanguageSettingsController.php
+│   │   │   │   ├── MediaController.php
+│   │   │   │   ├── MediaSettingsController.php
+│   │   │   │   ├── NarratorController.php
+│   │   │   │   ├── QuranController.php
+│   │   │   │   ├── ReciterController.php
+│   │   │   │   ├── RoleController.php
+│   │   │   │   ├── SahabiController.php
+│   │   │   │   ├── SchedulerController.php
+│   │   │   │   ├── ScholarController.php
+│   │   │   │   ├── SeerahEventController.php
+│   │   │   │   ├── SeriesController.php
+│   │   │   │   ├── SurahController.php
+│   │   │   │   ├── TafseerController.php
+│   │   │   │   ├── TagController.php
+│   │   │   │   ├── ThemeController.php
+│   │   │   │   ├── UserController.php
+│   │   │   │   ├── VerseController.php
+│   │   │   │   └── VersionController.php
+│   │   │   └── Api/                    # Public API controllers
 │   │   ├── Middleware/
-│   │   └── Requests/           # Form validation requests
-│   ├── Models/
-│   │   ├── Article.php         # Translatable article model
-│   │   ├── Media.php           # Media management model
-│   │   ├── Category.php        # Categories (Hadith, Seerah, etc.)
-│   │   ├── Tag.php             # Content tagging
-│   │   └── User.php            # User authentication
-│   ├── Repositories/           # Repository pattern
+│   │   ├── Requests/                   # Form validation requests
+│   │   └── Resources/                  # API resource transformers (26 files)
+│   │       ├── ArticleResource.php
+│   │       ├── AuditLogResource.php
+│   │       ├── BulkOperationResource.php
+│   │       ├── CategoryResource.php
+│   │       ├── GenealogyResource.php
+│   │       ├── HadithBookResource.php
+│   │       ├── HadithCollectionResource.php
+│   │       ├── HadithNarratorResource.php
+│   │       ├── HadithResource.php
+│   │       ├── HadithThemeResource.php
+│   │       ├── MediaResource.php
+│   │       ├── SahabiResource.php
+│   │       ├── SeerahEventResource.php
+│   │       ├── SeriesResource.php
+│   │       ├── SurahResource.php
+│   │       ├── TafseerResource.php
+│   │       ├── TagResource.php
+│   │       ├── UserResource.php
+│   │       ├── VerseResource.php
+│   │       └── ... (7 more)
+│   ├── Jobs/                           # Queue jobs
+│   │   ├── CleanupFailedImports.php
+│   │   ├── ProcessBulkOperation.php
+│   │   ├── ProcessImport.php
+│   │   ├── SyncBookJob.php
+│   │   └── SyncCollectionJob.php
+│   ├── Console/Commands/               # Artisan commands
+│   │   ├── SyncHadithCommand.php
+│   │   ├── SyncHadithFromJsonCommand.php
+│   │   └── SyncQuranCommand.php
+│   ├── Repositories/                   # Legacy repositories (app-level)
 │   │   ├── ArticleRepository.php
 │   │   └── MediaRepository.php
 │   ├── Traits/
-│   │   └── HasMedia.php        # Media handling trait
+│   │   └── HasMedia.php                # Media handling trait
 │   ├── Utils/
-│   │   └── DateUtil.php        # Date conversion utilities
-│   ├── Exceptions/             # Custom exceptions
+│   │   └── DateUtil.php                # Date conversion utilities
+│   ├── Exceptions/                     # Custom exceptions
 │   └── Helpers/
-│       └── helpers.php         # Global helper functions
+│       └── helpers.php                 # Global helper functions
 ├── database/
-│   ├── migrations/             # Database schema migrations
-│   ├── seeders/                # Database seeders
-│   └── factories/              # Model factories
+│   ├── migrations/                     # Database schema migrations
+│   ├── seeders/                        # Database seeders
+│   └── factories/                      # Model factories
 ├── resources/
 │   ├── views/
-│   │   ├── admin/              # Admin panel Blade templates
-│   │   │   ├── layouts/        # Base layouts
+│   │   ├── admin/                      # Admin panel Blade templates
+│   │   │   ├── layouts/                # Base layouts
 │   │   │   │   └── app.blade.php
-│   │   │   ├── articles/       # Article CRUD views
-│   │   │   ├── media/          # Media management views
-│   │   │   ├── categories/     # Category management
-│   │   │   └── tags/           # Tag management
-│   │   └── components/         # Reusable Blade components
-│   ├── lang/                   # Multi-language translations
-│   │   ├── ar/                 # Arabic (primary)
-│   │   ├── en/                 # English
-│   │   ├── tr/                 # Turkish
-│   │   ├── fr/                 # French
-│   │   └── ur/                 # Urdu
+│   │   │   ├── articles/               # Article CRUD views
+│   │   │   ├── media/                  # Media management views
+│   │   │   ├── categories/             # Category management
+│   │   │   ├── hadith/                 # Hadith management views
+│   │   │   ├── quran/                  # Quran management views
+│   │   │   ├── seerah/                 # Seerah event views
+│   │   │   ├── sahaba/                 # Companion profile views
+│   │   │   ├── genealogy/              # Genealogy tree views
+│   │   │   └── tags/                   # Tag management
+│   │   └── components/                 # Reusable Blade components
+│   ├── lang/                           # Multi-language translations
+│   │   ├── ar/                         # Arabic (primary)
+│   │   ├── en/                         # English
+│   │   ├── tr/                         # Turkish
+│   │   ├── fr/                         # French
+│   │   └── ur/                         # Urdu
 │   ├── js/
-│   │   └── admin.js            # Admin panel JavaScript
+│   │   └── admin.js                    # Admin panel JavaScript
 │   └── css/
-│       └── admin.css           # Admin panel styles
+│       └── admin.css                   # Admin panel styles
 ├── routes/
-│   ├── web.php                 # Admin panel routes
-│   ├── api.php                 # Public API routes
-│   └── channels.php            # Broadcasting channels
+│   ├── web.php                         # Admin panel routes
+│   ├── api.php                         # Public API routes
+│   └── channels.php                    # Broadcasting channels
 ├── config/
-│   ├── translatable.php        # Spatie translatable config
-│   ├── permission.php          # Spatie permission config
-│   └── media-library.php       # Spatie media library config
+│   ├── translatable.php                # Spatie translatable config
+│   ├── permission.php                  # Spatie permission config
+│   └── media-library.php               # Spatie media library config
 ├── public/
-│   ├── storage/                # Symlinked storage (media files)
-│   └── build/                  # Compiled assets (Vite)
+│   ├── storage/                        # Symlinked storage (media files)
+│   └── build/                          # Compiled assets (Vite)
 └── tests/
-    ├── Feature/                # Feature tests
-    └── Unit/                   # Unit tests
+    ├── Feature/                        # Feature tests
+    └── Unit/                           # Unit tests
 ```
 
 ## Technology Stack
@@ -151,9 +281,9 @@ primary: linear-gradient(135deg, #0056b3 0%, #218838 100%)
 - `database/migrations/*_create_articles_table.php`
 
 **API Endpoints:**
-- `GET /api/articles` - List articles (public)
-- `GET /api/articles/{slug}` - Get single article (public)
-- Admin CRUD at `/admin/articles`
+- ~~`GET /api/articles`~~ — **DISABLED** (commented out in `routes/api.php`; no API controller yet)
+- ~~`GET /api/articles/{slug}`~~ — **DISABLED**
+- Admin CRUD at `/su/portal/v1/admin/articles`
 
 ### 2. Media Management Module
 **Status:** ✅ Complete
@@ -204,16 +334,104 @@ primary: linear-gradient(135deg, #0056b3 0%, #218838 100%)
 - `config/permission.php`
 - Authentication views (RTL-enabled)
 
-### 5. Planned Modules (Not Yet Implemented)
-- ❌ Hadith Module (database, search, narrators)
-- ❌ Quran Module (verses, tafseer, reciters)
-- ❌ Genealogy Module (family tree API)
-- ❌ Media Programs Module (video management, series, episodes)
-- ❌ Timeline Module (chronological events)
+### 5. Hadith Module
+**Status:** ✅ Implemented (Domain-Driven Design with CQRS)
+
+**Features:**
+- Full CQRS pattern (Commands, Queries, Handlers in `app/Domain/Hadith/Application/`)
+- Collections, Books, Chapters, Hadiths, Narrators, Scholars, Grading Levels, Themes
+- Value Objects for immutable domain concepts (`app/Domain/Hadith/ValueObjects/`)
+- Domain Events for cross-module communication (`app/Domain/Hadith/Events/`)
+- Sync commands: `SyncHadithCommand`, `SyncHadithFromJsonCommand`
+- Queue jobs: `SyncBookJob`, `SyncCollectionJob`
+
+**Key Files:**
+- `app/Domain/Hadith/` — full domain structure
+- `app/Http/Controllers/Admin/CollectionController.php`
+- `app/Http/Controllers/Admin/NarratorController.php`
+- `app/Http/Controllers/Admin/ScholarController.php`
+- `app/Http/Controllers/Admin/GradingLevelController.php`
+- `app/Http/Controllers/Admin/ThemeController.php`
+- `app/Http/Resources/HadithResource.php` (+ HadithCollection, HadithBook, HadithNarrator, HadithTheme)
+
+### 6. Quran Module
+**Status:** ✅ Implemented (Domain-Driven Design with CQRS)
+
+**Features:**
+- Full CQRS pattern matching Hadith module structure
+- Surahs, Verses, Tafseer, Reciters
+- Exporters for data output
+- Domain Events and Exceptions
+
+**Key Files:**
+- `app/Domain/Quran/` — full domain structure
+- `app/Http/Controllers/Admin/QuranController.php`
+- `app/Http/Controllers/Admin/SurahController.php`
+- `app/Http/Controllers/Admin/VerseController.php`
+- `app/Http/Controllers/Admin/TafseerController.php`
+- `app/Http/Controllers/Admin/ReciterController.php`
+- `app/Http/Resources/SurahResource.php`, `VerseResource.php`, `TafseerResource.php`
+
+### 7. Seerah Module
+**Status:** ✅ Implemented
+
+**Features:**
+- Seerah events with timeline support
+- Exporters for data output
+- Enums for event categorization
+
+**Key Files:**
+- `app/Domain/Seerah/` — domain structure
+- `app/Http/Controllers/Admin/SeerahEventController.php`
+- `app/Http/Resources/SeerahEventResource.php`, `SeerahParticipantResource.php`
+
+### 8. Sahaba (Companions) Module
+**Status:** ✅ Implemented
+
+**Features:**
+- Companion profiles with translatable content
+- Exporters for data output
+- Enums for categorization
+
+**Key Files:**
+- `app/Domain/Sahaba/` — domain structure
+- `app/Http/Controllers/Admin/SahabiController.php`
+- `app/Http/Resources/SahabiResource.php`
+
+### 9. Genealogy Module
+**Status:** ✅ Implemented
+
+**Features:**
+- Family tree with Person model
+- Repository and Service layers
+
+**Key Files:**
+- `app/Domain/Genealogy/` — domain structure
+- `app/Http/Controllers/Admin/GenealogyController.php`
+- `app/Http/Resources/GenealogyResource.php`
+
+### 10. Planned / Partial Modules
+- 🟡 Media Programs Module (SeriesController exists; video management incomplete)
 - ❌ Search Module (Elasticsearch integration)
 - ❌ Notification System (Laravel Echo + Pusher)
 
 ## Architecture Patterns
+
+### Domain-Driven Design Architecture
+
+The backend uses a DDD-inspired layered architecture with bounded contexts per module.
+
+**Module organization** (`app/Domain/{ModuleName}/`):
+- Each domain module is self-contained with its own Models, Repositories, Services, Enums, and DTOs.
+- Hadith and Quran use a full **CQRS pattern**: writes go through Commands dispatched to Handlers; reads go through typed Query objects with dedicated Handlers.
+- **Repository interfaces** define the contract in `app/Domain/{Module}/Repositories/`. Implementations are registered in the service container.
+- The `Shared` module (`app/Domain/Shared/`) provides cross-cutting concerns (base contracts, shared DTOs, common enums, generic exporters/importers). Domain modules must never import from each other — only from `Shared`.
+- **Value Objects** in Hadith (`app/Domain/Hadith/ValueObjects/`) enforce immutability for domain concepts (e.g. narrator chain, grading).
+- **Domain Events** (`app/Domain/Hadith/Events/`, `app/Domain/Quran/Events/`) decouple cross-module side-effects and are dispatched via Laravel's event system.
+
+**Repository locations (dual):**
+- `app/Repositories/` — legacy app-level repositories (ArticleRepository, MediaRepository); kept for backward compatibility.
+- `app/Domain/*/Repositories/` — domain repositories following DDD; these are the authoritative implementations for all domain modules.
 
 ### Repository Pattern
 All data access goes through repositories for better testability and separation of concerns.
@@ -592,12 +810,16 @@ public function test_converts_gregorian_to_hijri()
 ### Phase 1 - Backend Core (Current)
 - ✅ Admin panel design system
 - ✅ Multi-language support (Spatie Translatable)
-- ✅ Articles module (CRUD + API)
+- ✅ Articles/Blog module (Admin CRUD; public API disabled)
 - ✅ Media management (Spatie Media Library)
 - ✅ Categories & tags
 - ✅ User authentication & roles
-- 🟡 Hadith module (in progress)
-- ❌ Quran module
+- ✅ Hadith module (DDD + CQRS, full admin CRUD)
+- ✅ Quran module (DDD + CQRS, full admin CRUD)
+- ✅ Seerah module (events, timeline, admin CRUD)
+- ✅ Sahaba module (companion profiles, admin CRUD)
+- ✅ Genealogy module (family tree, admin CRUD)
+- 🟡 Media Programs module (SeriesController exists; video management incomplete)
 - ❌ API documentation (Swagger/OpenAPI)
 
 ### Phase 2 - Advanced Features
@@ -672,14 +894,13 @@ ray($variable);
 
 ## Documentation References
 
-### Internal Documentation
-- `ADMIN-DESIGN-SYSTEM.md` - Complete admin UI design system
-- `ADMIN-QUICK-REFERENCE.md` - Admin panel quick reference
-- `ARTICLE-API-DOCUMENTATION.md` - Articles API documentation
-- `MEDIA-PICKER-INTEGRATION.md` - Media picker usage guide
-- `FORM-BUILDER-GUIDE.md` - Form builder patterns
-- `DATATABLE-API-DOCUMENTATION.md` - DataTable implementation
-- `ARABIC_RTL_CONFIGURATION_SUMMARY.md` - RTL support guide
+### Internal Documentation (docs/)
+- `ADMIN-DESIGN-SYSTEM.md` — Complete admin UI design system
+- `ARTICLE-API-DOCUMENTATION.md` — Articles API documentation
+- `MEDIA-PICKER-ARCHITECTURE.md` — Media picker architecture guide
+- `FORM-BUILDER-GUIDE.md` — Form builder patterns
+- `DATATABLE-API-DOCUMENTATION.md` — DataTable implementation
+- `ARABIC_RTL_CONFIGURATION_SUMMARY.md` — RTL support guide
 
 ### External Documentation
 - Laravel 12 Docs: https://laravel.com/docs/12.x
@@ -700,7 +921,7 @@ ray($variable);
 
 ---
 
-**Last Updated:** November 11, 2024
+**Last Updated:** March 2026
 **Laravel Version:** 12.0
 **PHP Version:** 8.2+
 - localize all view make it in arabic by default

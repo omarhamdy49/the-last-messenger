@@ -101,6 +101,15 @@ class Surah extends Model
     }
 
     /**
+     * Get surah number (1-114) as an alias for revelation_order.
+     * Accessor so SurahResource and other callers can use $surah->number.
+     */
+    public function getNumberAttribute(): int
+    {
+        return $this->revelation_order;
+    }
+
+    /**
      * Get display name
      */
     public function getDisplayName(string $language = 'ar'): string

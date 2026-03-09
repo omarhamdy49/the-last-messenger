@@ -4,16 +4,15 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
-use App\Domain\Shared\Importers\ArticleImporter;
-use App\Domain\Shared\Importers\HadithImporter;
-use App\Domain\Shared\Importers\HadithNarratorImporter;
-use App\Domain\Shared\Importers\MediaProgramImporter;
-use App\Domain\Shared\Importers\QuranSurahImporter;
-use App\Domain\Shared\Importers\QuranVerseImporter;
-use App\Domain\Shared\Importers\ReciterImporter;
-use App\Domain\Shared\Importers\SahabiImporter;
-use App\Domain\Shared\Importers\SeerahEventImporter;
-use App\Domain\Shared\Importers\TafseerImporter;
+use App\Domain\Blog\Importers\ArticleImporter;
+use App\Domain\Hadith\Importers\HadithImporter;
+use App\Domain\Hadith\Importers\HadithNarratorImporter;
+use App\Domain\Quran\Importers\QuranSurahImporter;
+use App\Domain\Quran\Importers\QuranVerseImporter;
+use App\Domain\Quran\Importers\ReciterImporter;
+use App\Domain\Quran\Importers\TafseerImporter;
+use App\Domain\Sahaba\Importers\SahabiImporter;
+use App\Domain\Seerah\Importers\SeerahEventImporter;
 use App\Domain\Shared\Models\Import;
 use App\Domain\Shared\Services\AdminLoggerService;
 use Illuminate\Bus\Queueable;
@@ -41,7 +40,12 @@ class ProcessImport implements ShouldQueue
     /**
      * The number of seconds the job can run before timing out.
      */
-    public int $timeout = 3600; // 1 hour
+    public int $timeout = 600;
+
+    /**
+     * The number of seconds to wait before retrying the job.
+     */
+    public array $backoff = [30, 60, 120];
 
     /**
      * Constructor
@@ -66,7 +70,7 @@ class ProcessImport implements ShouldQueue
             $importer = $this->getImporter();
 
             if (! $importer) {
-                throw new \Exception("No importer found for module: {$this->import->module}");
+                throw new \RuntimeException('No importer found for module: ' . $this->import->module);
             }
 
             // Execute import
@@ -124,7 +128,6 @@ class ProcessImport implements ShouldQueue
         return match ($this->import->module) {
             'articles' => new ArticleImporter($this->import),
             'hadith' => new HadithImporter($this->import),
-            'media_programs' => new MediaProgramImporter($this->import),
             'seerah_events' => new SeerahEventImporter($this->import),
             'sahaba' => new SahabiImporter($this->import),
             'quran_surahs' => new QuranSurahImporter($this->import),
@@ -141,11 +144,13 @@ class ProcessImport implements ShouldQueue
      */
     public function failed(Throwable $exception): void
     {
-        Log::error('Import job failed permanently', [
+        Log::error('process_import.failed', [
+            'job' => static::class,
             'import_id' => $this->import->id,
+            'module' => $this->import->module,
             'error' => $exception->getMessage(),
         ]);
 
-        $this->import->markAsFailed('Job failed after '.$this->tries.' attempts: '.$exception->getMessage());
+        $this->import->markAsFailed('Job failed after ' . $this->tries . ' attempts: ' . $exception->getMessage());
     }
 }

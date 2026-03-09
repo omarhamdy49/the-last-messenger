@@ -336,7 +336,7 @@ class MediaService
             match ($preset->method) {
                 'crop' => $variantImage->cover($preset->width, $preset->height),
                 'resize' => $variantImage->resize($preset->width, $preset->height),
-                default => $variantImage->scaleDown($preset->width, $preset->height),
+                default => $variantImage->pad($preset->width, $preset->height),
             };
 
             try {

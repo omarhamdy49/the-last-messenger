@@ -16,7 +16,7 @@
     </div>
 
     <!-- Action Buttons -->
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
         <button @click="$dispatch('toggle-filters')"
                 x-data
                 class="px-4 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 border-2"
@@ -181,7 +181,7 @@
                     <tr class="transition-colors" :class="darkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'">
                         <!-- User -->
                         <td class="p-4">
-                            <div class="flex items-center gap-3">
+                            <div class="flex flex-wrap items-center gap-3">
                                 <div class="w-8 h-8 rounded-full bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center">
                                     <span class="text-white text-xs font-bold">{{ mb_substr($log->user?->name ?? '?', 0, 1) }}</span>
                                 </div>

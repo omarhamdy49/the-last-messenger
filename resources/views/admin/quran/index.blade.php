@@ -1,5 +1,9 @@
 @extends('layouts.admin')
 
+@php
+use Illuminate\Support\Str;
+@endphp
+
 @section('page-header')
 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
     <!-- Page Title -->
@@ -16,7 +20,7 @@
     </div>
 
     <!-- Action Buttons -->
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
         <!-- Filter Toggle Button -->
         <button @click="$dispatch('toggle-filters')"
                 x-data
@@ -97,96 +101,96 @@
         </form>
     </div>
 
-    <!-- Verses Table -->
-    <div class="rounded-2xl border overflow-hidden"
-         :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead>
-                    <tr :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                        <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">#</th>
-                        <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">مفتاح الآية</th>
-                        <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">رقم السورة</th>
-                        <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">رقم الآية</th>
-                        <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الجزء</th>
-                        <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الصفحة</th>
-                        <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الحزب</th>
-                        <th class="px-6 py-4 text-center text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الإجراءات</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y" :class="darkMode ? 'divide-gray-800' : 'divide-gray-100'">
-                    @forelse($verses ?? [] as $verse)
-                    <tr class="transition-colors" :class="darkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'">
-                        <td class="px-6 py-4 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                            {{ $verse->id }}
-                        </td>
-                        <td class="px-6 py-4">
-                            <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white">
-                                {{ $verse->verse_key }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 text-sm font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                            {{ $verse->surah_id }}
-                        </td>
-                        <td class="px-6 py-4 text-sm font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                            {{ $verse->verse_number }}
-                        </td>
-                        <td class="px-6 py-4 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                            {{ $verse->juz_number }}
-                        </td>
-                        <td class="px-6 py-4 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                            {{ $verse->page_number }}
-                        </td>
-                        <td class="px-6 py-4 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                            {{ $verse->hizb_number }}
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center justify-center gap-2">
-                                <a href="{{ route('admin.quran.show', $verse->id) }}"
-                                   class="p-2 rounded-lg transition-colors"
-                                   :class="darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'"
-                                   title="{{ __('admin.view') }}">
-                                    <i data-lucide="eye" class="w-4 h-4"></i>
-                                </a>
-                                <a href="{{ route('admin.quran.edit', $verse->id) }}"
-                                   class="p-2 rounded-lg transition-colors"
-                                   :class="darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'"
-                                   title="{{ __('admin.edit') }}">
-                                    <i data-lucide="edit-2" class="w-4 h-4"></i>
-                                </a>
-                                <form action="{{ route('admin.quran.destroy', $verse->id) }}"
-                                      method="POST"
-                                      class="inline"
-                                      onsubmit="return confirm('{{ __('admin.confirm_delete') }}')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit"
-                                            class="p-2 rounded-lg transition-colors text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                            title="{{ __('admin.delete') }}">
-                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="8" class="px-6 py-12 text-center">
-                            <i data-lucide="book-open" class="w-16 h-16 mx-auto mb-4" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
-                            <p class="text-lg font-medium mb-4" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                                لا توجد آيات
+    <!-- Verses Rows -->
+    <div class="space-y-4">
+        @forelse($verses ?? [] as $verse)
+            <div class="group rounded-xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.01]"
+                 :class="darkMode ? 'bg-gray-800/60 border border-gray-700 hover:bg-gray-800' : 'bg-white border border-gray-200 hover:shadow-xl'"
+                 style="box-shadow: 0 1px 3px rgba(0,0,0,0.1)">
+
+                <div class="p-5 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
+                    <!-- Verse Key Badge -->
+                    <div class="flex-shrink-0">
+                        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center flex-shrink-0">
+                            <span class="text-sm sm:text-base font-bold text-white">{{ $verse->verse_key }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Main Content: Verse Text (Clickable) -->
+                    <div class="flex-1 min-w-0">
+                        <a href="{{ route('admin.quran.show', $verse->id) }}"
+                           class="block group">
+                            @php
+                                $translation = $verse->translations->where('lang', 'ar')->first();
+                                $text = $translation?->text ?? '';
+                                $textPreview = Illuminate\Support\Str::limit($text, 250, '...');
+                            @endphp
+                            <p class="font-serif text-lg leading-relaxed line-clamp-2 group-hover:text-[#64CCC5] transition-colors"
+                               :class="darkMode ? 'text-gray-100' : 'text-gray-900'">
+                                {{ $textPreview }}
                             </p>
-                            <a href="{{ route('admin.quran.create') }}"
-                               class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-semibold hover:scale-105 transition-all">
-                                <i data-lucide="plus" class="w-5 h-5"></i>
-                                إضافة آية جديدة
-                            </a>
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                        </a>
+
+                        <!-- Bottom Info: Surah & Metadata -->
+                        <div class="flex flex-wrap gap-4 mt-3 items-center">
+                            <span class="text-xs sm:text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                📖 {{ $verse->surah?->name_ar ?? "Surah {$verse->surah_id}" }}
+                            </span>
+                            <span class="text-xs sm:text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                📄 صفحة {{ $verse->page_number }}
+                            </span>
+                            <span class="text-xs sm:text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                📕 جزء {{ $verse->juz_number }}
+                            </span>
+                            <span class="text-xs sm:text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                🔖 حزب {{ $verse->hizb_number }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 self-end sm:self-auto">
+                        <a href="{{ route('admin.quran.show', $verse->id) }}"
+                           class="p-2.5 rounded-lg transition-all"
+                           :class="darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white hover:text-[#64CCC5]' : 'hover:bg-gray-100 text-gray-600 hover:text-[#0056b3]'"
+                           title="{{ __('admin.view') }}">
+                            <i data-lucide="eye" class="w-5 h-5"></i>
+                        </a>
+                        <a href="{{ route('admin.quran.edit', $verse->id) }}"
+                           class="p-2.5 rounded-lg transition-all"
+                           :class="darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white hover:text-[#64CCC5]' : 'hover:bg-gray-100 text-gray-600 hover:text-[#0056b3]'"
+                           title="{{ __('admin.edit') }}">
+                            <i data-lucide="edit-2" class="w-5 h-5"></i>
+                        </a>
+                        <form action="{{ route('admin.quran.destroy', $verse->id) }}"
+                              method="POST"
+                              class="inline"
+                              onsubmit="return confirm('{{ __('admin.confirm_delete') }}')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit"
+                                    class="p-2.5 rounded-lg transition-all text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700"
+                                    title="{{ __('admin.delete') }}">
+                                <i data-lucide="trash-2" class="w-5 h-5"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        @empty
+            <div class="text-center py-12 px-6 rounded-2xl border"
+                 :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+                <i data-lucide="book-open" class="w-16 h-16 mx-auto mb-4" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
+                <p class="text-lg font-medium mb-4" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                    لا توجد آيات
+                </p>
+                <a href="{{ route('admin.quran.create') }}"
+                   class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-semibold hover:scale-105 transition-all">
+                    <i data-lucide="plus" class="w-5 h-5"></i>
+                    إضافة آية جديدة
+                </a>
+            </div>
+        @endforelse
     </div>
 
     <!-- Pagination -->

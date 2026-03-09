@@ -56,6 +56,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             "hadiths_by_book_{$bookId}",
             self::CACHE_TTL,
             fn () => $this->model
+                ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
                 ->byBook($bookId)
                 ->with('translations')
                 ->orderBy('hadith_number')
@@ -69,6 +70,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
     public function getByGrading(string $gradingStatus): Collection
     {
         return $this->model
+            ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
             ->byGrading($gradingStatus)
             ->with('translations')
             ->get();
@@ -83,6 +85,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             'hadiths_authentic',
             self::CACHE_TTL,
             fn () => $this->model
+                ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
                 ->authentic()
                 ->with('translations')
                 ->get()
@@ -95,6 +98,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
     public function getWithAgreement(): Collection
     {
         return $this->model
+            ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
             ->withAgreement()
             ->with('translations')
             ->get();
@@ -106,6 +110,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
     public function getByTheme(int $themeId): Collection
     {
         return $this->model
+            ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
             ->whereHas('themes', fn ($q) => $q->where('hadith_theme_id', $themeId))
             ->with(['translations', 'themes'])
             ->get();
@@ -117,8 +122,9 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
     public function getByNarrator(int $companionId): Collection
     {
         return $this->model
+            ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
             ->where('companion_id', $companionId)
-            ->with(['translations', 'companion'])
+            ->with(['translations', 'companion:id,name_ar,name_en'])
             ->orderBy('hadith_number')
             ->get();
     }
@@ -149,7 +155,8 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             $q->whereHas('book', fn ($b) => $b->where('collection_id', $filters['collection_id']));
         }
 
-        return $q->with(['translations', 'book.collection'])
+        return $q->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
+            ->with(['translations', 'book:id,collection_id,title_ar,title_en', 'book.collection:id,name_ar,name_en,abbreviation'])
             ->orderBy('hadith_number')
             ->paginate($perPage);
     }
@@ -198,7 +205,8 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
         $sortBy = in_array($sortBy, $allowedSorts, true) ? $sortBy : 'hadith_number';
         $query->orderBy($sortBy);
 
-        return $query->with(['translations', 'book'])
+        return $query->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
+            ->with(['translations', 'book:id,collection_id,title_ar,title_en'])
             ->paginate($perPage);
     }
 
@@ -225,7 +233,8 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             $query->where('grading_status', $gradingStatus);
         }
 
-        return $query->with('translations')
+        return $query->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
+            ->with('translations')
             ->inRandomOrder()
             ->first();
     }

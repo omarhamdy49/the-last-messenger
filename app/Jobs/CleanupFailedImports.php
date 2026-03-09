@@ -25,7 +25,17 @@ class CleanupFailedImports implements ShouldQueue
     /**
      * The number of times the job may be attempted.
      */
-    public int $tries = 1;
+    public int $tries = 3;
+
+    /**
+     * The number of seconds the job can run before timing out.
+     */
+    public int $timeout = 60;
+
+    /**
+     * The number of seconds to wait before retrying the job.
+     */
+    public array $backoff = [30, 60, 120];
 
     /**
      * Constructor
@@ -73,5 +83,17 @@ class CleanupFailedImports implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    /**
+     * Handle a job failure.
+     */
+    public function failed(\Throwable $exception): void
+    {
+        Log::error('cleanup_failed_imports.failed', [
+            'job' => static::class,
+            'days_old' => $this->daysOld,
+            'error' => $exception->getMessage(),
+        ]);
     }
 }

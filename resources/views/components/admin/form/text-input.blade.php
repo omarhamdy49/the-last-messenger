@@ -89,11 +89,11 @@
     @if($multilang)
         <!-- Multi-language Tabs -->
         <div class="mb-3">
-            <div class="flex flex-wrap gap-2 mb-4">
+            <div class="flex gap-2 mb-4 overflow-x-auto pb-1 custom-scrollbar">
                 @foreach($supportedLanguages as $lang)
                     <button type="button"
                             @click="currentLang = '{{ $lang }}'"
-                            class="px-4 py-2 rounded-lg font-semibold transition-all duration-300"
+                            class="px-4 py-2 rounded-lg font-semibold transition-all duration-300 whitespace-nowrap flex-shrink-0"
                             :class="currentLang === '{{ $lang }}'
                                 ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg scale-105'
                                 : (darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')">
@@ -114,7 +114,7 @@
                      class="relative">
 
                     @if($icon)
-                        <div class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                        <div class="absolute start-3 top-1/2 -translate-y-1/2 pointer-events-none"
                              :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
                             <i data-lucide="{{ $icon }}" class="w-5 h-5"></i>
                         </div>
@@ -135,12 +135,12 @@
                            @focus="isFocused = true"
                            @blur="isFocused = false"
                            dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                           class="w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 font-cairo"
+                           class="w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 font-cairo text-base sm:text-sm"
                            :class="[
-                               darkMode ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400',
+                               darkMode ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400',
                                isFocused ? 'border-[#64CCC5] shadow-glow ring-4 ring-[#64CCC5]/20' : '',
                                hasError ? 'border-red-500' : '',
-                               '{{ $icon ? 'pl-11' : '' }}'
+                               '{{ $icon ? 'ps-11' : '' }}'
                            ]">
 
                     @if($errors->has("{$name}.{$lang}"))
@@ -157,7 +157,7 @@
         <!-- Single language input -->
         <div class="relative">
             @if($icon)
-                <div class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                <div class="absolute start-3 top-1/2 -translate-y-1/2 pointer-events-none"
                      :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
                     <i data-lucide="{{ $icon }}" class="w-5 h-5"></i>
                 </div>
@@ -177,12 +177,12 @@
                    @input="updateCharCount()"
                    @focus="isFocused = true"
                    @blur="isFocused = false"
-                   class="w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 font-cairo"
+                   class="w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 font-cairo text-base sm:text-sm"
                    :class="[
-                       darkMode ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400',
+                       darkMode ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400',
                        isFocused ? 'border-[#64CCC5] shadow-glow ring-4 ring-[#64CCC5]/20' : '',
                        hasError ? 'border-red-500' : '',
-                       '{{ $icon ? 'pl-11' : '' }}'
+                       '{{ $icon ? 'ps-11' : '' }}'
                    ]">
 
             @if($errors->has($name))

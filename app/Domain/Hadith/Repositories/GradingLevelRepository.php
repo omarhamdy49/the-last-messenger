@@ -53,6 +53,7 @@ class GradingLevelRepository extends BaseRepository implements GradingLevelRepos
             'hadith_grading_levels_by_rank',
             self::CACHE_TTL,
             fn () => $this->model
+                ->select(['id', 'grade_ar', 'grade_en', 'description', 'rank'])
                 ->orderBy('rank')
                 ->get()
         );
@@ -67,6 +68,7 @@ class GradingLevelRepository extends BaseRepository implements GradingLevelRepos
             'hadith_grading_levels_with_count',
             self::CACHE_TTL,
             fn () => $this->model
+                ->select(['id', 'grade_ar', 'grade_en', 'description', 'rank'])
                 ->withCount('hadiths')
                 ->orderBy('rank')
                 ->get()

@@ -100,10 +100,61 @@
             </div>
 
             <!-- Mobile Search Button -->
-            <button class="lg:hidden p-2 rounded-xl transition-all hover:scale-110"
-                    :class="darkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-100'">
-                <i data-lucide="search" class="w-5 h-5"></i>
-            </button>
+            <div x-data="{ mobileSearchOpen: false, mobileQuery: '' }" class="lg:hidden">
+                <button @click="mobileSearchOpen = true"
+                        class="p-2 rounded-xl transition-all hover:scale-110"
+                        :class="darkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-100'">
+                    <i data-lucide="search" class="w-5 h-5"></i>
+                </button>
+
+                <!-- Mobile Search Modal -->
+                <div x-show="mobileSearchOpen"
+                     x-cloak
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0"
+                     x-transition:enter-end="opacity-100"
+                     x-transition:leave="transition ease-in duration-150"
+                     x-transition:leave-start="opacity-100"
+                     x-transition:leave-end="opacity-0"
+                     class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-16 px-4"
+                     @click.self="mobileSearchOpen = false; mobileQuery = ''">
+
+                    <div class="w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden"
+                         :class="darkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-200'">
+
+                        <!-- Search Input Row -->
+                        <div class="flex items-center gap-3 px-4 py-3 border-b"
+                             :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
+                            <i data-lucide="search" class="w-5 h-5 flex-shrink-0"
+                               :class="darkMode ? 'text-gray-400' : 'text-gray-500'"></i>
+                            <input type="text"
+                                   x-model="mobileQuery"
+                                   x-ref="mobileSearchInput"
+                                   x-init="$watch('mobileSearchOpen', v => v && $nextTick(() => $refs.mobileSearchInput?.focus()))"
+                                   placeholder="{{ __('admin.search') }}"
+                                   @keydown.escape="mobileSearchOpen = false; mobileQuery = ''"
+                                   class="flex-1 bg-transparent outline-none text-base"
+                                   :class="darkMode ? 'text-white placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'">
+                            <button @click="mobileSearchOpen = false; mobileQuery = ''"
+                                    class="p-1 rounded-lg transition-colors"
+                                    :class="darkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'">
+                                <i data-lucide="x" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+
+                        <!-- Results Area -->
+                        <div class="p-4 text-center py-8">
+                            <i data-lucide="search" class="w-10 h-10 mx-auto mb-3"
+                               :class="darkMode ? 'text-gray-600' : 'text-gray-300'"></i>
+                            <p class="text-sm font-medium"
+                               :class="darkMode ? 'text-gray-300' : 'text-gray-500'">
+                                <span x-show="mobileQuery.length === 0">{{ __('admin.search_placeholder') }}</span>
+                                <span x-show="mobileQuery.length > 0">{{ __('admin.no_results') }}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Language Switcher -->
             <div x-data="{ langOpen: false }" class="relative">

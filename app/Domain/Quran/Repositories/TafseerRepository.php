@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Quran\Repositories;
 
 use App\Domain\Quran\Models\VerseTafsir as Tafseer;
+use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
@@ -36,61 +37,71 @@ class TafseerRepository extends BaseRepository implements TafseerRepositoryInter
      */
     public function paginateWithFilters(int $perPage, array $filters): LengthAwarePaginator
     {
-        $query = $this->model->query()->with(['surah']);
+        $query = $this->model->query()->with(['verse.surah']);
 
-        // Filter by surah
+        // Filter by surah - extract from verse_key or filter through verse.surah_id
         if (isset($filters['surah_id']) && $filters['surah_id']) {
-            $query->where('surah_id', $filters['surah_id']);
+            $query->whereHas('verse', function ($q) use ($filters) {
+                $q->where('surah_id', $filters['surah_id']);
+            });
         }
 
-        // Filter by source
-        if (isset($filters['source']) && $filters['source']) {
-            $query->where('source', $filters['source']);
+        // Filter by language
+        if (isset($filters['lang']) && $filters['lang']) {
+            $query->where('lang', $filters['lang']);
         }
 
-        // Filter by status
+        // Filter by status/active
         if (isset($filters['status']) && $filters['status']) {
-            $query->where('status', $filters['status']);
+            $query->where('active', $filters['status'] === 'active' || $filters['status'] === '1');
         }
 
-        // Search
+        // Search in tafsir text
         if (isset($filters['search']) && $filters['search']) {
-            $query->search($filters['search']);
+            $query->where('text', 'LIKE', '%'.$filters['search'].'%');
         }
 
         // Sorting
-        $sortBy = $filters['sort_by'] ?? 'verse_reference';
+        $sortBy = $filters['sort_by'] ?? 'verse_key';
         $sortDir = $filters['sort_dir'] ?? 'asc';
-        $query->orderBy($sortBy, $sortDir);
+
+        $allowedSorts = ['verse_key', 'lang', 'active', 'created_at', 'updated_at'];
+        if (in_array($sortBy, $allowedSorts, true)) {
+            $query->orderBy($sortBy, $sortDir);
+        } else {
+            $query->orderBy('verse_key', 'asc');
+        }
 
         return $query->paginate($perPage);
     }
 
     /**
-     * Get tafseer by verse reference and source
+     * Get tafseer for a specific verse by verse key
      */
-    public function getByVerseAndSource(string $verseReference, string $source): ?Model
+    public function getByVerseKey(string $verseKey, string $language = 'ar'): ?Model
     {
         return $this->model
-            ->where('verse_reference', $verseReference)
-            ->where('source', $source)
+            ->where('verse_key', $verseKey)
+            ->where('lang', $language)
+            ->active()
+            ->with(['verse.surah'])
             ->first();
     }
 
     /**
-     * Get all tafseer for a specific verse
+     * Get all tafseer for a specific verse (all languages)
      *
      * @return Collection<int, Model>
      */
     public function getByVerseReference(string $verseReference): Collection
     {
         return Cache::remember(
-            "tafseer_verse_{$verseReference}",
+            QuranCacheKeys::tafseerByVerseReference($verseReference),
             self::CACHE_TTL,
             fn () => $this->model
-                ->where('verse_reference', $verseReference)
-                ->published()
-                ->with(['surah'])
+                ->where('verse_key', $verseReference)
+                ->active()
+                ->with(['verse.surah'])
                 ->get()
         );
     }
@@ -101,45 +112,75 @@ class TafseerRepository extends BaseRepository implements TafseerRepositoryInter
     public function getBySurah(int $surahId, int $perPage): LengthAwarePaginator
     {
         return $this->model
-            ->where('surah_id', $surahId)
-            ->published()
-            ->orderBy('ayah_number')
-            ->with(['surah'])
+            ->whereHas('verse', function ($q) use ($surahId) {
+                $q->where('surah_id', $surahId);
+            })
+            ->active()
+            ->orderBy('verse_key')
+            ->with(['verse.surah'])
             ->paginate($perPage);
     }
 
     /**
-     * Get tafseer by source
+     * Get tafseer by verse and source (language)
+     */
+    public function getByVerseAndSource(string $verseReference, string $source): ?Model
+    {
+        return $this->model
+            ->where('verse_key', $verseReference)
+            ->where('lang', $source)
+            ->active()
+            ->with(['verse.surah'])
+            ->first();
+    }
+
+    /**
+     * Get tafseer by source (language) with pagination
      */
     public function getBySource(string $source, int $perPage): LengthAwarePaginator
     {
         return $this->model
-            ->where('source', $source)
-            ->published()
-            ->orderBy('verse_reference')
-            ->with(['surah'])
+            ->where('lang', $source)
+            ->active()
+            ->orderBy('verse_key')
+            ->with(['verse.surah'])
             ->paginate($perPage);
     }
 
     /**
-     * Search tafseer by query
+     * Get tafseer by language
+     */
+    public function getByLanguage(string $language, int $perPage): LengthAwarePaginator
+    {
+        return $this->model
+            ->where('lang', $language)
+            ->active()
+            ->orderBy('verse_key')
+            ->with(['verse.surah'])
+            ->paginate($perPage);
+    }
+
+    /**
+     * Search tafseer by query in text
      */
     public function search(string $query, int $perPage): LengthAwarePaginator
     {
         return $this->model
-            ->search($query)
-            ->with(['surah'])
+            ->where('text', 'LIKE', '%'.$query.'%')
+            ->active()
+            ->with(['verse.surah'])
+            ->orderBy('verse_key')
             ->paginate($perPage);
     }
 
     /**
-     * Check if duplicate exists (same verse + source)
+     * Check if duplicate exists (same verse + language combination)
      */
-    public function checkDuplicate(string $verseReference, string $source, ?int $excludeId = null): bool
+    public function checkDuplicate(string $verseKey, string $language, ?int $excludeId = null): bool
     {
         $query = $this->model
-            ->where('verse_reference', $verseReference)
-            ->where('source', $source);
+            ->where('verse_key', $verseKey)
+            ->where('lang', $language);
 
         if ($excludeId) {
             $query->where('id', '!=', $excludeId);
@@ -149,34 +190,36 @@ class TafseerRepository extends BaseRepository implements TafseerRepositoryInter
     }
 
     /**
-     * Get available sources
+     * Get available languages with tafsir content
      *
      * @return array<string>
      */
     public function getAvailableSources(): array
     {
         return Cache::remember(
-            'tafseer_sources',
+            QuranCacheKeys::tafseerSources(),
             self::CACHE_TTL,
             fn () => $this->model
+                ->active()
                 ->distinct()
-                ->pluck('source')
+                ->pluck('lang')
                 ->toArray()
         );
     }
 
     /**
-     * Count unique surahs covered
+     * Count unique surahs with tafsir content
      */
     public function countUniqueSurahs(): int
     {
         return Cache::remember(
-            'tafseer_unique_surahs',
+            QuranCacheKeys::tafseerUniqueSurahs(),
             self::CACHE_TTL,
             fn () => $this->model
+                ->active()
                 ->distinct()
-                ->whereNotNull('surah_id')
-                ->count('surah_id')
+                ->join('quran_verses', 'quran_verse_tafsirs.verse_id', '=', 'quran_verses.id')
+                ->count('quran_verses.surah_id')
         );
     }
 
@@ -199,7 +242,7 @@ class TafseerRepository extends BaseRepository implements TafseerRepositoryInter
     public function getWithDetails(int $id): ?Model
     {
         return $this->model
-            ->with(['surah'])
+            ->with(['verse.surah'])
             ->find($id);
     }
 
@@ -249,8 +292,8 @@ class TafseerRepository extends BaseRepository implements TafseerRepositoryInter
      */
     public function clearCache(): void
     {
-        Cache::forget('tafseer_sources');
-        Cache::forget('tafseer_unique_surahs');
+        Cache::forget(QuranCacheKeys::tafseerSources());
+        Cache::forget(QuranCacheKeys::tafseerUniqueSurahs());
         // Clear verse-specific caches would require knowing all verse references
         // In production, consider using cache tags
     }

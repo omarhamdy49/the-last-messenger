@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Domain\Shared\Services\AnalyticsService;
+use App\Domain\Shared\Services\DashboardAnalyticsService;
 use App\Domain\Shared\Services\DashboardService;
 use App\Http\Controllers\Controller;
 use App\Support\Traits\ApiResponse;
@@ -26,7 +27,8 @@ class AnalyticsController extends Controller
      */
     public function __construct(
         protected AnalyticsService $analyticsService,
-        protected DashboardService $dashboardService
+        protected DashboardService $dashboardService,
+        protected DashboardAnalyticsService $dashboardAnalyticsService,
     ) {}
 
     /**
@@ -96,9 +98,9 @@ class AnalyticsController extends Controller
 
         $chartData = match ($type) {
             'growth' => $this->analyticsService->getGrowthTrends($period, $limit),
-            'distribution' => $this->dashboardService->getModuleDistribution(),
+            'distribution' => $this->dashboardAnalyticsService->getModuleDistribution(),
             'engagement' => $this->getEngagementChartData($limit),
-            'activity' => $this->dashboardService->getActivityHeatmap($limit),
+            'activity' => $this->dashboardAnalyticsService->getActivityHeatmap($limit),
             default => null,
         };
 
@@ -291,7 +293,7 @@ class AnalyticsController extends Controller
      */
     public function getPerformance(): JsonResponse
     {
-        $performance = $this->dashboardService->getPerformanceMetrics();
+        $performance = $this->dashboardAnalyticsService->getPerformanceMetrics();
 
         return $this->successResponse($performance, 'Performance metrics retrieved successfully');
     }
@@ -305,6 +307,7 @@ class AnalyticsController extends Controller
     {
         $this->analyticsService->clearCache();
         $this->dashboardService->clearCache();
+        $this->dashboardAnalyticsService->clearCache();
 
         return $this->successResponse(null, 'Analytics cache cleared successfully');
     }
