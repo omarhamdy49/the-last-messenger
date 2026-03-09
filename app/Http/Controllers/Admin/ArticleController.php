@@ -72,11 +72,12 @@ class ArticleController extends AdminController
             $articles->getCollection()->load([
                 'locales:id,article_id,locale,title,slug,is_ready',
                 'writer:id,name',
-                'category:id,name,slug',
+                'category:id,slug,type,status',
+                'category.translations:id,category_id,locale,name',
             ]);
         }
 
-        $categories = Category::select(['id', 'name'])->orderBy('name')->get();
+        $categories = Category::with(['translations:id,category_id,locale,name'])->select(['id', 'slug', 'type', 'status'])->orderBy('id')->get();
         $authors    = User::role('writer')->select(['id', 'name'])->orderBy('name')->get();
 
         $articleCounts = DB::table('articles')
@@ -111,9 +112,9 @@ class ArticleController extends AdminController
     {
         $this->authorizeAdmin('create articles');
 
-        $categories      = Category::select(['id', 'name'])->orderBy('name')->get();
+        $categories      = Category::with(['translations:id,category_id,locale,name'])->select(['id', 'slug', 'type', 'status'])->orderBy('id')->get();
         $writers         = User::role('writer')->select(['id', 'name'])->orderBy('name')->get();
-        $tags            = Tag::where('type', 'article')->select(['id', 'name'])->orderBy('name')->get();
+        $tags            = Tag::with(['translations:id,tag_id,locale,name'])->where('type', 'article')->select(['id', 'slug', 'type'])->orderBy('id')->get();
         $locales         = $this->locales;
         $currentHijriDate = DateUtil::getCurrentHijriDate();
 
@@ -187,15 +188,17 @@ class ArticleController extends AdminController
 
         $article->load([
             'locales:id,article_id,locale,title,slug,description,excerpt,content,seo_metadata,is_ready',
-            'categories:id,name,slug',
-            'tags:id,name,slug',
+            'categories:id,slug,type,status',
+            'categories.translations:id,category_id,locale,name',
+            'tags:id,slug,type',
+            'tags.translations:id,tag_id,locale,name',
             'mediaItems:id,filename,original_filename,path,mime_type,size,type',
             'gallery:id,article_id,image,caption,order',
         ]);
 
-        $categories      = Category::select(['id', 'name'])->orderBy('name')->get();
+        $categories      = Category::with(['translations:id,category_id,locale,name'])->select(['id', 'slug', 'type', 'status'])->orderBy('id')->get();
         $writers         = User::role('writer')->select(['id', 'name'])->orderBy('name')->get();
-        $tags            = Tag::where('type', 'article')->select(['id', 'name'])->orderBy('name')->get();
+        $tags            = Tag::with(['translations:id,tag_id,locale,name'])->where('type', 'article')->select(['id', 'slug', 'type'])->orderBy('id')->get();
         $locales         = $this->locales;
         $currentHijriDate = DateUtil::getCurrentHijriDate();
         $formArticle     = $this->transformArticleForForm($article);
@@ -560,9 +563,12 @@ class ArticleController extends AdminController
         return [
             'locales:id,article_id,locale,title,slug,is_ready',
             'writer:id,name',
-            'category:id,name,slug',
-            'categories:id,name,slug',
-            'tags:id,name,slug',
+            'category:id,slug,type,status',
+            'category.translations:id,category_id,locale,name',
+            'categories:id,slug,type,status',
+            'categories.translations:id,category_id,locale,name',
+            'tags:id,slug,type',
+            'tags.translations:id,tag_id,locale,name',
             'mediaItems:id,filename,original_filename,path,mime_type,size,type',
             'gallery:id,article_id,image,caption,order',
             'versions:id,versionable_id,versionable_type,created_at',

@@ -25,7 +25,7 @@ class ArticleRepository
         string $order = 'desc'
     ): LengthAwarePaginator {
         $query = Article::query()
-            ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name,email', 'category:id,name', 'categories:id,name']);
+            ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name,email', 'category:id,slug,type,status', 'category.translations:id,category_id,locale,name', 'categories:id,slug,type,status', 'categories.translations:id,category_id,locale,name']);
 
         // Apply filters
         $this->applyFilters($query, $filters);
@@ -47,7 +47,7 @@ class ArticleRepository
     public function searchArticles(string $query, string $locale = 'ar', int $perPage = 15): LengthAwarePaginator
     {
         return Article::query()
-            ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,name,slug'])
+            ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,slug,type,status', 'category.translations:id,category_id,locale,name'])
             ->whereHas('locales', function ($q) use ($query, $locale) {
                 $q->where('locale', $locale)
                     ->where(function ($subQ) use ($query) {
@@ -65,7 +65,7 @@ class ArticleRepository
      */
     public function getArticlesByStatus(string $status, int $perPage = 15): LengthAwarePaginator
     {
-        $query = Article::query()->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,name,slug']);
+        $query = Article::query()->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,slug,type,status', 'category.translations:id,category_id,locale,name']);
 
         switch ($status) {
             case 'draft':
@@ -98,7 +98,7 @@ class ArticleRepository
     public function getArticlesByCategory(int $categoryId, int $perPage = 15): LengthAwarePaginator
     {
         return Article::query()
-            ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,name,slug'])
+            ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,slug,type,status', 'category.translations:id,category_id,locale,name'])
             ->where(function ($query) use ($categoryId) {
                 $query->where('category_id', $categoryId)
                     ->orWhereHas('categories', function ($q) use ($categoryId) {
@@ -115,7 +115,7 @@ class ArticleRepository
     public function getArticlesByAuthor(int $userId, int $perPage = 15): LengthAwarePaginator
     {
         return Article::query()
-            ->with(['locales:id,article_id,locale,title,slug,is_ready', 'category:id,name,slug', 'categories:id,name,slug'])
+            ->with(['locales:id,article_id,locale,title,slug,is_ready', 'category:id,slug,type,status', 'category.translations:id,category_id,locale,name', 'categories:id,slug,type,status', 'categories.translations:id,category_id,locale,name'])
             ->where('writer_id', $userId)
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
@@ -128,7 +128,7 @@ class ArticleRepository
     {
         return Cache::remember('featured_articles', 3600, function () use ($limit) {
             return Article::query()
-                ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,name,slug'])
+                ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,slug,type,status', 'category.translations:id,category_id,locale,name'])
                 ->where('is_featured', true)
                 ->whereHas('locales', function ($q) {
                     $q->where('is_ready', true);
@@ -150,7 +150,7 @@ class ArticleRepository
         $tagIds = $article->tags->pluck('id')->toArray();
 
         return Article::query()
-            ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,name,slug'])
+            ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,slug,type,status', 'category.translations:id,category_id,locale,name'])
             ->where('id', '!=', $articleId)
             ->where(function ($query) use ($categoryIds, $tagIds) {
                 if (!empty($categoryIds)) {
@@ -218,8 +218,10 @@ class ArticleRepository
     {
         return DB::table('article_category')
             ->join('categories', 'categories.id', '=', 'article_category.category_id')
-            ->select('categories.id', 'categories.name', DB::raw('COUNT(*) as count'))
-            ->groupBy('categories.id', 'categories.name')
+            ->leftJoin('category_translations', 'category_translations.category_id', '=', 'categories.id')
+            ->where('category_translations.locale', app()->getLocale())
+            ->select('categories.id', 'category_translations.name', DB::raw('COUNT(*) as count'))
+            ->groupBy('categories.id', 'category_translations.name')
             ->orderBy('count', 'desc')
             ->get()
             ->toArray();
@@ -253,7 +255,7 @@ class ArticleRepository
         return Article::query()
             ->with(['locales' => function ($q) {
                 $q->where('is_ready', true);
-            }, 'writer:id,name', 'category:id,name'])
+            }, 'writer:id,name', 'category:id,slug,type,status', 'category.translations:id,category_id,locale,name'])
             ->whereHas('locales', function ($q) {
                 $q->where('is_ready', true);
             })
@@ -270,7 +272,7 @@ class ArticleRepository
         return Article::query()
             ->with(['locales' => function ($q) {
                 $q->where('is_ready', true);
-            }, 'writer:id,name', 'category:id,name'])
+            }, 'writer:id,name', 'category:id,slug,type,status', 'category.translations:id,category_id,locale,name'])
             ->whereHas('locales', function ($q) {
                 $q->where('is_ready', true);
             })
@@ -285,7 +287,7 @@ class ArticleRepository
     public function getArticlesByTag(int $tagId, int $perPage = 15): LengthAwarePaginator
     {
         return Article::query()
-            ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,name,slug'])
+            ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,slug,type,status', 'category.translations:id,category_id,locale,name'])
             ->whereHas('tags', function ($q) use ($tagId) {
                 $q->where('tags.id', $tagId);
             })
@@ -302,7 +304,7 @@ class ArticleRepository
     public function getArticlesByDateRange(string $dateFrom, string $dateTo, int $perPage = 15): LengthAwarePaginator
     {
         return Article::query()
-            ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,name,slug'])
+            ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,slug,type,status', 'category.translations:id,category_id,locale,name'])
             ->whereBetween('created_at', [$dateFrom, $dateTo])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
@@ -325,9 +327,12 @@ class ArticleRepository
         return Article::with([
             'locales:id,article_id,locale,title,slug,description,excerpt,content,seo_metadata,is_ready',
             'writer:id,name',
-            'category:id,name,slug',
-            'categories:id,name,slug',
-            'tags:id,name,slug',
+            'category:id,slug,type,status',
+            'category.translations:id,category_id,locale,name',
+            'categories:id,slug,type,status',
+            'categories.translations:id,category_id,locale,name',
+            'tags:id,slug',
+            'tags.translations:id,tag_id,locale,name',
             'media',
         ])->find($articleLocale->article_id);
     }
@@ -338,7 +343,7 @@ class ArticleRepository
     public function getPopularArticles(int $days = 30, int $limit = 10): Collection
     {
         return Article::query()
-            ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,name,slug'])
+            ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,slug,type,status', 'category.translations:id,category_id,locale,name'])
             ->where('created_at', '>=', now()->subDays($days))
             ->whereHas('locales', function ($q) {
                 $q->where('is_ready', true);
@@ -355,7 +360,7 @@ class ArticleRepository
     {
         return Cache::remember('trending_articles', 1800, function () use ($limit) {
             return Article::query()
-                ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,name,slug'])
+                ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,slug,type,status', 'category.translations:id,category_id,locale,name'])
                 ->where('created_at', '>=', now()->subDays(7))
                 ->whereHas('locales', function ($q) {
                     $q->where('is_ready', true);
