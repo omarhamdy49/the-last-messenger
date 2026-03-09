@@ -26,8 +26,8 @@ return new class extends Migration
             }
         });
 
-        // categories_translations table
-        Schema::create('categories_translations', function (Blueprint $table) {
+        // category_translations table
+        Schema::create('category_translations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('category_id')->constrained('categories')->cascadeOnDelete();
             $table->string('locale', 5);
@@ -42,8 +42,8 @@ return new class extends Migration
             }
         });
 
-        // tags_translations table
-        Schema::create('tags_translations', function (Blueprint $table) {
+        // tag_translations table
+        Schema::create('tag_translations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tag_id')->constrained('tags')->cascadeOnDelete();
             $table->string('locale', 5);
@@ -61,8 +61,8 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('tags_translations');
-        Schema::dropIfExists('categories_translations');
+        Schema::dropIfExists('tag_translations');
+        Schema::dropIfExists('category_translations');
         Schema::dropIfExists('series_translations');
     }
 };

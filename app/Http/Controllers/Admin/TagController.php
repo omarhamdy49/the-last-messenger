@@ -56,10 +56,11 @@ class TagController extends Controller
         );
 
         // Get statistics for stats cards
+        $mostUsedTag = $this->service->getMostUsedTag();
         $stats = [
             'total' => $this->service->count(),
             'total_uses' => $this->service->getTotalUsageCount(),
-            'most_used' => $this->service->getMostUsedTag(),
+            'most_used' => $mostUsedTag ? $mostUsedTag->getTranslation('name', app()->getLocale()) : 'N/A',
             'recent' => $this->service->getRecentlyAddedCount(7),
         ];
 
