@@ -490,4 +490,3 @@ function tagManagement() {
 }
 </script>
 @endpush
-@endsection
