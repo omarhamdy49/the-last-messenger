@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domain\Shared\Models;
 
+use App\Domain\Shared\Traits\HasLocalizedContent;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Spatie\Translatable\HasTranslations;
 
 /**
  * Language Model
@@ -28,7 +28,7 @@ use Spatie\Translatable\HasTranslations;
  */
 class Language extends Model
 {
-    use HasTranslations;
+    use HasLocalizedContent;
 
     /**
      * The attributes that are mass assignable.
@@ -37,7 +37,6 @@ class Language extends Model
      */
     protected $fillable = [
         'code',
-        'name',
         'native_name',
         'direction',
         'is_active',
@@ -52,18 +51,26 @@ class Language extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'name' => 'array',
         'is_active' => 'boolean',
         'is_default' => 'boolean',
         'sort_order' => 'integer',
     ];
 
     /**
-     * The translatable attributes.
-     *
-     * @var array<int, string>
+     * Get the FQCN of the translation model.
      */
-    public $translatable = ['name'];
+    public function getTranslationModelClass(): string
+    {
+        return LanguageTranslation::class;
+    }
+
+    /**
+     * Get the list of translatable field names.
+     */
+    public function getTranslatableFields(): array
+    {
+        return ['name'];
+    }
 
     /**
      * Scope: Get only active languages.

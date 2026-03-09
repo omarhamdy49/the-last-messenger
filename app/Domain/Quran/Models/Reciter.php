@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Models;
 
+use App\Domain\Shared\Traits\HasLocalizedContent;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
-use Spatie\Translatable\HasTranslations;
 
 /**
  * Reciter Model (Quran Reciter/Qari)
@@ -30,7 +30,7 @@ use Spatie\Translatable\HasTranslations;
  */
 class Reciter extends Model
 {
-    use HasFactory, HasTranslations;
+    use HasFactory, HasLocalizedContent;
 
     /**
      * The table associated with the model.
@@ -44,8 +44,6 @@ class Reciter extends Model
      */
     protected $fillable = [
         'slug',
-        'name',
-        'description',
         'style',
         'country',
         'profile_image',
@@ -60,22 +58,26 @@ class Reciter extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'name' => 'array',
-        'description' => 'array',
         'is_featured' => 'boolean',
         'is_active' => 'boolean',
         'display_order' => 'integer',
     ];
 
     /**
-     * Translatable attributes
-     *
-     * @var array<string>
+     * Get the FQCN of the translation model.
      */
-    public array $translatable = [
-        'name',
-        'description',
-    ];
+    public function getTranslationModelClass(): string
+    {
+        return ReciterTranslation::class;
+    }
+
+    /**
+     * Get the list of translatable field names.
+     */
+    public function getTranslatableFields(): array
+    {
+        return ['name', 'description'];
+    }
 
     /**
      * Boot the model

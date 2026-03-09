@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Domain\Seerah\Models;
 
 use App\Domain\Seerah\Enums\ParticipantRole;
+use App\Domain\Shared\Traits\HasLocalizedContent;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Spatie\Translatable\HasTranslations;
 
 /**
  * SeerahParticipant Model
@@ -25,7 +25,7 @@ use Spatie\Translatable\HasTranslations;
  */
 class SeerahParticipant extends Model
 {
-    use HasFactory, HasTranslations;
+    use HasFactory, HasLocalizedContent;
 
     /**
      * The table associated with the model.
@@ -43,9 +43,7 @@ class SeerahParticipant extends Model
         'event_id',
         'participant_type',
         'participant_id',
-        'name',
         'role',
-        'description',
     ];
 
     /**
@@ -54,17 +52,24 @@ class SeerahParticipant extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'name' => 'array',
-        'description' => 'array',
         'role' => ParticipantRole::class,
     ];
 
     /**
-     * Translatable attributes
-     *
-     * @var array<string>
+     * Get the FQCN of the translation model.
      */
-    public array $translatable = ['name', 'description'];
+    public function getTranslationModelClass(): string
+    {
+        return SeerahParticipantTranslation::class;
+    }
+
+    /**
+     * Get the list of translatable field names.
+     */
+    public function getTranslatableFields(): array
+    {
+        return ['name', 'description'];
+    }
 
     /**
      * Get the event this participant belongs to

@@ -37,7 +37,7 @@ class SahabiController extends Controller
     public function index(Request $request): View|JsonResponse
     {
         $perPage = $request->integer('per_page', 15);
-        $sahaba = $this->sahabiService->paginate($perPage, ['*'], []);
+        $sahaba = $this->sahabiService->paginate($perPage, ['*'], ['translations']);
 
         $sahabiCounts = DB::table('sahaba')
             ->selectRaw("
@@ -95,6 +95,8 @@ class SahabiController extends Controller
             abort(404, 'Sahabi not found');
         }
 
+        $sahabi->loadMissing('translations');
+
         return view('admin.sahaba.edit', compact('sahabi'));
     }
 
@@ -107,10 +109,16 @@ class SahabiController extends Controller
     {
         $data = $request->validated();
 
+        // Separate translatable data from model data
+        $translatableData = $this->extractTranslatableData($data);
+
         // Handle is_featured checkbox (unchecked checkboxes are not sent)
         $data['is_featured'] = $request->boolean('is_featured');
 
         $sahabi = $this->sahabiService->create($data);
+
+        // Sync translations
+        $sahabi->syncTranslations($translatableData);
 
         // Handle profile image (file upload or media picker selection)
         if ($request->hasFile('profile_image')) {
@@ -162,6 +170,8 @@ class SahabiController extends Controller
             abort(404, 'Sahabi not found');
         }
 
+        $sahabi->loadMissing('translations');
+
         return view('admin.sahaba.show', compact('sahabi'));
     }
 
@@ -183,6 +193,9 @@ class SahabiController extends Controller
 
         $data = $request->validated();
 
+        // Separate translatable data from model data
+        $translatableData = $this->extractTranslatableData($data);
+
         // Handle is_featured checkbox (unchecked checkboxes are not sent)
         $data['is_featured'] = $request->boolean('is_featured');
 
@@ -190,6 +203,9 @@ class SahabiController extends Controller
         $this->sahabiService->update($id, $data);
 
         $sahabi = $this->sahabiService->find($id);
+
+        // Sync translations
+        $sahabi->syncTranslations($translatableData);
 
         // Handle profile image (file upload or media picker selection)
         if ($request->hasFile('profile_image')) {
@@ -309,7 +325,7 @@ class SahabiController extends Controller
         $query = $request->input('q');
         $perPage = $request->integer('per_page', 15);
 
-        $sahaba = $this->sahabiService->search($query, $perPage);
+        $sahaba = $this->sahabiService->searchCompanions($query, $perPage);
 
         return response()->json([
             'success' => true,
@@ -321,5 +337,27 @@ class SahabiController extends Controller
                 'total' => $sahaba->total(),
             ],
         ]);
+    }
+
+    /**
+     * Extract translatable fields from validated data.
+     * Removes them from $data (by reference) so the model doesn't receive them.
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, array<string, string>>
+     */
+    private function extractTranslatableData(array &$data): array
+    {
+        $translatableFields = ['name', 'full_name', 'kunya', 'laqab', 'biography', 'virtues', 'famous_narrations'];
+        $translatableData = [];
+
+        foreach ($translatableFields as $field) {
+            if (isset($data[$field]) && is_array($data[$field])) {
+                $translatableData[$field] = $data[$field];
+                unset($data[$field]);
+            }
+        }
+
+        return $translatableData;
     }
 }

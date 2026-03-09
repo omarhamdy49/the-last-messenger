@@ -112,7 +112,7 @@ class SeerahEventCrudTest extends TestCase
         Storage::disk('public')->assertMissing($oldImagePath);
         Storage::disk('public')->assertExists($event->featured_image);
 
-        $response = $this->getJson('/api/seerah/battle-of-badr');
+        $response = $this->getJson('/api/v1/seerah/battle-of-badr');
 
         $response->assertOk()
             ->assertJsonPath('success', true)

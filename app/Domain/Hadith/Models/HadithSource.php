@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Hadith\Models;
 
+use App\Domain\Shared\Traits\HasLocalizedContent;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Spatie\Translatable\HasTranslations;
 
 /**
  * HadithSource Model
@@ -27,7 +27,7 @@ use Spatie\Translatable\HasTranslations;
  */
 class HadithSource extends Model
 {
-    use HasTranslations;
+    use HasLocalizedContent;
 
     /**
      * The table associated with the model.
@@ -46,28 +46,20 @@ class HadithSource extends Model
         'source_book',
         'reference_code',
         'arabic_ref',
-        'name',
-        'description',
         'type',
     ];
 
-    /**
-     * Translatable attributes
-     *
-     * @var array<string>
-     */
-    public array $translatable = [
-        'name',
-        'description',
-    ];
-
-    /**
-     * Disable timestamps if table doesn't have them
-     * (Based on migration, the table doesn't have created_at/updated_at)
-     *
-     * @var bool
-     */
     public $timestamps = false;
+
+    public function getTranslationModelClass(): string
+    {
+        return HadithSourceTranslation::class;
+    }
+
+    public function getTranslatableFields(): array
+    {
+        return ['name', 'description'];
+    }
 
     /**
      * Get the Hadith this source belongs to

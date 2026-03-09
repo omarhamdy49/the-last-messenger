@@ -22,10 +22,10 @@ class SahabiResource extends JsonResource
         return [
             'id' => $this->id,
             'slug' => $this->slug,
-            'name' => $this->name,
-            'full_name' => $this->full_name,
-            'kunya' => $this->kunya,
-            'laqab' => $this->laqab,
+            'name' => $this->getTranslations('name'),
+            'full_name' => $this->getTranslations('full_name'),
+            'kunya' => $this->getTranslations('kunya'),
+            'laqab' => $this->getTranslations('laqab'),
             'display_name' => $this->when(
                 $request->has('lang'),
                 fn () => $this->getDisplayName($request->input('lang', 'ar'))

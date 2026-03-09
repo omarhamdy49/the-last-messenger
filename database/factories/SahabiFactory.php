@@ -6,6 +6,7 @@ namespace Database\Factories;
 
 use App\Domain\Sahaba\Enums\CompanionStatus;
 use App\Domain\Sahaba\Models\Sahabi;
+use App\Domain\Sahaba\Models\SahabiTranslation;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -78,14 +79,44 @@ class SahabiFactory extends Factory
 
     /**
      * Configure the model factory.
-     *
-     * @return $this
      */
     public function configure(): static
     {
-        return $this->afterMaking(function (Sahabi $sahabi) {
-            // Spatie HasTranslations trait requires special handling
-            // The translations are already set via rawAttributes, no additional action needed
+        return $this->afterCreating(function (Sahabi $sahabi) {
+            $arabicName = $this->faker->randomElement($this->famousCompanions);
+            $englishName = 'Companion '.$this->faker->firstName();
+            $hasLaqab = $this->faker->boolean(50);
+            $hasNarrations = $this->faker->boolean(60);
+
+            foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $locale) {
+                $isArabic = in_array($locale, ['ar', 'ur']);
+
+                SahabiTranslation::create([
+                    'sahabi_id' => $sahabi->id,
+                    'locale' => $locale,
+                    'name' => $isArabic ? $arabicName : $englishName,
+                    'full_name' => $isArabic
+                        ? $arabicName.' '.$this->faker->words(2, true)
+                        : $englishName.' '.$this->faker->lastName(),
+                    'kunya' => match ($locale) {
+                        'ar', 'ur' => 'أبو '.$this->faker->firstName(),
+                        'fr' => 'Abou '.$this->faker->firstName(),
+                        'tr' => 'Ebu '.$this->faker->firstName(),
+                        default => 'Abu '.$this->faker->firstName(),
+                    },
+                    'laqab' => $hasLaqab ? match ($locale) {
+                        'ar', 'ur' => $this->faker->randomElement(['الصديق', 'الفاروق', 'ذو النورين', 'الأمين']),
+                        'en' => $this->faker->randomElement(['The Truthful', 'The Criterion', 'The Trustworthy']),
+                        'fr' => $this->faker->randomElement(['Le Véridique', 'Le Critère', 'Le Digne de Confiance']),
+                        'tr' => $this->faker->randomElement(['Sadık', 'Ayırıcı', 'Güvenilir']),
+                        default => null,
+                    } : null,
+                    'biography' => $this->faker->paragraphs(5, true),
+                    'virtues' => $this->faker->paragraphs(3, true),
+                    'famous_narrations' => $hasNarrations ? $this->faker->paragraphs(2, true) : null,
+                    'is_ready' => true,
+                ]);
+            }
         });
     }
 
@@ -96,63 +127,13 @@ class SahabiFactory extends Factory
      */
     public function definition(): array
     {
-        $arabicName = $this->faker->randomElement($this->famousCompanions);
         $englishName = 'Companion '.$this->faker->firstName();
         $slug = Str::slug($englishName).'-'.$this->faker->unique()->numberBetween(1, 10000);
 
         return [
             'slug' => $slug,
-            'name' => json_encode([
-                'ar' => $arabicName,
-                'en' => $englishName,
-                'fr' => $englishName,
-                'tr' => $englishName,
-                'ur' => $arabicName,
-            ]),
-            'full_name' => [
-                'ar' => $arabicName.' '.$this->faker->words(2, true),
-                'en' => $englishName.' '.$this->faker->lastName(),
-                'fr' => $englishName.' '.$this->faker->lastName(),
-                'tr' => $englishName.' '.$this->faker->lastName(),
-                'ur' => $arabicName.' '.$this->faker->words(2, true),
-            ],
-            'kunya' => [
-                'ar' => 'أبو '.$this->faker->firstName(),
-                'en' => 'Abu '.$this->faker->firstName(),
-                'fr' => 'Abou '.$this->faker->firstName(),
-                'tr' => 'Ebu '.$this->faker->firstName(),
-                'ur' => 'أبو '.$this->faker->firstName(),
-            ],
-            'laqab' => $this->faker->optional(0.5)->passthrough([
-                'ar' => $this->faker->randomElement(['الصديق', 'الفاروق', 'ذو النورين', 'الأمين']),
-                'en' => $this->faker->randomElement(['The Truthful', 'The Criterion', 'The Trustworthy']),
-                'fr' => $this->faker->randomElement(['Le Véridique', 'Le Critère', 'Le Digne de Confiance']),
-                'tr' => $this->faker->randomElement(['Sadık', 'Ayırıcı', 'Güvenilir']),
-                'ur' => $this->faker->randomElement(['الصديق', 'الفاروق', 'ذو النورين', 'الأمين']),
-            ]),
             'gender' => 'male',
             'status' => $this->faker->randomElement(CompanionStatus::cases()),
-            'biography' => [
-                'ar' => $this->faker->paragraphs(5, true),
-                'en' => $this->faker->paragraphs(5, true),
-                'fr' => $this->faker->paragraphs(5, true),
-                'tr' => $this->faker->paragraphs(5, true),
-                'ur' => $this->faker->paragraphs(5, true),
-            ],
-            'virtues' => [
-                'ar' => $this->faker->paragraphs(3, true),
-                'en' => $this->faker->paragraphs(3, true),
-                'fr' => $this->faker->paragraphs(3, true),
-                'tr' => $this->faker->paragraphs(3, true),
-                'ur' => $this->faker->paragraphs(3, true),
-            ],
-            'famous_narrations' => $this->faker->optional(0.6)->passthrough([
-                'ar' => $this->faker->paragraphs(2, true),
-                'en' => $this->faker->paragraphs(2, true),
-                'fr' => $this->faker->paragraphs(2, true),
-                'tr' => $this->faker->paragraphs(2, true),
-                'ur' => $this->faker->paragraphs(2, true),
-            ]),
             'birth_date_hijri' => $this->faker->optional(0.5)->numberBetween(-50, -10).' قبل الهجرة',
             'death_date_hijri' => $this->faker->optional(0.7)->numberBetween(10, 60).' هـ',
             'birth_date_gregorian' => $this->faker->optional(0.5)->dateTimeBetween('-1500 years', '-1400 years'),
@@ -203,17 +184,27 @@ class SahabiFactory extends Factory
             'أسماء بنت أبي بكر',
         ];
 
+        $arabicName = $this->faker->randomElement($femaleNames);
+
         return $this->state(fn (array $attributes) => [
             'gender' => 'female',
-            'name' => [
-                'ar' => $this->faker->randomElement($femaleNames),
+            'battles' => [], // Women typically didn't participate in battles
+        ])->afterCreating(function (Sahabi $sahabi) use ($arabicName) {
+            $names = [
+                'ar' => $arabicName,
                 'en' => 'Female Companion '.$this->faker->firstName('female'),
                 'fr' => 'Compagnonne '.$this->faker->firstName('female'),
                 'tr' => 'Sahabe '.$this->faker->firstName('female'),
-                'ur' => $this->faker->randomElement($femaleNames),
-            ],
-            'battles' => [], // Women typically didn't participate in battles
-        ]);
+                'ur' => $arabicName,
+            ];
+
+            foreach ($names as $locale => $name) {
+                $sahabi->translations()->updateOrCreate(
+                    ['locale' => $locale],
+                    ['name' => $name]
+                );
+            }
+        });
     }
 
     /**

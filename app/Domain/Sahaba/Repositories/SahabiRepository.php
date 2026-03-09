@@ -35,7 +35,7 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
         return $this->model
             ->byStatus($status)
             ->byImportance()
-            ->with(['article'])
+            ->with(['translations', 'article'])
             ->paginate($perPage);
     }
 
@@ -47,7 +47,7 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
         return $this->model
             ->byTribe($tribe)
             ->byImportance()
-            ->with(['article'])
+            ->with(['translations', 'article'])
             ->paginate($perPage);
     }
 
@@ -59,7 +59,7 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
         return $this->model
             ->participatedIn($battle)
             ->byImportance()
-            ->with(['article'])
+            ->with(['translations', 'article'])
             ->paginate($perPage);
     }
 
@@ -74,7 +74,7 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
             fn () => $this->model
                 ->featured()
                 ->byImportance()
-                ->with(['article'])
+                ->with(['translations', 'article'])
                 ->limit($limit)
                 ->get()
         );
@@ -90,7 +90,7 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
             self::CACHE_TTL,
             fn () => $this->model
                 ->earlyMuslims($limit)
-                ->with(['article'])
+                ->with(['translations', 'article'])
                 ->get()
         );
     }
@@ -105,26 +105,28 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
             self::CACHE_TTL,
             fn () => $this->model
                 ->topNarrators($limit)
-                ->with(['article'])
+                ->with(['translations', 'article'])
                 ->get()
         );
     }
 
     /**
-     * Search companions
+     * Search companions via translation table
      */
     public function search(string $query, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model
             ->where(function ($q) use ($query) {
-                $q->whereRaw("JSON_SEARCH(name, 'one', ?) IS NOT NULL", ["%{$query}%"])
-                    ->orWhereRaw("JSON_SEARCH(full_name, 'one', ?) IS NOT NULL", ["%{$query}%"])
-                    ->orWhereRaw("JSON_SEARCH(kunya, 'one', ?) IS NOT NULL", ["%{$query}%"])
-                    ->orWhereRaw("JSON_SEARCH(laqab, 'one', ?) IS NOT NULL", ["%{$query}%"])
-                    ->orWhere('tribe', 'like', "%{$query}%");
+                $q->whereHas('translations', function ($tq) use ($query) {
+                    $tq->where('name', 'LIKE', "%{$query}%")
+                        ->orWhere('full_name', 'LIKE', "%{$query}%")
+                        ->orWhere('kunya', 'LIKE', "%{$query}%")
+                        ->orWhere('laqab', 'LIKE', "%{$query}%");
+                })
+                ->orWhere('tribe', 'like', "%{$query}%");
             })
             ->byImportance()
-            ->with(['article'])
+            ->with(['translations', 'article'])
             ->paginate($perPage);
     }
 
@@ -133,7 +135,7 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
      */
     public function findBySlug(string $slug, array $columns = ['*'], array $relations = []): ?Model
     {
-        $defaultRelations = ['article', 'father', 'mother'];
+        $defaultRelations = ['translations', 'article', 'father', 'mother'];
         $relations = empty($relations) ? $defaultRelations : $relations;
 
         return Cache::remember(

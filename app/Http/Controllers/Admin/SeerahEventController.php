@@ -40,7 +40,7 @@ class SeerahEventController extends Controller
     public function index(Request $request): View|JsonResponse
     {
         $perPage = $request->integer('per_page', 15);
-        $events = $this->seerahEventService->paginate($perPage, ['*'], []);
+        $events = $this->seerahEventService->paginate($perPage, ['*'], ['translations']);
 
         // Single aggregate query to replace N+1 count-per-category queries
         $eventCountRows = DB::table('seerah_events')
@@ -96,6 +96,9 @@ class SeerahEventController extends Controller
     {
         $data = $request->validated();
 
+        // Separate translatable data from model data
+        $translatableData = $this->extractTranslatableData($data);
+
         // Handle is_featured checkbox (unchecked checkboxes are not sent)
         $data['is_featured'] = $request->boolean('is_featured');
 
@@ -105,6 +108,9 @@ class SeerahEventController extends Controller
         }
 
         $event = $this->seerahEventService->create($data);
+
+        // Sync translations
+        $event->syncTranslations($translatableData);
 
         // Log the creation
         $this->logger->logCreate($event, $request->user());
@@ -126,7 +132,7 @@ class SeerahEventController extends Controller
             abort(404, 'Seerah event not found');
         }
 
-        $event->loadMissing(['article.locales', 'article.mediaItems', 'participants']);
+        $event->loadMissing(['translations', 'article.locales', 'article.mediaItems', 'participants']);
 
         return view('admin.seerah-events.show', compact('event'));
     }
@@ -144,7 +150,7 @@ class SeerahEventController extends Controller
             abort(404, 'Seerah event not found');
         }
 
-        $event->loadMissing('article.locales');
+        $event->loadMissing(['translations', 'article.locales']);
         $articles = Article::query()
             ->with('locales')
             ->orderByDesc('id')
@@ -171,6 +177,9 @@ class SeerahEventController extends Controller
 
         $data = $request->validated();
 
+        // Separate translatable data from model data
+        $translatableData = $this->extractTranslatableData($data);
+
         // Handle is_featured checkbox (unchecked checkboxes are not sent)
         $data['is_featured'] = $request->boolean('is_featured');
 
@@ -184,6 +193,9 @@ class SeerahEventController extends Controller
         $this->seerahEventService->update($id, $data);
 
         $event = $this->seerahEventService->find($id);
+
+        // Sync translations
+        $event->syncTranslations($translatableData);
 
         // Log the update with diff
         $this->logger->logUpdate($event, $oldValues, $event->toArray(), $request->user());
@@ -277,6 +289,28 @@ class SeerahEventController extends Controller
                 'total' => $events->total(),
             ],
         ]);
+    }
+
+    /**
+     * Extract translatable fields from validated data.
+     * Removes them from $data (by reference) so the model doesn't receive them.
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, array<string, string>>
+     */
+    private function extractTranslatableData(array &$data): array
+    {
+        $translatableFields = ['title', 'description', 'content'];
+        $translatableData = [];
+
+        foreach ($translatableFields as $field) {
+            if (isset($data[$field]) && is_array($data[$field])) {
+                $translatableData[$field] = $data[$field];
+                unset($data[$field]);
+            }
+        }
+
+        return $translatableData;
     }
 
     private function deleteFeaturedImage(?string $path): void

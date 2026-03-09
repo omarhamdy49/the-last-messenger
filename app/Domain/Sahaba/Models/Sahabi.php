@@ -5,31 +5,24 @@ declare(strict_types=1);
 namespace App\Domain\Sahaba\Models;
 
 use App\Domain\Sahaba\Enums\CompanionStatus;
+use App\Domain\Shared\Traits\HasInteractions;
+use App\Domain\Shared\Traits\HasLocalizedContent;
 use App\Models\Article;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Domain\Shared\Traits\HasInteractions;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
-use Spatie\Translatable\HasTranslations;
 
 /**
  * Sahabi Model (Companion of Prophet Muhammad ﷺ)
  *
  * @property int $id
  * @property string $slug
- * @property array $name
- * @property array|null $full_name
- * @property array|null $kunya
- * @property array|null $laqab
  * @property string $gender
  * @property CompanionStatus $status
- * @property array|null $biography
- * @property array|null $virtues
- * @property array|null $famous_narrations
  * @property string|null $birth_date_hijri
  * @property string|null $death_date_hijri
  * @property \Carbon\Carbon|null $birth_date_gregorian
@@ -59,7 +52,7 @@ use Spatie\Translatable\HasTranslations;
  */
 class Sahabi extends Model implements HasMedia
 {
-    use HasFactory, HasTranslations, InteractsWithMedia, SoftDeletes, HasInteractions;
+    use HasFactory, HasLocalizedContent, InteractsWithMedia, SoftDeletes, HasInteractions;
 
     /**
      * The table associated with the model.
@@ -75,15 +68,8 @@ class Sahabi extends Model implements HasMedia
      */
     protected $fillable = [
         'slug',
-        'name',
-        'full_name',
-        'kunya',
-        'laqab',
         'gender',
         'status',
-        'biography',
-        'virtues',
-        'famous_narrations',
         'birth_date_hijri',
         'death_date_hijri',
         'birth_date_gregorian',
@@ -115,13 +101,6 @@ class Sahabi extends Model implements HasMedia
      * @var array<string, string>
      */
     protected $casts = [
-        'name' => 'array',
-        'full_name' => 'array',
-        'kunya' => 'array',
-        'laqab' => 'array',
-        'biography' => 'array',
-        'virtues' => 'array',
-        'famous_narrations' => 'array',
         'birth_date_gregorian' => 'date',
         'death_date_gregorian' => 'date',
         'age_at_death' => 'integer',
@@ -137,19 +116,28 @@ class Sahabi extends Model implements HasMedia
     ];
 
     /**
-     * Translatable attributes
-     *
-     * @var array<string>
+     * Get the translation model class.
      */
-    public array $translatable = [
-        'name',
-        'full_name',
-        'kunya',
-        'laqab',
-        'biography',
-        'virtues',
-        'famous_narrations',
-    ];
+    public function getTranslationModelClass(): string
+    {
+        return SahabiTranslation::class;
+    }
+
+    /**
+     * Get the list of translatable field names.
+     */
+    public function getTranslatableFields(): array
+    {
+        return ['name', 'full_name', 'kunya', 'laqab', 'biography', 'virtues', 'famous_narrations'];
+    }
+
+    /**
+     * Get the foreign key name for translations.
+     */
+    public function getTranslationForeignKey(): string
+    {
+        return 'sahabi_id';
+    }
 
     /**
      * Get the related article
@@ -208,8 +196,8 @@ class Sahabi extends Model implements HasMedia
      */
     public function getDisplayName(string $language = 'ar'): string
     {
-        $name = $this->name[$language] ?? $this->name['ar'] ?? '';
-        $laqab = $this->laqab[$language] ?? null;
+        $name = $this->getTranslation('name', $language) ?? '';
+        $laqab = $this->getTranslation('laqab', $language);
 
         if ($laqab) {
             return "{$name} {$laqab}";

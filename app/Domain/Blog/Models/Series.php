@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Domain\Blog\Models;
 
+use App\Domain\Shared\Traits\HasLocalizedContent;
 use App\Models\Article;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Spatie\Translatable\HasTranslations;
 
 /**
  * Series Model
@@ -25,7 +25,7 @@ use Spatie\Translatable\HasTranslations;
  */
 class Series extends Model
 {
-    use HasFactory, HasTranslations;
+    use HasFactory, HasLocalizedContent;
 
     /**
      * The attributes that are mass assignable.
@@ -34,26 +34,31 @@ class Series extends Model
      */
     protected $fillable = [
         'slug',
-        'title',
-        'description',
         'thumbnail',
         'total_articles',
     ];
-
-    /**
-     * Translatable attributes
-     * Handled by Spatie\Translatable\HasTranslations trait
-     * Do NOT add these to $casts as it conflicts with HasTranslations
-     *
-     * @var array<string>
-     */
-    public array $translatable = ['title', 'description'];
 
     protected function casts(): array
     {
         return [
             'total_articles' => 'integer',
         ];
+    }
+
+    /**
+     * Get the FQCN of the translation model.
+     */
+    public function getTranslationModelClass(): string
+    {
+        return SeriesTranslation::class;
+    }
+
+    /**
+     * Get the list of translatable field names.
+     */
+    public function getTranslatableFields(): array
+    {
+        return ['title', 'description'];
     }
 
     /**
@@ -75,41 +80,4 @@ class Series extends Model
         $this->updateQuietly(['total_articles' => $this->articles()->count()]);
     }
 
-    /**
-     * Get all translations for title attribute
-     * Returns the raw JSON decoded to array
-     */
-    public function getTitleTranslations(): array
-    {
-        $raw = $this->getAttributes()['title'] ?? '{}';
-        return is_string($raw) ? json_decode($raw, true) : $raw;
-    }
-
-    /**
-     * Get all translations for description attribute
-     * Returns the raw JSON decoded to array
-     */
-    public function getDescriptionTranslations(): array
-    {
-        $raw = $this->getAttributes()['description'] ?? '{}';
-        return is_string($raw) ? json_decode($raw, true) : $raw;
-    }
-
-    /**
-     * Get title in specified language
-     */
-    public function getTitleInLanguage(string $language): ?string
-    {
-        $translations = $this->getTitleTranslations();
-        return $translations[$language] ?? $translations['ar'] ?? null;
-    }
-
-    /**
-     * Get description in specified language
-     */
-    public function getDescriptionInLanguage(string $language): ?string
-    {
-        $translations = $this->getDescriptionTranslations();
-        return $translations[$language] ?? $translations['ar'] ?? null;
-    }
 }

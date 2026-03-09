@@ -89,23 +89,26 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
             'seerah_events_with_location',
             self::CACHE_TTL,
             fn () => $this->model
+                ->with('translations')
                 ->withLocation()
                 ->chronological()
-                ->get(['id', 'slug', 'title', 'location', 'latitude', 'longitude', 'event_type', 'hijri_year'])
+                ->get(['id', 'slug', 'location', 'latitude', 'longitude', 'event_type', 'hijri_year'])
         );
     }
 
     /**
-     * Search events
+     * Search events via translation table
      */
     public function search(string $query, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model
             ->with($this->defaultRelations())
             ->where(function ($q) use ($query) {
-                $q->whereRaw("JSON_SEARCH(title, 'one', ?) IS NOT NULL", ["%{$query}%"])
-                    ->orWhereRaw("JSON_SEARCH(description, 'one', ?) IS NOT NULL", ["%{$query}%"])
-                    ->orWhere('location', 'like', "%{$query}%");
+                $q->whereHas('translations', function ($tq) use ($query) {
+                    $tq->where('title', 'LIKE', "%{$query}%")
+                        ->orWhere('description', 'LIKE', "%{$query}%");
+                })
+                ->orWhere('location', 'like', "%{$query}%");
             })
             ->chronological()
             ->paginate($perPage);
@@ -147,6 +150,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     private function defaultRelations(): array
     {
         return [
+            'translations',
             'article.locales',
             'article.category',
             'article.categories',

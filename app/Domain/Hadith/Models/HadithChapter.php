@@ -2,12 +2,12 @@
 
 namespace App\Domain\Hadith\Models;
 
+use App\Domain\Shared\Traits\HasLocalizedContent;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
-use Spatie\Translatable\HasTranslations;
 
 /**
  * Class HadithChapter
@@ -38,7 +38,7 @@ use Spatie\Translatable\HasTranslations;
 class HadithChapter extends Model
 {
     use HasFactory;
-    use HasTranslations;
+    use HasLocalizedContent;
 
     /**
      * The table associated with the model.
@@ -55,19 +55,7 @@ class HadithChapter extends Model
     protected $fillable = [
         'book_id',
         'chapter_number',
-        'name',
-        'description',
         'display_order',
-    ];
-
-    /**
-     * The attributes that should be translatable.
-     *
-     * @var array<int, string>
-     */
-    public array $translatable = [
-        'name',
-        'description',
     ];
 
     /**
@@ -82,6 +70,22 @@ class HadithChapter extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    /**
+     * Get the FQCN of the translation model.
+     */
+    public function getTranslationModelClass(): string
+    {
+        return HadithChapterTranslation::class;
+    }
+
+    /**
+     * Get the list of translatable field names.
+     */
+    public function getTranslatableFields(): array
+    {
+        return ['name', 'description'];
+    }
 
     /**
      * Get the book that this chapter belongs to.

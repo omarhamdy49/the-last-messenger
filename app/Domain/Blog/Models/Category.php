@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Blog\Models;
 
 use App\Domain\Blog\Enums\CategoryType;
+use App\Domain\Shared\Traits\HasLocalizedContent;
 use App\Models\Article;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,7 +16,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
-use Spatie\Translatable\HasTranslations;
 
 /**
  * Category Model
@@ -40,7 +40,7 @@ use Spatie\Translatable\HasTranslations;
  */
 class Category extends Model
 {
-    use HasFactory, HasTranslations, SoftDeletes;
+    use HasFactory, HasLocalizedContent, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -51,8 +51,6 @@ class Category extends Model
         'slug',
         'type',
         'status',
-        'name',
-        'description',
         'parent_id',
         'lft',
         'rgt',
@@ -62,15 +60,6 @@ class Category extends Model
         'display_order',
     ];
 
-    /**
-     * Translatable attributes
-     * Handled by Spatie\Translatable\HasTranslations trait
-     * Do NOT add these to $casts as it conflicts with HasTranslations
-     *
-     * @var array<string>
-     */
-    public array $translatable = ['name', 'description'];
-
     protected $casts = [
         'type' => CategoryType::class,
         'display_order' => 'integer',
@@ -78,6 +67,22 @@ class Category extends Model
         'rgt' => 'integer',
         'depth' => 'integer',
     ];
+
+    /**
+     * Get the FQCN of the translation model.
+     */
+    public function getTranslationModelClass(): string
+    {
+        return CategoryTranslation::class;
+    }
+
+    /**
+     * Get the list of translatable field names.
+     */
+    public function getTranslatableFields(): array
+    {
+        return ['name', 'description'];
+    }
 
     /**
      * Boot the model
@@ -90,17 +95,15 @@ class Category extends Model
         static::creating(function ($model) {
             if (empty($model->slug)) {
                 // Generate slug from English name, fallback to Arabic
-                $nameTranslations = json_decode($model->getAttributes()['name'] ?? '{}', true);
-                $name = $nameTranslations['en'] ?? $nameTranslations['ar'] ?? 'category';
+                $name = $model->getTranslation('name', 'en') ?? $model->getTranslation('name', 'ar') ?? 'category';
                 $model->slug = Str::slug($name);
             }
         });
 
         // Update slug if name changes
         static::updating(function ($model) {
-            if ($model->isDirty('name') && empty($model->slug)) {
-                $nameTranslations = json_decode($model->getAttributes()['name'] ?? '{}', true);
-                $name = $nameTranslations['en'] ?? $nameTranslations['ar'] ?? 'category';
+            if ($model->isDirty('translations') && empty($model->slug)) {
+                $name = $model->getTranslation('name', 'en') ?? $model->getTranslation('name', 'ar') ?? 'category';
                 $model->slug = Str::slug($name);
             }
         });
@@ -179,41 +182,19 @@ class Category extends Model
     }
 
     /**
-     * Get all translations for name attribute
-     * Returns the raw JSON decoded to array
-     */
-    public function getNameTranslations(): array
-    {
-        $raw = $this->getAttributes()['name'] ?? '{}';
-        return is_string($raw) ? json_decode($raw, true) : $raw;
-    }
-
-    /**
-     * Get all translations for description attribute
-     * Returns the raw JSON decoded to array
-     */
-    public function getDescriptionTranslations(): array
-    {
-        $raw = $this->getAttributes()['description'] ?? '{}';
-        return is_string($raw) ? json_decode($raw, true) : $raw;
-    }
-
-    /**
-     * Get name in specified language
+     * Get name in specified language (backward-compatible shorthand)
      */
     public function getNameInLanguage(string $language): ?string
     {
-        $translations = $this->getNameTranslations();
-        return $translations[$language] ?? $translations['ar'] ?? null;
+        return $this->getTranslation('name', $language);
     }
 
     /**
-     * Get description in specified language
+     * Get description in specified language (backward-compatible shorthand)
      */
     public function getDescriptionInLanguage(string $language): ?string
     {
-        $translations = $this->getDescriptionTranslations();
-        return $translations[$language] ?? $translations['ar'] ?? null;
+        return $this->getTranslation('description', $language);
     }
 
     /**

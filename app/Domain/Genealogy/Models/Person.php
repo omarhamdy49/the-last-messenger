@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Domain\Genealogy\Models;
 
 use App\Domain\Genealogy\Enums\PersonType;
+use App\Domain\Shared\Traits\HasLocalizedContent;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
-use Spatie\Translatable\HasTranslations;
 
 /**
  * Person Model
@@ -19,31 +19,23 @@ use Spatie\Translatable\HasTranslations;
  */
 class Person extends Model implements HasMedia
 {
-    use HasTranslations, InteractsWithMedia, SoftDeletes;
+    use HasLocalizedContent, InteractsWithMedia, SoftDeletes;
 
     protected $table = 'people';
 
     protected $fillable = [
-        'name',
         'slug',
-        'title',
-        'biography',
         'person_type',
         'gender',
         'birth_date_hijri',
         'birth_date_gregorian',
-        'birth_place',
-        'death_date_hijri',
-        'death_date_gregorian',
-        'death_place',
-        'burial_place',
+        'birth_date_hijri',
+        'birth_date_gregorian',
         'father_id',
         'mother_id',
         'sahaba_id',
         'tribe',
-        'occupation',
         'is_verified',
-        'notes',
         'is_featured',
         'kunya',
         'laqab',
@@ -53,17 +45,6 @@ class Person extends Model implements HasMedia
         'generation',
     ];
 
-    public $translatable = [
-        'name',
-        'title',
-        'biography',
-        'birth_place',
-        'death_place',
-        'burial_place',
-        'occupation',
-        'notes',
-    ];
-
     protected $casts = [
         'person_type' => PersonType::class,
         'birth_date_hijri' => 'date',
@@ -71,15 +52,23 @@ class Person extends Model implements HasMedia
         'death_date_hijri' => 'date',
         'death_date_gregorian' => 'date',
         'is_verified' => 'boolean',
-        'name' => 'array',
-        'title' => 'array',
-        'biography' => 'array',
-        'birth_place' => 'array',
-        'death_place' => 'array',
-        'burial_place' => 'array',
-        'occupation' => 'array',
-        'notes' => 'array',
     ];
+
+    /**
+     * Get the FQCN of the translation model.
+     */
+    public function getTranslationModelClass(): string
+    {
+        return PersonTranslation::class;
+    }
+
+    /**
+     * Get the list of translatable field names.
+     */
+    public function getTranslatableFields(): array
+    {
+        return ['name', 'title', 'biography', 'birth_place', 'death_place', 'burial_place', 'occupation', 'notes'];
+    }
 
     /**
      * Get the father

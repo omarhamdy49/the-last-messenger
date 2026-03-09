@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Domain\Hadith\Models;
 
+use App\Domain\Shared\Traits\HasLocalizedContent;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Spatie\Translatable\HasTranslations;
 
 /**
  * HadithTheme Model
@@ -27,7 +27,7 @@ use Spatie\Translatable\HasTranslations;
  */
 class HadithTheme extends Model
 {
-    use HasTranslations;
+    use HasLocalizedContent;
 
     /**
      * The table associated with the model.
@@ -44,18 +44,7 @@ class HadithTheme extends Model
     protected $fillable = [
         'theme_en',
         'theme_ar',
-        'description',
         'parent_id',
-    ];
-
-    /**
-     * Translatable attributes
-     *
-     * @var array<string>
-     */
-    public array $translatable = [
-        'name',
-        'description',
     ];
 
     /**
@@ -65,6 +54,22 @@ class HadithTheme extends Model
      * @var bool
      */
     public $timestamps = false;
+
+    /**
+     * Get the FQCN of the translation model.
+     */
+    public function getTranslationModelClass(): string
+    {
+        return HadithThemeTranslation::class;
+    }
+
+    /**
+     * Get the list of translatable field names.
+     */
+    public function getTranslatableFields(): array
+    {
+        return ['name', 'description'];
+    }
 
     /**
      * Get all Hadiths associated with this theme

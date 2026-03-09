@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Domain\Blog\Models;
 
+use App\Domain\Shared\Traits\HasLocalizedContent;
 use App\Models\Article;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Str;
-use Spatie\Translatable\HasTranslations;
 
 /**
  * Tag Model
@@ -25,7 +25,7 @@ use Spatie\Translatable\HasTranslations;
  */
 class Tag extends Model
 {
-    use HasFactory, HasTranslations;
+    use HasFactory, HasLocalizedContent;
 
     /**
      * The attributes that are mass assignable.
@@ -34,21 +34,26 @@ class Tag extends Model
      */
     protected $fillable = [
         'slug',
-        'name',
-        'description',
         'type',
         'color',
         'usage_count',
     ];
 
     /**
-     * Translatable attributes
-     * Handled by Spatie\Translatable\HasTranslations trait
-     * Do NOT add these to $casts as it conflicts with HasTranslations
-     *
-     * @var array<string>
+     * Get the FQCN of the translation model.
      */
-    public array $translatable = ['name', 'description'];
+    public function getTranslationModelClass(): string
+    {
+        return TagTranslation::class;
+    }
+
+    /**
+     * Get the list of translatable field names.
+     */
+    public function getTranslatableFields(): array
+    {
+        return ['name', 'description'];
+    }
 
     /**
      * Boot the model

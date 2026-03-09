@@ -7,6 +7,7 @@ namespace Database\Factories;
 use App\Domain\Seerah\Enums\EventImportance;
 use App\Domain\Seerah\Enums\EventType;
 use App\Domain\Seerah\Models\SeerahEvent;
+use App\Domain\Seerah\Models\SeerahEventTranslation;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -59,6 +60,29 @@ class SeerahEventFactory extends Factory
     ];
 
     /**
+     * Configure the model factory.
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (SeerahEvent $event) {
+            $eventData = $this->faker->randomElement($this->famousEvents);
+
+            foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $locale) {
+                SeerahEventTranslation::create([
+                    'seerah_event_id' => $event->id,
+                    'locale' => $locale,
+                    'title' => $locale === 'ar' || $locale === 'ur'
+                        ? $eventData['ar']
+                        : ($locale === 'en' ? $eventData['en'] : ucfirst($this->faker->words(4, true))),
+                    'description' => $this->faker->paragraphs(3, true),
+                    'content' => $this->faker->paragraphs(10, true),
+                    'is_ready' => true,
+                ]);
+            }
+        });
+    }
+
+    /**
      * Define the model's default state.
      *
      * @return array<string, mixed>
@@ -73,27 +97,6 @@ class SeerahEventFactory extends Factory
 
         return [
             'slug' => $slug,
-            'title' => [
-                'ar' => $event['ar'],
-                'en' => $event['en'],
-                'fr' => ucfirst($this->faker->words(4, true)),
-                'tr' => ucfirst($this->faker->words(4, true)),
-                'ur' => $event['ar'],
-            ],
-            'description' => [
-                'ar' => $this->faker->paragraphs(3, true),
-                'en' => $this->faker->paragraphs(3, true),
-                'fr' => $this->faker->paragraphs(3, true),
-                'tr' => $this->faker->paragraphs(3, true),
-                'ur' => $this->faker->paragraphs(3, true),
-            ],
-            'content' => [
-                'ar' => $this->faker->paragraphs(10, true),
-                'en' => $this->faker->paragraphs(10, true),
-                'fr' => $this->faker->paragraphs(10, true),
-                'tr' => $this->faker->paragraphs(10, true),
-                'ur' => $this->faker->paragraphs(10, true),
-            ],
             'hijri_date' => $this->generateHijriDate($hijriYear),
             'hijri_year' => $hijriYear,
             'hijri_month' => $this->faker->numberBetween(1, 12),
@@ -155,14 +158,14 @@ class SeerahEventFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'event_type' => EventType::BATTLE,
             'importance' => EventImportance::HIGH,
-            'title' => [
-                'ar' => $battle['ar'],
-                'en' => $battle['en'],
-                'fr' => $battle['en'],
-                'tr' => $battle['en'],
-                'ur' => $battle['ar'],
-            ],
-        ]);
+        ])->afterCreating(function (SeerahEvent $event) use ($battle) {
+            foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $locale) {
+                $event->translations()->updateOrCreate(
+                    ['locale' => $locale],
+                    ['title' => in_array($locale, ['ar', 'ur']) ? $battle['ar'] : $battle['en']]
+                );
+            }
+        });
     }
 
     /**
@@ -170,17 +173,19 @@ class SeerahEventFactory extends Factory
      */
     public function migration(): static
     {
+        $titles = ['ar' => 'الهجرة', 'en' => 'Migration', 'fr' => 'Migration', 'tr' => 'Hicret', 'ur' => 'ہجرت'];
+
         return $this->state(fn (array $attributes) => [
             'event_type' => EventType::MIGRATION,
             'importance' => EventImportance::HIGH,
-            'title' => [
-                'ar' => 'الهجرة',
-                'en' => 'Migration',
-                'fr' => 'Migration',
-                'tr' => 'Hicret',
-                'ur' => 'ہجرت',
-            ],
-        ]);
+        ])->afterCreating(function (SeerahEvent $event) use ($titles) {
+            foreach ($titles as $locale => $title) {
+                $event->translations()->updateOrCreate(
+                    ['locale' => $locale],
+                    ['title' => $title]
+                );
+            }
+        });
     }
 
     /**

@@ -7,6 +7,7 @@ namespace App\Domain\Seerah\Models;
 use App\Domain\Seerah\Enums\EventImportance;
 use App\Domain\Seerah\Enums\EventType;
 use App\Domain\Shared\Traits\HasInteractions;
+use App\Domain\Shared\Traits\HasLocalizedContent;
 use App\Models\Article;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,16 +17,12 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
-use Spatie\Translatable\HasTranslations;
 
 /**
  * SeerahEvent Model
  *
  * @property int $id
  * @property string $slug
- * @property array $title
- * @property array $description
- * @property array|null $content
  * @property string|null $hijri_date
  * @property int|null $hijri_year
  * @property int|null $hijri_month
@@ -48,7 +45,7 @@ use Spatie\Translatable\HasTranslations;
  */
 class SeerahEvent extends Model implements HasMedia
 {
-    use HasFactory, HasTranslations, InteractsWithMedia, HasInteractions {
+    use HasFactory, HasLocalizedContent, InteractsWithMedia, HasInteractions {
         getFirstMediaUrl as protected spatieGetFirstMediaUrl;
     }
 
@@ -66,9 +63,6 @@ class SeerahEvent extends Model implements HasMedia
      */
     protected $fillable = [
         'slug',
-        'title',
-        'description',
-        'content',
         'hijri_date',
         'hijri_year',
         'hijri_month',
@@ -94,9 +88,6 @@ class SeerahEvent extends Model implements HasMedia
      * @var array<string, string>
      */
     protected $casts = [
-        'title' => 'array',
-        'description' => 'array',
-        'content' => 'array',
         'hijri_year' => 'integer',
         'hijri_month' => 'integer',
         'hijri_day' => 'integer',
@@ -113,11 +104,28 @@ class SeerahEvent extends Model implements HasMedia
     ];
 
     /**
-     * Translatable attributes
-     *
-     * @var array<string>
+     * Get the translation model class.
      */
-    public array $translatable = ['title', 'description', 'content'];
+    public function getTranslationModelClass(): string
+    {
+        return SeerahEventTranslation::class;
+    }
+
+    /**
+     * Get the list of translatable field names.
+     */
+    public function getTranslatableFields(): array
+    {
+        return ['title', 'description', 'content'];
+    }
+
+    /**
+     * Get the foreign key name for translations.
+     */
+    public function getTranslationForeignKey(): string
+    {
+        return 'seerah_event_id';
+    }
 
     /**
      * Get the related article

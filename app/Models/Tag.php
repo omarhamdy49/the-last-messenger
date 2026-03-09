@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Domain\Shared\Traits\HasLocalizedContent;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
-use Spatie\Translatable\HasTranslations;
 
 /**
  * Tag Model
@@ -30,7 +30,7 @@ use Spatie\Translatable\HasTranslations;
  */
 class Tag extends Model
 {
-    use HasFactory, HasTranslations, SoftDeletes;
+    use HasFactory, HasLocalizedContent, SoftDeletes;
 
     /**
      * The table associated with the model.
@@ -42,8 +42,6 @@ class Tag extends Model
      */
     protected $fillable = [
         'slug',
-        'name',
-        'description',
         'type',
         'color',
         'usage_count',
@@ -53,15 +51,24 @@ class Tag extends Model
      * The attributes that should be cast.
      */
     protected $casts = [
-        'name' => 'array',
-        'description' => 'array',
         'usage_count' => 'integer',
     ];
 
     /**
-     * Translatable attributes.
+     * Get the FQCN of the translation model.
      */
-    public array $translatable = ['name', 'description'];
+    public function getTranslationModelClass(): string
+    {
+        return \App\Domain\Blog\Models\TagTranslation::class;
+    }
+
+    /**
+     * Get the list of translatable field names.
+     */
+    public function getTranslatableFields(): array
+    {
+        return ['name', 'description'];
+    }
 
     /**
      * Boot the model.
@@ -72,7 +79,8 @@ class Tag extends Model
 
         static::creating(function (Tag $tag) {
             if (empty($tag->slug)) {
-                $tag->slug = Str::slug($tag->name['en'] ?? $tag->name['ar'] ?? '');
+                $name = $tag->getTranslation('name', 'en') ?? $tag->getTranslation('name', 'ar') ?? '';
+                $tag->slug = Str::slug($name);
             }
         });
     }
