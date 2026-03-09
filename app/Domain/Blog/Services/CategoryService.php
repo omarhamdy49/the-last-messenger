@@ -10,6 +10,7 @@ use App\Domain\Blog\Repositories\CategoryRepositoryInterface;
 use App\Domain\Shared\Services\BaseService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 /**
@@ -24,6 +25,27 @@ class CategoryService extends BaseService
     public function __construct(CategoryRepositoryInterface $repository)
     {
         $this->repository = $repository;
+    }
+
+    /**
+     * Override create to use createCategory which handles translations
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function create(array $data): Model
+    {
+        return $this->createCategory($data);
+    }
+
+    /**
+     * Override update to use updateCategory which handles translations
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function update(int $id, array $data): bool
+    {
+        $this->updateCategory($id, $data);
+        return true;
     }
 
     /**
@@ -49,23 +71,44 @@ class CategoryService extends BaseService
      */
     public function createCategory(array $data): Category
     {
+        // Separate translatable fields
+        $translatableFields = ['name', 'description'];
+        $translatableData = [];
+        $nonTranslatableData = [];
+
+        foreach ($data as $key => $value) {
+            if (in_array($key, $translatableFields)) {
+                $translatableData[$key] = $value;
+            } else {
+                $nonTranslatableData[$key] = $value;
+            }
+        }
+
         // Generate slug if not provided
-        if (empty($data['slug'])) {
-            $data['slug'] = $this->generateUniqueSlug($data['name']['en'] ?? $data['name']['ar']);
+        if (empty($nonTranslatableData['slug'])) {
+            $titleForSlug = $translatableData['name']['en'] ?? $translatableData['name']['ar'] ?? 'category';
+            $nonTranslatableData['slug'] = $this->generateUniqueSlug($titleForSlug);
         }
 
         // Set default display order if not provided
-        if (! isset($data['display_order'])) {
-            $data['display_order'] = $this->getNextDisplayOrder($data['parent_id'] ?? null);
+        if (! isset($nonTranslatableData['display_order'])) {
+            $nonTranslatableData['display_order'] = $this->getNextDisplayOrder($nonTranslatableData['parent_id'] ?? null);
         }
 
         // Validate parent_id to prevent circular references
-        if (! empty($data['parent_id'])) {
-            $this->validateParentId($data['parent_id']);
+        if (! empty($nonTranslatableData['parent_id'])) {
+            $this->validateParentId($nonTranslatableData['parent_id']);
         }
 
         /** @var Category */
-        return $this->repository->create($data);
+        $category = $this->repository->create($nonTranslatableData);
+
+        // Sync translations
+        if (!empty($translatableData)) {
+            $category->syncTranslations($translatableData);
+        }
+
+        return $category;
     }
 
     /**
@@ -75,22 +118,47 @@ class CategoryService extends BaseService
      */
     public function updateCategory(int $id, array $data): Category
     {
+        // Get current category for comparison
+        /** @var Category */
+        $category = $this->repository->findOrFail($id, with: ['translations']);
+
+        // Separate translatable fields
+        $translatableFields = ['name', 'description'];
+        $translatableData = [];
+        $nonTranslatableData = [];
+
+        foreach ($data as $key => $value) {
+            if (in_array($key, $translatableFields)) {
+                $translatableData[$key] = $value;
+            } else {
+                $nonTranslatableData[$key] = $value;
+            }
+        }
+
         // Validate parent_id to prevent circular references
-        if (isset($data['parent_id']) && $data['parent_id'] !== null) {
-            $this->validateParentId($data['parent_id'], $id);
+        if (isset($nonTranslatableData['parent_id']) && $nonTranslatableData['parent_id'] !== null) {
+            $this->validateParentId($nonTranslatableData['parent_id'], $id);
         }
 
         // Auto-generate slug from English name if slug is empty
-        if (empty($data['slug'])) {
-            if (isset($data['name'])) {
-                $data['slug'] = $this->generateUniqueSlug(
-                    $data['name']['en'] ?? $data['name']['ar'],
+        if (empty($nonTranslatableData['slug'])) {
+            if (!empty($translatableData['name'])) {
+                $nonTranslatableData['slug'] = $this->generateUniqueSlug(
+                    $translatableData['name']['en'] ?? $translatableData['name']['ar'],
                     $id
                 );
             }
         }
 
-        $this->repository->update($id, $data);
+        // Update non-translatable fields
+        if (!empty($nonTranslatableData)) {
+            $this->repository->update($id, $nonTranslatableData);
+        }
+
+        // Sync translations
+        if (!empty($translatableData)) {
+            $category->syncTranslations($translatableData);
+        }
 
         /** @var Category */
         return $this->repository->findOrFail($id);

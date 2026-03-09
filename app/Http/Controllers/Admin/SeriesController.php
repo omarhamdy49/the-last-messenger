@@ -42,18 +42,15 @@ class SeriesController extends Controller
         $search = $request->input('search');
 
         // Build query
-        $query = Series::query()->with('articles');
+        $query = Series::query()->with(['articles', 'translations']);
 
-        // Apply search
+        // Apply search via translation table
         if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->whereJsonContains('title->ar', $search)
-                    ->orWhereJsonContains('title->en', $search)
-                    ->orWhereJsonContains('title->fr', $search)
-                    ->orWhereJsonContains('title->tr', $search)
-                    ->orWhereJsonContains('title->ur', $search)
-                    ->orWhereJsonContains('description->ar', $search)
-                    ->orWhereJsonContains('description->en', $search);
+            $query->whereHas('translations', function ($q) use ($search) {
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('title', 'LIKE', "%{$search}%")
+                        ->orWhere('description', 'LIKE', "%{$search}%");
+                });
             });
         }
 
@@ -113,24 +110,42 @@ class SeriesController extends Controller
         try {
             $data = $request->validated();
 
+            // Separate translatable data
+            $translatableFields = ['title', 'description'];
+            $translatableData = [];
+            $nonTranslatableData = [];
+
+            foreach ($data as $key => $value) {
+                if (in_array($key, $translatableFields)) {
+                    $translatableData[$key] = $value;
+                } else {
+                    $nonTranslatableData[$key] = $value;
+                }
+            }
+
             // Handle thumbnail upload
             if ($request->hasFile('thumbnail')) {
                 $thumbnailPath = $request->file('thumbnail')->store('series/thumbnails', 'public');
-                $data['thumbnail'] = $thumbnailPath;
+                $nonTranslatableData['thumbnail'] = $thumbnailPath;
             }
 
             // Set default values
-            $data['total_articles'] = 0;
-            if (empty($data['slug'])) {
-                $data['slug'] = \Illuminate\Support\Str::slug($data['title']['en'] ?? $data['title']['ar']);
+            $nonTranslatableData['total_articles'] = 0;
+            if (empty($nonTranslatableData['slug'])) {
+                // Use first available title for slug generation
+                $titleForSlug = $translatableData['title']['en'] ?? $translatableData['title']['ar'] ?? 'series';
+                $nonTranslatableData['slug'] = \Illuminate\Support\Str::slug($titleForSlug);
             }
 
             // Remove articles from data before creating
             $articleIds = $request->input('article_ids', []);
-            unset($data['article_ids']);
+            unset($nonTranslatableData['article_ids']);
 
-            // Create series
-            $series = Series::create($data);
+            // Create series with non-translatable data only
+            $series = Series::create($nonTranslatableData);
+
+            // Sync translations
+            $series->syncTranslations($translatableData);
 
             // Sync articles with positions
             if (!empty($articleIds)) {
@@ -150,7 +165,7 @@ class SeriesController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => __('admin.series_created'),
-                    'data' => $series,
+                    'data' => $series->load('translations'),
                 ], 201);
             }
 
@@ -187,7 +202,7 @@ class SeriesController extends Controller
      */
     public function show(int $id): View
     {
-        $series = Series::with(['articles.locales:id,article_id,locale,title'])->findOrFail($id);
+        $series = Series::with(['articles', 'translations'])->findOrFail($id);
 
         return view('admin.series.show', compact('series'));
     }
@@ -202,7 +217,7 @@ class SeriesController extends Controller
      */
     public function edit(int $id): View
     {
-        $series = Series::with(['articles.locales:id,article_id,locale,title'])->findOrFail($id);
+        $series = Series::with(['articles', 'translations'])->findOrFail($id);
 
         return view('admin.series.edit', compact('series'));
     }
@@ -220,11 +235,24 @@ class SeriesController extends Controller
     {
         try {
             // Get old values before update
-            $series = Series::findOrFail($id);
+            $series = Series::with('translations')->findOrFail($id);
             $oldValues = $series->toArray();
             $oldThumbnail = $series->thumbnail;
 
             $data = $request->validated();
+
+            // Separate translatable data
+            $translatableFields = ['title', 'description'];
+            $translatableData = [];
+            $nonTranslatableData = [];
+
+            foreach ($data as $key => $value) {
+                if (in_array($key, $translatableFields)) {
+                    $translatableData[$key] = $value;
+                } else {
+                    $nonTranslatableData[$key] = $value;
+                }
+            }
 
             // Handle thumbnail upload
             if ($request->hasFile('thumbnail')) {
@@ -235,20 +263,33 @@ class SeriesController extends Controller
 
                 // Store new thumbnail
                 $thumbnailPath = $request->file('thumbnail')->store('series/thumbnails', 'public');
-                $data['thumbnail'] = $thumbnailPath;
+                $nonTranslatableData['thumbnail'] = $thumbnailPath;
             }
 
             // Update slug if title changed
-            if (isset($data['title']) && $series->title !== $data['title']) {
-                $data['slug'] = \Illuminate\Support\Str::slug($data['title']['en'] ?? $data['title']['ar']);
+            if (!empty($translatableData['title'])) {
+                // Get current title for comparison
+                $currentTitle = $series->getTranslation('title', app()->getLocale());
+                $newTitle = $translatableData['title'][app()->getLocale()] ?? $translatableData['title']['en'] ?? $translatableData['title']['ar'];
+
+                if ($currentTitle !== $newTitle) {
+                    $nonTranslatableData['slug'] = \Illuminate\Support\Str::slug($newTitle);
+                }
             }
 
             // Handle articles sync
             $articleIds = $request->input('article_ids', []);
-            unset($data['article_ids']);
+            unset($nonTranslatableData['article_ids']);
 
-            // Perform update
-            $series->update($data);
+            // Perform update of non-translatable fields
+            if (!empty($nonTranslatableData)) {
+                $series->update($nonTranslatableData);
+            }
+
+            // Sync translations
+            if (!empty($translatableData)) {
+                $series->syncTranslations($translatableData);
+            }
 
             // Sync articles with positions
             $syncData = [];
@@ -266,7 +307,7 @@ class SeriesController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => __('admin.series_updated'),
-                    'data' => $series->fresh(),
+                    'data' => $series->fresh()->load('translations'),
                 ]);
             }
 

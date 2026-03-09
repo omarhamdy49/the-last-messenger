@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Blog\Services;
 
+use App\Domain\Blog\Models\Tag;
 use App\Domain\Blog\Repositories\TagRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Model;
@@ -56,7 +57,35 @@ class TagService
      */
     public function create(array $data): Model
     {
-        return $this->repository->create($data);
+        // Separate translatable fields
+        $translatableFields = ['name', 'description'];
+        $translatableData = [];
+        $nonTranslatableData = [];
+
+        foreach ($data as $key => $value) {
+            if (in_array($key, $translatableFields)) {
+                $translatableData[$key] = $value;
+            } else {
+                $nonTranslatableData[$key] = $value;
+            }
+        }
+
+        // Generate slug if not provided
+        if (empty($nonTranslatableData['slug'])) {
+            $titleForSlug = $translatableData['name']['en'] ?? $translatableData['name']['ar'] ?? 'tag';
+            $nonTranslatableData['slug'] = \Illuminate\Support\Str::slug($titleForSlug);
+        }
+
+        // Create tag with non-translatable data only
+        /** @var Tag */
+        $tag = $this->repository->create($nonTranslatableData);
+
+        // Sync translations
+        if (!empty($translatableData)) {
+            $tag->syncTranslations($translatableData);
+        }
+
+        return $tag;
     }
 
     /**
@@ -68,7 +97,43 @@ class TagService
      */
     public function update(int $id, array $data): Model
     {
-        return $this->repository->update($id, $data);
+        // Get current tag
+        /** @var Tag */
+        $tag = $this->repository->findOrFail($id, with: ['translations']);
+
+        // Separate translatable fields
+        $translatableFields = ['name', 'description'];
+        $translatableData = [];
+        $nonTranslatableData = [];
+
+        foreach ($data as $key => $value) {
+            if (in_array($key, $translatableFields)) {
+                $translatableData[$key] = $value;
+            } else {
+                $nonTranslatableData[$key] = $value;
+            }
+        }
+
+        // Generate slug if not provided
+        if (empty($nonTranslatableData['slug'])) {
+            if (!empty($translatableData['name'])) {
+                $nonTranslatableData['slug'] = \Illuminate\Support\Str::slug(
+                    $translatableData['name']['en'] ?? $translatableData['name']['ar']
+                );
+            }
+        }
+
+        // Update non-translatable fields
+        if (!empty($nonTranslatableData)) {
+            $this->repository->update($id, $nonTranslatableData);
+        }
+
+        // Sync translations
+        if (!empty($translatableData)) {
+            $tag->syncTranslations($translatableData);
+        }
+
+        return $this->repository->findOrFail($id);
     }
 
     /**

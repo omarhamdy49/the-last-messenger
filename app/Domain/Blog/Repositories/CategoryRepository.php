@@ -41,16 +41,18 @@ class CategoryRepository extends BaseRepository implements CategoryRepositoryInt
         $relations = ! empty($with) ? $with : $defaultRelations;
         $query->with($relations)->withCount('articles');
 
-        // Apply search across all languages in name and description
+        // Apply search across all languages in name and description (via translation table)
         if (! empty($search)) {
             $query->where(function ($q) use ($search) {
-                // Search in all language fields
-                foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $lang) {
-                    $q->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.{$lang}')) LIKE ?", ["%{$search}%"])
-                        ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(description, '$.{$lang}')) LIKE ?", ["%{$search}%"]);
-                }
-                // Also search slug
-                $q->orWhere('slug', 'LIKE', "%{$search}%");
+                // Search in translation table
+                $q->whereHas('translations', function ($sub) use ($search) {
+                    $sub->where(function ($inner) use ($search) {
+                        $inner->where('name', 'LIKE', "%{$search}%")
+                            ->orWhere('description', 'LIKE', "%{$search}%");
+                    });
+                })
+                // Also search slug directly on categories table
+                ->orWhere('slug', 'LIKE', "%{$search}%");
             });
         }
 

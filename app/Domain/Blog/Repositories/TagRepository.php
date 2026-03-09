@@ -51,15 +51,18 @@ class TagRepository implements TagRepositoryInterface
     ): LengthAwarePaginator {
         $query = $this->getBaseQuery();
 
-        // Apply search across all language fields
+        // Apply search across all language fields (via translation table)
         if (!empty($search)) {
             $query->where(function ($q) use ($search) {
-                $q->where('name->en', 'like', "%{$search}%")
-                    ->orWhere('name->ar', 'like', "%{$search}%")
-                    ->orWhere('name->fr', 'like', "%{$search}%")
-                    ->orWhere('name->tr', 'like', "%{$search}%")
-                    ->orWhere('name->ur', 'like', "%{$search}%")
-                    ->orWhere('slug', 'like', "%{$search}%");
+                // Search in translation table
+                $q->whereHas('translations', function ($sub) use ($search) {
+                    $sub->where(function ($inner) use ($search) {
+                        $inner->where('name', 'LIKE', "%{$search}%")
+                            ->orWhere('description', 'LIKE', "%{$search}%");
+                    });
+                })
+                // Also search slug directly on tags table
+                ->orWhere('slug', 'like', "%{$search}%");
             });
         }
 
@@ -289,12 +292,14 @@ class TagRepository implements TagRepositoryInterface
     {
         $query = $this->model::query();
 
-        $query->where(function ($q) use ($name) {
-            foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $lang) {
-                if (!empty($name[$lang])) {
-                    $q->orWhere("name->{$lang}", $name[$lang]);
+        $query->whereHas('translations', function ($q) use ($name) {
+            $q->where(function ($inner) use ($name) {
+                foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $lang) {
+                    if (!empty($name[$lang])) {
+                        $inner->orWhere('name', $name[$lang]);
+                    }
                 }
-            }
+            });
         });
 
         return $query->first();
@@ -312,12 +317,15 @@ class TagRepository implements TagRepositoryInterface
     {
         $searchQuery = $this->model::query();
 
-        // Search across all language fields
+        // Search across all language fields (via translation table)
         $searchQuery->where(function ($q) use ($query) {
-            foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $lang) {
-                $q->orWhere("name->{$lang}", 'like', "%{$query}%");
-            }
-            $q->orWhere('slug', 'like', "%{$query}%");
+            $q->whereHas('translations', function ($sub) use ($query) {
+                $sub->where(function ($inner) use ($query) {
+                    $inner->where('name', 'like', "%{$query}%")
+                        ->orWhere('description', 'like', "%{$query}%");
+                });
+            })
+            ->orWhere('slug', 'like', "%{$query}%");
         });
 
         // Filter by type if provided
