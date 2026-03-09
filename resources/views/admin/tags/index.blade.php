@@ -40,29 +40,29 @@
         <!-- Stats Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <x-admin.stats-card
-                title="Total Tags"
-                :value="$totalTags"
+                title="{{ __('admin.total_tags') }}"
+                :value="$stats['count'] ?? 0"
                 icon="tag"
                 color="blue"
                 :trend="null"
             />
             <x-admin.stats-card
-                title="Most Used"
-                :value="$mostUsedTag?->name ?? 'N/A'"
+                title="{{ __('admin.most_used') }}"
+                :value="$stats['most_used'] ?? 'N/A'"
                 icon="trending-up"
                 color="green"
                 :trend="null"
             />
             <x-admin.stats-card
-                title="Unused Tags"
-                :value="$unusedTags"
+                title="{{ __('admin.unused_tags') }}"
+                :value="$stats['unused_count'] ?? 0"
                 icon="alert-circle"
                 color="orange"
                 :trend="null"
             />
             <x-admin.stats-card
-                title="Total Usage"
-                :value="$totalUsage"
+                title="{{ __('admin.total_usage') }}"
+                :value="$stats['total_usage'] ?? 0"
                 icon="hash"
                 color="purple"
                 :trend="null"

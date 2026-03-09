@@ -46,31 +46,31 @@
         <!-- Stats Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <x-admin.stats-card
-                title="Total Categories"
-                :value="$totalCategories"
+                title="{{ __('admin.total_categories') }}"
+                :value="$stats['total'] ?? 0"
                 icon="folder"
                 color="blue"
                 :trend="null"
             />
             <x-admin.stats-card
-                title="Active"
-                :value="$activeCategories"
+                title="{{ __('admin.blog') }}"
+                :value="$stats['blog'] ?? 0"
                 icon="check-circle"
                 color="green"
                 :trend="null"
             />
             <x-admin.stats-card
-                title="Inactive"
-                :value="$inactiveCategories"
-                icon="x-circle"
-                color="gray"
+                title="{{ __('admin.media') }}"
+                :value="$stats['media'] ?? 0"
+                icon="layers"
+                color="purple"
                 :trend="null"
             />
             <x-admin.stats-card
-                title="Max Depth"
-                :value="$maxDepth"
-                icon="layers"
-                color="purple"
+                title="{{ __('admin.timeline') }}"
+                :value="$stats['timeline'] ?? 0"
+                icon="clock"
+                color="teal"
                 :trend="null"
             />
         </div>
@@ -126,60 +126,101 @@
         </select>
     </div>
 
-    <!-- Category Tree -->
+    <!-- Categories List -->
     <div class="rounded-2xl overflow-hidden shadow-xl border"
          :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
 
-        <!-- Loading State -->
-        <div x-show="loading" class="p-8">
-            <div class="space-y-4">
-                <template x-for="i in 5" :key="i">
-                    <div class="flex items-center gap-4">
-                        <div class="h-12 w-12 rounded-lg animate-pulse"
-                             :class="darkMode ? 'bg-gray-800' : 'bg-gray-200'"></div>
-                        <div class="flex-1 space-y-2">
-                            <div class="h-4 rounded animate-pulse w-1/4"
-                                 :class="darkMode ? 'bg-gray-800' : 'bg-gray-200'"></div>
-                            <div class="h-3 rounded animate-pulse w-1/3"
-                                 :class="darkMode ? 'bg-gray-800' : 'bg-gray-200'"></div>
-                        </div>
-                    </div>
-                </template>
+        <!-- Table View -->
+        @if($categories->count() > 0)
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr :class="darkMode ? 'bg-gray-800' : 'bg-gray-100' ">
+                            <th class="px-6 py-4 text-start font-semibold">{{ __('admin.name') }}</th>
+                            <th class="px-6 py-4 text-start font-semibold">{{ __('admin.type') }}</th>
+                            <th class="px-6 py-4 text-start font-semibold">{{ __('admin.articles_count') }}</th>
+                            <th class="px-6 py-4 text-start font-semibold">{{ __('admin.status') }}</th>
+                            <th class="px-6 py-4 text-end font-semibold">{{ __('admin.actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y" :class="darkMode ? 'divide-gray-800' : 'divide-gray-200'">
+                        @foreach($categories as $category)
+                            <tr :class="darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'">
+                                <td class="px-6 py-4">
+                                    <div>
+                                        <p class="font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                            {{ $category->getTranslation('name', app()->getLocale()) ?? $category->getTranslation('name', 'ar') }}
+                                        </p>
+                                        <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                            {{ $category->slug }}
+                                        </p>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold"
+                                          :class="'{{ $category->type->value }}' === 'blog' ? 'bg-blue-100 text-blue-800' :
+                                                   '{{ $category->type->value }}' === 'media' ? 'bg-purple-100 text-purple-800' :
+                                                   'bg-teal-100 text-teal-800'">
+                                        {{ ucfirst($category->type->value) }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span :class="darkMode ? 'text-gray-300' : 'text-gray-600'">
+                                        {{ $category->articles_count ?? 0 }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold"
+                                          :class="$category->status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'">
+                                        {{ ucfirst($category->status) }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <a href="{{ route('admin.categories.edit', $category->id) }}"
+                                           class="p-2 rounded-lg transition-colors"
+                                           :class="darkMode ? 'hover:bg-gray-800 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'">
+                                            <i data-lucide="pencil" class="w-5 h-5"></i>
+                                        </a>
+                                        <button @click="deleteCategory({{ $category->id }})"
+                                                class="p-2 rounded-lg transition-colors text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30">
+                                            <i data-lucide="trash-2" class="w-5 h-5"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
-        </div>
 
-        <!-- Tree View -->
-        <div x-show="!loading && filteredCategories.length > 0" class="divide-y"
-             :class="darkMode ? 'divide-gray-800' : 'divide-gray-200'">
-            <template x-for="category in filteredCategories" :key="category.id">
-                <x-admin.category-tree-item :category="category" />
-            </template>
-        </div>
-
-        <!-- Empty State -->
-        <div x-show="!loading && filteredCategories.length === 0" class="p-16 text-center">
-            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4"
-                 :class="darkMode ? 'bg-gray-800' : 'bg-gray-100'">
-                <i data-lucide="folder-x" class="w-10 h-10"
-                   :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
+            <!-- Pagination -->
+            @if($categories->hasPages())
+                <div class="px-6 py-4 border-t" :class="darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-gray-50'">
+                    {{ $categories->links() }}
+                </div>
+            @endif
+        @else
+            <!-- Empty State -->
+            <div class="p-16 text-center">
+                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4"
+                     :class="darkMode ? 'bg-gray-800' : 'bg-gray-100'">
+                    <i data-lucide="folder-x" class="w-10 h-10"
+                       :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
+                </div>
+                <h3 class="text-xl font-bold mb-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                    {{ __('admin.no_categories_found') }}
+                </h3>
+                <p :class="darkMode ? 'text-gray-400' : 'text-gray-600'" class="mb-6">
+                    {{ __('admin.get_started_by_creating_category') }}
+                </p>
+                <a href="{{ route('admin.categories.create') }}"
+                   class="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white hover:scale-105 transition-all shadow-lg">
+                    <i data-lucide="plus" class="w-5 h-5"></i>
+                    <span>{{ __('admin.create_category') }}</span>
+                </a>
             </div>
-            <h3 class="text-xl font-bold mb-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                No Categories Found
-            </h3>
-            <p :class="darkMode ? 'text-gray-400' : 'text-gray-600'" class="mb-6">
-                <template x-if="searchQuery || statusFilter !== 'all' || depthFilter !== 'all'">
-                    <span>Try adjusting your filters or search query</span>
-                </template>
-                <template x-if="!searchQuery && statusFilter === 'all' && depthFilter === 'all'">
-                    <span>Get started by creating your first category</span>
-                </template>
-            </p>
-            <a href="{{ route('admin.categories.create') }}"
-               class="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white hover:scale-105 transition-all shadow-lg">
-                <i data-lucide="plus" class="w-5 h-5"></i>
-                <span>Create Category</span>
-            </a>
-        </div>
+        @endif
     </div>
 </div>
 @endsection
@@ -189,140 +230,66 @@
 function categoryManagement() {
     return {
         loading: false,
-        categories: @json($categories),
-        filteredCategories: [],
-        expandedCategories: [],
         searchQuery: '',
         statusFilter: 'all',
         depthFilter: 'all',
 
         init() {
-            this.filteredCategories = this.categories;
             this.$nextTick(() => lucide.createIcons());
-        },
-
-        async loadCategories() {
-            this.loading = true;
-            try {
-                const response = await fetch('{{ route("admin.categories.index") }}?ajax=1', {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json'
-                    }
-                });
-                const data = await response.json();
-                this.categories = data.categories;
-                this.filterCategories();
-            } catch (error) {
-                console.error('Failed to load categories:', error);
-            } finally {
-                this.loading = false;
-                this.$nextTick(() => lucide.createIcons());
-            }
-        },
-
-        filterCategories() {
-            let filtered = [...this.categories];
-
-            // Search filter
-            if (this.searchQuery) {
-                const query = this.searchQuery.toLowerCase();
-                filtered = filtered.filter(cat =>
-                    this.searchInCategory(cat, query)
-                );
-            }
-
-            // Status filter
-            if (this.statusFilter !== 'all') {
-                filtered = this.filterByStatus(filtered, this.statusFilter);
-            }
-
-            // Depth filter
-            if (this.depthFilter !== 'all') {
-                const depth = parseInt(this.depthFilter);
-                filtered = this.filterByDepth(filtered, depth);
-            }
-
-            this.filteredCategories = filtered;
-            this.$nextTick(() => lucide.createIcons());
-        },
-
-        searchInCategory(category, query) {
-            // Search in name
-            if (category.name && category.name.toLowerCase().includes(query)) {
-                return true;
-            }
-            // Search in children
-            if (category.children && category.children.length > 0) {
-                return category.children.some(child => this.searchInCategory(child, query));
-            }
-            return false;
-        },
-
-        filterByStatus(categories, status) {
-            return categories.filter(cat => {
-                const matchesStatus = cat.is_active === (status === 'active');
-                if (cat.children && cat.children.length > 0) {
-                    cat.children = this.filterByStatus(cat.children, status);
-                }
-                return matchesStatus || (cat.children && cat.children.length > 0);
-            });
-        },
-
-        filterByDepth(categories, targetDepth) {
-            if (targetDepth === 3) {
-                // Show categories at depth 3 or more
-                return categories.filter(cat => cat.depth >= 3);
-            }
-            return categories.filter(cat => cat.depth === targetDepth);
         },
 
         expandAll() {
-            this.expandedCategories = this.getAllCategoryIds(this.filteredCategories);
-            window.dispatchEvent(new CustomEvent('expand-all-categories'));
+            // Expand all category trees
+            document.querySelectorAll('[data-expandable]').forEach(el => {
+                el.classList.remove('hidden');
+            });
         },
 
         collapseAll() {
-            this.expandedCategories = [];
-            window.dispatchEvent(new CustomEvent('collapse-all-categories'));
+            // Collapse all category trees
+            document.querySelectorAll('[data-expandable]').forEach(el => {
+                el.classList.add('hidden');
+            });
         },
 
-        getAllCategoryIds(categories) {
-            let ids = [];
-            categories.forEach(cat => {
-                ids.push(cat.id);
-                if (cat.children && cat.children.length > 0) {
-                    ids = ids.concat(this.getAllCategoryIds(cat.children));
-                }
-            });
-            return ids;
+        async loadCategories() {
+            // Reload the page with current filters
+            window.location.href = '{{ route("admin.categories.index") }}' +
+                '?search=' + this.searchQuery +
+                '&status=' + this.statusFilter +
+                '&type=' + this.depthFilter;
+        },
+
+        filterCategories() {
+            // Submit form with filters (server-side filtering)
+            this.loadCategories();
         },
 
         deleteCategory(categoryId) {
-            window.showConfirm({
-                title: '{{ __("admin.confirm_delete") }}',
-                message: 'هل أنت متأكد من حذف هذا التصنيف؟ سيتم حذف جميع التصنيفات الفرعية أيضاً.',
-                type: 'danger',
-                onConfirm: async () => {
-                    try {
-                        const response = await fetch(`/admin/categories/${categoryId}`, {
-                            method: 'DELETE',
-                            headers: {
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        });
+            if (!confirm('{{ __("admin.confirm_delete") }}')) {
+                return;
+            }
 
-                        if (response.ok) {
-                            await this.loadCategories();
-                            showToast('{{ __("admin.deleted_successfully") }}', 'success');
-                        }
-                    } catch (error) {
-                        console.error('Failed to delete category:', error);
-                        showToast('{{ __("admin.error_occurred") }}', 'error');
-                    }
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+            fetch(`/su/portal/v1/admin/categories/${categoryId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('{{ __("admin.error_occurred") }}');
+                }
+            })
+            .catch(error => {
+                console.error('Delete error:', error);
+                alert('{{ __("admin.error_occurred") }}');
             });
         }
     };
