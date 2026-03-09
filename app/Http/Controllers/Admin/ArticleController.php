@@ -189,7 +189,7 @@ class ArticleController extends AdminController
             'locales:id,article_id,locale,title,slug,description,excerpt,content,seo_metadata,is_ready',
             'categories:id,name,slug',
             'tags:id,name,slug',
-            'mediaItems:id,filename,url,thumbnail_url,mime_type,type',
+            'mediaItems:id,filename,original_filename,path,mime_type,size,type',
             'gallery:id,article_id,image,caption,order',
         ]);
 
@@ -563,7 +563,7 @@ class ArticleController extends AdminController
             'category:id,name,slug',
             'categories:id,name,slug',
             'tags:id,name,slug',
-            'mediaItems:id,filename,url,thumbnail_url,mime_type,type',
+            'mediaItems:id,filename,original_filename,path,mime_type,size,type',
             'gallery:id,article_id,image,caption,order',
             'versions:id,versionable_id,versionable_type,created_at',
             'seerahEvents:id,slug',
@@ -647,8 +647,7 @@ class ArticleController extends AdminController
                 'id'                => $media->id,
                 'filename'          => $media->filename,
                 'original_filename' => $media->original_filename,
-                'url'               => $media->url,
-                'thumbnail_url'     => $media->thumbnail_url,
+                'path'              => $media->path,
                 'mime_type'         => $media->mime_type,
                 'size'              => $media->size,
                 'type'              => $media->type,

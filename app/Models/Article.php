@@ -121,7 +121,7 @@ class Article extends Model
     {
         return $this->belongsToMany(Media::class, 'articles_media', 'article_id', 'media_id')
             ->withTimestamps()
-            ->orderBy('created_at', 'desc');
+            ->orderBy('articles_media.created_at', 'desc');
     }
 
     /**
