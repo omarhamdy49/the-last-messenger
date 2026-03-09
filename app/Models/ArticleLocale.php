@@ -74,11 +74,106 @@ class ArticleLocale extends Model
     }
 
     /**
-     * Get content body from content JSON
+     * Get content body from content JSON.
+     *
+     * If body is a blocks array, renders it to HTML for public API consumers.
+     * If body is a string (legacy), returns as-is.
      */
     public function getBody(): ?string
     {
-        return $this->content['body'] ?? null;
+        $body = $this->content['body'] ?? null;
+
+        if ($body === null) {
+            return null;
+        }
+
+        if (is_array($body)) {
+            return $this->renderBlocksToHtml($body);
+        }
+
+        return $body;
+    }
+
+    /**
+     * Get content blocks array for the admin form.
+     *
+     * If body is a blocks array, returns it directly.
+     * If body is a legacy HTML string, wraps it in a single WYSIWYG block.
+     */
+    public function getBlocks(): array
+    {
+        $body = $this->content['body'] ?? null;
+
+        if ($body === null) {
+            return [];
+        }
+
+        if (is_array($body)) {
+            return $body;
+        }
+
+        // Legacy HTML string — wrap in a single WYSIWYG block
+        return [
+            ['type' => 'wysiwyg', 'content' => $body],
+        ];
+    }
+
+    /**
+     * Render content blocks array to HTML for public API.
+     */
+    private function renderBlocksToHtml(array $blocks): string
+    {
+        $html = '';
+
+        foreach ($blocks as $block) {
+            $type = $block['type'] ?? '';
+
+            switch ($type) {
+                case 'wysiwyg':
+                    $html .= $block['content'] ?? '';
+                    break;
+
+                case 'verse':
+                    $surahName = $block['surah_name'] ?? '';
+                    $html .= '<blockquote class="quran-quote">';
+                    foreach ($block['verses'] ?? [] as $verse) {
+                        $html .= '<p class="verse-text">' . e($verse['text'] ?? '') . ' <span class="verse-number">(' . e($verse['number'] ?? '') . ')</span></p>';
+                    }
+                    $html .= '<footer>' . e($surahName) . '</footer>';
+                    $html .= '</blockquote>';
+                    break;
+
+                case 'hadith':
+                    $html .= '<blockquote class="hadith-quote">';
+                    $html .= '<p>' . e($block['text'] ?? '') . '</p>';
+                    $collection = $block['collection'] ?? '';
+                    $number = $block['number'] ?? '';
+                    $grade = $block['grade'] ?? '';
+                    $html .= '<footer>' . e($collection) . ' - ' . e($number) . ' (' . e($grade) . ')</footer>';
+                    $html .= '</blockquote>';
+                    break;
+
+                case 'sahabi':
+                    $html .= '<div class="sahabi-card">';
+                    $html .= '<strong>' . e($block['name'] ?? '') . '</strong>';
+                    if (! empty($block['kunya'])) {
+                        $html .= ' <span>(' . e($block['kunya']) . ')</span>';
+                    }
+                    $html .= '</div>';
+                    break;
+
+                case 'seerah':
+                    $html .= '<div class="seerah-card">';
+                    $html .= '<strong>' . e($block['title'] ?? '') . '</strong>';
+                    if (! empty($block['hijri_year'])) {
+                        $html .= ' <span>' . e($block['hijri_year']) . ' هـ</span>';
+                    }
+                    $html .= '</div>';
+                    break;
+            }
+        }
+
+        return $html;
     }
 
     /**
@@ -114,9 +209,11 @@ class ArticleLocale extends Model
     }
 
     /**
-     * Set content with structure
+     * Set content with structure.
+     *
+     * @param string|array|null $body HTML string or blocks array.
      */
-    public function setContent(?string $body, ?array $toc = null, ?string $summary = null): void
+    public function setContent(string|array|null $body, ?array $toc = null, ?string $summary = null): void
     {
         $this->content = [
             'body' => $body,

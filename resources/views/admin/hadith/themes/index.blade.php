@@ -100,7 +100,7 @@
                         <a href="{{ route('admin.hadith.themes.edit', $theme->id) }}" class="p-1.5 rounded-lg transition-colors" :class="darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'" title="تعديل">
                             <i data-lucide="edit-2" class="w-4 h-4"></i>
                         </a>
-                        <form action="{{ route('admin.hadith.themes.destroy', $theme->id) }}" method="POST" class="inline" onsubmit="return confirm('{{ __('admin.confirm_delete') }}')">
+                        <form action="{{ route('admin.hadith.themes.destroy', $theme->id) }}" method="POST" class="inline" @submit.prevent="$dispatch('show-confirm', { title: '{{ __("admin.confirm_delete") }}', message: '{{ __("admin.delete_warning") }}', type: 'danger', onConfirm: () => $el.submit() })">
                             @csrf @method('DELETE')
                             <button type="submit" class="p-1.5 rounded-lg transition-colors text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" title="حذف">
                                 <i data-lucide="trash-2" class="w-4 h-4"></i>

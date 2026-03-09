@@ -203,7 +203,7 @@ use Illuminate\Support\Str;
                                     <i data-lucide="edit-3" class="w-5 h-5 group-hover/icon:scale-110 transition-transform"></i>
                                 </a>
                                 <form action="{{ route('admin.hadith.destroy', $hadith) }}" method="POST" class="inline-block"
-                                      @click.stop @submit.prevent="if (confirm('{{ __('admin.confirm_delete') }}')) { this.submit(); }">
+                                      @click.stop @submit.prevent="$dispatch('show-confirm', { title: '{{ __("admin.confirm_delete") }}', message: '{{ __("admin.delete_warning") }}', type: 'danger', onConfirm: () => $el.submit() })">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="p-2 sm:p-2.5 rounded-lg transition-all duration-200 group/icon"

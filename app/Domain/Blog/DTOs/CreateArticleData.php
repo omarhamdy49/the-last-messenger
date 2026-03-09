@@ -21,7 +21,7 @@ final class CreateArticleData
      * @param  array<string, string>       $slugs         Locale-keyed slugs (may be empty; action will generate).
      * @param  array<string, string|null>  $descriptions  Locale-keyed descriptions.
      * @param  array<string, string|null>  $excerpts      Locale-keyed excerpts.
-     * @param  array<string, string|null>  $contents      Locale-keyed HTML body content.
+     * @param  array<string, string|array|null>  $contents      Locale-keyed body content (HTML string or blocks array).
      * @param  array<string, array|null>   $tocs          Locale-keyed TOC arrays (may be empty; action will generate).
      * @param  array<string, string|null>  $summaries     Locale-keyed summaries.
      * @param  array<string, string|null>  $seoTitles     Locale-keyed SEO titles.
@@ -30,6 +30,7 @@ final class CreateArticleData
      * @param  array<int>|null             $tags          Tag IDs to attach.
      * @param  array<int>|null             $mediaItems    Media IDs to sync.
      * @param  array<int>|null             $additionalCategories Additional category IDs to attach.
+     * @param  array<int>|null             $series        Series IDs to attach (with positions).
      */
     public function __construct(
         public readonly ?UploadedFile $thumb,
@@ -56,6 +57,7 @@ final class CreateArticleData
         public readonly ?array $tags,
         public readonly ?array $mediaItems,
         public readonly ?array $additionalCategories,
+        public readonly ?array $series = null,
     ) {}
 
     /**
@@ -92,6 +94,7 @@ final class CreateArticleData
             tags:                 $validated['tags'] ?? null,
             mediaItems:           $validated['media_items'] ?? null,
             additionalCategories: $validated['additional_categories'] ?? null,
+            series:               $validated['series'] ?? null,
         );
     }
 }

@@ -49,6 +49,10 @@ class StoreSeriesRequest extends FormRequest
 
             // Slug (auto-generated if not provided)
             'slug' => 'nullable|string|max:255|unique:series,slug',
+
+            // Articles
+            'article_ids' => 'nullable|array',
+            'article_ids.*' => 'integer|exists:articles,id',
         ];
     }
 

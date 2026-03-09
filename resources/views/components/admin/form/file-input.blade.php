@@ -42,7 +42,7 @@
                  const invalidFiles = selectedFiles.filter(file => file.size > maxBytes);
 
                  if (invalidFiles.length > 0) {
-                     alert(`Some files exceed the maximum size of ${this.maxSize}MB`);
+                     showToast(`Some files exceed the maximum size of ${this.maxSize}MB`, 'error');
                      return;
                  }
              }

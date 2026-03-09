@@ -415,7 +415,7 @@ function tagManagement() {
 
         mergeSelected() {
             if (this.selectedTags.length < 2) {
-                alert('Please select at least 2 tags to merge');
+                showToast('يرجى تحديد وسمين على الأقل للدمج', 'warning');
                 return;
             }
             window.dispatchEvent(new CustomEvent('open-tag-merge-modal', {
@@ -424,52 +424,58 @@ function tagManagement() {
         },
 
         async deleteUnused() {
-            if (!confirm('Are you sure you want to delete all unused tags? This cannot be undone.')) {
-                return;
-            }
+            window.showConfirm({
+                title: '{{ __("admin.confirm_delete") }}',
+                message: 'هل أنت متأكد من حذف جميع الوسوم غير المستخدمة؟ لا يمكن التراجع عن هذا الإجراء.',
+                type: 'danger',
+                onConfirm: async () => {
+                    this.loading = true;
+                    try {
+                        const response = await fetch('/admin/tags/delete-unused', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            }
+                        });
 
-            this.loading = true;
-            try {
-                const response = await fetch('/admin/tags/delete-unused', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
+                        if (response.ok) {
+                            window.location.reload();
+                        }
+                    } catch (error) {
+                        console.error('Failed to delete unused tags:', error);
+                    } finally {
+                        this.loading = false;
                     }
-                });
-
-                if (response.ok) {
-                    window.location.reload();
                 }
-            } catch (error) {
-                console.error('Failed to delete unused tags:', error);
-            } finally {
-                this.loading = false;
-            }
+            });
         },
 
-        async deleteTag(tagId) {
-            if (!confirm('Are you sure you want to delete this tag?')) {
-                return;
-            }
+        deleteTag(tagId) {
+            window.showConfirm({
+                title: '{{ __("admin.confirm_delete") }}',
+                message: '{{ __("admin.delete_warning") }}',
+                type: 'danger',
+                onConfirm: async () => {
+                    try {
+                        const response = await fetch(`/admin/tags/${tagId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Accept': 'application/json'
+                            }
+                        });
 
-            try {
-                const response = await fetch(`/admin/tags/${tagId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Accept': 'application/json'
+                        if (response.ok) {
+                            this.tags = this.tags.filter(tag => tag.id !== tagId);
+                            this.filterTags();
+                        }
+                    } catch (error) {
+                        console.error('Failed to delete tag:', error);
                     }
-                });
-
-                if (response.ok) {
-                    this.tags = this.tags.filter(tag => tag.id !== tagId);
-                    this.filterTags();
                 }
-            } catch (error) {
-                console.error('Failed to delete tag:', error);
-            }
+            });
         },
 
         formatDate(dateString) {

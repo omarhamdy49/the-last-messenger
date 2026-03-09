@@ -230,7 +230,7 @@
                                 <form action="{{ route('admin.seerah-events.destroy', $event->id) }}"
                                       method="POST"
                                       class="inline"
-                                      onsubmit="return confirm('{{ __('admin.confirm_delete') }}')">
+                                      @submit.prevent="$dispatch('show-confirm', { title: '{{ __("admin.confirm_delete") }}', message: '{{ __("admin.delete_warning") }}', type: 'danger', onConfirm: () => $el.submit() })">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit"

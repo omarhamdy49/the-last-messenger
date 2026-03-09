@@ -13,6 +13,7 @@ return [
     'search' => 'Ara...',
     'save' => 'Kaydet',
     'cancel' => 'İptal',
+    'confirm' => 'Onayla',
     'delete' => 'Sil',
     'edit' => 'Düzenle',
     'view' => 'Görüntüle',
@@ -24,6 +25,7 @@ return [
     'loading' => 'Yükleniyor...',
     'no_data' => 'Veri yok',
     'confirm_delete' => 'Silmek istediğinizden emin misiniz?',
+    'delete_warning' => 'Bu işlem geri alınamaz.',
 
     // Navigation
     'nav' => [
@@ -140,6 +142,8 @@ return [
     'created_successfully' => 'Başarıyla oluşturuldu',
     'updated_successfully' => 'Başarıyla güncellendi',
     'deleted_successfully' => 'Başarıyla silindi',
+    'error_occurred' => 'Bir hata oluştu. Lütfen tekrar deneyin.',
+    'items_published' => 'öğe başarıyla yayınlandı',
     'operation_failed' => 'İşlem başarısız',
 
     // Pagination

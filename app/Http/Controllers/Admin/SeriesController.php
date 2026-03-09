@@ -125,8 +125,22 @@ class SeriesController extends Controller
                 $data['slug'] = \Illuminate\Support\Str::slug($data['title']['en'] ?? $data['title']['ar']);
             }
 
+            // Remove articles from data before creating
+            $articleIds = $request->input('article_ids', []);
+            unset($data['article_ids']);
+
             // Create series
             $series = Series::create($data);
+
+            // Sync articles with positions
+            if (!empty($articleIds)) {
+                $syncData = [];
+                foreach ($articleIds as $position => $articleId) {
+                    $syncData[$articleId] = ['position' => $position];
+                }
+                $series->articles()->sync($syncData);
+                $series->updateArticlesCount();
+            }
 
             // Log the creation
             $this->logger->logCreate($series, $request->user());
@@ -173,7 +187,7 @@ class SeriesController extends Controller
      */
     public function show(int $id): View
     {
-        $series = Series::with('articles')->findOrFail($id);
+        $series = Series::with(['articles.locales:id,article_id,locale,title'])->findOrFail($id);
 
         return view('admin.series.show', compact('series'));
     }
@@ -188,7 +202,7 @@ class SeriesController extends Controller
      */
     public function edit(int $id): View
     {
-        $series = Series::with('articles')->findOrFail($id);
+        $series = Series::with(['articles.locales:id,article_id,locale,title'])->findOrFail($id);
 
         return view('admin.series.edit', compact('series'));
     }
@@ -229,8 +243,20 @@ class SeriesController extends Controller
                 $data['slug'] = \Illuminate\Support\Str::slug($data['title']['en'] ?? $data['title']['ar']);
             }
 
+            // Handle articles sync
+            $articleIds = $request->input('article_ids', []);
+            unset($data['article_ids']);
+
             // Perform update
             $series->update($data);
+
+            // Sync articles with positions
+            $syncData = [];
+            foreach ($articleIds as $position => $articleId) {
+                $syncData[$articleId] = ['position' => $position];
+            }
+            $series->articles()->sync($syncData);
+            $series->updateArticlesCount();
 
             // Log the update with diff
             $this->logger->logUpdate($series, $oldValues, $series->fresh()->toArray(), $request->user());
@@ -245,7 +271,7 @@ class SeriesController extends Controller
             }
 
             return redirect()
-                ->route('admin.series.index')
+                ->route('admin.series.edit', $id)
                 ->with('success', __('admin.series_updated'));
         } catch (\Throwable $e) {
             \Log::error('admin.series.update_failed', [
@@ -283,8 +309,8 @@ class SeriesController extends Controller
             $series = Series::findOrFail($id);
             $thumbnail = $series->thumbnail;
 
-            // Remove series_id from all articles in this series
-            $series->articles()->update(['series_id' => null]);
+            // Detach all articles from this series
+            $series->articles()->detach();
 
             // Delete thumbnail file if exists
             if ($thumbnail && Storage::disk('public')->exists($thumbnail)) {
@@ -343,17 +369,18 @@ class SeriesController extends Controller
             $request->validate([
                 'articles' => 'required|array|min:1',
                 'articles.*.id' => 'required|integer|exists:articles,id',
-                'articles.*.published_at' => 'required|date',
+                'articles.*.position' => 'required|integer|min:0',
             ]);
 
             $series = Series::findOrFail($id);
             $articles = $request->input('articles');
 
-            // Update published_at for ordering (since position_in_series doesn't exist)
+            // Update position in pivot table for ordering
             foreach ($articles as $articleData) {
-                $series->articles()
-                    ->where('id', $articleData['id'])
-                    ->update(['published_at' => $articleData['published_at']]);
+                $series->articles()->updateExistingPivot(
+                    $articleData['id'],
+                    ['position' => $articleData['position']]
+                );
             }
 
             // Log the action
@@ -409,8 +436,8 @@ class SeriesController extends Controller
                         continue;
                     }
 
-                    // Remove series_id from articles
-                    $series->articles()->update(['series_id' => null]);
+                    // Detach all articles from this series
+                    $series->articles()->detach();
 
                     // Delete thumbnail
                     if ($series->thumbnail && Storage::disk('public')->exists($series->thumbnail)) {

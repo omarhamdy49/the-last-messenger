@@ -51,6 +51,7 @@ class CreateArticleAction
                 $this->syncCategories($article, $data);
                 $this->syncTags($article, $data);
                 $this->syncMediaItems($article, $data);
+                $this->syncSeries($article, $data);
 
                 $this->versionService->createVersion(
                     $article,
@@ -89,7 +90,7 @@ class CreateArticleAction
 
     private function createArticleRecord(CreateArticleData $data, ?string $thumbPath): Article
     {
-        $primaryContent = $data->contents['ar'] ?? reset($data->contents) ?? '';
+        $primaryContent = $data->contents['ar'] ?? reset($data->contents) ?: '';
 
         return Article::create([
             'thumb'        => $thumbPath,
@@ -159,6 +160,17 @@ class CreateArticleAction
     {
         if (! empty($data->mediaItems)) {
             $article->mediaItems()->sync($data->mediaItems);
+        }
+    }
+
+    private function syncSeries(Article $article, CreateArticleData $data): void
+    {
+        if (! empty($data->series)) {
+            $syncData = [];
+            foreach ($data->series as $position => $seriesId) {
+                $syncData[$seriesId] = ['position' => $position];
+            }
+            $article->series()->sync($syncData);
         }
     }
 }

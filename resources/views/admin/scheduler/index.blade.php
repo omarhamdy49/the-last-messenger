@@ -225,7 +225,7 @@
                                         </a>
                                         <form action="{{ route('admin.scheduler.destroy', $schedule->id) }}"
                                               method="POST" class="inline"
-                                              onsubmit="return confirm('هل أنت متأكد من إلغاء هذه الجدولة؟')">
+                                              @submit.prevent="$dispatch('show-confirm', { title: '{{ __("admin.confirm_delete") }}', message: 'هل أنت متأكد من إلغاء هذه الجدولة؟', type: 'danger', onConfirm: () => $el.submit() })">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit"

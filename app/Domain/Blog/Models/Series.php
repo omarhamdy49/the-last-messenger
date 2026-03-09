@@ -7,7 +7,7 @@ namespace App\Domain\Blog\Models;
 use App\Models\Article;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Spatie\Translatable\HasTranslations;
 
 /**
@@ -57,19 +57,22 @@ class Series extends Model
     }
 
     /**
-     * Get articles in this series
+     * Get articles in this series (many-to-many with position ordering)
      */
-    public function articles(): HasMany
+    public function articles(): BelongsToMany
     {
-        return $this->hasMany(Article::class)->orderBy('published_at');
+        return $this->belongsToMany(Article::class, 'article_series')
+            ->withPivot('position')
+            ->withTimestamps()
+            ->orderBy('article_series.position');
     }
 
     /**
-     * Update total articles count
+     * Update total articles count from pivot
      */
     public function updateArticlesCount(): void
     {
-        $this->update(['total_articles' => $this->articles()->count()]);
+        $this->updateQuietly(['total_articles' => $this->articles()->count()]);
     }
 
     /**

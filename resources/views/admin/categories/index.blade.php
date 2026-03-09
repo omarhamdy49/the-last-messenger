@@ -298,34 +298,32 @@ function categoryManagement() {
             return ids;
         },
 
-        async deleteCategory(categoryId) {
-            if (!confirm('Are you sure you want to delete this category? All subcategories will also be deleted.')) {
-                return;
-            }
+        deleteCategory(categoryId) {
+            window.showConfirm({
+                title: '{{ __("admin.confirm_delete") }}',
+                message: 'هل أنت متأكد من حذف هذا التصنيف؟ سيتم حذف جميع التصنيفات الفرعية أيضاً.',
+                type: 'danger',
+                onConfirm: async () => {
+                    try {
+                        const response = await fetch(`/admin/categories/${categoryId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
 
-            try {
-                const response = await fetch(`/admin/categories/${categoryId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
+                        if (response.ok) {
+                            await this.loadCategories();
+                            showToast('{{ __("admin.deleted_successfully") }}', 'success');
+                        }
+                    } catch (error) {
+                        console.error('Failed to delete category:', error);
+                        showToast('{{ __("admin.error_occurred") }}', 'error');
                     }
-                });
-
-                if (response.ok) {
-                    await this.loadCategories();
-                    // Show success message
-                    window.dispatchEvent(new CustomEvent('show-notification', {
-                        detail: { type: 'success', message: 'Category deleted successfully' }
-                    }));
                 }
-            } catch (error) {
-                console.error('Failed to delete category:', error);
-                window.dispatchEvent(new CustomEvent('show-notification', {
-                    detail: { type: 'error', message: 'Failed to delete category' }
-                }));
-            }
+            });
         }
     };
 }

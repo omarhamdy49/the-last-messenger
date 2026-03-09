@@ -13,6 +13,7 @@ return [
     'search' => 'Search...',
     'save' => 'Save',
     'cancel' => 'Cancel',
+    'confirm' => 'Confirm',
     'delete' => 'Delete',
     'edit' => 'Edit',
     'view' => 'View',
@@ -24,6 +25,7 @@ return [
     'loading' => 'Loading...',
     'no_data' => 'No data available',
     'confirm_delete' => 'Are you sure you want to delete?',
+    'delete_warning' => 'This action cannot be undone.',
 
     // Navigation
     'nav' => [
@@ -140,6 +142,8 @@ return [
     'created_successfully' => 'Created successfully',
     'updated_successfully' => 'Updated successfully',
     'deleted_successfully' => 'Deleted successfully',
+    'error_occurred' => 'An error occurred. Please try again.',
+    'items_published' => 'items published successfully',
     'operation_failed'          => 'Operation failed. Please try again.',
     'category_operation_failed' => 'Category operation failed. Please try again.',
     'article_create_failed'     => 'Failed to create article. Please try again.',

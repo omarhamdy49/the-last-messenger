@@ -501,6 +501,7 @@ Route::prefix('su/portal/v1/admin')
         // Quran Verse Routes (full CRUD)
         Route::prefix('verses')->group(function (): void {
             Route::get('/search', [VerseController::class, 'search'])->name('admin.verses.search');
+            Route::get('/by-surah/{surahId}', [VerseController::class, 'bySurah'])->name('admin.verses.by-surah');
             Route::post('/bulk-delete', [VerseController::class, 'bulkDelete'])->name('admin.verses.bulk-delete');
         });
         Route::resource('verses', VerseController::class)->names([

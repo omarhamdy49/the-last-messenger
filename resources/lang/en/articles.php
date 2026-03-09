@@ -269,6 +269,8 @@ return [
         'no_published' => 'No published articles',
         'no_scheduled' => 'No scheduled articles',
         'no_trash' => 'Trash is empty',
+        'gallery' => 'No gallery images',
+        'media' => 'No linked media',
     ],
 
     // Validation
@@ -298,6 +300,8 @@ return [
         'is_ready' => 'Mark if this translation is ready for publication.',
         'is_pinned' => 'Pinned articles appear at the top of lists.',
         'read_time' => 'Estimated reading time in minutes (auto-calculated from content).',
+        'seo_title_length' => 'Ideal length: 50-60 characters',
+        'seo_desc_length' => 'Ideal length: 150-160 characters',
     ],
 
     // Sidebar Sections
@@ -320,5 +324,72 @@ return [
         'media_gallery' => 'Media Gallery',
         'video_content' => 'Video Content',
         'statistics_and_references' => 'Statistics & References',
+    ],
+
+    // Block System
+    'blocks' => [
+        'add' => 'Add Block',
+        'text' => 'Text',
+        'empty' => 'No content blocks yet',
+        'add_first' => 'Add first content block',
+        'verses' => 'Verses',
+        'verse' => 'Verse',
+        'hijri' => 'AH',
+    ],
+
+    // Module Selector
+    'selector' => [
+        'search_surah' => 'Search surah...',
+        'verses' => 'verses',
+        'change_surah' => 'Change surah',
+        'all_collections' => 'All collections',
+        'search_hadith' => 'Search hadith...',
+        'search_sahabi' => 'Search companion...',
+        'search_seerah' => 'Search event...',
+        'ayat' => 'verses',
+        'no_translation' => 'No translation available',
+        'no_results' => 'No results found',
+        'selected' => 'selected',
+        'add_block' => 'Add',
+    ],
+
+    // Modules (for content embed buttons)
+    'modules' => [
+        'quran' => 'Quran Verse',
+        'hadith' => 'Hadith',
+        'sahabah' => 'Companion',
+        'seerah' => 'Seerah Event',
+        'media' => 'Media',
+        'insert' => 'Insert',
+        'reference_placeholder' => 'Enter reference (e.g., Al-Baqarah 255, Bukhari 1)',
+        'quran_short' => 'Verse',
+        'hadith_short' => 'Hadith',
+        'sahabi_short' => 'Sahabi',
+        'seerah_short' => 'Seerah',
+    ],
+
+    'embed' => [
+        'view_profile' => 'View Profile',
+        'view_event' => 'View Event',
+    ],
+
+    // SEO
+    'seo' => [
+        'title' => 'SEO Title',
+        'description' => 'SEO Description',
+        'keywords' => 'Keywords',
+        'og_title' => 'Facebook Title',
+        'og_description' => 'Facebook Description',
+        'og_image' => 'Facebook Image',
+        'twitter_title' => 'Twitter Title',
+        'twitter_description' => 'Twitter Description',
+        'twitter_image' => 'Twitter Image',
+        'canonical_url' => 'Canonical URL',
+        'robots' => 'Robots Directives',
+        'index' => 'Index',
+        'noindex' => 'No Index',
+        'follow' => 'Follow',
+        'nofollow' => 'No Follow',
+        'preview' => 'Search Preview',
     ],
 ];

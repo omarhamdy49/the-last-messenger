@@ -219,7 +219,7 @@
                                     </div>
                                 </form>
 
-                                <form action="{{ route('admin.media-library.settings.presets.destroy', $preset) }}" method="POST" onsubmit="return confirm(@js(__('media.settings_page.confirm_delete_preset', ['name' => $preset->name])));">
+                                <form action="{{ route('admin.media-library.settings.presets.destroy', $preset) }}" method="POST" @submit.prevent="$dispatch('show-confirm', { title: '{{ __("admin.confirm_delete") }}', message: @js(__('media.settings_page.confirm_delete_preset', ['name' => $preset->name])), type: 'danger', onConfirm: () => $el.submit() })">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit"

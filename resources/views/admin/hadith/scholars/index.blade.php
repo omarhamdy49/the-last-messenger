@@ -172,7 +172,7 @@
                                 <a href="{{ route('admin.hadith.scholars.edit', $scholar->id) }}" class="p-2 rounded-lg transition-colors" :class="darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'" title="تعديل">
                                     <i data-lucide="edit-2" class="w-4 h-4"></i>
                                 </a>
-                                <form action="{{ route('admin.hadith.scholars.destroy', $scholar->id) }}" method="POST" class="inline" onsubmit="return confirm('{{ __('admin.confirm_delete') }}')">
+                                <form action="{{ route('admin.hadith.scholars.destroy', $scholar->id) }}" method="POST" class="inline" @submit.prevent="$dispatch('show-confirm', { title: '{{ __("admin.confirm_delete") }}', message: '{{ __("admin.delete_warning") }}', type: 'danger', onConfirm: () => $el.submit() })">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="p-2 rounded-lg transition-colors text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" title="حذف">

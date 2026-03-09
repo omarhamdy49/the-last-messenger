@@ -381,9 +381,9 @@
                  :class="darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'">
 
                 @if(in_array('view', $actions) && $viewRouteUrl)
-                    <a :href="'{{ $viewRouteUrl }}'.replace('{{ $routePlaceholder }}', activeMenuRow?.id)"
-                       @click="closeRowMenu()"
-                       class="flex items-center gap-3 px-4 py-3 transition-colors group/item"
+                    <a @click.prevent="window.location.href = '{{ $viewRouteUrl }}'.replace('{{ $routePlaceholder }}', activeMenuRow?.id)"
+                       href="#"
+                       class="flex items-center gap-3 px-4 py-3 transition-colors group/item cursor-pointer"
                        :class="darkMode ? 'hover:bg-gray-700 text-white' : 'hover:bg-gray-50 text-gray-900'">
                         <i data-lucide="eye" class="w-5 h-5 text-blue-500 group-hover/item:scale-110 transition-transform"></i>
                         <span class="font-medium text-sm">{{ __('admin.view') }}</span>
@@ -391,9 +391,9 @@
                 @endif
 
                 @if(in_array('edit', $actions) && $editRouteUrl)
-                    <a :href="'{{ $editRouteUrl }}'.replace('{{ $routePlaceholder }}', activeMenuRow?.id)"
-                       @click="closeRowMenu()"
-                       class="flex items-center gap-3 px-4 py-3 transition-colors group/item"
+                    <a @click.prevent="window.location.href = '{{ $editRouteUrl }}'.replace('{{ $routePlaceholder }}', activeMenuRow?.id)"
+                       href="#"
+                       class="flex items-center gap-3 px-4 py-3 transition-colors group/item cursor-pointer"
                        :class="darkMode ? 'hover:bg-gray-700 text-white' : 'hover:bg-gray-50 text-gray-900'">
                         <i data-lucide="edit" class="w-5 h-5 text-accent group-hover/item:scale-110 transition-transform"></i>
                         <span class="font-medium text-sm">{{ __('admin.edit') }}</span>
@@ -704,19 +704,25 @@ function dataTable() {
 
         // ── BULK ACTIONS ──────────────────────────────────────────
         bulkDelete() {
-            if (!confirm(`Are you sure you want to delete ${this.selectedRows.length} items?`)) return;
-            this.loading = true;
-            setTimeout(() => {
-                this.rawData = this.rawData.filter(row => !this.selectedRows.includes(row.id));
-                this.filterData();
-                this.clearSelection();
-            }, 800);
+            showConfirm({
+                title: '{{ __("admin.confirm_delete") }}',
+                message: '{{ __("admin.delete_warning") }}',
+                type: 'danger',
+                onConfirm: () => {
+                    this.loading = true;
+                    setTimeout(() => {
+                        this.rawData = this.rawData.filter(row => !this.selectedRows.includes(row.id));
+                        this.filterData();
+                        this.clearSelection();
+                    }, 800);
+                }
+            });
         },
 
         bulkPublish() {
             this.loading = true;
             setTimeout(() => {
-                alert(`${this.selectedRows.length} items published successfully!`);
+                showToast(`${this.selectedRows.length} {{ __("admin.items_published") }}`, 'success');
                 this.clearSelection();
                 this.loading = false;
             }, 800);
@@ -731,8 +737,8 @@ function dataTable() {
         exportData(format) {
             switch (format) {
                 case 'csv':   this.downloadCSV(this.filteredData, 'data-export.csv'); break;
-                case 'excel': alert('Excel export coming soon!'); break;
-                case 'pdf':   alert('PDF export coming soon!'); break;
+                case 'excel': showToast('Excel export coming soon!', 'info'); break;
+                case 'pdf':   showToast('PDF export coming soon!', 'info'); break;
             }
         },
 

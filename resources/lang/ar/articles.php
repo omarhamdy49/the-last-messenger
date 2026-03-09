@@ -246,6 +246,7 @@ return [
         'noindex' => 'عدم الفهرسة',
         'follow' => 'متابعة الروابط',
         'nofollow' => 'عدم متابعة الروابط',
+        'preview' => 'معاينة نتائج البحث',
     ],
 
     // Statistics
@@ -309,6 +310,8 @@ return [
         'is_ready' => 'تحديد ما إذا كانت الترجمة جاهزة للنشر.',
         'is_pinned' => 'المقالات المثبتة تظهر في أعلى القوائم.',
         'read_time' => 'وقت القراءة المقدر بالدقائق (يتم حسابه تلقائياً من المحتوى).',
+        'seo_title_length' => 'الطول المثالي: 50-60 حرف',
+        'seo_desc_length' => 'الطول المثالي: 150-160 حرف',
     ],
 
     // Sidebar Sections
@@ -346,6 +349,13 @@ return [
 
     // Block System
     'blocks' => [
+        'add' => 'إضافة كتلة',
+        'text' => 'نص',
+        'empty' => 'لم تضف أي كتل محتوى بعد',
+        'add_first' => 'أضف أول كتلة محتوى',
+        'verses' => 'الآيات',
+        'verse' => 'الآية',
+        'hijri' => 'هـ',
         'wysiwyg' => 'محرر نصي',
         'wysiwyg_desc' => 'إضافة محتوى نصي غني بالتنسيق',
         'wysiwyg_placeholder' => 'اكتب محتواك هنا...',
@@ -371,6 +381,22 @@ return [
         'empty_state' => 'لم تضف أي محتوى بعد. اختر نوع محتوى من الأعلى',
     ],
 
+    // Module Selector
+    'selector' => [
+        'search_surah' => 'ابحث عن سورة...',
+        'verses' => 'آية',
+        'change_surah' => 'تغيير السورة',
+        'all_collections' => 'جميع المجموعات',
+        'search_hadith' => 'ابحث عن حديث...',
+        'search_sahabi' => 'ابحث عن صحابي...',
+        'search_seerah' => 'ابحث عن حدث...',
+        'ayat' => 'آية',
+        'no_translation' => 'لا توجد ترجمة',
+        'no_results' => 'لا توجد نتائج',
+        'selected' => 'محدد',
+        'add_block' => 'إضافة',
+    ],
+
     'blocks_count' => 'كتلة محتوى',
 
     // Review Section
@@ -386,9 +412,40 @@ return [
         'select_writer' => 'اختر المؤلف...',
         'select_category' => 'اختر التصنيف الرئيسي...',
         'title' => 'أدخل عنوان المقال',
+        'content' => 'اكتب محتواك هنا...',
+        'excerpt' => 'أدخل ملخص المقال...',
     ],
 
     'hints' => [
         'meta_length' => 'الطول المثالي: 120-160 حرف',
+    ],
+
+    // Modules (for content embed buttons)
+    'modules' => [
+        'quran' => 'آية قرآنية',
+        'hadith' => 'حديث نبوي',
+        'sahabah' => 'صحابي',
+        'seerah' => 'حدث سيرة',
+        'media' => 'وسائط',
+        'insert' => 'إدراج',
+        'reference_placeholder' => 'أدخل المرجع (مثال: البقرة 255، البخاري 1)',
+        'quran_short' => 'آية',
+        'hadith_short' => 'حديث',
+        'sahabi_short' => 'صحابي',
+        'seerah_short' => 'سيرة',
+    ],
+
+    'embed' => [
+        'view_profile' => 'عرض السيرة الذاتية',
+        'view_event' => 'عرض الحدث',
+    ],
+
+    // Empty states (additional)
+    'empty' => [
+        'title' => 'لا توجد مقالات بعد',
+        'description' => 'ابدأ بإنشاء أول مقال',
+        'no_results' => 'لا توجد نتائج مطابقة',
+        'gallery' => 'لا توجد صور في المعرض',
+        'media' => 'لا توجد وسائط مرتبطة',
     ],
 ];

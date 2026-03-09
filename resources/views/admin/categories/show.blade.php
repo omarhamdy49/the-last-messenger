@@ -348,25 +348,33 @@
 @push('scripts')
 <script>
 function duplicateCategory() {
-    if (confirm('This will create a copy of this category. Continue?')) {
-        window.location.href = '{{ route("admin.categories.create") }}?duplicate={{ $category->id }}';
-    }
+    window.showConfirm({
+        title: 'نسخ التصنيف',
+        message: 'سيتم إنشاء نسخة من هذا التصنيف. هل تريد المتابعة؟',
+        type: 'warning',
+        onConfirm: () => {
+            window.location.href = '{{ route("admin.categories.create") }}?duplicate={{ $category->id }}';
+        }
+    });
 }
 
 function deleteCategory() {
-    if (!confirm('Are you sure you want to delete this category? All subcategories will also be deleted.')) {
-        return;
-    }
-
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '{{ route("admin.categories.destroy", $category) }}';
-    form.innerHTML = `
-        @csrf
-        @method('DELETE')
-    `;
-    document.body.appendChild(form);
-    form.submit();
+    window.showConfirm({
+        title: '{{ __("admin.confirm_delete") }}',
+        message: 'هل أنت متأكد من حذف هذا التصنيف؟ سيتم حذف جميع التصنيفات الفرعية أيضاً.',
+        type: 'danger',
+        onConfirm: () => {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ route("admin.categories.destroy", $category) }}';
+            form.innerHTML = `
+                @csrf
+                @method('DELETE')
+            `;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    });
 }
 </script>
 @endpush

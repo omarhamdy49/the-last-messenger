@@ -175,35 +175,40 @@
                     if (result.success) {
                         window.location.reload();
                     } else {
-                        alert(result.message || 'حدث خطأ');
+                        showToast(result.message || 'حدث خطأ', 'error');
                     }
                 } catch (error) {
-                    alert('حدث خطأ أثناء تحديث حالة اللغة');
+                    showToast('حدث خطأ أثناء تحديث حالة اللغة', 'error');
                 }
             },
 
             async setDefault(code) {
-                if (!confirm('هل تريد تعيين هذه اللغة كلغة افتراضية؟')) return;
-
-                try {
-                    const response = await fetch(`{{ url('admin/settings/languages') }}/${code}/set-default`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
-                            'X-Requested-With': 'XMLHttpRequest',
-                        },
-                    });
-                    const result = await response.json();
-                    if (result.success) {
-                        window.location.reload();
-                    } else {
-                        alert(result.message || 'حدث خطأ');
+                window.showConfirm({
+                    title: 'تعيين اللغة الافتراضية',
+                    message: 'هل تريد تعيين هذه اللغة كلغة افتراضية؟',
+                    type: 'warning',
+                    onConfirm: async () => {
+                        try {
+                            const response = await fetch(`{{ url('admin/settings/languages') }}/${code}/set-default`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                },
+                            });
+                            const result = await response.json();
+                            if (result.success) {
+                                window.location.reload();
+                            } else {
+                                showToast(result.message || 'حدث خطأ', 'error');
+                            }
+                        } catch (error) {
+                            showToast('حدث خطأ أثناء تعيين اللغة الافتراضية', 'error');
+                        }
                     }
-                } catch (error) {
-                    alert('حدث خطأ أثناء تعيين اللغة الافتراضية');
-                }
+                });
             },
         };
     }

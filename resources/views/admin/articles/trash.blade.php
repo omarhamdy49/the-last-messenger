@@ -128,7 +128,7 @@
                                 <form action="{{ route('admin.articles.force-delete', $article->id) }}"
                                       method="POST"
                                       class="inline"
-                                      onsubmit="return confirm('هل أنت متأكد؟ سيتم حذف المقال نهائياً ولا يمكن استعادته.')">
+                                      @submit.prevent="$dispatch('show-confirm', { title: '{{ __("admin.confirm_delete") }}', message: 'هل أنت متأكد؟ سيتم حذف المقال نهائياً ولا يمكن استعادته.', type: 'danger', onConfirm: () => $el.submit() })">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit"

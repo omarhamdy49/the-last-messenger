@@ -33,17 +33,21 @@ class StoreArticleRequest extends FormRequest
         $rules['excerpt'] = 'nullable|array';
         $rules['description'] = 'nullable|array';
         $rules['content'] = 'required|array';
+        $rules['content_blocks'] = 'nullable|array';
         $rules['summary'] = 'nullable|array';
         $rules['seo_title'] = 'nullable|array';
         $rules['seo_description'] = 'nullable|array';
         $rules['is_ready'] = 'nullable|array';
 
         foreach ($locales as $locale) {
-            $rules["title.{$locale}"] = 'required|string|max:200';
+            // Only Arabic title and content are required; other locales are optional
+            $isRequired = $locale === 'ar';
+            $rules["title.{$locale}"] = ($isRequired ? 'required' : 'nullable') . '|string|max:200';
             $rules["slug.{$locale}"] = ['nullable', 'string', 'max:255', Rule::unique('article_locale', 'slug')->where('locale', $locale)];
             $rules["excerpt.{$locale}"] = 'nullable|string|max:500';
             $rules["description.{$locale}"] = 'nullable|string';
-            $rules["content.{$locale}"] = 'required|string';
+            $rules["content.{$locale}"] = $isRequired ? 'required' : 'nullable';
+            $rules["content_blocks.{$locale}"] = 'nullable|string';
             $rules["summary.{$locale}"] = 'nullable|string';
             $rules["seo_title.{$locale}"] = 'nullable|string|max:70';
             $rules["seo_description.{$locale}"] = 'nullable|string|max:160';
@@ -87,6 +91,10 @@ class StoreArticleRequest extends FormRequest
         $rules['statistics.*.name'] = 'required_with:statistics|string|max:200';
         $rules['statistics.*.value'] = 'required_with:statistics|string|max:200';
 
+        // Series (many-to-many)
+        $rules['series'] = 'nullable|array';
+        $rules['series.*'] = 'exists:series,id';
+
         // Advanced
         $rules['writer_id'] = 'nullable|exists:users,id';
         $rules['read_time'] = 'nullable|integer|min:1|max:999';
@@ -104,9 +112,7 @@ class StoreArticleRequest extends FormRequest
     {
         return [
             'title.ar.required' => 'Arabic title is required',
-            'title.en.required' => 'English title is required',
             'content.ar.required' => 'Arabic content is required',
-            'content.en.required' => 'English content is required',
             'slug.*.unique' => 'This slug is already taken for this language',
             'category_id.exists' => 'Selected category does not exist',
             'additional_categories.*.exists' => 'One or more additional categories do not exist',
@@ -160,6 +166,22 @@ class StoreArticleRequest extends FormRequest
             $this->merge([
                 'is_pinned' => filter_var($this->is_pinned, FILTER_VALIDATE_BOOLEAN),
             ]);
+        }
+
+        // Decode content_blocks JSON strings into content arrays
+        if ($this->has('content_blocks')) {
+            $content = $this->input('content', []);
+            $locales = array_keys(config('app.supported_locales', ['ar' => [], 'en' => []]));
+            foreach ($locales as $locale) {
+                $blocksJson = $this->input("content_blocks.{$locale}");
+                if ($blocksJson) {
+                    $decoded = json_decode($blocksJson, true);
+                    if (is_array($decoded)) {
+                        $content[$locale] = $decoded;
+                    }
+                }
+            }
+            $this->merge(['content' => $content]);
         }
 
         // Prepare is_ready array using supported locales from config

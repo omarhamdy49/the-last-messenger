@@ -228,20 +228,23 @@ function tagForm() {
         },
 
         @if($isEdit)
-        async deleteTag() {
-            if (!confirm('Are you sure you want to delete this tag?')) {
-                return;
-            }
-
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '{{ route("admin.tags.destroy", $tag) }}';
-            form.innerHTML = `
-                @csrf
-                @method('DELETE')
-            `;
-            document.body.appendChild(form);
-            form.submit();
+        deleteTag() {
+            window.showConfirm({
+                title: '{{ __("admin.confirm_delete") }}',
+                message: '{{ __("admin.delete_warning") }}',
+                type: 'danger',
+                onConfirm: () => {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '{{ route("admin.tags.destroy", $tag) }}';
+                    form.innerHTML = `
+                        @csrf
+                        @method('DELETE')
+                    `;
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
         }
         @endif
     };

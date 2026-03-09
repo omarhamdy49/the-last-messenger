@@ -312,15 +312,23 @@ const mediaUploadModal = () => ({
 
         closeModal() {
             if (this.uploadingCount > 0) {
-                if (!confirm(this.translations.closeWhileUploading)) {
-                    return;
-                }
-
-                this.files.forEach((file) => {
-                    if (file.xhr) {
-                        file.xhr.abort();
+                showConfirm({
+                    title: this.translations.closeWhileUploading,
+                    message: this.translations.closeWhileUploading,
+                    type: 'warning',
+                    onConfirm: () => {
+                        this.files.forEach((file) => {
+                            if (file.xhr) {
+                                file.xhr.abort();
+                            }
+                        });
+                        this.isOpen = false;
+                        setTimeout(() => {
+                            this.reset();
+                        }, 150);
                     }
                 });
+                return;
             }
             this.isOpen = false;
             setTimeout(() => {
@@ -354,7 +362,7 @@ const mediaUploadModal = () => ({
         addFiles(newFiles) {
             // Validate max files
             if (this.files.length + newFiles.length > 10) {
-                alert(this.translations.maxFilesError);
+                showToast(this.translations.maxFilesError, 'error');
                 return;
             }
 
@@ -450,19 +458,27 @@ const mediaUploadModal = () => ({
         },
 
         clearAll() {
+            const doClear = () => {
+                this.files.forEach(file => {
+                    if (file.xhr) {
+                        file.xhr.abort();
+                    }
+                });
+                this.files = [];
+                this.uploadingCount = 0;
+                this.successCount = 0;
+            };
+
             if (this.uploadingCount > 0) {
-                if (!confirm(this.translations.clearWhileUploading)) {
-                    return;
-                }
+                showConfirm({
+                    title: this.translations.clearWhileUploading,
+                    message: this.translations.clearWhileUploading,
+                    type: 'warning',
+                    onConfirm: () => doClear()
+                });
+                return;
             }
-            this.files.forEach(file => {
-                if (file.xhr) {
-                    file.xhr.abort();
-                }
-            });
-            this.files = [];
-            this.uploadingCount = 0;
-            this.successCount = 0;
+            doClear();
         },
 
         async startUpload() {

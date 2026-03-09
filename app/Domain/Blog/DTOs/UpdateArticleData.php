@@ -21,7 +21,7 @@ final class UpdateArticleData
      * @param  array<string, string>       $slugs
      * @param  array<string, string|null>  $descriptions
      * @param  array<string, string|null>  $excerpts
-     * @param  array<string, string|null>  $contents
+     * @param  array<string, string|array|null>  $contents
      * @param  array<string, array|null>   $tocs
      * @param  array<string, string|null>  $summaries
      * @param  array<string, string|null>  $seoTitles
@@ -56,6 +56,7 @@ final class UpdateArticleData
         public readonly ?array $tags,
         public readonly ?array $mediaItems,
         public readonly ?array $additionalCategories,
+        public readonly ?array $series = null,
     ) {}
 
     /**
@@ -94,6 +95,7 @@ final class UpdateArticleData
             tags:                 $validated['tags'] ?? null,
             mediaItems:           isset($validated['media_items']) ? $validated['media_items'] : null,
             additionalCategories: $validated['additional_categories'] ?? null,
+            series:               $validated['series'] ?? null,
         );
     }
 }

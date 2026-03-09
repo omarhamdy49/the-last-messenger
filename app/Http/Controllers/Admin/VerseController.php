@@ -316,6 +316,35 @@ class VerseController extends Controller
     }
 
     /**
+     * Get all verses for a specific surah with Arabic text.
+     *
+     * GET /su/portal/v1/admin/verses/by-surah/{surahId}
+     */
+    public function bySurah(int $surahId): JsonResponse
+    {
+        $surah = \App\Domain\Quran\Models\Surah::select(['id', 'revelation_order', 'name_ar', 'name_en', 'verses_count'])
+            ->findOrFail($surahId);
+
+        $verses = \App\Domain\Quran\Models\Verse::query()
+            ->select(['id', 'surah_id', 'verse_number', 'verse_key'])
+            ->where('surah_id', $surahId)
+            ->with(['translations' => fn ($q) => $q->select(['id', 'verse_id', 'lang', 'text'])->where('lang', 'ar')])
+            ->orderBy('verse_number')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'surah' => $surah,
+            'data' => $verses->map(fn ($v) => [
+                'id' => $v->id,
+                'verse_number' => $v->verse_number,
+                'verse_key' => $v->verse_key,
+                'text' => $v->translations->first()?->text ?? '',
+            ]),
+        ]);
+    }
+
+    /**
      * Helper: Get surahs for dropdown selector
      * Cached for 30 minutes
      *

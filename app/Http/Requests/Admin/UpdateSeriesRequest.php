@@ -51,6 +51,10 @@ class UpdateSeriesRequest extends FormRequest
 
             // Slug (unique except for current series)
             'slug' => 'nullable|string|max:255|unique:series,slug,' . $seriesId,
+
+            // Articles
+            'article_ids' => 'nullable|array',
+            'article_ids.*' => 'integer|exists:articles,id',
         ];
     }
 

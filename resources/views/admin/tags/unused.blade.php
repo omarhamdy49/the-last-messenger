@@ -56,7 +56,7 @@
                 تم تحديد <span x-text="selectedTags.length" class="font-bold text-accent"></span> وسم
             </span>
         </div>
-        <button @click="if(confirm('هل أنت متأكد من حذف الوسوم المحددة؟')) { /* bulk delete via AJAX */ }"
+        <button @click="$dispatch('show-confirm', { title: 'هل أنت متأكد من حذف الوسوم المحددة؟', message: '{{ __("admin.delete_warning") }}', type: 'danger', onConfirm: () => { /* bulk delete via AJAX */ } })"
                 class="px-4 py-2 rounded-xl font-semibold transition-all hover:scale-105 bg-red-500 hover:bg-red-600 text-white flex items-center gap-2">
             <i data-lucide="trash-2" class="w-4 h-4"></i>
             <span>حذف المحدد</span>
@@ -127,7 +127,7 @@
                                 <form action="{{ route('admin.tags.destroy', $tag->id) }}"
                                       method="POST"
                                       class="inline"
-                                      onsubmit="return confirm('{{ __('admin.confirm_delete') }}')">
+                                      @submit.prevent="$dispatch('show-confirm', { title: '{{ __("admin.confirm_delete") }}', message: '{{ __("admin.delete_warning") }}', type: 'danger', onConfirm: () => $el.submit() })">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit"

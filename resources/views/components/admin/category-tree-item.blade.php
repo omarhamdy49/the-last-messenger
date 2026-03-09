@@ -196,43 +196,46 @@ function categoryTreeItem(initialCategory) {
             });
         },
 
-        async deleteCategory() {
-            if (!confirm(`Are you sure you want to delete "${this.category.name}"? ${this.hasChildren ? 'All subcategories will also be deleted.' : ''}`)) {
-                return;
-            }
+        deleteCategory() {
+            showConfirm({
+                title: '{{ __("admin.confirm_delete") }}',
+                message: '{{ __("admin.delete_warning") }}',
+                type: 'danger',
+                onConfirm: async () => {
+                    try {
+                        const response = await fetch(`/admin/categories/${this.category.id}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
 
-            try {
-                const response = await fetch(`/admin/categories/${this.category.id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
+                        if (response.ok) {
+                            window.dispatchEvent(new CustomEvent('category-deleted', {
+                                detail: { categoryId: this.category.id }
+                            }));
+
+                            this.$el.style.transition = 'all 0.3s ease-out';
+                            this.$el.style.opacity = '0';
+                            this.$el.style.transform = 'translateX(-20px)';
+
+                            setTimeout(() => {
+                                this.$el.remove();
+                            }, 300);
+
+                            showToast('{{ __("admin.deleted_successfully") }}', 'success');
+                        } else {
+                            const error = await response.json();
+                            showToast(error.message || '{{ __("admin.error_occurred") }}', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Failed to delete category:', error);
+                        showToast('{{ __("admin.error_occurred") }}', 'error');
                     }
-                });
-
-                if (response.ok) {
-                    // Dispatch event to parent to reload categories
-                    window.dispatchEvent(new CustomEvent('category-deleted', {
-                        detail: { categoryId: this.category.id }
-                    }));
-
-                    // Remove from DOM with animation
-                    this.$el.style.transition = 'all 0.3s ease-out';
-                    this.$el.style.opacity = '0';
-                    this.$el.style.transform = 'translateX(-20px)';
-
-                    setTimeout(() => {
-                        this.$el.remove();
-                    }, 300);
-                } else {
-                    const error = await response.json();
-                    alert(error.message || 'Failed to delete category');
                 }
-            } catch (error) {
-                console.error('Failed to delete category:', error);
-                alert('Failed to delete category. Please try again.');
-            }
+            });
         }
     };
 }

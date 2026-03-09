@@ -193,7 +193,7 @@ if (typeof tocManager === 'undefined') {
             }
 
             if (!contentHtml) {
-                alert('الرجاء كتابة المحتوى أولاً');
+                showToast('الرجاء كتابة المحتوى أولاً', 'warning');
                 return;
             }
 
@@ -203,7 +203,7 @@ if (typeof tocManager === 'undefined') {
             const headings = doc.querySelectorAll('h2, h3');
 
             if (headings.length === 0) {
-                alert('لم يتم العثور على عناوين (H2, H3) في المحتوى');
+                showToast('لم يتم العثور على عناوين (H2, H3) في المحتوى', 'warning');
                 return;
             }
 

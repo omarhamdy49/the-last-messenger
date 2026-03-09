@@ -87,7 +87,7 @@
                 Back to Dashboard
             </a>
 
-            <button onclick="alert('Updates will be sent to your email!')"
+            <button onclick="showToast('سيتم إرسال التحديثات إلى بريدك الإلكتروني!', 'success')"
                     class="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-colors"
                     :class="darkMode ?
                         'bg-gray-800 text-white hover:bg-gray-700' :

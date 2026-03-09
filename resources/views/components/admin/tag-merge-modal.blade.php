@@ -289,45 +289,49 @@ function tagMergeModal() {
             return false;
         },
 
-        async mergeTags() {
+        mergeTags() {
             if (!this.canMerge) return;
 
-            if (!confirm(`Are you sure you want to merge ${this.sourceTags.length} tags? This cannot be undone.`)) {
-                return;
-            }
+            showConfirm({
+                title: '{{ __("admin.confirm_delete") }}',
+                message: `Are you sure you want to merge ${this.sourceTags.length} tags? This cannot be undone.`,
+                type: 'danger',
+                onConfirm: async () => {
+                    this.isLoading = true;
 
-            this.isLoading = true;
+                    try {
+                        const response = await fetch('/admin/tags/merge', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: JSON.stringify({
+                                source_tag_ids: this.sourceTagIds,
+                                merge_mode: this.mergeMode,
+                                target_tag_id: this.mergeMode === 'existing' ? this.targetTagId : null,
+                                new_tag_name: this.mergeMode === 'new' ? this.newTagName : null
+                            })
+                        });
 
-            try {
-                const response = await fetch('/admin/tags/merge', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: JSON.stringify({
-                        source_tag_ids: this.sourceTagIds,
-                        merge_mode: this.mergeMode,
-                        target_tag_id: this.mergeMode === 'existing' ? this.targetTagId : null,
-                        new_tag_name: this.mergeMode === 'new' ? this.newTagName : null
-                    })
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    window.location.reload();
-                } else {
-                    const error = await response.json();
-                    alert(error.message || 'Failed to merge tags');
+                        if (response.ok) {
+                            const result = await response.json();
+                            showToast('{{ __("admin.saved_successfully") }}', 'success');
+                            window.location.reload();
+                        } else {
+                            const error = await response.json();
+                            showToast(error.message || '{{ __("admin.error_occurred") }}', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Failed to merge tags:', error);
+                        showToast('{{ __("admin.error_occurred") }}', 'error');
+                    } finally {
+                        this.isLoading = false;
+                    }
                 }
-            } catch (error) {
-                console.error('Failed to merge tags:', error);
-                alert('Failed to merge tags. Please try again.');
-            } finally {
-                this.isLoading = false;
-            }
+            });
         }
     };
 }

@@ -42,6 +42,7 @@ class UpdateArticleAction
             $this->syncCategories($article, $data);
             $this->syncTags($article, $data);
             $this->syncMediaItems($article, $data);
+            $this->syncSeries($article, $data);
 
             $this->versionService->createVersion(
                 $article,
@@ -144,6 +145,17 @@ class UpdateArticleAction
     {
         if ($data->mediaItems !== null) {
             $article->mediaItems()->sync($data->mediaItems);
+        }
+    }
+
+    private function syncSeries(Article $article, UpdateArticleData $data): void
+    {
+        if ($data->series !== null) {
+            $syncData = [];
+            foreach ($data->series as $position => $seriesId) {
+                $syncData[$seriesId] = ['position' => $position];
+            }
+            $article->series()->sync($syncData);
         }
     }
 }

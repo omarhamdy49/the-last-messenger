@@ -16,19 +16,21 @@ use Illuminate\Support\Str;
 class TocGeneratorService
 {
     /**
-     * Generate a table of contents from HTML content.
+     * Generate a table of contents from HTML content or content blocks.
      *
      * Scans for <h2> and <h3> tags. Each entry carries the heading text,
      * a URL-safe anchor id derived from that text, and the heading level.
      *
-     * @param  string  $content  Raw HTML article body.
-     * @return array<int, array{id: string, text: string, level: int}>
+     * @param  string|array  $content  Raw HTML article body or blocks array.
+     * @return array<int, array{title: string, link: string, level: int}>
      */
-    public function generate(string $content): array
+    public function generate(string|array $content): array
     {
+        $html = is_array($content) ? $this->extractHtmlFromBlocks($content) : $content;
+
         $toc = [];
 
-        preg_match_all('/<h([2-3])[^>]*>(.*?)<\/h[2-3]>/i', $content, $matches, PREG_SET_ORDER);
+        preg_match_all('/<h([2-3])[^>]*>(.*?)<\/h[2-3]>/i', $html, $matches, PREG_SET_ORDER);
 
         foreach ($matches as $match) {
             $level = (int) $match[1];
@@ -36,12 +38,27 @@ class TocGeneratorService
             $id    = Str::slug($text);
 
             $toc[] = [
-                'id'    => $id,
-                'text'  => $text,
+                'title' => $text,
+                'link'  => $id,
                 'level' => $level,
             ];
         }
 
         return $toc;
+    }
+
+    /**
+     * Extract HTML content from WYSIWYG blocks for TOC generation.
+     */
+    private function extractHtmlFromBlocks(array $blocks): string
+    {
+        $html = '';
+        foreach ($blocks as $block) {
+            if (($block['type'] ?? '') === 'wysiwyg') {
+                $html .= ($block['content'] ?? '');
+            }
+        }
+
+        return $html;
     }
 }

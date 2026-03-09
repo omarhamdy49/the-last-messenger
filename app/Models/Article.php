@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Domain\Blog\Models\Category;
+use App\Domain\Blog\Models\Series;
 use App\Domain\Blog\Models\Tag;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Shared\Traits\HasVersions;
@@ -172,6 +173,17 @@ class Article extends Model
     {
         $localeModel = $this->getLocale($locale);
         return $localeModel && $localeModel->is_ready;
+    }
+
+    /**
+     * Get all series this article belongs to (many-to-many)
+     */
+    public function series(): BelongsToMany
+    {
+        return $this->belongsToMany(Series::class, 'article_series')
+            ->withPivot('position')
+            ->withTimestamps()
+            ->orderBy('article_series.position');
     }
 
     /**

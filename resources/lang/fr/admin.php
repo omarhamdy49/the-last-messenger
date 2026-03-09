@@ -13,6 +13,7 @@ return [
     'search' => 'Rechercher...',
     'save' => 'Enregistrer',
     'cancel' => 'Annuler',
+    'confirm' => 'Confirmer',
     'delete' => 'Supprimer',
     'edit' => 'Modifier',
     'view' => 'Voir',
@@ -24,6 +25,7 @@ return [
     'loading' => 'Chargement...',
     'no_data' => 'Aucune donnée disponible',
     'confirm_delete' => 'Êtes-vous sûr de vouloir supprimer?',
+    'delete_warning' => 'Cette action est irréversible.',
 
     // Navigation
     'nav' => [
@@ -140,6 +142,8 @@ return [
     'created_successfully' => 'Créé avec succès',
     'updated_successfully' => 'Mis à jour avec succès',
     'deleted_successfully' => 'Supprimé avec succès',
+    'error_occurred' => 'Une erreur est survenue. Veuillez réessayer.',
+    'items_published' => 'éléments publiés avec succès',
     'operation_failed' => 'Opération échouée',
 
     // Pagination

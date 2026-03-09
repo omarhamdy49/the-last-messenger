@@ -166,15 +166,45 @@ class HadithController
      */
     public function search(Request $request)
     {
-        $search = $request->input('q');
+        $search = $request->input('q', '');
+        $collectionId = $request->input('collection_id');
+        $perPage = $request->integer('per_page', 15);
+        $locale = app()->getLocale();
 
-        $hadiths = Hadith::with(['book:id,title_ar'])
-            ->where('hadith_number', 'like', "%{$search}%")
-            ->orWhereHas('book', fn ($q) => $q->where('title_ar', 'like', "%{$search}%"))
-            ->limit(10)
-            ->get();
+        $query = Hadith::query()
+            ->select(['id', 'book_id', 'hadith_number', 'grading_status'])
+            ->with([
+                'book:id,collection_id,title_ar,title_en',
+                'book.collection:id,name_ar,name_en,abbreviation',
+                'translations' => fn ($q) => $q->select(['id', 'hadith_id', 'language_code', 'text'])
+                    ->whereIn('language_code', [$locale, 'ar'])
+                    ->orderByRaw("FIELD(language_code, ?, 'ar')", [$locale]),
+            ]);
 
-        return response()->json($hadiths);
+        if ($collectionId) {
+            $query->whereHas('book', fn ($q) => $q->where('collection_id', $collectionId));
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('hadith_number', 'like', "%{$search}%")
+                    ->orWhereHas('translations', fn ($tq) => $tq->where('text', 'like', "%{$search}%"))
+                    ->orWhereHas('book', fn ($bq) => $bq->where('title_ar', 'like', "%{$search}%")->orWhere('title_en', 'like', "%{$search}%"));
+            });
+        }
+
+        $hadiths = $query->paginate($perPage);
+
+        return response()->json([
+            'success' => true,
+            'data' => $hadiths->items(),
+            'meta' => [
+                'current_page' => $hadiths->currentPage(),
+                'last_page' => $hadiths->lastPage(),
+                'per_page' => $hadiths->perPage(),
+                'total' => $hadiths->total(),
+            ],
+        ]);
     }
 
     /**

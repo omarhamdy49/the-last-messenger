@@ -174,7 +174,7 @@
                 <i data-lucide="trash-2" class="w-5 h-5"></i> حذف العالم
             </h3>
             <p class="text-sm mb-4" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">سيتم حذف هذا العالم نهائياً ولا يمكن استرجاعه.</p>
-            <form action="{{ route('admin.hadith.scholars.destroy', $scholar->id) }}" method="POST" onsubmit="return confirm('{{ __('admin.confirm_delete') }}')">
+            <form action="{{ route('admin.hadith.scholars.destroy', $scholar->id) }}" method="POST" @submit.prevent="$dispatch('show-confirm', { title: '{{ __("admin.confirm_delete") }}', message: '{{ __("admin.delete_warning") }}', type: 'danger', onConfirm: () => $el.submit() })">
                 @csrf @method('DELETE')
                 <button type="submit" class="w-full px-4 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-2">
                     <i data-lucide="trash-2" class="w-5 h-5"></i> <span>حذف العالم</span>

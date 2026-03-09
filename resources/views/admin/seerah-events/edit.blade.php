@@ -306,34 +306,15 @@
                     الصورة الرئيسية
                 </h3>
 
-                <div class="space-y-4" x-data="{ preview: null, hasExisting: {{ $event->getFirstMediaUrl('featured_image') ? 'true' : 'false' }} }">
-                    <div class="aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center">
-                        <template x-if="preview">
-                            <img :src="preview" class="w-full h-full object-cover">
-                        </template>
-                        <template x-if="!preview && hasExisting">
-                            <img src="{{ $event->getFirstMediaUrl('featured_image') }}" class="w-full h-full object-cover">
-                        </template>
-                        <template x-if="!preview && !hasExisting">
-                            <i data-lucide="calendar" class="w-20 h-20 text-white/30"></i>
-                        </template>
-                    </div>
-
-                    <input type="file" name="featured_image" accept="image/*"
-                           @change="preview = URL.createObjectURL($event.target.files[0])"
-                           class="w-full px-4 py-2 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all text-sm"
-                           :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                    <p class="text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
-                        الحد الأقصى: 10MB | الصيغ: JPG, PNG, WebP
-                    </p>
-                    @if($event->getFirstMediaUrl('featured_image'))
-                    <p class="text-xs text-green-500 flex items-center gap-1">
-                        <i data-lucide="check" class="w-3 h-3"></i>
-                        توجد صورة حالية - اختر صورة جديدة للاستبدال
-                    </p>
-                    @endif
-                    @error('featured_image') <p class="text-sm text-red-500">{{ $message }}</p> @enderror
-                </div>
+                <x-admin.image-upload
+                    name="featured_image"
+                    aspectClass="aspect-video"
+                    placeholderIcon="calendar"
+                    maxSize="10MB"
+                    formats="JPG, PNG, WebP"
+                    :currentImage="$event->getFirstMediaUrl('featured_image') ?: null"
+                    :mediaLibrary="false"
+                />
             </div>
 
             <!-- Info -->

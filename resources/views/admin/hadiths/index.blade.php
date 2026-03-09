@@ -147,7 +147,7 @@ use Illuminate\Support\Str;
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="p-2 rounded hover:bg-red-100 text-red-600 transition-colors" :class="darkMode && 'hover:bg-red-900'"
-                                        onclick="return confirm('{{ __('admin.confirm_delete') }}')">
+                                        @click.prevent="$dispatch('show-confirm', { title: '{{ __("admin.confirm_delete") }}', message: '{{ __("admin.delete_warning") }}', type: 'danger', onConfirm: () => $el.closest('form').submit() })">
                                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                                     </button>
                                 </form>

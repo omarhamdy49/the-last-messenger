@@ -13,6 +13,7 @@ return [
     'search' => 'تلاش کریں...',
     'save' => 'محفوظ کریں',
     'cancel' => 'منسوخ کریں',
+    'confirm' => 'تصدیق کریں',
     'delete' => 'حذف کریں',
     'edit' => 'ترمیم کریں',
     'view' => 'دیکھیں',
@@ -24,6 +25,7 @@ return [
     'loading' => 'لوڈ ہو رہا ہے...',
     'no_data' => 'کوئی ڈیٹا دستیاب نہیں',
     'confirm_delete' => 'کیا آپ واقعی حذف کرنا چاہتے ہیں؟',
+    'delete_warning' => 'یہ عمل واپس نہیں ہو سکتا۔',
 
     // Navigation
     'nav' => [
@@ -140,6 +142,8 @@ return [
     'created_successfully' => 'کامیابی سے بنایا گیا',
     'updated_successfully' => 'کامیابی سے اپ ڈیٹ کیا گیا',
     'deleted_successfully' => 'کامیابی سے حذف کیا گیا',
+    'error_occurred' => 'ایک خرابی پیش آئی۔ براہ کرم دوبارہ کوشش کریں۔',
+    'items_published' => 'آئٹمز کامیابی سے شائع ہو گئے',
     'operation_failed' => 'آپریشن ناکام',
 
     // Pagination

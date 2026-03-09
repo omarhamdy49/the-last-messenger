@@ -187,11 +187,16 @@
 
         // Duplicate article function
         window.duplicateArticle = (articleId) => {
-            if (confirm('{{ __("articles.confirm.duplicate") }}')) {
-                // In production, this would make an AJAX request
-                console.log('Duplicating article:', articleId);
-                alert('{{ __("articles.messages.duplicated") }}');
-            }
+            window.showConfirm({
+                title: '{{ __("articles.confirm.duplicate") }}',
+                message: '{{ __("admin.delete_warning") }}',
+                type: 'warning',
+                onConfirm: () => {
+                    // In production, this would make an AJAX request
+                    console.log('Duplicating article:', articleId);
+                    showToast('{{ __("articles.messages.duplicated") }}', 'success');
+                }
+            });
         };
     });
 

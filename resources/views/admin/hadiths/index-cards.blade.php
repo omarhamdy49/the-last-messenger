@@ -206,11 +206,7 @@ use Illuminate\Support\Str;
 
                             <!-- Delete Button -->
                             <form action="{{ route('admin.hadith.destroy', $hadith) }}" method="POST" class="flex-1 sm:flex-none inline-block"
-                                  @click.stop="event.preventDefault()" @submit.prevent="
-                                    if (confirm('{{ __('admin.confirm_delete') }}')) {
-                                        this.submit();
-                                    }
-                                  ">
+                                  @click.stop="event.preventDefault()" @submit.prevent="$dispatch('show-confirm', { title: '{{ __("admin.confirm_delete") }}', message: '{{ __("admin.delete_warning") }}', type: 'danger', onConfirm: () => $el.submit() })">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit"

@@ -116,7 +116,7 @@
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="w-full px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
-                            onclick="return confirm('{{ __('admin.confirm_delete_hadith') }}')">
+                            @click.prevent="$dispatch('show-confirm', { title: '{{ __("admin.confirm_delete") }}', message: '{{ __("admin.delete_warning") }}', type: 'danger', onConfirm: () => $el.closest('form').submit() })">
                             {{ __('admin.delete_hadith') }}
                         </button>
                     </form>

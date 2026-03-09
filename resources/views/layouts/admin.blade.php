@@ -264,6 +264,12 @@
          class="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 lg:hidden">
     </div>
 
+    {{-- Global Toast Notifications --}}
+    <x-admin.toast-container />
+
+    {{-- Global Confirm Modal --}}
+    <x-admin.confirm-modal />
+
     <!-- Initialize Lucide Icons -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {

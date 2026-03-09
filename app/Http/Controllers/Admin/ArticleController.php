@@ -629,14 +629,16 @@ class ArticleController extends AdminController
     protected function transformArticleForForm(Article $article): array
     {
         return [
-            'id'          => $article->id,
-            'thumb'       => $article->thumb,
-            'writer_id'   => $article->writer_id,
-            'category_id' => $article->category_id,
-            'is_featured' => $article->is_featured,
-            'is_pinned'   => $article->is_pinned,
-            'hijri_date'  => $article->hijri_date,
-            'read_time'   => $article->read_time,
+            'id'           => $article->id,
+            'thumb'        => $article->thumb,
+            'writer_id'    => $article->writer_id,
+            'category_id'  => $article->category_id,
+            'is_featured'  => $article->is_featured,
+            'is_pinned'    => $article->is_pinned,
+            'hijri_date'   => $article->hijri_date,
+            'read_time'    => $article->read_time,
+            'status'       => $article->status,
+            'scheduled_at' => $article->scheduled_at?->format('Y-m-d\TH:i'),
             'gallery'     => $article->gallery->map(fn ($item) => [
                 'id'      => $item->id,
                 'image'   => $item->image,
@@ -667,5 +669,42 @@ class ArticleController extends AdminController
                 ],
             ])->all(),
         ];
+    }
+
+    /**
+     * Search articles for AJAX selectors (e.g. series article picker).
+     *
+     * GET /su/portal/v1/admin/articles/search?q=...
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $query = $request->input('q', '');
+        $excludeIds = $request->input('exclude', []);
+
+        $articles = Article::query()
+            ->select(['id', 'status', 'created_at'])
+            ->with(['locales:id,article_id,locale,title'])
+            ->when($query, function ($q) use ($query) {
+                $q->whereHas('locales', function ($lq) use ($query) {
+                    $lq->where('title', 'like', "%{$query}%");
+                });
+            })
+            ->when(!empty($excludeIds), function ($q) use ($excludeIds) {
+                $q->whereNotIn('id', $excludeIds);
+            })
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get()
+            ->map(function ($article) {
+                $arLocale = $article->locales->firstWhere('locale', 'ar');
+                $enLocale = $article->locales->firstWhere('locale', 'en');
+                return [
+                    'id' => $article->id,
+                    'title' => $arLocale?->title ?? $enLocale?->title ?? __('admin.untitled'),
+                    'status' => $article->status,
+                ];
+            });
+
+        return response()->json(['data' => $articles]);
     }
 }

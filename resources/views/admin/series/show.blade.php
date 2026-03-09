@@ -118,7 +118,7 @@
                     </div>
                     <div class="flex-1 min-w-0">
                         <h3 class="font-medium truncate" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                            {{ $article->getTranslation('title', 'ar') ?? $article->title }}
+                            {{ $article->locales->where('locale', 'ar')->first()?->title ?? $article->locales->first()?->title ?? __('admin.untitled') }}
                         </h3>
                         <p class="text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
                             {{ $article->published_at?->format('Y/m/d') ?? '-' }}
@@ -211,7 +211,7 @@
 
             <form action="{{ route('admin.series.destroy', $series->id) }}"
                   method="POST"
-                  onsubmit="return confirm('{{ __('admin.confirm_delete') }}')">
+                  @submit.prevent="$dispatch('show-confirm', { title: '{{ __("admin.confirm_delete") }}', message: '{{ __("admin.delete_warning") }}', type: 'danger', onConfirm: () => $el.submit() })">
                 @csrf
                 @method('DELETE')
                 <button type="submit"

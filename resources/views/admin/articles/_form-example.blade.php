@@ -297,10 +297,15 @@ function articleForm() {
         },
 
         removeFeaturedImage() {
-            if (confirm('Are you sure you want to remove the featured image?')) {
-                this.featuredImage = null;
-                this.featuredImageId = null;
-            }
+            showConfirm({
+                title: '{{ __("admin.confirm_delete") }}',
+                message: '{{ __("admin.delete_warning") }}',
+                type: 'warning',
+                onConfirm: () => {
+                    this.featuredImage = null;
+                    this.featuredImageId = null;
+                }
+            });
         },
 
         viewImage(url) {
@@ -321,15 +326,25 @@ function articleForm() {
         },
 
         removeFromGallery(index) {
-            if (confirm('Remove this image from gallery?')) {
-                this.galleryImages.splice(index, 1);
-            }
+            showConfirm({
+                title: '{{ __("admin.confirm_delete") }}',
+                message: '{{ __("admin.delete_warning") }}',
+                type: 'warning',
+                onConfirm: () => {
+                    this.galleryImages.splice(index, 1);
+                }
+            });
         },
 
         clearGallery() {
-            if (confirm('Are you sure you want to clear the entire gallery?')) {
-                this.galleryImages = [];
-            }
+            showConfirm({
+                title: '{{ __("admin.confirm_delete") }}',
+                message: '{{ __("admin.delete_warning") }}',
+                type: 'danger',
+                onConfirm: () => {
+                    this.galleryImages = [];
+                }
+            });
         }
     };
 }
