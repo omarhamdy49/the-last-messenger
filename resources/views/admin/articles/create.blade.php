@@ -62,8 +62,8 @@
         </div>
     @endif
 
-    {{-- Article Form --}}
-    @include('admin.articles._form-new', [
+    {{-- Article Wizard Form --}}
+    @include('admin.articles._form-wizard', [
         'article' => null,
         'categories' => $categories,
         'writers' => $writers,

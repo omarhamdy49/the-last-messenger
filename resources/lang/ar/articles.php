@@ -329,5 +329,69 @@ return [
         'media_gallery' => 'معرض الوسائط',
         'video_content' => 'محتوى الفيديو',
         'statistics_and_references' => 'الإحصائيات والمراجع',
+        'tags' => 'الوسوم',
+        'publishing' => 'الجدولة والنشر',
     ],
+
+    // Wizard Form
+    'create_title' => 'إنشاء مقال جديد',
+    'edit_title' => 'تحرير المقال',
+    'wizard_subtitle' => 'أنشئ محتوى رائع خطوة بخطوة',
+    'wizard_step1' => 'المعلومات الأساسية',
+    'wizard_step2' => 'محرر المحتوى',
+    'wizard_step3' => 'الإعدادات والميتا',
+    'wizard_step4' => 'المراجعة والنشر',
+
+    // Block System
+    'blocks' => [
+        'wysiwyg' => 'محرر نصي',
+        'wysiwyg_desc' => 'إضافة محتوى نصي غني بالتنسيق',
+        'wysiwyg_placeholder' => 'اكتب محتواك هنا...',
+        'quran' => 'آيات قرآنية',
+        'quran_desc' => 'إدراج آيات قرآنية مع التفسير',
+        'surah' => 'السورة',
+        'select_surah' => 'اختر السورة...',
+        'verse_range' => 'نطاق الآيات',
+        'show_translation' => 'عرض الترجمة',
+        'hadith' => 'أحاديث نبوية',
+        'hadith_desc' => 'إدراج أحاديث من المكتبة',
+        'hadith_book' => 'مصدر الحديث',
+        'select_book' => 'اختر الكتاب...',
+        'hadith_number' => 'رقم الحديث',
+        'show_narrator_chain' => 'عرض سند الحديث',
+        'show_chain' => 'عرض سند الحديث',
+        'sahabah' => 'صحابة الرسول',
+        'sahabah_desc' => 'عرض معلومات عن صحابي',
+        'companion' => 'اختر الصحابي',
+        'select_companion' => 'اختر الصحابي...',
+        'show_biography' => 'عرض السيرة الذاتية',
+        'show_contributions' => 'عرض الإسهامات',
+        'empty_state' => 'لم تضف أي محتوى بعد. اختر نوع محتوى من الأعلى',
+    ],
+
+    'blocks_count' => 'كتلة محتوى',
+
+    // Review Section
+    'review' => [
+        'header' => 'تحقق من البيانات قبل النشر',
+        'subtitle' => 'تأكد من صحة جميع المعلومات',
+        'content' => 'ملخص المحتوى',
+    ],
+
+    // Placeholders & Hints
+    'placeholders' => [
+        'upload_thumbnail' => 'اضغط لتحميل صورة مميزة',
+        'select_writer' => 'اختر المؤلف...',
+        'select_category' => 'اختر التصنيف الرئيسي...',
+        'title' => 'أدخل عنوان المقال',
+    ],
+
+    'hints' => [
+        'meta_length' => 'الطول المثالي: 120-160 حرف',
+    ],
+
+    'fields' => array_merge($this['fields'] ?? [], [
+        'meta_description' => 'وصف الميتا (للبحث)',
+        'blocks' => 'عدد كتل المحتوى',
+    ]),
 ];
