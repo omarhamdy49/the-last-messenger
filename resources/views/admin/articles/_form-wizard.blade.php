@@ -76,7 +76,7 @@
       enctype="multipart/form-data"
       x-data="articleWizard(@js($formArticle ?? $article ?? null), @js($locales))"
       @submit.prevent="handleSubmit"
-      class="min-h-screen pb-12">
+      class="article-form min-h-screen pb-12">
 
     @csrf
     @if($isEdit)
