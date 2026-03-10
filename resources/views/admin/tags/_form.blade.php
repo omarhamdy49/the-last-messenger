@@ -4,7 +4,7 @@
 --}}
 
 @php
-    $supportedLanguages = config('translatable.locales', ['en', 'ar', 'tr', 'fr', 'ur']);
+    $supportedLanguages = ['ar', 'en', 'tr', 'fr', 'ur']; // Hardcoded for testing
     $isEdit = isset($tag) && $tag->exists;
 @endphp
 
@@ -32,7 +32,7 @@
             </h2>
         </div>
 
-        <div class="p-6" x-data="{ activeLanguage: '{{ app()->getLocale() }}' }">
+        <div class="p-6">
 
             <!-- Language Tabs -->
             <div class="flex flex-wrap gap-2 mb-6 pb-6 border-b"
@@ -223,6 +223,8 @@
 <script>
 function tagForm() {
     return {
+        activeLanguage: '{{ app()->getLocale() }}',
+
         handleSubmit(e) {
             e.target.submit();
         },
