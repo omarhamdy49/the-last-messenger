@@ -76,7 +76,7 @@
                             <div class="mb-6">
                                 <label class="block mb-2 font-semibold"
                                        :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
-                                    Category Name <span class="text-red-500">*</span>
+                                    {{ __('admin.category_name') }} <span class="text-red-500">*</span>
                                 </label>
                                 <input type="text"
                                        name="name[{{ $lang }}]"
@@ -100,7 +100,7 @@
                             <div class="mb-6">
                                 <label class="block mb-2 font-semibold"
                                        :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
-                                    Slug <span class="text-red-500">*</span>
+                                    {{ __('admin.slug') }} <span class="text-red-500">*</span>
                                 </label>
                                 <input type="text"
                                        name="slug[{{ $lang }}]"
@@ -128,7 +128,7 @@
                             <div>
                                 <label class="block mb-2 font-semibold"
                                        :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
-                                    Description
+                                    {{ __('admin.description') }}
                                 </label>
                                 <textarea name="description[{{ $lang }}]"
                                           rows="4"

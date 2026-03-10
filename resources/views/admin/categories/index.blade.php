@@ -171,7 +171,7 @@
                                 </td>
                                 <td class="px-6 py-4">
                                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold"
-                                          :class="$category->status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'">
+                                          :class="'{{ $category->status }}' === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'">
                                         {{ ucfirst($category->status) }}
                                     </span>
                                 </td>
