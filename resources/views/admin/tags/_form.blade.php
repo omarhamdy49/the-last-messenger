@@ -6,7 +6,42 @@
 @php
     $supportedLanguages = ['ar', 'en', 'tr', 'fr', 'ur']; // Hardcoded for testing
     $isEdit = isset($tag) && $tag->exists;
+    $defLang = app()->getLocale();
+    if (!in_array($defLang, $supportedLanguages)) { $defLang = 'ar'; }
 @endphp
+
+{{-- Define tagForm() BEFORE the form so Alpine can find it when it initialises --}}
+<script>
+function tagForm() {
+    return {
+        darkMode: localStorage.getItem('darkMode') !== 'false',
+        activeLanguage: '{{ $defLang }}',
+
+        handleSubmit(e) {
+            e.target.submit();
+        },
+
+        @if($isEdit)
+        deleteTag() {
+            window.showConfirm({
+                title: '{{ __("admin.confirm_delete") }}',
+                message: '{{ __("admin.delete_warning") }}',
+                type: 'danger',
+                onConfirm: () => {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '{{ route("admin.tags.destroy", $tag) }}';
+                    form.innerHTML = '<input type="hidden" name="_token" value="{{ csrf_token() }}">'
+                                   + '<input type="hidden" name="_method" value="DELETE">';
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        }
+        @endif
+    };
+}
+</script>
 
 <form method="POST"
       action="{{ $isEdit ? route('admin.tags.update', $tag) : route('admin.tags.store') }}"
@@ -219,37 +254,3 @@
     </div>
 </form>
 
-@push('scripts')
-<script>
-function tagForm() {
-    return {
-        activeLanguage: '{{ app()->getLocale() }}',
-
-        handleSubmit(e) {
-            e.target.submit();
-        },
-
-        @if($isEdit)
-        deleteTag() {
-            window.showConfirm({
-                title: '{{ __("admin.confirm_delete") }}',
-                message: '{{ __("admin.delete_warning") }}',
-                type: 'danger',
-                onConfirm: () => {
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = '{{ route("admin.tags.destroy", $tag) }}';
-                    form.innerHTML = `
-                        @csrf
-                        @method('DELETE')
-                    `;
-                    document.body.appendChild(form);
-                    form.submit();
-                }
-            });
-        }
-        @endif
-    };
-}
-</script>
-@endpush

@@ -20,6 +20,7 @@
 
 <div class="form-field"
      x-data="{
+         darkMode: localStorage.getItem('darkMode') !== 'false',
          hasError: false,
          isFocused: false,
          isOpen: false,

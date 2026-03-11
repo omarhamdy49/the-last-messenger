@@ -12,7 +12,79 @@
     'required' => false,
 ])
 
-<div x-data="iconPicker()" class="icon-picker">
+{{-- Define iconPicker() BEFORE the element so Alpine finds it when its MutationObserver fires --}}
+@once
+<script>
+function iconPicker() {
+    return {
+        isOpen: false,
+        selectedIcon: '',
+        searchQuery: '',
+        filteredIcons: [],
+        allIcons: [
+            'folder', 'folder-open', 'folder-tree', 'folders',
+            'file-text', 'file', 'files', 'book', 'book-open',
+            'star', 'heart', 'bookmark', 'tag', 'tags',
+            'home', 'user', 'users', 'settings', 'search',
+            'calendar', 'clock', 'map', 'globe', 'compass',
+            'camera', 'image', 'video', 'music', 'mic',
+            'shopping-cart', 'shopping-bag', 'gift', 'award',
+            'trophy', 'target', 'flag', 'shield', 'lock',
+            'key', 'mail', 'message-circle', 'phone', 'bell',
+            'alert-circle', 'info', 'help-circle', 'check-circle',
+            'x-circle', 'plus-circle', 'minus-circle',
+            'trending-up', 'trending-down', 'activity',
+            'bar-chart', 'pie-chart', 'layers', 'box',
+            'package', 'archive', 'database', 'server',
+            'cpu', 'hard-drive', 'wifi', 'bluetooth',
+            'zap', 'sun', 'moon', 'cloud', 'umbrella',
+            'thermometer', 'wind', 'droplet', 'flame',
+            'feather', 'anchor', 'briefcase', 'tool',
+            'wrench', 'hammer', 'scissors', 'paperclip',
+            'pen-tool', 'edit', 'trash', 'save', 'download',
+            'upload', 'printer', 'copy', 'clipboard'
+        ],
+        popularIcons: [
+            'folder', 'book', 'star', 'heart', 'tag',
+            'user', 'home', 'calendar', 'image', 'video'
+        ],
+
+        init() {
+            this.filteredIcons = this.allIcons;
+            this.$nextTick(() => {
+                lucide.createIcons();
+            });
+        },
+
+        selectIcon(icon) {
+            this.selectedIcon = icon;
+            this.isOpen = false;
+            this.searchQuery = '';
+            this.filteredIcons = this.allIcons;
+            this.$nextTick(() => {
+                lucide.createIcons();
+            });
+        },
+
+        filterIcons() {
+            if (!this.searchQuery) {
+                this.filteredIcons = this.allIcons;
+            } else {
+                const query = this.searchQuery.toLowerCase();
+                this.filteredIcons = this.allIcons.filter(icon =>
+                    icon.toLowerCase().includes(query)
+                );
+            }
+            this.$nextTick(() => {
+                lucide.createIcons();
+            });
+        }
+    };
+}
+</script>
+@endonce
+
+<div x-data="iconPicker()" x-init="selectedIcon = '{{ $value }}'; filteredIcons = allIcons" class="icon-picker">
     <!-- Hidden Input -->
     <input type="hidden"
            name="{{ $name }}"
@@ -115,73 +187,3 @@
     </div>
 </div>
 
-@push('scripts')
-<script>
-function iconPicker() {
-    return {
-        isOpen: false,
-        selectedIcon: '{{ $value }}',
-        searchQuery: '',
-        filteredIcons: [],
-        allIcons: [
-            'folder', 'folder-open', 'folder-tree', 'folders',
-            'file-text', 'file', 'files', 'book', 'book-open',
-            'star', 'heart', 'bookmark', 'tag', 'tags',
-            'home', 'user', 'users', 'settings', 'search',
-            'calendar', 'clock', 'map', 'globe', 'compass',
-            'camera', 'image', 'video', 'music', 'mic',
-            'shopping-cart', 'shopping-bag', 'gift', 'award',
-            'trophy', 'target', 'flag', 'shield', 'lock',
-            'key', 'mail', 'message-circle', 'phone', 'bell',
-            'alert-circle', 'info', 'help-circle', 'check-circle',
-            'x-circle', 'plus-circle', 'minus-circle',
-            'trending-up', 'trending-down', 'activity',
-            'bar-chart', 'pie-chart', 'layers', 'box',
-            'package', 'archive', 'database', 'server',
-            'cpu', 'hard-drive', 'wifi', 'bluetooth',
-            'zap', 'sun', 'moon', 'cloud', 'umbrella',
-            'thermometer', 'wind', 'droplet', 'flame',
-            'feather', 'anchor', 'briefcase', 'tool',
-            'wrench', 'hammer', 'scissors', 'paperclip',
-            'pen-tool', 'edit', 'trash', 'save', 'download',
-            'upload', 'printer', 'copy', 'clipboard'
-        ],
-        popularIcons: [
-            'folder', 'book', 'star', 'heart', 'tag',
-            'user', 'home', 'calendar', 'image', 'video'
-        ],
-
-        init() {
-            this.filteredIcons = this.allIcons;
-            this.$nextTick(() => {
-                lucide.createIcons();
-            });
-        },
-
-        selectIcon(icon) {
-            this.selectedIcon = icon;
-            this.isOpen = false;
-            this.searchQuery = '';
-            this.filteredIcons = this.allIcons;
-            this.$nextTick(() => {
-                lucide.createIcons();
-            });
-        },
-
-        filterIcons() {
-            if (!this.searchQuery) {
-                this.filteredIcons = this.allIcons;
-            } else {
-                const query = this.searchQuery.toLowerCase();
-                this.filteredIcons = this.allIcons.filter(icon =>
-                    icon.toLowerCase().includes(query)
-                );
-            }
-            this.$nextTick(() => {
-                lucide.createIcons();
-            });
-        }
-    };
-}
-</script>
-@endpush

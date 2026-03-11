@@ -12,7 +12,78 @@
     'required' => false,
 ])
 
-<div x-data="colorPicker()" class="color-picker">
+{{-- Define colorPicker() BEFORE the element so Alpine finds it when its MutationObserver fires --}}
+@once
+<script>
+function colorPicker() {
+    return {
+        isOpen: false,
+        selectedColor: '',
+        brandColors: [
+            { name: 'Primary Blue', value: '#0056b3' },
+            { name: 'Secondary Green', value: '#218838' },
+            { name: 'Accent Teal', value: '#64CCC5' },
+            { name: 'Light Blue', value: '#3385ff' },
+            { name: 'Dark Green', value: '#1b5e20' }
+        ],
+        standardColors: [
+            // Reds
+            '#ef4444', '#dc2626', '#b91c1c', '#991b1b',
+            // Oranges
+            '#f97316', '#ea580c', '#c2410c', '#9a3412',
+            // Yellows
+            '#eab308', '#ca8a04', '#a16207', '#854d0e',
+            // Greens
+            '#22c55e', '#16a34a', '#15803d', '#166534',
+            // Blues
+            '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af',
+            // Purples
+            '#a855f7', '#9333ea', '#7e22ce', '#6b21a8',
+            // Pinks
+            '#ec4899', '#db2777', '#be185d', '#9f1239',
+            // Grays
+            '#6b7280', '#4b5563', '#374151', '#1f2937'
+        ],
+
+        init() {
+            this.$nextTick(() => {
+                lucide.createIcons();
+            });
+        },
+
+        selectColor(color) {
+            this.selectedColor = color.toUpperCase();
+            this.$nextTick(() => {
+                lucide.createIcons();
+            });
+        },
+
+        validateColor() {
+            // Ensure # prefix
+            if (!this.selectedColor.startsWith('#')) {
+                this.selectedColor = '#' + this.selectedColor;
+            }
+
+            // Convert to uppercase
+            this.selectedColor = this.selectedColor.toUpperCase();
+
+            // Validate hex format
+            const hexPattern = /^#[0-9A-F]{6}$/;
+            if (!hexPattern.test(this.selectedColor)) {
+                // If invalid, don't update (keep previous valid value)
+                return;
+            }
+
+            this.$nextTick(() => {
+                lucide.createIcons();
+            });
+        }
+    };
+}
+</script>
+@endonce
+
+<div x-data="colorPicker()" x-init="selectedColor = '{{ $value }}'" class="color-picker">
     <!-- Hidden Input -->
     <input type="hidden"
            name="{{ $name }}"
@@ -148,72 +219,3 @@
     </div>
 </div>
 
-@push('scripts')
-<script>
-function colorPicker() {
-    return {
-        isOpen: false,
-        selectedColor: '{{ $value }}',
-        brandColors: [
-            { name: 'Primary Blue', value: '#0056b3' },
-            { name: 'Secondary Green', value: '#218838' },
-            { name: 'Accent Teal', value: '#64CCC5' },
-            { name: 'Light Blue', value: '#3385ff' },
-            { name: 'Dark Green', value: '#1b5e20' }
-        ],
-        standardColors: [
-            // Reds
-            '#ef4444', '#dc2626', '#b91c1c', '#991b1b',
-            // Oranges
-            '#f97316', '#ea580c', '#c2410c', '#9a3412',
-            // Yellows
-            '#eab308', '#ca8a04', '#a16207', '#854d0e',
-            // Greens
-            '#22c55e', '#16a34a', '#15803d', '#166534',
-            // Blues
-            '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af',
-            // Purples
-            '#a855f7', '#9333ea', '#7e22ce', '#6b21a8',
-            // Pinks
-            '#ec4899', '#db2777', '#be185d', '#9f1239',
-            // Grays
-            '#6b7280', '#4b5563', '#374151', '#1f2937'
-        ],
-
-        init() {
-            this.$nextTick(() => {
-                lucide.createIcons();
-            });
-        },
-
-        selectColor(color) {
-            this.selectedColor = color.toUpperCase();
-            this.$nextTick(() => {
-                lucide.createIcons();
-            });
-        },
-
-        validateColor() {
-            // Ensure # prefix
-            if (!this.selectedColor.startsWith('#')) {
-                this.selectedColor = '#' + this.selectedColor;
-            }
-
-            // Convert to uppercase
-            this.selectedColor = this.selectedColor.toUpperCase();
-
-            // Validate hex format
-            const hexPattern = /^#[0-9A-F]{6}$/;
-            if (!hexPattern.test(this.selectedColor)) {
-                // If invalid, don't update (keep previous valid value)
-                return;
-            }
-
-            this.$nextTick(() => {
-                lucide.createIcons();
-            });
-        }
-    };
-}
-</script>
-@endpush

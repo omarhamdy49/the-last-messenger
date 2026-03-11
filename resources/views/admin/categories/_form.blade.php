@@ -1,229 +1,281 @@
-{{--
-    Category Form Component
-    Used by both create and edit pages
---}}
+{{-- Category Form — used by create.blade.php and edit.blade.php --}}
 
 @php
-    $supportedLanguages = ['ar', 'en', 'tr', 'fr', 'ur']; // Hardcoded for now, fix config later
-    $isEdit = isset($category) && $category->exists;
+    $langs = ['ar', 'en', 'tr', 'fr', 'ur'];
+    $langMeta = [
+        'ar' => ['name' => 'العربية',  'flag' => '🇸🇦', 'dir' => 'rtl'],
+        'en' => ['name' => 'English',  'flag' => '🇬🇧', 'dir' => 'ltr'],
+        'tr' => ['name' => 'Türkçe',   'flag' => '🇹🇷', 'dir' => 'ltr'],
+        'fr' => ['name' => 'Français', 'flag' => '🇫🇷', 'dir' => 'ltr'],
+        'ur' => ['name' => 'اردو',     'flag' => '🇵🇰', 'dir' => 'rtl'],
+    ];
+    $isEdit  = isset($category) && $category->exists;
+    $defLang = app()->getLocale();
+    if (!array_key_exists($defLang, $langMeta)) { $defLang = 'ar'; }
 @endphp
+
+{{-- Define categoryForm() BEFORE the form so Alpine can find it when it initialises --}}
+<script>
+function categoryForm() {
+    return {
+        darkMode:      localStorage.getItem('darkMode') !== 'false',
+        activeLanguage:'{{ $defLang }}',
+        activeSeoLang: '{{ $defLang }}',
+
+        handleSubmit(e) {
+            e.target.submit();
+        },
+
+        @if($isEdit)
+        deleteCategory() {
+            window.showConfirm({
+                title:     '{{ __("admin.confirm_delete") }}',
+                message:   '{{ __("admin.delete_category_warning") }}',
+                type:      'danger',
+                onConfirm: () => {
+                    const f  = document.createElement('form');
+                    f.method = 'POST';
+                    f.action = '{{ route("admin.categories.destroy", $category) }}';
+                    f.innerHTML = '<input type="hidden" name="_token" value="{{ csrf_token() }}">'
+                                + '<input type="hidden" name="_method" value="DELETE">';
+                    document.body.appendChild(f);
+                    f.submit();
+                },
+            });
+        },
+        @endif
+    };
+}
+</script>
 
 <form method="POST"
       action="{{ $isEdit ? route('admin.categories.update', $category) : route('admin.categories.store') }}"
       x-data="categoryForm()"
       @submit.prevent="handleSubmit"
+      enctype="multipart/form-data"
       class="space-y-8">
 
     @csrf
-    @if($isEdit)
-        @method('PUT')
-    @endif
+    @if($isEdit) @method('PUT') @endif
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-        <!-- Main Form (Left Column) -->
+        {{-- ══════════════════════════════════════════════════
+             LEFT / MAIN COLUMN
+        ══════════════════════════════════════════════════ --}}
         <div class="lg:col-span-2 space-y-6">
 
-            <!-- Multi-language Fields Card -->
+            {{-- ─── Multi-language Fields ─── --}}
             <div class="rounded-2xl overflow-hidden shadow-xl border"
                  :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
 
-                <div class="p-6 border-b"
+                {{-- Card Header --}}
+                <div class="px-6 py-4 border-b flex items-center gap-2"
                      :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
-                    <h2 class="text-xl font-bold flex items-center gap-2"
+                    <i data-lucide="languages" class="w-5 h-5 text-accent"></i>
+                    <h2 class="text-lg font-bold"
                         :class="darkMode ? 'text-white' : 'text-gray-900'">
-                        <i data-lucide="languages" class="w-5 h-5 text-accent"></i>
-                        <span>Category Information</span>
+                        {{ __('admin.category_information') }}
                     </h2>
                 </div>
 
                 <div class="p-6">
 
-                    <!-- Language Tabs -->
-                    <div class="flex flex-wrap gap-2 mb-6 pb-6 border-b"
+                    {{-- Language Tab Buttons --}}
+                    <div role="tablist"
+                         class="flex flex-wrap gap-2 mb-6 pb-5 border-b"
                          :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
-                        @foreach($supportedLanguages as $lang)
-                            @php
-                                $langNames = [
-                                    'ar' => ['name' => 'العربية', 'flag' => '🇸🇦'],
-                                    'en' => ['name' => 'English', 'flag' => '🇬🇧'],
-                                    'tr' => ['name' => 'Türkçe', 'flag' => '🇹🇷'],
-                                    'fr' => ['name' => 'Français', 'flag' => '🇫🇷'],
-                                    'ur' => ['name' => 'اردو', 'flag' => '🇵🇰'],
-                                ];
-                                $langData = $langNames[$lang] ?? ['name' => $lang, 'flag' => '🌐'];
-                            @endphp
+                        @foreach($langs as $lang)
                             <button type="button"
+                                    role="tab"
+                                    id="tab-{{ $lang }}"
+                                    :aria-selected="activeLanguage === '{{ $lang }}'"
                                     @click="activeLanguage = '{{ $lang }}'"
-                                    class="px-4 py-2 rounded-lg font-semibold transition-all duration-300 flex items-center gap-2"
+                                    class="px-4 py-2 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 text-sm"
                                     :class="activeLanguage === '{{ $lang }}'
                                         ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg scale-105'
-                                        : (darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')">
-                                <span>{{ $langData['flag'] }}</span>
-                                <span>{{ $langData['name'] }}</span>
-                                @if($errors->has("name.{$lang}") || $errors->has("description.{$lang}"))
-                                    <span class="inline-block w-2 h-2 bg-red-500 rounded-full"></span>
+                                        : (darkMode
+                                            ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200')">
+                                <span>{{ $langMeta[$lang]['flag'] }}</span>
+                                <span>{{ $langMeta[$lang]['name'] }}</span>
+                                @if($errors->hasAny(["name.{$lang}", "description.{$lang}"]))
+                                    <span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
                                 @endif
                             </button>
                         @endforeach
                     </div>
 
-                    <!-- Language Panels -->
-                    @foreach($supportedLanguages as $lang)
+                    {{-- Language Panels --}}
+                    @foreach($langs as $lang)
+                        @php $ldir = $langMeta[$lang]['dir']; @endphp
                         <x-admin.language-tab-panel :language="$lang">
 
-                            <!-- Name Field -->
-                            <div class="mb-6">
-                                <label class="block mb-2 font-semibold"
-                                       :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
-                                    {{ __('admin.category_name') }} <span class="text-red-500">*</span>
+                            {{-- Name --}}
+                            <div>
+                                <label dir="{{ $ldir }}"
+                                       class="block mb-1.5 text-sm font-semibold"
+                                       :class="darkMode ? 'text-gray-200' : 'text-gray-700'">
+                                    {{ __('admin.category_name') }}
+                                    <span class="text-red-500 ms-0.5">*</span>
                                 </label>
                                 <input type="text"
                                        name="name[{{ $lang }}]"
-                                       value="{{ old("name.{$lang}", $isEdit ? $category->translate($lang)?->name : '') }}"
-                                       required
-                                       dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                                       placeholder="Enter category name in {{ $langData['name'] ?? $lang }}"
-                                       class="w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 font-cairo focus:ring-2 focus:ring-accent/50"
-                                       :class="darkMode ?
-                                           'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-accent' :
-                                           'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'">
+                                       value="{{ old("name.{$lang}", $isEdit ? ($category->translate($lang)?->name ?? '') : '') }}"
+                                       dir="{{ $ldir }}"
+                                       placeholder="{{ __('admin.enter_name_in', ['lang' => $langMeta[$lang]['name']]) }}"
+                                       class="w-full px-4 py-2.5 rounded-lg border-2 text-sm transition-all focus:ring-2 focus:ring-accent/40 font-cairo"
+                                       :class="darkMode
+                                           ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-accent'
+                                           : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'">
                                 @error("name.{$lang}")
-                                    <div class="mt-2 flex items-start gap-2 text-red-500 text-sm">
-                                        <i data-lucide="alert-circle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
-                                        <span>{{ $message }}</span>
-                                    </div>
+                                    <p class="mt-1 text-xs text-red-500 flex items-center gap-1">
+                                        <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
+                                        {{ $message }}
+                                    </p>
                                 @enderror
                             </div>
 
-                            <!-- Slug Field -->
-                            <div class="mb-6">
-                                <label class="block mb-2 font-semibold"
-                                       :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
-                                    {{ __('admin.slug') }} <span class="text-red-500">*</span>
-                                </label>
-                                <input type="text"
-                                       name="slug[{{ $lang }}]"
-                                       value="{{ old("slug.{$lang}", $isEdit ? $category->translate($lang)?->slug : '') }}"
-                                       required
-                                       dir="ltr"
-                                       placeholder="category-slug"
-                                       class="w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 font-mono focus:ring-2 focus:ring-accent/50"
-                                       :class="darkMode ?
-                                           'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-accent' :
-                                           'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'">
-                                <p class="mt-2 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                                    <i data-lucide="info" class="w-4 h-4 inline mr-1"></i>
-                                    URL-friendly version of the name (lowercase, hyphens only)
-                                </p>
-                                @error("slug.{$lang}")
-                                    <div class="mt-2 flex items-start gap-2 text-red-500 text-sm">
-                                        <i data-lucide="alert-circle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
-                                        <span>{{ $message }}</span>
-                                    </div>
-                                @enderror
-                            </div>
-
-                            <!-- Description Field -->
+                            {{-- Description --}}
                             <div>
-                                <label class="block mb-2 font-semibold"
-                                       :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
+                                <label dir="{{ $ldir }}"
+                                       class="block mb-1.5 text-sm font-semibold"
+                                       :class="darkMode ? 'text-gray-200' : 'text-gray-700'">
                                     {{ __('admin.description') }}
                                 </label>
                                 <textarea name="description[{{ $lang }}]"
                                           rows="4"
-                                          dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                                          placeholder="Brief description of this category..."
-                                          class="w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 font-cairo focus:ring-2 focus:ring-accent/50"
-                                          :class="darkMode ?
-                                              'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-accent' :
-                                              'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'">{{ old("description.{$lang}", $isEdit ? $category->translate($lang)?->description : '') }}</textarea>
+                                          dir="{{ $ldir }}"
+                                          placeholder="{{ __('admin.brief_description') }}"
+                                          class="w-full px-4 py-2.5 rounded-lg border-2 text-sm transition-all focus:ring-2 focus:ring-accent/40 font-cairo resize-none"
+                                          :class="darkMode
+                                              ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-accent'
+                                              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'">{{ old("description.{$lang}", $isEdit ? ($category->translate($lang)?->description ?? '') : '') }}</textarea>
                                 @error("description.{$lang}")
-                                    <div class="mt-2 flex items-start gap-2 text-red-500 text-sm">
-                                        <i data-lucide="alert-circle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
-                                        <span>{{ $message }}</span>
-                                    </div>
+                                    <p class="mt-1 text-xs text-red-500 flex items-center gap-1">
+                                        <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
+                                        {{ $message }}
+                                    </p>
                                 @enderror
                             </div>
 
                         </x-admin.language-tab-panel>
                     @endforeach
+
+                    {{-- ─── Single Shared Slug ─── --}}
+                    <div class="pt-5 border-t"
+                         :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
+                        <label dir="ltr"
+                               class="block mb-1.5 text-sm font-semibold"
+                               :class="darkMode ? 'text-gray-200' : 'text-gray-700'">
+                            <i data-lucide="link" class="w-3.5 h-3.5 inline me-1"></i>
+                            {{ __('admin.slug') }}
+                        </label>
+                        <input type="text"
+                               name="slug"
+                               value="{{ old('slug', $isEdit ? $category->slug : '') }}"
+                               dir="ltr"
+                               placeholder="category-slug"
+                               class="w-full px-4 py-2.5 rounded-lg border-2 text-sm transition-all focus:ring-2 focus:ring-accent/40 font-mono"
+                               :class="darkMode
+                                   ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-accent'
+                                   : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'">
+                        <p class="mt-1 text-xs flex items-center gap-1"
+                           :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                            <i data-lucide="info" class="w-3.5 h-3.5"></i>
+                            {{ __('admin.url_friendly_hint') }}
+                        </p>
+                        @error('slug')
+                            <p class="mt-1 text-xs text-red-500 flex items-center gap-1">
+                                <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
+                                {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
+
                 </div>
             </div>
 
-            <!-- SEO Fields Card -->
+            {{-- ─── SEO Settings ─── --}}
             <div class="rounded-2xl overflow-hidden shadow-xl border"
                  :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
 
-                <div class="p-6 border-b"
+                <div class="px-6 py-4 border-b flex items-center justify-between"
                      :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
-                    <h2 class="text-xl font-bold flex items-center gap-2"
-                        :class="darkMode ? 'text-white' : 'text-gray-900'">
+                    <div class="flex items-center gap-2">
                         <i data-lucide="search" class="w-5 h-5 text-accent"></i>
-                        <span>SEO Settings</span>
-                    </h2>
-                    <p class="text-sm mt-1" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                        Optimize for search engines
-                    </p>
+                        <div>
+                            <h2 class="text-lg font-bold"
+                                :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                {{ __('admin.seo_settings') }}
+                            </h2>
+                            <p class="text-xs mt-0.5"
+                               :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                                {{ __('admin.seo_settings_desc') }}
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="p-6" x-data="{ activeSeoLang: '{{ app()->getLocale() }}' }">
-
-                    <!-- SEO Language Tabs -->
-                    <div class="flex flex-wrap gap-2 mb-6">
-                        @foreach($supportedLanguages as $lang)
+                <div class="p-6">
+                    {{-- SEO Language Tabs --}}
+                    <div class="flex flex-wrap gap-2 mb-5">
+                        @foreach($langs as $lang)
                             <button type="button"
                                     @click="activeSeoLang = '{{ $lang }}'"
                                     class="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all"
                                     :class="activeSeoLang === '{{ $lang }}'
                                         ? 'bg-accent text-white'
                                         : (darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')">
-                                {{ $langNames[$lang]['flag'] ?? '🌐' }}
+                                {{ $langMeta[$lang]['flag'] }} {{ $langMeta[$lang]['name'] }}
                             </button>
                         @endforeach
                     </div>
 
-                    <!-- SEO Panels -->
-                    @foreach($supportedLanguages as $lang)
+                    {{-- SEO Panels --}}
+                    @foreach($langs as $lang)
+                        @php $ldir = $langMeta[$lang]['dir']; @endphp
                         <div x-show="activeSeoLang === '{{ $lang }}'"
-                             x-transition:enter="transition ease-out duration-200"
-                             x-transition:enter-start="opacity-0 translate-y-2"
-                             x-transition:enter-end="opacity-100 translate-y-0"
+                             x-cloak
+                             x-transition:enter="transition ease-out duration-150"
+                             x-transition:enter-start="opacity-0"
+                             x-transition:enter-end="opacity-100"
+                             dir="{{ $ldir }}"
                              class="space-y-4">
 
-                            <!-- Meta Title -->
                             <div>
-                                <label class="block mb-2 font-semibold text-sm"
-                                       :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
-                                    Meta Title
+                                <label dir="{{ $ldir }}"
+                                       class="block mb-1.5 text-sm font-semibold"
+                                       :class="darkMode ? 'text-gray-200' : 'text-gray-700'">
+                                    {{ __('admin.meta_title') }}
                                 </label>
                                 <input type="text"
                                        name="meta_title[{{ $lang }}]"
-                                       value="{{ old("meta_title.{$lang}", $isEdit ? $category->translate($lang)?->meta_title : '') }}"
+                                       value="{{ old("meta_title.{$lang}", $isEdit ? ($category->translate($lang)?->meta_title ?? '') : '') }}"
                                        maxlength="60"
-                                       dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                                       placeholder="SEO title (max 60 characters)"
-                                       class="w-full px-4 py-2.5 rounded-lg border-2 transition-all text-sm focus:ring-2 focus:ring-accent/50"
-                                       :class="darkMode ?
-                                           'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-accent' :
-                                           'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'">
+                                       dir="{{ $ldir }}"
+                                       placeholder="{{ __('admin.seo_title_placeholder') }}"
+                                       class="w-full px-4 py-2.5 rounded-lg border-2 text-sm transition-all focus:ring-2 focus:ring-accent/40"
+                                       :class="darkMode
+                                           ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-accent'
+                                           : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'">
                             </div>
 
-                            <!-- Meta Description -->
                             <div>
-                                <label class="block mb-2 font-semibold text-sm"
-                                       :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
-                                    Meta Description
+                                <label dir="{{ $ldir }}"
+                                       class="block mb-1.5 text-sm font-semibold"
+                                       :class="darkMode ? 'text-gray-200' : 'text-gray-700'">
+                                    {{ __('admin.meta_description') }}
                                 </label>
                                 <textarea name="meta_description[{{ $lang }}]"
                                           rows="3"
                                           maxlength="160"
-                                          dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                                          placeholder="SEO description (max 160 characters)"
-                                          class="w-full px-4 py-2.5 rounded-lg border-2 transition-all text-sm focus:ring-2 focus:ring-accent/50"
-                                          :class="darkMode ?
-                                              'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-accent' :
-                                              'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'">{{ old("meta_description.{$lang}", $isEdit ? $category->translate($lang)?->meta_description : '') }}</textarea>
+                                          dir="{{ $ldir }}"
+                                          placeholder="{{ __('admin.seo_desc_placeholder') }}"
+                                          class="w-full px-4 py-2.5 rounded-lg border-2 text-sm transition-all focus:ring-2 focus:ring-accent/40 resize-none"
+                                          :class="darkMode
+                                              ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-accent'
+                                              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'">{{ old("meta_description.{$lang}", $isEdit ? ($category->translate($lang)?->meta_description ?? '') : '') }}</textarea>
                             </div>
                         </div>
                     @endforeach
@@ -231,49 +283,72 @@
             </div>
         </div>
 
-        <!-- Sidebar (Right Column) -->
-        <div class="space-y-6">
+        {{-- ══════════════════════════════════════════════════
+             RIGHT / SIDEBAR
+        ══════════════════════════════════════════════════ --}}
+        <div class="space-y-5">
 
-            <!-- Parent Category -->
+            {{-- ─── Parent Category ─── --}}
             <div class="rounded-2xl overflow-hidden shadow-xl border"
                  :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
-                <div class="p-6">
-                    <label class="block mb-3 font-semibold"
+                <div class="p-5">
+                    <label class="block mb-2 font-semibold text-sm"
                            :class="darkMode ? 'text-white' : 'text-gray-900'">
-                        <i data-lucide="folder-tree" class="w-5 h-5 inline mr-2 text-accent"></i>
-                        Parent Category
+                        <i data-lucide="folder-tree" class="w-4 h-4 inline me-1.5 text-accent"></i>
+                        {{ __('admin.parent_category') }}
                     </label>
                     <select name="parent_id"
-                            class="w-full px-4 py-3 rounded-lg border-2 transition-all focus:ring-2 focus:ring-accent/50"
-                            :class="darkMode ?
-                                'bg-gray-800 border-gray-700 text-white focus:border-accent' :
-                                'bg-white border-gray-300 text-gray-900 focus:border-accent'">
-                        <option value="">-- Root Level --</option>
+                            class="w-full px-4 py-2.5 rounded-lg border-2 text-sm transition-all focus:ring-2 focus:ring-accent/40"
+                            :class="darkMode
+                                ? 'bg-gray-800 border-gray-700 text-white focus:border-accent'
+                                : 'bg-white border-gray-300 text-gray-900 focus:border-accent'">
+                        <option value="">{{ __('admin.root_level') }}</option>
                         @foreach($categories ?? [] as $cat)
                             @include('admin.categories._parent-option', [
                                 'category' => $cat,
-                                'depth' => 0,
-                                'selected' => old('parent_id', $isEdit ? $category->parent_id : null)
+                                'depth'    => 0,
+                                'selected' => old('parent_id', $isEdit ? $category->parent_id : null),
                             ])
                         @endforeach
                     </select>
-                    <p class="mt-2 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                        Leave empty for root level category
+                    <p class="mt-1.5 text-xs"
+                       :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                        {{ __('admin.leave_empty_root_category') }}
                     </p>
                 </div>
             </div>
 
-            <!-- Icon & Color -->
+            {{-- ─── Type ─── --}}
             <div class="rounded-2xl overflow-hidden shadow-xl border"
                  :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
-                <div class="p-6 space-y-6">
+                <div class="p-5">
+                    <label class="block mb-2 font-semibold text-sm"
+                           :class="darkMode ? 'text-white' : 'text-gray-900'">
+                        <i data-lucide="tag" class="w-4 h-4 inline me-1.5 text-accent"></i>
+                        {{ __('admin.type') }}
+                    </label>
+                    <select name="type"
+                            class="w-full px-4 py-2.5 rounded-lg border-2 text-sm transition-all focus:ring-2 focus:ring-accent/40"
+                            :class="darkMode
+                                ? 'bg-gray-800 border-gray-700 text-white focus:border-accent'
+                                : 'bg-white border-gray-300 text-gray-900 focus:border-accent'">
+                        <option value="blog"     {{ old('type', $isEdit ? $category->type->value : 'blog') === 'blog'     ? 'selected' : '' }}>{{ __('admin.blog') }}</option>
+                        <option value="media"    {{ old('type', $isEdit ? $category->type->value : 'blog') === 'media'    ? 'selected' : '' }}>{{ __('admin.media') }}</option>
+                        <option value="timeline" {{ old('type', $isEdit ? $category->type->value : 'blog') === 'timeline' ? 'selected' : '' }}>{{ __('admin.timeline') }}</option>
+                    </select>
+                </div>
+            </div>
 
-                    <!-- Icon Picker -->
+            {{-- ─── Icon & Color ─── --}}
+            <div class="rounded-2xl overflow-hidden shadow-xl border"
+                 :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
+                <div class="p-5 space-y-5">
+
                     <div>
-                        <label class="block mb-3 font-semibold"
+                        <label class="block mb-2 font-semibold text-sm"
                                :class="darkMode ? 'text-white' : 'text-gray-900'">
-                            <i data-lucide="smile" class="w-5 h-5 inline mr-2 text-accent"></i>
-                            Icon
+                            <i data-lucide="smile" class="w-4 h-4 inline me-1.5 text-accent"></i>
+                            {{ __('admin.icon') }}
                         </label>
                         <x-admin.icon-picker
                             name="icon"
@@ -281,12 +356,11 @@
                         />
                     </div>
 
-                    <!-- Color Picker -->
                     <div>
-                        <label class="block mb-3 font-semibold"
+                        <label class="block mb-2 font-semibold text-sm"
                                :class="darkMode ? 'text-white' : 'text-gray-900'">
-                            <i data-lucide="palette" class="w-5 h-5 inline mr-2 text-accent"></i>
-                            Color
+                            <i data-lucide="palette" class="w-4 h-4 inline me-1.5 text-accent"></i>
+                            {{ __('admin.color') }}
                         </label>
                         <x-admin.color-picker
                             name="color"
@@ -296,162 +370,101 @@
                 </div>
             </div>
 
-            <!-- Featured Image -->
+            {{-- ─── Order & Status ─── --}}
             <div class="rounded-2xl overflow-hidden shadow-xl border"
                  :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
-                <div class="p-6">
-                    <label class="block mb-3 font-semibold"
-                           :class="darkMode ? 'text-white' : 'text-gray-900'">
-                        <i data-lucide="image" class="w-5 h-5 inline mr-2 text-accent"></i>
-                        Featured Image
-                    </label>
-                    <x-admin.form.file-input
-                        name="featured_image_id"
-                        :value="old('featured_image_id', $isEdit ? $category->featured_image_id : null)"
-                        :preview="$isEdit && $category->featuredImage ? $category->featuredImage->url : null"
-                    />
-                </div>
-            </div>
+                <div class="p-5 space-y-5">
 
-            <!-- Order & Status -->
-            <div class="rounded-2xl overflow-hidden shadow-xl border"
-                 :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
-                <div class="p-6 space-y-6">
-
-                    <!-- Order -->
                     <div>
-                        <label class="block mb-3 font-semibold"
+                        <label class="block mb-2 font-semibold text-sm"
                                :class="darkMode ? 'text-white' : 'text-gray-900'">
-                            <i data-lucide="arrow-up-down" class="w-5 h-5 inline mr-2 text-accent"></i>
-                            Display Order
+                            <i data-lucide="arrow-up-down" class="w-4 h-4 inline me-1.5 text-accent"></i>
+                            {{ __('admin.display_order') }}
                         </label>
                         <input type="number"
                                name="order"
                                value="{{ old('order', $isEdit ? $category->order : 0) }}"
                                min="0"
-                               class="w-full px-4 py-3 rounded-lg border-2 transition-all focus:ring-2 focus:ring-accent/50"
-                               :class="darkMode ?
-                                   'bg-gray-800 border-gray-700 text-white focus:border-accent' :
-                                   'bg-white border-gray-300 text-gray-900 focus:border-accent'">
-                        <p class="mt-2 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                            Lower numbers appear first
+                               dir="ltr"
+                               class="w-full px-4 py-2.5 rounded-lg border-2 text-sm transition-all focus:ring-2 focus:ring-accent/40"
+                               :class="darkMode
+                                   ? 'bg-gray-800 border-gray-700 text-white focus:border-accent'
+                                   : 'bg-white border-gray-300 text-gray-900 focus:border-accent'">
+                        <p class="mt-1.5 text-xs"
+                           :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                            {{ __('admin.lower_numbers_first') }}
                         </p>
                     </div>
 
-                    <!-- Status Toggle -->
-                    <div>
-                        <label class="flex items-center justify-between cursor-pointer">
-                            <span class="font-semibold"
-                                  :class="darkMode ? 'text-white' : 'text-gray-900'">
-                                <i data-lucide="eye" class="w-5 h-5 inline mr-2 text-accent"></i>
-                                Active Status
-                            </span>
-                            <div class="relative">
-                                <input type="checkbox"
-                                       name="is_active"
-                                       value="1"
-                                       {{ old('is_active', $isEdit ? $category->is_active : true) ? 'checked' : '' }}
-                                       class="sr-only peer">
-                                <div class="w-14 h-8 rounded-full transition-colors peer-checked:bg-gradient-to-r peer-checked:from-[#0056b3] peer-checked:to-[#218838]"
-                                     :class="darkMode ? 'bg-gray-700' : 'bg-gray-300'">
-                                </div>
-                                <div class="absolute left-1 top-1 w-6 h-6 bg-white rounded-full transition-transform peer-checked:translate-x-6 shadow-lg">
-                                </div>
-                            </div>
+                    <div class="flex items-center justify-between">
+                        <span class="font-semibold text-sm"
+                              :class="darkMode ? 'text-white' : 'text-gray-900'">
+                            <i data-lucide="eye" class="w-4 h-4 inline me-1.5 text-accent"></i>
+                            {{ __('admin.active_status') }}
+                        </span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox"
+                                   name="is_active"
+                                   value="1"
+                                   {{ old('is_active', $isEdit ? $category->is_active : true) ? 'checked' : '' }}
+                                   class="sr-only peer">
+                            <div class="w-11 h-6 rounded-full transition-colors peer-checked:bg-gradient-to-r peer-checked:from-[#0056b3] peer-checked:to-[#218838]"
+                                 :class="darkMode ? 'bg-gray-700' : 'bg-gray-300'"></div>
+                            <div class="absolute start-0.5 top-0.5 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-5 shadow-md"></div>
                         </label>
                     </div>
+
                 </div>
             </div>
 
-            <!-- Action Buttons -->
+            {{-- ─── Action Buttons ─── --}}
             <div class="rounded-2xl overflow-hidden shadow-xl border"
                  :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
-                <div class="p-6 space-y-3">
+                <div class="p-5 space-y-2.5">
+
                     <button type="submit"
-                            name="action"
-                            value="save"
-                            class="w-full px-6 py-3 rounded-lg font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white hover:scale-105 transition-all shadow-lg flex items-center justify-center gap-2">
-                        <i data-lucide="save" class="w-5 h-5"></i>
-                        <span>Save Category</span>
+                            name="action" value="save"
+                            class="w-full px-5 py-2.5 rounded-lg font-semibold text-sm bg-gradient-to-r from-[#0056b3] to-[#218838] text-white hover:opacity-90 hover:scale-[1.02] transition-all shadow-lg flex items-center justify-center gap-2">
+                        <i data-lucide="save" class="w-4 h-4"></i>
+                        <span>{{ __('admin.save_category') }}</span>
                     </button>
 
                     <button type="submit"
-                            name="action"
-                            value="save_close"
-                            class="w-full px-6 py-3 rounded-lg font-semibold transition-all hover:scale-105 flex items-center justify-center gap-2"
-                            :class="darkMode ?
-                                'bg-gray-800 text-white hover:bg-gray-700' :
-                                'bg-gray-100 text-gray-900 hover:bg-gray-200'">
-                        <i data-lucide="check" class="w-5 h-5"></i>
-                        <span>Save & Close</span>
+                            name="action" value="save_close"
+                            class="w-full px-5 py-2.5 rounded-lg font-semibold text-sm hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                            :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
+                        <i data-lucide="check" class="w-4 h-4"></i>
+                        <span>{{ __('admin.save_and_close') }}</span>
                     </button>
 
                     <button type="submit"
-                            name="action"
-                            value="save_new"
-                            class="w-full px-6 py-3 rounded-lg font-semibold transition-all hover:scale-105 flex items-center justify-center gap-2"
-                            :class="darkMode ?
-                                'bg-gray-800 text-white hover:bg-gray-700' :
-                                'bg-gray-100 text-gray-900 hover:bg-gray-200'">
-                        <i data-lucide="plus" class="w-5 h-5"></i>
-                        <span>Save & New</span>
+                            name="action" value="save_new"
+                            class="w-full px-5 py-2.5 rounded-lg font-semibold text-sm hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                            :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>{{ __('admin.save_and_new') }}</span>
                     </button>
 
                     <a href="{{ route('admin.categories.index') }}"
-                       class="w-full px-6 py-3 rounded-lg font-semibold transition-all hover:scale-105 flex items-center justify-center gap-2 border-2"
-                       :class="darkMode ?
-                           'border-gray-700 text-gray-300 hover:bg-gray-800' :
-                           'border-gray-300 text-gray-700 hover:bg-gray-50'">
-                        <i data-lucide="x" class="w-5 h-5"></i>
-                        <span>Cancel</span>
+                       class="w-full px-5 py-2.5 rounded-lg font-semibold text-sm border-2 hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                       :class="darkMode ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                        <span>{{ __('admin.cancel') }}</span>
                     </a>
 
                     @if($isEdit)
+                        <hr :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
                         <button type="button"
                                 @click="deleteCategory"
-                                class="w-full px-6 py-3 rounded-lg font-semibold bg-red-500 text-white hover:bg-red-600 transition-all hover:scale-105 flex items-center justify-center gap-2">
-                            <i data-lucide="trash-2" class="w-5 h-5"></i>
-                            <span>Delete Category</span>
+                                class="w-full px-5 py-2.5 rounded-lg font-semibold text-sm bg-red-500 text-white hover:bg-red-600 hover:scale-[1.02] transition-all flex items-center justify-center gap-2">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            <span>{{ __('admin.delete_category') }}</span>
                         </button>
                     @endif
                 </div>
             </div>
+
         </div>
     </div>
 </form>
 
-@push('scripts')
-<script>
-function categoryForm() {
-    return {
-        activeLanguage: '{{ app()->getLocale() }}',
-
-        handleSubmit(e) {
-            // Form will submit normally
-            e.target.submit();
-        },
-
-        @if($isEdit)
-        deleteCategory() {
-            window.showConfirm({
-                title: '{{ __("admin.confirm_delete") }}',
-                message: 'هل أنت متأكد من حذف هذا التصنيف؟ سيتم حذف جميع التصنيفات الفرعية أيضاً.',
-                type: 'danger',
-                onConfirm: () => {
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = '{{ route("admin.categories.destroy", $category) }}';
-                    form.innerHTML = `
-                        @csrf
-                        @method('DELETE')
-                    `;
-                    document.body.appendChild(form);
-                    form.submit();
-                }
-            });
-        }
-        @endif
-    };
-}
-</script>
-@endpush
