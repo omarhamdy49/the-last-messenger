@@ -8,6 +8,7 @@ use App\Domain\Sahaba\Enums\CompanionStatus;
 use App\Domain\Shared\Traits\HasInteractions;
 use App\Domain\Shared\Traits\HasLocalizedContent;
 use App\Models\Article;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -39,7 +40,6 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property int|null $conversion_order
  * @property array|null $roles
  * @property int $hadith_count
- * @property array|null $battles
  * @property string|null $profile_image
  * @property array|null $gallery
  * @property int|null $related_article_id
@@ -52,7 +52,30 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  */
 class Sahabi extends Model implements HasMedia
 {
-    use HasFactory, HasLocalizedContent, InteractsWithMedia, SoftDeletes, HasInteractions;
+    use HasFactory, HasInteractions, HasLocalizedContent, InteractsWithMedia, SoftDeletes {
+        getFirstMediaUrl as protected spatieGetFirstMediaUrl;
+    }
+
+    /**
+     * The custom `media` table uses mediable_* columns, so Spatie queries throw
+     * (KI-17). Serve the profile_image column first and never surface the SQL error.
+     */
+    public function getFirstMediaUrl(string $collectionName = 'default', string $conversionName = ''): string
+    {
+        if ($collectionName === 'profile_image' && ! empty($this->profile_image)) {
+            if (str_starts_with($this->profile_image, 'http://') || str_starts_with($this->profile_image, 'https://')) {
+                return $this->profile_image;
+            }
+
+            return \Illuminate\Support\Facades\Storage::disk('public')->url($this->profile_image);
+        }
+
+        try {
+            return $this->spatieGetFirstMediaUrl($collectionName, $conversionName);
+        } catch (\Throwable) {
+            return '';
+        }
+    }
 
     /**
      * The table associated with the model.
@@ -86,7 +109,6 @@ class Sahabi extends Model implements HasMedia
         'conversion_order',
         'roles',
         'hadith_count',
-        'battles',
         'profile_image',
         'gallery',
         'related_article_id',
@@ -107,7 +129,6 @@ class Sahabi extends Model implements HasMedia
         'conversion_order' => 'integer',
         'roles' => 'array',
         'hadith_count' => 'integer',
-        'battles' => 'array',
         'gallery' => 'array',
         'status' => CompanionStatus::class,
         'views_count' => 'integer',
@@ -128,7 +149,7 @@ class Sahabi extends Model implements HasMedia
      */
     public function getTranslatableFields(): array
     {
-        return ['name', 'full_name', 'kunya', 'laqab', 'biography', 'virtues', 'famous_narrations'];
+        return ['name', 'full_name', 'kunya', 'laqab', 'biography', 'virtues', 'famous_narrations', 'martyrdom'];
     }
 
     /**
@@ -164,6 +185,22 @@ class Sahabi extends Model implements HasMedia
     }
 
     /**
+     * Get all battle participation records for this companion.
+     */
+    public function battles(): HasMany
+    {
+        return $this->hasMany(SahabiBattle::class);
+    }
+
+    /**
+     * Get the personal timeline entries for this companion.
+     */
+    public function timelineItems(): HasMany
+    {
+        return $this->hasMany(SahabiTimelineItem::class)->orderBy('position');
+    }
+
+    /**
      * Get people related to this companion
      */
     public function people(): HasMany
@@ -180,15 +217,22 @@ class Sahabi extends Model implements HasMedia
     }
 
     /**
-     * Check if companion participated in a battle
+     * Check if companion participated in a battle.
+     *
+     * Uses the pivot relation. When the battles relation is already
+     * eager-loaded this is O(n) over the cached collection; otherwise
+     * it issues a single EXISTS-style count query.
      */
     public function participatedInBattle(string $battleName): bool
     {
-        if (! $this->battles) {
-            return false;
+        if ($this->relationLoaded('battles')) {
+            return $this->battles
+                ->contains('battle_name', $battleName);
         }
 
-        return in_array($battleName, $this->battles, true);
+        return $this->battles()
+            ->where('battle_name', $battleName)
+            ->exists();
     }
 
     /**
@@ -244,12 +288,19 @@ class Sahabi extends Model implements HasMedia
     /**
      * Scope: Participated in battle
      *
+     * Uses a JOIN against sahabi_battles so the query is backed by the
+     * composite index (battle_name, sahabi_id) rather than a full-table
+     * JSON scan. The join is against sahaba.id to avoid a subquery.
+     *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeParticipatedIn($query, string $battle)
     {
-        return $query->whereJsonContains('battles', $battle);
+        return $query
+            ->join('sahabi_battles', 'sahaba.id', '=', 'sahabi_battles.sahabi_id')
+            ->where('sahabi_battles.battle_name', $battle)
+            ->select('sahaba.*');
     }
 
     /**
@@ -309,13 +360,11 @@ class Sahabi extends Model implements HasMedia
         $this->addMediaCollection('profile_image')
             ->singleFile()
             ->acceptsMimeTypes(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'])
-            ->maxFilesize(10 * 1024 * 1024) // 10MB
             ->useDisk('public');
 
         // Gallery collection (multiple files) - Historical images, artifacts, etc.
         $this->addMediaCollection('gallery')
             ->acceptsMimeTypes(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'])
-            ->maxFilesize(10 * 1024 * 1024) // 10MB
             ->useDisk('public');
     }
 
@@ -326,9 +375,7 @@ class Sahabi extends Model implements HasMedia
     {
         // Avatar conversion (100x100 crop-center for small profile pics)
         $this->addMediaConversion('avatar')
-            ->width(100)
-            ->height(100)
-            ->crop('crop-center')
+            ->fit(\Spatie\Image\Enums\Fit::Crop, 100, 100)
             ->sharpen(10)
             ->optimize()
             ->performOnCollections('profile_image')
@@ -336,9 +383,7 @@ class Sahabi extends Model implements HasMedia
 
         // Thumbnail conversion (150x150 crop-center)
         $this->addMediaConversion('thumbnail')
-            ->width(150)
-            ->height(150)
-            ->crop('crop-center')
+            ->fit(\Spatie\Image\Enums\Fit::Crop, 150, 150)
             ->sharpen(10)
             ->optimize()
             ->performOnCollections('profile_image', 'gallery')
@@ -346,9 +391,7 @@ class Sahabi extends Model implements HasMedia
 
         // Display conversion (600x800 contain for profile page)
         $this->addMediaConversion('display')
-            ->width(600)
-            ->height(800)
-            ->fit('contain')
+            ->fit(\Spatie\Image\Enums\Fit::Contain, 600, 800)
             ->sharpen(10)
             ->optimize()
             ->performOnCollections('profile_image', 'gallery')
@@ -357,8 +400,6 @@ class Sahabi extends Model implements HasMedia
 
     /**
      * Get profile image URL (accessor with backward compatibility)
-     *
-     * @return string|null
      */
     public function getProfileImageUrlAttribute(): ?string
     {
@@ -367,8 +408,6 @@ class Sahabi extends Model implements HasMedia
 
     /**
      * Get avatar URL (small profile image)
-     *
-     * @return string|null
      */
     public function getAvatarUrlAttribute(): ?string
     {
@@ -377,12 +416,10 @@ class Sahabi extends Model implements HasMedia
 
     /**
      * Get gallery images with conversions
-     *
-     * @return array
      */
     public function getGalleryImagesAttribute(): array
     {
-        return $this->getMedia('gallery')->map(fn($media) => [
+        return $this->getMedia('gallery')->map(fn ($media) => [
             'id' => $media->id,
             'url' => $media->getUrl(),
             'thumbnail' => $media->getUrl('thumbnail'),

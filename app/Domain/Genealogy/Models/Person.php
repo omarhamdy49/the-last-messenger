@@ -19,7 +19,30 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  */
 class Person extends Model implements HasMedia
 {
-    use HasLocalizedContent, InteractsWithMedia, SoftDeletes;
+    use HasLocalizedContent, InteractsWithMedia, SoftDeletes {
+        getFirstMediaUrl as protected spatieGetFirstMediaUrl;
+    }
+
+    /**
+     * The custom `media` table uses mediable_* columns, so Spatie queries throw
+     * (KI-17). Serve the profile_image column first and never surface the SQL error.
+     */
+    public function getFirstMediaUrl(string $collectionName = 'default', string $conversionName = ''): string
+    {
+        if ($collectionName === 'profile_image' && ! empty($this->profile_image)) {
+            if (str_starts_with($this->profile_image, 'http://') || str_starts_with($this->profile_image, 'https://')) {
+                return $this->profile_image;
+            }
+
+            return \Illuminate\Support\Facades\Storage::disk('public')->url($this->profile_image);
+        }
+
+        try {
+            return $this->spatieGetFirstMediaUrl($collectionName, $conversionName);
+        } catch (\Throwable) {
+            return '';
+        }
+    }
 
     protected $table = 'people';
 
@@ -177,7 +200,6 @@ class Person extends Model implements HasMedia
         $this->addMediaCollection('profile_image')
             ->singleFile()
             ->acceptsMimeTypes(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'])
-            ->maxFilesize(10 * 1024 * 1024) // 10MB
             ->useDisk('public');
     }
 
@@ -188,9 +210,7 @@ class Person extends Model implements HasMedia
     {
         // Avatar conversion (100x100 crop-center for genealogy tree nodes)
         $this->addMediaConversion('avatar')
-            ->width(100)
-            ->height(100)
-            ->crop('crop-center')
+            ->fit(\Spatie\Image\Enums\Fit::Crop, 100, 100)
             ->sharpen(10)
             ->optimize()
             ->performOnCollections('profile_image')
@@ -198,9 +218,7 @@ class Person extends Model implements HasMedia
 
         // Display conversion (400x400 contain for profile page)
         $this->addMediaConversion('display')
-            ->width(400)
-            ->height(400)
-            ->fit('contain')
+            ->fit(\Spatie\Image\Enums\Fit::Contain, 400, 400)
             ->sharpen(10)
             ->optimize()
             ->performOnCollections('profile_image')
@@ -209,8 +227,6 @@ class Person extends Model implements HasMedia
 
     /**
      * Get profile image URL (accessor with backward compatibility)
-     *
-     * @return string|null
      */
     public function getProfileImageUrlAttribute(): ?string
     {
@@ -219,8 +235,6 @@ class Person extends Model implements HasMedia
 
     /**
      * Get avatar URL (small profile image for tree visualization)
-     *
-     * @return string|null
      */
     public function getAvatarUrlAttribute(): ?string
     {

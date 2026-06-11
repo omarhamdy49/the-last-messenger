@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Seerah\Models;
 
+use App\Domain\Seerah\Enums\EventEra;
 use App\Domain\Seerah\Enums\EventImportance;
+use App\Domain\Seerah\Enums\EventPhase;
 use App\Domain\Seerah\Enums\EventType;
 use App\Domain\Shared\Traits\HasInteractions;
 use App\Domain\Shared\Traits\HasLocalizedContent;
@@ -31,6 +33,10 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property int|null $gregorian_year
  * @property EventType $event_type
  * @property EventImportance $importance
+ * @property EventEra|null $era
+ * @property EventPhase|null $phase
+ * @property array|null $statistics
+ * @property bool $is_pivotal
  * @property string|null $location
  * @property float|null $latitude
  * @property float|null $longitude
@@ -45,7 +51,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  */
 class SeerahEvent extends Model implements HasMedia
 {
-    use HasFactory, HasLocalizedContent, InteractsWithMedia, HasInteractions {
+    use HasFactory, HasInteractions, HasLocalizedContent, InteractsWithMedia {
         getFirstMediaUrl as protected spatieGetFirstMediaUrl;
     }
 
@@ -71,15 +77,19 @@ class SeerahEvent extends Model implements HasMedia
         'gregorian_year',
         'event_type',
         'importance',
+        'era',
+        'phase',
         'location',
         'latitude',
         'longitude',
         'featured_image',
         'gallery',
+        'statistics',
         'related_article_id',
         'views_count',
         'display_order',
         'is_featured',
+        'is_pivotal',
     ];
 
     /**
@@ -95,12 +105,16 @@ class SeerahEvent extends Model implements HasMedia
         'gregorian_year' => 'integer',
         'event_type' => EventType::class,
         'importance' => EventImportance::class,
+        'era' => EventEra::class,
+        'phase' => EventPhase::class,
         'latitude' => 'decimal:7',
         'longitude' => 'decimal:7',
         'gallery' => 'array',
+        'statistics' => 'array',
         'views_count' => 'integer',
         'display_order' => 'integer',
         'is_featured' => 'boolean',
+        'is_pivotal' => 'boolean',
     ];
 
     /**
@@ -141,6 +155,51 @@ class SeerahEvent extends Model implements HasMedia
     public function participants(): HasMany
     {
         return $this->hasMany(SeerahParticipant::class, 'event_id');
+    }
+
+    /**
+     * Get the inner timeline items of this event
+     */
+    public function timelineItems(): HasMany
+    {
+        return $this->hasMany(SeerahEventTimelineItem::class, 'seerah_event_id');
+    }
+
+    /**
+     * Scope: Filter by era
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeByEra($query, EventEra|string $era)
+    {
+        $eraValue = $era instanceof EventEra ? $era->value : $era;
+
+        return $query->where('era', $eraValue);
+    }
+
+    /**
+     * Scope: Filter by phase
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeByPhase($query, EventPhase|string $phase)
+    {
+        $phaseValue = $phase instanceof EventPhase ? $phase->value : $phase;
+
+        return $query->where('phase', $phaseValue);
+    }
+
+    /**
+     * Scope: Pivotal events ("حدث مفصلي")
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopePivotal($query)
+    {
+        return $query->where('is_pivotal', true);
     }
 
     /**
@@ -288,13 +347,11 @@ class SeerahEvent extends Model implements HasMedia
         $this->addMediaCollection('featured_image')
             ->singleFile()
             ->acceptsMimeTypes(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'])
-            ->maxFilesize(10 * 1024 * 1024) // 10MB
             ->useDisk('public');
 
         // Gallery collection (multiple files) - Historical photos, maps, artifacts
         $this->addMediaCollection('gallery')
             ->acceptsMimeTypes(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'])
-            ->maxFilesize(10 * 1024 * 1024) // 10MB
             ->useDisk('public');
     }
 
@@ -305,9 +362,7 @@ class SeerahEvent extends Model implements HasMedia
     {
         // Thumbnail conversion (150x150 crop-center)
         $this->addMediaConversion('thumbnail')
-            ->width(150)
-            ->height(150)
-            ->crop('crop-center')
+            ->fit(\Spatie\Image\Enums\Fit::Crop, 150, 150)
             ->sharpen(10)
             ->optimize()
             ->performOnCollections('featured_image', 'gallery')
@@ -315,9 +370,7 @@ class SeerahEvent extends Model implements HasMedia
 
         // Medium conversion (800x600 contain)
         $this->addMediaConversion('medium')
-            ->width(800)
-            ->height(600)
-            ->fit('contain')
+            ->fit(\Spatie\Image\Enums\Fit::Contain, 800, 600)
             ->sharpen(10)
             ->optimize()
             ->performOnCollections('featured_image', 'gallery')
@@ -325,9 +378,7 @@ class SeerahEvent extends Model implements HasMedia
 
         // Large conversion (1200x800 contain)
         $this->addMediaConversion('large')
-            ->width(1200)
-            ->height(800)
-            ->fit('contain')
+            ->fit(\Spatie\Image\Enums\Fit::Contain, 1200, 800)
             ->sharpen(10)
             ->optimize()
             ->performOnCollections('featured_image', 'gallery')
@@ -336,8 +387,6 @@ class SeerahEvent extends Model implements HasMedia
 
     /**
      * Get featured image URL (accessor with backward compatibility)
-     *
-     * @return string|null
      */
     public function getFeaturedImageUrlAttribute(): ?string
     {
@@ -361,7 +410,11 @@ class SeerahEvent extends Model implements HasMedia
             return Storage::disk('public')->url($this->featured_image);
         }
 
-        return $this->spatieGetFirstMediaUrl($collectionName, $conversionName);
+        try {
+            return $this->spatieGetFirstMediaUrl($collectionName, $conversionName);
+        } catch (\Throwable) {
+            return '';
+        }
     }
 
     /**
@@ -374,8 +427,6 @@ class SeerahEvent extends Model implements HasMedia
 
     /**
      * Get featured image thumbnail URL
-     *
-     * @return string|null
      */
     public function getFeaturedImageThumbnailAttribute(): ?string
     {
@@ -384,12 +435,10 @@ class SeerahEvent extends Model implements HasMedia
 
     /**
      * Get gallery images with conversions
-     *
-     * @return array
      */
     public function getGalleryImagesAttribute(): array
     {
-        return $this->getMedia('gallery')->map(fn($media) => [
+        return $this->getMedia('gallery')->map(fn ($media) => [
             'id' => $media->id,
             'url' => $media->getUrl(),
             'thumbnail' => $media->getUrl('thumbnail'),
