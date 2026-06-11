@@ -14,8 +14,8 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
 
 class Media extends Model implements HasMedia
 {
-    use SoftDeletes;
     use InteractsWithMedia;
+    use SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -176,15 +176,15 @@ class Media extends Model implements HasMedia
     {
         $bytes = $this->size;
         if ($bytes >= 1073741824) {
-            return number_format($bytes / 1073741824, 2) . ' GB';
+            return number_format($bytes / 1073741824, 2).' GB';
         } elseif ($bytes >= 1048576) {
-            return number_format($bytes / 1048576, 2) . ' MB';
+            return number_format($bytes / 1048576, 2).' MB';
         } elseif ($bytes >= 1024) {
-            return number_format($bytes / 1024, 2) . ' KB';
+            return number_format($bytes / 1024, 2).' KB';
         } elseif ($bytes > 1) {
-            return $bytes . ' bytes';
+            return $bytes.' bytes';
         } elseif ($bytes == 1) {
-            return $bytes . ' byte';
+            return $bytes.' byte';
         } else {
             return '0 bytes';
         }
@@ -243,7 +243,7 @@ class Media extends Model implements HasMedia
      */
     public function scopeByMimeType($query, string $mimeType)
     {
-        return $query->where('mime_type', 'like', $mimeType . '%');
+        return $query->where('mime_type', 'like', $mimeType.'%');
     }
 
     /**
@@ -326,9 +326,10 @@ class Media extends Model implements HasMedia
      */
     public function getUsageCountAttribute(): int
     {
-        if (!$this->mediable_type || !$this->mediable_id) {
+        if (! $this->mediable_type || ! $this->mediable_id) {
             return 0;
         }
+
         return 1; // Can be enhanced to check multiple relationships
     }
 

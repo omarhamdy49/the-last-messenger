@@ -1,0 +1,305 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domain\Media\Repositories;
+
+use App\Domain\Media\Enums\ProgramCategory;
+use App\Domain\Media\Models\MediaCategory;
+use App\Domain\Media\Models\MediaProgram;
+use App\Domain\Media\Support\MediaCacheKeys;
+use App\Domain\Shared\Repositories\BaseRepository;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+
+class MediaProgramRepository extends BaseRepository implements MediaProgramRepositoryInterface
+{
+    private const CACHE_TTL = 1800; // 30 minutes
+
+    /**
+     * Allowed sort columns — whitelist prevents SQL injection via dynamic ordering.
+     */
+    private const ALLOWED_SORT_COLUMNS = ['display_order', 'views_count', 'created_at', 'rating'];
+
+    protected function getModel(): Model
+    {
+        return new MediaProgram;
+    }
+
+    public function paginatePrograms(
+        int $perPage = 15,
+        ?string $category = null,
+        string $sortBy = 'display_order',
+        string $sortDir = 'asc',
+        ?string $search = null,
+        bool $publishedOnly = false,
+        ?string $status = null
+    ): LengthAwarePaginator {
+        // Whitelist sort column to prevent injection
+        $sortBy = in_array($sortBy, self::ALLOWED_SORT_COLUMNS, true) ? $sortBy : 'display_order';
+        $sortDir = $sortDir === 'desc' ? 'desc' : 'asc';
+
+        $query = MediaProgram::query()
+            ->select(['id', 'slug', 'category', 'maturity_rating', 'year', 'total_seasons', 'total_episodes', 'rating', 'is_featured', 'is_trending', 'is_published', 'publish_at', 'views_count', 'display_order', 'created_at'])
+            ->with(['translations:id,media_program_id,locale,title,is_ready', 'media']);
+
+        if ($category !== null) {
+            $query->where('category', $category);
+        }
+
+        if ($search !== null && $search !== '') {
+            $query->whereHas('translations', function ($q) use ($search) {
+                $q->where('title', 'LIKE', "%{$search}%")
+                    ->orWhere('description', 'LIKE', "%{$search}%");
+            });
+        }
+
+        if ($publishedOnly) {
+            $query->published();
+        }
+
+        match ($status) {
+            'published' => $query->where('is_published', true),
+            'scheduled' => $query->where('is_published', false)->whereNotNull('publish_at'),
+            'draft' => $query->where('is_published', false)->whereNull('publish_at'),
+            default => null,
+        };
+
+        return $query->orderBy($sortBy, $sortDir)->paginate($perPage);
+    }
+
+    public function publishDue(): int
+    {
+        $due = MediaProgram::query()
+            ->select(['id', 'slug'])
+            ->where('is_published', false)
+            ->whereNotNull('publish_at')
+            ->where('publish_at', '<=', now())
+            ->get();
+
+        if ($due->isEmpty()) {
+            return 0;
+        }
+
+        MediaProgram::query()
+            ->whereIn('id', $due->pluck('id'))
+            ->update(['is_published' => true]);
+
+        // Bulk update bypasses BaseRepository::update(), so invalidate both
+        // the versioned base cache (find/findBy) and the media list caches.
+        $this->clearCache();
+        foreach ($due as $program) {
+            $this->clearCacheForModel($program->id);
+        }
+
+        return $due->count();
+    }
+
+    public function getPopular(int $limit = 12): Collection
+    {
+        return Cache::remember(
+            MediaCacheKeys::programTrending($limit),
+            self::CACHE_TTL,
+            fn () => MediaProgram::query()
+                ->select(['id', 'slug', 'category', 'maturity_rating', 'year', 'rating', 'views_count', 'display_order', 'created_at'])
+                ->with(['translations:id,media_program_id,locale,title,is_ready', 'media'])
+                ->withCount('episodes')
+                ->published()
+                ->orderByDesc('views_count')
+                ->limit($limit)
+                ->get()
+        );
+    }
+
+    public function getRecent(int $limit = 12): Collection
+    {
+        return MediaProgram::query()
+            ->select(['id', 'slug', 'category', 'rating', 'views_count', 'display_order', 'created_at'])
+            ->with(['translations:id,media_program_id,locale,title,is_ready'])
+            ->published()
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get();
+    }
+
+    public function getFeatured(int $limit = 6): Collection
+    {
+        return Cache::remember(
+            MediaCacheKeys::programFeatured($limit),
+            self::CACHE_TTL,
+            fn () => MediaProgram::query()
+                ->select(['id', 'slug', 'category', 'maturity_rating', 'year', 'rating', 'is_featured', 'is_trending', 'views_count', 'display_order', 'created_at'])
+                ->with(['translations:id,media_program_id,locale,title,description,is_ready', 'media'])
+                ->withCount('episodes')
+                ->published()
+                ->where('is_featured', true)
+                ->orderBy('display_order')
+                ->limit($limit)
+                ->get()
+        );
+    }
+
+    public function getFeaturedForHero(int $limit = 5): Collection
+    {
+        return Cache::remember(
+            MediaCacheKeys::programsHero($limit),
+            self::CACHE_TTL,
+            fn () => MediaProgram::query()
+                ->select(['id', 'slug', 'category', 'maturity_rating', 'year', 'rating', 'is_featured', 'is_trending', 'views_count', 'display_order', 'created_at'])
+                ->with(['translations:id,media_program_id,locale,title,description,host,is_ready', 'media'])
+                ->withCount('episodes')
+                ->published()
+                ->where('is_featured', true)
+                ->orderBy('display_order')
+                ->limit($limit)
+                ->get()
+        );
+    }
+
+    public function getTrendingFlagged(int $limit = 12): Collection
+    {
+        return Cache::remember(
+            MediaCacheKeys::programsTrendingFlagged($limit),
+            self::CACHE_TTL,
+            fn () => MediaProgram::query()
+                ->select(['id', 'slug', 'category', 'maturity_rating', 'year', 'rating', 'views_count', 'display_order', 'created_at'])
+                ->with(['translations:id,media_program_id,locale,title,is_ready', 'media'])
+                ->withCount('episodes')
+                ->published()
+                ->where('is_trending', true)
+                ->orderBy('display_order')
+                ->limit($limit)
+                ->get()
+        );
+    }
+
+    public function getByCategory(string $category, int $limit = 12): Collection
+    {
+        return Cache::remember(
+            MediaCacheKeys::programsRow($category, $limit),
+            self::CACHE_TTL,
+            fn () => MediaProgram::query()
+                ->select(['id', 'slug', 'category', 'maturity_rating', 'year', 'rating', 'views_count', 'display_order', 'created_at'])
+                ->with(['translations:id,media_program_id,locale,title,is_ready', 'media'])
+                ->withCount('episodes')
+                ->published()
+                ->where('category', $category)
+                ->orderBy('display_order')
+                ->limit($limit)
+                ->get()
+        );
+    }
+
+    public function search(string $term, int $perPage = 15, bool $publishedOnly = false): LengthAwarePaginator
+    {
+        return MediaProgram::query()
+            ->select(['id', 'slug', 'category', 'rating', 'is_published', 'publish_at', 'views_count', 'display_order', 'created_at'])
+            ->with(['translations:id,media_program_id,locale,title,description,is_ready'])
+            ->whereHas('translations', function ($q) use ($term) {
+                $q->where('title', 'LIKE', "%{$term}%")
+                    ->orWhere('description', 'LIKE', "%{$term}%");
+            })
+            ->when($publishedOnly, fn ($q) => $q->published())
+            ->orderBy('display_order')
+            ->paginate($perPage);
+    }
+
+    public function findBySlug(string $slug): ?MediaProgram
+    {
+        return Cache::remember(
+            MediaCacheKeys::programBySlug($slug),
+            self::CACHE_TTL,
+            fn () => MediaProgram::query()
+                ->select(['id', 'slug', 'category', 'maturity_rating', 'year', 'total_seasons', 'total_episodes', 'rating', 'is_featured', 'is_trending', 'is_published', 'publish_at', 'views_count', 'display_order', 'created_at', 'updated_at'])
+                ->with(['translations', 'media'])
+                ->published()
+                ->where('slug', $slug)
+                ->first()
+        );
+    }
+
+    public function getFeaturedCategoryKeys(): array
+    {
+        return Cache::remember(
+            MediaCacheKeys::featuredCategoryKeys(),
+            self::CACHE_TTL,
+            function (): array {
+                // Unseeded table → every category stays visible (safe default).
+                if (! MediaCategory::query()->exists()) {
+                    return array_column(ProgramCategory::cases(), 'value');
+                }
+
+                return MediaCategory::query()
+                    ->select(['key'])
+                    ->featured()
+                    ->ordered()
+                    ->pluck('key')
+                    ->all();
+            }
+        );
+    }
+
+    public function getAllCategoriesWithProgramCounts(): Collection
+    {
+        return MediaCategory::query()
+            ->select(['media_categories.id', 'media_categories.key', 'media_categories.is_featured', 'media_categories.display_order'])
+            ->selectSub(
+                MediaProgram::query()
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('media_programs.category', 'media_categories.key'),
+                'programs_count'
+            )
+            ->ordered()
+            ->get();
+    }
+
+    public function setCategoryFeatured(string $key, bool $isFeatured): void
+    {
+        MediaCategory::query()
+            ->where('key', $key)
+            ->update(['is_featured' => $isFeatured]);
+
+        Cache::forget(MediaCacheKeys::featuredCategoryKeys());
+    }
+
+    public function clearCacheForModel(int $id): void
+    {
+        $program = MediaProgram::find($id, ['id', 'slug']);
+        if (! $program) {
+            return;
+        }
+
+        Cache::forget(MediaCacheKeys::programBySlug($program->slug));
+        Cache::forget(MediaCacheKeys::programFeatured(6));
+        Cache::forget(MediaCacheKeys::programFeatured(12));
+        Cache::forget(MediaCacheKeys::programTrending(12));
+        Cache::forget(MediaCacheKeys::programsHero(5));
+        Cache::forget(MediaCacheKeys::programsTrendingFlagged(12));
+        foreach (\App\Domain\Media\Enums\ProgramCategory::cases() as $category) {
+            Cache::forget(MediaCacheKeys::programsRow($category->value, 12));
+        }
+        Cache::forget(MediaCacheKeys::stats());
+    }
+
+    public function getIndexStats(): array
+    {
+        $row = DB::table('media_programs')
+            ->selectRaw('
+                COUNT(*) as total,
+                SUM(CASE WHEN is_featured = 1 THEN 1 ELSE 0 END) as featured,
+                SUM(CASE WHEN is_trending = 1 THEN 1 ELSE 0 END) as trending,
+                SUM(views_count) as total_views
+            ')
+            ->first();
+
+        return [
+            'total' => (int) ($row->total ?? 0),
+            'featured' => (int) ($row->featured ?? 0),
+            'trending' => (int) ($row->trending ?? 0),
+            'total_views' => (int) ($row->total_views ?? 0),
+        ];
+    }
+}

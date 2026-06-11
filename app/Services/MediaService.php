@@ -28,7 +28,7 @@ class MediaService
 
     public function __construct()
     {
-        $this->imageManager = new ImageManager(new Driver());
+        $this->imageManager = new ImageManager(new Driver);
     }
 
     public function upload(UploadedFile $file, array $options = []): Media
@@ -267,7 +267,7 @@ class MediaService
         $response = response()->file($servedPath, [
             'Content-Type' => $mimeType,
             'Cache-Control' => 'private, max-age=3600',
-            'Content-Disposition' => 'inline; filename="' . $this->downloadName($media, $variant) . '"',
+            'Content-Disposition' => 'inline; filename="'.$this->downloadName($media, $variant).'"',
         ]);
 
         if ($servedPath !== $fullPath) {
@@ -293,6 +293,50 @@ class MediaService
         }
 
         return $response;
+    }
+
+    /**
+     * Resolve a library media id to a disposable plaintext temp copy, or
+     * null when the id is unknown. Keeps consumers (controllers in other
+     * modules) decoupled from the Media model.
+     */
+    public function temporaryOriginalCopyById(int $mediaId): ?\App\Services\Dtos\TemporaryMediaCopy
+    {
+        $media = Media::query()->find($mediaId);
+
+        if ($media === null) {
+            return null;
+        }
+
+        return new \App\Services\Dtos\TemporaryMediaCopy(
+            path: $this->temporaryOriginalCopy($media),
+            filename: $media->original_filename ?: basename($media->path),
+        );
+    }
+
+    /**
+     * Materialize the original file as a disposable plaintext temp copy,
+     * decrypting when stored encrypted-at-rest. Use when re-attaching a
+     * library item elsewhere (e.g. a model's Spatie media collection) —
+     * the caller (or the consumer moving the file) owns the temp file.
+     */
+    public function temporaryOriginalCopy(Media $media): string
+    {
+        $fullPath = $this->fullPath($media->disk, $media->path);
+        abort_unless(is_file($fullPath), 404, 'Media file not found.');
+
+        if ($this->isEncryptedMedia($media)) {
+            return $this->decryptToTemporaryPath($media->disk, $media->path, $this->extensionFromMedia($media));
+        }
+
+        $temporaryPath = $this->temporaryPath($this->extensionFromMedia($media));
+        if (! copy($fullPath, $temporaryPath)) {
+            $this->deleteTemporaryFile($temporaryPath);
+
+            throw new RuntimeException('Unable to copy media file to temporary path.');
+        }
+
+        return $temporaryPath;
     }
 
     protected function regenerateVariantsFromSource(Media $media, string $sourcePath, bool $generateSizes): Media
@@ -401,7 +445,7 @@ class MediaService
             $directory = Str::beforeLast($directory, '/original');
         }
 
-        return $directory . '/variants/' . $variantName . '/' . $pathInfo['basename'];
+        return $directory.'/variants/'.$variantName.'/'.$pathInfo['basename'];
     }
 
     protected function fullPath(string $disk, string $path): string
@@ -445,9 +489,9 @@ class MediaService
 
     protected function generateProtectedFilename(string $displayTitle, string $extension): string
     {
-        $cipherText = Crypt::encryptString($displayTitle . '|' . Str::uuid()->toString() . '|' . Str::random(32));
+        $cipherText = Crypt::encryptString($displayTitle.'|'.Str::uuid()->toString().'|'.Str::random(32));
 
-        return hash('sha256', $cipherText) . '.' . $extension;
+        return hash('sha256', $cipherText).'.'.$extension;
     }
 
     protected function resolveMediaType(string $mimeType): string
@@ -747,7 +791,7 @@ class MediaService
             return $basePath;
         }
 
-        $extendedPath = $basePath . '.' . $extension;
+        $extendedPath = $basePath.'.'.$extension;
         if (! rename($basePath, $extendedPath)) {
             @unlink($basePath);
 
@@ -790,7 +834,7 @@ class MediaService
     protected function downloadName(Media $media, ?string $variant = null): string
     {
         $title = trim((string) data_get($media->metadata, 'display_title', $this->fallbackTitleFromOriginalName($media->original_filename)));
-        $slug = Str::slug($title) ?: 'media-' . $media->id;
+        $slug = Str::slug($title) ?: 'media-'.$media->id;
         $extension = strtolower(pathinfo($media->original_filename, PATHINFO_EXTENSION) ?: pathinfo($media->path, PATHINFO_EXTENSION));
 
         return $variant ? "{$slug}-{$variant}.{$extension}" : "{$slug}.{$extension}";

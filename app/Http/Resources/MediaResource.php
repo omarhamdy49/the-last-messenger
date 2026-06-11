@@ -16,9 +16,6 @@ class MediaResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
-     *
-     * @param Request $request
-     * @return array
      */
     public function toArray(Request $request): array
     {
@@ -38,7 +35,7 @@ class MediaResource extends JsonResource
         return [
             'id' => $this->id,
             'public_key' => $publicKey,
-            'title' => $this->metadata['display_title'] ?? pathinfo($this->original_filename, PATHINFO_FILENAME),
+            'title' => $this->metadata['display_title'] ?? ($this->original_filename ? pathinfo($this->original_filename, PATHINFO_FILENAME) : $this->filename),
             'filename' => $this->filename,
             'original_filename' => $this->original_filename,
             'path' => $this->path,

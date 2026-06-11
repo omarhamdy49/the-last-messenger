@@ -27,11 +27,23 @@
         'verses'          => 'quran',
         'tafseer'         => 'quran',
         'reciters'        => 'quran',
-        'programs'        => 'media',
-        'episodes'        => 'media',
+        'media-programs'  => 'media',
+        'media-episodes'  => 'media',
+        'media-categories' => 'media',
         'media-library'   => 'media',
+        'site-settings'   => 'site-content',
+        'menus'           => 'site-content',
+        'home-cards'      => 'site-content',
+        'quick-filters'   => 'site-content',
+        'static-pages'    => 'site-content',
+        'faqs'            => 'site-content',
+        'contact-messages' => 'site-content',
+        'imports'         => 'site-content',
     ];
     $initialSubmenu = $submenuMap[$activeSegment] ?? '';
+
+    // Unread contact messages badge for the Site Content group
+    $contentUnreadCount = app(\App\Domain\Content\Services\ContactMessageService::class)->unreadCount();
 @endphp
 
 <!-- Admin Sidebar Component -->
@@ -163,7 +175,7 @@
             <div>
                 <button @click="toggleSubmenu('media')"
                         :class="openSubmenu === 'media' ||
-                                ['programs','episodes','media-library'].includes(activeMenu) ?
+                                ['media-programs','media-episodes','media-categories','media-library'].includes(activeMenu) ?
                             'bg-gradient-primary text-white shadow-lg' :
                             (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
                         class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
@@ -188,18 +200,27 @@
                         <i data-lucide="images" class="w-4 h-4"></i>
                         <span>{{ __('media.title') }}</span>
                     </a>
-                    <a href="{{ route('admin.programs.index') }}"
-                       @click="activeMenu = 'programs'"
-                       :class="isActive('programs') ?
+                    <a href="{{ route('admin.media-programs.index') }}"
+                       @click="activeMenu = 'media-programs'"
+                       :class="isActive('media-programs') ?
                            'text-accent font-semibold' :
                            (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
                        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
                         <i data-lucide="tv" class="w-4 h-4"></i>
                         <span>{{ __('admin.media_programs') }}</span>
                     </a>
-                    <a href="{{ route('admin.episodes.index') }}"
-                       @click="activeMenu = 'episodes'"
-                       :class="isActive('episodes') ?
+                    <a href="{{ route('admin.media-categories.index') }}"
+                       @click="activeMenu = 'media-categories'"
+                       :class="isActive('media-categories') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="layout-grid" class="w-4 h-4"></i>
+                        <span>{{ __('admin.media_categories') }}</span>
+                    </a>
+                    <a href="{{ route('admin.media-episodes.index') }}"
+                       @click="activeMenu = 'media-episodes'"
+                       :class="isActive('media-episodes') ?
                            'text-accent font-semibold' :
                            (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
                        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
@@ -376,6 +397,105 @@
                 <i data-lucide="git-branch" class="w-5 h-5"></i>
                 <span class="font-semibold">{{ __('admin.genealogy') }}</span>
             </a>
+
+            <!-- Site Content (Settings, Menus, Home Sections, Pages, FAQs, Inbox, Imports) -->
+            <div>
+                <button @click="toggleSubmenu('site-content')"
+                        :class="openSubmenu === 'site-content' ||
+                                ['site-settings','menus','home-cards','quick-filters','static-pages','faqs','contact-messages','imports'].includes(activeMenu) ?
+                            'bg-gradient-primary text-white shadow-lg' :
+                            (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+                        class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="panels-top-left" class="w-5 h-5"></i>
+                        <span class="font-semibold">{{ __('admin.nav_site_content') }}</span>
+                        @if ($contentUnreadCount > 0)
+                            <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-red-500 text-white">{{ $contentUnreadCount }}</span>
+                        @endif
+                    </div>
+                    <i data-lucide="chevron-down"
+                       class="w-4 h-4 transition-transform duration-200"
+                       :class="openSubmenu === 'site-content' ? 'rotate-180' : ''"></i>
+                </button>
+
+                <div x-show="openSubmenu === 'site-content'"
+                     x-collapse
+                     class="mt-2 ms-6 space-y-1">
+
+                    <a href="{{ route('admin.content.settings.index') }}"
+                       @click="activeMenu = 'site-settings'"
+                       :class="isActive('site-settings') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="settings-2" class="w-4 h-4"></i>
+                        <span>{{ __('admin.content_settings') }}</span>
+                    </a>
+
+                    <a href="{{ route('admin.content.menus.index') }}"
+                       @click="activeMenu = 'menus'"
+                       :class="isActive('menus') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="menu" class="w-4 h-4"></i>
+                        <span>{{ __('admin.content_menus') }}</span>
+                    </a>
+
+                    <a href="{{ route('admin.content.home-cards.index') }}"
+                       @click="activeMenu = 'home-cards'"
+                       :class="isActive('home-cards') || isActive('quick-filters') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="layout-grid" class="w-4 h-4"></i>
+                        <span>{{ __('admin.content_home_sections') }}</span>
+                    </a>
+
+                    <a href="{{ route('admin.content.static-pages.index') }}"
+                       @click="activeMenu = 'static-pages'"
+                       :class="isActive('static-pages') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                        <span>{{ __('admin.content_static_pages') }}</span>
+                    </a>
+
+                    <a href="{{ route('admin.content.faqs.index') }}"
+                       @click="activeMenu = 'faqs'"
+                       :class="isActive('faqs') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="circle-help" class="w-4 h-4"></i>
+                        <span>{{ __('admin.content_faqs') }}</span>
+                    </a>
+
+                    <a href="{{ route('admin.content.contact-messages.index') }}"
+                       @click="activeMenu = 'contact-messages'"
+                       :class="isActive('contact-messages') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="inbox" class="w-4 h-4"></i>
+                        <span>{{ __('admin.content_contact_messages') }}</span>
+                        @if ($contentUnreadCount > 0)
+                            <span class="ms-auto px-2 py-0.5 rounded-full text-xs font-bold bg-red-500 text-white">{{ $contentUnreadCount }}</span>
+                        @endif
+                    </a>
+
+                    <a href="{{ route('admin.content.imports.index') }}"
+                       @click="activeMenu = 'imports'"
+                       :class="isActive('imports') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        <span>{{ __('admin.content_imports') }}</span>
+                    </a>
+                </div>
+            </div>
 
             <!-- Divider -->
             <div class="my-4 border-t" :class="darkMode ? 'border-gray-800' : 'border-gray-200'"></div>

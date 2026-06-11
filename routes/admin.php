@@ -4,49 +4,27 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\AnalyticsController;
-use App\Http\Controllers\Admin\ArticleController;
 use App\Http\Controllers\Admin\AuditController;
 use App\Http\Controllers\Admin\BulkOperationController;
-use App\Http\Controllers\Admin\CategoryController;
-use App\Http\Controllers\Admin\CollectionController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ExportController;
-use App\Http\Controllers\Admin\GenealogyController;
-use App\Http\Controllers\Admin\GradingLevelController;
-// use App\Http\Controllers\Admin\HadithBookController; // DISABLED: Hadith module removed
-// use App\Http\Controllers\Admin\HadithChapterController; // DISABLED: Hadith module removed
-use App\Http\Controllers\Admin\HadithController;
-// use App\Http\Controllers\Admin\HadithNarratorController; // DISABLED: Hadith module removed
 use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\LanguageSettingsController;
-use App\Http\Controllers\Admin\MediaSettingsController;
-use App\Http\Controllers\Admin\NarratorController;
+use App\Http\Controllers\Admin\MediaController;
 // use App\Http\Controllers\Admin\MediaCategoryController;
 // use App\Http\Controllers\Admin\MediaProgramController;
-use App\Http\Controllers\Admin\MediaController;
+use App\Http\Controllers\Admin\MediaSettingsController;
 // use App\Http\Controllers\Admin\MediaUploadController;
 // use App\Http\Controllers\Admin\MediaLibraryController;
 // use App\Http\Controllers\Admin\MediaFolderController;
 // use App\Http\Controllers\Admin\MediaTagController;
-// use App\Http\Controllers\Admin\MediaSettingsController;
 // use App\Http\Controllers\Admin\MediaSearchController;
 // use App\Http\Controllers\Admin\MediaBulkController;
 // use App\Http\Controllers\Admin\MediaCropController;
 // use App\Http\Controllers\Admin\MediaUsageController;
-use App\Http\Controllers\Admin\QuranController;
-use App\Http\Controllers\Admin\ReciterController;
 use App\Http\Controllers\Admin\RoleController;
-use App\Http\Controllers\Admin\SahabiController;
 use App\Http\Controllers\Admin\SchedulerController;
-use App\Http\Controllers\Admin\ScholarController;
-use App\Http\Controllers\Admin\SeerahEventController;
-use App\Http\Controllers\Admin\SeriesController;
-use App\Http\Controllers\Admin\SurahController;
-use App\Http\Controllers\Admin\TafseerController;
-use App\Http\Controllers\Admin\TagController;
-use App\Http\Controllers\Admin\ThemeController;
 use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\VerseController;
 use App\Http\Controllers\Admin\VersionController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -118,16 +96,7 @@ Route::get('su/portal/v1/admin/settings', function () {
 })->middleware(['web', 'auth', 'admin', 'throttle:60,1'])
     ->name('admin.settings');
 
-// Programs & Episodes Route Placeholders (Media module - coming soon)
-Route::get('su/portal/v1/admin/programs', function () {
-    return view('admin.coming-soon', ['module' => 'Programs']);
-})->middleware(['web', 'auth', 'admin', 'throttle:60,1'])
-    ->name('admin.programs.index');
-
-Route::get('su/portal/v1/admin/episodes', function () {
-    return view('admin.coming-soon', ['module' => 'Episodes']);
-})->middleware(['web', 'auth', 'admin', 'throttle:60,1'])
-    ->name('admin.episodes.index');
+// Programs & Episodes — now handled by full domain routes below
 
 // Help Route
 Route::get('su/portal/v1/admin/help', function () {
@@ -213,95 +182,6 @@ Route::prefix('su/portal/v1/admin')
             Route::get('/{media:public_key}/download', [MediaController::class, 'download'])->name('download');
         });
 
-        // Article Routes
-        Route::prefix('articles')->group(function (): void {
-            // API endpoints (must be before resource routes to avoid conflicts)
-            Route::get('/api', [ArticleController::class, 'api'])->name('admin.articles.api');
-            Route::get('/stats', [ArticleController::class, 'stats'])->name('admin.articles.stats');
-
-            // Bulk actions
-            Route::post('/bulk-action', [ArticleController::class, 'bulkAction'])->name('admin.articles.bulk-action');
-            Route::post('/bulk-delete', [ArticleController::class, 'bulkDelete'])->name('admin.articles.bulk-delete');
-            Route::post('/bulk-publish', [ArticleController::class, 'bulkPublish'])->name('admin.articles.bulk-publish');
-            Route::post('/bulk-archive', [ArticleController::class, 'bulkArchive'])->name('admin.articles.bulk-archive');
-
-            // Search
-            Route::get('/search', [ArticleController::class, 'search'])->name('admin.articles.search');
-        });
-
-        // Article resource routes
-        Route::resource('articles', ArticleController::class)->names([
-            'index' => 'admin.articles.index',
-            'create' => 'admin.articles.create',
-            'store' => 'admin.articles.store',
-            'show' => 'admin.articles.show',
-            'edit' => 'admin.articles.edit',
-            'update' => 'admin.articles.update',
-            'destroy' => 'admin.articles.destroy',
-        ]);
-        Route::get('articles/{article}/preview', [ArticleController::class, 'preview'])->name('admin.articles.preview');
-
-        // Article toggle routes (must be after resource to avoid route conflicts)
-        Route::post('articles/{article}/toggle-feature', [ArticleController::class, 'toggleFeature'])->name('admin.articles.toggle-feature');
-        Route::post('articles/{article}/toggle-pin', [ArticleController::class, 'togglePin'])->name('admin.articles.toggle-pin');
-
-        // Article trash route
-        Route::get('articles/trash', [ArticleController::class, 'trash'])->name('admin.articles.trash');
-
-        // Category Routes
-        Route::prefix('categories')->group(function (): void {
-            // Special endpoints (must be before resource routes to avoid conflicts)
-            Route::get('/tree', [CategoryController::class, 'tree'])->name('admin.categories.tree');
-            Route::get('/search', [CategoryController::class, 'search'])->name('admin.categories.search');
-            Route::post('/bulk-delete', [CategoryController::class, 'bulkDelete'])->name('admin.categories.bulk-delete');
-            Route::post('/reorder', [CategoryController::class, 'reorder'])->name('admin.categories.reorder');
-        });
-        Route::resource('categories', CategoryController::class)->names([
-            'index' => 'admin.categories.index',
-            'create' => 'admin.categories.create',
-            'store' => 'admin.categories.store',
-            'show' => 'admin.categories.show',
-            'edit' => 'admin.categories.edit',
-            'update' => 'admin.categories.update',
-            'destroy' => 'admin.categories.destroy',
-        ]);
-        // Post-resource routes (with ID parameter)
-        Route::post('categories/{id}/restore', [CategoryController::class, 'restore'])->name('admin.categories.restore');
-        Route::post('categories/{id}/duplicate', [CategoryController::class, 'duplicate'])->name('admin.categories.duplicate');
-
-        // Tag Routes
-        Route::prefix('tags')->group(function (): void {
-            // Special endpoints (must be before resource routes to avoid conflicts)
-            Route::get('/search', [TagController::class, 'search'])->name('admin.tags.search');
-            Route::get('/unused', [TagController::class, 'unused'])->name('admin.tags.unused');
-            Route::post('/merge', [TagController::class, 'merge'])->name('admin.tags.merge');
-            Route::post('/bulk-delete', [TagController::class, 'bulkDelete'])->name('admin.tags.bulk-delete');
-        });
-        Route::resource('tags', TagController::class)->names([
-            'index' => 'admin.tags.index',
-            'create' => 'admin.tags.create',
-            'store' => 'admin.tags.store',
-            'show' => 'admin.tags.show',
-            'edit' => 'admin.tags.edit',
-            'update' => 'admin.tags.update',
-            'destroy' => 'admin.tags.destroy',
-        ]);
-
-        // Series Routes
-        Route::prefix('series')->group(function (): void {
-            Route::post('/bulk-delete', [SeriesController::class, 'bulkDelete'])->name('admin.series.bulk-delete');
-            Route::post('/reorder-articles', [SeriesController::class, 'reorderArticles'])->name('admin.series.reorder-articles');
-        });
-        Route::resource('series', SeriesController::class)->names([
-            'index' => 'admin.series.index',
-            'create' => 'admin.series.create',
-            'store' => 'admin.series.store',
-            'show' => 'admin.series.show',
-            'edit' => 'admin.series.edit',
-            'update' => 'admin.series.update',
-            'destroy' => 'admin.series.destroy',
-        ]);
-
         // DISABLED: Media Category Routes
         // Route::prefix('media-categories')->group(function (): void {
         //     Route::post('/bulk-delete', [MediaCategoryController::class, 'bulkDelete'])->name('admin.media-categories.bulk-delete');
@@ -316,22 +196,6 @@ Route::prefix('su/portal/v1/admin')
         //     'update' => 'admin.media-categories.update',
         //     'destroy' => 'admin.media-categories.destroy',
         // ]);
-
-
-        // DISABLED: Hadith Routes (module removed - use API endpoints instead)
-        Route::prefix('hadith')->group(function (): void {
-            Route::get('/search', [HadithController::class, 'search'])->name('admin.hadith.search');
-            Route::post('/bulk-delete', [HadithController::class, 'bulkDelete'])->name('admin.hadith.bulk-delete');
-        });
-        Route::resource('hadith', HadithController::class)->names([
-            'index' => 'admin.hadith.index',
-            'create' => 'admin.hadith.create',
-            'store' => 'admin.hadith.store',
-            'show' => 'admin.hadith.show',
-            'edit' => 'admin.hadith.edit',
-            'update' => 'admin.hadith.update',
-            'destroy' => 'admin.hadith.destroy',
-        ]);
 
         // DISABLED: Hadith Narrator Routes (module removed)
         // Route::prefix('hadith-narrators')->group(function (): void {
@@ -401,195 +265,6 @@ Route::prefix('su/portal/v1/admin')
         //     'update' => 'admin.media-programs.update',
         //     'destroy' => 'admin.media-programs.destroy',
         // ]);
-
-        // Quran Routes (main entry point for Quran management)
-        Route::prefix('quran')->group(function (): void {
-            Route::get('/search', [QuranController::class, 'search'])->name('admin.quran.search');
-            Route::post('/bulk-delete', [QuranController::class, 'bulkDelete'])->name('admin.quran.bulk-delete');
-        });
-        Route::resource('quran', QuranController::class)->names([
-            'index' => 'admin.quran.index',
-            'create' => 'admin.quran.create',
-            'store' => 'admin.quran.store',
-            'show' => 'admin.quran.show',
-            'edit' => 'admin.quran.edit',
-            'update' => 'admin.quran.update',
-            'destroy' => 'admin.quran.destroy',
-        ]);
-
-        // Hadith Collection Routes
-        Route::prefix('hadith/collections')->group(function (): void {
-            Route::get('/search', [CollectionController::class, 'search'])->name('admin.hadith.collections.search');
-            Route::post('/bulk-delete', [CollectionController::class, 'bulkDelete'])->name('admin.hadith.collections.bulk-delete');
-            Route::post('/reorder', [CollectionController::class, 'reorder'])->name('admin.hadith.collections.reorder');
-            Route::post('/{id}/toggle-active', [CollectionController::class, 'toggleActive'])->name('admin.hadith.collections.toggle-active');
-            Route::post('/{id}/toggle-featured', [CollectionController::class, 'toggleFeatured'])->name('admin.hadith.collections.toggle-featured');
-        });
-        Route::resource('hadith/collections', CollectionController::class)->names([
-            'index' => 'admin.hadith.collections.index',
-            'create' => 'admin.hadith.collections.create',
-            'store' => 'admin.hadith.collections.store',
-            'show' => 'admin.hadith.collections.show',
-            'edit' => 'admin.hadith.collections.edit',
-            'update' => 'admin.hadith.collections.update',
-            'destroy' => 'admin.hadith.collections.destroy',
-        ]);
-
-        // Hadith Narrator Routes
-        Route::prefix('hadith/narrators')->group(function (): void {
-            Route::get('/search', [NarratorController::class, 'search'])->name('admin.hadith.narrators.search');
-            Route::post('/bulk-delete', [NarratorController::class, 'bulkDelete'])->name('admin.hadith.narrators.bulk-delete');
-        });
-        Route::resource('hadith/narrators', NarratorController::class)->names([
-            'index' => 'admin.hadith.narrators.index',
-            'create' => 'admin.hadith.narrators.create',
-            'store' => 'admin.hadith.narrators.store',
-            'show' => 'admin.hadith.narrators.show',
-            'edit' => 'admin.hadith.narrators.edit',
-            'update' => 'admin.hadith.narrators.update',
-            'destroy' => 'admin.hadith.narrators.destroy',
-        ]);
-
-        // Hadith Scholar Routes
-        Route::prefix('hadith/scholars')->group(function (): void {
-            Route::get('/search', [ScholarController::class, 'search'])->name('admin.hadith.scholars.search');
-            Route::post('/bulk-delete', [ScholarController::class, 'bulkDelete'])->name('admin.hadith.scholars.bulk-delete');
-        });
-        Route::resource('hadith/scholars', ScholarController::class)->names([
-            'index' => 'admin.hadith.scholars.index',
-            'create' => 'admin.hadith.scholars.create',
-            'store' => 'admin.hadith.scholars.store',
-            'show' => 'admin.hadith.scholars.show',
-            'edit' => 'admin.hadith.scholars.edit',
-            'update' => 'admin.hadith.scholars.update',
-            'destroy' => 'admin.hadith.scholars.destroy',
-        ]);
-
-        // Hadith Theme Routes
-        Route::prefix('hadith/themes')->group(function (): void {
-            Route::get('/search', [ThemeController::class, 'search'])->name('admin.hadith.themes.search');
-            Route::post('/bulk-delete', [ThemeController::class, 'bulkDelete'])->name('admin.hadith.themes.bulk-delete');
-        });
-        Route::resource('hadith/themes', ThemeController::class)->names([
-            'index' => 'admin.hadith.themes.index',
-            'create' => 'admin.hadith.themes.create',
-            'store' => 'admin.hadith.themes.store',
-            'show' => 'admin.hadith.themes.show',
-            'edit' => 'admin.hadith.themes.edit',
-            'update' => 'admin.hadith.themes.update',
-            'destroy' => 'admin.hadith.themes.destroy',
-        ]);
-
-        // Hadith Grading Level Routes (enum-based, not CRUD)
-        Route::prefix('hadith/grading-levels')->group(function (): void {
-            Route::get('/', [GradingLevelController::class, 'index'])->name('admin.hadith.grading-levels.index');
-            Route::get('/{grade}', [GradingLevelController::class, 'show'])->name('admin.hadith.grading-levels.show');
-            Route::get('/{grade}/statistics', [GradingLevelController::class, 'statistics'])->name('admin.hadith.grading-levels.statistics');
-        });
-
-        // Quran Surah Routes (no create/store - 114 surahs are fixed)
-        Route::prefix('surahs')->group(function (): void {
-            Route::get('/search', [SurahController::class, 'search'])->name('admin.surahs.search');
-        });
-        Route::resource('surahs', SurahController::class)->except(['create', 'store', 'destroy'])->names([
-            'index' => 'admin.surahs.index',
-            'show' => 'admin.surahs.show',
-            'edit' => 'admin.surahs.edit',
-            'update' => 'admin.surahs.update',
-        ]);
-
-        // Quran Verse Routes (full CRUD)
-        Route::prefix('verses')->group(function (): void {
-            Route::get('/search', [VerseController::class, 'search'])->name('admin.verses.search');
-            Route::get('/by-surah/{surahId}', [VerseController::class, 'bySurah'])->name('admin.verses.by-surah');
-            Route::post('/bulk-delete', [VerseController::class, 'bulkDelete'])->name('admin.verses.bulk-delete');
-        });
-        Route::resource('verses', VerseController::class)->names([
-            'index' => 'admin.verses.index',
-            'create' => 'admin.verses.create',
-            'store' => 'admin.verses.store',
-            'show' => 'admin.verses.show',
-            'edit' => 'admin.verses.edit',
-            'update' => 'admin.verses.update',
-            'destroy' => 'admin.verses.destroy',
-        ]);
-
-        // Reciter Routes
-        Route::prefix('reciters')->group(function (): void {
-            Route::get('/search', [ReciterController::class, 'search'])->name('admin.reciters.search');
-            Route::post('/bulk-delete', [ReciterController::class, 'bulkDelete'])->name('admin.reciters.bulk-delete');
-            Route::post('/reorder', [ReciterController::class, 'reorder'])->name('admin.reciters.reorder');
-            Route::post('/{id}/toggle-featured', [ReciterController::class, 'toggleFeatured'])->name('admin.reciters.toggle-featured');
-        });
-        Route::resource('reciters', ReciterController::class)->names([
-            'index' => 'admin.reciters.index',
-            'create' => 'admin.reciters.create',
-            'store' => 'admin.reciters.store',
-            'show' => 'admin.reciters.show',
-            'edit' => 'admin.reciters.edit',
-            'update' => 'admin.reciters.update',
-            'destroy' => 'admin.reciters.destroy',
-        ]);
-
-        // Tafseer Routes
-        Route::prefix('tafseer')->group(function (): void {
-            Route::get('/search', [TafseerController::class, 'search'])->name('admin.tafseer.search');
-            Route::post('/bulk-delete', [TafseerController::class, 'bulkDelete'])->name('admin.tafseer.bulk-delete');
-        });
-        Route::resource('tafseer', TafseerController::class)->names([
-            'index' => 'admin.tafseer.index',
-            'create' => 'admin.tafseer.create',
-            'store' => 'admin.tafseer.store',
-            'show' => 'admin.tafseer.show',
-            'edit' => 'admin.tafseer.edit',
-            'update' => 'admin.tafseer.update',
-            'destroy' => 'admin.tafseer.destroy',
-        ]);
-
-        // Sahaba Routes
-        Route::prefix('sahaba')->group(function (): void {
-            Route::get('/search', [SahabiController::class, 'search'])->name('admin.sahaba.search');
-            Route::post('/bulk-delete', [SahabiController::class, 'bulkDelete'])->name('admin.sahaba.bulk-delete');
-        });
-        Route::resource('sahaba', SahabiController::class)->names([
-            'index' => 'admin.sahaba.index',
-            'create' => 'admin.sahaba.create',
-            'store' => 'admin.sahaba.store',
-            'show' => 'admin.sahaba.show',
-            'edit' => 'admin.sahaba.edit',
-            'update' => 'admin.sahaba.update',
-            'destroy' => 'admin.sahaba.destroy',
-        ]);
-
-        // Seerah Event Routes
-        Route::prefix('seerah-events')->group(function (): void {
-            Route::get('/search', [SeerahEventController::class, 'search'])->name('admin.seerah-events.search');
-            Route::post('/bulk-delete', [SeerahEventController::class, 'bulkDelete'])->name('admin.seerah-events.bulk-delete');
-        });
-        Route::resource('seerah-events', SeerahEventController::class)->names([
-            'index' => 'admin.seerah-events.index',
-            'create' => 'admin.seerah-events.create',
-            'store' => 'admin.seerah-events.store',
-            'show' => 'admin.seerah-events.show',
-            'edit' => 'admin.seerah-events.edit',
-            'update' => 'admin.seerah-events.update',
-            'destroy' => 'admin.seerah-events.destroy',
-        ]);
-
-        // Genealogy Routes
-        Route::prefix('genealogy')->group(function (): void {
-            Route::get('/search', [GenealogyController::class, 'search'])->name('admin.genealogy.search');
-            Route::post('/bulk-delete', [GenealogyController::class, 'bulkDelete'])->name('admin.genealogy.bulk-delete');
-        });
-        Route::resource('genealogy', GenealogyController::class)->names([
-            'index' => 'admin.genealogy.index',
-            'create' => 'admin.genealogy.create',
-            'store' => 'admin.genealogy.store',
-            'show' => 'admin.genealogy.show',
-            'edit' => 'admin.genealogy.edit',
-            'update' => 'admin.genealogy.update',
-            'destroy' => 'admin.genealogy.destroy',
-        ]);
 
         // User Management Routes (Super Admin Only)
         Route::prefix('users')->group(function (): void {
@@ -712,4 +387,14 @@ Route::prefix('su/portal/v1/admin')
             Route::get('/ip/{ipAddress}', [AuditController::class, 'logsByIp'])->name('logs-by-ip');
             Route::get('/action/{action}', [AuditController::class, 'logsByAction'])->name('logs-by-action');
         });
+
+        // Domain route files
+        require __DIR__.'/admin/blog.php';
+        require __DIR__.'/admin/hadith.php';
+        require __DIR__.'/admin/quran.php';
+        require __DIR__.'/admin/seerah.php';
+        require __DIR__.'/admin/sahaba.php';
+        require __DIR__.'/admin/genealogy.php';
+        require __DIR__.'/admin/media.php';
+        require __DIR__.'/admin/content.php';
     });

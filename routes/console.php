@@ -59,3 +59,15 @@ Schedule::command('content:process-scheduled')
     ->onFailure(function () {
         \Illuminate\Support\Facades\Log::error('Failed to process scheduled content');
     });
+
+/**
+ * Publish media programs whose scheduled publish_at has passed.
+ * Runs hourly.
+ */
+Schedule::command('media:publish-scheduled')
+    ->hourly()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->onFailure(function () {
+        \Illuminate\Support\Facades\Log::error('Failed to publish scheduled media programs');
+    });

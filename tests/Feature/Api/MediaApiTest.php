@@ -4,160 +4,486 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
+use App\Domain\Media\Enums\ProgramCategory;
+use App\Domain\Media\Models\EpisodeWatchProgress;
+use App\Domain\Media\Models\MediaEpisode;
+use App\Domain\Media\Models\MediaEpisodeTranslation;
+use App\Domain\Media\Models\MediaProgram;
+use App\Domain\Media\Models\MediaProgramTranslation;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * MediaApiTest
- *
- * Tests for the stub MediaProgramController. All endpoints return a stub
- * response of { success: true, data: [], message: "Media programs coming soon" }
- * until the full domain model is implemented.
- */
 class MediaApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    // ===================== HELPERS =====================
+
+    /**
+     * Create a published program with AR+EN translations.
+     */
+    private function createProgram(array $attributes = []): MediaProgram
+    {
+        /** @var MediaProgram $program */
+        $program = MediaProgram::create(array_merge([
+            'slug' => 'test-program-'.uniqid(),
+            'category' => ProgramCategory::SEERAH,
+            'maturity_rating' => 'all',
+            'year' => 2020,
+            'rating' => 8.5,
+            'is_featured' => false,
+            'is_trending' => false,
+            'views_count' => 0,
+            'display_order' => 1,
+        ], $attributes));
+
+        MediaProgramTranslation::create([
+            'media_program_id' => $program->id,
+            'locale' => 'ar',
+            'title' => 'برنامج تجريبي',
+            'description' => 'وصف البرنامج التجريبي',
+            'host' => 'مقدم البرنامج',
+            'is_ready' => true,
+        ]);
+
+        MediaProgramTranslation::create([
+            'media_program_id' => $program->id,
+            'locale' => 'en',
+            'title' => 'Test Program',
+            'description' => 'Test program description',
+            'host' => 'Test Host',
+            'is_ready' => true,
+        ]);
+
+        return $program;
+    }
+
+    /**
+     * Create an episode belonging to a program.
+     */
+    private function createEpisode(MediaProgram $program, int $episodeNumber = 1, int $season = 1): MediaEpisode
+    {
+        /** @var MediaEpisode $episode */
+        $episode = MediaEpisode::create([
+            'program_id' => $program->id,
+            'season_number' => $season,
+            'episode_number' => $episodeNumber,
+            'slug' => $program->slug.'-s'.$season.'e'.$episodeNumber,
+            'video_url' => 'https://www.youtube.com/embed/test123',
+            'duration_seconds' => 1800,
+            'views_count' => 100,
+            'is_featured' => false,
+        ]);
+
+        MediaEpisodeTranslation::create([
+            'media_episode_id' => $episode->id,
+            'locale' => 'ar',
+            'title' => 'حلقة رقم '.$episodeNumber,
+            'description' => 'وصف الحلقة',
+            'is_ready' => true,
+        ]);
+
+        MediaEpisodeTranslation::create([
+            'media_episode_id' => $episode->id,
+            'locale' => 'en',
+            'title' => 'Episode '.$episodeNumber,
+            'description' => 'Episode description',
+            'is_ready' => true,
+        ]);
+
+        return $episode;
+    }
+
     // ===================== PROGRAMS LIST =====================
 
-    public function test_media_programs_index_returns_success(): void
+    public function test_programs_index_returns_success_envelope(): void
     {
         $response = $this->getJson('/api/v1/media/programs');
 
         $response->assertOk()
-            ->assertJson(['success' => true]);
+            ->assertJsonStructure(['success', 'data']);
+        $this->assertTrue($response->json('success'));
     }
 
-    public function test_media_programs_index_returns_empty_data_array(): void
-    {
-        $response = $this->getJson('/api/v1/media/programs');
-
-        $response->assertOk()
-            ->assertJsonPath('data', []);
-    }
-
-    public function test_media_programs_index_does_not_require_authentication(): void
+    public function test_programs_index_does_not_require_authentication(): void
     {
         $response = $this->getJson('/api/v1/media/programs');
 
         $response->assertOk();
     }
 
-    public function test_media_programs_index_has_success_envelope(): void
+    public function test_programs_index_returns_programs_list(): void
     {
+        $this->createProgram(['slug' => 'list-program-a']);
+        $this->createProgram(['slug' => 'list-program-b']);
+
         $response = $this->getJson('/api/v1/media/programs');
 
-        $response->assertOk()
-            ->assertJsonStructure(['success', 'data']);
+        $response->assertOk();
+        $this->assertTrue($response->json('success'));
+    }
+
+    public function test_programs_index_respects_per_page_cap(): void
+    {
+        // per_page above 100 should be capped to 100 — no 422
+        $response = $this->getJson('/api/v1/media/programs?per_page=9999');
+
+        $response->assertOk();
+    }
+
+    public function test_programs_index_filters_by_category(): void
+    {
+        $this->createProgram(['slug' => 'cat-seerah', 'category' => ProgramCategory::SEERAH]);
+        $this->createProgram(['slug' => 'cat-quran', 'category' => ProgramCategory::QURAN]);
+
+        $response = $this->getJson('/api/v1/media/programs?category=seerah');
+
+        $response->assertOk();
+        $this->assertTrue($response->json('success'));
     }
 
     // ===================== POPULAR =====================
 
-    public function test_media_programs_popular_returns_success(): void
-    {
-        $response = $this->getJson('/api/v1/media/programs/popular');
-
-        $response->assertOk()
-            ->assertJson(['success' => true]);
-    }
-
-    public function test_media_programs_popular_does_not_require_authentication(): void
-    {
-        $response = $this->getJson('/api/v1/media/programs/popular');
-
-        $response->assertOk();
-    }
-
-    public function test_media_programs_popular_has_success_envelope(): void
+    public function test_popular_returns_success(): void
     {
         $response = $this->getJson('/api/v1/media/programs/popular');
 
         $response->assertOk()
             ->assertJsonStructure(['success', 'data']);
+        $this->assertTrue($response->json('success'));
+    }
+
+    public function test_popular_does_not_require_authentication(): void
+    {
+        $response = $this->getJson('/api/v1/media/programs/popular');
+
+        $response->assertOk();
     }
 
     // ===================== RECENT =====================
 
-    public function test_media_programs_recent_returns_success(): void
+    public function test_recent_returns_success(): void
     {
         $response = $this->getJson('/api/v1/media/programs/recent');
 
         $response->assertOk()
-            ->assertJson(['success' => true]);
-    }
-
-    public function test_media_programs_recent_does_not_require_authentication(): void
-    {
-        $response = $this->getJson('/api/v1/media/programs/recent');
-
-        $response->assertOk();
+            ->assertJsonStructure(['success', 'data']);
+        $this->assertTrue($response->json('success'));
     }
 
     // ===================== SEARCH =====================
 
-    public function test_media_programs_search_returns_success(): void
+    public function test_search_returns_validation_error_when_query_too_short(): void
     {
-        // Stub controller ignores all params and returns an empty success response.
+        $response = $this->getJson('/api/v1/media/programs/search?q=a');
+
+        // 1-character query should return a validation error response
+        $response->assertStatus(422);
+    }
+
+    public function test_search_returns_results_with_valid_query(): void
+    {
+        $this->createProgram(['slug' => 'search-program-valid']);
+
         $response = $this->getJson('/api/v1/media/programs/search?q=test');
 
         $response->assertOk()
-            ->assertJson(['success' => true]);
+            ->assertJsonStructure(['success', 'data']);
+        $this->assertTrue($response->json('success'));
     }
 
-    public function test_media_programs_search_does_not_require_authentication(): void
+    public function test_search_does_not_require_authentication(): void
     {
-        $response = $this->getJson('/api/v1/media/programs/search');
+        $response = $this->getJson('/api/v1/media/programs/search?q=test');
 
         $response->assertOk();
     }
 
-    // ===================== SINGLE PROGRAM (slug) =====================
+    // ===================== SHOW (slug) =====================
 
-    public function test_media_programs_show_returns_success_for_any_slug(): void
+    public function test_show_returns_200_for_existing_program(): void
     {
-        // Stub controller returns success regardless of slug value.
-        $response = $this->getJson('/api/v1/media/programs/some-program-slug');
+        $program = $this->createProgram(['slug' => 'show-program-exists']);
+
+        $response = $this->getJson('/api/v1/media/programs/'.$program->slug);
+
+        $response->assertOk()
+            ->assertJsonStructure(['success', 'data'])
+            ->assertJsonPath('data.slug', $program->slug);
+    }
+
+    public function test_show_returns_404_for_unknown_slug(): void
+    {
+        $response = $this->getJson('/api/v1/media/programs/completely-unknown-slug-xyz');
+
+        $response->assertNotFound()
+            ->assertJson(['success' => false]);
+    }
+
+    public function test_show_404_has_error_envelope(): void
+    {
+        $response = $this->getJson('/api/v1/media/programs/does-not-exist-abc');
+
+        $response->assertNotFound()
+            ->assertJsonStructure(['success', 'error' => ['message']]);
+    }
+
+    public function test_show_does_not_require_authentication(): void
+    {
+        $program = $this->createProgram(['slug' => 'show-no-auth']);
+
+        $response = $this->getJson('/api/v1/media/programs/'.$program->slug);
+
+        $response->assertOk();
+    }
+
+    // ===================== EPISODES LIST =====================
+
+    public function test_episodes_list_returns_200_for_existing_program(): void
+    {
+        $program = $this->createProgram(['slug' => 'episodes-list-program']);
+        $this->createEpisode($program, 1);
+        $this->createEpisode($program, 2);
+
+        $response = $this->getJson('/api/v1/media/programs/'.$program->slug.'/episodes');
+
+        $response->assertOk()
+            ->assertJsonStructure(['success', 'data']);
+        $this->assertTrue($response->json('success'));
+    }
+
+    public function test_episodes_list_returns_404_for_unknown_program(): void
+    {
+        $response = $this->getJson('/api/v1/media/programs/nonexistent-program-slug/episodes');
+
+        $response->assertNotFound()
+            ->assertJson(['success' => false]);
+    }
+
+    public function test_episodes_list_does_not_require_authentication(): void
+    {
+        $program = $this->createProgram(['slug' => 'episodes-noauth']);
+
+        $response = $this->getJson('/api/v1/media/programs/'.$program->slug.'/episodes');
+
+        $response->assertOk();
+    }
+
+    // ===================== SINGLE EPISODE =====================
+
+    public function test_single_episode_returns_200(): void
+    {
+        $program = $this->createProgram(['slug' => 'ep-show-program']);
+        $episode = $this->createEpisode($program, 1);
+
+        $response = $this->getJson('/api/v1/media/programs/'.$program->slug.'/episodes/1');
+
+        $response->assertOk()
+            ->assertJsonStructure(['success', 'data' => ['episode']]);
+    }
+
+    public function test_single_episode_includes_next_episode_key(): void
+    {
+        $program = $this->createProgram(['slug' => 'ep-next-program']);
+        $this->createEpisode($program, 1);
+        $this->createEpisode($program, 2);
+
+        $response = $this->getJson('/api/v1/media/programs/'.$program->slug.'/episodes/1');
+
+        $response->assertOk()
+            ->assertJsonStructure(['success', 'data' => ['episode', 'next_episode']]);
+    }
+
+    public function test_single_episode_returns_404_for_unknown_program(): void
+    {
+        $response = $this->getJson('/api/v1/media/programs/no-program-here/episodes/1');
+
+        $response->assertNotFound()
+            ->assertJson(['success' => false]);
+    }
+
+    public function test_single_episode_does_not_require_authentication(): void
+    {
+        $program = $this->createProgram(['slug' => 'ep-noauth']);
+        $this->createEpisode($program, 1);
+
+        $response = $this->getJson('/api/v1/media/programs/'.$program->slug.'/episodes/1');
+
+        $response->assertOk();
+    }
+
+    // ===================== WATCH PROGRESS =====================
+
+    public function test_store_progress_requires_authentication(): void
+    {
+        $program = $this->createProgram(['slug' => 'progress-auth-program']);
+        $episode = $this->createEpisode($program, 1);
+
+        $response = $this->postJson('/api/v1/media/progress', [
+            'episode_id' => $episode->id,
+            'seconds' => 120,
+        ]);
+
+        $response->assertUnauthorized();
+    }
+
+    public function test_store_progress_succeeds_for_authenticated_user(): void
+    {
+        $user = User::factory()->create();
+        $program = $this->createProgram(['slug' => 'progress-ok-program']);
+        $episode = $this->createEpisode($program, 1);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/media/progress', [
+                'episode_id' => $episode->id,
+                'seconds' => 300,
+            ]);
 
         $response->assertOk()
             ->assertJson(['success' => true]);
     }
 
-    public function test_media_programs_show_does_not_require_authentication(): void
+    public function test_store_progress_returns_422_for_invalid_data(): void
     {
-        $response = $this->getJson('/api/v1/media/programs/any-slug');
+        $user = User::factory()->create();
 
-        $response->assertOk();
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/media/progress', [
+                'episode_id' => 999999, // non-existent
+                'seconds' => -1,     // invalid
+            ]);
+
+        $response->assertStatus(422);
     }
 
-    // ===================== EPISODES =====================
-
-    public function test_media_programs_episodes_returns_success(): void
+    public function test_store_progress_uses_authenticated_user_id_not_request_body(): void
     {
-        $response = $this->getJson('/api/v1/media/programs/some-program-slug/episodes');
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        $program = $this->createProgram(['slug' => 'progress-idor-program']);
+        $episode = $this->createEpisode($program, 1);
+
+        // Try to pass another user's ID in body — it must be ignored
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/media/progress', [
+                'episode_id' => $episode->id,
+                'seconds' => 500,
+                'user_id' => $other->id, // IDOR attempt — must be silently ignored
+            ]);
+
+        $this->assertDatabaseHas('episode_watch_progress', [
+            'user_id' => $user->id,
+            'episode_id' => $episode->id,
+        ]);
+
+        $this->assertDatabaseMissing('episode_watch_progress', [
+            'user_id' => $other->id,
+            'episode_id' => $episode->id,
+        ]);
+    }
+
+    public function test_store_progress_is_idempotent_upsert(): void
+    {
+        $user = User::factory()->create();
+        $program = $this->createProgram(['slug' => 'progress-upsert-program']);
+        $episode = $this->createEpisode($program, 1);
+
+        // First request
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/media/progress', [
+                'episode_id' => $episode->id,
+                'seconds' => 100,
+            ]);
+
+        // Second request with updated seconds
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/media/progress', [
+                'episode_id' => $episode->id,
+                'seconds' => 500,
+                'completed' => true,
+            ]);
+
+        $this->assertDatabaseCount('episode_watch_progress', 1);
+        $this->assertDatabaseHas('episode_watch_progress', [
+            'user_id' => $user->id,
+            'episode_id' => $episode->id,
+            'seconds' => 500,
+            'completed' => true,
+        ]);
+    }
+
+    // ===================== CONTINUE WATCHING =====================
+
+    public function test_continue_watching_requires_authentication(): void
+    {
+        $response = $this->getJson('/api/v1/media/continue-watching');
+
+        $response->assertUnauthorized();
+    }
+
+    public function test_continue_watching_returns_success_for_authenticated_user(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->getJson('/api/v1/media/continue-watching');
 
         $response->assertOk()
+            ->assertJsonStructure(['success', 'data'])
             ->assertJson(['success' => true]);
     }
 
-    public function test_media_programs_episodes_does_not_require_authentication(): void
+    public function test_continue_watching_returns_only_incomplete_episodes(): void
     {
-        $response = $this->getJson('/api/v1/media/programs/some-slug/episodes');
+        $user = User::factory()->create();
+        $program = $this->createProgram(['slug' => 'cw-program']);
+        $ep1 = $this->createEpisode($program, 1);
+        $ep2 = $this->createEpisode($program, 2);
+
+        // ep1: in progress
+        EpisodeWatchProgress::create([
+            'user_id' => $user->id,
+            'episode_id' => $ep1->id,
+            'seconds' => 300,
+            'completed' => false,
+        ]);
+
+        // ep2: completed — must NOT appear in continue-watching
+        EpisodeWatchProgress::create([
+            'user_id' => $user->id,
+            'episode_id' => $ep2->id,
+            'seconds' => 1800,
+            'completed' => true,
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->getJson('/api/v1/media/continue-watching');
 
         $response->assertOk();
+        $data = $response->json('data');
+        $this->assertCount(1, $data);
     }
 
-    public function test_media_programs_single_episode_returns_success(): void
+    public function test_continue_watching_returns_only_own_progress(): void
     {
-        $response = $this->getJson('/api/v1/media/programs/some-slug/episodes/1');
+        $user1 = User::factory()->create();
+        $user2 = User::factory()->create();
+        $program = $this->createProgram(['slug' => 'cw-own-program']);
+        $episode = $this->createEpisode($program, 1);
 
-        $response->assertOk()
-            ->assertJson(['success' => true]);
-    }
+        EpisodeWatchProgress::create([
+            'user_id' => $user2->id,
+            'episode_id' => $episode->id,
+            'seconds' => 500,
+            'completed' => false,
+        ]);
 
-    public function test_media_programs_single_episode_does_not_require_authentication(): void
-    {
-        $response = $this->getJson('/api/v1/media/programs/any-slug/episodes/1');
+        $response = $this->actingAs($user1, 'sanctum')
+            ->getJson('/api/v1/media/continue-watching');
 
         $response->assertOk();
+        $data = $response->json('data');
+        $this->assertCount(0, $data);
     }
 }
