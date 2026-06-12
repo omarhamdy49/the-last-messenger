@@ -177,7 +177,7 @@ class Tag extends Model
      */
     public function getDescriptionInLanguage(string $language): ?string
     {
-        if (!$this->description) {
+        if (! $this->description) {
             return null;
         }
 

@@ -21,7 +21,7 @@ class DomainException extends Exception
     protected array $context = [];
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     public function __construct(
         string $message = '',

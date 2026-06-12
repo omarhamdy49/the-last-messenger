@@ -23,12 +23,12 @@ class TafseerResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'         => $this->id,
-            'verse_id'   => $this->verse_id,
-            'verse_key'  => $this->verse_key,
-            'lang'       => $this->lang,
-            'text'       => $this->text,
-            'active'     => $this->active,
+            'id' => $this->id,
+            'verse_id' => $this->verse_id,
+            'verse_key' => $this->verse_key,
+            'lang' => $this->lang,
+            'text' => $this->text,
+            'active' => $this->active,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

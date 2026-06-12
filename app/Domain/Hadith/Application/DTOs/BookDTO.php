@@ -43,10 +43,12 @@ final readonly class BookDTO implements JsonSerializable
             titleEn: $book->title_en,
             slugAr: $book->slug_ar ?? '',
             slugEn: $book->slug_en,
-            bookNumber: $book->book_number ?? 0,
+            bookNumber: (int) ($book->book_number ?? 0),
             chapterTitleAr: $book->chapter_title_ar,
             chapterTitleEn: $book->chapter_title_en,
-            hadithCount: $book->hadith_count ?? $book->hadiths()->count(),
+            // Repositories alias withCount() as either hadith_count or Laravel's default
+            // hadiths_count (kept for API resources) — accept both before the N+1 fallback.
+            hadithCount: $book->hadith_count ?? $book->hadiths_count ?? $book->hadiths()->count(),
             chaptersCount: $book->chapters_count ?? $book->chapters()->count(),
             collectionName: $book->collection?->getNameInLocale($locale),
             createdAt: $book->created_at?->toIso8601String(),

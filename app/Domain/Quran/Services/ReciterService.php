@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Services;
 
+use App\Domain\Quran\DTOs\CreateReciterData;
+use App\Domain\Quran\DTOs\UpdateReciterData;
 use App\Domain\Quran\Models\Reciter;
 use App\Domain\Quran\Repositories\ReciterRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -19,8 +22,6 @@ class ReciterService
 {
     /**
      * Constructor
-     *
-     * @param ReciterRepositoryInterface $reciterRepository
      */
     public function __construct(
         protected ReciterRepositoryInterface $reciterRepository
@@ -28,9 +29,6 @@ class ReciterService
 
     /**
      * Get paginated reciters
-     *
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function paginate(int $perPage = 15): LengthAwarePaginator
     {
@@ -38,60 +36,127 @@ class ReciterService
     }
 
     /**
-     * Create new reciter with image upload
+     * Get paginated reciters with optional search/country/style filters (admin list).
      *
-     * @param array $data
-     * @return Reciter
+     * @param  array{search?: string, country?: string, style?: string}  $filters
      */
-    public function create(array $data): Reciter
+    public function list(array $filters, int $perPage = 50): LengthAwarePaginator
     {
-        // Generate slug if not provided
-        if (empty($data['slug'])) {
-            $data['slug'] = $this->generateSlug($data['name']['en'] ?? $data['name']['ar']);
+        return $this->reciterRepository->paginateWithFilters($filters, $perPage);
+    }
+
+    /**
+     * Find a single reciter by ID. Returns null when not found.
+     */
+    public function find(int $id): ?Reciter
+    {
+        return $this->reciterRepository->getById($id);
+    }
+
+    /**
+     * Find a single reciter by ID or throw ModelNotFoundException.
+     *
+     * @throws ModelNotFoundException
+     */
+    public function findOrFail(int $id): Reciter
+    {
+        $reciter = $this->reciterRepository->getById($id);
+
+        if ($reciter === null) {
+            throw (new ModelNotFoundException)->setModel(Reciter::class, $id);
         }
 
-        // Handle profile image upload
-        if (isset($data['profile_image']) && $data['profile_image'] instanceof \Illuminate\Http\UploadedFile) {
-            $data['profile_image'] = $this->uploadProfileImage($data['profile_image']);
-        }
+        return $reciter;
+    }
 
-        return $this->reciterRepository->create($data);
+    /**
+     * Get aggregate stats for the admin dashboard card.
+     *
+     * @return array{total: int, featured: int, countries: int, total_recitations: int}
+     */
+    public function getStats(): array
+    {
+        $stats = $this->reciterRepository->getStats();
+
+        return array_merge($stats, [
+            'total_recitations' => 0,
+        ]);
+    }
+
+    /**
+     * Get a sorted, distinct list of non-null country codes for filter dropdowns.
+     *
+     * @return Collection<int, string>
+     */
+    public function getDistinctCountries(): Collection
+    {
+        return $this->reciterRepository->getDistinctCountries();
+    }
+
+    /**
+     * Create new reciter with image upload
+     */
+    public function create(CreateReciterData $data): Reciter
+    {
+        $slug = empty($data->slug)
+            ? $this->generateSlug($data->name['en'] ?? $data->name['ar'])
+            : $data->slug;
+
+        $profileImagePath = $data->profileImage
+            ? $this->uploadProfileImage($data->profileImage)
+            : null;
+
+        return $this->reciterRepository->create([
+            'name' => $data->name,
+            'description' => $data->description,
+            'slug' => $slug,
+            'country' => $data->country,
+            'style' => $data->style,
+            'profile_image' => $profileImagePath,
+            'is_featured' => $data->isFeatured,
+            'display_order' => $data->displayOrder,
+        ]);
     }
 
     /**
      * Update reciter
-     *
-     * @param Reciter $reciter
-     * @param array $data
-     * @return Reciter
      */
-    public function update(Reciter $reciter, array $data): Reciter
+    public function update(Reciter $reciter, UpdateReciterData $data): Reciter
     {
+        $payload = [
+            'name' => $data->name,
+            'description' => $data->description,
+            'country' => $data->country,
+            'style' => $data->style,
+            'is_featured' => $data->isFeatured,
+        ];
+
+        if ($data->displayOrder !== null) {
+            $payload['display_order'] = $data->displayOrder;
+        }
+
         // Update slug if name changed
-        if (isset($data['name']) && $reciter->name !== $data['name']) {
-            $data['slug'] = $this->generateSlug($data['name']['en'] ?? $data['name']['ar']);
+        if ($reciter->name !== $data->name) {
+            $payload['slug'] = $data->slug ?? $this->generateSlug($data->name['en'] ?? $data->name['ar']);
+        } elseif ($data->slug !== null) {
+            $payload['slug'] = $data->slug;
         }
 
         // Handle profile image upload
-        if (isset($data['profile_image']) && $data['profile_image'] instanceof \Illuminate\Http\UploadedFile) {
-            // Delete old image
+        if ($data->profileImage !== null) {
             if ($reciter->profile_image) {
                 $this->deleteProfileImage($reciter->profile_image);
             }
-
-            $data['profile_image'] = $this->uploadProfileImage($data['profile_image']);
+            $payload['profile_image'] = $this->uploadProfileImage($data->profileImage);
         }
 
-        $this->reciterRepository->update($reciter, $data);
+        $this->reciterRepository->update($reciter, $payload);
 
         return $reciter->fresh();
     }
 
     /**
      * Delete reciter and cleanup image
-     *
-     * @param Reciter $reciter
-     * @return bool
      */
     public function delete(Reciter $reciter): bool
     {
@@ -106,15 +171,14 @@ class ReciterService
     /**
      * Bulk delete reciters and cleanup images
      *
-     * @param array $ids
+     * @param  array<int>  $ids
      * @return int Number of deleted reciters
      */
     public function bulkDelete(array $ids): int
     {
-        // Get reciters before deletion to cleanup images
-        $reciters = Reciter::whereIn('id', $ids)->get();
+        // Fetch only the columns needed for image cleanup — no select *
+        $reciters = $this->reciterRepository->getByIds($ids);
 
-        // Delete all profile images
         foreach ($reciters as $reciter) {
             if ($reciter->profile_image) {
                 $this->deleteProfileImage($reciter->profile_image);
@@ -126,9 +190,6 @@ class ReciterService
 
     /**
      * Get reciters by country
-     *
-     * @param string $country
-     * @return Collection
      */
     public function getByCountry(string $country): Collection
     {
@@ -137,9 +198,6 @@ class ReciterService
 
     /**
      * Get reciters by recitation style
-     *
-     * @param string $style
-     * @return Collection
      */
     public function getByStyle(string $style): Collection
     {
@@ -148,8 +206,6 @@ class ReciterService
 
     /**
      * Get featured reciters
-     *
-     * @return Collection
      */
     public function getFeatured(): Collection
     {
@@ -158,13 +214,10 @@ class ReciterService
 
     /**
      * Toggle featured status
-     *
-     * @param Reciter $reciter
-     * @return Reciter
      */
     public function toggleFeatured(Reciter $reciter): Reciter
     {
-        $this->reciterRepository->updateFeatured($reciter, !$reciter->is_featured);
+        $this->reciterRepository->updateFeatured($reciter, ! $reciter->is_featured);
 
         return $reciter->fresh();
     }
@@ -172,8 +225,7 @@ class ReciterService
     /**
      * Reorder reciters
      *
-     * @param array $ids Ordered array of IDs
-     * @return bool
+     * @param  array  $ids  Ordered array of IDs
      */
     public function reorder(array $ids): bool
     {
@@ -182,9 +234,6 @@ class ReciterService
 
     /**
      * Count recitations for reciter
-     *
-     * @param Reciter $reciter
-     * @return int
      */
     public function countRecitations(Reciter $reciter): int
     {
@@ -193,9 +242,6 @@ class ReciterService
 
     /**
      * Search reciters by name
-     *
-     * @param string $query
-     * @return Collection
      */
     public function search(string $query): Collection
     {
@@ -205,7 +251,6 @@ class ReciterService
     /**
      * Upload profile image
      *
-     * @param \Illuminate\Http\UploadedFile $file
      * @return string Path to uploaded file
      */
     private function uploadProfileImage(\Illuminate\Http\UploadedFile $file): string
@@ -215,9 +260,6 @@ class ReciterService
 
     /**
      * Delete profile image
-     *
-     * @param string $path
-     * @return bool
      */
     private function deleteProfileImage(string $path): bool
     {
@@ -230,18 +272,16 @@ class ReciterService
 
     /**
      * Generate unique slug
-     *
-     * @param string $title
-     * @return string
      */
     private function generateSlug(string $title): string
     {
-        $slug = Str::slug($title);
+        $base = Str::slug($title);
+        $slug = $base;
         $count = 1;
 
-        // Ensure uniqueness
-        while (Reciter::where('slug', $slug)->exists()) {
-            $slug = Str::slug($title) . '-' . $count;
+        // Ensure uniqueness by delegating the lookup to the repository
+        while ($this->reciterRepository->getBySlug($slug) !== null) {
+            $slug = $base.'-'.$count;
             $count++;
         }
 

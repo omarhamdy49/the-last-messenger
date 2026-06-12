@@ -15,14 +15,14 @@ class CategoryTest extends TestCase
     public function test_categories_index_returns_paginated_list_with_correct_json_structure(): void
     {
         Category::query()->create([
-            'slug'          => 'seerah',
-            'type'          => 'blog',
-            'status'        => 'active',
-            'name'          => ['ar' => 'السيرة', 'en' => 'Seerah'],
-            'description'   => ['ar' => 'تصنيف السيرة', 'en' => 'Seerah category'],
-            'lft'           => 1,
-            'rgt'           => 2,
-            'depth'         => 0,
+            'slug' => 'seerah',
+            'type' => 'blog',
+            'status' => 'active',
+            'name' => ['ar' => 'السيرة', 'en' => 'Seerah'],
+            'description' => ['ar' => 'تصنيف السيرة', 'en' => 'Seerah category'],
+            'lft' => 1,
+            'rgt' => 2,
+            'depth' => 0,
             'display_order' => 1,
         ]);
 
@@ -46,14 +46,14 @@ class CategoryTest extends TestCase
     public function test_category_show_returns_single_category_by_slug(): void
     {
         Category::query()->create([
-            'slug'          => 'hadith',
-            'type'          => 'blog',
-            'status'        => 'active',
-            'name'          => ['ar' => 'الحديث', 'en' => 'Hadith'],
-            'description'   => ['ar' => 'تصنيف الحديث', 'en' => 'Hadith category'],
-            'lft'           => 1,
-            'rgt'           => 2,
-            'depth'         => 0,
+            'slug' => 'hadith',
+            'type' => 'blog',
+            'status' => 'active',
+            'name' => ['ar' => 'الحديث', 'en' => 'Hadith'],
+            'description' => ['ar' => 'تصنيف الحديث', 'en' => 'Hadith category'],
+            'lft' => 1,
+            'rgt' => 2,
+            'depth' => 0,
             'display_order' => 1,
         ]);
 

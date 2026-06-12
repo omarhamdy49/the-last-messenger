@@ -45,6 +45,8 @@ class HadithTheme extends Model
         'theme_en',
         'theme_ar',
         'parent_id',
+        'review_status',
+        'source_reference',
     ];
 
     /**
@@ -73,8 +75,6 @@ class HadithTheme extends Model
 
     /**
      * Get all Hadiths associated with this theme
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
     public function hadiths(): BelongsToMany
     {
@@ -88,8 +88,6 @@ class HadithTheme extends Model
 
     /**
      * Get the parent theme
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function parent(): BelongsTo
     {
@@ -98,8 +96,6 @@ class HadithTheme extends Model
 
     /**
      * Get all child themes
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function children(): HasMany
     {
@@ -108,8 +104,6 @@ class HadithTheme extends Model
 
     /**
      * Get all descendant themes recursively
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function descendants(): HasMany
     {
@@ -151,8 +145,6 @@ class HadithTheme extends Model
 
     /**
      * Check if this theme has children
-     *
-     * @return bool
      */
     public function hasChildren(): bool
     {
@@ -161,8 +153,6 @@ class HadithTheme extends Model
 
     /**
      * Check if this theme is a root theme
-     *
-     * @return bool
      */
     public function isRoot(): bool
     {
@@ -171,10 +161,6 @@ class HadithTheme extends Model
 
     /**
      * Get the full hierarchy path (e.g., "Worship > Prayer > Obligatory Prayers")
-     *
-     * @param  string  $locale
-     * @param  string  $separator
-     * @return string
      */
     public function getHierarchyPath(string $locale = 'ar', string $separator = ' > '): string
     {
@@ -191,8 +177,6 @@ class HadithTheme extends Model
 
     /**
      * Get theme name accessor (backward compatibility with theme_ar/theme_en)
-     *
-     * @return array
      */
     public function getNameAttribute(): array
     {
@@ -204,9 +188,6 @@ class HadithTheme extends Model
 
     /**
      * Set theme name mutator (backward compatibility with theme_ar/theme_en)
-     *
-     * @param  array  $value
-     * @return void
      */
     public function setNameAttribute(array $value): void
     {

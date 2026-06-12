@@ -10,8 +10,8 @@ namespace App\Domain\Quran\Application\Commands;
 final readonly class CreateReciterCommand
 {
     /**
-     * @param array<string, string> $name
-     * @param array<string, string>|null $description
+     * @param  array<string, string>  $name
+     * @param  array<string, string>|null  $description
      */
     public function __construct(
         public array $name,

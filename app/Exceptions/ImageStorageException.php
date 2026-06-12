@@ -22,8 +22,8 @@ class ImageStorageException extends ImageUploadException
     /**
      * Create a new storage exception
      *
-     * @param string $message Detailed storage error message
-     * @param \Throwable|null $previous Previous exception for chaining
+     * @param  string  $message  Detailed storage error message
+     * @param  \Throwable|null  $previous  Previous exception for chaining
      */
     public function __construct(string $message, ?\Throwable $previous = null)
     {

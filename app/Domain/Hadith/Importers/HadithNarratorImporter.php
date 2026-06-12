@@ -25,15 +25,15 @@ class HadithNarratorImporter extends BaseImporter
     protected function getValidationRules(): array
     {
         return [
-            'name_ar'      => 'required|string|max:255',
-            'name_en'      => 'required|string|max:255',
+            'name_ar' => 'required|string|max:255',
+            'name_en' => 'required|string|max:255',
             'biography_ar' => 'nullable|string',
             'biography_en' => 'nullable|string',
-            'grade'        => 'nullable|string|max:100',
-            'era'          => 'nullable|string|max:100',
-            'country'      => 'nullable|string|max:100',
-            'birth_hijri'  => 'nullable|integer|min:1',
-            'death_hijri'  => 'nullable|integer|min:1',
+            'grade' => 'nullable|string|max:100',
+            'era' => 'nullable|string|max:100',
+            'country' => 'nullable|string|max:100',
+            'birth_hijri' => 'nullable|integer|min:1',
+            'death_hijri' => 'nullable|integer|min:1',
         ];
     }
 
@@ -43,15 +43,15 @@ class HadithNarratorImporter extends BaseImporter
     protected function getColumnMapping(): array
     {
         return [
-            'name_ar'      => 'name_ar',
-            'name_en'      => 'name_en',
+            'name_ar' => 'name_ar',
+            'name_en' => 'name_en',
             'biography_ar' => 'biography_ar',
             'biography_en' => 'biography_en',
-            'grade'        => 'grade',
-            'era'          => 'era',
-            'country'      => 'country',
-            'birth_hijri'  => 'birth_hijri',
-            'death_hijri'  => 'death_hijri',
+            'grade' => 'grade',
+            'era' => 'era',
+            'country' => 'country',
+            'birth_hijri' => 'birth_hijri',
+            'death_hijri' => 'death_hijri',
         ];
     }
 
@@ -110,11 +110,11 @@ class HadithNarratorImporter extends BaseImporter
         }
 
         $data = [
-            'name_ar'          => trim((string) $row['name_ar']),
-            'name_en'          => trim((string) $row['name_en']),
+            'name_ar' => trim((string) $row['name_ar']),
+            'name_en' => trim((string) $row['name_en']),
             'reliability_grade' => $row['grade'] ?? null,
-            'school'           => $row['era'] ?? null,
-            'region'           => $row['country'] ?? null,
+            'school' => $row['era'] ?? null,
+            'region' => $row['country'] ?? null,
         ];
 
         if ($biography !== null) {

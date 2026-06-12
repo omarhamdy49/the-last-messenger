@@ -27,7 +27,7 @@ class ChapterRepository extends BaseRepository implements ChapterRepositoryInter
      */
     protected function getModel(): Model
     {
-        return new HadithChapter();
+        return new HadithChapter;
     }
 
     /**
@@ -52,7 +52,7 @@ class ChapterRepository extends BaseRepository implements ChapterRepositoryInter
     public function getWithHadiths(int $id): ?HadithChapter
     {
         return $this->model
-            ->with(['hadiths' => fn ($q) => $q->orderBy('hadith_number'), 'hadiths.translations'])
+            ->with(['hadiths' => fn ($q) => $q->orderByRaw('LENGTH(hadith_number)')->orderBy('hadith_number'), 'hadiths.translations'])
             ->find($id);
     }
 

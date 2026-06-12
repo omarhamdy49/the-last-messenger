@@ -22,6 +22,21 @@ class CollectionNotFoundException extends EntityNotFoundException
     }
 
     /**
+     * Create for collection slug
+     */
+    public static function withCollectionSlug(string $slug): static
+    {
+        return new static(
+            message: "المجموعة بالمعرف {$slug} غير موجودة | Collection with slug {$slug} not found",
+            context: [
+                'entity_type' => 'HadithCollection',
+                'slug' => $slug,
+            ],
+            code: 404
+        );
+    }
+
+    /**
      * Create for collection abbreviation
      */
     public static function withAbbreviation(string $abbreviation): static

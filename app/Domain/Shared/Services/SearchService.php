@@ -7,19 +7,24 @@ namespace App\Domain\Shared\Services;
 use App\Domain\Shared\Builders\FilterBuilder;
 use App\Domain\Shared\Enums\SearchModule;
 use App\Domain\Shared\Enums\SortDirection;
+use App\Domain\Shared\Models\SavedFilter;
 use App\Domain\Shared\Models\SearchHistory;
 use App\Domain\Shared\Models\SearchPreference;
-use App\Domain\Shared\Models\SavedFilter;
+use App\Domain\Shared\Repositories\SavedFilterRepositoryInterface;
+use App\Domain\Shared\Search\SearchQueryBuilder;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Search Service
- * Unified search service across all content modules
+ *
+ * Thin orchestrator for unified search across all content modules.
+ * Query construction is delegated to SearchQueryBuilder; this class is
+ * responsible for module iteration, history persistence, cache management,
+ * and user preference / saved-filter operations.
  */
 class SearchService
 {
@@ -31,13 +36,18 @@ class SearchService
 
     protected int $cacheTTL = 300; // 5 minutes
 
+    public function __construct(
+        protected SavedFilterRepositoryInterface $savedFilterRepository,
+        protected SearchQueryBuilder $queryBuilder,
+    ) {}
+
     /**
      * Perform unified search across modules
      *
      * @param  string  $query  Search query
      * @param  array<string, mixed>  $filters  Additional filters
      * @param  array<string, mixed>  $options  Search options (sort, per_page, etc.)
-     * @return array<string, mixed>  Search results grouped by module
+     * @return array<string, mixed> Search results grouped by module
      */
     public function search(string $query, array $filters = [], array $options = []): array
     {
@@ -64,7 +74,14 @@ class SearchService
             ];
         }
 
-        $totalResults = array_sum(array_column($results, 'total'));
+        // Per-module facet counts, derived from the already-fetched paginators
+        // (each paginator ran its own COUNT) — zero additional queries.
+        $counts = array_map(
+            static fn (array $moduleGroup): int => (int) $moduleGroup['total'],
+            $results
+        );
+
+        $totalResults = array_sum($counts);
         $executionTime = round((microtime(true) - $startTime) * 1000, 2);
 
         // Save search history
@@ -80,9 +97,10 @@ class SearchService
         return [
             'query' => $query,
             'results' => $results,
+            'counts' => $counts,
             'total_results' => $totalResults,
             'execution_time_ms' => $executionTime,
-            'filters_applied' => !empty($filters),
+            'filters_applied' => ! empty($filters),
         ];
     }
 
@@ -101,54 +119,25 @@ class SearchService
         array $options = []
     ): LengthAwarePaginator {
         $module = SearchModule::from($moduleType);
-        $modelClass = $module->modelClass();
 
-        if ($modelClass === null) {
-            throw new \InvalidArgumentException("Invalid module type: {$moduleType}");
-        }
+        $filterBuilder = $this->buildModuleSearchQuery($module, $query, $filters);
 
-        // Build base query
-        $queryBuilder = $modelClass::query();
-
-        // Apply full-text search on searchable fields
-        $searchableFields = $module->searchableFields();
-        if (!empty($query) && !empty($searchableFields)) {
-            // Check if model has generated columns for full-text search
-            $hasFullText = method_exists($modelClass, 'getFullTextColumns');
-
-            if ($hasFullText) {
-                $fullTextColumns = $modelClass::getFullTextColumns();
-                $this->applyMySQLFullText($queryBuilder, $fullTextColumns, $query);
-            } else {
-                $this->applyBasicSearch($queryBuilder, $searchableFields, $query);
-            }
-        }
-
-        // Build and apply filters
-        $filterBuilder = new FilterBuilder($queryBuilder);
-        $this->applyFilters($filterBuilder, $filters, $module);
-
-        // Apply sorting
         $sort = $options['sort'] ?? 'relevance';
-        $order = $options['order'] ?? 'desc';
-        $this->applySorting($filterBuilder, $sort, SortDirection::from($order), $module);
+        $direction = SortDirection::from($options['order'] ?? 'desc');
+        $this->queryBuilder->applySorting($filterBuilder, $sort, $direction);
 
-        // Build query
-        $queryBuilder = $filterBuilder->build();
+        $eloquentQuery = $filterBuilder->build();
 
-        // Apply eager loading if model has relationships
-        $relations = $options['with'] ?? $this->getDefaultRelations($module);
-        if (!empty($relations)) {
-            $queryBuilder->with($relations);
+        // Eager-load relationships
+        $relations = $options['with'] ?? $this->queryBuilder->getDefaultRelations($module);
+        if (! empty($relations)) {
+            $eloquentQuery->with($relations);
         }
 
-        // Get per page from options or user preference
-        $perPage = $this->getPerPage($options);
+        $perPage = $this->queryBuilder->resolvePerPage($options, $this->defaultPerPage);
+        $results = $eloquentQuery->paginate($perPage);
 
-        // Execute and paginate
-        $results = $queryBuilder->paginate($perPage);
-
-        // Save search history
+        // Save search history (per-module searches made by authenticated users)
         if (isset($options['user'])) {
             $this->saveSearchHistory(
                 query: $query,
@@ -163,15 +152,35 @@ class SearchService
     }
 
     /**
+     * Count matching results in a module without fetching rows.
+     *
+     * Used for facet counts on modules excluded from the current result set
+     * (e.g. when a content-type filter is active): one COUNT query, no
+     * sorting, eager loads, pagination, or history side effects.
+     *
+     * @param  string  $moduleType  Module type (article, hadith, etc.)
+     * @param  string  $query  Search query
+     * @param  array<string, mixed>  $filters  Additional filters
+     */
+    public function countWithin(string $moduleType, string $query, array $filters = []): int
+    {
+        $module = SearchModule::from($moduleType);
+
+        return $this->buildModuleSearchQuery($module, $query, $filters)
+            ->build()
+            ->count();
+    }
+
+    /**
      * Get search suggestions based on partial query
      *
      * @param  string  $query  Partial search query
      * @param  string|null  $module  Module to get suggestions for
-     * @return Collection<int, string>  Suggested queries
+     * @return Collection<int, string> Suggested queries
      */
     public function getSuggestions(string $query, ?string $module = null): Collection
     {
-        $cacheKey = "search:suggestions:{$module}:" . md5($query);
+        $cacheKey = "search:suggestions:{$module}:".md5($query);
 
         return Cache::remember($cacheKey, $this->cacheTTL, function () use ($query, $module) {
             $queryBuilder = SearchHistory::query()
@@ -289,13 +298,11 @@ class SearchService
 
         // If this is set as default, unset other defaults
         if ($options['is_default'] ?? false) {
-            SavedFilter::where('user_id', $userId)
-                ->where('module', $module)
-                ->where('is_default', true)
-                ->update(['is_default' => false]);
+            $this->savedFilterRepository->clearDefaults($userId, $module);
         }
 
-        return SavedFilter::create([
+        /** @var SavedFilter $savedFilter */
+        $savedFilter = $this->savedFilterRepository->create([
             'user_id' => $userId,
             'name' => $name,
             'description' => $options['description'] ?? null,
@@ -305,6 +312,8 @@ class SearchService
             'is_public' => $options['is_public'] ?? false,
             'is_default' => $options['is_default'] ?? false,
         ]);
+
+        return $savedFilter;
     }
 
     /**
@@ -318,15 +327,7 @@ class SearchService
     {
         $userId = $user instanceof User ? $user->id : $user;
 
-        $query = SavedFilter::where('user_id', $userId)
-            ->orderBy('is_default', 'desc')
-            ->orderBy('usage_count', 'desc');
-
-        if ($module !== null) {
-            $query->where('module', $module);
-        }
-
-        return $query->get();
+        return $this->savedFilterRepository->getByUser($userId, $module);
     }
 
     /**
@@ -337,8 +338,9 @@ class SearchService
      */
     public function applySavedFilter(int $filterId, array $options = []): LengthAwarePaginator
     {
-        $savedFilter = SavedFilter::findOrFail($filterId);
-        $savedFilter->incrementUsage();
+        /** @var SavedFilter $savedFilter */
+        $savedFilter = $this->savedFilterRepository->findOrFail($filterId);
+        $this->savedFilterRepository->incrementUsage($filterId);
 
         $module = $savedFilter->module;
         $filters = $savedFilter->filters;
@@ -374,15 +376,49 @@ class SearchService
         return $query->delete();
     }
 
+    // -------------------------------------------------------------------------
+    // Private helpers
+    // -------------------------------------------------------------------------
+
     /**
-     * Save search to history
+     * Build the filtered (search term + module filters) query for a module.
      *
-     * @param  string  $query  Search query
-     * @param  string|null  $module  Module type
-     * @param  array<string, mixed>  $filters  Applied filters
-     * @param  int  $resultsCount  Number of results
-     * @param  float|null  $executionTime  Execution time in milliseconds
-     * @param  User|null  $user  User who performed search
+     * Shared by searchWithin() (which adds sorting/eager loads/pagination on
+     * top) and countWithin() (which only counts).
+     *
+     * @param  array<string, mixed>  $filters
+     *
+     * @throws \InvalidArgumentException when the module has no model class.
+     */
+    protected function buildModuleSearchQuery(SearchModule $module, string $query, array $filters): FilterBuilder
+    {
+        $modelClass = $module->modelClass();
+
+        if ($modelClass === null) {
+            throw new \InvalidArgumentException("Invalid module type: {$module->value}");
+        }
+
+        $eloquentQuery = $modelClass::query();
+
+        // Delegate full-text / LIKE search to the query builder
+        $this->queryBuilder->applySearch(
+            $eloquentQuery,
+            $module->searchableFields(),
+            $modelClass,
+            $query
+        );
+
+        $filterBuilder = new FilterBuilder($eloquentQuery);
+        $this->queryBuilder->applyFilters($filterBuilder, $filters, $module);
+
+        return $filterBuilder;
+    }
+
+    /**
+     * Persist a search event to history.
+     *
+     * @param  array<string, mixed>  $filters
+     * @param  float|null  $executionTime  Milliseconds
      */
     protected function saveSearchHistory(
         string $query,
@@ -392,156 +428,16 @@ class SearchService
         ?float $executionTime = null,
         ?User $user = null
     ): void {
-        $data = [
+        SearchHistory::create([
             'user_id' => $user?->id,
             'query' => $query,
             'module' => $module,
-            'filters' => !empty($filters) ? $filters : null,
+            'filters' => ! empty($filters) ? $filters : null,
             'results_count' => $resultsCount,
             'results_meta' => $executionTime ? ['execution_time_ms' => $executionTime] : null,
             'ip_address' => request()->ip(),
             'user_agent' => request()->userAgent(),
             'searched_at' => now(),
-        ];
-
-        SearchHistory::create($data);
-    }
-
-    /**
-     * Apply MySQL full-text search
-     *
-     * @param  Builder  $query  Query builder
-     * @param  array<string>  $columns  Columns with FULLTEXT index
-     * @param  string  $searchQuery  Search query
-     */
-    protected function applyMySQLFullText(Builder $query, array $columns, string $searchQuery): void
-    {
-        $columnsString = implode(',', $columns);
-        $query->whereRaw(
-            "MATCH({$columnsString}) AGAINST(? IN NATURAL LANGUAGE MODE)",
-            [$searchQuery]
-        );
-    }
-
-    /**
-     * Apply basic LIKE search across fields
-     *
-     * @param  Builder  $query  Query builder
-     * @param  array<string>  $fields  Fields to search
-     * @param  string  $searchQuery  Search query
-     */
-    protected function applyBasicSearch(Builder $query, array $fields, string $searchQuery): void
-    {
-        $query->where(function ($q) use ($fields, $searchQuery) {
-            foreach ($fields as $field) {
-                // Handle JSON fields (e.g., title->en)
-                if (str_contains($field, '->')) {
-                    $q->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT({$field})) LIKE ?", ["%{$searchQuery}%"]);
-                } else {
-                    $q->orWhere($field, 'LIKE', "%{$searchQuery}%");
-                }
-            }
-        });
-    }
-
-    /**
-     * Apply filters using FilterBuilder
-     *
-     * @param  FilterBuilder  $builder  Filter builder
-     * @param  array<string, mixed>  $filters  Filters to apply
-     * @param  SearchModule  $module  Module being searched
-     */
-    protected function applyFilters(FilterBuilder $builder, array $filters, SearchModule $module): void
-    {
-        $filterableFields = $module->filterableFields();
-
-        foreach ($filters as $field => $value) {
-            if (!isset($filterableFields[$field]) || $value === null) {
-                continue;
-            }
-
-            $filterType = $filterableFields[$field];
-
-            match ($filterType) {
-                \App\Domain\Shared\Enums\FilterType::DATE_RANGE => $builder->addDateRange(
-                    $field,
-                    $value['from'] ?? null,
-                    $value['to'] ?? null
-                ),
-                \App\Domain\Shared\Enums\FilterType::RANGE => $builder->addNumberRange(
-                    $field,
-                    $value['min'] ?? null,
-                    $value['max'] ?? null
-                ),
-                \App\Domain\Shared\Enums\FilterType::MULTISELECT => $builder->addMultiSelect($field, (array) $value),
-                \App\Domain\Shared\Enums\FilterType::TEXT => $builder->addTextSearch($field, (string) $value),
-                default => $builder->addFilter($field, \App\Domain\Shared\Enums\FilterOperator::EQUALS, $value),
-            };
-        }
-    }
-
-    /**
-     * Apply sorting to query
-     *
-     * @param  FilterBuilder  $builder  Filter builder
-     * @param  string  $sort  Sort field
-     * @param  SortDirection  $direction  Sort direction
-     * @param  SearchModule  $module  Module being searched
-     */
-    protected function applySorting(
-        FilterBuilder $builder,
-        string $sort,
-        SortDirection $direction,
-        SearchModule $module
-    ): void {
-        // Map common sort aliases
-        $sortField = match ($sort) {
-            'relevance' => 'id', // Default to ID for relevance
-            'date', 'newest' => 'created_at',
-            'oldest' => 'created_at',
-            'popular' => 'views_count',
-            'updated' => 'updated_at',
-            default => $sort,
-        };
-
-        // Adjust direction for certain sort types
-        if ($sort === 'oldest') {
-            $direction = SortDirection::ASC;
-        }
-
-        $builder->addSort($sortField, $direction);
-    }
-
-    /**
-     * Get default relations to eager load for a module
-     *
-     * @param  SearchModule  $module  Module type
-     * @return array<string>
-     */
-    protected function getDefaultRelations(SearchModule $module): array
-    {
-        return match ($module) {
-            SearchModule::ARTICLE => ['author', 'category'],
-            SearchModule::HADITH => ['book', 'chapter', 'narrators'],
-            SearchModule::MEDIA => ['category', 'episodes'],
-            SearchModule::SEERAH => ['participants'],
-            SearchModule::SAHABA => [],
-            SearchModule::QURAN => ['surah'],
-            SearchModule::GENEALOGY => ['relationships'],
-            default => [],
-        };
-    }
-
-    /**
-     * Get per page value from options or default
-     *
-     * @param  array<string, mixed>  $options  Search options
-     */
-    protected function getPerPage(array $options): int
-    {
-        $perPage = $options['per_page'] ?? $this->defaultPerPage;
-
-        // Ensure per_page is within reasonable bounds
-        return min(max($perPage, 1), 100);
+        ]);
     }
 }

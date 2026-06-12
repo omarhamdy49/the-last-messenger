@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Domain\Shared\Repositories;
 
-use App\Domain\Blog\Models\Article;
 use App\Domain\Shared\Repositories\BaseRepository;
+use App\Models\Article;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

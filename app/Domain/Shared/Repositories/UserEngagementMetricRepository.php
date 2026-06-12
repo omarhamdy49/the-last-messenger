@@ -8,7 +8,6 @@ use App\Domain\Shared\Models\UserEngagementMetric;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
 /**
  * User Engagement Metric Repository Implementation
@@ -22,7 +21,7 @@ class UserEngagementMetricRepository extends BaseRepository implements UserEngag
      */
     protected function getModel(): Model
     {
-        return new UserEngagementMetric();
+        return new UserEngagementMetric;
     }
 
     /**
@@ -103,7 +102,12 @@ class UserEngagementMetricRepository extends BaseRepository implements UserEngag
 
         if ($updated) {
             Cache::forget("engagement:user:{$userId}");
-            Cache::tags(['engagement'])->flush();
+            // Forget all known aggregate keys that may now be stale.
+            // Cache::tags() is not available with file/database drivers.
+            Cache::forget('engagement:statistics');
+            foreach ([10, 25, 50, 100] as $limit) {
+                Cache::forget("engagement:top_engaged:{$limit}");
+            }
         }
 
         return $updated > 0;
@@ -139,7 +143,12 @@ class UserEngagementMetricRepository extends BaseRepository implements UserEngag
 
         if ($updated) {
             Cache::forget("engagement:user:{$userId}");
-            Cache::tags(['engagement'])->flush();
+            // Forget all known aggregate keys that may now be stale.
+            // Cache::tags() is not available with file/database drivers.
+            Cache::forget('engagement:statistics');
+            foreach ([10, 25, 50, 100] as $limit) {
+                Cache::forget("engagement:top_streaks:{$limit}");
+            }
         }
 
         return $updated;
@@ -214,7 +223,13 @@ class UserEngagementMetricRepository extends BaseRepository implements UserEngag
                 'metrics_month' => now(),
             ]);
 
-        Cache::tags(['engagement'])->flush();
+        // Forget all known aggregate keys that may now be stale.
+        // Cache::tags() is not available with file/database drivers.
+        Cache::forget('engagement:statistics');
+        foreach ([10, 25, 50, 100] as $limit) {
+            Cache::forget("engagement:top_engaged:{$limit}");
+            Cache::forget("engagement:top_streaks:{$limit}");
+        }
 
         return $updated;
     }

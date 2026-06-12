@@ -22,8 +22,8 @@ class TranslatableRequired implements ValidationRule
     /**
      * Constructor
      *
-     * @param string $defaultLanguage Default language code (default: 'ar')
-     * @param string $fieldName Field name for error messages
+     * @param  string  $defaultLanguage  Default language code (default: 'ar')
+     * @param  string  $fieldName  Field name for error messages
      */
     public function __construct(string $defaultLanguage = 'ar', string $fieldName = 'field')
     {
@@ -41,12 +41,14 @@ class TranslatableRequired implements ValidationRule
         // Check if value is an array
         if (! is_array($value)) {
             $fail("The {$this->fieldName} must be an array of translations.");
+
             return;
         }
 
         // Check if default language exists and is not empty
         if (! isset($value[$this->defaultLanguage]) || empty(trim((string) $value[$this->defaultLanguage]))) {
             $fail("The {$this->fieldName} must include {$this->defaultLanguage} translation.");
+
             return;
         }
     }

@@ -29,8 +29,8 @@ final class CreateBookHandler implements CommandHandler
     /**
      * Handle the command
      *
-     * @param CreateBookCommand $command
-     * @return BookDTO
+     * @param  CreateBookCommand  $command
+     *
      * @throws EntityNotFoundException
      * @throws ValidationException
      */

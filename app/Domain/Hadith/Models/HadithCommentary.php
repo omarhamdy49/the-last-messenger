@@ -2,10 +2,10 @@
 
 namespace App\Domain\Hadith\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Class HadithCommentary
@@ -20,7 +20,6 @@ use Illuminate\Database\Eloquent\Builder;
  * @property string|null $source Source book (e.g., Fath al-Bari, Sharh al-Nawawi)
  * @property string|null $commentary_text Full commentary text
  * @property \Illuminate\Support\Carbon $created_at
- *
  * @property-read \App\Domain\Hadith\Models\Hadith $hadith
  *
  * @method static Builder forHadith(int $hadithId)
@@ -68,9 +67,13 @@ class HadithCommentary extends Model
      */
     protected $fillable = [
         'hadith_id',
+        'scholar_id',
         'language_code',
         'author',
         'source',
+        'source_url',
+        'verified',
+        'review_status',
         'commentary_text',
     ];
 
@@ -81,7 +84,10 @@ class HadithCommentary extends Model
      */
     protected $casts = [
         'hadith_id' => 'integer',
+        'scholar_id' => 'integer',
+        'verified' => 'boolean',
         'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     /**
@@ -93,8 +99,6 @@ class HadithCommentary extends Model
 
     /**
      * Get the hadith that this commentary belongs to.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function hadith(): BelongsTo
     {
@@ -102,11 +106,15 @@ class HadithCommentary extends Model
     }
 
     /**
+     * Get the scholar who authored this commentary.
+     */
+    public function scholar(): BelongsTo
+    {
+        return $this->belongsTo(HadithScholar::class, 'scholar_id');
+    }
+
+    /**
      * Scope to filter commentaries by hadith.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $hadithId
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeForHadith(Builder $query, int $hadithId): Builder
     {
@@ -115,10 +123,6 @@ class HadithCommentary extends Model
 
     /**
      * Scope to filter commentaries by language.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $languageCode
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByLanguage(Builder $query, string $languageCode): Builder
     {
@@ -127,10 +131,6 @@ class HadithCommentary extends Model
 
     /**
      * Scope to filter commentaries by author.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $author
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByAuthor(Builder $query, string $author): Builder
     {
@@ -139,10 +139,6 @@ class HadithCommentary extends Model
 
     /**
      * Scope to filter commentaries by source book.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $source
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeBySource(Builder $query, string $source): Builder
     {
@@ -152,10 +148,6 @@ class HadithCommentary extends Model
     /**
      * Scope to search commentaries using FULLTEXT search.
      * Searches commentary_text column using MySQL FULLTEXT index.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $term
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeSearch(Builder $query, string $term): Builder
     {
@@ -167,9 +159,6 @@ class HadithCommentary extends Model
 
     /**
      * Scope to get Arabic commentaries.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeArabic(Builder $query): Builder
     {
@@ -178,9 +167,6 @@ class HadithCommentary extends Model
 
     /**
      * Scope to get English commentaries.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeEnglish(Builder $query): Builder
     {
@@ -189,9 +175,6 @@ class HadithCommentary extends Model
 
     /**
      * Scope to get commentaries with hadith relationship.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithHadith(Builder $query): Builder
     {
@@ -200,10 +183,6 @@ class HadithCommentary extends Model
 
     /**
      * Scope to order by creation date (newest first).
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $direction
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeRecent(Builder $query, string $direction = 'desc'): Builder
     {
@@ -212,8 +191,6 @@ class HadithCommentary extends Model
 
     /**
      * Get the language display name.
-     *
-     * @return string
      */
     public function getLanguageName(): string
     {
@@ -230,8 +207,6 @@ class HadithCommentary extends Model
 
     /**
      * Get the author display name with fallback.
-     *
-     * @return string
      */
     public function getAuthorName(): string
     {
@@ -240,8 +215,6 @@ class HadithCommentary extends Model
 
     /**
      * Get the source display name with fallback.
-     *
-     * @return string
      */
     public function getSourceName(): string
     {
@@ -250,14 +223,10 @@ class HadithCommentary extends Model
 
     /**
      * Get a truncated version of the commentary text.
-     *
-     * @param int $length
-     * @param string $suffix
-     * @return string
      */
     public function getTruncatedText(int $length = 200, string $suffix = '...'): string
     {
-        if (!$this->commentary_text) {
+        if (! $this->commentary_text) {
             return '';
         }
 
@@ -265,14 +234,11 @@ class HadithCommentary extends Model
             return $this->commentary_text;
         }
 
-        return mb_substr($this->commentary_text, 0, $length) . $suffix;
+        return mb_substr($this->commentary_text, 0, $length).$suffix;
     }
 
     /**
      * Check if the language code is supported.
-     *
-     * @param string $languageCode
-     * @return bool
      */
     public static function isSupportedLanguage(string $languageCode): bool
     {
@@ -282,7 +248,6 @@ class HadithCommentary extends Model
     /**
      * Get all commentaries for a hadith grouped by language.
      *
-     * @param int $hadithId
      * @return \Illuminate\Support\Collection
      */
     public static function getByLanguageForHadith(int $hadithId)

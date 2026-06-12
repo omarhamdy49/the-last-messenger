@@ -22,8 +22,8 @@ class ImageValidationException extends ImageUploadException
     /**
      * Create a new validation exception
      *
-     * @param string $message Detailed validation error message
-     * @param \Throwable|null $previous Previous exception for chaining
+     * @param  string  $message  Detailed validation error message
+     * @param  \Throwable|null  $previous  Previous exception for chaining
      */
     public function __construct(string $message, ?\Throwable $previous = null)
     {

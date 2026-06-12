@@ -161,17 +161,15 @@ class StoreReciterRequest extends FormRequest
 
     /**
      * Prepare the data for validation
-     *
-     * @return void
      */
     protected function prepareForValidation(): void
     {
         // Set default values
-        if (!$this->has('is_featured')) {
+        if (! $this->has('is_featured')) {
             $this->merge(['is_featured' => false]);
         }
 
-        if (!$this->has('display_order')) {
+        if (! $this->has('display_order')) {
             $this->merge(['display_order' => 0]);
         }
     }

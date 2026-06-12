@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Domain\Shared\Repositories;
 
 use App\Domain\Shared\Contracts\RepositoryInterface;
-use App\Domain\Shared\Models\BulkOperation;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 

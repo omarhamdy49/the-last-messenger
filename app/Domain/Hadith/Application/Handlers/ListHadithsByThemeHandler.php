@@ -28,8 +28,8 @@ final class ListHadithsByThemeHandler implements QueryHandler
     /**
      * Handle the query
      *
-     * @param ListHadithsByThemeQuery $query
-     * @return PaginatedResult
+     * @param  ListHadithsByThemeQuery  $query
+     *
      * @throws EntityNotFoundException
      */
     public function handle(Query $query): PaginatedResult
@@ -64,7 +64,7 @@ final class ListHadithsByThemeHandler implements QueryHandler
 
         $locale = $query->locale ?? 'ar';
         $items = $paginator->getCollection()->map(
-            fn($hadith) => HadithDTO::fromModel($hadith, $locale)
+            fn ($hadith) => HadithDTO::fromModel($hadith, $locale)
         );
 
         return PaginatedResult::fromPaginator($paginator, $items->toArray());

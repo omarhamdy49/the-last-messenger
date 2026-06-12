@@ -33,8 +33,6 @@ class TranslationServiceProvider extends ServiceProvider
 
     /**
      * Load available languages from database and set them in config.
-     *
-     * @return void
      */
     protected function loadLanguagesFromDatabase(): void
     {
@@ -92,8 +90,6 @@ class TranslationServiceProvider extends ServiceProvider
     /**
      * Determine if languages should be loaded.
      * Skip during migrations to avoid circular dependency.
-     *
-     * @return bool
      */
     protected function shouldLoadLanguages(): bool
     {

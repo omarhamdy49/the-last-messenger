@@ -65,7 +65,7 @@
             :change="isset($stats['media_change']) ? ($stats['media_change'] > 0 ? '+' : '') . $stats['media_change'] . '%' : null"
             :changeType="isset($stats['media_change']) && $stats['media_change'] > 0 ? 'up' : 'down'"
             delay="delay-200"
-            href="{{ route('admin.programs.index') }}"
+            href="{{ route('admin.media-programs.index') }}"
         />
 
         {{-- Total Views --}}
@@ -290,7 +290,7 @@
                               :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('dashboard.quick_links.new_article') }}</span>
                     </a>
 
-                    <a href="{{ route('admin.programs.index') }}"
+                    <a href="{{ route('admin.media-programs.index') }}"
                        class="flex items-center gap-3 p-3 rounded-lg transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-800">
                         <i data-lucide="upload" class="w-4 h-4 text-brand"></i>
                         <span class="text-sm font-medium"

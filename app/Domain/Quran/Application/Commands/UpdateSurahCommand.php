@@ -12,7 +12,7 @@ namespace App\Domain\Quran\Application\Commands;
 final readonly class UpdateSurahCommand
 {
     /**
-     * @param array<int, int>|null $pages
+     * @param  array<int, int>|null  $pages
      */
     public function __construct(
         public int $id,

@@ -60,7 +60,7 @@ class AuditService
                 'action' => $action,
                 'subject_type' => get_class($subject),
                 'subject_id' => $subject->id,
-                'description' => $description ?? ucfirst($action) . ' ' . class_basename($subject),
+                'description' => $description ?? ucfirst($action).' '.class_basename($subject),
                 'old_values' => $oldValues,
                 'new_values' => $newValues,
                 'metadata' => $metadata,
@@ -301,7 +301,7 @@ class AuditService
                 str_replace(',', ';', $log->description ?? ''),
                 $log->ip_address ?? '',
                 $log->created_at->toIso8601String(),
-            ]) . "\n";
+            ])."\n";
         }
 
         return $csv;

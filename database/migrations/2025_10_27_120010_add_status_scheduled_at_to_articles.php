@@ -12,14 +12,14 @@ return new class extends Migration
     {
         Schema::table('articles', function (Blueprint $table) {
             $table->enum('status', ['draft', 'pending', 'published', 'scheduled', 'archived'])
-                  ->default('draft')
-                  ->after('hijri_date')
-                  ->comment('Publication status');
+                ->default('draft')
+                ->after('hijri_date')
+                ->comment('Publication status');
 
             $table->timestamp('scheduled_at')
-                  ->nullable()
-                  ->after('status')
-                  ->comment('Scheduled publish datetime');
+                ->nullable()
+                ->after('status')
+                ->comment('Scheduled publish datetime');
 
             $table->index('status');
             $table->index('scheduled_at');

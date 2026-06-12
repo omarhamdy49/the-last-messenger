@@ -18,13 +18,14 @@ use SplFileInfo;
 final class JsonFileScanner
 {
     private const JSON_EXTENSION = 'json';
+
     private const MAX_FILE_SIZE_MB = 100;
 
     /**
      * Scan a path (file or directory) for JSON files
      *
-     * @param string $path File path or directory path
-     * @param bool $recursive Scan subdirectories if path is a directory
+     * @param  string  $path  File path or directory path
+     * @param  bool  $recursive  Scan subdirectories if path is a directory
      * @return array<string> Array of absolute paths to JSON files
      *
      * @throws InvalidArgumentException If path does not exist
@@ -69,7 +70,7 @@ final class JsonFileScanner
      */
     public function isJsonFile(string $path): bool
     {
-        if (!is_file($path)) {
+        if (! is_file($path)) {
             return false;
         }
 
@@ -85,20 +86,20 @@ final class JsonFileScanner
      * - File size is within limits
      * - File contains valid JSON
      *
-     * @param string $path Path to JSON file
+     * @param  string  $path  Path to JSON file
      * @return array{valid: bool, error: string|null}
      */
     public function validateFile(string $path): array
     {
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             return ['valid' => false, 'error' => 'File does not exist'];
         }
 
-        if (!is_readable($path)) {
+        if (! is_readable($path)) {
             return ['valid' => false, 'error' => 'File is not readable'];
         }
 
-        if (!$this->isJsonFile($path)) {
+        if (! $this->isJsonFile($path)) {
             return ['valid' => false, 'error' => 'File is not a JSON file'];
         }
 
@@ -116,7 +117,7 @@ final class JsonFileScanner
         if (json_last_error() !== JSON_ERROR_NONE) {
             return [
                 'valid' => false,
-                'error' => 'Invalid JSON syntax: ' . json_last_error_msg(),
+                'error' => 'Invalid JSON syntax: '.json_last_error_msg(),
             ];
         }
 
@@ -142,8 +143,8 @@ final class JsonFileScanner
     /**
      * Scan directory for JSON files
      *
-     * @param string $dirPath Directory path
-     * @param bool $recursive Include subdirectories
+     * @param  string  $dirPath  Directory path
+     * @param  bool  $recursive  Include subdirectories
      * @return array<string> Array of file paths
      */
     private function scanDirectory(string $dirPath, bool $recursive): array
@@ -200,7 +201,7 @@ final class JsonFileScanner
                 continue;
             }
 
-            $filePath = $dirPath . DIRECTORY_SEPARATOR . $file;
+            $filePath = $dirPath.DIRECTORY_SEPARATOR.$file;
 
             if (is_file($filePath) && $this->isJsonFile($filePath)) {
                 $jsonFiles[] = $filePath;
@@ -225,7 +226,7 @@ final class JsonFileScanner
      */
     private function validatePathExists(string $path): void
     {
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             throw new InvalidArgumentException("Path does not exist: {$path}");
         }
     }

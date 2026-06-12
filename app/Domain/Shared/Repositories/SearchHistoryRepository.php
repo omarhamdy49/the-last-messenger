@@ -30,6 +30,7 @@ class SearchHistoryRepository extends BaseRepository implements SearchHistoryRep
     public function getRecentByUser(int $userId, int $limit = 20): Collection
     {
         return $this->model
+            ->select(['id', 'user_id', 'query', 'module', 'results_count', 'searched_at'])
             ->where('user_id', $userId)
             ->orderBy('searched_at', 'desc')
             ->limit($limit)

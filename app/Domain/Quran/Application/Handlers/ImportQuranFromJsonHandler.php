@@ -44,7 +44,7 @@ final readonly class ImportQuranFromJsonHandler
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
     private function importSurahs(array $data, bool $truncate): array
@@ -53,7 +53,7 @@ final readonly class ImportQuranFromJsonHandler
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
     private function importVerses(array $data, bool $truncate): array
@@ -62,7 +62,7 @@ final readonly class ImportQuranFromJsonHandler
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
     private function importTranslations(array $data, bool $truncate): array
@@ -71,7 +71,7 @@ final readonly class ImportQuranFromJsonHandler
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
     private function importTafsir(array $data, bool $truncate): array
@@ -80,7 +80,7 @@ final readonly class ImportQuranFromJsonHandler
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
     private function importReciters(array $data, bool $truncate): array

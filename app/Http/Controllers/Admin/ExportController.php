@@ -41,11 +41,11 @@ class ExportController extends Controller
         $data = $request->validatedWithDefaults();
 
         $exportRecord = Export::create([
-            'user_id'   => $request->user()->id,
-            'module'    => $data['module'],
-            'format'    => $data['format'],
-            'filters'   => $data['filters'],
-            'status'    => 'pending',
+            'user_id' => $request->user()->id,
+            'module' => $data['module'],
+            'format' => $data['format'],
+            'filters' => $data['filters'],
+            'status' => 'pending',
             'file_name' => $this->generateFilename($data['module'], $data['format']),
         ]);
 
@@ -62,7 +62,7 @@ class ExportController extends Controller
             $exportRecord->update(['record_count' => $recordCount]);
 
             $filename = $this->generateFilename($data['module'], $data['format']);
-            $format   = ExportFormat::from($data['format']);
+            $format = ExportFormat::from($data['format']);
             $filePath = $exporter->exportToFile($format, pathinfo($filename, PATHINFO_FILENAME));
 
             $fileSize = file_exists($filePath) ? filesize($filePath) : 0;
@@ -76,8 +76,8 @@ class ExportController extends Controller
             );
 
             return response()->download($filePath, $filename, [
-                'Content-Type'        => $format->getMimeType(),
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                'Content-Type' => $format->getMimeType(),
+                'Content-Disposition' => 'attachment; filename="'.$filename.'"',
             ])->deleteFileAfterSend(true);
         } catch (BusinessRuleViolationException $e) {
             $exportRecord->markAsFailed();
@@ -90,15 +90,15 @@ class ExportController extends Controller
             $exportRecord->markAsFailed();
 
             \Log::error('admin.export.failed', [
-                'module'    => $data['module'],
-                'format'    => $data['format'],
-                'user_id'   => $request->user()->id,
-                'error'     => $e->getMessage(),
+                'module' => $data['module'],
+                'format' => $data['format'],
+                'user_id' => $request->user()->id,
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Export failed: ' . $e->getMessage(),
+                'message' => 'Export failed: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -117,7 +117,7 @@ class ExportController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data'    => $columns,
+                'data' => $columns,
             ]);
         } catch (\ValueError) {
             return response()->json([
@@ -149,12 +149,12 @@ class ExportController extends Controller
 
         return response()->json([
             'success' => true,
-            'data'    => $exports->items(),
-            'meta'    => [
+            'data' => $exports->items(),
+            'meta' => [
                 'current_page' => $exports->currentPage(),
-                'per_page'     => $exports->perPage(),
-                'total'        => $exports->total(),
-                'last_page'    => $exports->lastPage(),
+                'per_page' => $exports->perPage(),
+                'total' => $exports->total(),
+                'last_page' => $exports->lastPage(),
             ],
         ]);
     }
@@ -169,17 +169,17 @@ class ExportController extends Controller
         $userId = $request->user()->id;
 
         $stats = [
-            'total_exports'          => Export::where('user_id', $userId)->count(),
-            'completed_exports'      => Export::where('user_id', $userId)->where('status', 'completed')->count(),
-            'failed_exports'         => Export::where('user_id', $userId)->where('status', 'failed')->count(),
+            'total_exports' => Export::where('user_id', $userId)->count(),
+            'completed_exports' => Export::where('user_id', $userId)->where('status', 'completed')->count(),
+            'failed_exports' => Export::where('user_id', $userId)->where('status', 'failed')->count(),
             'total_records_exported' => Export::where('user_id', $userId)->where('status', 'completed')->sum('record_count'),
-            'total_file_size'        => Export::where('user_id', $userId)->where('status', 'completed')->sum('file_size'),
-            'exports_by_module'      => Export::where('user_id', $userId)
+            'total_file_size' => Export::where('user_id', $userId)->where('status', 'completed')->sum('file_size'),
+            'exports_by_module' => Export::where('user_id', $userId)
                 ->selectRaw('module, COUNT(*) as count')
                 ->groupBy('module')
                 ->get()
                 ->pluck('count', 'module'),
-            'exports_by_format'      => Export::where('user_id', $userId)
+            'exports_by_format' => Export::where('user_id', $userId)
                 ->selectRaw('format, COUNT(*) as count')
                 ->groupBy('format')
                 ->get()
@@ -188,7 +188,7 @@ class ExportController extends Controller
 
         return response()->json([
             'success' => true,
-            'data'    => $stats,
+            'data' => $stats,
         ]);
     }
 
@@ -200,7 +200,7 @@ class ExportController extends Controller
     public function cleanup(Request $request): JsonResponse
     {
         try {
-            $oldExports   = Export::where('status', 'completed')
+            $oldExports = Export::where('status', 'completed')
                 ->where('created_at', '<', now()->subDay())
                 ->get(['id', 'file_path']);
 
@@ -219,12 +219,12 @@ class ExportController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => "تم حذف {$deletedCount} ملف تصدير قديم",
-                'data'    => ['deleted_count' => $deletedCount],
+                'data' => ['deleted_count' => $deletedCount],
             ]);
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'فشل تنظيف الملفات: ' . $e->getMessage(),
+                'message' => 'فشل تنظيف الملفات: '.$e->getMessage(),
             ], 500);
         }
     }

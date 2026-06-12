@@ -10,7 +10,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class HadithThemeTranslation extends Model
 {
     protected $fillable = ['hadith_theme_id', 'locale', 'name', 'description', 'is_ready'];
+
     protected $casts = ['is_ready' => 'boolean'];
+
     public $timestamps = false;
 
     public function hadithTheme(): BelongsTo

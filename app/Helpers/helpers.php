@@ -8,9 +8,8 @@ if (! function_exists('format_arabic_date')) {
     /**
      * Format date in Arabic locale
      *
-     * @param string|Carbon|null $date
-     * @param string $format Default format: 'd M Y'
-     * @return string
+     * @param  string|Carbon|null  $date
+     * @param  string  $format  Default format: 'd M Y'
      */
     function format_arabic_date($date, string $format = 'd M Y'): string
     {
@@ -39,8 +38,7 @@ if (! function_exists('format_relative_arabic_date')) {
     /**
      * Format date as relative time in Arabic (e.g., "منذ 5 دقائق")
      *
-     * @param string|Carbon|null $date
-     * @return string
+     * @param  string|Carbon|null  $date
      */
     function format_relative_arabic_date($date): string
     {
@@ -67,8 +65,7 @@ if (! function_exists('convert_to_arabic_numerals')) {
     /**
      * Convert Western numerals (0-9) to Arabic/Hindi numerals (٠-٩)
      *
-     * @param string|int|float $number
-     * @return string
+     * @param  string|int|float  $number
      */
     function convert_to_arabic_numerals($number): string
     {
@@ -82,9 +79,6 @@ if (! function_exists('convert_to_arabic_numerals')) {
 if (! function_exists('convert_to_western_numerals')) {
     /**
      * Convert Arabic/Hindi numerals (٠-٩) to Western numerals (0-9)
-     *
-     * @param string $number
-     * @return string
      */
     function convert_to_western_numerals(string $number): string
     {
@@ -99,10 +93,9 @@ if (! function_exists('format_arabic_number')) {
     /**
      * Format number with thousands separator in Arabic style
      *
-     * @param int|float $number
-     * @param int $decimals Number of decimal places
-     * @param bool $useArabicNumerals Convert to Arabic numerals
-     * @return string
+     * @param  int|float  $number
+     * @param  int  $decimals  Number of decimal places
+     * @param  bool  $useArabicNumerals  Convert to Arabic numerals
      */
     function format_arabic_number($number, int $decimals = 0, bool $useArabicNumerals = false): string
     {
@@ -121,8 +114,7 @@ if (! function_exists('is_rtl_locale')) {
     /**
      * Check if current locale is RTL (Right-to-Left)
      *
-     * @param string|null $locale If null, uses current app locale
-     * @return bool
+     * @param  string|null  $locale  If null, uses current app locale
      */
     function is_rtl_locale(?string $locale = null): bool
     {
@@ -137,7 +129,7 @@ if (! function_exists('get_text_direction')) {
     /**
      * Get text direction for current locale
      *
-     * @param string|null $locale If null, uses current app locale
+     * @param  string|null  $locale  If null, uses current app locale
      * @return string Returns 'rtl' or 'ltr'
      */
     function get_text_direction(?string $locale = null): string
@@ -151,9 +143,7 @@ if (! function_exists('hijri_date')) {
      * Convert Gregorian date to Hijri date (Islamic calendar)
      * Note: Requires additional package for accurate conversion
      *
-     * @param string|Carbon|null $date
-     * @param string $format
-     * @return string
+     * @param  string|Carbon|null  $date
      */
     function hijri_date($date = null, string $format = 'd M Y'): string
     {
@@ -179,10 +169,9 @@ if (! function_exists('localized_route')) {
     /**
      * Generate localized route URL
      *
-     * @param string $name Route name
-     * @param array $parameters Route parameters
-     * @param string|null $locale Locale code
-     * @return string
+     * @param  string  $name  Route name
+     * @param  array  $parameters  Route parameters
+     * @param  string|null  $locale  Locale code
      */
     function localized_route(string $name, array $parameters = [], ?string $locale = null): string
     {
@@ -197,10 +186,9 @@ if (! function_exists('trans_fallback')) {
     /**
      * Get translation with fallback to English if not found
      *
-     * @param string $key Translation key
-     * @param array $replace Replacement values
-     * @param string|null $locale Locale to use
-     * @return string
+     * @param  string  $key  Translation key
+     * @param  array  $replace  Replacement values
+     * @param  string|null  $locale  Locale to use
      */
     function trans_fallback(string $key, array $replace = [], ?string $locale = null): string
     {
@@ -222,9 +210,8 @@ if (! function_exists('format_file_size')) {
     /**
      * Format file size in human-readable format (Arabic)
      *
-     * @param int $bytes File size in bytes
-     * @param bool $useArabicNumerals Use Arabic numerals
-     * @return string
+     * @param  int  $bytes  File size in bytes
+     * @param  bool  $useArabicNumerals  Use Arabic numerals
      */
     function format_file_size(int $bytes, bool $useArabicNumerals = false): string
     {
@@ -247,9 +234,6 @@ if (! function_exists('format_file_size')) {
 if (! function_exists('arabic_ordinal')) {
     /**
      * Convert number to Arabic ordinal (e.g., 1 => الأول)
-     *
-     * @param int $number
-     * @return string
      */
     function arabic_ordinal(int $number): string
     {
@@ -274,9 +258,8 @@ if (! function_exists('get_locale_name')) {
     /**
      * Get localized name of a language
      *
-     * @param string $locale Language code
-     * @param string|null $displayLocale Locale to display name in
-     * @return string
+     * @param  string  $locale  Language code
+     * @param  string|null  $displayLocale  Locale to display name in
      */
     function get_locale_name(string $locale, ?string $displayLocale = null): string
     {

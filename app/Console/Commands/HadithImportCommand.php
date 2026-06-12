@@ -23,8 +23,9 @@ class HadithImportCommand extends Command
     {
         $path = $this->argument('path');
 
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             $this->error("Path not found: {$path}");
+
             return 1;
         }
 
@@ -39,10 +40,12 @@ class HadithImportCommand extends Command
                 return $this->importDirectory($path);
             } else {
                 $this->error("Invalid path: {$path}");
+
                 return 1;
             }
         } catch (\Exception $e) {
-            $this->error('Import failed: ' . $e->getMessage());
+            $this->error('Import failed: '.$e->getMessage());
+
             return 1;
         }
     }
@@ -51,8 +54,9 @@ class HadithImportCommand extends Command
     {
         $collectionId = $this->option('collection-id');
 
-        if (!$collectionId) {
+        if (! $collectionId) {
             $this->error('--collection-id is required when importing a single file');
+
             return 1;
         }
 
@@ -88,6 +92,7 @@ class HadithImportCommand extends Command
 
         if (isset($stats['error'])) {
             $this->error($stats['error']);
+
             return 1;
         }
 
@@ -102,7 +107,7 @@ class HadithImportCommand extends Command
             ['Failed', $stats['total_failed']],
         ]);
 
-        if (!empty($stats['file_stats'])) {
+        if (! empty($stats['file_stats'])) {
             $this->newLine();
             $this->info('Per-File Details:');
             foreach ($stats['file_stats'] as $filename => $fileStats) {
@@ -136,14 +141,14 @@ class HadithImportCommand extends Command
             ['Failed', $stats['failed']],
         ]);
 
-        if (!empty($stats['errors'])) {
+        if (! empty($stats['errors'])) {
             $this->newLine();
             $this->error('Errors:');
             foreach (array_slice($stats['errors'], 0, 10) as $error) {
                 $this->line("  • {$error}");
             }
             if (count($stats['errors']) > 10) {
-                $this->line("  ... and " . (count($stats['errors']) - 10) . " more");
+                $this->line('  ... and '.(count($stats['errors']) - 10).' more');
             }
         }
     }

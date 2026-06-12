@@ -185,8 +185,8 @@ final readonly class DateRange implements JsonSerializable
         $prefix = $this->approximate ? '~' : '';
 
         if ($this->hijriStart !== null) {
-            return $prefix . $this->hijriStart .
-                ($this->hijriEnd ? ' - ' . $this->hijriEnd : '') .
+            return $prefix.$this->hijriStart.
+                ($this->hijriEnd ? ' - '.$this->hijriEnd : '').
                 ' (هجري)';
         }
 
@@ -195,15 +195,15 @@ final readonly class DateRange implements JsonSerializable
         }
 
         if ($this->isPoint()) {
-            return $prefix . $this->startDate->format($dateFormat);
+            return $prefix.$this->startDate->format($dateFormat);
         }
 
         if ($this->isOpenEnded()) {
-            return $prefix . $this->startDate->format($dateFormat) . ' - present';
+            return $prefix.$this->startDate->format($dateFormat).' - present';
         }
 
-        return $prefix . $this->startDate->format($dateFormat) .
-            ' - ' . $this->endDate->format($dateFormat);
+        return $prefix.$this->startDate->format($dateFormat).
+            ' - '.$this->endDate->format($dateFormat);
     }
 
     /**

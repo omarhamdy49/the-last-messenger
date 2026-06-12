@@ -93,18 +93,18 @@ class CreateArticleAction
         $primaryContent = $data->contents['ar'] ?? reset($data->contents) ?: '';
 
         return Article::create([
-            'thumb'        => $thumbPath,
-            'writer_id'    => $data->writerId,
-            'read_time'    => $data->readTime ?? $this->readTimeCalculator->calculate($primaryContent),
-            'views'        => 0,
-            'is_featured'  => $data->isFeatured,
-            'is_pinned'    => $data->isPinned,
-            'category_id'  => $data->categoryId,
-            'hijri_date'   => $data->hijriDate,
-            'status'       => $data->status,
+            'thumb' => $thumbPath,
+            'writer_id' => $data->writerId,
+            'read_time' => $data->readTime ?? $this->readTimeCalculator->calculate($primaryContent),
+            'views' => 0,
+            'is_featured' => $data->isFeatured,
+            'is_pinned' => $data->isPinned,
+            'category_id' => $data->categoryId,
+            'hijri_date' => $data->hijriDate,
+            'status' => $data->status,
             'scheduled_at' => $data->scheduledAt,
-            'statistics'   => $data->statistics,
-            'references'   => $data->references,
+            'statistics' => $data->statistics,
+            'references' => $data->references,
         ]);
     }
 
@@ -115,25 +115,25 @@ class CreateArticleAction
                 continue;
             }
 
-            $slug    = $data->slugs[$locale] ?? $this->slugGenerator->generate($data->titles[$locale], $locale);
+            $slug = $data->slugs[$locale] ?? $this->slugGenerator->generate($data->titles[$locale], $locale);
             $content = $data->contents[$locale] ?? '';
 
             $article->locales()->create([
-                'locale'       => $locale,
-                'title'        => $data->titles[$locale],
-                'slug'         => $slug,
-                'description'  => $data->descriptions[$locale] ?? null,
-                'excerpt'      => $data->excerpts[$locale] ?? null,
-                'content'      => [
-                    'body'    => $content,
-                    'toc'     => $data->tocs[$locale] ?? $this->tocGenerator->generate($content),
+                'locale' => $locale,
+                'title' => $data->titles[$locale],
+                'slug' => $slug,
+                'description' => $data->descriptions[$locale] ?? null,
+                'excerpt' => $data->excerpts[$locale] ?? null,
+                'content' => [
+                    'body' => $content,
+                    'toc' => $data->tocs[$locale] ?? $this->tocGenerator->generate($content),
                     'summary' => $data->summaries[$locale] ?? null,
                 ],
                 'seo_metadata' => [
-                    'title'       => $data->seoTitles[$locale] ?? null,
+                    'title' => $data->seoTitles[$locale] ?? null,
                     'description' => $data->seoDescriptions[$locale] ?? null,
                 ],
-                'is_ready'     => $data->isReady[$locale] ?? false,
+                'is_ready' => $data->isReady[$locale] ?? false,
             ]);
         }
     }

@@ -20,13 +20,11 @@ final class CreateNarratorHandler implements CommandHandler
     /**
      * Handle the command
      *
-     * @param CreateNarratorCommand $command
-     * @return NarratorDTO
+     * @param  CreateNarratorCommand  $command
      */
     public function handle(Command $command): NarratorDTO
     {
         /** @var CreateNarratorCommand $command */
-
         $narrator = HadithNarrator::create([
             'name_ar' => $command->nameAr,
             'name_en' => $command->nameEn,

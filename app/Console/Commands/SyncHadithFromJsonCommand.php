@@ -37,6 +37,7 @@ class SyncHadithFromJsonCommand extends Command
     protected $description = 'استيراد بيانات الأحاديث من ملفات JSON - Import Hadith data from JSON files';
 
     private const EXIT_SUCCESS = 0;
+
     private const EXIT_ERROR = 1;
 
     public function __construct(
@@ -62,8 +63,9 @@ class SyncHadithFromJsonCommand extends Command
             $this->displayDryRunWarning();
         }
 
-        if (!$this->fileScanner->pathExists($path)) {
+        if (! $this->fileScanner->pathExists($path)) {
             $this->displayPathNotFound($path);
+
             return self::EXIT_ERROR;
         }
 
@@ -96,6 +98,7 @@ class SyncHadithFromJsonCommand extends Command
         }
 
         $this->displayInvalidPath();
+
         return self::EXIT_ERROR;
     }
 
@@ -109,8 +112,9 @@ class SyncHadithFromJsonCommand extends Command
 
         // Validate file
         $validation = $this->fileScanner->validateFile($filePath);
-        if (!$validation['valid']) {
+        if (! $validation['valid']) {
             $this->displayImportFailed($validation['error']);
+
             return self::EXIT_ERROR;
         }
 
@@ -137,6 +141,7 @@ class SyncHadithFromJsonCommand extends Command
 
         } catch (\Throwable $e) {
             $this->handleImportError($e, $filePath);
+
             return self::EXIT_ERROR;
         }
     }
@@ -152,13 +157,15 @@ class SyncHadithFromJsonCommand extends Command
 
         if (empty($jsonFiles)) {
             $this->displayNoFilesFound();
+
             return self::EXIT_SUCCESS;
         }
 
         $this->displayFilesFound(count($jsonFiles));
 
-        if (!$this->confirmBatchImport(count($jsonFiles))) {
+        if (! $this->confirmBatchImport(count($jsonFiles))) {
             $this->info('تم الإلغاء - Cancelled');
+
             return self::EXIT_SUCCESS;
         }
 
@@ -197,7 +204,7 @@ class SyncHadithFromJsonCommand extends Command
         try {
             $collectionName = $options['collection']
                 ?? $this->transformer->detectCollectionFromFilename($filePath)
-                ?? 'unknown_' . uniqid();
+                ?? 'unknown_'.uniqid();
 
             $syncLog = $this->createSyncLogForFile($filePath, $collectionName, $options);
 
@@ -211,6 +218,7 @@ class SyncHadithFromJsonCommand extends Command
 
         } catch (\Throwable $e) {
             $this->logImportError($e, $filePath);
+
             return SyncStatistics::empty()->withFileFailed();
         }
     }

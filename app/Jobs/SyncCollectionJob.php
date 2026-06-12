@@ -109,7 +109,7 @@ class SyncCollectionJob implements ShouldQueue
             $syncLog = HadithSyncLog::find($this->syncLogId);
             if ($syncLog && $syncLog->status === 'in_progress') {
                 $syncLog->markFailed(
-                    'Job failed after ' . $this->attempts() . ' attempts: ' . $exception->getMessage(),
+                    'Job failed after '.$this->attempts().' attempts: '.$exception->getMessage(),
                     ['exception' => get_class($exception)]
                 );
             }

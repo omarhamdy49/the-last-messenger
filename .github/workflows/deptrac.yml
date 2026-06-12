@@ -1,0 +1,47 @@
+name: Architecture Check (deptrac)
+
+on:
+  push:
+    branches: ["main", "develop", "master"]
+    paths:
+      - "app/**"
+      - "deptrac.yaml"
+      - ".github/workflows/deptrac.yml"
+  pull_request:
+    paths:
+      - "app/**"
+      - "deptrac.yaml"
+      - ".github/workflows/deptrac.yml"
+
+jobs:
+  deptrac:
+    name: Enforce Architecture Boundaries
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          tools: composer:v2
+          coverage: none
+
+      - name: Get composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - name: Run deptrac
+        run: php vendor/bin/deptrac analyse --config-file=deptrac.yaml --no-interaction --fail-on-uncovered

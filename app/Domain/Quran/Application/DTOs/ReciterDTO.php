@@ -15,8 +15,8 @@ use JsonSerializable;
 final readonly class ReciterDTO implements JsonSerializable
 {
     /**
-     * @param array<string, string> $name
-     * @param array<string, string>|null $description
+     * @param  array<string, string>  $name
+     * @param  array<string, string>|null  $description
      */
     public function __construct(
         public int $id,
@@ -32,6 +32,7 @@ final readonly class ReciterDTO implements JsonSerializable
         public int $recitationsCount,
         public ?string $createdAt,
         public ?string $updatedAt,
+        public ?string $everyayahFolder = null,
     ) {}
 
     /**
@@ -42,8 +43,9 @@ final readonly class ReciterDTO implements JsonSerializable
         return new self(
             id: $reciter->id,
             slug: $reciter->slug ?? '',
-            name: $reciter->name ?? [],
-            description: $reciter->description,
+            // Names live in reciter_translations (HasLocalizedContent), not a JSON column.
+            name: $reciter->getTranslations('name') ?: ($reciter->name ?? []),
+            description: $reciter->getTranslations('description') ?: $reciter->description,
             style: $reciter->style,
             country: $reciter->country,
             profileImage: $reciter->profile_image_url,
@@ -53,6 +55,7 @@ final readonly class ReciterDTO implements JsonSerializable
             recitationsCount: 0, // TODO: Add when recitations relation exists
             createdAt: $reciter->created_at?->toIso8601String(),
             updatedAt: $reciter->updated_at?->toIso8601String(),
+            everyayahFolder: $reciter->everyayah_folder,
         );
     }
 
@@ -91,6 +94,7 @@ final readonly class ReciterDTO implements JsonSerializable
             'recitations_count' => $this->recitationsCount,
             'created_at' => $this->createdAt,
             'updated_at' => $this->updatedAt,
+            'everyayah_folder' => $this->everyayahFolder,
         ];
     }
 

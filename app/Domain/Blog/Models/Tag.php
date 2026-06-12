@@ -105,6 +105,7 @@ class Tag extends Model
     public function getNameTranslations(): array
     {
         $raw = $this->getAttributes()['name'] ?? '{}';
+
         return is_string($raw) ? json_decode($raw, true) : $raw;
     }
 
@@ -114,6 +115,7 @@ class Tag extends Model
     public function getNameInLanguage(string $language): ?string
     {
         $translations = $this->getNameTranslations();
+
         return $translations[$language] ?? $translations['ar'] ?? null;
     }
 }

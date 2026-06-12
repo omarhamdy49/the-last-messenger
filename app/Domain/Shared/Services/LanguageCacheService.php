@@ -33,8 +33,6 @@ class LanguageCacheService
 
     /**
      * Check if cache driver supports tagging
-     *
-     * @return bool
      */
     protected function supportsTags(): bool
     {
@@ -61,7 +59,7 @@ class LanguageCacheService
     public function getActiveLanguages(): Collection
     {
         return $this->cache()->remember(
-            self::CACHE_KEY . '.active',
+            self::CACHE_KEY.'.active',
             self::CACHE_TTL,
             fn () => Language::where('is_active', true)
                 ->orderBy('sort_order')
@@ -71,13 +69,11 @@ class LanguageCacheService
 
     /**
      * Get the default language
-     *
-     * @return Language|null
      */
     public function getDefaultLanguage(): ?Language
     {
         return $this->cache()->remember(
-            self::CACHE_KEY . '.default',
+            self::CACHE_KEY.'.default',
             self::CACHE_TTL,
             fn () => Language::where('is_default', true)->first()
         );
@@ -86,13 +82,12 @@ class LanguageCacheService
     /**
      * Get language by code
      *
-     * @param string $code Language code (e.g., 'ar', 'en')
-     * @return Language|null
+     * @param  string  $code  Language code (e.g., 'ar', 'en')
      */
     public function getLanguageByCode(string $code): ?Language
     {
         return $this->cache()->remember(
-            self::CACHE_KEY . '.code.' . $code,
+            self::CACHE_KEY.'.code.'.$code,
             self::CACHE_TTL,
             fn () => Language::where('code', $code)->first()
         );
@@ -106,7 +101,7 @@ class LanguageCacheService
     public function getActiveLanguageCodes(): array
     {
         return $this->cache()->remember(
-            self::CACHE_KEY . '.codes',
+            self::CACHE_KEY.'.codes',
             self::CACHE_TTL,
             fn () => Language::where('is_active', true)
                 ->orderBy('sort_order')
@@ -117,8 +112,6 @@ class LanguageCacheService
 
     /**
      * Get default language code
-     *
-     * @return string
      */
     public function getDefaultLanguageCode(): string
     {
@@ -130,7 +123,7 @@ class LanguageCacheService
     /**
      * Get language direction (rtl/ltr) by code
      *
-     * @param string $code Language code
+     * @param  string  $code  Language code
      * @return string 'rtl' or 'ltr'
      */
     public function getLanguageDirection(string $code): string
@@ -143,8 +136,7 @@ class LanguageCacheService
     /**
      * Check if language code is RTL
      *
-     * @param string $code Language code
-     * @return bool
+     * @param  string  $code  Language code
      */
     public function isRtl(string $code): bool
     {
@@ -159,7 +151,7 @@ class LanguageCacheService
     public function getAllLanguages(): Collection
     {
         return $this->cache()->remember(
-            self::CACHE_KEY . '.all',
+            self::CACHE_KEY.'.all',
             self::CACHE_TTL,
             fn () => Language::orderBy('sort_order')->get()
         );
@@ -167,8 +159,6 @@ class LanguageCacheService
 
     /**
      * Warm up the cache with all language data
-     *
-     * @return void
      */
     public function warmCache(): void
     {
@@ -180,8 +170,6 @@ class LanguageCacheService
 
     /**
      * Clear all language-related cache
-     *
-     * @return void
      */
     public function clearCache(): void
     {
@@ -190,10 +178,10 @@ class LanguageCacheService
         } else {
             // Manual cache key clearing for non-tagged stores
             $keys = [
-                self::CACHE_KEY . '.active',
-                self::CACHE_KEY . '.default',
-                self::CACHE_KEY . '.codes',
-                self::CACHE_KEY . '.all',
+                self::CACHE_KEY.'.active',
+                self::CACHE_KEY.'.default',
+                self::CACHE_KEY.'.codes',
+                self::CACHE_KEY.'.all',
             ];
 
             foreach ($keys as $key) {
@@ -202,15 +190,13 @@ class LanguageCacheService
 
             // Clear individual language code caches (common codes)
             foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $code) {
-                Cache::forget(self::CACHE_KEY . '.code.' . $code);
+                Cache::forget(self::CACHE_KEY.'.code.'.$code);
             }
         }
     }
 
     /**
      * Refresh cache after language changes
-     *
-     * @return void
      */
     public function refreshCache(): void
     {
@@ -226,10 +212,10 @@ class LanguageCacheService
     public function getCacheStats(): array
     {
         $keys = [
-            'active' => self::CACHE_KEY . '.active',
-            'default' => self::CACHE_KEY . '.default',
-            'codes' => self::CACHE_KEY . '.codes',
-            'all' => self::CACHE_KEY . '.all',
+            'active' => self::CACHE_KEY.'.active',
+            'default' => self::CACHE_KEY.'.default',
+            'codes' => self::CACHE_KEY.'.codes',
+            'all' => self::CACHE_KEY.'.all',
         ];
 
         $stats = [];

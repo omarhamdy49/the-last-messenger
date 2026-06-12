@@ -19,15 +19,15 @@ class SeerahTest extends TestCase
     private function createSeerahEvent(array $overrides = []): SeerahEvent
     {
         $defaults = [
-            'slug'           => 'birth-of-the-prophet',
-            'event_type'     => 'birth',
-            'importance'     => 'high',
-            'hijri_year'     => -53,
-            'is_featured'    => false,
-            'display_order'  => 0,
+            'slug' => 'birth-of-the-prophet',
+            'event_type' => 'birth',
+            'importance' => 'high',
+            'hijri_year' => -53,
+            'is_featured' => false,
+            'display_order' => 0,
             'featured_image' => 'https://example.com/image.jpg', // Prevents Spatie fallback query
-            'title'          => ['ar' => 'مولد النبي', 'en' => 'Birth of the Prophet'],
-            'description'    => ['ar' => 'وصف الحدث', 'en' => 'Event description'],
+            'title' => ['ar' => 'مولد النبي', 'en' => 'Birth of the Prophet'],
+            'description' => ['ar' => 'وصف الحدث', 'en' => 'Event description'],
         ];
 
         return SeerahEvent::query()->create(array_merge($defaults, $overrides));

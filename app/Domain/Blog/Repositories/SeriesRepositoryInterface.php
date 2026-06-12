@@ -21,7 +21,6 @@ interface SeriesRepositoryInterface extends RepositoryInterface
      * @param  string  $search  Search query across title/description
      * @param  array<string, mixed>  $filters  Additional filters (e.g., status)
      * @param  array<string>  $with  Relations to eager load
-     * @return LengthAwarePaginator
      */
     public function paginateWithSearch(
         int $perPage = 50,
@@ -34,7 +33,6 @@ interface SeriesRepositoryInterface extends RepositoryInterface
      * Count series by status
      *
      * @param  string  $status  Status to count
-     * @return int
      */
     public function countByStatus(string $status): int;
 
@@ -42,7 +40,6 @@ interface SeriesRepositoryInterface extends RepositoryInterface
      * Get series with all articles ordered
      *
      * @param  int  $id  Series ID
-     * @return Series
      *
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
      */
@@ -53,7 +50,6 @@ interface SeriesRepositoryInterface extends RepositoryInterface
      *
      * @param  int  $seriesId  Series ID
      * @param  array<int>  $articleIds  Article IDs in desired order
-     * @return void
      */
     public function reorderArticles(int $seriesId, array $articleIds): void;
 
@@ -61,7 +57,6 @@ interface SeriesRepositoryInterface extends RepositoryInterface
      * Update article count for series
      *
      * @param  int  $id  Series ID
-     * @return void
      */
     public function updateArticleCount(int $id): void;
 
@@ -70,7 +65,6 @@ interface SeriesRepositoryInterface extends RepositoryInterface
      *
      * @param  string  $query  Search query
      * @param  int  $perPage  Number of items per page
-     * @return LengthAwarePaginator
      */
     public function search(string $query, int $perPage = 50): LengthAwarePaginator;
 
@@ -78,7 +72,19 @@ interface SeriesRepositoryInterface extends RepositoryInterface
      * Bulk delete series by IDs
      *
      * @param  array<int>  $ids  Series IDs to delete
-     * @return int  Number of deleted records
+     * @return int Number of deleted records
      */
     public function bulkDelete(array $ids): int;
+
+    /**
+     * Get aggregate stats for the series index page.
+     *
+     * Returns:
+     *   - total:                Total number of series rows
+     *   - total_articles_in_series: Sum of total_articles across all series
+     *   - max_articles:         Max total_articles value (0 if no rows)
+     *
+     * @return array{total: int, total_articles_in_series: int, max_articles: int}
+     */
+    public function getStats(): array;
 }

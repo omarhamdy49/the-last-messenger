@@ -12,8 +12,6 @@ class DateUtil
 {
     /**
      * Get current Hijri date in Arabic format
-     *
-     * @return string
      */
     public static function getCurrentHijriDate(): string
     {
@@ -22,11 +20,6 @@ class DateUtil
 
     /**
      * Convert Gregorian date to Hijri
-     *
-     * @param Carbon|string|null $date
-     * @param string $locale
-     * @param string $format
-     * @return string
      */
     public static function toHijri(
         Carbon|string|null $date = null,
@@ -40,7 +33,7 @@ class DateUtil
         }
 
         // Check if intl extension is available
-        if (!extension_loaded('intl')) {
+        if (! extension_loaded('intl')) {
             // Fallback: use approximate conversion algorithm
             return self::approximateHijriConversion($date);
         }
@@ -53,7 +46,7 @@ class DateUtil
             // Format the date in Hijri
             // Use 0 for GREGORIAN calendar type (will be overridden by locale setting)
             $formatter = new IntlDateFormatter(
-                $locale . '@calendar=islamic-civil',
+                $locale.'@calendar=islamic-civil',
                 IntlDateFormatter::FULL,
                 IntlDateFormatter::NONE,
                 $date->timezone->getName(),
@@ -71,9 +64,6 @@ class DateUtil
     /**
      * Approximate Hijri date conversion (fallback when intl is not available)
      * Uses a simplified algorithm
-     *
-     * @param Carbon $date
-     * @return string
      */
     private static function approximateHijriConversion(Carbon $date): string
     {
@@ -121,8 +111,6 @@ class DateUtil
 
     /**
      * Get Hijri month names in Arabic
-     *
-     * @return array
      */
     public static function getHijriMonthNames(): array
     {
@@ -144,8 +132,6 @@ class DateUtil
 
     /**
      * Get Hijri month names in English
-     *
-     * @return array
      */
     public static function getHijriMonthNamesEnglish(): array
     {
@@ -167,10 +153,6 @@ class DateUtil
 
     /**
      * Format Hijri date for display
-     *
-     * @param string|null $hijriDate
-     * @param string $locale
-     * @return string
      */
     public static function formatHijriDate(?string $hijriDate, string $locale = 'ar'): string
     {
@@ -189,8 +171,6 @@ class DateUtil
 
     /**
      * Get current Hijri year
-     *
-     * @return int
      */
     public static function getCurrentHijriYear(): int
     {
@@ -198,6 +178,7 @@ class DateUtil
             try {
                 $calendar = IntlCalendar::createInstance(null, '@calendar=islamic-civil');
                 $calendar->setTime(time() * 1000);
+
                 return $calendar->get(IntlCalendar::FIELD_YEAR);
             } catch (\Exception $e) {
                 // Fallback
@@ -206,20 +187,20 @@ class DateUtil
 
         // Approximate calculation
         $gregorianYear = (int) date('Y');
+
         return (int) floor(($gregorianYear - 622) * 1.030684);
     }
 
     /**
      * Get Hijri date from Gregorian date string
      *
-     * @param string $gregorianDate Format: Y-m-d
-     * @param string $locale
-     * @return string
+     * @param  string  $gregorianDate  Format: Y-m-d
      */
     public static function fromGregorian(string $gregorianDate, string $locale = 'ar'): string
     {
         try {
             $carbon = Carbon::createFromFormat('Y-m-d', $gregorianDate);
+
             return self::toHijri($carbon, $locale);
         } catch (\Exception $e) {
             return self::getCurrentHijriDate();

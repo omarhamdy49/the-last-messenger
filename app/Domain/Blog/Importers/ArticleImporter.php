@@ -7,7 +7,6 @@ namespace App\Domain\Blog\Importers;
 use App\Domain\Shared\Importers\BaseImporter;
 use App\Models\Article;
 use App\Models\ArticleLocale;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -25,23 +24,23 @@ class ArticleImporter extends BaseImporter
     protected function getValidationRules(): array
     {
         return [
-            'title_ar'     => 'required|string|max:500',
-            'title_en'     => 'required|string|max:500',
-            'title_fr'     => 'nullable|string|max:500',
-            'title_tr'     => 'nullable|string|max:500',
-            'title_ur'     => 'nullable|string|max:500',
-            'content_ar'   => 'required|string',
-            'content_en'   => 'required|string',
-            'content_fr'   => 'nullable|string',
-            'content_tr'   => 'nullable|string',
-            'content_ur'   => 'nullable|string',
-            'excerpt_ar'   => 'nullable|string|max:1000',
-            'excerpt_en'   => 'nullable|string|max:1000',
-            'excerpt_fr'   => 'nullable|string|max:1000',
-            'excerpt_tr'   => 'nullable|string|max:1000',
-            'excerpt_ur'   => 'nullable|string|max:1000',
+            'title_ar' => 'required|string|max:500',
+            'title_en' => 'required|string|max:500',
+            'title_fr' => 'nullable|string|max:500',
+            'title_tr' => 'nullable|string|max:500',
+            'title_ur' => 'nullable|string|max:500',
+            'content_ar' => 'required|string',
+            'content_en' => 'required|string',
+            'content_fr' => 'nullable|string',
+            'content_tr' => 'nullable|string',
+            'content_ur' => 'nullable|string',
+            'excerpt_ar' => 'nullable|string|max:1000',
+            'excerpt_en' => 'nullable|string|max:1000',
+            'excerpt_fr' => 'nullable|string|max:1000',
+            'excerpt_tr' => 'nullable|string|max:1000',
+            'excerpt_ur' => 'nullable|string|max:1000',
             'author_email' => 'nullable|email|max:255',
-            'status'       => 'nullable|in:draft,published,scheduled,archived',
+            'status' => 'nullable|in:draft,published,scheduled,archived',
             'published_at' => 'nullable|date',
         ];
     }
@@ -56,23 +55,23 @@ class ArticleImporter extends BaseImporter
     protected function getColumnMapping(): array
     {
         return [
-            'title_ar'     => 'title_ar',
-            'title_en'     => 'title_en',
-            'title_fr'     => 'title_fr',
-            'title_tr'     => 'title_tr',
-            'title_ur'     => 'title_ur',
-            'content_ar'   => 'content_ar',
-            'content_en'   => 'content_en',
-            'content_fr'   => 'content_fr',
-            'content_tr'   => 'content_tr',
-            'content_ur'   => 'content_ur',
-            'excerpt_ar'   => 'excerpt_ar',
-            'excerpt_en'   => 'excerpt_en',
-            'excerpt_fr'   => 'excerpt_fr',
-            'excerpt_tr'   => 'excerpt_tr',
-            'excerpt_ur'   => 'excerpt_ur',
+            'title_ar' => 'title_ar',
+            'title_en' => 'title_en',
+            'title_fr' => 'title_fr',
+            'title_tr' => 'title_tr',
+            'title_ur' => 'title_ur',
+            'content_ar' => 'content_ar',
+            'content_en' => 'content_en',
+            'content_fr' => 'content_fr',
+            'content_tr' => 'content_tr',
+            'content_ur' => 'content_ur',
+            'excerpt_ar' => 'excerpt_ar',
+            'excerpt_en' => 'excerpt_en',
+            'excerpt_fr' => 'excerpt_fr',
+            'excerpt_tr' => 'excerpt_tr',
+            'excerpt_ur' => 'excerpt_ur',
             'author_email' => 'author_email',
-            'status'       => 'status',
+            'status' => 'status',
             'published_at' => 'published_at',
         ];
     }
@@ -120,7 +119,7 @@ class ArticleImporter extends BaseImporter
         }
 
         $article = Article::create([
-            'status'      => in_array($status, ['draft', 'published', 'scheduled', 'archived'], true)
+            'status' => in_array($status, ['draft', 'published', 'scheduled', 'archived'], true)
                 ? $status
                 : 'draft',
             'scheduled_at' => $status === 'scheduled'
@@ -179,10 +178,10 @@ class ArticleImporter extends BaseImporter
             $excerpt = trim((string) ($row["excerpt_{$locale}"] ?? ''));
 
             $payloads[$locale] = [
-                'title'    => $title,
-                'slug'     => Str::slug($title),
-                'excerpt'  => $excerpt !== '' ? $excerpt : null,
-                'content'  => $content !== '' ? ['body' => $content, 'toc' => null, 'summary' => null] : null,
+                'title' => $title,
+                'slug' => Str::slug($title),
+                'excerpt' => $excerpt !== '' ? $excerpt : null,
+                'content' => $content !== '' ? ['body' => $content, 'toc' => null, 'summary' => null] : null,
                 'is_ready' => $content !== '',
             ];
         }

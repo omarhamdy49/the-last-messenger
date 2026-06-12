@@ -27,8 +27,8 @@ final class CreateThemeHandler implements CommandHandler
     /**
      * Handle the command
      *
-     * @param CreateThemeCommand $command
-     * @return ThemeDTO
+     * @param  CreateThemeCommand  $command
+     *
      * @throws EntityNotFoundException
      * @throws ValidationException
      */

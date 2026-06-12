@@ -18,15 +18,11 @@ abstract class BaseTranslatableRequest extends FormRequest
 {
     /**
      * Get translatable field names
-     *
-     * @return array
      */
     abstract protected function translatableFields(): array;
 
     /**
      * Get required translatable field names
-     *
-     * @return array
      */
     protected function requiredTranslatableFields(): array
     {
@@ -36,10 +32,9 @@ abstract class BaseTranslatableRequest extends FormRequest
     /**
      * Generate validation rules for translatable fields
      *
-     * @param string $field Field name
-     * @param bool $required Whether field is required
-     * @param array $extraRules Extra validation rules for each language
-     * @return array
+     * @param  string  $field  Field name
+     * @param  bool  $required  Whether field is required
+     * @param  array  $extraRules  Extra validation rules for each language
      */
     protected function translatableRules(string $field, bool $required = true, array $extraRules = []): array
     {
@@ -74,9 +69,8 @@ abstract class BaseTranslatableRequest extends FormRequest
     /**
      * Generate validation messages for translatable fields
      *
-     * @param string $field Field name
-     * @param string $displayName Display name for error messages
-     * @return array
+     * @param  string  $field  Field name
+     * @param  string  $displayName  Display name for error messages
      */
     protected function translatableMessages(string $field, string $displayName): array
     {
@@ -91,9 +85,6 @@ abstract class BaseTranslatableRequest extends FormRequest
 
     /**
      * Merge translatable rules with custom rules
-     *
-     * @param array $customRules
-     * @return array
      */
     protected function mergeTranslatableRules(array $customRules = []): array
     {

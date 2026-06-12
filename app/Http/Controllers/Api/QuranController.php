@@ -181,19 +181,19 @@ class QuranController extends Controller
     {
         try {
             $validated = $request->validate([
-                'q'        => 'required|string|min:2|max:200',
-                'lang'     => 'sometimes|string|in:ar,en,fr,tr,ur',
-                'type'     => 'sometimes|string|in:arabic,translation',
+                'q' => 'required|string|min:2|max:200',
+                'lang' => 'sometimes|string|in:ar,en,fr,tr,ur',
+                'type' => 'sometimes|string|in:arabic,translation',
                 'per_page' => 'sometimes|integer|min:1|max:100',
             ]);
         } catch (ValidationException $e) {
             return $this->validationErrorResponse($e->errors());
         }
 
-        $query      = $validated['q'];
-        $language   = $validated['lang'] ?? 'ar';
+        $query = $validated['q'];
+        $language = $validated['lang'] ?? 'ar';
         $searchType = $validated['type'] ?? 'translation';
-        $perPage    = isset($validated['per_page']) ? (int) $validated['per_page'] : 20;
+        $perPage = isset($validated['per_page']) ? (int) $validated['per_page'] : 20;
 
         try {
             if ($searchType === 'arabic') {

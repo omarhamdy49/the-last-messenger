@@ -144,7 +144,7 @@ class ActivityLogController extends Controller
                         $modelUrl = $this->getModelUrl($log->model_type, $log->model_id);
                     }
                 }
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 // Model doesn't exist or can't be loaded
                 $modelExists = false;
             }
@@ -203,7 +203,7 @@ class ActivityLogController extends Controller
         if (isset($routes[$modelType])) {
             try {
                 return route($routes[$modelType], $modelId);
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 return null;
             }
         }

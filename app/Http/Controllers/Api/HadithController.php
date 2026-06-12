@@ -16,7 +16,6 @@ use App\Http\Resources\HadithBookResource;
 use App\Http\Resources\HadithCollectionResource;
 use App\Http\Resources\HadithNarratorResource;
 use App\Http\Resources\HadithResource;
-use App\Http\Resources\HadithThemeResource;
 use App\Support\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,10 +25,10 @@ class HadithController extends Controller
     use ApiResponse;
 
     public function __construct(
-        private readonly HadithRepository    $hadithRepository,
+        private readonly HadithRepository $hadithRepository,
         private readonly CollectionRepository $collectionRepository,
-        private readonly BookRepository      $bookRepository,
-        private readonly NarratorRepository  $narratorRepository,
+        private readonly BookRepository $bookRepository,
+        private readonly NarratorRepository $narratorRepository,
     ) {}
 
     /**
@@ -40,10 +39,10 @@ class HadithController extends Controller
     {
         $validated = $request->validate([
             'collection_id' => ['sometimes', 'integer', 'min:1'],
-            'book_id'       => ['sometimes', 'integer', 'min:1'],
-            'grade'         => ['sometimes', 'string', 'in:sahih,hasan,daif,mawdu,mutawatir,mursal'],
-            'narrator_id'   => ['sometimes', 'integer', 'min:1'],
-            'per_page'      => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'book_id' => ['sometimes', 'integer', 'min:1'],
+            'grade' => ['sometimes', 'string', 'in:sahih,hasan,daif,mawdu,mutawatir,mursal'],
+            'narrator_id' => ['sometimes', 'integer', 'min:1'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
 
         $perPage = $validated['per_page'] ?? 20;
@@ -98,11 +97,11 @@ class HadithController extends Controller
     public function search(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'q'             => ['required', 'string', 'min:3', 'max:500'],
+            'q' => ['required', 'string', 'min:3', 'max:500'],
             'collection_id' => ['sometimes', 'integer', 'min:1'],
-            'book_id'       => ['sometimes', 'integer', 'min:1'],
-            'grade'         => ['sometimes', 'string', 'in:sahih,hasan,daif,mawdu,mutawatir,mursal'],
-            'per_page'      => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'book_id' => ['sometimes', 'integer', 'min:1'],
+            'grade' => ['sometimes', 'string', 'in:sahih,hasan,daif,mawdu,mutawatir,mursal'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
 
         $perPage = $validated['per_page'] ?? 20;
@@ -229,7 +228,7 @@ class HadithController extends Controller
         $allowedLocales = ['ar', 'en', 'fr', 'tr', 'ur'];
         $requestedLocale = request()->header('Accept-Language', 'ar');
         $locale = in_array($requestedLocale, $allowedLocales, true) ? $requestedLocale : 'ar';
-        $book   = $this->bookRepository->getBySlug(0, $slug, $locale);
+        $book = $this->bookRepository->getBySlug(0, $slug, $locale);
 
         // Fallback: try without collection constraint using both locales
         if ($book === null) {

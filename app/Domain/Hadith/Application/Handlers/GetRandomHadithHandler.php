@@ -25,8 +25,8 @@ final class GetRandomHadithHandler implements QueryHandler
     /**
      * Handle the query
      *
-     * @param GetRandomHadithQuery $query
-     * @return HadithDTO
+     * @param  GetRandomHadithQuery  $query
+     *
      * @throws HadithNotFoundException
      */
     public function handle(Query $query): HadithDTO

@@ -27,7 +27,7 @@ class BulkOperationRepository extends BaseRepository implements BulkOperationRep
      */
     protected function getModel(): Model
     {
-        return new BulkOperation();
+        return new BulkOperation;
     }
 
     /**

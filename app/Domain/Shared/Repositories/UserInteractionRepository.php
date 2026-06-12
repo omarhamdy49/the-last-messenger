@@ -24,7 +24,7 @@ class UserInteractionRepository extends BaseRepository implements UserInteractio
      */
     protected function getModel(): Model
     {
-        return new UserInteraction();
+        return new UserInteraction;
     }
 
     /**

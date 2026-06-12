@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Domain\Shared\Enums\ScheduleAction;
-use App\Domain\Shared\Enums\ScheduleStatus;
 use App\Domain\Shared\Services\SchedulerService;
 use App\Exceptions\Domain\BusinessLogicException;
 use App\Exceptions\Domain\ResourceNotFoundException;
@@ -197,7 +196,7 @@ class SchedulerController extends Controller
             return redirect()->back()
                 ->withInput()
                 ->withErrors(['error' => $e->getMessage()]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => false,

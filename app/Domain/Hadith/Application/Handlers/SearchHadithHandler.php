@@ -25,7 +25,7 @@ final class SearchHadithHandler implements QueryHandler
     /**
      * Handle the query
      *
-     * @param SearchHadithQuery $query
+     * @param  SearchHadithQuery  $query
      * @return PaginatedResult<HadithDTO>
      */
     public function handle(Query $query): PaginatedResult

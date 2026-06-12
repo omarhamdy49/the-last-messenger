@@ -154,33 +154,33 @@ class SeerahEventCrudTest extends TestCase
             $article->locales()->create([
                 'locale' => $locale,
                 'title' => $title,
-                'slug' => $slugPrefix . '-' . $locale,
-                'description' => $title . ' description',
-                'excerpt' => $title . ' excerpt',
+                'slug' => $slugPrefix.'-'.$locale,
+                'description' => $title.' description',
+                'excerpt' => $title.' excerpt',
                 'content' => [
-                    'body' => '<p>' . $title . ' body</p>',
-                    'summary' => $title . ' summary',
+                    'body' => '<p>'.$title.' body</p>',
+                    'summary' => $title.' summary',
                     'toc' => [],
                 ],
                 'seo_metadata' => [
-                    'title' => $title . ' seo',
-                    'description' => $title . ' seo description',
+                    'title' => $title.' seo',
+                    'description' => $title.' seo description',
                 ],
                 'is_ready' => true,
             ]);
         }
 
         $media = Media::query()->create([
-            'filename' => $slugPrefix . '-media.jpg',
-            'original_filename' => $slugPrefix . '-media.jpg',
-            'path' => 'media/' . $slugPrefix . '-media.jpg',
+            'filename' => $slugPrefix.'-media.jpg',
+            'original_filename' => $slugPrefix.'-media.jpg',
+            'path' => 'media/'.$slugPrefix.'-media.jpg',
             'mime_type' => 'image/jpeg',
             'size' => 153600,
             'width' => 1200,
             'height' => 630,
             'disk' => 'public',
-            'alt_text' => $englishTitle . ' image',
-            'caption' => $englishTitle . ' image',
+            'alt_text' => $englishTitle.' image',
+            'caption' => $englishTitle.' image',
             'metadata' => ['source' => 'test'],
             'type' => 'image',
             'mediable_type' => User::class,
@@ -202,9 +202,9 @@ class SeerahEventCrudTest extends TestCase
         return [
             'ar' => $arabic,
             'en' => $english,
-            'fr' => $english . ' FR',
-            'tr' => $english . ' TR',
-            'ur' => $english . ' UR',
+            'fr' => $english.' FR',
+            'tr' => $english.' TR',
+            'ur' => $english.' UR',
         ];
     }
 }

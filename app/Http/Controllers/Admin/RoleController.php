@@ -8,49 +8,40 @@ use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreRoleRequest;
 use App\Http\Requests\Admin\UpdateRoleRequest;
+use App\Services\RoleService;
 use App\Support\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 /**
  * Admin Role Controller
- * Handles role and permission management for admin portal
+ * Handles role and permission management for admin portal.
+ * All business logic lives in RoleService.
  */
 class RoleController extends Controller
 {
     use ApiResponse;
 
-    /**
-     * Constructor
-     */
     public function __construct(
-        protected AdminLoggerService $logger
+        protected AdminLoggerService $logger,
+        protected RoleService $roleService,
     ) {}
 
     /**
-     * Display a listing of all roles
+     * Display a listing of all roles.
      *
      * GET /su/portal/v1/admin/roles
      */
     public function index(Request $request): \Illuminate\View\View|JsonResponse
     {
-        $perPage = $request->integer('per_page', 15);
-        $search = $request->input('search');
+        $roles = $this->roleService->list([
+            'search' => $request->input('search'),
+            'per_page' => $request->integer('per_page', 15),
+        ]);
 
-        $roles = Role::with('permissions')
-            ->when($search, function ($query, $search) {
-                return $query->where('name', 'like', "%{$search}%");
-            })
-            ->paginate($perPage);
+        $stats = $this->roleService->stats();
 
-        $stats = [
-            'total' => Role::count(),
-            'with_permissions' => Role::has('permissions')->count(),
-        ];
-
-        // Return JSON for AJAX requests
         if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
             return response()->json([
                 'success' => true,
@@ -69,7 +60,7 @@ class RoleController extends Controller
     }
 
     /**
-     * Show the form for creating a new role
+     * Show the form for creating a new role.
      *
      * GET /su/portal/v1/admin/roles/create
      */
@@ -79,35 +70,30 @@ class RoleController extends Controller
     }
 
     /**
-     * Store a newly created role
+     * Store a newly created role.
      *
      * POST /su/portal/v1/admin/roles
      */
     public function store(StoreRoleRequest $request): JsonResponse
     {
-        $role = Role::create(['name' => $request->input('name')]);
+        $role = $this->roleService->create(
+            name: $request->input('name'),
+            permissionNames: (array) $request->input('permissions', []),
+        );
 
-        if ($request->has('permissions')) {
-            $role->syncPermissions($request->input('permissions'));
-        }
-
-        // Log the creation
         $this->logger->logCreate($role, $request->user());
 
-        return $this->createdResponse(
-            $role->load('permissions'),
-            'Role created successfully'
-        );
+        return $this->createdResponse($role, 'Role created successfully');
     }
 
     /**
-     * Display the specified role
+     * Display the specified role.
      *
      * GET /su/portal/v1/admin/roles/{id}
      */
     public function show(int $id): JsonResponse
     {
-        $role = Role::with('permissions')->find($id);
+        $role = $this->roleService->getRoleWithPermissions($id);
 
         if (! $role) {
             return $this->notFoundResponse('Role not found');
@@ -117,7 +103,7 @@ class RoleController extends Controller
     }
 
     /**
-     * Show the form for editing a role
+     * Show the form for editing a role.
      *
      * GET /su/portal/v1/admin/roles/{id}/edit
      */
@@ -127,82 +113,70 @@ class RoleController extends Controller
     }
 
     /**
-     * Update the specified role
+     * Update the specified role.
      *
      * PUT/PATCH /su/portal/v1/admin/roles/{id}
      */
     public function update(UpdateRoleRequest $request, int $id): JsonResponse
     {
-        $role = Role::find($id);
+        $role = $this->roleService->getRoleWithPermissions($id);
 
         if (! $role) {
             return $this->notFoundResponse('Role not found');
         }
 
-        // Get old values before update
-        $oldValues = $role->toArray();
-        $oldValues['permissions'] = $role->permissions->pluck('name')->toArray();
-
-        $role->update(['name' => $request->input('name')]);
-
-        if ($request->has('permissions')) {
-            $role->syncPermissions($request->input('permissions'));
-        }
-
-        // Get new values
-        $newValues = $role->fresh()->toArray();
-        $newValues['permissions'] = $role->fresh()->permissions->pluck('name')->toArray();
-
-        // Log the update with diff
-        $this->logger->logUpdate($role, $oldValues, $newValues, $request->user());
-
-        return $this->successResponse(
-            $role->load('permissions'),
-            'Role updated successfully'
+        $result = $this->roleService->update(
+            id: $id,
+            name: $request->input('name'),
+            permissionNames: (array) $request->input('permissions', []),
         );
+
+        $newValues = $result['role']->toArray();
+        $newValues['permissions'] = $result['role']->permissions->pluck('name')->toArray();
+
+        $this->logger->logUpdate($result['role'], $result['old_values'], $newValues, $request->user());
+
+        return $this->successResponse($result['role'], 'Role updated successfully');
     }
 
     /**
-     * Remove the specified role
+     * Remove the specified role.
      *
      * DELETE /su/portal/v1/admin/roles/{id}
      */
     public function destroy(int $id): JsonResponse
     {
-        $role = Role::find($id);
+        $role = $this->roleService->getRoleWithPermissions($id);
 
         if (! $role) {
             return $this->notFoundResponse('Role not found');
         }
 
-        // Prevent deletion of super_admin role
-        if ($role->name === 'super_admin') {
-            return $this->errorResponse('Cannot delete super_admin role', 403);
+        $check = $this->roleService->canDelete($id);
+
+        if (! $check['allowed']) {
+            return $this->errorResponse($check['reason'], 403);
         }
 
-        // Perform deletion
-        $role->delete();
+        $deletedRole = $this->roleService->delete($id);
 
-        // Log the deletion
-        $this->logger->logDelete($role, request()->user());
+        $this->logger->logDelete($deletedRole, request()->user());
 
         return $this->successResponse(null, 'Role deleted successfully');
     }
 
     /**
-     * Get all permissions
+     * Get all permissions.
      *
      * GET /su/portal/v1/admin/permissions
      */
     public function permissions(): JsonResponse
     {
-        $permissions = Permission::all(['id', 'name']);
-
-        return $this->successResponse($permissions);
+        return $this->successResponse($this->roleService->getPermissions());
     }
 
     /**
-     * Assign permissions to role
+     * Assign permissions to role.
      *
      * POST /su/portal/v1/admin/roles/{id}/permissions
      */
@@ -213,7 +187,7 @@ class RoleController extends Controller
             'permissions.*' => ['string', 'exists:permissions,name'],
         ]);
 
-        $role = Role::find($id);
+        $role = $this->roleService->getRoleWithPermissions($id);
 
         if (! $role) {
             return $this->notFoundResponse('Role not found');
@@ -221,25 +195,21 @@ class RoleController extends Controller
 
         $oldPermissions = $role->permissions->pluck('name')->toArray();
 
-        $role->syncPermissions($request->input('permissions'));
+        $updatedRole = $this->roleService->syncPermissions($id, $request->input('permissions'));
 
-        // Log custom action
         $this->logger->logCustomAction(
             'assign_permissions',
-            $role,
+            $updatedRole,
             $request->user(),
             ['old_permissions' => $oldPermissions],
-            ['new_permissions' => $request->input('permissions')]
+            ['new_permissions' => $request->input('permissions')],
         );
 
-        return $this->successResponse(
-            $role->load('permissions'),
-            'Permissions assigned successfully'
-        );
+        return $this->successResponse($updatedRole, 'Permissions assigned successfully');
     }
 
     /**
-     * Bulk delete roles (with system role protection)
+     * Bulk delete roles (with system role protection).
      *
      * POST /su/portal/v1/admin/roles/bulk-delete
      */
@@ -251,48 +221,25 @@ class RoleController extends Controller
         ]);
 
         $ids = $request->input('ids');
-        $systemRoles = ['super_admin', 'admin'];
-        $deleted = 0;
-        $protected = [];
+        $result = $this->roleService->bulkDelete($ids);
 
-        foreach ($ids as $id) {
-            $role = Role::find($id);
+        $this->logger->logBulkAction('bulk_delete', Role::class, $ids, $request->user());
 
-            if ($role && in_array($role->name, $systemRoles)) {
-                $protected[] = $role->name;
-
-                continue;
-            }
-
-            if ($role) {
-                $role->delete();
-                $deleted++;
-            }
-        }
-
-        // Log bulk action
-        $this->logger->logBulkAction(
-            'bulk_delete',
-            Role::class,
-            $ids,
-            $request->user()
-        );
-
-        $message = "تم حذف {$deleted} دور بنجاح";
-        if (count($protected) > 0) {
-            $message .= '. الأدوار المحمية: '.implode(', ', $protected);
+        $message = "تم حذف {$result['deleted']} دور بنجاح";
+        if (count($result['protected']) > 0) {
+            $message .= '. الأدوار المحمية: '.implode(', ', $result['protected']);
         }
 
         return response()->json([
             'success' => true,
             'message' => $message,
-            'deleted' => $deleted,
-            'protected' => $protected,
+            'deleted' => $result['deleted'],
+            'protected' => $result['protected'],
         ]);
     }
 
     /**
-     * Clone role with all permissions
+     * Clone role with all permissions.
      *
      * POST /su/portal/v1/admin/roles/{id}/clone
      */
@@ -302,76 +249,60 @@ class RoleController extends Controller
             'name' => ['required', 'string', 'max:255', 'unique:roles,name'],
         ]);
 
-        $originalRole = Role::with('permissions')->find($id);
+        $originalRole = $this->roleService->getRoleWithPermissions($id);
 
         if (! $originalRole) {
             return $this->notFoundResponse('Role not found');
         }
 
-        // Create new role
-        $newRole = Role::create(['name' => $request->input('name')]);
+        $result = $this->roleService->cloneRole($id, $request->input('name'));
 
-        // Copy all permissions
-        $permissions = $originalRole->permissions->pluck('name')->toArray();
-        $newRole->syncPermissions($permissions);
-
-        // Log custom action
         $this->logger->logCustomAction(
             'clone_role',
-            $newRole,
+            $result['role'],
             $request->user(),
-            ['original_role_id' => $originalRole->id],
-            ['permissions_count' => count($permissions)]
+            ['original_role_id' => $result['original_role']->id],
+            ['permissions_count' => $result['permissions_count']],
         );
 
         return $this->createdResponse(
-            $newRole->load('permissions'),
-            "تم نسخ الدور بنجاح: {$originalRole->name} -> {$newRole->name}"
+            $result['role'],
+            "تم نسخ الدور بنجاح: {$result['original_role']->name} -> {$result['role']->name}",
         );
     }
 
     /**
-     * Get permission matrix for all roles
+     * Get permission matrix for all roles.
      *
      * GET /su/portal/v1/admin/roles/permission-matrix
      */
     public function getPermissionMatrix(): JsonResponse
     {
-        $roles = Role::with('permissions')->get();
-        $allPermissions = Permission::all(['id', 'name']);
-
-        $matrix = [];
-        foreach ($roles as $role) {
-            $rolePermissions = $role->permissions->pluck('name')->toArray();
-            $matrix[$role->name] = [
-                'id' => $role->id,
-                'permissions' => array_fill_keys($rolePermissions, true),
-            ];
-        }
+        $data = $this->roleService->getPermissionMatrix();
 
         return response()->json([
             'success' => true,
             'data' => [
-                'matrix' => $matrix,
-                'all_permissions' => $allPermissions,
+                'matrix' => $data['matrix'],
+                'all_permissions' => $data['all_permissions'],
             ],
         ]);
     }
 
     /**
-     * Get user count per role
+     * Get user count per role.
      *
      * GET /su/portal/v1/admin/roles/{id}/users-count
      */
     public function getUserCount(int $id): JsonResponse
     {
-        $role = Role::find($id);
+        $role = $this->roleService->getRoleWithPermissions($id);
 
         if (! $role) {
             return $this->notFoundResponse('Role not found');
         }
 
-        $userCount = \App\Models\User::role($role->name)->count();
+        $userCount = $this->roleService->getUserCount($id);
 
         return response()->json([
             'success' => true,
@@ -384,7 +315,7 @@ class RoleController extends Controller
     }
 
     /**
-     * Search roles (AJAX endpoint)
+     * Search roles (AJAX endpoint).
      *
      * GET /su/portal/v1/admin/roles/search
      */
@@ -394,11 +325,7 @@ class RoleController extends Controller
             'q' => ['required', 'string', 'min:1'],
         ]);
 
-        $query = $request->input('q');
-
-        $roles = Role::with('permissions')
-            ->where('name', 'like', "%{$query}%")
-            ->get();
+        $roles = $this->roleService->search($request->input('q'));
 
         return response()->json([
             'success' => true,
@@ -407,28 +334,23 @@ class RoleController extends Controller
     }
 
     /**
-     * Check if role is a system role (protected from deletion)
+     * Check if role is a system role (protected from deletion).
      *
      * GET /su/portal/v1/admin/roles/{id}/is-system
      */
     public function isSystemRole(int $id): JsonResponse
     {
-        $role = Role::find($id);
+        $role = $this->roleService->getRoleWithPermissions($id);
 
         if (! $role) {
             return $this->notFoundResponse('Role not found');
         }
 
-        $systemRoles = ['super_admin', 'admin'];
-        $isSystem = in_array($role->name, $systemRoles);
+        $data = $this->roleService->isSystemRole($id);
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'role_id' => $role->id,
-                'role_name' => $role->name,
-                'is_system' => $isSystem,
-            ],
+            'data' => $data,
         ]);
     }
 }

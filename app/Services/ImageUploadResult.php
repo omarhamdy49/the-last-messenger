@@ -26,14 +26,14 @@ class ImageUploadResult
     /**
      * Create a new image upload result instance
      *
-     * @param string $original Path to original image
-     * @param string $thumbnail Path to thumbnail (150x150)
-     * @param string $medium Path to medium size (400x300)
-     * @param string $large Path to large size (1200x800)
-     * @param int $width Original image width
-     * @param int $height Original image height
-     * @param string $mimeType MIME type (e.g., 'image/jpeg')
-     * @param int $fileSize File size in bytes
+     * @param  string  $original  Path to original image
+     * @param  string  $thumbnail  Path to thumbnail (150x150)
+     * @param  string  $medium  Path to medium size (400x300)
+     * @param  string  $large  Path to large size (1200x800)
+     * @param  int  $width  Original image width
+     * @param  int  $height  Original image height
+     * @param  string  $mimeType  MIME type (e.g., 'image/jpeg')
+     * @param  int  $fileSize  File size in bytes
      */
     public function __construct(
         public readonly string $original,
@@ -49,7 +49,7 @@ class ImageUploadResult
     /**
      * Get public URL for specific size variant
      *
-     * @param string $size Size variant: 'original', 'thumbnail', 'medium', 'large'
+     * @param  string  $size  Size variant: 'original', 'thumbnail', 'medium', 'large'
      * @return string Full public URL
      */
     public function getUrl(string $size = 'original'): string
@@ -168,7 +168,7 @@ class ImageUploadResult
             $index++;
         }
 
-        return round($bytes, 2) . ' ' . $units[$index];
+        return round($bytes, 2).' '.$units[$index];
     }
 
     /**

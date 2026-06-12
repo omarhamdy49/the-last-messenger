@@ -114,11 +114,7 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
     /**
      * Get paginated surahs with filters
      *
-     * @param int $perPage
-     * @param string $search
-     * @param string $sortBy
-     * @param array<string, mixed> $filters
-     * @return \Illuminate\Pagination\LengthAwarePaginator
+     * @param  array<string, mixed>  $filters
      */
     public function paginateWithFilters(
         int $perPage = 15,
@@ -139,7 +135,7 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
         }
 
         // Apply filters
-        if (!empty($filters['revelation_place'])) {
+        if (! empty($filters['revelation_place'])) {
             $query->where('revelation_place', $filters['revelation_place']);
         }
 
@@ -153,9 +149,6 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
 
     /**
      * Count surahs by revelation place
-     *
-     * @param string $place
-     * @return int
      */
     public function countByRevelation(string $place): int
     {
@@ -168,8 +161,6 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
 
     /**
      * Get total verses count across all surahs
-     *
-     * @return int
      */
     public function getTotalVersesCount(): int
     {
@@ -182,11 +173,6 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
 
     /**
      * Search surahs by name_ar, name_en, and transliteration
-     *
-     * @param string $query
-     * @param int $perPage
-     * @param string|null $revelationPlace
-     * @return \Illuminate\Pagination\LengthAwarePaginator
      */
     public function search(string $query, int $perPage = 15, ?string $revelationPlace = null): \Illuminate\Pagination\LengthAwarePaginator
     {
@@ -208,8 +194,6 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
 
     /**
      * Get average verses per surah
-     *
-     * @return float
      */
     public function getAverageVersesPerSurah(): float
     {

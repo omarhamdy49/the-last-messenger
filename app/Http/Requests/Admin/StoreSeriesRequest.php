@@ -14,8 +14,6 @@ class StoreSeriesRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request
-     *
-     * @return bool
      */
     public function authorize(): bool
     {
@@ -76,5 +74,4 @@ class StoreSeriesRequest extends FormRequest
             'slug.unique' => 'الرابط المختصر مستخدم بالفعل',
         ];
     }
-
 }

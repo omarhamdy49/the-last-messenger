@@ -12,10 +12,10 @@ use App\Domain\Shared\Application\Commands\Command;
 final readonly class CreateChapterCommand implements Command
 {
     /**
-     * @param int $bookId The book this chapter belongs to
-     * @param array<string, string> $title Chapter title translations
-     * @param int $chapterNumber The chapter number within the book
-     * @param array<string, string> $intro Optional introduction translations
+     * @param  int  $bookId  The book this chapter belongs to
+     * @param  array<string, string>  $title  Chapter title translations
+     * @param  int  $chapterNumber  The chapter number within the book
+     * @param  array<string, string>  $intro  Optional introduction translations
      */
     public function __construct(
         public int $bookId,

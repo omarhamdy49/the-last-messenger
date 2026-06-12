@@ -19,8 +19,8 @@ class HadithImportService
     /**
      * Import hadith from JSON file with deduplication
      *
-     * @param string $filePath Path to JSON file
-     * @param int $collectionId Collection ID for these hadiths
+     * @param  string  $filePath  Path to JSON file
+     * @param  int  $collectionId  Collection ID for these hadiths
      * @return array Import statistics
      */
     public function importFromJsonFile(string $filePath, int $collectionId): array
@@ -34,20 +34,23 @@ class HadithImportService
             'errors' => [],
         ];
 
-        if (!file_exists($filePath)) {
+        if (! file_exists($filePath)) {
             $stats['errors'][] = "File not found: {$filePath}";
+
             return $stats;
         }
 
         $json = json_decode(file_get_contents($filePath), true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            $stats['errors'][] = "Invalid JSON: " . json_last_error_msg();
+            $stats['errors'][] = 'Invalid JSON: '.json_last_error_msg();
+
             return $stats;
         }
 
         $collection = HadithCollection::find($collectionId);
-        if (!$collection) {
+        if (! $collection) {
             $stats['errors'][] = "Collection {$collectionId} not found";
+
             return $stats;
         }
 
@@ -62,9 +65,10 @@ class HadithImportService
                     $hadithNumber = $item['hadith_number'] ?? null;
                     $arabicText = $item['hadith_ar_text'] ?? null;
 
-                    if (!$bookTitle || !$arabicText) {
-                        $stats['errors'][] = "Missing required fields in item: " . json_encode(array_keys($item));
+                    if (! $bookTitle || ! $arabicText) {
+                        $stats['errors'][] = 'Missing required fields in item: '.json_encode(array_keys($item));
                         $stats['failed']++;
+
                         return;
                     }
 
@@ -73,7 +77,7 @@ class HadithImportService
                         ->where('title_ar', $bookTitle)
                         ->first();
 
-                    if (!$book) {
+                    if (! $book) {
                         $book = HadithBook::create([
                             'collection_id' => $collection->id,
                             'title_ar' => $bookTitle,
@@ -170,11 +174,11 @@ class HadithImportService
             'file_stats' => [],
         ];
 
-        if (!is_dir($directoryPath)) {
+        if (! is_dir($directoryPath)) {
             return ['error' => "Directory not found: {$directoryPath}"];
         }
 
-        $files = glob($directoryPath . '/*.json');
+        $files = glob($directoryPath.'/*.json');
         $stats['total_files'] = count($files);
 
         foreach ($files as $file) {
@@ -187,11 +191,12 @@ class HadithImportService
                 ->orWhereRaw('LOWER(abbreviation) = ?', [strtolower($filename)])
                 ->first();
 
-            if (!$collection) {
+            if (! $collection) {
                 $stats['file_stats'][$filename] = [
                     'status' => 'skipped',
                     'reason' => 'Collection not found',
                 ];
+
                 continue;
             }
 

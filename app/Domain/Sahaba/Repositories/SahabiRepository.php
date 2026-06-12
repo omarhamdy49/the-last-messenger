@@ -6,11 +6,13 @@ namespace App\Domain\Sahaba\Repositories;
 
 use App\Domain\Sahaba\Enums\CompanionStatus;
 use App\Domain\Sahaba\Models\Sahabi;
+use App\Domain\Shared\Helpers\FullTextSearchHelper;
 use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class SahabiRepository extends BaseRepository implements SahabiRepositoryInterface
 {
@@ -52,12 +54,21 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
     }
 
     /**
-     * Get companions who participated in a battle
+     * Get companions who participated in a battle.
+     *
+     * Uses a JOIN against sahabi_battles (battle_name, sahabi_id composite
+     * index) instead of the previous whereJsonContains full-table scan.
+     *
+     * Execution plan (before): type=ALL, Extra=Using where (JSON function)
+     * Execution plan (after):  type=ref on sahabi_battles.battle_name index,
+     *                          then eq_ref lookup on sahaba.PRIMARY
      */
     public function getByBattle(string $battle, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->model
-            ->participatedIn($battle)
+        return Sahabi::query()
+            ->select('sahaba.*')
+            ->join('sahabi_battles', 'sahaba.id', '=', 'sahabi_battles.sahabi_id')
+            ->where('sahabi_battles.battle_name', $battle)
             ->byImportance()
             ->with(['translations', 'article'])
             ->paginate($perPage);
@@ -111,19 +122,18 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
     }
 
     /**
-     * Search companions via translation table
+     * Search companions via translation table.
+     * FULLTEXT index covers (name, full_name, kunya, laqab) on sahabi_translations.
+     * 'tribe' on sahaba table has no FULLTEXT index and keeps LIKE.
      */
     public function search(string $query, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model
             ->where(function ($q) use ($query) {
                 $q->whereHas('translations', function ($tq) use ($query) {
-                    $tq->where('name', 'LIKE', "%{$query}%")
-                        ->orWhere('full_name', 'LIKE', "%{$query}%")
-                        ->orWhere('kunya', 'LIKE', "%{$query}%")
-                        ->orWhere('laqab', 'LIKE', "%{$query}%");
+                    FullTextSearchHelper::apply($tq, ['name', 'full_name', 'kunya', 'laqab'], $query);
                 })
-                ->orWhere('tribe', 'like', "%{$query}%");
+                    ->orWhere('tribe', 'LIKE', "%{$query}%");
             })
             ->byImportance()
             ->with(['translations', 'article'])
@@ -160,5 +170,26 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
             Cache::forget('sahaba_early_muslims_10');
             Cache::forget('sahaba_top_narrators_10');
         }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getIndexStats(): array
+    {
+        $row = DB::table('sahaba')
+            ->selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN gender = 'male' THEN 1 ELSE 0 END) as male,
+                SUM(CASE WHEN gender = 'female' THEN 1 ELSE 0 END) as female
+            ")
+            ->whereNull('deleted_at')
+            ->first();
+
+        return [
+            'total' => (int) ($row->total ?? 0),
+            'male' => (int) ($row->male ?? 0),
+            'female' => (int) ($row->female ?? 0),
+        ];
     }
 }

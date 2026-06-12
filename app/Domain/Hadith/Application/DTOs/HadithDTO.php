@@ -15,8 +15,8 @@ use JsonSerializable;
 final readonly class HadithDTO implements JsonSerializable
 {
     /**
-     * @param array<string, string> $translations
-     * @param array<string> $themes
+     * @param  array<string, string>  $translations
+     * @param  array<string>  $themes
      */
     public function __construct(
         public int $id,
@@ -45,7 +45,7 @@ final readonly class HadithDTO implements JsonSerializable
             ];
         }
 
-        $themes = $hadith->themes->pluck('name_' . $locale)->toArray();
+        $themes = $hadith->themes->pluck('name_'.$locale)->toArray();
 
         return new self(
             id: $hadith->id,

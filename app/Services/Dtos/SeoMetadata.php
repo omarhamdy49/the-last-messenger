@@ -4,31 +4,27 @@ declare(strict_types=1);
 
 namespace App\Services\Dtos;
 
-use Illuminate\Support\Facades\View;
-
 /**
  * SEO Metadata Data Transfer Object
  *
  * Encapsulates all SEO-related metadata for an article or content piece.
  * Provides rendering capabilities for meta tags and JSON-LD structured data.
- *
- * @package App\Services\Dtos
  */
 class SeoMetadata
 {
     /**
      * Create new SEO Metadata instance
      *
-     * @param string $title Page title
-     * @param string $description Page description
-     * @param string $keywords Comma-separated keywords
-     * @param string $canonicalUrl Canonical URL
-     * @param string|null $featuredImage Featured image URL
-     * @param array<string, mixed> $openGraph OpenGraph tags
-     * @param array<string, mixed> $twitterCard Twitter Card tags
-     * @param array<string, mixed> $jsonLd JSON-LD structured data
-     * @param array<string, mixed> $metaTags Additional meta tags
-     * @param string $locale Current locale
+     * @param  string  $title  Page title
+     * @param  string  $description  Page description
+     * @param  string  $keywords  Comma-separated keywords
+     * @param  string  $canonicalUrl  Canonical URL
+     * @param  string|null  $featuredImage  Featured image URL
+     * @param  array<string, mixed>  $openGraph  OpenGraph tags
+     * @param  array<string, mixed>  $twitterCard  Twitter Card tags
+     * @param  array<string, mixed>  $jsonLd  JSON-LD structured data
+     * @param  array<string, mixed>  $metaTags  Additional meta tags
+     * @param  string  $locale  Current locale
      */
     public function __construct(
         public string $title,
@@ -114,7 +110,7 @@ class SeoMetadata
         $output[] = $this->renderMetaTags();
 
         $jsonLd = $this->renderJsonLd();
-        if (!empty($jsonLd)) {
+        if (! empty($jsonLd)) {
             $output[] = $jsonLd;
         }
 
@@ -145,12 +141,12 @@ class SeoMetadata
     /**
      * Get OpenGraph tag value
      *
-     * @param string $property Property name (with or without og: prefix)
+     * @param  string  $property  Property name (with or without og: prefix)
      * @return mixed|null
      */
     public function getOpenGraphTag(string $property): mixed
     {
-        $property = str_starts_with($property, 'og:') ? $property : 'og:' . $property;
+        $property = str_starts_with($property, 'og:') ? $property : 'og:'.$property;
 
         return $this->openGraph[$property] ?? null;
     }
@@ -158,21 +154,18 @@ class SeoMetadata
     /**
      * Get Twitter Card tag value
      *
-     * @param string $name Tag name (with or without twitter: prefix)
+     * @param  string  $name  Tag name (with or without twitter: prefix)
      * @return mixed|null
      */
     public function getTwitterCardTag(string $name): mixed
     {
-        $name = str_starts_with($name, 'twitter:') ? $name : 'twitter:' . $name;
+        $name = str_starts_with($name, 'twitter:') ? $name : 'twitter:'.$name;
 
         return $this->twitterCard[$name] ?? null;
     }
 
     /**
      * Escape HTML attribute value
-     *
-     * @param string $value
-     * @return string
      */
     private function escapeAttribute(string $value): string
     {
@@ -181,17 +174,15 @@ class SeoMetadata
 
     /**
      * Check if SEO metadata is complete
-     *
-     * @return bool
      */
     public function isComplete(): bool
     {
-        return !empty($this->title)
-            && !empty($this->description)
-            && !empty($this->keywords)
-            && !empty($this->canonicalUrl)
-            && !empty($this->openGraph)
-            && !empty($this->twitterCard);
+        return ! empty($this->title)
+            && ! empty($this->description)
+            && ! empty($this->keywords)
+            && ! empty($this->canonicalUrl)
+            && ! empty($this->openGraph)
+            && ! empty($this->twitterCard);
     }
 
     /**

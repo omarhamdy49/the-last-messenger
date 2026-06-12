@@ -17,20 +17,20 @@ use Illuminate\Http\UploadedFile;
 final class CreateArticleData
 {
     /**
-     * @param  array<string, string>       $titles        Locale-keyed titles, e.g. ['ar' => '...', 'en' => '...'].
-     * @param  array<string, string>       $slugs         Locale-keyed slugs (may be empty; action will generate).
+     * @param  array<string, string>  $titles  Locale-keyed titles, e.g. ['ar' => '...', 'en' => '...'].
+     * @param  array<string, string>  $slugs  Locale-keyed slugs (may be empty; action will generate).
      * @param  array<string, string|null>  $descriptions  Locale-keyed descriptions.
-     * @param  array<string, string|null>  $excerpts      Locale-keyed excerpts.
-     * @param  array<string, string|array|null>  $contents      Locale-keyed body content (HTML string or blocks array).
-     * @param  array<string, array|null>   $tocs          Locale-keyed TOC arrays (may be empty; action will generate).
-     * @param  array<string, string|null>  $summaries     Locale-keyed summaries.
-     * @param  array<string, string|null>  $seoTitles     Locale-keyed SEO titles.
-     * @param  array<string, string|null>  $seoDescriptions Locale-keyed SEO descriptions.
-     * @param  array<string, bool>         $isReady       Locale-keyed readiness flags.
-     * @param  array<int>|null             $tags          Tag IDs to attach.
-     * @param  array<int>|null             $mediaItems    Media IDs to sync.
-     * @param  array<int>|null             $additionalCategories Additional category IDs to attach.
-     * @param  array<int>|null             $series        Series IDs to attach (with positions).
+     * @param  array<string, string|null>  $excerpts  Locale-keyed excerpts.
+     * @param  array<string, string|array|null>  $contents  Locale-keyed body content (HTML string or blocks array).
+     * @param  array<string, array|null>  $tocs  Locale-keyed TOC arrays (may be empty; action will generate).
+     * @param  array<string, string|null>  $summaries  Locale-keyed summaries.
+     * @param  array<string, string|null>  $seoTitles  Locale-keyed SEO titles.
+     * @param  array<string, string|null>  $seoDescriptions  Locale-keyed SEO descriptions.
+     * @param  array<string, bool>  $isReady  Locale-keyed readiness flags.
+     * @param  array<int>|null  $tags  Tag IDs to attach.
+     * @param  array<int>|null  $mediaItems  Media IDs to sync.
+     * @param  array<int>|null  $additionalCategories  Additional category IDs to attach.
+     * @param  array<int>|null  $series  Series IDs to attach (with positions).
      */
     public function __construct(
         public readonly ?UploadedFile $thumb,
@@ -68,33 +68,33 @@ final class CreateArticleData
         $validated = $request->validated();
 
         return new self(
-            thumb:                $request->hasFile('thumb') ? $request->file('thumb') : null,
-            writerId:             (int) ($validated['writer_id'] ?? auth()->id()),
-            readTime:             isset($validated['read_time']) ? (int) $validated['read_time'] : null,
-            isFeatured:           $request->boolean('is_featured'),
-            isPinned:             $request->boolean('is_pinned'),
-            categoryId:           isset($validated['category_id']) ? (int) $validated['category_id'] : null,
-            hijriDate:            $validated['hijri_date'] ?? null,
-            status:               $validated['status'] ?? 'draft',
-            scheduledAt:          ($validated['status'] ?? 'draft') === 'scheduled'
+            thumb: $request->hasFile('thumb') ? $request->file('thumb') : null,
+            writerId: (int) ($validated['writer_id'] ?? auth()->id()),
+            readTime: isset($validated['read_time']) ? (int) $validated['read_time'] : null,
+            isFeatured: $request->boolean('is_featured'),
+            isPinned: $request->boolean('is_pinned'),
+            categoryId: isset($validated['category_id']) ? (int) $validated['category_id'] : null,
+            hijriDate: $validated['hijri_date'] ?? null,
+            status: $validated['status'] ?? 'draft',
+            scheduledAt: ($validated['status'] ?? 'draft') === 'scheduled'
                                       ? ($validated['scheduled_at'] ?? null)
                                       : null,
-            statistics:           $validated['statistics'] ?? null,
-            references:           $validated['references'] ?? null,
-            titles:               $validated['title'] ?? [],
-            slugs:                $validated['slug'] ?? [],
-            descriptions:         $validated['description'] ?? [],
-            excerpts:             $validated['excerpt'] ?? [],
-            contents:             $validated['content'] ?? [],
-            tocs:                 $validated['toc'] ?? [],
-            summaries:            $validated['summary'] ?? [],
-            seoTitles:            $validated['seo_title'] ?? [],
-            seoDescriptions:      $validated['seo_description'] ?? [],
-            isReady:              $validated['is_ready'] ?? [],
-            tags:                 $validated['tags'] ?? null,
-            mediaItems:           $validated['media_items'] ?? null,
+            statistics: $validated['statistics'] ?? null,
+            references: $validated['references'] ?? null,
+            titles: $validated['title'] ?? [],
+            slugs: $validated['slug'] ?? [],
+            descriptions: $validated['description'] ?? [],
+            excerpts: $validated['excerpt'] ?? [],
+            contents: $validated['content'] ?? [],
+            tocs: $validated['toc'] ?? [],
+            summaries: $validated['summary'] ?? [],
+            seoTitles: $validated['seo_title'] ?? [],
+            seoDescriptions: $validated['seo_description'] ?? [],
+            isReady: $validated['is_ready'] ?? [],
+            tags: $validated['tags'] ?? null,
+            mediaItems: $validated['media_items'] ?? null,
             additionalCategories: $validated['additional_categories'] ?? null,
-            series:               $validated['series'] ?? null,
+            series: $validated['series'] ?? null,
         );
     }
 }

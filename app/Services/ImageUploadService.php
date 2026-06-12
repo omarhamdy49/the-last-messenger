@@ -118,7 +118,7 @@ class ImageUploadService
     {
         // Initialize Intervention Image with GD driver
         // Note: You can switch to Imagick driver if available
-        $this->imageManager = new ImageManager(new Driver());
+        $this->imageManager = new ImageManager(new Driver);
     }
 
     /**
@@ -127,9 +127,9 @@ class ImageUploadService
      * Main method for uploading images with automatic validation,
      * optimization, and thumbnail generation.
      *
-     * @param UploadedFile $file The uploaded file from request
-     * @param string|null $oldImagePath Optional path to old image to delete
-     * @param string|null $prefix Optional filename prefix (default: 'article')
+     * @param  UploadedFile  $file  The uploaded file from request
+     * @param  string|null  $oldImagePath  Optional path to old image to delete
+     * @param  string|null  $prefix  Optional filename prefix (default: 'article')
      * @return ImageUploadResult Upload result with all paths and metadata
      *
      * @throws ImageValidationException If validation fails
@@ -203,8 +203,7 @@ class ImageUploadService
      *
      * Validates file type, size, and dimensions according to defined constraints.
      *
-     * @param UploadedFile $file The file to validate
-     * @return void
+     * @param  UploadedFile  $file  The file to validate
      *
      * @throws ImageValidationException If validation fails
      */
@@ -229,7 +228,7 @@ class ImageUploadService
         $extension = strtolower($file->getClientOriginalExtension());
         if (! in_array($extension, self::ALLOWED_EXTENSIONS, true)) {
             throw new ImageValidationException(
-                "Invalid file extension '.{$extension}'. Only " . implode(', ', self::ALLOWED_EXTENSIONS) . ' are allowed.'
+                "Invalid file extension '.{$extension}'. Only ".implode(', ', self::ALLOWED_EXTENSIONS).' are allowed.'
             );
         }
 
@@ -275,7 +274,7 @@ class ImageUploadService
             throw $e;
         } catch (\Throwable $e) {
             throw new ImageValidationException(
-                'Failed to validate image: ' . $e->getMessage(),
+                'Failed to validate image: '.$e->getMessage(),
                 $e
             );
         }
@@ -286,7 +285,7 @@ class ImageUploadService
      *
      * Creates thumbnail, medium, and large size variants of the image.
      *
-     * @param string $imagePath Path to original image
+     * @param  string  $imagePath  Path to original image
      * @return array<string, string> Paths to generated thumbnails
      *
      * @throws ImageCompressionException If thumbnail generation fails
@@ -348,8 +347,7 @@ class ImageUploadService
      *
      * Applies compression to reduce file size while maintaining quality.
      *
-     * @param string $imagePath Path to image to optimize
-     * @return void
+     * @param  string  $imagePath  Path to image to optimize
      *
      * @throws ImageCompressionException If optimization fails
      */
@@ -378,7 +376,7 @@ class ImageUploadService
     /**
      * Delete image and all its thumbnails
      *
-     * @param string $imagePath Path to image to delete
+     * @param  string  $imagePath  Path to image to delete
      * @return bool True if deleted successfully
      */
     public function deleteImage(string $imagePath): bool
@@ -413,7 +411,7 @@ class ImageUploadService
     /**
      * Get public URL for image
      *
-     * @param string $path Relative path to image
+     * @param  string  $path  Relative path to image
      * @return string Full public URL
      */
     public function getImageUrl(string $path): string
@@ -424,7 +422,7 @@ class ImageUploadService
     /**
      * Get public path for image
      *
-     * @param string $path Relative path to image
+     * @param  string  $path  Relative path to image
      * @return string Full file system path
      */
     public function getPublicPath(string $path): string
@@ -435,7 +433,7 @@ class ImageUploadService
     /**
      * Get image dimensions
      *
-     * @param string $path Relative path to image
+     * @param  string  $path  Relative path to image
      * @return array{width: int, height: int} Image dimensions
      *
      * @throws ImageValidationException If unable to read image
@@ -465,8 +463,8 @@ class ImageUploadService
     /**
      * Store original uploaded image
      *
-     * @param UploadedFile $file The uploaded file
-     * @param string $path Destination path
+     * @param  UploadedFile  $file  The uploaded file
+     * @param  string  $path  Destination path
      * @return string Stored file path
      *
      * @throws ImageStorageException If storage fails
@@ -507,8 +505,8 @@ class ImageUploadService
     /**
      * Generate unique filename for uploaded image
      *
-     * @param UploadedFile $file The uploaded file
-     * @param string $prefix Filename prefix
+     * @param  UploadedFile  $file  The uploaded file
+     * @param  string  $prefix  Filename prefix
      * @return string Unique filename with extension
      */
     protected function generateUniqueFilename(UploadedFile $file, string $prefix = 'article'): string
@@ -530,17 +528,17 @@ class ImageUploadService
     {
         $date = now();
 
-        return self::STORAGE_PATH . '/' .
-            $date->format('Y') . '/' .
-            $date->format('m') . '/' .
+        return self::STORAGE_PATH.'/'.
+            $date->format('Y').'/'.
+            $date->format('m').'/'.
             $date->format('d');
     }
 
     /**
      * Get thumbnail path for specific size
      *
-     * @param string $originalPath Path to original image
-     * @param string $sizeName Size variant name (thumbnail, medium, large)
+     * @param  string  $originalPath  Path to original image
+     * @param  string  $sizeName  Size variant name (thumbnail, medium, large)
      * @return string Path to thumbnail
      */
     protected function getThumbnailPath(string $originalPath, string $sizeName): string
@@ -556,7 +554,7 @@ class ImageUploadService
     /**
      * Get compression quality based on file type
      *
-     * @param string $path Image path
+     * @param  string  $path  Image path
      * @return int Compression quality (1-100)
      */
     protected function getCompressionQuality(string $path): int
@@ -574,8 +572,7 @@ class ImageUploadService
     /**
      * Ensure directory exists
      *
-     * @param string $directory Full directory path
-     * @return void
+     * @param  string  $directory  Full directory path
      *
      * @throws ImageStorageException If directory creation fails
      */

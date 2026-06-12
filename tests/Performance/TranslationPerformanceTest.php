@@ -36,8 +36,6 @@ class TranslationPerformanceTest extends TestCase
 
     /**
      * Test language cache service performance
-     *
-     * @return void
      */
     public function test_language_cache_service_performance(): void
     {
@@ -75,8 +73,6 @@ class TranslationPerformanceTest extends TestCase
 
     /**
      * Test translation retrieval performance
-     *
-     * @return void
      */
     public function test_translation_retrieval_performance(): void
     {
@@ -118,8 +114,6 @@ class TranslationPerformanceTest extends TestCase
 
     /**
      * Test bulk translation operations performance
-     *
-     * @return void
      */
     public function test_bulk_translation_operations_performance(): void
     {
@@ -173,8 +167,6 @@ class TranslationPerformanceTest extends TestCase
 
     /**
      * Test translation fallback performance
-     *
-     * @return void
      */
     public function test_translation_fallback_performance(): void
     {
@@ -208,8 +200,6 @@ class TranslationPerformanceTest extends TestCase
 
     /**
      * Test cache invalidation performance
-     *
-     * @return void
      */
     public function test_cache_invalidation_performance(): void
     {
@@ -237,8 +227,6 @@ class TranslationPerformanceTest extends TestCase
 
     /**
      * Test database index effectiveness
-     *
-     * @return void
      */
     public function test_database_index_effectiveness(): void
     {
@@ -278,8 +266,6 @@ class TranslationPerformanceTest extends TestCase
 
     /**
      * Generate performance summary report
-     *
-     * @return void
      */
     public function test_generate_performance_summary(): void
     {
@@ -313,8 +299,6 @@ class TranslationPerformanceTest extends TestCase
 
     /**
      * Seed test data for performance testing
-     *
-     * @return void
      */
     protected function seedTestData(): void
     {

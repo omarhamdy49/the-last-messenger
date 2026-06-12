@@ -6,11 +6,13 @@ namespace App\Domain\Seerah\Repositories;
 
 use App\Domain\Seerah\Enums\EventType;
 use App\Domain\Seerah\Models\SeerahEvent;
+use App\Domain\Shared\Helpers\FullTextSearchHelper;
 use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class SeerahEventRepository extends BaseRepository implements SeerahEventRepositoryInterface
 {
@@ -33,7 +35,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     public function getByType(EventType|string $type, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model
-            ->with($this->defaultRelations())
+            ->with($this->listRelations())
             ->byType($type)
             ->chronological()
             ->paginate($perPage);
@@ -45,7 +47,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     public function getByHijriYear(int $year, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model
-            ->with($this->defaultRelations())
+            ->with($this->listRelations())
             ->byHijriYear($year)
             ->chronological()
             ->paginate($perPage);
@@ -57,7 +59,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     public function getByGregorianYear(int $year, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model
-            ->with($this->defaultRelations())
+            ->with($this->listRelations())
             ->byGregorianYear($year)
             ->chronological()
             ->paginate($perPage);
@@ -72,7 +74,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
             "seerah_featured_{$limit}",
             self::CACHE_TTL,
             fn () => $this->model
-                ->with($this->defaultRelations())
+                ->with($this->listRelations())
                 ->featured()
                 ->chronological()
                 ->limit($limit)
@@ -89,7 +91,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
             'seerah_events_with_location',
             self::CACHE_TTL,
             fn () => $this->model
-                ->with('translations')
+                ->with('translations:id,seerah_event_id,locale,title')
                 ->withLocation()
                 ->chronological()
                 ->get(['id', 'slug', 'location', 'latitude', 'longitude', 'event_type', 'hijri_year'])
@@ -97,18 +99,19 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     }
 
     /**
-     * Search events via translation table
+     * Search events via translation table.
+     * FULLTEXT index covers (title, description) on seerah_event_translations.
+     * 'location' on seerah_events has no FULLTEXT index and keeps LIKE.
      */
     public function search(string $query, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model
-            ->with($this->defaultRelations())
+            ->with($this->listRelations())
             ->where(function ($q) use ($query) {
                 $q->whereHas('translations', function ($tq) use ($query) {
-                    $tq->where('title', 'LIKE', "%{$query}%")
-                        ->orWhere('description', 'LIKE', "%{$query}%");
+                    FullTextSearchHelper::apply($tq, ['title', 'description'], $query);
                 })
-                ->orWhere('location', 'like', "%{$query}%");
+                    ->orWhere('location', 'LIKE', "%{$query}%");
             })
             ->chronological()
             ->paginate($perPage);
@@ -120,7 +123,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     public function getChronological(int $perPage = 15): LengthAwarePaginator
     {
         return $this->model
-            ->with($this->defaultRelations())
+            ->with($this->listRelations())
             ->chronological()
             ->paginate($perPage);
     }
@@ -130,7 +133,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
      */
     public function findBySlug(string $slug, array $columns = ['*'], array $relations = []): ?Model
     {
-        $relations = empty($relations) ? $this->defaultRelations() : $relations;
+        $relations = empty($relations) ? $this->detailRelations() : $relations;
 
         return Cache::remember(
             "seerah_event_slug_{$slug}",
@@ -143,21 +146,57 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     }
 
     /**
-     * Relations required for event detail responses.
+     * Minimal relations for list/index endpoints.
+     * Loads only the translation titles needed to render a list row.
+     * Avoids the 5 article sub-relations and the participants join entirely.
+     *
+     * @return array<int, string>
+     */
+    private function listRelations(): array
+    {
+        return [
+            'translations:id,seerah_event_id,locale,title',
+        ];
+    }
+
+    /**
+     * Full relations for single-record detail/show endpoints.
+     * Includes all article sub-relations, participant data (+translations),
+     * and the ordered inner event timeline items (+translations).
+     *
+     * @return array<int|string, string|\Closure>
+     */
+    private function detailRelations(): array
+    {
+        return [
+            'translations:id,seerah_event_id,locale,title,description,content,is_ready',
+            'participants:id,event_id,participant_type,participant_id,role',
+            'participants.translations:id,seerah_participant_id,locale,name,description',
+            'timelineItems' => fn ($query) => $query
+                ->select(['id', 'seerah_event_id', 'display_order'])
+                ->orderBy('display_order'),
+            'timelineItems.translations:id,seerah_event_timeline_item_id,locale,title,description',
+            'article:id,status,thumb,category_id,writer_id,read_time,views,is_featured,is_pinned,hijri_date,created_at,updated_at',
+            'article.locales:id,article_id,locale,title,slug,excerpt,is_ready',
+            'article.category:id,slug,icon,color',
+            'article.category.translations:id,category_id,locale,name',
+            'article.categories:id,slug,icon,color',
+            'article.categories.translations:id,category_id,locale,name',
+            'article.tags:id,slug,type',
+            'article.tags.translations:id,tag_id,locale,name',
+            'article.mediaItems:id,filename,path,mime_type,type,alt_text',
+        ];
+    }
+
+    /**
+     * Alias for detailRelations() — kept for backward compatibility with any
+     * BaseRepository or external callers that reference defaultRelations().
      *
      * @return array<int, string>
      */
     private function defaultRelations(): array
     {
-        return [
-            'translations',
-            'article.locales',
-            'article.category',
-            'article.categories',
-            'article.tags',
-            'article.mediaItems',
-            'participants',
-        ];
+        return $this->detailRelations();
     }
 
     /**
@@ -171,5 +210,21 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
             Cache::forget('seerah_featured_10');
             Cache::forget('seerah_events_with_location');
         }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getIndexStats(): array
+    {
+        $rows = DB::table('seerah_events')
+            ->selectRaw('event_type, COUNT(*) as count')
+            ->groupBy('event_type')
+            ->pluck('count', 'event_type');
+
+        return [
+            'total' => (int) $rows->sum(),
+            'categories' => $rows->all(),
+        ];
     }
 }

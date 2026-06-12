@@ -4,7 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domain\Blog\Services;
 
+use App\Domain\Blog\DTOs\CreateCategoryData;
+use App\Domain\Blog\DTOs\UpdateCategoryData;
 use App\Domain\Blog\Enums\CategoryType;
+use App\Domain\Blog\Exceptions\CategoryHasArticlesException;
+use App\Domain\Blog\Exceptions\CategoryHasChildrenException;
+use App\Domain\Blog\Exceptions\CircularCategoryException;
 use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Repositories\CategoryRepositoryInterface;
 use App\Domain\Shared\Services\BaseService;
@@ -28,23 +33,36 @@ class CategoryService extends BaseService
     }
 
     /**
-     * Override create to use createCategory which handles translations
+     * Override create to use createCategory which handles translations.
+     * Accepts a raw array for internal callers (e.g. duplicate action) or a
+     * CreateCategoryData DTO for controller-driven creates.
      *
-     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>|CreateCategoryData  $data
      */
-    public function create(array $data): Model
+    public function create(array|CreateCategoryData $data): Model
     {
-        return $this->createCategory($data);
+        if ($data instanceof CreateCategoryData) {
+            return $this->createCategory($data);
+        }
+
+        // Legacy array path — used by internal callers such as the duplicate action.
+        return $this->createCategoryFromArray($data);
     }
 
     /**
-     * Override update to use updateCategory which handles translations
+     * Override update to use updateCategory which handles translations.
+     * Accepts a raw array for internal callers or an UpdateCategoryData DTO.
      *
-     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>|UpdateCategoryData  $data
      */
-    public function update(int $id, array $data): bool
+    public function update(int $id, array|UpdateCategoryData $data): bool
     {
-        $this->updateCategory($id, $data);
+        if ($data instanceof UpdateCategoryData) {
+            $this->updateCategory($id, $data);
+        } else {
+            $this->updateCategoryFromArray($id, $data);
+        }
+
         return true;
     }
 
@@ -66,10 +84,52 @@ class CategoryService extends BaseService
 
     /**
      * Create new category with business logic
+     */
+    public function createCategory(CreateCategoryData $data): Category
+    {
+        $translatableData = ['name' => $data->name, 'description' => $data->description];
+        $nonTranslatableData = [
+            'type' => $data->type,
+            'slug' => $data->slug,
+            'parent_id' => $data->parentId,
+            'icon' => $data->icon,
+            'color' => $data->color,
+            'display_order' => $data->displayOrder,
+        ];
+
+        // Generate slug if not provided
+        if (empty($nonTranslatableData['slug'])) {
+            $titleForSlug = $data->name['en'] ?? $data->name['ar'] ?? 'category';
+            $nonTranslatableData['slug'] = $this->generateUniqueSlug($titleForSlug);
+        }
+
+        // Set default display order if not provided
+        if (! isset($nonTranslatableData['display_order'])) {
+            $nonTranslatableData['display_order'] = $this->getNextDisplayOrder($nonTranslatableData['parent_id'] ?? null);
+        }
+
+        // Validate parent_id to prevent circular references
+        if (! empty($nonTranslatableData['parent_id'])) {
+            $this->validateParentId($nonTranslatableData['parent_id']);
+        }
+
+        /** @var Category */
+        $category = $this->repository->create($nonTranslatableData);
+
+        // Sync translations
+        if (! empty($translatableData)) {
+            $category->syncTranslations($translatableData);
+        }
+
+        return $category;
+    }
+
+    /**
+     * Create new category from a raw array (legacy/internal path, e.g. duplicate action).
      *
      * @param  array<string, mixed>  $data
      */
-    public function createCategory(array $data): Category
+    protected function createCategoryFromArray(array $data): Category
     {
         // Separate translatable fields
         $translatableFields = ['name', 'description'];
@@ -104,7 +164,7 @@ class CategoryService extends BaseService
         $category = $this->repository->create($nonTranslatableData);
 
         // Sync translations
-        if (!empty($translatableData)) {
+        if (! empty($translatableData)) {
             $category->syncTranslations($translatableData);
         }
 
@@ -113,12 +173,59 @@ class CategoryService extends BaseService
 
     /**
      * Update existing category with business logic
+     */
+    public function updateCategory(int $id, UpdateCategoryData $data): Category
+    {
+        // Get current category for comparison
+        /** @var Category */
+        $category = $this->repository->findOrFail($id, with: ['translations']);
+
+        $translatableData = ['name' => $data->name, 'description' => $data->description];
+        $nonTranslatableData = [
+            'type' => $data->type,
+            'slug' => $data->slug,
+            'parent_id' => $data->parentId,
+            'icon' => $data->icon,
+            'color' => $data->color,
+            'display_order' => $data->displayOrder,
+        ];
+
+        // Validate parent_id to prevent circular references
+        if ($data->parentId !== null) {
+            $this->validateParentId($data->parentId, $id);
+        }
+
+        // Auto-generate slug from English name if slug is empty
+        if (empty($nonTranslatableData['slug'])) {
+            if (! empty($data->name)) {
+                $nonTranslatableData['slug'] = $this->generateUniqueSlug(
+                    $data->name['en'] ?? $data->name['ar'],
+                    $id
+                );
+            }
+        }
+
+        // Update non-translatable fields
+        if (! empty($nonTranslatableData)) {
+            $this->repository->update($id, $nonTranslatableData);
+        }
+
+        // Sync translations
+        if (! empty($translatableData)) {
+            $category->syncTranslations($translatableData);
+        }
+
+        /** @var Category */
+        return $this->repository->findOrFail($id);
+    }
+
+    /**
+     * Update existing category from a raw array (legacy/internal path).
      *
      * @param  array<string, mixed>  $data
      */
-    public function updateCategory(int $id, array $data): Category
+    protected function updateCategoryFromArray(int $id, array $data): Category
     {
-        // Get current category for comparison
         /** @var Category */
         $category = $this->repository->findOrFail($id, with: ['translations']);
 
@@ -142,7 +249,7 @@ class CategoryService extends BaseService
 
         // Auto-generate slug from English name if slug is empty
         if (empty($nonTranslatableData['slug'])) {
-            if (!empty($translatableData['name'])) {
+            if (! empty($translatableData['name'])) {
                 $nonTranslatableData['slug'] = $this->generateUniqueSlug(
                     $translatableData['name']['en'] ?? $translatableData['name']['ar'],
                     $id
@@ -151,12 +258,12 @@ class CategoryService extends BaseService
         }
 
         // Update non-translatable fields
-        if (!empty($nonTranslatableData)) {
+        if (! empty($nonTranslatableData)) {
             $this->repository->update($id, $nonTranslatableData);
         }
 
         // Sync translations
-        if (!empty($translatableData)) {
+        if (! empty($translatableData)) {
             $category->syncTranslations($translatableData);
         }
 
@@ -167,7 +274,8 @@ class CategoryService extends BaseService
     /**
      * Delete category with validation
      *
-     * @throws \Exception If category has children or articles
+     * @throws CategoryHasChildrenException
+     * @throws CategoryHasArticlesException
      */
     public function deleteCategory(int $id): bool
     {
@@ -176,12 +284,12 @@ class CategoryService extends BaseService
 
         // Check if category has children
         if ($category->hasChildren()) {
-            throw new \Exception('Cannot delete category with child categories. Please delete or move child categories first.');
+            throw CategoryHasChildrenException::forDelete($id);
         }
 
         // Check if category has articles
         if ($category->articles()->count() > 0) {
-            throw new \Exception('Cannot delete category with articles. Please reassign or delete articles first.');
+            throw CategoryHasArticlesException::forDelete($id);
         }
 
         return $this->repository->delete($id);
@@ -193,7 +301,8 @@ class CategoryService extends BaseService
      * @param  array<int>  $ids
      * @return int Number of deleted records
      *
-     * @throws \Exception If any category has children or articles
+     * @throws CategoryHasChildrenException
+     * @throws CategoryHasArticlesException
      */
     public function bulkDelete(array $ids): int
     {
@@ -203,11 +312,11 @@ class CategoryService extends BaseService
             $category = $this->repository->findOrFail($id);
 
             if ($category->hasChildren()) {
-                throw new \Exception("Cannot delete category '{$category->name['en']}' (ID: {$id}) because it has child categories.");
+                throw CategoryHasChildrenException::forDeleteWithName($category->name['en'] ?? '', $id);
             }
 
             if ($category->articles()->count() > 0) {
-                throw new \Exception("Cannot delete category '{$category->name['en']}' (ID: {$id}) because it has articles.");
+                throw CategoryHasArticlesException::forDeleteWithName($category->name['en'] ?? '', $id);
             }
         }
 
@@ -327,19 +436,19 @@ class CategoryService extends BaseService
     /**
      * Validate parent_id to prevent circular references
      *
-     * @throws \Exception If circular reference detected
+     * @throws CircularCategoryException
      */
     protected function validateParentId(int $parentId, ?int $categoryId = null): void
     {
         // Cannot set parent to self
         if ($categoryId !== null && $parentId === $categoryId) {
-            throw new \Exception('Category cannot be its own parent.');
+            throw CircularCategoryException::selfParent($categoryId);
         }
 
         // Check if parent exists
         $parent = $this->repository->find($parentId);
         if ($parent === null) {
-            throw new \Exception("Parent category with ID {$parentId} does not exist.");
+            throw CircularCategoryException::parentNotFound($parentId);
         }
 
         // If updating existing category, check for circular reference
@@ -351,7 +460,7 @@ class CategoryService extends BaseService
     /**
      * Check for circular reference in parent-child relationship
      *
-     * @throws \Exception If circular reference detected
+     * @throws CircularCategoryException
      */
     protected function checkCircularReference(int $parentId, int $categoryId): void
     {
@@ -361,7 +470,7 @@ class CategoryService extends BaseService
         while ($currentParentId !== null) {
             // Circular reference detected
             if ($currentParentId === $categoryId) {
-                throw new \Exception('Circular reference detected. A category cannot be a child of its own descendant.');
+                throw CircularCategoryException::descendantLoop($categoryId, $parentId);
             }
 
             // Prevent infinite loop
@@ -374,5 +483,15 @@ class CategoryService extends BaseService
             $parent = $this->repository->find($currentParentId);
             $currentParentId = $parent?->parent_id;
         }
+    }
+
+    /**
+     * Restore a soft-deleted category.
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     */
+    public function restoreById(int $id): \App\Domain\Blog\Models\Category
+    {
+        return $this->repository->restoreById($id);
     }
 }

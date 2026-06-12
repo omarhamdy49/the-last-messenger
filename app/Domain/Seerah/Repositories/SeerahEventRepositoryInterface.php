@@ -45,4 +45,12 @@ interface SeerahEventRepositoryInterface extends RepositoryInterface
      * Get events in chronological order
      */
     public function getChronological(int $perPage = 15): LengthAwarePaginator;
+
+    /**
+     * Get event counts grouped by event_type (single aggregate query).
+     * Returns ['total' => int, 'categories' => array<string, int>].
+     *
+     * @return array{total: int, categories: array<string, int>}
+     */
+    public function getIndexStats(): array;
 }

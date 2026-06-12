@@ -16,7 +16,8 @@ use Stringable;
 abstract readonly class EntityId implements Stringable
 {
     /**
-     * @param int|string $value The identifier value
+     * @param  int|string  $value  The identifier value
+     *
      * @throws InvalidArgumentException If value is invalid
      */
     public function __construct(

@@ -72,15 +72,10 @@ class QuranSyncService
     {
         $this->onProgress = $onProgress;
 
-        $this->notify($onProgress, 'Fetching chapters list...', 'info');
+        $chapters = $this->fetchChaptersList($fromChapter, $toChapter);
+        $totalSurahs = count($chapters);
 
-        $response = $this->requestWithRetry(fn () => $this->quranClient()->get('chapters'));
-
-        if (! $response->isSuccessful()) {
-            throw new \RuntimeException(
-                'Failed to fetch surahs from Quran API: '.$response->getBody()
-            );
-        }
+        $this->notify($onProgress, "Found {$totalSurahs} chapters to sync", 'info');
 
         $result = [
             'surahs' => 0,
@@ -90,62 +85,13 @@ class QuranSyncService
             'errors' => [],
         ];
 
-        $allChapters = $response->json()['chapters'];
-
-        // Filter chapters based on from/to range
-        $chapters = array_filter($allChapters, fn ($ch) => $ch['id'] >= $fromChapter && $ch['id'] <= $toChapter);
-        $totalSurahs = count($chapters);
-
-        $this->notify($onProgress, "Found {$totalSurahs} chapters to sync", 'info');
-
         $processedCount = 0;
 
         foreach ($chapters as $surahData) {
             $surahNumber = $surahData['id'];
 
             try {
-                DB::beginTransaction();
-
-                // Step 1: Save surah
-                $this->notify($onProgress, "[{$surahNumber}/{$toChapter}] Saving surah {$surahData['name_simple']}...", 'step');
-                $surah = $this->saveSurah($surahData);
-                $result['surahs']++;
-
-                // Step 2: Get and save surah info
-                $this->notify($onProgress, "[{$surahNumber}/{$toChapter}] Fetching surah info...", 'substep');
-                $infoData = $this->getSurahInfo($surahData['id']);
-                $this->saveSurahInfo($surah->id, $infoData);
-                $result['surah_info']++;
-
-                // Step 3: Get tafsir data (paginated to avoid timeout)
-                $tafsir = $this->getAllSurahTafsir($surahData['id'], $surahData['verses_count']);
-
-                // Step 4: Get and save verses with translations
-                $this->notify($onProgress, "[{$surahNumber}/{$toChapter}] Fetching verses ({$surahData['verses_count']} verses)...", 'substep');
-                $versesData = $this->getSurahVerses($surahData['id']);
-
-                $versesCount = count($versesData);
-                foreach ($versesData as $verseData) {
-                    $verse = $this->saveVerse($surah->id, $verseData);
-                    // save verse tafsir
-                    $this->saveVerseTafsir($verse->id, $verse->getVerseKey(), $tafsir);
-                    $result['verses']++;
-
-                    // Save translations
-                    foreach ($verseData['quran_verse_translation'] as $translationData) {
-                        $this->saveVerseTranslation($verse->id, $translationData);
-
-                        $result['translations']++;
-                    }
-                }
-
-                $this->notify($onProgress, "[{$surahNumber}/{$toChapter}] Saved {$versesCount} verses", 'substep');
-
-                DB::commit();
-
-                $this->notify($onProgress, "[{$surahNumber}/{$toChapter}] Saved surah {$surahData['name_simple']}", 'success');
-
-                Log::info("Synced surah {$surah->id}: {$surahData['name_simple']}");
+                $this->processSurah($surahData, $toChapter, $result);
 
                 // Pause every N chapters to avoid rate limiting
                 $processedCount++;
@@ -153,9 +99,7 @@ class QuranSyncService
                     $this->notify($onProgress, 'Pausing for '.self::PAUSE_DURATION_SECONDS." seconds after {$processedCount} chapters...", 'info');
                     sleep(self::PAUSE_DURATION_SECONDS);
                 }
-
             } catch (Throwable $e) {
-                DB::rollBack();
                 $result['errors'][] = "Surah {$surahData['id']}: {$e->getMessage()}";
                 $this->notify($onProgress, "[{$surahNumber}/{$toChapter}] Failed to save surah {$surahData['name_simple']}: {$e->getMessage()}", 'error');
                 Log::error("Failed to sync surah {$surahData['id']}: {$e->getMessage()}");
@@ -163,6 +107,95 @@ class QuranSyncService
         }
 
         return $result;
+    }
+
+    /**
+     * Fetch all chapters from the API and return only those within the requested range.
+     *
+     * @return array<int, array<string, mixed>>
+     *
+     * @throws \RuntimeException
+     */
+    private function fetchChaptersList(int $fromChapter, int $toChapter): array
+    {
+        $this->notify($this->onProgress, 'Fetching chapters list...', 'info');
+
+        $response = $this->requestWithRetry(fn () => $this->quranClient()->get('chapters'));
+
+        if (! $response->isSuccessful()) {
+            throw new \RuntimeException(
+                'Failed to fetch surahs from Quran API: '.$response->getBody()
+            );
+        }
+
+        $allChapters = $response->json()['chapters'];
+
+        return array_values(
+            array_filter($allChapters, fn ($ch) => $ch['id'] >= $fromChapter && $ch['id'] <= $toChapter)
+        );
+    }
+
+    /**
+     * Persist one surah and all its related data inside a single DB transaction.
+     * Rolls back and re-throws on failure so the caller can record the error.
+     *
+     * @throws Throwable
+     */
+    private function processSurah(array $surahData, int $toChapter, array &$result): void
+    {
+        $surahNumber = $surahData['id'];
+
+        DB::beginTransaction();
+
+        try {
+            // Step 1: Save surah
+            $this->notify($this->onProgress, "[{$surahNumber}/{$toChapter}] Saving surah {$surahData['name_simple']}...", 'step');
+            $surah = $this->saveSurah($surahData);
+            $result['surahs']++;
+
+            // Step 2: Get and save surah info
+            $this->notify($this->onProgress, "[{$surahNumber}/{$toChapter}] Fetching surah info...", 'substep');
+            $infoData = $this->getSurahInfo($surahData['id']);
+            $this->saveSurahInfo($surah->id, $infoData);
+            $result['surah_info']++;
+
+            // Step 3: Get tafsir data (paginated to avoid timeout)
+            $tafsir = $this->getAllSurahTafsir($surahData['id'], $surahData['verses_count']);
+
+            // Step 4: Get and save verses with translations
+            $this->notify($this->onProgress, "[{$surahNumber}/{$toChapter}] Fetching verses ({$surahData['verses_count']} verses)...", 'substep');
+            $versesData = $this->getSurahVerses($surahData['id']);
+            $versesCount = count($versesData);
+
+            foreach ($versesData as $verseData) {
+                $this->saveVerseWithRelations($surah, $verseData, $tafsir, $result);
+            }
+
+            $this->notify($this->onProgress, "[{$surahNumber}/{$toChapter}] Saved {$versesCount} verses", 'substep');
+
+            DB::commit();
+
+            $this->notify($this->onProgress, "[{$surahNumber}/{$toChapter}] Saved surah {$surahData['name_simple']}", 'success');
+            Log::info("Synced surah {$surah->id}: {$surahData['name_simple']}");
+        } catch (Throwable $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Save a single verse and all its associated tafsir and translation records.
+     */
+    private function saveVerseWithRelations(Surah $surah, array $verseData, array $tafsir, array &$result): void
+    {
+        $verse = $this->saveVerse($surah->id, $verseData);
+        $this->saveVerseTafsir($verse->id, $verse->getVerseKey(), $tafsir);
+        $result['verses']++;
+
+        foreach ($verseData['quran_verse_translation'] as $translationData) {
+            $this->saveVerseTranslation($verse->id, $translationData);
+            $result['translations']++;
+        }
     }
 
     private function notify(?callable $callback, string $message, string $type = 'info'): void

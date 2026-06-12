@@ -31,8 +31,6 @@ class SearchController extends Controller
      *
      * POST /api/search
      * Body: query, filters, modules, sort, order, per_page
-     *
-     * @return JsonResponse
      */
     public function index(SearchRequest $request): JsonResponse
     {
@@ -60,7 +58,6 @@ class SearchController extends Controller
      * Body: query, filters, sort, order, per_page
      *
      * @param  string  $module  Module type (article, hadith, etc.)
-     * @return JsonResponse
      */
     public function searchModule(string $module, SearchRequest $request): JsonResponse
     {
@@ -89,8 +86,6 @@ class SearchController extends Controller
      * Get search suggestions based on query
      *
      * GET /api/search/suggestions?q={query}&module={module}
-     *
-     * @return JsonResponse
      */
     public function suggestions(Request $request): JsonResponse
     {
@@ -114,8 +109,6 @@ class SearchController extends Controller
      * Get user's search history
      *
      * GET /api/search/history?module={module}
-     *
-     * @return JsonResponse
      */
     public function history(Request $request): JsonResponse
     {
@@ -138,8 +131,6 @@ class SearchController extends Controller
      * Clear user's search history
      *
      * DELETE /api/search/history?module={module}
-     *
-     * @return JsonResponse
      */
     public function clearHistory(Request $request): JsonResponse
     {
@@ -162,8 +153,6 @@ class SearchController extends Controller
      * Get popular/trending searches
      *
      * GET /api/search/trending?module={module}&days={days}
-     *
-     * @return JsonResponse
      */
     public function trending(Request $request): JsonResponse
     {
@@ -188,8 +177,6 @@ class SearchController extends Controller
      * Get available search modules and their filterable fields
      *
      * GET /api/search/modules
-     *
-     * @return JsonResponse
      */
     public function modules(): JsonResponse
     {

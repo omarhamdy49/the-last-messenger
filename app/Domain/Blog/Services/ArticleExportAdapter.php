@@ -38,11 +38,11 @@ class ArticleExportAdapter implements ExportableModuleInterface
 
     public function getAvailableColumns(): array
     {
-        return (new ArticleExporter())->getAvailableColumns();
+        return (new ArticleExporter)->getAvailableColumns();
     }
 
     public function getDefaultColumns(): array
     {
-        return (new ArticleExporter())->getDefaultColumns();
+        return (new ArticleExporter)->getDefaultColumns();
     }
 }

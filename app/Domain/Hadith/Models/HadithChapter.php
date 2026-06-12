@@ -3,11 +3,11 @@
 namespace App\Domain\Hadith\Models;
 
 use App\Domain\Shared\Traits\HasLocalizedContent;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Class HadithChapter
@@ -26,7 +26,6 @@ use Illuminate\Database\Eloquent\Builder;
  * @property int|null $display_order Order for display purposes
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
- *
  * @property-read \App\Domain\Hadith\Models\HadithBook $book
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Domain\Hadith\Models\Hadith[] $hadiths
  * @property-read int|null $hadiths_count
@@ -55,6 +54,8 @@ class HadithChapter extends Model
     protected $fillable = [
         'book_id',
         'chapter_number',
+        'name',
+        'description',
         'display_order',
     ];
 
@@ -89,8 +90,6 @@ class HadithChapter extends Model
 
     /**
      * Get the book that this chapter belongs to.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function book(): BelongsTo
     {
@@ -99,8 +98,6 @@ class HadithChapter extends Model
 
     /**
      * Get all hadiths in this chapter.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function hadiths(): HasMany
     {
@@ -109,10 +106,6 @@ class HadithChapter extends Model
 
     /**
      * Scope to filter chapters by book.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $bookId
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeForBook(Builder $query, int $bookId): Builder
     {
@@ -121,10 +114,6 @@ class HadithChapter extends Model
 
     /**
      * Scope to filter chapters by chapter number.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $chapterNumber
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByChapterNumber(Builder $query, int $chapterNumber): Builder
     {
@@ -133,9 +122,6 @@ class HadithChapter extends Model
 
     /**
      * Scope to order chapters by display order, then chapter number.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeOrdered(Builder $query): Builder
     {
@@ -145,9 +131,6 @@ class HadithChapter extends Model
 
     /**
      * Scope to get chapters with their book relationship.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithBook(Builder $query): Builder
     {
@@ -156,9 +139,6 @@ class HadithChapter extends Model
 
     /**
      * Scope to get chapters with their hadiths.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithHadiths(Builder $query): Builder
     {
@@ -167,9 +147,6 @@ class HadithChapter extends Model
 
     /**
      * Scope to get chapters with hadith count.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithHadithCount(Builder $query): Builder
     {
@@ -178,9 +155,6 @@ class HadithChapter extends Model
 
     /**
      * Get the chapter name in the specified language.
-     *
-     * @param string $locale
-     * @return string
      */
     public function getNameInLocale(string $locale = 'ar'): string
     {
@@ -189,9 +163,6 @@ class HadithChapter extends Model
 
     /**
      * Get the chapter description in the specified language.
-     *
-     * @param string $locale
-     * @return string|null
      */
     public function getDescriptionInLocale(string $locale = 'ar'): ?string
     {
@@ -200,8 +171,6 @@ class HadithChapter extends Model
 
     /**
      * Get the total count of hadiths in this chapter.
-     *
-     * @return int
      */
     public function getHadithsCount(): int
     {
@@ -210,8 +179,6 @@ class HadithChapter extends Model
 
     /**
      * Get the next chapter in the same book.
-     *
-     * @return \App\Domain\Hadith\Models\HadithChapter|null
      */
     public function getNextChapter(): ?HadithChapter
     {
@@ -223,8 +190,6 @@ class HadithChapter extends Model
 
     /**
      * Get the previous chapter in the same book.
-     *
-     * @return \App\Domain\Hadith\Models\HadithChapter|null
      */
     public function getPreviousChapter(): ?HadithChapter
     {
@@ -237,9 +202,6 @@ class HadithChapter extends Model
 
     /**
      * Get the chapter's full display title with book name.
-     *
-     * @param string $locale
-     * @return string
      */
     public function getFullTitle(string $locale = 'ar'): string
     {

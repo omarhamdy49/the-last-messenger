@@ -17,7 +17,7 @@ interface CommandHandler
     /**
      * Handle the command
      *
-     * @param TCommand $command
+     * @param  TCommand  $command
      * @return TResult
      */
     public function handle(Command $command): mixed;

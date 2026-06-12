@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 return new class extends Migration
 {
@@ -33,17 +32,17 @@ return new class extends Migration
 
             foreach ($fields as $field) {
                 $jsonValue = $record->{$field} ?? null;
-                if (!$jsonValue) {
+                if (! $jsonValue) {
                     continue;
                 }
 
                 $decoded = is_string($jsonValue) ? json_decode($jsonValue, true) : $jsonValue;
-                if (!is_array($decoded)) {
+                if (! is_array($decoded)) {
                     continue;
                 }
 
                 foreach ($decoded as $locale => $value) {
-                    if (!isset($locales[$locale])) {
+                    if (! isset($locales[$locale])) {
                         $locales[$locale] = [];
                     }
                     $locales[$locale][$field] = $value;
@@ -53,12 +52,12 @@ return new class extends Migration
             foreach ($locales as $locale => $values) {
                 $hasContent = false;
                 foreach ($values as $value) {
-                    if (!empty(trim((string) ($value ?? '')))) {
+                    if (! empty(trim((string) ($value ?? '')))) {
                         $hasContent = true;
                         break;
                     }
                 }
-                if (!$hasContent) {
+                if (! $hasContent) {
                     continue;
                 }
 
@@ -90,6 +89,7 @@ return new class extends Migration
     private function isLocaleReady(array $fields): bool
     {
         $firstValue = reset($fields);
-        return !empty(trim((string) ($firstValue ?? '')));
+
+        return ! empty(trim((string) ($firstValue ?? '')));
     }
 };

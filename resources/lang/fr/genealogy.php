@@ -1,0 +1,45 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    // Site public (arbre généalogique prophétique)
+    'public' => [
+        'page_title' => 'L\'arbre généalogique prophétique',
+        'page_description' => 'Découvrez la lignée du Sceau des Prophètes, Muhammad ﷺ, et de sa noble famille à travers un arbre interactif moderne.',
+        'hero_badge' => 'Exploration interactive',
+        'hero_title' => 'Arbre généalogique',
+        'hero_subtitle' => 'du noble Prophète',
+        'hero_lead' => 'Découvrez la lignée du Sceau des Prophètes, Muhammad ﷺ, et de sa noble famille à travers un arbre interactif moderne.',
+        'stat_people' => 'Membres de la famille',
+        'stat_children' => 'Fils et filles',
+        'stat_generations' => 'Générations',
+        'explore_tree' => 'Explorer l\'arbre',
+        'view_list' => 'Vue liste',
+        'view_tree' => 'Vue arbre',
+        'zoom_in' => 'Zoom avant',
+        'zoom_out' => 'Zoom arrière',
+        'reset_zoom' => 'Réinitialiser',
+        'filter_all' => 'Tous',
+        'filter_children' => 'Enfants',
+        'filter_grandchildren' => 'Petits-enfants',
+        'filter_wives' => 'Épouses',
+        'search' => 'Rechercher',
+        'search_title' => 'Rechercher dans la généalogie',
+        'search_placeholder' => 'Rechercher par nom...',
+        'search_hint' => 'Saisissez un nom pour filtrer instantanément.',
+        'prophet_relation' => 'Sceau des Prophètes et des Messagers',
+        'view_details' => 'Voir les détails',
+        'historical_note' => 'Note historique',
+        'virtues' => 'Vertus',
+        'virtue_ahl_bayt' => 'De la maison du noble Prophète ﷺ',
+        'virtue_beloved' => 'Aimé d\'Allah et de Son Messager',
+        'read_full' => 'Lire la biographie complète',
+        'close' => 'Fermer',
+        'no_biography' => 'Aucune note historique n\'est encore disponible pour cette personne.',
+        'tree_unavailable' => 'L\'arbre généalogique n\'a pas pu être construit ; une liste des personnes est affichée ci-dessous.',
+        'empty_title' => 'Aucune donnée d\'arbre',
+        'empty_message' => 'Aucune personne n\'a encore été ajoutée à l\'arbre généalogique.',
+        'people_count' => 'personnes',
+    ],
+];

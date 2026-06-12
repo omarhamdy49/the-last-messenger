@@ -28,8 +28,8 @@ final class ListBooksByCollectionHandler implements QueryHandler
     /**
      * Handle the query
      *
-     * @param ListBooksByCollectionQuery $query
-     * @return PaginatedResult
+     * @param  ListBooksByCollectionQuery  $query
+     *
      * @throws EntityNotFoundException
      */
     public function handle(Query $query): PaginatedResult
@@ -51,9 +51,9 @@ final class ListBooksByCollectionHandler implements QueryHandler
 
         $locale = $query->locale ?? 'ar';
         $items = $paginator->getCollection()->map(
-            fn($book) => BookDTO::fromModel($book, $locale)
+            fn ($book) => BookDTO::fromModel($book, $locale)
         );
 
-        return PaginatedResult::fromPaginator($paginator, $items->toArray());
+        return PaginatedResult::fromPaginatorWithItems($paginator, $items->toArray());
     }
 }

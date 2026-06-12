@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -35,10 +34,16 @@ return new class extends Migration
             } catch (\Exception $e) {
                 // Index might already exist, skip
             }
-            try {
-                DB::statement('CREATE INDEX idx_hadith_chapter_id ON hadith(chapter_id)');
-            } catch (\Exception $e) {
-                // Index might already exist, skip
+            // chapter_id did not exist when this migration originally ran; guard on the
+            // column so migrate:fresh succeeds regardless of ordering. The hadith_hadiths
+            // chapter_id index is created (with a distinct name) by the
+            // 2026_06_11 add_chapter_id_to_hadith_hadiths_table migration.
+            if (Schema::hasColumn('hadith', 'chapter_id')) {
+                try {
+                    DB::statement('CREATE INDEX idx_hadith_chapter_id ON hadith(chapter_id)');
+                } catch (\Exception $e) {
+                    // Index might already exist, skip
+                }
             }
             try {
                 DB::statement('CREATE INDEX idx_hadith_authenticity ON hadith(authenticity_grade)');

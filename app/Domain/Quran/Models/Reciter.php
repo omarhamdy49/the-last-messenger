@@ -20,11 +20,14 @@ use Illuminate\Support\Str;
  * @property array $name
  * @property array|null $description
  * @property string|null $style
+ * @property string|null $riwayah
+ * @property string|null $everyayah_folder
  * @property string|null $country
  * @property string|null $profile_image
  * @property bool $is_featured
  * @property bool $is_active
  * @property int $display_order
+ * @property int $followers_count
  * @property Carbon $created_at
  * @property Carbon $updated_at
  */
@@ -45,11 +48,14 @@ class Reciter extends Model
     protected $fillable = [
         'slug',
         'style',
+        'riwayah',
+        'everyayah_folder',
         'country',
         'profile_image',
         'is_featured',
         'is_active',
         'display_order',
+        'followers_count',
     ];
 
     /**
@@ -61,6 +67,7 @@ class Reciter extends Model
         'is_featured' => 'boolean',
         'is_active' => 'boolean',
         'display_order' => 'integer',
+        'followers_count' => 'integer',
     ];
 
     /**
@@ -124,7 +131,7 @@ class Reciter extends Model
     public function getProfileImageUrlAttribute(): ?string
     {
         if ($this->profile_image) {
-            return asset('storage/' . $this->profile_image);
+            return asset('storage/'.$this->profile_image);
         }
 
         return null;
@@ -134,7 +141,6 @@ class Reciter extends Model
      * Scope: Featured reciters only
      *
      * @param  Builder  $query
-     * @return Builder
      */
     public function scopeFeatured($query): Builder
     {
@@ -143,9 +149,6 @@ class Reciter extends Model
 
     /**
      * Scope: Active reciters only
-     *
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeActive(Builder $query): Builder
     {

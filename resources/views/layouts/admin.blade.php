@@ -39,10 +39,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Alpine.js Plugins (Must load BEFORE Alpine.js) -->
-    <script src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
 
+    {{-- defer is REQUIRED: the CDN build auto-starts via queueMicrotask, and without defer
+         Alpine's MutationObserver initializes components mid-parse — before @stack('scripts')
+         defines factories like articleForm(), leaving those components with empty scopes. --}}
     <!-- Alpine.js -->
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -274,6 +277,30 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
+
+            // Alpine re-renders (data-tables, language tabs, modals) insert fresh
+            // <i data-lucide> nodes after the initial pass — re-render them, one
+            // coalesced pass per frame. createIcons swaps <i> for <svg>, which the
+            // selector doesn't match, so this can't loop.
+            let iconRenderQueued = false;
+            const scheduleIcons = () => {
+                if (iconRenderQueued) return;
+                iconRenderQueued = true;
+                requestAnimationFrame(() => {
+                    iconRenderQueued = false;
+                    lucide.createIcons();
+                });
+            };
+            new MutationObserver((mutations) => {
+                for (const m of mutations) {
+                    for (const n of m.addedNodes) {
+                        if (n.nodeType === 1 && (n.matches?.('i[data-lucide]') || n.querySelector?.('i[data-lucide]'))) {
+                            scheduleIcons();
+                            return;
+                        }
+                    }
+                }
+            }).observe(document.body, { childList: true, subtree: true });
         });
 
         // Handle window resize for sidebar

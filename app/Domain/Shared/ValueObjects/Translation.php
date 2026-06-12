@@ -23,7 +23,7 @@ final readonly class Translation implements ArrayAccess, JsonSerializable
     public const DEFAULT_LOCALE = 'ar';
 
     /**
-     * @param array<string, string|null> $translations
+     * @param  array<string, string|null>  $translations
      */
     public function __construct(
         private array $translations
@@ -34,7 +34,7 @@ final readonly class Translation implements ArrayAccess, JsonSerializable
     /**
      * Create from array of translations
      *
-     * @param array<string, string|null> $data
+     * @param  array<string, string|null>  $data
      */
     public static function fromArray(array $data): self
     {
@@ -183,7 +183,8 @@ final readonly class Translation implements ArrayAccess, JsonSerializable
     /**
      * Validate translations
      *
-     * @param array<string, string|null> $translations
+     * @param  array<string, string|null>  $translations
+     *
      * @throws InvalidArgumentException
      */
     private function validate(array $translations): void

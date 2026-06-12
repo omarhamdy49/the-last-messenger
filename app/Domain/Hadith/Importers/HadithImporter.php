@@ -33,14 +33,14 @@ class HadithImporter extends BaseImporter
     protected function getValidationRules(): array
     {
         return [
-            'arabic_text'  => 'required|string',
+            'arabic_text' => 'required|string',
             'english_text' => 'required|string',
-            'book_name'    => 'required|string|max:255',
+            'book_name' => 'required|string|max:255',
             'chapter_name' => 'required|string|max:255',
             'hadith_number' => 'required|string|max:50',
-            'grade'        => 'nullable|in:sahih,hasan,daif,mawdu,mutawatir,mursal',
-            'narrators'    => 'nullable|string',
-            'reference'    => 'nullable|string|max:500',
+            'grade' => 'nullable|in:sahih,hasan,daif,mawdu,mutawatir,mursal',
+            'narrators' => 'nullable|string',
+            'reference' => 'nullable|string|max:500',
         ];
     }
 
@@ -50,14 +50,14 @@ class HadithImporter extends BaseImporter
     protected function getColumnMapping(): array
     {
         return [
-            'arabic_text'   => 'arabic_text',
-            'english_text'  => 'english_text',
-            'book_name'     => 'book_name',
-            'chapter_name'  => 'chapter_name',
+            'arabic_text' => 'arabic_text',
+            'english_text' => 'english_text',
+            'book_name' => 'book_name',
+            'chapter_name' => 'chapter_name',
             'hadith_number' => 'hadith_number',
-            'grade'         => 'grade',
-            'narrators'     => 'narrators',
-            'reference'     => 'reference',
+            'grade' => 'grade',
+            'narrators' => 'narrators',
+            'reference' => 'reference',
         ];
     }
 
@@ -113,8 +113,8 @@ class HadithImporter extends BaseImporter
         $grade = $row['grade'] ?? null;
 
         return [
-            'book_id'        => $bookId,
-            'hadith_number'  => (string) $row['hadith_number'],
+            'book_id' => $bookId,
+            'hadith_number' => (string) $row['hadith_number'],
             'grading_status' => in_array($grade, Hadith::getGradingStatuses(), true) ? $grade : null,
         ];
     }
@@ -161,9 +161,9 @@ class HadithImporter extends BaseImporter
         $collection = $this->resolveCollection($bookName);
 
         return HadithBook::create([
-            'collection_id'   => $collection->id,
-            'title_en'        => $bookName,
-            'title_ar'        => $bookName,
+            'collection_id' => $collection->id,
+            'title_en' => $bookName,
+            'title_ar' => $bookName,
             'chapter_title_en' => $chapterName,
             'chapter_title_ar' => $chapterName,
         ]);

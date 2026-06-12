@@ -17,7 +17,6 @@ interface SearchHistoryRepositoryInterface extends RepositoryInterface
      *
      * @param  int  $userId  User ID
      * @param  int  $limit  Number of results
-     * @return Collection
      */
     public function getRecentByUser(int $userId, int $limit = 20): Collection;
 
@@ -27,7 +26,6 @@ interface SearchHistoryRepositoryInterface extends RepositoryInterface
      * @param  string|null  $module  Filter by module
      * @param  int  $days  Days to look back
      * @param  int  $limit  Number of results
-     * @return Collection
      */
     public function getPopular(?string $module = null, int $days = 7, int $limit = 20): Collection;
 
@@ -37,7 +35,6 @@ interface SearchHistoryRepositoryInterface extends RepositoryInterface
      * @param  string  $query  Partial query
      * @param  string|null  $module  Filter by module
      * @param  int  $limit  Number of suggestions
-     * @return Collection
      */
     public function getSuggestions(string $query, ?string $module = null, int $limit = 10): Collection;
 
@@ -46,7 +43,7 @@ interface SearchHistoryRepositoryInterface extends RepositoryInterface
      *
      * @param  int  $userId  User ID
      * @param  string|null  $module  Filter by module
-     * @return int  Number of deleted records
+     * @return int Number of deleted records
      */
     public function clearByUser(int $userId, ?string $module = null): int;
 }

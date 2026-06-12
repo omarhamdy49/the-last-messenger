@@ -8,8 +8,8 @@ use App\Models\Media;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection as SupportCollection;
+use Illuminate\Support\Facades\DB;
 
 class MediaRepository
 {
@@ -241,7 +241,7 @@ class MediaRepository
             return (string) $model->name;
         }
 
-        return class_basename($model) . ' #' . $model->id;
+        return class_basename($model).' #'.$model->id;
     }
 
     private function getModelUrl(mixed $model): ?string

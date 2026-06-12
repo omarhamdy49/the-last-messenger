@@ -48,17 +48,17 @@ class JsonImportService
      */
     public function __construct(
         private readonly JsonDataTransformer $transformer
-    ) {
-    }
+    ) {}
 
     /**
      * Import hadith data from JSON file
      *
-     * @param string $filePath Path to JSON file
-     * @param HadithSyncLog|null $syncLog Optional sync log for tracking
-     * @param bool $dryRun If true, validate without saving
-     * @param string|null $collectionNameOverride Override collection name detection
+     * @param  string  $filePath  Path to JSON file
+     * @param  HadithSyncLog|null  $syncLog  Optional sync log for tracking
+     * @param  bool  $dryRun  If true, validate without saving
+     * @param  string|null  $collectionNameOverride  Override collection name detection
      * @return array Import statistics
+     *
      * @throws \Exception If file not found or invalid JSON
      */
     public function importFromFile(
@@ -71,11 +71,11 @@ class JsonImportService
         $this->resetStats();
 
         // Validate file exists
-        if (!file_exists($filePath)) {
+        if (! file_exists($filePath)) {
             throw new \Exception("File not found: {$filePath}");
         }
 
-        if (!is_readable($filePath)) {
+        if (! is_readable($filePath)) {
             throw new \Exception("File not readable: {$filePath}");
         }
 
@@ -84,7 +84,7 @@ class JsonImportService
         $data = json_decode($jsonContent, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \Exception("Invalid JSON: " . json_last_error_msg());
+            throw new \Exception('Invalid JSON: '.json_last_error_msg());
         }
 
         Log::info("Starting JSON import from file: {$filePath}", [
@@ -97,8 +97,8 @@ class JsonImportService
             ?? $data['collection_name']
             ?? $this->transformer->detectCollectionFromFilename($filePath);
 
-        if (!$collectionName) {
-            throw new \Exception("Could not detect collection name from file");
+        if (! $collectionName) {
+            throw new \Exception('Could not detect collection name from file');
         }
 
         // Update sync log
@@ -118,11 +118,11 @@ class JsonImportService
                 // Hadiths-only format
                 $this->importHadithsOnly($data, $collectionName, $dryRun, $syncLog);
             } else {
-                throw new \Exception("Unrecognized JSON structure");
+                throw new \Exception('Unrecognized JSON structure');
             }
 
             // Mark sync log as completed
-            if ($syncLog && !$dryRun) {
+            if ($syncLog && ! $dryRun) {
                 $syncLog->update([
                     'status' => HadithSyncLog::STATUS_COMPLETED,
                     'completed_at' => now(),
@@ -134,7 +134,7 @@ class JsonImportService
                 ]);
             }
 
-            Log::info("JSON import completed successfully", [
+            Log::info('JSON import completed successfully', [
                 'file' => $filePath,
                 'stats' => $this->stats,
             ]);
@@ -150,7 +150,7 @@ class JsonImportService
                 ]);
             }
 
-            Log::error("JSON import failed", [
+            Log::error('JSON import failed', [
                 'file' => $filePath,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -163,11 +163,10 @@ class JsonImportService
     /**
      * Import full collection structure (collection > books > chapters > hadiths)
      *
-     * @param array $data Full JSON data
-     * @param string $collectionName Collection identifier
-     * @param bool $dryRun If true, validate only
-     * @param HadithSyncLog|null $syncLog Optional sync log
-     * @return void
+     * @param  array  $data  Full JSON data
+     * @param  string  $collectionName  Collection identifier
+     * @param  bool  $dryRun  If true, validate only
+     * @param  HadithSyncLog|null  $syncLog  Optional sync log
      */
     private function importFullCollection(
         array $data,
@@ -178,19 +177,19 @@ class JsonImportService
         // Step 1: Import collection
         $collectionData = $this->transformer->transformCollection($data['collection']);
 
-        if (!$this->transformer->validateCollection($collectionData)) {
-            throw new \Exception("Invalid collection data");
+        if (! $this->transformer->validateCollection($collectionData)) {
+            throw new \Exception('Invalid collection data');
         }
 
         $collection = null;
-        if (!$dryRun) {
+        if (! $dryRun) {
             $collection = HadithCollection::updateOrCreate(
                 ['name_en' => $collectionData['name_en']],
                 $collectionData
             );
             $this->stats['collections']++;
 
-            Log::debug("Collection imported", ['id' => $collection->id, 'name' => $collectionData['name_en']]);
+            Log::debug('Collection imported', ['id' => $collection->id, 'name' => $collectionData['name_en']]);
         }
 
         // Step 2: Import books
@@ -204,11 +203,10 @@ class JsonImportService
     /**
      * Import book and its chapters/hadiths
      *
-     * @param array $bookData Book data from JSON
-     * @param int $collectionId Collection database ID
-     * @param bool $dryRun If true, validate only
-     * @param HadithSyncLog|null $syncLog Optional sync log
-     * @return void
+     * @param  array  $bookData  Book data from JSON
+     * @param  int  $collectionId  Collection database ID
+     * @param  bool  $dryRun  If true, validate only
+     * @param  HadithSyncLog|null  $syncLog  Optional sync log
      */
     private function importBook(
         array $bookData,
@@ -219,25 +217,26 @@ class JsonImportService
         // Transform and validate book
         $transformedBook = $this->transformer->transformBook($bookData, $collectionId);
 
-        if (!$this->transformer->validateBook($transformedBook)) {
-            Log::warning("Invalid book data, skipping", ['book' => $bookData]);
+        if (! $this->transformer->validateBook($transformedBook)) {
+            Log::warning('Invalid book data, skipping', ['book' => $bookData]);
             $this->stats['errors']++;
+
             return;
         }
 
         $book = null;
-        if (!$dryRun) {
+        if (! $dryRun) {
             // Try to find existing book by title
             $book = HadithBook::where('collection_id', $collectionId)
                 ->where('title->en', $transformedBook['title']['en'])
                 ->first();
 
-            if (!$book) {
+            if (! $book) {
                 $book = HadithBook::create($transformedBook);
             }
             $this->stats['books']++;
 
-            Log::debug("Book imported", ['id' => $book->id, 'title' => $transformedBook['title_en']]);
+            Log::debug('Book imported', ['id' => $book->id, 'title' => $transformedBook['title_en']]);
         }
 
         // Import chapters if present
@@ -256,12 +255,11 @@ class JsonImportService
     /**
      * Import chapter and its hadiths
      *
-     * @param array $chapterData Chapter data from JSON
-     * @param int $bookId Book database ID
-     * @param int $collectionId Collection database ID
-     * @param bool $dryRun If true, validate only
-     * @param HadithSyncLog|null $syncLog Optional sync log
-     * @return void
+     * @param  array  $chapterData  Chapter data from JSON
+     * @param  int  $bookId  Book database ID
+     * @param  int  $collectionId  Collection database ID
+     * @param  bool  $dryRun  If true, validate only
+     * @param  HadithSyncLog|null  $syncLog  Optional sync log
      */
     private function importChapter(
         array $chapterData,
@@ -273,14 +271,15 @@ class JsonImportService
         // Transform and validate chapter
         $transformedChapter = $this->transformer->transformChapter($chapterData, $bookId, $collectionId);
 
-        if (!$this->transformer->validateChapter($transformedChapter)) {
-            Log::warning("Invalid chapter data, skipping", ['chapter' => $chapterData]);
+        if (! $this->transformer->validateChapter($transformedChapter)) {
+            Log::warning('Invalid chapter data, skipping', ['chapter' => $chapterData]);
             $this->stats['errors']++;
+
             return;
         }
 
         $chapter = null;
-        if (!$dryRun) {
+        if (! $dryRun) {
             $chapter = HadithChapter::updateOrCreate(
                 [
                     'book_id' => $bookId,
@@ -290,7 +289,7 @@ class JsonImportService
             );
             $this->stats['chapters']++;
 
-            Log::debug("Chapter imported", ['id' => $chapter->id, 'number' => $transformedChapter['chapter_number']]);
+            Log::debug('Chapter imported', ['id' => $chapter->id, 'number' => $transformedChapter['chapter_number']]);
         }
 
         // Import hadiths if present
@@ -304,11 +303,10 @@ class JsonImportService
      *
      * Creates default collection and book if needed
      *
-     * @param array $data JSON data with 'hadiths' array
-     * @param string $collectionName Collection identifier
-     * @param bool $dryRun If true, validate only
-     * @param HadithSyncLog|null $syncLog Optional sync log
-     * @return void
+     * @param  array  $data  JSON data with 'hadiths' array
+     * @param  string  $collectionName  Collection identifier
+     * @param  bool  $dryRun  If true, validate only
+     * @param  HadithSyncLog|null  $syncLog  Optional sync log
      */
     private function importHadithsOnly(
         array $data,
@@ -319,7 +317,7 @@ class JsonImportService
         $collection = null;
         $book = null;
 
-        if (!$dryRun) {
+        if (! $dryRun) {
             // Extract metadata if present
             $metadata = $data['metadata'] ?? $data;
 
@@ -343,7 +341,7 @@ class JsonImportService
                 ->where('title_en', $bookTitleEn)
                 ->first();
 
-            if (!$book) {
+            if (! $book) {
                 $book = HadithBook::create([
                     'collection_id' => $collection->id,
                     'title_ar' => $bookTitleAr,
@@ -371,13 +369,13 @@ class JsonImportService
                             );
                             $this->stats['chapters']++;
 
-                            Log::debug("Chapter imported", [
+                            Log::debug('Chapter imported', [
                                 'book_id' => $book->id,
                                 'chapter_number' => $transformedChapter['chapter_number'],
                             ]);
                         }
                     } catch (\Exception $e) {
-                        Log::warning("Failed to import chapter", [
+                        Log::warning('Failed to import chapter', [
                             'chapter' => $chapterData,
                             'error' => $e->getMessage(),
                         ]);
@@ -393,12 +391,11 @@ class JsonImportService
     /**
      * Import batch of hadiths with bulk operations
      *
-     * @param array $hadiths Array of hadith data
-     * @param int $bookId Book database ID
-     * @param int|null $chapterId Optional chapter database ID
-     * @param bool $dryRun If true, validate only
-     * @param HadithSyncLog|null $syncLog Optional sync log
-     * @return void
+     * @param  array  $hadiths  Array of hadith data
+     * @param  int  $bookId  Book database ID
+     * @param  int|null  $chapterId  Optional chapter database ID
+     * @param  bool  $dryRun  If true, validate only
+     * @param  HadithSyncLog|null  $syncLog  Optional sync log
      */
     private function importHadithBatch(
         array $hadiths,
@@ -418,14 +415,15 @@ class JsonImportService
                 try {
                     $transformed = $this->transformer->transformHadith($hadithData, $bookId, $chapterId);
 
-                    if (!$this->transformer->validateHadith($transformed)) {
-                        Log::warning("Invalid hadith data, skipping", ['hadith' => $hadithData]);
+                    if (! $this->transformer->validateHadith($transformed)) {
+                        Log::warning('Invalid hadith data, skipping', ['hadith' => $hadithData]);
                         $this->stats['errors']++;
+
                         continue;
                     }
 
                     // Sanitize text
-                    if (!empty($transformed['arabic_text'])) {
+                    if (! empty($transformed['arabic_text'])) {
                         $transformed['arabic_text'] = $this->sanitizeText($transformed['arabic_text']);
                     }
 
@@ -440,7 +438,7 @@ class JsonImportService
                     $transformedHadiths[] = $transformed;
 
                 } catch (\Exception $e) {
-                    Log::error("Failed to transform hadith", [
+                    Log::error('Failed to transform hadith', [
                         'hadith' => $hadithData,
                         'error' => $e->getMessage(),
                     ]);
@@ -449,7 +447,7 @@ class JsonImportService
             }
 
             // Perform bulk upsert
-            if (!$dryRun && !empty($transformedHadiths)) {
+            if (! $dryRun && ! empty($transformedHadiths)) {
                 $result = $this->bulkUpsertHadiths($transformedHadiths);
                 $this->stats['hadiths'] += $result['hadiths'];
                 $this->stats['translations'] += $result['translations'];
@@ -471,7 +469,7 @@ class JsonImportService
     /**
      * Bulk upsert hadiths and translations
      *
-     * @param array $hadiths Array of transformed hadith data
+     * @param  array  $hadiths  Array of transformed hadith data
      * @return array Statistics ['hadiths' => count, 'translations' => count, 'failed' => count]
      */
     private function bulkUpsertHadiths(array $hadiths): array
@@ -499,9 +497,9 @@ class JsonImportService
                         $hadithCount++;
 
                         // Insert/update translations
-                        if (!empty($hadithData['translations'])) {
+                        if (! empty($hadithData['translations'])) {
                             foreach (self::SUPPORTED_LANGUAGES as $lang) {
-                                if (!empty($hadithData['translations'][$lang])) {
+                                if (! empty($hadithData['translations'][$lang])) {
                                     HadithTranslation::updateOrCreate(
                                         [
                                             'hadith_id' => $hadith->id,
@@ -517,7 +515,7 @@ class JsonImportService
                         }
 
                     } catch (\Exception $e) {
-                        Log::error("Failed to upsert individual hadith", [
+                        Log::error('Failed to upsert individual hadith', [
                             'hadith_number' => $hadithData['hadith_number'],
                             'error' => $e->getMessage(),
                         ]);
@@ -526,7 +524,7 @@ class JsonImportService
             });
 
         } catch (\Exception $e) {
-            Log::error("Bulk upsert transaction failed", [
+            Log::error('Bulk upsert transaction failed', [
                 'error' => $e->getMessage(),
             ]);
             $failedCount = count($hadiths);
@@ -542,7 +540,7 @@ class JsonImportService
     /**
      * Sanitize text (remove HTML, invisible characters)
      *
-     * @param string $text Text to sanitize
+     * @param  string  $text  Text to sanitize
      * @return string Sanitized text
      */
     private function sanitizeText(string $text): string
@@ -568,8 +566,6 @@ class JsonImportService
 
     /**
      * Reset statistics counters
-     *
-     * @return void
      */
     private function resetStats(): void
     {

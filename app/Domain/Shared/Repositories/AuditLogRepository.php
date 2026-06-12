@@ -23,7 +23,7 @@ class AuditLogRepository extends BaseRepository implements AuditLogRepositoryInt
      */
     protected function getModel(): Model
     {
-        return new AuditLog();
+        return new AuditLog;
     }
 
     /**
@@ -31,7 +31,9 @@ class AuditLogRepository extends BaseRepository implements AuditLogRepositoryInt
      */
     public function getLogsForModel(Model $model, int $perPage = 15): LengthAwarePaginator
     {
-        return AuditLog::where('subject_type', get_class($model))
+        return AuditLog::query()
+            ->select(['id', 'user_id', 'action', 'subject_type', 'subject_id', 'description', 'ip_address', 'url', 'method', 'created_at'])
+            ->where('subject_type', get_class($model))
             ->where('subject_id', $model->id)
             ->with('user:id,name,email')
             ->orderBy('created_at', 'desc')
@@ -43,7 +45,9 @@ class AuditLogRepository extends BaseRepository implements AuditLogRepositoryInt
      */
     public function getLogsForUser(int $userId, int $perPage = 15): LengthAwarePaginator
     {
-        return AuditLog::where('user_id', $userId)
+        return AuditLog::query()
+            ->select(['id', 'user_id', 'action', 'subject_type', 'subject_id', 'description', 'ip_address', 'url', 'method', 'created_at'])
+            ->where('user_id', $userId)
             ->with('user:id,name,email')
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
@@ -54,7 +58,9 @@ class AuditLogRepository extends BaseRepository implements AuditLogRepositoryInt
      */
     public function getLogsByAction(string $action, int $perPage = 15): LengthAwarePaginator
     {
-        return AuditLog::where('action', $action)
+        return AuditLog::query()
+            ->select(['id', 'user_id', 'action', 'subject_type', 'subject_id', 'description', 'ip_address', 'url', 'method', 'created_at'])
+            ->where('action', $action)
             ->with('user:id,name,email')
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
@@ -69,7 +75,9 @@ class AuditLogRepository extends BaseRepository implements AuditLogRepositoryInt
         ?string $action = null,
         int $perPage = 15
     ): LengthAwarePaginator {
-        $query = AuditLog::whereBetween('created_at', [$startDate, $endDate]);
+        $query = AuditLog::query()
+            ->select(['id', 'user_id', 'action', 'subject_type', 'subject_id', 'description', 'ip_address', 'url', 'method', 'created_at'])
+            ->whereBetween('created_at', [$startDate, $endDate]);
 
         if ($action) {
             $query->where('action', $action);
@@ -86,7 +94,9 @@ class AuditLogRepository extends BaseRepository implements AuditLogRepositoryInt
     public function getRecentLogs(int $limit = 50): Collection
     {
         return Cache::remember("audit_logs:recent:{$limit}", $this->cacheTTL, function () use ($limit) {
-            return AuditLog::with('user:id,name,email')
+            return AuditLog::query()
+                ->select(['id', 'user_id', 'action', 'subject_type', 'subject_id', 'description', 'ip_address', 'url', 'method', 'created_at'])
+                ->with('user:id,name,email')
                 ->orderBy('created_at', 'desc')
                 ->limit($limit)
                 ->get();
@@ -98,7 +108,9 @@ class AuditLogRepository extends BaseRepository implements AuditLogRepositoryInt
      */
     public function getUserActivityReport(int $userId, $startDate, $endDate): array
     {
-        $logs = AuditLog::where('user_id', $userId)
+        $logs = AuditLog::query()
+            ->select(['id', 'user_id', 'action', 'description', 'created_at'])
+            ->where('user_id', $userId)
             ->whereBetween('created_at', [$startDate, $endDate])
             ->get();
 
@@ -134,7 +146,9 @@ class AuditLogRepository extends BaseRepository implements AuditLogRepositoryInt
      */
     public function getActivityTimeline($startDate, $endDate): array
     {
-        $logs = AuditLog::whereBetween('created_at', [$startDate, $endDate])
+        $logs = AuditLog::query()
+            ->select(['id', 'user_id', 'action', 'description', 'created_at'])
+            ->whereBetween('created_at', [$startDate, $endDate])
             ->with('user:id,name,email')
             ->orderBy('created_at', 'desc')
             ->get();
@@ -195,7 +209,9 @@ class AuditLogRepository extends BaseRepository implements AuditLogRepositoryInt
                         'count' => $log->count,
                     ])
                     ->toArray(),
-                'recent_logs' => AuditLog::with('user:id,name,email')
+                'recent_logs' => AuditLog::query()
+                    ->select(['id', 'user_id', 'action', 'description', 'created_at'])
+                    ->with('user:id,name,email')
                     ->orderBy('created_at', 'desc')
                     ->limit(10)
                     ->get()
@@ -216,7 +232,8 @@ class AuditLogRepository extends BaseRepository implements AuditLogRepositoryInt
      */
     public function searchLogs(array $filters, int $perPage = 15): LengthAwarePaginator
     {
-        $query = AuditLog::query();
+        $query = AuditLog::query()
+            ->select(['id', 'user_id', 'action', 'subject_type', 'subject_id', 'description', 'ip_address', 'url', 'method', 'created_at']);
 
         if (isset($filters['user_id'])) {
             $query->where('user_id', $filters['user_id']);
@@ -240,8 +257,8 @@ class AuditLogRepository extends BaseRepository implements AuditLogRepositoryInt
 
         if (isset($filters['search'])) {
             $query->where(function ($q) use ($filters) {
-                $q->where('description', 'like', '%' . $filters['search'] . '%')
-                    ->orWhere('action', 'like', '%' . $filters['search'] . '%');
+                $q->where('description', 'like', '%'.$filters['search'].'%')
+                    ->orWhere('action', 'like', '%'.$filters['search'].'%');
             });
         }
 
@@ -269,7 +286,9 @@ class AuditLogRepository extends BaseRepository implements AuditLogRepositoryInt
      */
     public function getLogsByIp(string $ipAddress, int $perPage = 15): LengthAwarePaginator
     {
-        return AuditLog::where('ip_address', $ipAddress)
+        return AuditLog::query()
+            ->select(['id', 'user_id', 'action', 'subject_type', 'subject_id', 'description', 'ip_address', 'url', 'method', 'created_at'])
+            ->where('ip_address', $ipAddress)
             ->with('user:id,name,email')
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);

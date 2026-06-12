@@ -39,7 +39,8 @@ class HadithKeyword extends Model
         'hadith_id',
         'keyword_ar',
         'keyword_en',
-        'frequency',
+        'review_status',
+        'source_reference',
     ];
 
     /**
@@ -48,7 +49,7 @@ class HadithKeyword extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'frequency' => 'integer',
+        'hadith_id' => 'integer',
     ];
 
     /**
@@ -61,8 +62,6 @@ class HadithKeyword extends Model
 
     /**
      * Get the Hadith this keyword belongs to
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function hadith(): BelongsTo
     {
@@ -73,7 +72,6 @@ class HadithKeyword extends Model
      * Scope: Search by keyword in Arabic
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @param  string  $keyword
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeSearchArabic($query, string $keyword)
@@ -85,7 +83,6 @@ class HadithKeyword extends Model
      * Scope: Search by keyword in English
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @param  string  $keyword
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeSearchEnglish($query, string $keyword)
@@ -97,14 +94,13 @@ class HadithKeyword extends Model
      * Scope: Search by keyword in any language
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @param  string  $keyword
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeSearch($query, string $keyword)
     {
         return $query->where(function ($q) use ($keyword) {
             $q->where('keyword_ar', 'like', "%{$keyword}%")
-              ->orWhere('keyword_en', 'like', "%{$keyword}%");
+                ->orWhere('keyword_en', 'like', "%{$keyword}%");
         });
     }
 
@@ -112,59 +108,49 @@ class HadithKeyword extends Model
      * Scope: Get popular keywords (high frequency)
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @param  int  $minFrequency
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopePopular($query, int $minFrequency = 5)
     {
-        return $query->where('frequency', '>=', $minFrequency)
-            ->orderByDesc('frequency');
+        return $query;
     }
 
     /**
      * Scope: Order by frequency
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @param  string  $direction
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByFrequency($query, string $direction = 'desc')
     {
-        return $query->orderBy('frequency', $direction);
+        return $query->orderBy('keyword_en', $direction);
     }
 
     /**
      * Scope: Get unique keywords (grouped by keyword)
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @param  string  $language
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeUnique($query, string $language = 'ar')
     {
         $column = $language === 'ar' ? 'keyword_ar' : 'keyword_en';
 
-        return $query->select($column, \DB::raw('SUM(frequency) as total_frequency'))
+        return $query->select($column, \DB::raw('COUNT(*) as total_frequency'))
             ->groupBy($column)
             ->orderByDesc('total_frequency');
     }
 
     /**
      * Increment keyword frequency
-     *
-     * @param  int  $amount
-     * @return void
      */
     public function incrementFrequency(int $amount = 1): void
     {
-        $this->increment('frequency', $amount);
+        // Frequency is computed from grouped rows; the table has no counter column.
     }
 
     /**
      * Get keyword in specific language
-     *
-     * @param  string  $locale
-     * @return string|null
      */
     public function getKeyword(string $locale = 'ar'): ?string
     {
@@ -173,8 +159,6 @@ class HadithKeyword extends Model
 
     /**
      * Get keyword in both languages as array
-     *
-     * @return array
      */
     public function getKeywordsAttribute(): array
     {
@@ -186,22 +170,17 @@ class HadithKeyword extends Model
 
     /**
      * Check if keyword exists in specific language
-     *
-     * @param  string  $locale
-     * @return bool
      */
     public function hasKeyword(string $locale = 'ar'): bool
     {
         $keyword = $this->getKeyword($locale);
 
-        return !empty($keyword);
+        return ! empty($keyword);
     }
 
     /**
      * Get top keywords globally (static method)
      *
-     * @param  int  $limit
-     * @param  string  $language
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public static function getTopKeywords(int $limit = 50, string $language = 'ar')

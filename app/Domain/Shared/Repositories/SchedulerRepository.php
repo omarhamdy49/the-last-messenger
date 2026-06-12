@@ -21,7 +21,7 @@ class SchedulerRepository extends BaseRepository implements SchedulerRepositoryI
      */
     protected function getModel(): Model
     {
-        return new ContentSchedule();
+        return new ContentSchedule;
     }
 
     /**

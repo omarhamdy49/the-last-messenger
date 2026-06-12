@@ -17,10 +17,9 @@ trait HasTranslationHelpers
     /**
      * Get translation with enhanced fallback logic
      *
-     * @param string $key Attribute name
-     * @param string|null $locale Language code
-     * @param bool $useFallbackLocale Whether to use fallback locale
-     * @return mixed
+     * @param  string  $key  Attribute name
+     * @param  string|null  $locale  Language code
+     * @param  bool  $useFallbackLocale  Whether to use fallback locale
      */
     public function getTranslationWithFallback(string $key, ?string $locale = null, bool $useFallbackLocale = true): mixed
     {
@@ -59,8 +58,7 @@ trait HasTranslationHelpers
     /**
      * Get translation for current app locale
      *
-     * @param string $key Attribute name
-     * @return mixed
+     * @param  string  $key  Attribute name
      */
     public function trans(string $key): mixed
     {
@@ -70,8 +68,7 @@ trait HasTranslationHelpers
     /**
      * Get all translations for a key
      *
-     * @param string $key Attribute name
-     * @return array
+     * @param  string  $key  Attribute name
      */
     public function getAllTranslations(string $key): array
     {
@@ -85,9 +82,8 @@ trait HasTranslationHelpers
     /**
      * Check if translation exists for locale
      *
-     * @param string $key Attribute name
-     * @param string $locale Language code
-     * @return bool
+     * @param  string  $key  Attribute name
+     * @param  string  $locale  Language code
      */
     public function hasTranslation(string $key, string $locale): bool
     {
@@ -96,14 +92,14 @@ trait HasTranslationHelpers
         }
 
         $value = $this->getTranslation($key, $locale, false);
+
         return ! empty($value);
     }
 
     /**
      * Check if all translations are complete
      *
-     * @param string $key Attribute name
-     * @return bool
+     * @param  string  $key  Attribute name
      */
     public function hasCompleteTranslations(string $key): bool
     {
@@ -122,8 +118,7 @@ trait HasTranslationHelpers
     /**
      * Get missing translation codes
      *
-     * @param string $key Attribute name
-     * @return array
+     * @param  string  $key  Attribute name
      */
     public function getMissingTranslationCodes(string $key): array
     {
@@ -143,10 +138,9 @@ trait HasTranslationHelpers
     /**
      * Set translation for specific locale
      *
-     * @param string $key Attribute name
-     * @param string $locale Language code
-     * @param mixed $value Translation value
-     * @return self
+     * @param  string  $key  Attribute name
+     * @param  string  $locale  Language code
+     * @param  mixed  $value  Translation value
      */
     public function setTranslationForLocale(string $key, string $locale, mixed $value): self
     {
@@ -160,8 +154,7 @@ trait HasTranslationHelpers
     /**
      * Fill missing translations with default language value
      *
-     * @param string $key Attribute name
-     * @return self
+     * @param  string  $key  Attribute name
      */
     public function fillMissingTranslations(string $key): self
     {
@@ -182,8 +175,6 @@ trait HasTranslationHelpers
 
     /**
      * Get translation helper service
-     *
-     * @return TranslationHelperService
      */
     protected function getTranslationHelper(): TranslationHelperService
     {
@@ -192,8 +183,6 @@ trait HasTranslationHelpers
 
     /**
      * Sanitize translatable attributes before saving
-     *
-     * @return void
      */
     protected function sanitizeTranslatableAttributes(): void
     {

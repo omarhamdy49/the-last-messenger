@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         // Handle category_translations table
-        if (!Schema::hasTable('category_translations') && !Schema::hasTable('categories_translations')) {
+        if (! Schema::hasTable('category_translations') && ! Schema::hasTable('categories_translations')) {
             // Create with correct singular name
             Schema::create('category_translations', function (Blueprint $table) {
                 $table->id();
@@ -28,13 +28,13 @@ return new class extends Migration
                     $table->fullText(['name', 'description']);
                 }
             });
-        } else if (Schema::hasTable('categories_translations') && !Schema::hasTable('category_translations')) {
+        } elseif (Schema::hasTable('categories_translations') && ! Schema::hasTable('category_translations')) {
             // Rename from plural to singular
             Schema::rename('categories_translations', 'category_translations');
         }
 
         // Handle tag_translations table
-        if (!Schema::hasTable('tag_translations') && !Schema::hasTable('tags_translations')) {
+        if (! Schema::hasTable('tag_translations') && ! Schema::hasTable('tags_translations')) {
             // Create with correct singular name
             Schema::create('tag_translations', function (Blueprint $table) {
                 $table->id();
@@ -50,7 +50,7 @@ return new class extends Migration
                     $table->fullText(['name', 'description']);
                 }
             });
-        } else if (Schema::hasTable('tags_translations') && !Schema::hasTable('tag_translations')) {
+        } elseif (Schema::hasTable('tags_translations') && ! Schema::hasTable('tag_translations')) {
             // Rename from plural to singular
             Schema::rename('tags_translations', 'tag_translations');
         }

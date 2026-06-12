@@ -35,4 +35,21 @@ interface NarratorRepositoryInterface extends RepositoryInterface
      * Get top narrators by hadith count
      */
     public function getTopByHadithCount(int $limit = 10): Collection;
+
+    /**
+     * Get paginated narrators with search and optional column filters
+     *
+     * @param  array<string, mixed>  $filters  Supports keys: reliability_grade, region, school, sort_direction
+     */
+    public function paginateWithFilters(
+        int $perPage = 15,
+        string $search = '',
+        string $sortBy = 'name_ar',
+        array $filters = []
+    ): LengthAwarePaginator;
+
+    /**
+     * Restore a soft-deleted narrator by ID
+     */
+    public function restoreById(int $id): HadithNarrator;
 }

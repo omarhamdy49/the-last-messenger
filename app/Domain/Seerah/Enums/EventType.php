@@ -18,6 +18,8 @@ enum EventType: string
     case TREATY = 'treaty';
     case MARRIAGE = 'marriage';
     case MIRACLE = 'miracle';
+    case DELEGATION = 'delegation';
+    case PERSONAL = 'personal';
     case OTHER = 'other';
 
     /**
@@ -44,6 +46,8 @@ enum EventType: string
             self::TREATY => 'Treaty',
             self::MARRIAGE => 'Marriage',
             self::MIRACLE => 'Miracle',
+            self::DELEGATION => 'Delegation',
+            self::PERSONAL => 'Personal',
             self::OTHER => 'Other Event',
         };
     }
@@ -62,6 +66,8 @@ enum EventType: string
             self::TREATY => 'معاهدة',
             self::MARRIAGE => 'زواج',
             self::MIRACLE => 'معجزة',
+            self::DELEGATION => 'وفد/بعثة',
+            self::PERSONAL => 'حدث شخصي',
             self::OTHER => 'حدث آخر',
         };
     }
@@ -80,6 +86,8 @@ enum EventType: string
             self::TREATY => 'file-text',
             self::MARRIAGE => 'heart',
             self::MIRACLE => 'sparkles',
+            self::DELEGATION => 'users',
+            self::PERSONAL => 'user',
             self::OTHER => 'circle',
         };
     }
@@ -98,6 +106,8 @@ enum EventType: string
             self::TREATY => 'yellow',
             self::MARRIAGE => 'pink',
             self::MIRACLE => 'cyan',
+            self::DELEGATION => 'teal',
+            self::PERSONAL => 'orange',
             self::OTHER => 'slate',
         };
     }

@@ -19,7 +19,7 @@ class ArticleResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'thumb' => $this->thumb ? asset('storage/' . $this->thumb) : null,
+            'thumb' => $this->thumb ? asset('storage/'.$this->thumb) : null,
             'read_time' => $this->read_time,
             'views' => $this->views,
             'is_featured' => $this->is_featured,
@@ -27,8 +27,8 @@ class ArticleResource extends JsonResource
             'hijri_date' => $this->hijri_date,
             'statistics' => $this->statistics,
             'references' => $this->references,
-            'created_at' => $this->created_at->toIso8601String(),
-            'updated_at' => $this->updated_at->toIso8601String(),
+            'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
 
             // Writer/Author
             'writer' => $this->when($this->relationLoaded('writer'), function () {
@@ -94,7 +94,7 @@ class ArticleResource extends JsonResource
                             'url' => Route::has('articles.show')
                                 ? route('articles.show', ['locale' => $locale->locale, 'slug' => $locale->slug])
                                 : null,
-                        ]
+                        ],
                     ];
                 });
             }),
@@ -108,7 +108,7 @@ class ArticleResource extends JsonResource
                 return $this->gallery->map(function ($item) {
                     return [
                         'id' => $item->id,
-                        'image' => $item->image ? asset('storage/' . $item->image) : null,
+                        'image' => $item->image ? asset('storage/'.$item->image) : null,
                         'caption' => $item->caption,
                         'order' => $item->order,
                     ];

@@ -20,9 +20,9 @@ class ImageUploadException extends Exception
     /**
      * Create a new exception instance
      *
-     * @param string $message The error message
-     * @param int $code HTTP status code (default: 422)
-     * @param \Throwable|null $previous Previous exception for chaining
+     * @param  string  $message  The error message
+     * @param  int  $code  HTTP status code (default: 422)
+     * @param  \Throwable|null  $previous  Previous exception for chaining
      */
     public function __construct(string $message, int $code = Response::HTTP_UNPROCESSABLE_ENTITY, ?\Throwable $previous = null)
     {

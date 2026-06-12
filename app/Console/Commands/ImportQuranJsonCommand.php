@@ -29,8 +29,9 @@ class ImportQuranJsonCommand extends Command
         $type = $this->option('type');
         $truncate = $this->option('truncate') ?? false;
 
-        if (!file_exists($file)) {
+        if (! file_exists($file)) {
             $this->error("File not found: {$file}");
+
             return Command::FAILURE;
         }
 
@@ -70,7 +71,7 @@ class ImportQuranJsonCommand extends Command
                 $tableData[] = [ucfirst(str_replace('_', ' ', $key)), $value];
             }
 
-            if (!empty($tableData)) {
+            if (! empty($tableData)) {
                 $this->table(['Metric', 'Count'], $tableData);
             }
 

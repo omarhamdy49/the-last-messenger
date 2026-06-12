@@ -85,8 +85,8 @@ final class QuranCommandService
     /**
      * Create a new reciter
      *
-     * @param array<string, string> $name
-     * @param array<string, string>|null $description
+     * @param  array<string, string>  $name
+     * @param  array<string, string>|null  $description
      */
     public function createReciter(
         array $name,
@@ -121,8 +121,8 @@ final class QuranCommandService
     /**
      * Update a reciter
      *
-     * @param array<string, string>|null $name
-     * @param array<string, string>|null $description
+     * @param  array<string, string>|null  $name
+     * @param  array<string, string>|null  $description
      */
     public function updateReciter(
         int $id,
@@ -177,7 +177,7 @@ final class QuranCommandService
     /**
      * Update a Surah
      *
-     * @param array<int, int>|null $pages
+     * @param  array<int, int>|null  $pages
      */
     public function updateSurah(
         int $id,

@@ -488,7 +488,7 @@
                                     <div id="description_{{ $locale }}_editor" class="quill-editor" style="height: 150px;"></div>
                                     <textarea name="description[{{ $locale }}]"
                                               id="description_{{ $locale }}"
-                                              class="hidden">{{ old("description.{$locale}", $article && $article->getLocale($locale) ? $article->getLocale($locale)->description : '') }}</textarea>
+                                              class="hidden">{{ old("description.{$locale}", $article && $article->getArticleLocale($locale) ? $article->getArticleLocale($locale)->description : '') }}</textarea>
                                 </div>
 
                                 {{-- Content Body (WYSIWYG) --}}
@@ -502,7 +502,7 @@
                                     <textarea name="content[{{ $locale }}]"
                                               id="content_{{ $locale }}"
                                               class="hidden"
-                                              required>{{ old("content.{$locale}", $article && $article->getLocale($locale) ? ($article->getLocale($locale)->content['body'] ?? '') : '') }}</textarea>
+                                              required>{{ old("content.{$locale}", $article && $article->getArticleLocale($locale) ? ($article->getArticleLocale($locale)->content['body'] ?? '') : '') }}</textarea>
                                 </div>
 
                                 {{-- TOC (Table of Contents) --}}
@@ -510,7 +510,7 @@
                                     name="toc"
                                     :locale="$locale"
                                     :content="'content_' . $locale"
-                                    :values="old('toc.' . $locale, $article && $article->getLocale($locale) ? ($article->getLocale($locale)->content['toc'] ?? []) : [])"
+                                    :values="old('toc.' . $locale, $article && $article->getArticleLocale($locale) ? ($article->getArticleLocale($locale)->content['toc'] ?? []) : [])"
                                     :label="__('articles.fields.toc')"
                                 />
 
@@ -523,7 +523,7 @@
                                     <div id="summary_{{ $locale }}_editor" class="quill-editor" style="height: 150px;"></div>
                                     <textarea name="summary[{{ $locale }}]"
                                               id="summary_{{ $locale }}"
-                                              class="hidden">{{ old("summary.{$locale}", $article && $article->getLocale($locale) ? ($article->getLocale($locale)->content['summary'] ?? '') : '') }}</textarea>
+                                              class="hidden">{{ old("summary.{$locale}", $article && $article->getArticleLocale($locale) ? ($article->getArticleLocale($locale)->content['summary'] ?? '') : '') }}</textarea>
                                 </div>
 
                                 {{-- Excerpt --}}

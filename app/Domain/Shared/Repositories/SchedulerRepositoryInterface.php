@@ -8,9 +8,8 @@ use App\Domain\Shared\Contracts\RepositoryInterface;
 use App\Domain\Shared\Enums\ScheduleAction;
 use App\Domain\Shared\Enums\ScheduleStatus;
 use App\Domain\Shared\Models\ContentSchedule;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Collection;
 
 interface SchedulerRepositoryInterface extends RepositoryInterface
 {

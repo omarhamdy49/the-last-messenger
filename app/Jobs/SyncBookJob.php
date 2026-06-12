@@ -6,7 +6,6 @@ namespace App\Jobs;
 
 use App\Domain\Hadith\Models\HadithBook;
 use App\Domain\Hadith\Models\HadithSyncLog;
-use App\Domain\Hadith\Services\BookSyncService;
 use App\Domain\Hadith\Services\ChapterSyncService;
 use App\Domain\Hadith\Services\HadithSyncService;
 use App\Services\Sunnah\SunnahApiClient;
@@ -81,8 +80,8 @@ class SyncBookJob implements ShouldQueue
             // Transform and sync book record
             $transformed = $transformer->transformBook($bookData, $this->collectionName);
 
-            if (!$this->dryRun) {
-                $bookSlug = $this->collectionName . '-' . $this->bookNumber;
+            if (! $this->dryRun) {
+                $bookSlug = $this->collectionName.'-'.$this->bookNumber;
 
                 $book = HadithBook::where('slug', $bookSlug)
                     ->where('collection_id', $this->collectionId)

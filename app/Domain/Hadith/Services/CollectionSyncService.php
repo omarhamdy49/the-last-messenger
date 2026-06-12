@@ -9,7 +9,6 @@ use App\Domain\Hadith\Models\HadithSyncLog;
 use App\Services\Sunnah\SunnahApiClient;
 use App\Services\Sunnah\SunnahDataTransformer;
 use Exception;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -23,21 +22,17 @@ class CollectionSyncService
 {
     /**
      * Constructor
-     *
-     * @param SunnahApiClient $apiClient
-     * @param SunnahDataTransformer $transformer
      */
     public function __construct(
         protected SunnahApiClient $apiClient,
         protected SunnahDataTransformer $transformer
-    ) {
-    }
+    ) {}
 
     /**
      * Sync all collections from Sunnah API
      *
-     * @param HadithSyncLog|null $syncLog Optional sync log for progress tracking
-     * @param bool $dryRun If true, no database writes will occur
+     * @param  HadithSyncLog|null  $syncLog  Optional sync log for progress tracking
+     * @param  bool  $dryRun  If true, no database writes will occur
      * @return array Summary of sync operation with keys: total, successful, failed, skipped, collections, errors
      */
     public function syncAllCollections(?HadithSyncLog $syncLog = null, bool $dryRun = false): array
@@ -58,7 +53,7 @@ class CollectionSyncService
 
         try {
             // Mark sync as started
-            if ($syncLog && !$dryRun) {
+            if ($syncLog && ! $dryRun) {
                 $syncLog->markStarted();
             }
 
@@ -73,7 +68,7 @@ class CollectionSyncService
                     $transformedData = $this->transformer->transformCollection($collectionData);
 
                     // Validate transformed data
-                    if (!$this->transformer->validateCollection($transformedData)) {
+                    if (! $this->transformer->validateCollection($transformedData)) {
                         Log::warning('Invalid collection data', [
                             'collection' => $transformedData['collection_name'] ?? 'unknown',
                         ]);
@@ -82,10 +77,11 @@ class CollectionSyncService
                             'collection' => $transformedData['collection_name'] ?? 'unknown',
                             'error' => 'Invalid collection data after transformation',
                         ];
+
                         continue;
                     }
 
-                    if (!$dryRun) {
+                    if (! $dryRun) {
                         // Upsert collection to database using raw column names
                         HadithCollection::updateOrCreate(
                             [
@@ -115,7 +111,7 @@ class CollectionSyncService
                     $summary['collections'][] = $transformedData['collection_name'];
 
                     // Update sync log progress
-                    if ($syncLog && !$dryRun) {
+                    if ($syncLog && ! $dryRun) {
                         $syncLog->updateProgress(1, 0, ['last_collection' => $transformedData['collection_name']]);
                     }
                 } catch (Exception $e) {
@@ -131,14 +127,14 @@ class CollectionSyncService
                         'trace' => $e->getTraceAsString(),
                     ]);
 
-                    if ($syncLog && !$dryRun) {
+                    if ($syncLog && ! $dryRun) {
                         $syncLog->updateProgress(0, 1);
                     }
                 }
             }
 
             // Mark sync as completed
-            if ($syncLog && !$dryRun) {
+            if ($syncLog && ! $dryRun) {
                 $syncLog->markCompleted();
             }
 
@@ -151,7 +147,7 @@ class CollectionSyncService
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            if ($syncLog && !$dryRun) {
+            if ($syncLog && ! $dryRun) {
                 $syncLog->markFailed($e->getMessage());
             }
 
@@ -162,10 +158,11 @@ class CollectionSyncService
     /**
      * Sync a specific collection by name
      *
-     * @param string $collectionName The collection slug/name (e.g., 'bukhari', 'muslim')
-     * @param HadithSyncLog|null $syncLog Optional sync log for progress tracking
-     * @param bool $dryRun If true, no database writes will occur
+     * @param  string  $collectionName  The collection slug/name (e.g., 'bukhari', 'muslim')
+     * @param  HadithSyncLog|null  $syncLog  Optional sync log for progress tracking
+     * @param  bool  $dryRun  If true, no database writes will occur
      * @return HadithCollection|null The synced collection model (null if dry run)
+     *
      * @throws Exception
      */
     public function syncCollection(
@@ -180,7 +177,7 @@ class CollectionSyncService
 
         try {
             // Mark sync as started
-            if ($syncLog && !$dryRun) {
+            if ($syncLog && ! $dryRun) {
                 $syncLog->markStarted();
             }
 
@@ -191,7 +188,7 @@ class CollectionSyncService
             $transformedData = $this->transformer->transformCollection($collectionData);
 
             // Validate transformed data
-            if (!$this->transformer->validateCollection($transformedData)) {
+            if (! $this->transformer->validateCollection($transformedData)) {
                 throw new Exception('Invalid collection data after transformation');
             }
 
@@ -239,7 +236,7 @@ class CollectionSyncService
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            if ($syncLog && !$dryRun) {
+            if ($syncLog && ! $dryRun) {
                 $syncLog->markFailed($e->getMessage());
             }
 
@@ -252,8 +249,9 @@ class CollectionSyncService
      *
      * This method handles pagination and fetches all available collections
      *
-     * @param bool $dryRun If true, data is fetched but not saved
+     * @param  bool  $dryRun  If true, data is fetched but not saved
      * @return array Array of stdClass collection objects from API
+     *
      * @throws Exception
      */
     public function fetchAndSaveCollections(bool $dryRun = false): array
@@ -270,7 +268,7 @@ class CollectionSyncService
                 // Fetch page of collections
                 $response = $this->apiClient->getCollections($limit, $page);
 
-                if (!isset($response->data) || !is_array($response->data)) {
+                if (! isset($response->data) || ! is_array($response->data)) {
                     Log::warning('No data in API response', ['page' => $page]);
                     break;
                 }

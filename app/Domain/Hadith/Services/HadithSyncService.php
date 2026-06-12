@@ -44,8 +44,7 @@ class HadithSyncService
     public function __construct(
         private readonly SunnahApiClient $apiClient,
         private readonly SunnahDataTransformer $transformer
-    ) {
-    }
+    ) {}
 
     /**
      * Sync all hadiths for a specific book
@@ -54,11 +53,11 @@ class HadithSyncService
      * sanitizes Arabic text, and performs bulk upsert operations for both
      * hadiths and their translations.
      *
-     * @param HadithBook $book The book to sync hadiths for
-     * @param string $collectionName API collection name (e.g., 'bukhari')
-     * @param string $bookNumber API book number
-     * @param HadithSyncLog|null $syncLog Optional sync log for progress tracking
-     * @param bool $dryRun If true, only validate without persisting
+     * @param  HadithBook  $book  The book to sync hadiths for
+     * @param  string  $collectionName  API collection name (e.g., 'bukhari')
+     * @param  string  $bookNumber  API book number
+     * @param  HadithSyncLog|null  $syncLog  Optional sync log for progress tracking
+     * @param  bool  $dryRun  If true, only validate without persisting
      * @return int Number of hadiths successfully synced
      */
     public function syncBookHadiths(
@@ -90,7 +89,7 @@ class HadithSyncService
                     $page
                 );
 
-                if (!isset($response->data) || empty($response->data)) {
+                if (! isset($response->data) || empty($response->data)) {
                     Log::debug('hadith.sync.book.no_more_data', [
                         'book_number' => $bookNumber,
                         'page' => $page,
@@ -111,12 +110,13 @@ class HadithSyncService
                         );
 
                         // Validate transformed data
-                        if (!$this->transformer->validateHadith($transformed)) {
-                            Log::warning("Invalid hadith data, skipping", [
+                        if (! $this->transformer->validateHadith($transformed)) {
+                            Log::warning('Invalid hadith data, skipping', [
                                 'hadith_number' => $transformed['hadith_number'] ?? 'unknown',
                                 'book_id' => $book->id,
                             ]);
                             $failedCount++;
+
                             continue;
                         }
 
@@ -124,12 +124,12 @@ class HadithSyncService
                         $transformed['book_id'] = $book->id;
 
                         // Sanitize Arabic text (remove HTML, invisible chars)
-                        if (!empty($transformed['arabic_text'])) {
+                        if (! empty($transformed['arabic_text'])) {
                             $transformed['arabic_text'] = $this->sanitizeText($transformed['arabic_text']);
                         }
 
                         // Sanitize translations (only ar and en)
-                        if (!empty($transformed['translations'])) {
+                        if (! empty($transformed['translations'])) {
                             foreach (self::SUPPORTED_LANGUAGES as $lang) {
                                 if (isset($transformed['translations'][$lang])) {
                                     $transformed['translations'][$lang] = $this->sanitizeText(
@@ -141,7 +141,7 @@ class HadithSyncService
 
                         $transformedHadiths[] = $transformed;
                     } catch (\Exception $e) {
-                        Log::error("Failed to transform hadith", [
+                        Log::error('Failed to transform hadith', [
                             'book_id' => $book->id,
                             'error' => $e->getMessage(),
                         ]);
@@ -150,7 +150,7 @@ class HadithSyncService
                 }
 
                 // Perform bulk upsert if not dry run
-                if (!$dryRun && !empty($transformedHadiths)) {
+                if (! $dryRun && ! empty($transformedHadiths)) {
                     $result = $this->batchUpsert($transformedHadiths);
                     $syncedCount += $result['success'];
                     $failedCount += $result['failed'];
@@ -214,7 +214,7 @@ class HadithSyncService
      * Performs bulk upsert operations with transaction wrapping and retry logic.
      * Stores hadiths first, then their translations separately for proper normalization.
      *
-     * @param array $hadiths Array of hadith data to upsert
+     * @param  array  $hadiths  Array of hadith data to upsert
      * @return array Statistics array with counts
      */
     public function batchUpsert(array $hadiths): array
@@ -236,7 +236,7 @@ class HadithSyncService
             $success = false;
 
             // Try bulk upsert with retries
-            while ($attempt < self::MAX_RETRIES && !$success) {
+            while ($attempt < self::MAX_RETRIES && ! $success) {
                 try {
                     DB::transaction(function () use ($chunk, &$successCount, &$insertCount, &$updateCount) {
                         // Step 1: Upsert hadiths
@@ -262,7 +262,7 @@ class HadithSyncService
                         }
 
                         // Bulk upsert hadiths
-                        if (!empty($hadithData)) {
+                        if (! empty($hadithData)) {
                             DB::table('hadiths')->upsert(
                                 $hadithData,
                                 ['book_id', 'hadith_number'], // Unique constraint
@@ -317,8 +317,7 @@ class HadithSyncService
      *
      * IMPORTANT: Only stores 'ar' and 'en' languages
      *
-     * @param array $translationData Array of translation data
-     * @return void
+     * @param  array  $translationData  Array of translation data
      */
     private function upsertTranslations(array $translationData): void
     {
@@ -330,17 +329,18 @@ class HadithSyncService
                 ->where('hadith_number', $item['hadith_number'])
                 ->first();
 
-            if (!$hadith) {
-                Log::warning("Hadith not found for translations", [
+            if (! $hadith) {
+                Log::warning('Hadith not found for translations', [
                     'book_id' => $item['book_id'],
                     'hadith_number' => $item['hadith_number'],
                 ]);
+
                 continue;
             }
 
             // Process only supported languages
             foreach (self::SUPPORTED_LANGUAGES as $lang) {
-                if (!empty($item['translations'][$lang])) {
+                if (! empty($item['translations'][$lang])) {
                     $translationsToInsert[] = [
                         'hadith_id' => $hadith->id,
                         'language_code' => $lang,
@@ -354,7 +354,7 @@ class HadithSyncService
         }
 
         // Bulk upsert translations
-        if (!empty($translationsToInsert)) {
+        if (! empty($translationsToInsert)) {
             // Process in chunks to avoid memory issues
             foreach (array_chunk($translationsToInsert, 500) as $chunk) {
                 DB::table('hadith_translations')->upsert(
@@ -369,7 +369,7 @@ class HadithSyncService
     /**
      * Fallback mechanism to insert hadiths individually when batch fails
      *
-     * @param array $hadiths Array of hadith data
+     * @param  array  $hadiths  Array of hadith data
      * @return array Statistics array
      */
     private function fallbackIndividualInserts(array $hadiths): array
@@ -393,9 +393,9 @@ class HadithSyncService
                     );
 
                     // Insert/update translations (only ar and en)
-                    if (!empty($hadith['translations'])) {
+                    if (! empty($hadith['translations'])) {
                         foreach (self::SUPPORTED_LANGUAGES as $lang) {
-                            if (!empty($hadith['translations'][$lang])) {
+                            if (! empty($hadith['translations'][$lang])) {
                                 HadithTranslation::updateOrCreate(
                                     [
                                         'hadith_id' => $hadithRecord->id,
@@ -414,7 +414,7 @@ class HadithSyncService
                     $successCount++;
                 });
             } catch (\Exception $e) {
-                Log::error("Individual hadith insert failed", [
+                Log::error('Individual hadith insert failed', [
                     'hadith_number' => $hadith['hadith_number'],
                     'book_id' => $hadith['book_id'],
                     'error' => $e->getMessage(),
@@ -423,7 +423,7 @@ class HadithSyncService
             }
         }
 
-        Log::info("Fallback individual inserts completed", [
+        Log::info('Fallback individual inserts completed', [
             'success' => $successCount,
             'failed' => $failedCount,
         ]);
@@ -440,7 +440,7 @@ class HadithSyncService
      * - Control characters
      * - Excess whitespace
      *
-     * @param string $text Text to sanitize
+     * @param  string  $text  Text to sanitize
      * @return string Sanitized text
      */
     public function sanitizeText(string $text): string
@@ -472,7 +472,7 @@ class HadithSyncService
     /**
      * Get hadith count for a specific book
      *
-     * @param int $bookId The book ID
+     * @param  int  $bookId  The book ID
      * @return int Number of hadiths
      */
     public function getHadithCount(int $bookId): int
@@ -483,7 +483,7 @@ class HadithSyncService
     /**
      * Get translation count for a specific hadith
      *
-     * @param int $hadithId The hadith ID
+     * @param  int  $hadithId  The hadith ID
      * @return int Number of translations
      */
     public function getTranslationCount(int $hadithId): int
@@ -496,7 +496,7 @@ class HadithSyncService
      *
      * Checks if all hadiths have the required translations
      *
-     * @param int $bookId The book ID
+     * @param  int  $bookId  The book ID
      * @return array Integrity report
      */
     public function verifySyncIntegrity(int $bookId): array
@@ -508,7 +508,7 @@ class HadithSyncService
             $translations = $hadith->translations->pluck('language_code')->toArray();
 
             foreach (self::SUPPORTED_LANGUAGES as $lang) {
-                if (!in_array($lang, $translations)) {
+                if (! in_array($lang, $translations)) {
                     $missingTranslations[] = [
                         'hadith_id' => $hadith->id,
                         'hadith_number' => $hadith->hadith_number,

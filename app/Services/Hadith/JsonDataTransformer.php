@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Hadith;
 
-use Illuminate\Support\Facades\Log;
-
 /**
  * Service for transforming JSON hadith data to database format
  *
@@ -22,7 +20,7 @@ class JsonDataTransformer
     /**
      * Transform JSON collection data to database format
      *
-     * @param array $data Raw JSON collection data
+     * @param  array  $data  Raw JSON collection data
      * @return array Transformed collection data
      */
     public function transformCollection(array $data): array
@@ -39,8 +37,8 @@ class JsonDataTransformer
     /**
      * Transform JSON book data to database format
      *
-     * @param array $data Raw JSON book data
-     * @param int $collectionId Database collection ID
+     * @param  array  $data  Raw JSON book data
+     * @param  int  $collectionId  Database collection ID
      * @return array Transformed book data
      */
     public function transformBook(array $data, int $collectionId): array
@@ -57,9 +55,9 @@ class JsonDataTransformer
     /**
      * Transform JSON chapter data to database format
      *
-     * @param array $data Raw JSON chapter data
-     * @param int $bookId Database book ID
-     * @param int|null $collectionId Database collection ID (optional)
+     * @param  array  $data  Raw JSON chapter data
+     * @param  int  $bookId  Database book ID
+     * @param  int|null  $collectionId  Database collection ID (optional)
      * @return array Transformed chapter data
      */
     public function transformChapter(array $data, int $bookId, ?int $collectionId = null): array
@@ -81,9 +79,9 @@ class JsonDataTransformer
     /**
      * Transform JSON hadith data to database format
      *
-     * @param array $data Raw JSON hadith data
-     * @param int $bookId Database book ID
-     * @param int|null $chapterId Database chapter ID (optional)
+     * @param  array  $data  Raw JSON hadith data
+     * @param  int  $bookId  Database book ID
+     * @param  int|null  $chapterId  Database chapter ID (optional)
      * @return array Transformed hadith data with translations
      */
     public function transformHadith(array $data, int $bookId, ?int $chapterId = null): array
@@ -113,7 +111,7 @@ class JsonDataTransformer
      *
      * Supports multiple JSON formats and returns only ar/en translations
      *
-     * @param array $data Raw JSON hadith data
+     * @param  array  $data  Raw JSON hadith data
      * @return array Translations array ['ar' => '...', 'en' => '...']
      */
     private function extractTranslations(array $data): array
@@ -132,7 +130,7 @@ class JsonDataTransformer
                 // Format: {"narrator": "...", "text": "..."}
                 $narrator = $data['english']['narrator'] ?? '';
                 $text = $data['english']['text'] ?? '';
-                $translations['en'] = trim($narrator . "\n\n" . $text);
+                $translations['en'] = trim($narrator."\n\n".$text);
             }
         }
 
@@ -165,12 +163,12 @@ class JsonDataTransformer
         }
 
         // Format 4: matn field (Arabic text)
-        if (isset($data['matn']) && !isset($translations['ar'])) {
+        if (isset($data['matn']) && ! isset($translations['ar'])) {
             $translations['ar'] = $data['matn'];
         }
 
         // Format 5: translation field (English text)
-        if (isset($data['translation']) && !isset($translations['en'])) {
+        if (isset($data['translation']) && ! isset($translations['en'])) {
             $translations['en'] = $data['translation'];
         }
 
@@ -180,7 +178,7 @@ class JsonDataTransformer
     /**
      * Extract grading information from JSON data
      *
-     * @param array $data Raw JSON hadith data
+     * @param  array  $data  Raw JSON hadith data
      * @return array Grading info ['status' => 'sahih', 'agreement' => 0.95]
      */
     private function extractGrading(array $data): array
@@ -215,7 +213,7 @@ class JsonDataTransformer
     /**
      * Normalize grading status to standard values
      *
-     * @param mixed $grade Raw grade value
+     * @param  mixed  $grade  Raw grade value
      * @return string Normalized grade (sahih, hasan, daif, unknown)
      */
     private function normalizeGradeStatus($grade): string
@@ -249,7 +247,7 @@ class JsonDataTransformer
     /**
      * Extract metadata from JSON hadith
      *
-     * @param array $data Raw JSON hadith data
+     * @param  array  $data  Raw JSON hadith data
      * @return array Metadata array
      */
     private function extractMetadata(array $data): array
@@ -295,49 +293,49 @@ class JsonDataTransformer
     /**
      * Validate transformed collection data
      *
-     * @param array $data Transformed collection data
+     * @param  array  $data  Transformed collection data
      * @return bool True if valid
      */
     public function validateCollection(array $data): bool
     {
-        return !empty($data['name_ar']) || !empty($data['name_en']);
+        return ! empty($data['name_ar']) || ! empty($data['name_en']);
     }
 
     /**
      * Validate transformed book data
      *
-     * @param array $data Transformed book data
+     * @param  array  $data  Transformed book data
      * @return bool True if valid
      */
     public function validateBook(array $data): bool
     {
-        return !empty($data['collection_id'])
-            && (!empty($data['title_ar']) || !empty($data['title_en']));
+        return ! empty($data['collection_id'])
+            && (! empty($data['title_ar']) || ! empty($data['title_en']));
     }
 
     /**
      * Validate transformed chapter data
      *
-     * @param array $data Transformed chapter data
+     * @param  array  $data  Transformed chapter data
      * @return bool True if valid
      */
     public function validateChapter(array $data): bool
     {
-        return !empty($data['book_id'])
+        return ! empty($data['book_id'])
             && isset($data['chapter_number']);
     }
 
     /**
      * Validate transformed hadith data
      *
-     * @param array $data Transformed hadith data
+     * @param  array  $data  Transformed hadith data
      * @return bool True if valid
      */
     public function validateHadith(array $data): bool
     {
         return isset($data['book_id'])
-            && !empty($data['hadith_number'])
-            && (!empty($data['arabic_text']) || !empty($data['translations']));
+            && ! empty($data['hadith_number'])
+            && (! empty($data['arabic_text']) || ! empty($data['translations']));
     }
 
     /**
@@ -345,7 +343,7 @@ class JsonDataTransformer
      *
      * Extracts collection identifier from common filename patterns
      *
-     * @param string $filename File name or path
+     * @param  string  $filename  File name or path
      * @return string|null Collection name or null if not detected
      */
     public function detectCollectionFromFilename(string $filename): ?string

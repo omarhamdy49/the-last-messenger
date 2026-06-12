@@ -10,6 +10,8 @@ use App\Domain\Genealogy\Services\GenealogyDashboardStatsProvider;
 use App\Domain\Hadith\Services\HadithDashboardStatsProvider;
 use App\Domain\Hadith\Services\HadithExportAdapter;
 use App\Domain\Hadith\Services\HadithNarratorExportAdapter;
+use App\Domain\Media\Services\MediaDashboardStatsProvider;
+use App\Domain\Media\Services\MediaProgramExportAdapter;
 use App\Domain\Quran\Services\QuranDashboardStatsProvider;
 use App\Domain\Quran\Services\QuranReciterExportAdapter;
 use App\Domain\Quran\Services\QuranSurahExportAdapter;
@@ -39,20 +41,19 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $statsProviders = [
-            new BlogDashboardStatsProvider(),
-            new HadithDashboardStatsProvider(),
-            new QuranDashboardStatsProvider(),
-            new SeerahDashboardStatsProvider(),
-            new SahabaDashboardStatsProvider(),
-            new GenealogyDashboardStatsProvider(),
+            new BlogDashboardStatsProvider,
+            new HadithDashboardStatsProvider,
+            new QuranDashboardStatsProvider,
+            new SeerahDashboardStatsProvider,
+            new SahabaDashboardStatsProvider,
+            new GenealogyDashboardStatsProvider,
+            new MediaDashboardStatsProvider,
         ];
 
-        $this->app->singleton(DashboardService::class, fn (): DashboardService =>
-            new DashboardService(statsProviders: $statsProviders)
+        $this->app->singleton(DashboardService::class, fn (): DashboardService => new DashboardService(statsProviders: $statsProviders)
         );
 
-        $this->app->singleton(DashboardAnalyticsService::class, fn (): DashboardAnalyticsService =>
-            new DashboardAnalyticsService(statsProviders: $statsProviders)
+        $this->app->singleton(DashboardAnalyticsService::class, fn (): DashboardAnalyticsService => new DashboardAnalyticsService(statsProviders: $statsProviders)
         );
 
         $this->app->singleton(ExportGateway::class, function ($app): ExportGateway {
@@ -66,6 +67,7 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(QuranTafseerExportAdapter::class),
                 $app->make(SeerahEventExportAdapter::class),
                 $app->make(SahabiExportAdapter::class),
+                $app->make(MediaProgramExportAdapter::class),
             ]);
         });
     }
@@ -115,8 +117,6 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * Register custom Blade directives for translations
-     *
-     * @return void
      */
     protected function registerBladeDirectives(): void
     {

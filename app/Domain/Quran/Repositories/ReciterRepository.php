@@ -7,8 +7,10 @@ namespace App\Domain\Quran\Repositories;
 use App\Domain\Quran\Models\Recitation;
 use App\Domain\Quran\Models\Reciter;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Reciter Repository
@@ -23,14 +25,14 @@ class ReciterRepository implements ReciterRepositoryInterface
 
     /**
      * Get paginated reciters
-     *
-     * @param int $perPage
-     * @param bool $activeOnly
-     * @return LengthAwarePaginator
      */
     public function paginate(int $perPage = 15, bool $activeOnly = true): LengthAwarePaginator
     {
-        $query = Reciter::query()->ordered();
+        // Eager-load translations: DTO name/description maps come from
+        // reciter_translations and would otherwise lazy-load per row.
+        $query = Reciter::query()
+            ->with(['translations:id,reciter_id,locale,name,description'])
+            ->ordered();
 
         if ($activeOnly) {
             $query->active();
@@ -41,14 +43,11 @@ class ReciterRepository implements ReciterRepositoryInterface
 
     /**
      * Get reciter by ID
-     *
-     * @param int $id
-     * @return Reciter|null
      */
     public function getById(int $id): ?Reciter
     {
-        return Cache::tags(['reciters'])->remember(
-            "reciter:$id",
+        return Cache::remember(
+            $this->versionedKey("reciter:$id"),
             now()->addMinutes(self::CACHE_TTL),
             fn () => Reciter::find($id)
         );
@@ -56,14 +55,11 @@ class ReciterRepository implements ReciterRepositoryInterface
 
     /**
      * Get reciter by slug
-     *
-     * @param string $slug
-     * @return Reciter|null
      */
     public function getBySlug(string $slug): ?Reciter
     {
-        return Cache::tags(['reciters'])->remember(
-            "reciter:slug:$slug",
+        return Cache::remember(
+            $this->versionedKey("reciter:slug:$slug"),
             now()->addMinutes(self::CACHE_TTL),
             fn () => Reciter::where('slug', $slug)->first()
         );
@@ -71,16 +67,12 @@ class ReciterRepository implements ReciterRepositoryInterface
 
     /**
      * Get reciters by country
-     *
-     * @param string $country
-     * @param bool $activeOnly
-     * @return Collection
      */
     public function getByCountry(string $country, bool $activeOnly = true): Collection
     {
-        $cacheKey = "reciters:country:$country:" . ($activeOnly ? 'active' : 'all');
+        $cacheKey = $this->versionedKey("reciters:country:$country:".($activeOnly ? 'active' : 'all'));
 
-        return Cache::tags(['reciters'])->remember(
+        return Cache::remember(
             $cacheKey,
             now()->addMinutes(self::CACHE_TTL),
             function () use ($country, $activeOnly) {
@@ -97,16 +89,12 @@ class ReciterRepository implements ReciterRepositoryInterface
 
     /**
      * Get reciters by recitation style
-     *
-     * @param string $style
-     * @param bool $activeOnly
-     * @return Collection
      */
     public function getByStyle(string $style, bool $activeOnly = true): Collection
     {
-        $cacheKey = "reciters:style:$style:" . ($activeOnly ? 'active' : 'all');
+        $cacheKey = $this->versionedKey("reciters:style:$style:".($activeOnly ? 'active' : 'all'));
 
-        return Cache::tags(['reciters'])->remember(
+        return Cache::remember(
             $cacheKey,
             now()->addMinutes(self::CACHE_TTL),
             function () use ($style, $activeOnly) {
@@ -123,15 +111,12 @@ class ReciterRepository implements ReciterRepositoryInterface
 
     /**
      * Get featured reciters
-     *
-     * @param bool $activeOnly
-     * @return Collection
      */
     public function getFeatured(bool $activeOnly = true): Collection
     {
-        $cacheKey = 'reciters:featured:' . ($activeOnly ? 'active' : 'all');
+        $cacheKey = $this->versionedKey('reciters:featured:'.($activeOnly ? 'active' : 'all'));
 
-        return Cache::tags(['reciters'])->remember(
+        return Cache::remember(
             $cacheKey,
             now()->addMinutes(self::CACHE_TTL),
             function () use ($activeOnly) {
@@ -148,13 +133,11 @@ class ReciterRepository implements ReciterRepositoryInterface
 
     /**
      * Get active reciters
-     *
-     * @return Collection
      */
     public function getActive(): Collection
     {
-        return Cache::tags(['reciters'])->remember(
-            'reciters:active',
+        return Cache::remember(
+            $this->versionedKey('reciters:active'),
             now()->addMinutes(self::CACHE_TTL),
             fn () => Reciter::active()->ordered()->get()
         );
@@ -163,19 +146,16 @@ class ReciterRepository implements ReciterRepositoryInterface
     /**
      * Search reciters by name (multi-language)
      *
-     * @param string $query
-     * @param bool $activeOnly
-     * @return Collection
+     * Reciter names live in the reciter_translations table (one row per locale),
+     * so the search runs against translations rather than a JSON column.
      */
     public function search(string $query, bool $activeOnly = true): Collection
     {
-        $searchQuery = Reciter::where(function ($q) use ($query) {
-            $q->whereRaw("JSON_EXTRACT(name, '$.ar') LIKE ?", ["%{$query}%"])
-                ->orWhereRaw("JSON_EXTRACT(name, '$.en') LIKE ?", ["%{$query}%"])
-                ->orWhereRaw("JSON_EXTRACT(name, '$.fr') LIKE ?", ["%{$query}%"])
-                ->orWhereRaw("JSON_EXTRACT(name, '$.tr') LIKE ?", ["%{$query}%"])
-                ->orWhereRaw("JSON_EXTRACT(name, '$.ur') LIKE ?", ["%{$query}%"]);
-        })->ordered();
+        $searchQuery = Reciter::query()
+            ->whereHas('translations', function ($q) use ($query) {
+                $q->where('name', 'LIKE', "%{$query}%");
+            })
+            ->ordered();
 
         if ($activeOnly) {
             $searchQuery->active();
@@ -186,9 +166,6 @@ class ReciterRepository implements ReciterRepositoryInterface
 
     /**
      * Create new reciter
-     *
-     * @param array $data
-     * @return Reciter
      */
     public function create(array $data): Reciter
     {
@@ -200,10 +177,6 @@ class ReciterRepository implements ReciterRepositoryInterface
 
     /**
      * Update reciter
-     *
-     * @param Reciter $reciter
-     * @param array $data
-     * @return bool
      */
     public function update(Reciter $reciter, array $data): bool
     {
@@ -215,9 +188,6 @@ class ReciterRepository implements ReciterRepositoryInterface
 
     /**
      * Delete reciter
-     *
-     * @param Reciter $reciter
-     * @return bool
      */
     public function delete(Reciter $reciter): bool
     {
@@ -230,7 +200,6 @@ class ReciterRepository implements ReciterRepositoryInterface
     /**
      * Bulk delete reciters
      *
-     * @param array $ids
      * @return int Number of deleted reciters
      */
     public function bulkDelete(array $ids): int
@@ -244,8 +213,7 @@ class ReciterRepository implements ReciterRepositoryInterface
     /**
      * Reorder reciters
      *
-     * @param array $ids Ordered array of IDs
-     * @return bool
+     * @param  array  $ids  Ordered array of IDs
      */
     public function reorder(array $ids): bool
     {
@@ -260,10 +228,6 @@ class ReciterRepository implements ReciterRepositoryInterface
 
     /**
      * Update featured status
-     *
-     * @param Reciter $reciter
-     * @param bool $featured
-     * @return bool
      */
     public function updateFeatured(Reciter $reciter, bool $featured): bool
     {
@@ -275,10 +239,6 @@ class ReciterRepository implements ReciterRepositoryInterface
 
     /**
      * Update active status
-     *
-     * @param Reciter $reciter
-     * @param bool $active
-     * @return bool
      */
     public function updateActive(Reciter $reciter, bool $active): bool
     {
@@ -290,9 +250,6 @@ class ReciterRepository implements ReciterRepositoryInterface
 
     /**
      * Count recitations for reciter
-     *
-     * @param Reciter $reciter
-     * @return int
      */
     public function countRecitations(Reciter $reciter): int
     {
@@ -300,12 +257,130 @@ class ReciterRepository implements ReciterRepositoryInterface
     }
 
     /**
-     * Clear all reciter caches
+     * Get paginated reciters with search/filter support (admin list).
      *
-     * @return void
+     * Searches against the reciter_translations table so the query is
+     * database-agnostic and works whether or not a JSON name column exists.
+     *
+     * @param  array{search?: string, country?: string, style?: string}  $filters
+     */
+    public function paginateWithFilters(array $filters, int $perPage): LengthAwarePaginator
+    {
+        $query = Reciter::query()
+            ->select([
+                'id',
+                'slug',
+                'country',
+                'style',
+                'everyayah_folder',
+                'profile_image',
+                'is_featured',
+                'is_active',
+                'display_order',
+                'created_at',
+                'updated_at',
+            ])
+            ->with(['translations:reciter_id,locale,name,description,is_ready'])
+            ->orderBy('display_order')
+            ->orderByDesc('created_at');
+
+        $search = $filters['search'] ?? null;
+        if ($search) {
+            $query->whereHas('translations', function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%");
+            });
+        }
+
+        if (! empty($filters['country'])) {
+            $query->where('country', $filters['country']);
+        }
+
+        if (! empty($filters['style'])) {
+            $query->where('style', $filters['style']);
+        }
+
+        return $query->paginate($perPage);
+    }
+
+    /**
+     * Get aggregate stats for the admin dashboard card.
+     *
+     * Uses a single query with conditional aggregates to avoid N round-trips.
+     *
+     * @return array{total: int, featured: int, countries: int}
+     */
+    public function getStats(): array
+    {
+        $row = DB::table('quran_reciters')
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw('SUM(CASE WHEN is_featured = 1 THEN 1 ELSE 0 END) as featured')
+            ->selectRaw('COUNT(DISTINCT country) as countries')
+            ->whereNotNull('country')
+            ->first();
+
+        // A separate total count is needed because the WHERE above excludes null-country rows.
+        $total = DB::table('quran_reciters')->count();
+
+        return [
+            'total' => $total,
+            'featured' => (int) ($row->featured ?? 0),
+            'countries' => (int) ($row->countries ?? 0),
+        ];
+    }
+
+    /**
+     * Get a sorted, distinct list of non-null country codes.
+     *
+     * @return Collection<int, string>
+     */
+    public function getDistinctCountries(): Collection
+    {
+        return Reciter::query()
+            ->select('country')
+            ->distinct()
+            ->whereNotNull('country')
+            ->orderBy('country')
+            ->pluck('country');
+    }
+
+    /**
+     * Fetch a set of reciters by their primary keys.
+     *
+     * Used by the service before bulk-deleting to collect image paths for cleanup.
+     *
+     * @param  array<int>  $ids
+     * @return EloquentCollection<int, Reciter>
+     */
+    public function getByIds(array $ids): EloquentCollection
+    {
+        return Reciter::query()
+            ->select(['id', 'profile_image'])
+            ->whereIn('id', $ids)
+            ->get();
+    }
+
+    /**
+     * Clear all reciter caches.
+     *
+     * Cache::tags() requires Redis/Memcached and is not available with the
+     * file or database drivers. We use a version counter instead: bumping
+     * the version orphans every previously-cached key without needing tag
+     * support, and works with any cache driver.
      */
     private function clearCache(): void
     {
-        Cache::tags(['reciters'])->flush();
+        $versionKey = 'reciters:version';
+        Cache::forever($versionKey, ((int) Cache::get($versionKey, 0)) + 1);
+    }
+
+    /**
+     * Prefix a cache key with the current version so that clearCache()
+     * effectively invalidates all keys written by this repository.
+     */
+    private function versionedKey(string $key): string
+    {
+        $version = (int) Cache::get('reciters:version', 0);
+
+        return "reciters:v{$version}:{$key}";
     }
 }

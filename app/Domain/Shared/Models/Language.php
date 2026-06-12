@@ -98,8 +98,6 @@ class Language extends Model
 
     /**
      * Get all active languages.
-     *
-     * @return Collection
      */
     public static function getAllActive(): Collection
     {
@@ -112,8 +110,6 @@ class Language extends Model
 
     /**
      * Get the default language.
-     *
-     * @return Language|null
      */
     public static function getDefault(): ?Language
     {
@@ -126,8 +122,6 @@ class Language extends Model
 
     /**
      * Get default language (alias for compatibility)
-     *
-     * @return Language|null
      */
     public static function getDefaultCached(): ?Language
     {
@@ -136,8 +130,6 @@ class Language extends Model
 
     /**
      * Get all active languages (alias for compatibility)
-     *
-     * @return Collection
      */
     public static function getActiveCached(): Collection
     {
@@ -146,8 +138,6 @@ class Language extends Model
 
     /**
      * Get all languages (not just active)
-     *
-     * @return Collection
      */
     public static function getAllCached(): Collection
     {
@@ -160,12 +150,11 @@ class Language extends Model
 
     /**
      * Get default language code
-     *
-     * @return string
      */
     public static function getDefaultCode(): string
     {
         $default = self::getDefault();
+
         return $default ? $default->code : 'ar';
     }
 
@@ -185,9 +174,6 @@ class Language extends Model
 
     /**
      * Check if a language code is valid and active.
-     *
-     * @param string $code
-     * @return bool
      */
     public static function isValidCode(string $code): bool
     {
@@ -196,8 +182,6 @@ class Language extends Model
 
     /**
      * Clear language caches.
-     *
-     * @return void
      */
     public static function clearCache(): void
     {
@@ -208,8 +192,6 @@ class Language extends Model
 
     /**
      * Boot method to handle events.
-     *
-     * @return void
      */
     protected static function boot(): void
     {

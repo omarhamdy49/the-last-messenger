@@ -14,7 +14,7 @@ class ReadTimeCalculatorServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new ReadTimeCalculatorService();
+        $this->service = new ReadTimeCalculatorService;
     }
 
     public function test_empty_content_returns_one_minute(): void
@@ -33,7 +33,7 @@ class ReadTimeCalculatorServiceTest extends TestCase
 
     public function test_two_hundred_words_returns_one_minute(): void
     {
-        $words   = implode(' ', array_fill(0, 200, 'word'));
+        $words = implode(' ', array_fill(0, 200, 'word'));
         $content = "<p>{$words}</p>";
 
         $result = $this->service->calculate($content);
@@ -43,7 +43,7 @@ class ReadTimeCalculatorServiceTest extends TestCase
 
     public function test_four_hundred_words_returns_two_minutes(): void
     {
-        $words   = implode(' ', array_fill(0, 400, 'word'));
+        $words = implode(' ', array_fill(0, 400, 'word'));
         $content = "<p>{$words}</p>";
 
         $result = $this->service->calculate($content);
@@ -53,7 +53,7 @@ class ReadTimeCalculatorServiceTest extends TestCase
 
     public function test_six_hundred_words_returns_three_minutes(): void
     {
-        $words   = implode(' ', array_fill(0, 600, 'word'));
+        $words = implode(' ', array_fill(0, 600, 'word'));
         $content = "<article>{$words}</article>";
 
         $result = $this->service->calculate($content);
@@ -84,7 +84,7 @@ class ReadTimeCalculatorServiceTest extends TestCase
     {
         // Arabic text: several distinct words
         $arabicWords = implode(' ', array_fill(0, 200, 'كلمة'));
-        $content     = "<p>{$arabicWords}</p>";
+        $content = "<p>{$arabicWords}</p>";
 
         // Result should be a positive integer (Arabic is counted by str_word_count)
         $result = $this->service->calculate($content);

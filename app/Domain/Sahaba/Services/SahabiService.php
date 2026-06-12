@@ -113,4 +113,14 @@ class SahabiService extends BaseService
     {
         return $this->repository->count(['gender' => $gender]);
     }
+
+    /**
+     * Get aggregate gender stats for the admin index page (single query).
+     *
+     * @return array{total: int, male: int, female: int}
+     */
+    public function getIndexStats(): array
+    {
+        return $this->repository->getIndexStats();
+    }
 }

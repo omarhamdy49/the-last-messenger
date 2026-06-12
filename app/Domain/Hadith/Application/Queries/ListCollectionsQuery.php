@@ -12,7 +12,7 @@ use App\Domain\Shared\Application\Queries\Query;
 final readonly class ListCollectionsQuery implements Query
 {
     /**
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      */
     public function __construct(
         public int $perPage = 15,

@@ -28,7 +28,7 @@ class BookRepository extends BaseRepository implements BookRepositoryInterface
      */
     protected function getModel(): Model
     {
-        return new HadithBook();
+        return new HadithBook;
     }
 
     /**
@@ -55,7 +55,7 @@ class BookRepository extends BaseRepository implements BookRepositoryInterface
     {
         $allowedLocales = ['ar', 'en', 'fr', 'tr', 'ur'];
         $safeLocale = in_array($locale, $allowedLocales, true) ? $locale : 'ar';
-        $slugField = 'slug_' . $safeLocale;
+        $slugField = 'slug_'.$safeLocale;
 
         return Cache::remember(
             "hadith_book_slug_{$collectionId}_{$safeLocale}_{$slug}",
@@ -88,7 +88,7 @@ class BookRepository extends BaseRepository implements BookRepositoryInterface
     {
         return $this->model
             ->with([
-                'hadiths' => fn ($q) => $q->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])->orderBy('hadith_number'),
+                'hadiths' => fn ($q) => $q->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])->orderByRaw('LENGTH(hadith_number)')->orderBy('hadith_number'),
                 'hadiths.translations',
             ])
             ->find($id);
@@ -103,7 +103,7 @@ class BookRepository extends BaseRepository implements BookRepositoryInterface
             ->with([
                 'collection:id,name_ar,name_en,abbreviation',
                 'chapters:id,book_id,chapter_number,name,display_order',
-                'hadiths' => fn ($q) => $q->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])->orderBy('hadith_number'),
+                'hadiths' => fn ($q) => $q->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])->orderByRaw('LENGTH(hadith_number)')->orderBy('hadith_number'),
                 'hadiths.translations',
             ])
             ->find($id);
@@ -170,6 +170,30 @@ class BookRepository extends BaseRepository implements BookRepositoryInterface
     /**
      * {@inheritdoc}
      */
+    public function getAllForDropdown(?int $collectionId = null): Collection
+    {
+        $cacheKey = 'hadith_books_dropdown'.($collectionId ? "_collection_{$collectionId}" : '_all');
+
+        return Cache::remember(
+            $cacheKey,
+            self::CACHE_TTL,
+            function () use ($collectionId) {
+                $query = $this->model
+                    ->select(['id', 'title_ar', 'title_en', 'collection_id'])
+                    ->orderBy('title_ar');
+
+                if ($collectionId !== null) {
+                    $query->where('collection_id', $collectionId);
+                }
+
+                return $query->get();
+            }
+        );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function paginateByCollection(
         int $collectionId,
         int $perPage = 15,
@@ -181,5 +205,44 @@ class BookRepository extends BaseRepository implements BookRepositoryInterface
             ->withCount(['hadiths', 'chapters'])
             ->orderBy($sortBy, $sortDirection)
             ->paginate($perPage);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getPublicByCollectionAndNumber(int $collectionId, int $bookNumber): ?HadithBook
+    {
+        return $this->model
+            ->select(['id', 'collection_id', 'book_number', 'title_ar', 'title_en', 'slug_ar', 'slug_en', 'chapter_title_ar', 'chapter_title_en', 'created_at', 'updated_at'])
+            // Aliased to the attribute names BookDTO reads, so mapping the DTO
+            // does not fall back to per-model count queries.
+            ->withCount(['hadiths as hadith_count', 'chapters as chapters_count'])
+            ->with('collection:id,name_ar,name_en')
+            ->where('collection_id', $collectionId)
+            ->where('book_number', $bookNumber)
+            ->first();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getAdjacentByNumber(int $collectionId, int $bookNumber): array
+    {
+        $columns = ['id', 'collection_id', 'book_number', 'title_ar', 'title_en'];
+
+        return [
+            'previous' => $this->model
+                ->select($columns)
+                ->where('collection_id', $collectionId)
+                ->where('book_number', '<', $bookNumber)
+                ->orderByDesc('book_number')
+                ->first(),
+            'next' => $this->model
+                ->select($columns)
+                ->where('collection_id', $collectionId)
+                ->where('book_number', '>', $bookNumber)
+                ->orderBy('book_number')
+                ->first(),
+        ];
     }
 }

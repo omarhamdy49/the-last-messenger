@@ -46,7 +46,7 @@ class SeerahEventController extends Controller
             return $this->successResponse(
                 new SeerahEventResource($event)
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return $this->notFoundResponse($e->getMessage());
         }
     }

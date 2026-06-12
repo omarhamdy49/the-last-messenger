@@ -5,26 +5,36 @@ declare(strict_types=1);
 namespace App\Domain\Hadith\Services;
 
 use App\Domain\Hadith\Application\DTOs\BookDTO;
+use App\Domain\Hadith\Application\DTOs\ChapterContextDTO;
 use App\Domain\Hadith\Application\DTOs\CollectionDTO;
+use App\Domain\Hadith\Application\DTOs\HadithDetailDTO;
 use App\Domain\Hadith\Application\DTOs\HadithDTO;
-use App\Domain\Hadith\Application\DTOs\ThemeDTO;
+use App\Domain\Hadith\Application\DTOs\ParallelNarrationsDTO;
 use App\Domain\Hadith\Application\Handlers\GetBookByIdHandler;
+use App\Domain\Hadith\Application\Handlers\GetChapterContextHandler;
 use App\Domain\Hadith\Application\Handlers\GetCollectionByIdHandler;
 use App\Domain\Hadith\Application\Handlers\GetCollectionBySlugHandler;
 use App\Domain\Hadith\Application\Handlers\GetHadithByIdHandler;
+use App\Domain\Hadith\Application\Handlers\GetHadithDetailHandler;
+use App\Domain\Hadith\Application\Handlers\GetParallelNarrationsHandler;
 use App\Domain\Hadith\Application\Handlers\GetRandomHadithHandler;
 use App\Domain\Hadith\Application\Handlers\ListBooksByCollectionHandler;
+use App\Domain\Hadith\Application\Handlers\ListChapterHadithsHandler;
 use App\Domain\Hadith\Application\Handlers\ListCollectionsHandler;
 use App\Domain\Hadith\Application\Handlers\ListHadithsByBookHandler;
 use App\Domain\Hadith\Application\Handlers\ListHadithsByThemeHandler;
 use App\Domain\Hadith\Application\Handlers\ListThemesHandler;
 use App\Domain\Hadith\Application\Handlers\SearchHadithHandler;
 use App\Domain\Hadith\Application\Queries\GetBookByIdQuery;
+use App\Domain\Hadith\Application\Queries\GetChapterContextQuery;
 use App\Domain\Hadith\Application\Queries\GetCollectionByIdQuery;
 use App\Domain\Hadith\Application\Queries\GetCollectionBySlugQuery;
 use App\Domain\Hadith\Application\Queries\GetHadithByIdQuery;
+use App\Domain\Hadith\Application\Queries\GetHadithDetailQuery;
+use App\Domain\Hadith\Application\Queries\GetParallelNarrationsQuery;
 use App\Domain\Hadith\Application\Queries\GetRandomHadithQuery;
 use App\Domain\Hadith\Application\Queries\ListBooksByCollectionQuery;
+use App\Domain\Hadith\Application\Queries\ListChapterHadithsQuery;
 use App\Domain\Hadith\Application\Queries\ListCollectionsQuery;
 use App\Domain\Hadith\Application\Queries\ListHadithsByBookQuery;
 use App\Domain\Hadith\Application\Queries\ListHadithsByThemeQuery;
@@ -52,6 +62,10 @@ final class HadithQueryService
         private readonly ListHadithsByThemeHandler $listHadithsByThemeHandler,
         private readonly ListThemesHandler $listThemesHandler,
         private readonly GetRandomHadithHandler $getRandomHadithHandler,
+        private readonly GetChapterContextHandler $getChapterContextHandler,
+        private readonly ListChapterHadithsHandler $listChapterHadithsHandler,
+        private readonly GetHadithDetailHandler $getHadithDetailHandler,
+        private readonly GetParallelNarrationsHandler $getParallelNarrationsHandler,
     ) {}
 
     // ========================================
@@ -80,12 +94,20 @@ final class HadithQueryService
         int $perPage = 15,
         array $filters = [],
         ?string $locale = 'ar',
+        int $page = 1,
+        string $sortBy = 'hadith_number',
+        string $sortDirection = 'asc',
     ): PaginatedResult {
+        // The handler resolves the DTO locale from filters['locale'].
+        $filters['locale'] = $locale ?? 'ar';
+
         $query = new SearchHadithQuery(
-            query: $searchQuery,
+            searchTerm: $searchQuery,
+            page: $page,
             perPage: $perPage,
             filters: $filters,
-            locale: $locale,
+            sortBy: $sortBy,
+            sortDirection: $sortDirection,
         );
 
         return $this->searchHadithHandler->handle($query);
@@ -108,6 +130,71 @@ final class HadithQueryService
         );
 
         return $this->getRandomHadithHandler->handle($query);
+    }
+
+    /**
+     * Get the full public detail of a hadith (translations, isnad,
+     * commentaries, scholar gradings, parallels count).
+     */
+    public function getHadithDetail(int $hadithId, ?string $locale = 'ar'): HadithDetailDTO
+    {
+        $query = new GetHadithDetailQuery(
+            hadithId: $hadithId,
+            locale: $locale,
+        );
+
+        return $this->getHadithDetailHandler->handle($query);
+    }
+
+    /**
+     * Get a hadith with its parallel narrations (same text hash).
+     */
+    public function getParallelNarrations(int $hadithId, ?string $locale = 'ar'): ParallelNarrationsDTO
+    {
+        $query = new GetParallelNarrationsQuery(
+            hadithId: $hadithId,
+            locale: $locale,
+        );
+
+        return $this->getParallelNarrationsHandler->handle($query);
+    }
+
+    /**
+     * Resolve the public chapter (kitab) page context by collection slug +
+     * book number, including previous/next chapter navigation.
+     */
+    public function getChapterContext(string $collectionSlug, int $bookNumber, ?string $locale = 'ar'): ChapterContextDTO
+    {
+        $query = new GetChapterContextQuery(
+            collectionSlug: $collectionSlug,
+            bookNumber: $bookNumber,
+            locale: $locale,
+        );
+
+        return $this->getChapterContextHandler->handle($query);
+    }
+
+    /**
+     * List the hadiths of a public chapter with search + grading filter.
+     */
+    public function listChapterHadiths(
+        int $bookId,
+        int $perPage = 15,
+        int $page = 1,
+        ?string $gradingStatus = null,
+        string $search = '',
+        ?string $locale = 'ar',
+    ): PaginatedResult {
+        $query = new ListChapterHadithsQuery(
+            bookId: $bookId,
+            perPage: $perPage,
+            page: $page,
+            gradingStatus: $gradingStatus,
+            search: $search,
+            locale: $locale,
+        );
+
+        return $this->listChapterHadithsHandler->handle($query);
     }
 
     // ========================================

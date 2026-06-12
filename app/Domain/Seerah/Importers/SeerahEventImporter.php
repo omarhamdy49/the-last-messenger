@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Seerah\Importers;
 
-use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Enums\EventStatus;
+use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Shared\Importers\BaseImporter;
 use Illuminate\Support\Str;
 

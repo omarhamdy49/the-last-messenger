@@ -19,7 +19,8 @@ final readonly class Slug implements Stringable
     private string $value;
 
     /**
-     * @param string $value The slug value
+     * @param  string  $value  The slug value
+     *
      * @throws InvalidArgumentException If slug is invalid
      */
     public function __construct(string $value)
@@ -57,7 +58,7 @@ final readonly class Slug implements Stringable
      */
     public function withSuffix(string|int $suffix): self
     {
-        return new self($this->value . '-' . $suffix);
+        return new self($this->value.'-'.$suffix);
     }
 
     /**

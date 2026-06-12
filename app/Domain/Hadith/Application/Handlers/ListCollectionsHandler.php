@@ -25,8 +25,7 @@ final class ListCollectionsHandler implements QueryHandler
     /**
      * Handle the query
      *
-     * @param ListCollectionsQuery $query
-     * @return PaginatedResult
+     * @param  ListCollectionsQuery  $query
      */
     public function handle(Query $query): PaginatedResult
     {
@@ -42,9 +41,11 @@ final class ListCollectionsHandler implements QueryHandler
 
         $locale = $query->locale ?? 'ar';
         $items = $paginator->getCollection()->map(
-            fn($collection) => CollectionDTO::fromModel($collection, $locale)
+            fn ($collection) => CollectionDTO::fromModel($collection, $locale)
         );
 
-        return PaginatedResult::fromPaginator($paginator, $items->toArray());
+        // Use the mapped DTOs as the page items (fromPaginator alone would discard
+        // them and return the raw Eloquent models from $paginator->items()).
+        return PaginatedResult::fromPaginatorWithItems($paginator, $items->all());
     }
 }

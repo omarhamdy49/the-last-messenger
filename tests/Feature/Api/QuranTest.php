@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Api;
 
 use App\Domain\Quran\Models\Surah;
-use App\Domain\Quran\Models\Verse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

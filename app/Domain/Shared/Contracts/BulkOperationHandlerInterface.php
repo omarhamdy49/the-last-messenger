@@ -16,8 +16,8 @@ interface BulkOperationHandlerInterface
      * Execute a bulk operation against a set of entity IDs.
      * Delegates all progress tracking to the caller via the returned counts.
      *
-     * @param  string        $operationType  One of the BulkOperationTypeEnum string values
-     * @param  int[]         $ids
+     * @param  string  $operationType  One of the BulkOperationTypeEnum string values
+     * @param  int[]  $ids
      * @param  array<string, mixed>  $parameters  Operation-specific options (fields, tag_ids, etc.)
      * @return array{successCount: int, failedCount: int, errors: array<int, string>}
      */
@@ -34,9 +34,9 @@ interface BulkOperationHandlerInterface
     /**
      * Export the given entity IDs in the requested format.
      *
-     * @param  int[]   $ids
+     * @param  int[]  $ids
      * @param  string  $format  'json' or 'csv'
-     * @return string           Serialized export content
+     * @return string Serialized export content
      */
     public function export(array $ids, string $format): string;
 }

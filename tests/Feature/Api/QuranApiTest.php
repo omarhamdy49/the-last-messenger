@@ -75,25 +75,22 @@ class QuranApiTest extends TestCase
             ->assertJson(['success' => false]);
     }
 
-    public function test_random_verse_currently_triggers_type_error_when_no_data_seeded(): void
+    public function test_random_verse_returns_404_when_no_data_seeded(): void
     {
-        // KNOWN BUG: QuranService::getRandomVerse() has a non-nullable return type (Verse)
-        // but returns null when the DB is empty. PHP raises a TypeError which extends Error,
-        // not Exception, so the controller's catch(\Exception $e) block does NOT intercept it,
-        // resulting in an unhandled 500.  When the bug is fixed (either by making the return
-        // type nullable and mapping null → 404, or by seeding data) this test must be updated.
+        // getRandomVerse() returns null on an empty DB and the controller maps it to 404.
         $response = $this->getJson('/api/v1/quran/random');
 
-        $response->assertStatus(500);
+        $response->assertNotFound()
+            ->assertJson(['success' => false]);
     }
 
     public function test_random_verse_route_is_public_not_protected(): void
     {
-        // The route itself must never return 401. It may return 500 due to the
-        // current TypeError bug, but authorization must not be the cause.
+        // The route must never return 401; on an empty DB it 404s, but
+        // authorization must not be the cause of failure.
         $response = $this->getJson('/api/v1/quran/random');
 
-        $response->assertStatus(500); // 500 ≠ 401; confirms the route is public
+        $response->assertNotFound();
     }
 
     // ===================== SEARCH ENDPOINTS =====================

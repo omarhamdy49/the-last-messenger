@@ -54,6 +54,8 @@ class HadithScholar extends Model
         'name_en',
         'kunya',
         'full_name',
+        'full_name_ar',
+        'full_name_en',
         'school',
         'birth_year_hijri',
         'death_year_hijri',
@@ -73,8 +75,6 @@ class HadithScholar extends Model
 
     /**
      * Get all gradings by this scholar
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function gradings(): HasMany
     {
@@ -84,8 +84,7 @@ class HadithScholar extends Model
     /**
      * Scope: Filter by specialty/school
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $school
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeBySchool($query, string $school)
@@ -96,8 +95,7 @@ class HadithScholar extends Model
     /**
      * Scope: Filter by region
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $region
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByRegion($query, string $region)
@@ -108,8 +106,7 @@ class HadithScholar extends Model
     /**
      * Scope: Filter scholars who died in a specific century
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $century
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByCentury($query, int $century)
@@ -123,8 +120,7 @@ class HadithScholar extends Model
     /**
      * Scope: Order by death year
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $direction
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeOrderByDeathYear($query, string $direction = 'asc')
@@ -134,9 +130,6 @@ class HadithScholar extends Model
 
     /**
      * Get scholar's full display name
-     *
-     * @param string $language
-     * @return string
      */
     public function getDisplayName(string $language = 'ar'): string
     {
@@ -153,8 +146,6 @@ class HadithScholar extends Model
 
     /**
      * Get scholar's lifespan in Hijri years
-     *
-     * @return int|null
      */
     public function getLifespanAttribute(): ?int
     {
@@ -167,8 +158,6 @@ class HadithScholar extends Model
 
     /**
      * Get scholar's century (based on death year)
-     *
-     * @return int|null
      */
     public function getCenturyAttribute(): ?int
     {
@@ -181,8 +170,6 @@ class HadithScholar extends Model
 
     /**
      * Check if scholar is from classical era (before year 600 AH)
-     *
-     * @return bool
      */
     public function isClassicalScholar(): bool
     {
@@ -191,8 +178,6 @@ class HadithScholar extends Model
 
     /**
      * Check if scholar is contemporary (after year 1300 AH)
-     *
-     * @return bool
      */
     public function isContemporaryScholar(): bool
     {

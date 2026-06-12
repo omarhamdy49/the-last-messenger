@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Seerah\Services;
 
+use App\Domain\Seerah\DTOs\CreateSeerahEventData;
+use App\Domain\Seerah\DTOs\UpdateSeerahEventData;
 use App\Domain\Seerah\Enums\EventType;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Repositories\SeerahEventRepositoryInterface;
@@ -101,13 +103,27 @@ class SeerahEventService extends BaseService
     /**
      * Create a new event
      */
-    public function createEvent(array $data): SeerahEvent
+    public function createEvent(CreateSeerahEventData $data): SeerahEvent
     {
-        $data['views_count'] = 0;
-        $data['display_order'] = $data['display_order'] ?? 0;
-        $data['is_featured'] = $data['is_featured'] ?? false;
-
-        return $this->repository->create($data);
+        return $this->repository->create([
+            'slug' => $data->slug,
+            'hijri_date' => $data->hijriDate,
+            'hijri_year' => $data->hijriYear,
+            'hijri_month' => $data->hijriMonth,
+            'hijri_day' => $data->hijriDay,
+            'gregorian_date' => $data->gregorianDate,
+            'gregorian_year' => $data->gregorianYear,
+            'event_type' => $data->eventType,
+            'importance' => $data->importance,
+            'location' => $data->location,
+            'latitude' => $data->latitude,
+            'longitude' => $data->longitude,
+            'related_article_id' => $data->relatedArticleId,
+            'featured_image' => $data->featuredImage,
+            'display_order' => $data->displayOrder,
+            'is_featured' => $data->isFeatured,
+            'views_count' => 0,
+        ]);
     }
 
     /**
@@ -115,9 +131,28 @@ class SeerahEventService extends BaseService
      *
      * @throws ResourceNotFoundException
      */
-    public function updateEvent(int $id, array $data): SeerahEvent
+    public function updateEvent(int $id, UpdateSeerahEventData $data): SeerahEvent
     {
-        $updated = $this->repository->update($id, $data);
+        $payload = array_filter([
+            'slug' => $data->slug,
+            'hijri_date' => $data->hijriDate,
+            'hijri_year' => $data->hijriYear,
+            'hijri_month' => $data->hijriMonth,
+            'hijri_day' => $data->hijriDay,
+            'gregorian_date' => $data->gregorianDate,
+            'gregorian_year' => $data->gregorianYear,
+            'event_type' => $data->eventType,
+            'importance' => $data->importance,
+            'location' => $data->location,
+            'latitude' => $data->latitude,
+            'longitude' => $data->longitude,
+            'related_article_id' => $data->relatedArticleId,
+            'featured_image' => $data->featuredImage,
+            'display_order' => $data->displayOrder,
+            'is_featured' => $data->isFeatured,
+        ], fn ($v) => $v !== null);
+
+        $updated = $this->repository->update($id, $payload);
 
         if (! $updated) {
             throw new ResourceNotFoundException("Timeline event not found: {$id}");
@@ -171,5 +206,15 @@ class SeerahEventService extends BaseService
     public function search(string $query, int $perPage = 15): LengthAwarePaginator
     {
         return $this->searchEvents($query, $perPage);
+    }
+
+    /**
+     * Get aggregate stats for the index page (single query, no N+1).
+     *
+     * @return array{total: int, categories: array<string, int>}
+     */
+    public function getIndexStats(): array
+    {
+        return $this->repository->getIndexStats();
     }
 }

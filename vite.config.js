@@ -9,6 +9,7 @@ export default defineConfig({
                 'resources/css/admin.css',
                 'resources/js/app.js',
                 'resources/js/admin/app.js',
+                'resources/js/admin/rich-text.js',
             ],
             refresh: true,
         }),

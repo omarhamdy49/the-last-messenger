@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domain\Hadith\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Builder;
 
 /**
  * HadithGrading Model
@@ -54,6 +54,9 @@ class HadithGrading extends Model
         'grading_level_id',
         'grading_notes',
         'source_reference',
+        'source_url',
+        'source_name',
+        'review_status',
         'date_evaluated',
     ];
 
@@ -71,8 +74,6 @@ class HadithGrading extends Model
 
     /**
      * Get the hadith that was graded
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function hadith(): BelongsTo
     {
@@ -81,8 +82,6 @@ class HadithGrading extends Model
 
     /**
      * Get the scholar who graded this hadith
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function scholar(): BelongsTo
     {
@@ -91,8 +90,6 @@ class HadithGrading extends Model
 
     /**
      * Get the grading level
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function gradingLevel(): BelongsTo
     {
@@ -101,10 +98,6 @@ class HadithGrading extends Model
 
     /**
      * Scope: Filter by scholar
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $scholarId
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByScholar(Builder $query, int $scholarId): Builder
     {
@@ -113,10 +106,6 @@ class HadithGrading extends Model
 
     /**
      * Scope: Filter by grading level
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $levelId
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByLevel(Builder $query, int $levelId): Builder
     {
@@ -125,10 +114,6 @@ class HadithGrading extends Model
 
     /**
      * Scope: Filter by hadith
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $hadithId
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByHadith(Builder $query, int $hadithId): Builder
     {
@@ -138,10 +123,8 @@ class HadithGrading extends Model
     /**
      * Scope: Filter by date range
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param \Carbon\Carbon|string $startDate
-     * @param \Carbon\Carbon|string|null $endDate
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  \Carbon\Carbon|string  $startDate
+     * @param  \Carbon\Carbon|string|null  $endDate
      */
     public function scopeByDateRange(Builder $query, $startDate, $endDate = null): Builder
     {
@@ -156,10 +139,6 @@ class HadithGrading extends Model
 
     /**
      * Scope: Order by evaluation date
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $direction
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeOrderByDate(Builder $query, string $direction = 'desc'): Builder
     {
@@ -168,10 +147,6 @@ class HadithGrading extends Model
 
     /**
      * Scope: Get recent gradings
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $days
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeRecent(Builder $query, int $days = 30): Builder
     {
@@ -181,9 +156,6 @@ class HadithGrading extends Model
 
     /**
      * Scope: Get authentic gradings (Sahih and Hasan)
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeAuthentic(Builder $query): Builder
     {
@@ -194,9 +166,6 @@ class HadithGrading extends Model
 
     /**
      * Scope: Get weak gradings
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWeak(Builder $query): Builder
     {
@@ -207,9 +176,6 @@ class HadithGrading extends Model
 
     /**
      * Scope: Get fabricated gradings
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeFabricated(Builder $query): Builder
     {
@@ -220,9 +186,6 @@ class HadithGrading extends Model
 
     /**
      * Scope: With eager loaded relationships
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithRelations(Builder $query): Builder
     {
@@ -231,9 +194,6 @@ class HadithGrading extends Model
 
     /**
      * Get grading summary for display
-     *
-     * @param string $language
-     * @return string
      */
     public function getGradingSummary(string $language = 'ar'): string
     {
@@ -249,28 +209,22 @@ class HadithGrading extends Model
 
     /**
      * Check if grading has notes
-     *
-     * @return bool
      */
     public function hasNotes(): bool
     {
-        return !empty($this->grading_notes);
+        return ! empty($this->grading_notes);
     }
 
     /**
      * Check if grading has source reference
-     *
-     * @return bool
      */
     public function hasSourceReference(): bool
     {
-        return !empty($this->source_reference);
+        return ! empty($this->source_reference);
     }
 
     /**
      * Check if grading is authentic
-     *
-     * @return bool
      */
     public function isAuthentic(): bool
     {
@@ -279,8 +233,6 @@ class HadithGrading extends Model
 
     /**
      * Check if grading is weak
-     *
-     * @return bool
      */
     public function isWeak(): bool
     {
@@ -289,8 +241,6 @@ class HadithGrading extends Model
 
     /**
      * Check if grading is fabricated
-     *
-     * @return bool
      */
     public function isFabricated(): bool
     {
@@ -299,12 +249,10 @@ class HadithGrading extends Model
 
     /**
      * Get the grading age (time since evaluation)
-     *
-     * @return string|null
      */
     public function getAgeAttribute(): ?string
     {
-        if (!$this->date_evaluated) {
+        if (! $this->date_evaluated) {
             return null;
         }
 
@@ -313,12 +261,10 @@ class HadithGrading extends Model
 
     /**
      * Get formatted source reference with notes
-     *
-     * @return string|null
      */
     public function getFullReferenceAttribute(): ?string
     {
-        if (!$this->source_reference && !$this->grading_notes) {
+        if (! $this->source_reference && ! $this->grading_notes) {
             return null;
         }
 

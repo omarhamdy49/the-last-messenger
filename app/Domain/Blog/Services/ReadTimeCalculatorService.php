@@ -37,13 +37,13 @@ class ReadTimeCalculatorService
         foreach ($blocks as $block) {
             $type = $block['type'] ?? '';
             if ($type === 'wysiwyg') {
-                $text .= ' ' . strip_tags($block['content'] ?? '');
+                $text .= ' '.strip_tags($block['content'] ?? '');
             } elseif ($type === 'verse') {
                 foreach ($block['verses'] ?? [] as $verse) {
-                    $text .= ' ' . ($verse['text'] ?? '');
+                    $text .= ' '.($verse['text'] ?? '');
                 }
             } elseif ($type === 'hadith') {
-                $text .= ' ' . ($block['text'] ?? '');
+                $text .= ' '.($block['text'] ?? '');
             }
         }
 

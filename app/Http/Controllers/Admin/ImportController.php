@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Blog\Importers\ArticleImporter;
+use App\Domain\Hadith\Importers\HadithImporter;
+use App\Domain\Hadith\Importers\HadithNarratorImporter;
 use App\Domain\Quran\Importers\QuranSurahImporter;
 use App\Domain\Quran\Importers\QuranVerseImporter;
 use App\Domain\Quran\Importers\ReciterImporter;
 use App\Domain\Quran\Importers\TafseerImporter;
 use App\Domain\Sahaba\Importers\SahabiImporter;
 use App\Domain\Seerah\Importers\SeerahEventImporter;
-use App\Domain\Blog\Importers\ArticleImporter;
-use App\Domain\Hadith\Importers\HadithImporter;
-use App\Domain\Hadith\Importers\HadithNarratorImporter;
 use App\Domain\Shared\Models\Import;
 use App\Domain\Shared\Repositories\ImportRepositoryInterface;
 use App\Domain\Shared\Services\AdminLoggerService;
@@ -401,7 +401,7 @@ class ImportController extends Controller
             'reciters' => new ReciterImporter($import),
             'tafseer' => new TafseerImporter($import),
             'hadith_narrators' => new HadithNarratorImporter($import),
-            default => throw new \Exception("No importer found for module: {$import->module}"),
+            default => throw \App\Domain\Shared\Exceptions\ImporterNotFoundException::forModule($import->module),
         };
     }
 

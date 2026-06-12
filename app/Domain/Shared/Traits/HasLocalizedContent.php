@@ -77,10 +77,9 @@ trait HasLocalizedContent
      * Backward-compatible with Spatie's HasTranslations::getTranslation().
      * Blade views using `$model->getTranslation('title', 'ar')` continue to work.
      *
-     * @param string $field The translatable field name
-     * @param string|null $locale The locale code (defaults to app locale)
-     * @param bool $useFallbackLocale Whether to fall back to default language
-     * @return string|null
+     * @param  string  $field  The translatable field name
+     * @param  string|null  $locale  The locale code (defaults to app locale)
+     * @param  bool  $useFallbackLocale  Whether to fall back to default language
      */
     public function getTranslation(string $field, ?string $locale = null, bool $useFallbackLocale = true): ?string
     {
@@ -123,7 +122,7 @@ trait HasLocalizedContent
      * Backward-compatible with Spatie's HasTranslations::getTranslations().
      * Returns: ['ar' => '...', 'en' => '...', 'fr' => '...']
      *
-     * @param string $field The translatable field name
+     * @param  string  $field  The translatable field name
      * @return array<string, string|null>
      */
     public function getTranslations(string $field): array
@@ -143,8 +142,7 @@ trait HasLocalizedContent
     /**
      * Get the translation record for a specific locale.
      *
-     * @param string|null $locale The locale code (defaults to app locale)
-     * @return \Illuminate\Database\Eloquent\Model|null
+     * @param  string|null  $locale  The locale code (defaults to app locale)
      */
     public function translationFor(?string $locale = null): ?\Illuminate\Database\Eloquent\Model
     {
@@ -161,8 +159,7 @@ trait HasLocalizedContent
      *
      * Groups the data by locale, then upserts one record per locale.
      *
-     * @param array<string, array<string, string>> $data Keyed by field → locale → value
-     * @return void
+     * @param  array<string, array<string, string>>  $data  Keyed by field → locale → value
      */
     public function syncTranslations(array $data): void
     {
@@ -215,9 +212,8 @@ trait HasLocalizedContent
     /**
      * Check if a translation exists for a field and locale.
      *
-     * @param string $field The translatable field name
-     * @param string $locale The locale code
-     * @return bool
+     * @param  string  $field  The translatable field name
+     * @param  string  $locale  The locale code
      */
     public function hasTranslation(string $field, string $locale): bool
     {
@@ -229,8 +225,7 @@ trait HasLocalizedContent
     /**
      * Get translation for the current app locale.
      *
-     * @param string $field The translatable field name
-     * @return string|null
+     * @param  string  $field  The translatable field name
      */
     public function trans(string $field): ?string
     {
@@ -240,8 +235,7 @@ trait HasLocalizedContent
     /**
      * Check if all required translatable fields are filled for a locale.
      *
-     * @param array<string, mixed> $fields The field values for a locale
-     * @return bool
+     * @param  array<string, mixed>  $fields  The field values for a locale
      */
     protected function isLocaleReady(array $fields): bool
     {
@@ -256,9 +250,6 @@ trait HasLocalizedContent
 
     /**
      * Find a translation record by locale from the loaded relationship.
-     *
-     * @param string $locale
-     * @return \Illuminate\Database\Eloquent\Model|null
      */
     protected function findTranslationByLocale(string $locale): ?\Illuminate\Database\Eloquent\Model
     {
@@ -269,8 +260,6 @@ trait HasLocalizedContent
 
     /**
      * Get the loaded translations collection. Auto-loads if not yet loaded.
-     *
-     * @return \Illuminate\Database\Eloquent\Collection
      */
     protected function getLoadedTranslations(): \Illuminate\Database\Eloquent\Collection
     {
@@ -284,8 +273,7 @@ trait HasLocalizedContent
     /**
      * Scope: Eager load translations for a single locale.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string|null $locale
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithTranslation($query, ?string $locale = null)
@@ -300,7 +288,7 @@ trait HasLocalizedContent
     /**
      * Scope: Eager load all translations.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithAllTranslations($query)
@@ -311,10 +299,10 @@ trait HasLocalizedContent
     /**
      * Scope: Search a translatable field using whereHas on translations table.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $field Translatable field name
-     * @param string $term Search term
-     * @param string|null $locale Optional locale filter
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  string  $field  Translatable field name
+     * @param  string  $term  Search term
+     * @param  string|null  $locale  Optional locale filter
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeSearchTranslation($query, string $field, string $term, ?string $locale = null)

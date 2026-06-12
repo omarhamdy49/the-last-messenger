@@ -33,10 +33,10 @@ class SunnahDataTransformer
 
         // Fill missing languages with empty strings
         foreach (self::SUPPORTED_LANGUAGES as $lang) {
-            if (!isset($name[$lang])) {
+            if (! isset($name[$lang])) {
                 $name[$lang] = '';
             }
-            if (!isset($description[$lang])) {
+            if (! isset($description[$lang])) {
                 $description[$lang] = '';
             }
         }
@@ -77,7 +77,7 @@ class SunnahDataTransformer
 
         // Fill missing languages with empty strings
         foreach (self::SUPPORTED_LANGUAGES as $lang) {
-            if (!isset($name[$lang])) {
+            if (! isset($name[$lang])) {
                 $name[$lang] = '';
             }
         }
@@ -116,10 +116,10 @@ class SunnahDataTransformer
 
         // Fill missing languages with empty strings
         foreach (self::SUPPORTED_LANGUAGES as $lang) {
-            if (!isset($name[$lang])) {
+            if (! isset($name[$lang])) {
                 $name[$lang] = '';
             }
-            if (!isset($description[$lang])) {
+            if (! isset($description[$lang])) {
                 $description[$lang] = '';
             }
         }
@@ -172,7 +172,7 @@ class SunnahDataTransformer
                 }
 
                 // Get URN from any language
-                if (!$urn && isset($item->urn)) {
+                if (! $urn && isset($item->urn)) {
                     $urn = $item->urn;
                 }
             }
@@ -202,7 +202,7 @@ class SunnahDataTransformer
      */
     private function extractGrade(stdClass $item): string
     {
-        if (!isset($item->grades) || !is_array($item->grades) || empty($item->grades)) {
+        if (! isset($item->grades) || ! is_array($item->grades) || empty($item->grades)) {
             return 'unknown';
         }
 
@@ -238,7 +238,7 @@ class SunnahDataTransformer
      */
     public function validateCollection(array $data): bool
     {
-        return !empty($data['slug']) && !empty($data['name']['ar']);
+        return ! empty($data['slug']) && ! empty($data['name']['ar']);
     }
 
     /**
@@ -246,7 +246,7 @@ class SunnahDataTransformer
      */
     public function validateBook(array $data): bool
     {
-        return isset($data['book_number']) && !empty($data['name']['ar']);
+        return isset($data['book_number']) && ! empty($data['name']['ar']);
     }
 
     /**
@@ -255,8 +255,8 @@ class SunnahDataTransformer
     public function validateChapter(array $data): bool
     {
         // Accept if we have a chapter number and at least one language name
-        $hasName = !empty($data['name']['ar']) ||
-                  !empty($data['name']['en']);
+        $hasName = ! empty($data['name']['ar']) ||
+                  ! empty($data['name']['en']);
 
         return isset($data['chapter_number']) && $hasName;
     }
@@ -267,8 +267,8 @@ class SunnahDataTransformer
     public function validateHadith(array $data): bool
     {
         // Accept if we have at least one language translation and a hadith number
-        $hasTranslation = !empty($data['translations']['ar']) ||
-                         !empty($data['translations']['en']);
+        $hasTranslation = ! empty($data['translations']['ar']) ||
+                         ! empty($data['translations']['en']);
 
         return $hasTranslation && $data['hadith_number'] > 0;
     }

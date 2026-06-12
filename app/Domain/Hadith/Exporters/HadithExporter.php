@@ -65,19 +65,19 @@ class HadithExporter extends BaseExporter
 
         foreach ($this->selectedColumns as $column) {
             $row[] = match ($column) {
-                'id'                 => $hadith->id,
-                'hadith_number'      => $hadith->hadith_number,
-                'book'               => $hadith->book?->title[$this->language] ?? $hadith->book?->title['ar'] ?? '',
-                'grading_status'     => $hadith->grading_status ?? '',
-                'grading_agreement'  => $this->formatBoolean($hadith->grading_agreement),
-                'narrator'           => $hadith->companion
+                'id' => $hadith->id,
+                'hadith_number' => $hadith->hadith_number,
+                'book' => $hadith->book?->title[$this->language] ?? $hadith->book?->title['ar'] ?? '',
+                'grading_status' => $hadith->grading_status ?? '',
+                'grading_agreement' => $this->formatBoolean($hadith->grading_agreement),
+                'narrator' => $hadith->companion
                     ? ($this->language === 'ar'
                         ? ($hadith->companion->name_ar ?? '')
                         : ($hadith->companion->name_en ?? $hadith->companion->name_ar ?? ''))
                     : '',
-                'text'               => $this->truncate($translation?->text ?? '', 500),
-                'created_at'         => $this->formatDate($hadith->created_at),
-                default              => '',
+                'text' => $this->truncate($translation?->text ?? '', 500),
+                'created_at' => $this->formatDate($hadith->created_at),
+                default => '',
             };
         }
 
@@ -87,14 +87,14 @@ class HadithExporter extends BaseExporter
     public function headings(): array
     {
         $translations = [
-            'id'                => ['ar' => 'المعرف', 'en' => 'ID', 'fr' => 'ID', 'tr' => 'Kimlik', 'ur' => 'شناخت'],
-            'hadith_number'     => ['ar' => 'رقم الحديث', 'en' => 'Hadith Number', 'fr' => 'Numéro de hadith', 'tr' => 'Hadis No', 'ur' => 'حدیث نمبر'],
-            'book'              => ['ar' => 'الكتاب', 'en' => 'Book', 'fr' => 'Livre', 'tr' => 'Kitap', 'ur' => 'کتاب'],
-            'grading_status'    => ['ar' => 'درجة الحديث', 'en' => 'Grading', 'fr' => 'Degré', 'tr' => 'Derece', 'ur' => 'درجہ'],
+            'id' => ['ar' => 'المعرف', 'en' => 'ID', 'fr' => 'ID', 'tr' => 'Kimlik', 'ur' => 'شناخت'],
+            'hadith_number' => ['ar' => 'رقم الحديث', 'en' => 'Hadith Number', 'fr' => 'Numéro de hadith', 'tr' => 'Hadis No', 'ur' => 'حدیث نمبر'],
+            'book' => ['ar' => 'الكتاب', 'en' => 'Book', 'fr' => 'Livre', 'tr' => 'Kitap', 'ur' => 'کتاب'],
+            'grading_status' => ['ar' => 'درجة الحديث', 'en' => 'Grading', 'fr' => 'Degré', 'tr' => 'Derece', 'ur' => 'درجہ'],
             'grading_agreement' => ['ar' => 'إجماع العلماء', 'en' => 'Scholar Agreement', 'fr' => 'Accord des savants', 'tr' => 'Alim İttifakı', 'ur' => 'علما کا اتفاق'],
-            'narrator'          => ['ar' => 'الراوي', 'en' => 'Narrator', 'fr' => 'Narrateur', 'tr' => 'Ravî', 'ur' => 'راوی'],
-            'text'              => ['ar' => 'متن الحديث', 'en' => 'Hadith Text', 'fr' => 'Texte du hadith', 'tr' => 'Hadis Metni', 'ur' => 'حدیث متن'],
-            'created_at'        => ['ar' => 'تاريخ الإنشاء', 'en' => 'Created At', 'fr' => 'Créé le', 'tr' => 'Oluşturulma', 'ur' => 'تخلیق کردہ'],
+            'narrator' => ['ar' => 'الراوي', 'en' => 'Narrator', 'fr' => 'Narrateur', 'tr' => 'Ravî', 'ur' => 'راوی'],
+            'text' => ['ar' => 'متن الحديث', 'en' => 'Hadith Text', 'fr' => 'Texte du hadith', 'tr' => 'Hadis Metni', 'ur' => 'حدیث متن'],
+            'created_at' => ['ar' => 'تاريخ الإنشاء', 'en' => 'Created At', 'fr' => 'Créé le', 'tr' => 'Oluşturulma', 'ur' => 'تخلیق کردہ'],
         ];
 
         $headers = [];

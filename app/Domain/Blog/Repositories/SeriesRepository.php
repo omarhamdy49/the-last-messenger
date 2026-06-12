@@ -86,9 +86,10 @@ class SeriesRepository extends BaseRepository implements SeriesRepositoryInterfa
         $cacheKey = $this->getCacheKey('getWithArticles', compact('id'));
 
         return Cache::remember($cacheKey, $this->cacheTTL, function () use ($id) {
-            return $this->model->with(['articles' => function ($query) {
-                $query->orderBy('published_at');
-            }])->findOrFail($id);
+            return $this->model->with([
+                'articles:id,thumb,writer_id,read_time,views,is_featured,is_pinned,category_id,created_at',
+                'translations:id,series_id,locale,title,description,is_ready',
+            ])->findOrFail($id);
         });
     }
 
@@ -151,6 +152,26 @@ class SeriesRepository extends BaseRepository implements SeriesRepositoryInterfa
         $this->clearCache();
 
         return $deleted;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getStats(): array
+    {
+        $cacheKey = $this->getCacheKey('stats');
+
+        return Cache::remember($cacheKey, $this->cacheTTL, function () {
+            $row = $this->model->toBase()
+                ->selectRaw('COUNT(*) as total, COALESCE(SUM(total_articles), 0) as total_articles_in_series, COALESCE(MAX(total_articles), 0) as max_articles')
+                ->first();
+
+            return [
+                'total' => (int) ($row->total ?? 0),
+                'total_articles_in_series' => (int) ($row->total_articles_in_series ?? 0),
+                'max_articles' => (int) ($row->max_articles ?? 0),
+            ];
+        });
     }
 
     /**

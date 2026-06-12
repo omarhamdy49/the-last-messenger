@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class HadithChapterTranslation extends Model
 {
     protected $fillable = ['hadith_chapter_id', 'locale', 'name', 'description', 'is_ready'];
+
     protected $casts = ['is_ready' => 'boolean'];
 
     public function hadithChapter(): BelongsTo

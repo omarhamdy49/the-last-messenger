@@ -26,14 +26,13 @@ final class DeleteHadithHandler implements CommandHandler
     /**
      * Handle the command
      *
-     * @param DeleteHadithCommand $command
-     * @return Result
+     * @param  DeleteHadithCommand  $command
+     *
      * @throws HadithNotFoundException
      */
     public function handle(Command $command): Result
     {
         /** @var DeleteHadithCommand $command */
-
         $hadith = $this->repository->find($command->hadithId);
         if ($hadith === null) {
             throw HadithNotFoundException::withHadithId($command->hadithId);

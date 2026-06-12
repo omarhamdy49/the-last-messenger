@@ -17,7 +17,7 @@ class BusinessRuleViolationException extends DomainException
     /**
      * Create for named business rule
      *
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     public static function forRule(string $ruleName, string $message, array $context = []): static
     {

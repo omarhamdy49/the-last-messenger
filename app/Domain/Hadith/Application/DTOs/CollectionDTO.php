@@ -35,18 +35,24 @@ final readonly class CollectionDTO implements JsonSerializable
      */
     public static function fromModel(HadithCollection $collection, string $locale = 'ar'): self
     {
+        // Real schema: slug_ar/slug_en (no generic `slug`) and total_hadiths (no `hadith_count`).
+        $slug = $locale === 'ar'
+            ? ($collection->slug_ar ?? $collection->slug_en ?? '')
+            : ($collection->slug_en ?? $collection->slug_ar ?? '');
+
         return new self(
             id: $collection->id,
             nameAr: $collection->name_ar ?? '',
             nameEn: $collection->name_en,
-            slug: $collection->slug ?? '',
+            slug: $slug,
             descriptionAr: $collection->description_ar,
             descriptionEn: $collection->description_en,
-            authorId: $collection->author_id,
-            authorName: $collection->author?->name_ar ?? $collection->author?->name_en,
-            hadithCount: $collection->hadith_count ?? 0,
-            booksCount: $collection->books_count ?? $collection->books()->count(),
-            isActive: $collection->is_active ?? true,
+            authorId: null,
+            authorName: null,
+            hadithCount: (int) ($collection->total_hadiths ?? 0),
+            booksCount: (int) ($collection->books_count ?? $collection->books()->count()),
+            // The hadith_collections table has no is_active column; collections are always active.
+            isActive: true,
             createdAt: $collection->created_at?->toIso8601String(),
             updatedAt: $collection->updated_at?->toIso8601String(),
         );

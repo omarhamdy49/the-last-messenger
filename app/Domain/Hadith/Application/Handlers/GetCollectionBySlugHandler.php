@@ -25,8 +25,8 @@ final class GetCollectionBySlugHandler implements QueryHandler
     /**
      * Handle the query
      *
-     * @param GetCollectionBySlugQuery $query
-     * @return CollectionDTO
+     * @param  GetCollectionBySlugQuery  $query
+     *
      * @throws CollectionNotFoundException
      */
     public function handle(Query $query): CollectionDTO
@@ -35,7 +35,7 @@ final class GetCollectionBySlugHandler implements QueryHandler
         $collection = $this->repository->getBySlug($query->slug);
 
         if ($collection === null) {
-            throw CollectionNotFoundException::withSlug($query->slug);
+            throw CollectionNotFoundException::withCollectionSlug($query->slug);
         }
 
         if ($query->withBooks) {

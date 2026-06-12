@@ -14,6 +14,7 @@ class HadithApplication extends Model
     protected $fillable = [
         'hadith_id', 'category_ar', 'category_en',
         'description_ar', 'description_en', 'display_order',
+        'review_status', 'source_reference', 'source_url',
     ];
 
     protected $casts = [

@@ -12,8 +12,8 @@ use App\Domain\Shared\Application\Commands\Command;
 final readonly class DeleteHadithCommand implements Command
 {
     /**
-     * @param int $hadithId The hadith ID to delete
-     * @param bool $forceDelete Whether to permanently delete (true) or soft delete (false)
+     * @param  int  $hadithId  The hadith ID to delete
+     * @param  bool  $forceDelete  Whether to permanently delete (true) or soft delete (false)
      */
     public function __construct(
         public int $hadithId,

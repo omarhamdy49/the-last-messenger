@@ -28,9 +28,7 @@ use Illuminate\Support\Str;
  * @property array $name
  * @property array|null $description
  * @property int|null $parent_id
- * @property int $lft Nested set left value
- * @property int $rgt Nested set right value
- * @property int $depth Nested set depth/level
+ * @property int $depth Nesting depth (0 = root), derived from parent_id on save
  * @property string|null $icon
  * @property string|null $color
  * @property int $display_order
@@ -52,8 +50,6 @@ class Category extends Model
         'type',
         'status',
         'parent_id',
-        'lft',
-        'rgt',
         'depth',
         'icon',
         'color',
@@ -63,8 +59,6 @@ class Category extends Model
     protected $casts = [
         'type' => CategoryType::class,
         'display_order' => 'integer',
-        'lft' => 'integer',
-        'rgt' => 'integer',
         'depth' => 'integer',
     ];
 
@@ -98,15 +92,45 @@ class Category extends Model
                 $name = $model->getTranslation('name', 'en') ?? $model->getTranslation('name', 'ar') ?? 'category';
                 $model->slug = Str::slug($name);
             }
+
+            // Derive depth from parent chain so the column is always correct.
+            $model->depth = static::computeDepth($model->parent_id);
         });
 
-        // Update slug if name changes
+        // Update slug if name changes; also refresh depth when parent changes.
         static::updating(function ($model) {
             if ($model->isDirty('translations') && empty($model->slug)) {
                 $name = $model->getTranslation('name', 'en') ?? $model->getTranslation('name', 'ar') ?? 'category';
                 $model->slug = Str::slug($name);
             }
+
+            if ($model->isDirty('parent_id')) {
+                $model->depth = static::computeDepth($model->parent_id);
+            }
         });
+    }
+
+    /**
+     * Walk up the parent chain to compute the correct depth for a given parent_id.
+     * Depth is 0 for root categories (parent_id = null).
+     */
+    protected static function computeDepth(?int $parentId): int
+    {
+        $depth = 0;
+        $currentId = $parentId;
+        $visited = [];
+
+        while ($currentId !== null) {
+            if (in_array($currentId, $visited, true)) {
+                break; // Circular reference guard
+            }
+            $visited[] = $currentId;
+            $depth++;
+            $parent = static::find($currentId);
+            $currentId = $parent?->parent_id;
+        }
+
+        return $depth;
     }
 
     /**
@@ -230,14 +254,34 @@ class Category extends Model
     }
 
     /**
-     * Get all ancestors (parent, grandparent, etc.)
+     * Get all ancestors (parent, grandparent, etc.) ordered from root down.
+     *
+     * Previously this used lft/rgt nested-set range queries, but those columns
+     * were never populated (no nested-set package was installed).  This
+     * implementation walks the parent_id chain instead, which is reliable.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, static>
      */
-    public function ancestors(): Builder
+    public function ancestors(): \Illuminate\Database\Eloquent\Collection
     {
-        return static::query()
-            ->where('lft', '<', $this->lft)
-            ->where('rgt', '>', $this->rgt)
-            ->orderBy('lft');
+        $ancestors = collect();
+        $currentId = $this->parent_id;
+        $visited = [];
+
+        while ($currentId !== null) {
+            if (in_array($currentId, $visited, true)) {
+                break; // Circular reference guard
+            }
+            $visited[] = $currentId;
+            $ancestor = static::find($currentId);
+            if ($ancestor === null) {
+                break;
+            }
+            $ancestors->prepend($ancestor); // prepend keeps root-first order
+            $currentId = $ancestor->parent_id;
+        }
+
+        return $ancestors;
     }
 
     /**
@@ -260,11 +304,15 @@ class Category extends Model
     }
 
     /**
-     * Check if category is a leaf node (no children)
+     * Check if category is a leaf node (no children).
+     *
+     * Previously relied on rgt - lft === 1 (nested-set convention) but those
+     * columns were never populated, so this always returned false.  Uses a
+     * children existence check instead.
      */
     public function isLeaf(): bool
     {
-        return $this->rgt - $this->lft === 1;
+        return ! $this->children()->exists();
     }
 
     /**
@@ -273,9 +321,8 @@ class Category extends Model
     public function getBreadcrumb(string $language = 'ar'): array
     {
         $breadcrumb = [];
-        $ancestors = $this->ancestors()->get();
 
-        foreach ($ancestors as $ancestor) {
+        foreach ($this->ancestors() as $ancestor) {
             $breadcrumb[] = $ancestor->getNameInLanguage($language);
         }
 

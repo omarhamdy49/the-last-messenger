@@ -21,14 +21,14 @@ class NoNPlusOneQueriesTest extends TestCase
         // returns early, avoiding Spatie media queries incompatible with SQLite.
         for ($i = 1; $i <= 5; $i++) {
             SeerahEvent::query()->create([
-                'slug'           => "event-{$i}",
-                'event_type'     => 'other',
-                'importance'     => 'medium',
-                'is_featured'    => false,
-                'display_order'  => $i,
+                'slug' => "event-{$i}",
+                'event_type' => 'other',
+                'importance' => 'medium',
+                'is_featured' => false,
+                'display_order' => $i,
                 'featured_image' => "https://example.com/event-{$i}.jpg",
-                'title'          => ['ar' => "عنوان {$i}", 'en' => "Title {$i}"],
-                'description'    => ['ar' => "وصف {$i}", 'en' => "Description {$i}"],
+                'title' => ['ar' => "عنوان {$i}", 'en' => "Title {$i}"],
+                'description' => ['ar' => "وصف {$i}", 'en' => "Description {$i}"],
             ]);
         }
 
@@ -53,13 +53,13 @@ class NoNPlusOneQueriesTest extends TestCase
         // Create a set of surahs to trigger potential N+1 scenarios
         for ($i = 1; $i <= 5; $i++) {
             Surah::query()->create([
-                'revelation_place'  => 'makkah',
-                'revelation_order'  => $i,
-                'bismillah_pre'     => true,
-                'name_ar'           => "سورة {$i}",
-                'name_en'           => "Surah {$i}",
-                'transliteration'   => "Surah-{$i}",
-                'verses_count'      => 7,
+                'revelation_place' => 'makkah',
+                'revelation_order' => $i,
+                'bismillah_pre' => true,
+                'name_ar' => "سورة {$i}",
+                'name_en' => "Surah {$i}",
+                'transliteration' => "Surah-{$i}",
+                'verses_count' => 7,
             ]);
         }
 

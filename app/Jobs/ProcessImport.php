@@ -70,7 +70,7 @@ class ProcessImport implements ShouldQueue
             $importer = $this->getImporter();
 
             if (! $importer) {
-                throw new \RuntimeException('No importer found for module: ' . $this->import->module);
+                throw new \RuntimeException('No importer found for module: '.$this->import->module);
             }
 
             // Execute import
@@ -151,6 +151,6 @@ class ProcessImport implements ShouldQueue
             'error' => $exception->getMessage(),
         ]);
 
-        $this->import->markAsFailed('Job failed after ' . $this->tries . ' attempts: ' . $exception->getMessage());
+        $this->import->markAsFailed('Job failed after '.$this->tries.' attempts: '.$exception->getMessage());
     }
 }

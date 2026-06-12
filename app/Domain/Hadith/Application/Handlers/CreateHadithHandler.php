@@ -31,8 +31,8 @@ final class CreateHadithHandler implements CommandHandler
     /**
      * Handle the command
      *
-     * @param CreateHadithCommand $command
-     * @return HadithDTO
+     * @param  CreateHadithCommand  $command
+     *
      * @throws EntityNotFoundException
      * @throws InvalidGradingException
      */
@@ -47,7 +47,7 @@ final class CreateHadithHandler implements CommandHandler
         }
 
         // Validate grading status if provided
-        if ($command->gradingStatus !== null && !in_array($command->gradingStatus, Hadith::getGradingStatuses())) {
+        if ($command->gradingStatus !== null && ! in_array($command->gradingStatus, Hadith::getGradingStatuses())) {
             throw InvalidGradingException::forStatus($command->gradingStatus);
         }
 
@@ -83,12 +83,12 @@ final class CreateHadithHandler implements CommandHandler
             }
 
             // Attach narrators
-            if (!empty($command->narratorIds)) {
+            if (! empty($command->narratorIds)) {
                 $hadith->narrators()->attach($command->narratorIds);
             }
 
             // Attach themes
-            if (!empty($command->themeIds)) {
+            if (! empty($command->themeIds)) {
                 $hadith->themes()->attach($command->themeIds);
             }
 

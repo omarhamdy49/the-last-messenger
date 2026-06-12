@@ -59,7 +59,7 @@ class EntityNotFoundException extends DomainException
     /**
      * Create exception with custom criteria
      *
-     * @param array<string, mixed> $criteria
+     * @param  array<string, mixed>  $criteria
      */
     public static function withCriteria(string $entityType, array $criteria): static
     {

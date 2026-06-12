@@ -43,14 +43,17 @@ enum SearchModule: string
      */
     public function searchableFields(): array
     {
+        // Searchable text for content modules lives in per-locale translation
+        // tables, not on the parent row. Fields written as "relation.column"
+        // are resolved via a relationship existence query by SearchQueryBuilder.
         return match ($this) {
-            self::ARTICLE => ['title', 'content', 'excerpt'],
-            self::HADITH => ['hadith_text', 'arabic_text', 'translation'],
-            self::MEDIA => ['title', 'description'],
-            self::SEERAH => ['title', 'description', 'location'],
-            self::SAHABA => ['name', 'kunya', 'description', 'tribe'],
-            self::QURAN => ['arabic_text', 'translation'],
-            self::GENEALOGY => ['name', 'description'],
+            self::ARTICLE => ['locales.title', 'locales.excerpt', 'locales.content'],
+            self::HADITH => ['translations.text'],
+            self::MEDIA => ['translations.title', 'translations.description'],
+            self::SEERAH => ['translations.title', 'translations.description', 'location'],
+            self::SAHABA => ['translations.name', 'translations.full_name', 'translations.kunya'],
+            self::QURAN => ['translations.text', 'translations.text_notashkeel'],
+            self::GENEALOGY => ['full_name', 'translations.name', 'translations.biography'],
             self::ALL => [],
         };
     }
@@ -77,10 +80,10 @@ enum SearchModule: string
                 'narrator_id' => FilterType::MULTISELECT,
             ],
             self::MEDIA => [
-                'category_id' => FilterType::SELECT,
-                'type' => FilterType::SELECT,
-                'duration' => FilterType::RANGE,
-                'release_date' => FilterType::DATE_RANGE,
+                // Real media_programs columns (category is an enum string, not a FK).
+                'category' => FilterType::SELECT,
+                'maturity_rating' => FilterType::SELECT,
+                'year' => FilterType::RANGE,
             ],
             self::SEERAH => [
                 'event_type' => FilterType::SELECT,
@@ -112,12 +115,12 @@ enum SearchModule: string
     public function modelClass(): ?string
     {
         return match ($this) {
-            self::ARTICLE => \App\Domain\Blog\Models\Article::class,
+            self::ARTICLE => \App\Models\Article::class,
             self::HADITH => \App\Domain\Hadith\Models\Hadith::class,
             self::MEDIA => \App\Domain\Media\Models\MediaProgram::class,
             self::SEERAH => \App\Domain\Seerah\Models\SeerahEvent::class,
             self::SAHABA => \App\Domain\Sahaba\Models\Sahabi::class,
-            self::QURAN => \App\Domain\Quran\Models\QuranVerse::class,
+            self::QURAN => \App\Domain\Quran\Models\Verse::class,
             self::GENEALOGY => \App\Domain\Genealogy\Models\Person::class,
             self::ALL => null,
         };

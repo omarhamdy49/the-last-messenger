@@ -42,7 +42,7 @@ class StoreArticleRequest extends FormRequest
         foreach ($locales as $locale) {
             // Only Arabic title and content are required; other locales are optional
             $isRequired = $locale === 'ar';
-            $rules["title.{$locale}"] = ($isRequired ? 'required' : 'nullable') . '|string|max:200';
+            $rules["title.{$locale}"] = ($isRequired ? 'required' : 'nullable').'|string|max:200';
             $rules["slug.{$locale}"] = ['nullable', 'string', 'max:255', Rule::unique('article_locale', 'slug')->where('locale', $locale)];
             $rules["excerpt.{$locale}"] = 'nullable|string|max:500';
             $rules["description.{$locale}"] = 'nullable|string';
@@ -70,6 +70,10 @@ class StoreArticleRequest extends FormRequest
         $rules['tags.*'] = 'exists:tags,id';
 
         // Publishing
+        // Without a status rule, validated() drops the field and articles are always
+        // created as drafts regardless of the form's status select.
+        $rules['status'] = ['nullable', \Illuminate\Validation\Rule::in(\App\Domain\Blog\Enums\ArticleStatus::values())];
+        $rules['scheduled_at'] = 'nullable|date';
         $rules['is_featured'] = 'nullable|boolean';
         $rules['is_pinned'] = 'nullable|boolean';
 

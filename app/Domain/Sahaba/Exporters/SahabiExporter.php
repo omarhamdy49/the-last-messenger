@@ -77,7 +77,11 @@ class SahabiExporter extends BaseExporter
                 'status' => ucfirst($sahabi->status ?? ''),
                 'hadith_count' => $sahabi->hadith_count ?? 0,
                 'known_for' => $this->formatMultiLanguageField($sahabi->known_for),
-                'battles_participated' => $this->formatArray($sahabi->battles_participated),
+                'battles_participated' => $this->formatArray(
+                    $sahabi->relationLoaded('battles')
+                        ? $sahabi->battles->pluck('battle_name')->all()
+                        : $sahabi->battles()->pluck('battle_name')->all()
+                ),
                 'father_name' => $this->formatMultiLanguageField($sahabi->father_name),
                 'mother_name' => $this->formatMultiLanguageField($sahabi->mother_name),
                 'spouse_names' => $this->formatArray($sahabi->spouse_names),

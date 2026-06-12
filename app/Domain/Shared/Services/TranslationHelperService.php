@@ -6,7 +6,6 @@ namespace App\Domain\Shared\Services;
 
 use App\Domain\Shared\Models\Language;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 
 /**
  * Translation Helper Service
@@ -17,8 +16,6 @@ class TranslationHelperService
 {
     /**
      * Get all active languages
-     *
-     * @return Collection
      */
     public function getActiveLanguages(): Collection
     {
@@ -27,8 +24,6 @@ class TranslationHelperService
 
     /**
      * Get default language
-     *
-     * @return Language|null
      */
     public function getDefaultLanguage(): ?Language
     {
@@ -37,8 +32,6 @@ class TranslationHelperService
 
     /**
      * Get default language code
-     *
-     * @return string
      */
     public function getDefaultLanguageCode(): string
     {
@@ -47,8 +40,6 @@ class TranslationHelperService
 
     /**
      * Get active language codes
-     *
-     * @return array
      */
     public function getActiveLanguageCodes(): array
     {
@@ -58,9 +49,9 @@ class TranslationHelperService
     /**
      * Validate that translation data has required languages
      *
-     * @param array $data Translation data
-     * @param string $field Field name to validate
-     * @param bool $requireDefault Whether default language is required
+     * @param  array  $data  Translation data
+     * @param  string  $field  Field name to validate
+     * @param  bool  $requireDefault  Whether default language is required
      * @return array Array with 'valid' bool and 'errors' array
      */
     public function validateTranslation(array $data, string $field, bool $requireDefault = true): array
@@ -96,7 +87,7 @@ class TranslationHelperService
         $invalidCodes = array_diff(array_keys($translations), $validCodes);
 
         if (! empty($invalidCodes)) {
-            $errors[] = "The {$field} contains invalid language codes: " . implode(', ', $invalidCodes);
+            $errors[] = "The {$field} contains invalid language codes: ".implode(', ', $invalidCodes);
         }
 
         return [
@@ -108,8 +99,8 @@ class TranslationHelperService
     /**
      * Fill missing translations with default language value or empty string
      *
-     * @param array $data Translation data
-     * @param bool $useDefaultValue Whether to copy default language value
+     * @param  array  $data  Translation data
+     * @param  bool  $useDefaultValue  Whether to copy default language value
      * @return array Filled translation data
      */
     public function fillMissingTranslations(array $data, bool $useDefaultValue = false): array
@@ -130,8 +121,8 @@ class TranslationHelperService
     /**
      * Sanitize translations (trim, remove empty values)
      *
-     * @param array $data Translation data
-     * @param bool $removeEmpty Whether to remove empty translations
+     * @param  array  $data  Translation data
+     * @param  bool  $removeEmpty  Whether to remove empty translations
      * @return array Sanitized translation data
      */
     public function sanitizeTranslations(array $data, bool $removeEmpty = false): array
@@ -158,10 +149,9 @@ class TranslationHelperService
     /**
      * Get translation for specific language with fallback
      *
-     * @param array $translations Translation array
-     * @param string|null $locale Desired language code (null for app locale)
-     * @param string|null $fallback Fallback language code (null for default)
-     * @return string
+     * @param  array  $translations  Translation array
+     * @param  string|null  $locale  Desired language code (null for app locale)
+     * @param  string|null  $fallback  Fallback language code (null for default)
      */
     public function getTranslation(array $translations, ?string $locale = null, ?string $fallback = null): string
     {
@@ -191,8 +181,8 @@ class TranslationHelperService
     /**
      * Prepare translatable fields for storage
      *
-     * @param array $data Input data
-     * @param array $translatableFields List of translatable field names
+     * @param  array  $data  Input data
+     * @param  array  $translatableFields  List of translatable field names
      * @return array Prepared data
      */
     public function prepareForStorage(array $data, array $translatableFields): array
@@ -210,20 +200,19 @@ class TranslationHelperService
     /**
      * Create empty translation array with all language codes
      *
-     * @param string $defaultValue Default value for all languages
-     * @return array
+     * @param  string  $defaultValue  Default value for all languages
      */
     public function createEmptyTranslationArray(string $defaultValue = ''): array
     {
         $activeCodes = $this->getActiveLanguageCodes();
+
         return array_fill_keys($activeCodes, $defaultValue);
     }
 
     /**
      * Check if translation is complete (all languages have values)
      *
-     * @param array $translations Translation array
-     * @return bool
+     * @param  array  $translations  Translation array
      */
     public function isTranslationComplete(array $translations): bool
     {
@@ -241,7 +230,7 @@ class TranslationHelperService
     /**
      * Get missing translations
      *
-     * @param array $translations Translation array
+     * @param  array  $translations  Translation array
      * @return array Array of missing language codes
      */
     public function getMissingTranslations(array $translations): array

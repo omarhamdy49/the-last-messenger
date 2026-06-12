@@ -16,8 +16,6 @@ class LanguageService
 {
     /**
      * Get all languages
-     *
-     * @return Collection
      */
     public function getAllLanguages(): Collection
     {
@@ -26,8 +24,6 @@ class LanguageService
 
     /**
      * Get active languages
-     *
-     * @return Collection
      */
     public function getActiveLanguages(): Collection
     {
@@ -36,8 +32,6 @@ class LanguageService
 
     /**
      * Get default language
-     *
-     * @return Language|null
      */
     public function getDefaultLanguage(): ?Language
     {
@@ -46,9 +40,6 @@ class LanguageService
 
     /**
      * Get language by code
-     *
-     * @param string $code
-     * @return Language|null
      */
     public function getLanguageByCode(string $code): ?Language
     {
@@ -57,9 +48,6 @@ class LanguageService
 
     /**
      * Check if language code is valid
-     *
-     * @param string $code
-     * @return bool
      */
     public function isValidLanguageCode(string $code): bool
     {
@@ -68,9 +56,6 @@ class LanguageService
 
     /**
      * Get language codes
-     *
-     * @param bool $activeOnly
-     * @return array
      */
     public function getLanguageCodes(bool $activeOnly = true): array
     {
@@ -83,8 +68,6 @@ class LanguageService
 
     /**
      * Get RTL languages
-     *
-     * @return Collection
      */
     public function getRtlLanguages(): Collection
     {
@@ -93,8 +76,6 @@ class LanguageService
 
     /**
      * Get LTR languages
-     *
-     * @return Collection
      */
     public function getLtrLanguages(): Collection
     {
@@ -103,21 +84,16 @@ class LanguageService
 
     /**
      * Check if language is RTL
-     *
-     * @param string $code
-     * @return bool
      */
     public function isRtl(string $code): bool
     {
         $language = $this->getLanguageByCode($code);
+
         return $language ? $language->direction === 'rtl' : false;
     }
 
     /**
      * Create or update language
-     *
-     * @param array $data
-     * @return Language
      */
     public function createOrUpdateLanguage(array $data): Language
     {
@@ -133,9 +109,6 @@ class LanguageService
 
     /**
      * Toggle language status
-     *
-     * @param string $code
-     * @return bool
      */
     public function toggleLanguageStatus(string $code): bool
     {
@@ -155,9 +128,6 @@ class LanguageService
 
     /**
      * Set default language
-     *
-     * @param string $code
-     * @return bool
      */
     public function setDefaultLanguage(string $code): bool
     {
@@ -181,8 +151,6 @@ class LanguageService
 
     /**
      * Seed default languages
-     *
-     * @return void
      */
     public function seedDefaultLanguages(): void
     {

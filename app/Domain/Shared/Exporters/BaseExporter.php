@@ -19,7 +19,7 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
  * Base Exporter Class
  * Abstract class that all exporters must extend
  */
-abstract class BaseExporter implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
+abstract class BaseExporter implements FromCollection, ShouldAutoSize, WithHeadings, WithMapping, WithStyles
 {
     use Exportable;
 
@@ -97,7 +97,6 @@ abstract class BaseExporter implements FromCollection, WithHeadings, WithMapping
     /**
      * Apply styles to worksheet
      *
-     * @param  Worksheet  $sheet
      * @return array<int|string, mixed>
      */
     public function styles(Worksheet $sheet): array

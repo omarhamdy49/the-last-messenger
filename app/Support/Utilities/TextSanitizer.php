@@ -82,6 +82,45 @@ class TextSanitizer
     }
 
     /**
+     * Normalize an Arabic search term to match the stored "*_notashkeel" columns.
+     *
+     * These columns (e.g. quran_verse_translations.text_notashkeel) were produced
+     * by the dataset normalizer (prophet-data-generator/quran/normalize_arabic.py):
+     * tashkeel removed, every alef form collapsed to plain alef, alef-maksura to ya,
+     * hamza carriers normalized, tatweel removed. A user query almost never carries
+     * diacritics or the Quranic wasla alef ("ٱ"), so it must be normalized the same
+     * way before a LIKE comparison, otherwise common terms like "الصبر" never match.
+     *
+     * @param  string  $term  Raw user search term
+     * @return string Normalized term suitable for LIKE on a notashkeel column
+     */
+    public static function normalizeArabicForSearch(string $term): string
+    {
+        // Strip all tashkeel and Quranic annotation marks (U+064B–U+065F, U+0670).
+        $term = preg_replace('/[\x{064B}-\x{065F}\x{0670}]/u', '', $term);
+
+        $replacements = [
+            'ٱ' => 'ا', // ALEF WASLA
+            'إ' => 'ا', // ALEF WITH HAMZA BELOW
+            'أ' => 'ا', // ALEF WITH HAMZA ABOVE
+            'آ' => 'ا', // ALEF WITH MADDA ABOVE
+            'ٲ' => 'ا',
+            'ٳ' => 'ا',
+            'ى' => 'ي', // ALEF MAKSURA -> YA
+            'ؤ' => 'و', // WAW WITH HAMZA
+            'ئ' => 'ي', // YA WITH HAMZA
+            'ـ' => '',  // TATWEEL / KASHIDA
+        ];
+
+        $term = strtr($term, $replacements);
+
+        // Collapse whitespace introduced by removals.
+        $term = preg_replace('/\s+/u', ' ', $term);
+
+        return trim($term);
+    }
+
+    /**
      * Normalize Arabic text by removing diacritical marks
      * Useful for search when diacritics shouldn't affect matching
      *

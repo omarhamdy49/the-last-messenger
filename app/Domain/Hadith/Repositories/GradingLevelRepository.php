@@ -27,7 +27,7 @@ class GradingLevelRepository extends BaseRepository implements GradingLevelRepos
      */
     protected function getModel(): Model
     {
-        return new HadithGradingLevel();
+        return new HadithGradingLevel;
     }
 
     /**

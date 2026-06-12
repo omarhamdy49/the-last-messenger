@@ -6,7 +6,7 @@ namespace App\Domain\Quran\Repositories;
 
 use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Services\QuranCacheKeys;
-use App\Domain\Quran\Models\VerseTranslation;
+use App\Domain\Shared\Helpers\FullTextSearchHelper;
 use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -21,7 +21,8 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
     private const CACHE_TTL = 3600;
 
     /**
-     * Columns to select for verse queries (no select * anywhere)
+     * Columns to select for verse queries (no select * anywhere).
+     * Used by methods that query quran_verses alone (no JOIN).
      */
     private const VERSE_COLUMNS = [
         'id',
@@ -35,6 +36,24 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
         'manzil_number',
         'sajdah_number',
         'page_number',
+    ];
+
+    /**
+     * Fully-qualified verse columns for queries that JOIN quran_verse_translations.
+     * Without the table prefix, 'id' would be ambiguous between the two joined tables.
+     */
+    private const VERSE_COLUMNS_QUALIFIED = [
+        'quran_verses.id',
+        'quran_verses.surah_id',
+        'quran_verses.verse_number',
+        'quran_verses.verse_key',
+        'quran_verses.juz_number',
+        'quran_verses.hizb_number',
+        'quran_verses.rub_el_hizb_number',
+        'quran_verses.ruku_number',
+        'quran_verses.manzil_number',
+        'quran_verses.sajdah_number',
+        'quran_verses.page_number',
     ];
 
     /**
@@ -142,48 +161,57 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
     }
 
     /**
-     * Search in Arabic text via quran_verse_translations (lang='ar')
+     * Search in Arabic text via quran_verse_translations (lang='ar').
+     *
+     * Single JOIN query replaces the previous two-step pluck+whereIn approach,
+     * which loaded thousands of IDs into PHP memory and produced a huge IN clause.
+     * FULLTEXT index covers (text, text_notashkeel) on quran_verse_translations.
+     * groupBy prevents duplicate verse rows when multiple translation rows match.
      */
     public function searchArabic(string $query, int $perPage = 20): LengthAwarePaginator
     {
-        $matchingVerseIds = VerseTranslation::query()
-            ->select('verse_id')
-            ->where('lang', 'ar')
-            ->where(function ($q) use ($query) {
-                $q->where('text', 'LIKE', "%{$query}%")
-                    ->orWhere('text_notashkeel', 'LIKE', "%{$query}%");
-            })
-            ->pluck('verse_id');
-
         return $this->model
-            ->select(self::VERSE_COLUMNS)
-            ->whereIn('id', $matchingVerseIds)
+            ->select(self::VERSE_COLUMNS_QUALIFIED)
+            ->join('quran_verse_translations', 'quran_verses.id', '=', 'quran_verse_translations.verse_id')
+            ->where('quran_verse_translations.lang', 'ar')
+            ->where(function ($q) use ($query) {
+                FullTextSearchHelper::apply(
+                    $q,
+                    ['quran_verse_translations.text', 'quran_verse_translations.text_notashkeel'],
+                    $query
+                );
+            })
+            ->groupBy('quran_verses.id')
             ->with([self::SURAH_EAGER, self::TRANSLATIONS_EAGER])
-            ->orderBy('surah_id')
-            ->orderBy('verse_number')
+            ->orderBy('quran_verses.surah_id')
+            ->orderBy('quran_verses.verse_number')
             ->paginate($perPage);
     }
 
     /**
-     * Search in translations for a given language
+     * Search in translations for a given language.
+     *
+     * Single JOIN query replaces the previous two-step pluck+whereIn approach.
+     * FULLTEXT index covers (text, text_notashkeel) on quran_verse_translations.
+     * groupBy prevents duplicate verse rows when multiple translation rows match.
      */
     public function searchTranslation(string $query, string $language, int $perPage = 20): LengthAwarePaginator
     {
-        $matchingVerseIds = VerseTranslation::query()
-            ->select('verse_id')
-            ->where('lang', $language)
-            ->where(function ($q) use ($query) {
-                $q->where('text', 'LIKE', "%{$query}%")
-                    ->orWhere('text_notashkeel', 'LIKE', "%{$query}%");
-            })
-            ->pluck('verse_id');
-
         return $this->model
-            ->select(self::VERSE_COLUMNS)
-            ->whereIn('id', $matchingVerseIds)
+            ->select(self::VERSE_COLUMNS_QUALIFIED)
+            ->join('quran_verse_translations', 'quran_verses.id', '=', 'quran_verse_translations.verse_id')
+            ->where('quran_verse_translations.lang', $language)
+            ->where(function ($q) use ($query) {
+                FullTextSearchHelper::apply(
+                    $q,
+                    ['quran_verse_translations.text', 'quran_verse_translations.text_notashkeel'],
+                    $query
+                );
+            })
+            ->groupBy('quran_verses.id')
             ->with([self::SURAH_EAGER, self::TRANSLATIONS_EAGER])
-            ->orderBy('surah_id')
-            ->orderBy('verse_number')
+            ->orderBy('quran_verses.surah_id')
+            ->orderBy('quran_verses.verse_number')
             ->paginate($perPage);
     }
 
@@ -200,13 +228,15 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
     }
 
     /**
-     * Get paginated verses with filters
+     * Get paginated verses with filters.
      *
-     * @param int $perPage
-     * @param string $search
-     * @param string $sortBy
-     * @param array<string, mixed> $filters
-     * @return \Illuminate\Pagination\LengthAwarePaginator
+     * When a search term is present, a JOIN onto quran_verse_translations replaces
+     * the previous two-step pluck+whereIn approach (which loaded thousands of IDs
+     * into PHP memory and produced a huge IN clause).
+     * groupBy('quran_verses.id') prevents duplicate rows from the JOIN.
+     * Without a search term, no JOIN is performed and bare column names remain safe.
+     *
+     * @param  array<string, mixed>  $filters
      */
     public function paginateWithFilters(
         int $perPage = 15,
@@ -214,51 +244,62 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
         string $sortBy = 'verse_key',
         array $filters = []
     ): \Illuminate\Pagination\LengthAwarePaginator {
+        $hasSearch = $search !== '';
+
+        // Use qualified column names when a JOIN is present to avoid ambiguity.
         $query = $this->model
-            ->select(self::VERSE_COLUMNS)
+            ->select($hasSearch ? self::VERSE_COLUMNS_QUALIFIED : self::VERSE_COLUMNS)
             ->with([self::SURAH_EAGER]);
 
-        // Search via translations table (language defaults to Arabic)
-        if ($search !== '') {
+        // Search via translations table (language defaults to Arabic).
+        // Single JOIN replaces the old pluck+whereIn.
+        // FULLTEXT index covers (text, text_notashkeel) on quran_verse_translations.
+        if ($hasSearch) {
             $searchLang = $filters['search_lang'] ?? 'ar';
-            $matchingIds = VerseTranslation::query()
-                ->select('verse_id')
-                ->where('lang', $searchLang)
+
+            $query
+                ->join('quran_verse_translations', 'quran_verses.id', '=', 'quran_verse_translations.verse_id')
+                ->where('quran_verse_translations.lang', $searchLang)
                 ->where(function ($q) use ($search) {
-                    $q->where('text', 'LIKE', "%{$search}%")
-                        ->orWhere('text_notashkeel', 'LIKE', "%{$search}%");
+                    FullTextSearchHelper::apply(
+                        $q,
+                        ['quran_verse_translations.text', 'quran_verse_translations.text_notashkeel'],
+                        $search
+                    );
                 })
-                ->pluck('verse_id');
-
-            $query->whereIn('id', $matchingIds);
+                ->groupBy('quran_verses.id');
         }
 
-        // Apply filters
-        if (!empty($filters['surah_id'])) {
-            $query->where('surah_id', $filters['surah_id']);
+        // Apply filters — prefix with table name when JOIN is active to avoid
+        // ambiguity; quran_verse_translations has no surah_id/juz_number/etc.
+        // so these are only ambiguous for 'id', which is not used here.
+        $tablePrefix = $hasSearch ? 'quran_verses.' : '';
+
+        if (! empty($filters['surah_id'])) {
+            $query->where($tablePrefix.'surah_id', $filters['surah_id']);
         }
 
-        if (!empty($filters['juz_number'])) {
-            $query->where('juz_number', $filters['juz_number']);
+        if (! empty($filters['juz_number'])) {
+            $query->where($tablePrefix.'juz_number', $filters['juz_number']);
         }
 
-        if (!empty($filters['page_number'])) {
-            $query->where('page_number', $filters['page_number']);
+        if (! empty($filters['page_number'])) {
+            $query->where($tablePrefix.'page_number', $filters['page_number']);
         }
 
         if (isset($filters['is_sajda']) && $filters['is_sajda'] !== '') {
             $isSajda = filter_var($filters['is_sajda'], FILTER_VALIDATE_BOOLEAN);
             if ($isSajda) {
-                $query->whereNotNull('sajdah_number');
+                $query->whereNotNull($tablePrefix.'sajdah_number');
             } else {
-                $query->whereNull('sajdah_number');
+                $query->whereNull($tablePrefix.'sajdah_number');
             }
         }
 
         // Apply sorting
         $allowedSorts = ['verse_key', 'verse_number', 'juz_number', 'page_number', 'created_at'];
         $sortBy = in_array($sortBy, $allowedSorts, true) ? $sortBy : 'verse_key';
-        $query->orderBy($sortBy);
+        $query->orderBy($tablePrefix.$sortBy);
 
         return $query->paginate($perPage);
     }
@@ -266,8 +307,7 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
     /**
      * Bulk delete verses
      *
-     * @param array<int> $ids
-     * @return int
+     * @param  array<int>  $ids
      */
     public function bulkDelete(array $ids): int
     {
@@ -275,13 +315,11 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
     }
 
     /**
-     * Search verses with filters
+     * Search verses with filters.
      *
-     * @param string $query
-     * @param int $perPage
-     * @param int|null $surahId
-     * @param string $language
-     * @return \Illuminate\Pagination\LengthAwarePaginator
+     * Single JOIN query replaces the previous two-step pluck+whereIn approach.
+     * FULLTEXT index covers (text, text_notashkeel) on quran_verse_translations.
+     * groupBy prevents duplicate verse rows when multiple translation rows match.
      */
     public function search(
         string $query,
@@ -289,31 +327,29 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
         ?int $surahId = null,
         string $language = 'ar'
     ): \Illuminate\Pagination\LengthAwarePaginator {
-        $matchingIds = VerseTranslation::query()
-            ->select('verse_id')
-            ->where('lang', $language)
-            ->where(function ($q) use ($query) {
-                $q->where('text', 'LIKE', "%{$query}%")
-                    ->orWhere('text_notashkeel', 'LIKE', "%{$query}%");
-            })
-            ->pluck('verse_id');
-
         $q = $this->model
-            ->select(self::VERSE_COLUMNS)
-            ->with([self::SURAH_EAGER])
-            ->whereIn('id', $matchingIds);
+            ->select(self::VERSE_COLUMNS_QUALIFIED)
+            ->join('quran_verse_translations', 'quran_verses.id', '=', 'quran_verse_translations.verse_id')
+            ->where('quran_verse_translations.lang', $language)
+            ->where(function ($builder) use ($query) {
+                FullTextSearchHelper::apply(
+                    $builder,
+                    ['quran_verse_translations.text', 'quran_verse_translations.text_notashkeel'],
+                    $query
+                );
+            })
+            ->groupBy('quran_verses.id')
+            ->with([self::SURAH_EAGER]);
 
         if ($surahId !== null) {
-            $q->where('surah_id', $surahId);
+            $q->where('quran_verses.surah_id', $surahId);
         }
 
-        return $q->orderBy('surah_id')->orderBy('verse_number')->paginate($perPage);
+        return $q->orderBy('quran_verses.surah_id')->orderBy('quran_verses.verse_number')->paginate($perPage);
     }
 
     /**
      * Count Sajda verses — sajdah_number IS NOT NULL
-     *
-     * @return int
      */
     public function countSajdaVerses(): int
     {

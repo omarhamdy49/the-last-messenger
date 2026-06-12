@@ -12,13 +12,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * HadithSource Model
  *
  * Represents source references for Hadiths (e.g., Sahih Bukhari 1234, Muslim 567)
- * Stores source book name, reference codes, and Arabic references
+ * Stores source book name, reference codes, URLs, and verification metadata.
  *
  * @property int $id
  * @property int $hadith_id Reference to the Hadith
- * @property string|null $source_book Source book name (e.g., "Sahih Bukhari")
- * @property string|null $reference_code Reference code/number (e.g., "1234")
- * @property string|null $arabic_ref Arabic reference
+ * @property string|null $title Source book/site title
+ * @property string|null $reference Reference code/number (e.g., "1234")
  * @property array $name Translatable name (ar/en)
  * @property string|null $description Source description
  * @property string|null $type Source type (book, manuscript, digital, etc.)
@@ -43,13 +42,29 @@ class HadithSource extends Model
      */
     protected $fillable = [
         'hadith_id',
-        'source_book',
-        'reference_code',
-        'arabic_ref',
-        'type',
+        'local_source_id',
+        'source_file',
+        'source_type',
+        'title',
+        'author',
+        'reference',
+        'url',
+        'sunnah_urn',
+        'verification_method',
+        'verified_at',
+        'name',
+        'description',
     ];
 
-    public $timestamps = false;
+    protected $casts = [
+        'hadith_id' => 'integer',
+        'sunnah_urn' => 'integer',
+        'verified_at' => 'datetime',
+        'name' => 'array',
+        'description' => 'array',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
 
     public function getTranslationModelClass(): string
     {
@@ -63,8 +78,6 @@ class HadithSource extends Model
 
     /**
      * Get the Hadith this source belongs to
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function hadith(): BelongsTo
     {
@@ -75,48 +88,43 @@ class HadithSource extends Model
      * Scope: Filter by source book
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @param  string  $book
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByBook($query, string $book)
     {
-        return $query->where('source_book', 'like', "%{$book}%");
+        return $query->where('title', 'like', "%{$book}%");
     }
 
     /**
      * Scope: Filter by reference code
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @param  string  $code
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByReferenceCode($query, string $code)
     {
-        return $query->where('reference_code', $code);
+        return $query->where('reference', $code);
     }
 
     /**
      * Scope: Filter by type
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @param  string  $type
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByType($query, string $type)
     {
-        return $query->where('type', $type);
+        return $query->where('source_type', $type);
     }
 
     /**
      * Get full source reference (e.g., "Sahih Bukhari 1234")
-     *
-     * @return string
      */
     public function getFullReferenceAttribute(): string
     {
         $parts = array_filter([
-            $this->source_book,
-            $this->reference_code,
+            $this->title,
+            $this->reference,
         ]);
 
         return implode(' ', $parts);
@@ -124,15 +132,13 @@ class HadithSource extends Model
 
     /**
      * Get formatted reference with Arabic
-     *
-     * @return string
      */
     public function getFormattedReferenceAttribute(): string
     {
         $parts = array_filter([
-            $this->source_book,
-            $this->reference_code,
-            $this->arabic_ref ? "({$this->arabic_ref})" : null,
+            $this->title,
+            $this->reference,
+            $this->url,
         ]);
 
         return implode(' ', $parts);
@@ -140,26 +146,22 @@ class HadithSource extends Model
 
     /**
      * Check if source has Arabic reference
-     *
-     * @return bool
      */
     public function hasArabicReference(): bool
     {
-        return !empty($this->arabic_ref);
+        return false;
     }
 
     /**
      * Get source name accessor (backward compatibility)
-     * Prioritizes source_book field over translatable name
-     *
-     * @return array
+     * Prioritizes title field over translatable name
      */
     public function getNameAttribute(): array
     {
-        if (!empty($this->source_book)) {
+        if (! empty($this->title)) {
             return [
-                'ar' => $this->source_book,
-                'en' => $this->source_book,
+                'ar' => $this->title,
+                'en' => $this->title,
             ];
         }
 

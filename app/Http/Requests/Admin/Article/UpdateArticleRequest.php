@@ -43,14 +43,14 @@ class UpdateArticleRequest extends FormRequest
         foreach ($locales as $locale) {
             // Only Arabic title and content are required; other locales are optional
             $isRequired = $locale === 'ar';
-            $rules["title.{$locale}"] = ($isRequired ? 'required' : 'nullable') . '|string|max:200';
+            $rules["title.{$locale}"] = ($isRequired ? 'required' : 'nullable').'|string|max:200';
             $rules["slug.{$locale}"] = [
                 'nullable',
                 'string',
                 'max:255',
                 Rule::unique('article_locale', 'slug')
                     ->where('locale', $locale)
-                    ->whereNot('article_id', $articleId)
+                    ->whereNot('article_id', $articleId),
             ];
             $rules["excerpt.{$locale}"] = 'nullable|string|max:500';
             $rules["description.{$locale}"] = 'nullable|string';
@@ -79,6 +79,10 @@ class UpdateArticleRequest extends FormRequest
         $rules['tags.*'] = 'exists:tags,id';
 
         // Publishing
+        // Without a status rule, validated() drops the field and the DTO falls back
+        // to the article's current status — making status unchangeable from the form.
+        $rules['status'] = ['nullable', Rule::in(\App\Domain\Blog\Enums\ArticleStatus::values())];
+        $rules['scheduled_at'] = 'nullable|date';
         $rules['is_featured'] = 'nullable|boolean';
         $rules['is_pinned'] = 'nullable|boolean';
 

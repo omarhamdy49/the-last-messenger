@@ -21,7 +21,7 @@ abstract class DomainEvent implements JsonSerializable
 
     public function __construct()
     {
-        $this->occurredAt = new DateTimeImmutable();
+        $this->occurredAt = new DateTimeImmutable;
         $this->eventId = uniqid('evt_', true);
     }
 

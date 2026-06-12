@@ -24,9 +24,9 @@ class TranslatableArray implements ValidationRule
     /**
      * Constructor
      *
-     * @param array $allowedLanguages Allowed language codes
-     * @param bool $requireAllLanguages Whether all languages are required
-     * @param string $fieldName Field name for error messages
+     * @param  array  $allowedLanguages  Allowed language codes
+     * @param  bool  $requireAllLanguages  Whether all languages are required
+     * @param  string  $fieldName  Field name for error messages
      */
     public function __construct(
         array $allowedLanguages = ['ar', 'en', 'fr', 'tr', 'ur'],
@@ -48,13 +48,15 @@ class TranslatableArray implements ValidationRule
         // Check if value is an array
         if (! is_array($value)) {
             $fail("The {$this->fieldName} must be an array.");
+
             return;
         }
 
         // Check for invalid language codes
         $invalidCodes = array_diff(array_keys($value), $this->allowedLanguages);
         if (! empty($invalidCodes)) {
-            $fail("The {$this->fieldName} contains invalid language codes: " . implode(', ', $invalidCodes));
+            $fail("The {$this->fieldName} contains invalid language codes: ".implode(', ', $invalidCodes));
+
             return;
         }
 
@@ -62,7 +64,8 @@ class TranslatableArray implements ValidationRule
         if ($this->requireAllLanguages) {
             $missingLanguages = array_diff($this->allowedLanguages, array_keys($value));
             if (! empty($missingLanguages)) {
-                $fail("The {$this->fieldName} must include all languages: " . implode(', ', $missingLanguages));
+                $fail("The {$this->fieldName} must include all languages: ".implode(', ', $missingLanguages));
+
                 return;
             }
         }

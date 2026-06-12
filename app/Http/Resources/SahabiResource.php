@@ -52,7 +52,10 @@ class SahabiResource extends JsonResource
             'conversion_order' => $this->conversion_order,
             'roles' => $this->roles,
             'hadith_count' => $this->hadith_count,
-            'battles' => $this->battles,
+            'battles' => $this->when(
+                $this->relationLoaded('battles'),
+                fn () => $this->battles->pluck('battle_name')->values()
+            ),
             'profile_image' => $this->profile_image,
             'gallery' => $this->when($request->route('slug'), $this->gallery),
             'views_count' => $this->views_count,

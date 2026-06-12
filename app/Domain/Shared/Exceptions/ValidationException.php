@@ -20,7 +20,7 @@ class ValidationException extends DomainException
     /**
      * Create with validation errors
      *
-     * @param array<string, array<string>> $errors
+     * @param  array<string, array<string>>  $errors
      */
     public static function withErrors(array $errors): static
     {
@@ -46,7 +46,7 @@ class ValidationException extends DomainException
     /**
      * Create for multiple field errors
      *
-     * @param array<string, string> $fieldMessages
+     * @param  array<string, string>  $fieldMessages
      */
     public static function forFields(array $fieldMessages): static
     {

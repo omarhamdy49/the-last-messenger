@@ -50,7 +50,7 @@ class VersionController extends Controller
             );
         } catch (ModelNotFoundException $e) {
             return $this->notFoundResponse('Content not found');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to get versions', [
                 'type' => $type,
                 'id' => $id,
@@ -76,7 +76,7 @@ class VersionController extends Controller
             }
 
             return $this->successResponse(new ContentVersionResource($version));
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to get version', [
                 'version_id' => $versionId,
                 'error' => $e->getMessage(),
@@ -106,7 +106,7 @@ class VersionController extends Controller
                 'differences' => $diff,
                 'changes_count' => count($diff),
             ], 'Versions compared successfully');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to compare versions', [
                 'v1' => $v1,
                 'v2' => $v2,
@@ -164,7 +164,7 @@ class VersionController extends Controller
                     'id' => $model->id,
                 ],
             ], 'Content reverted to version successfully');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to revert version', [
                 'version_id' => $request->validated('version_id'),
                 'error' => $e->getMessage(),
@@ -196,7 +196,7 @@ class VersionController extends Controller
             ]);
         } catch (ModelNotFoundException $e) {
             return $this->notFoundResponse('Content not found');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to get version timeline', [
                 'type' => $type,
                 'id' => $id,
@@ -218,7 +218,7 @@ class VersionController extends Controller
             $stats = $this->versionService->getVersionStats();
 
             return $this->successResponse($stats);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to get version stats', [
                 'error' => $e->getMessage(),
             ]);
@@ -246,7 +246,7 @@ class VersionController extends Controller
             ], "Pruned {$deleted} old versions");
         } catch (ModelNotFoundException $e) {
             return $this->notFoundResponse('Content not found');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to prune versions', [
                 'type' => $type,
                 'id' => $id,

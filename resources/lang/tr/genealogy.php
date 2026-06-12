@@ -1,0 +1,45 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    // Genel site (Peygamber soy ağacı)
+    'public' => [
+        'page_title' => 'Peygamber Soy Ağacı',
+        'page_description' => 'Peygamberlerin Sonuncusu Muhammed ﷺ ve onun mübarek ailesinin soyunu modern ve etkileşimli bir ağaçla keşfedin.',
+        'hero_badge' => 'Etkileşimli Keşif',
+        'hero_title' => 'Soy Ağacı',
+        'hero_subtitle' => 'Şerefli Peygamber\'in',
+        'hero_lead' => 'Peygamberlerin Sonuncusu Muhammed ﷺ ve onun mübarek ailesinin soyunu modern ve etkileşimli bir ağaçla keşfedin.',
+        'stat_people' => 'Aile Üyesi',
+        'stat_children' => 'Oğul ve Kız',
+        'stat_generations' => 'Nesil',
+        'explore_tree' => 'Ağacı Keşfet',
+        'view_list' => 'Liste Görünümü',
+        'view_tree' => 'Ağaç Görünümü',
+        'zoom_in' => 'Yakınlaştır',
+        'zoom_out' => 'Uzaklaştır',
+        'reset_zoom' => 'Sıfırla',
+        'filter_all' => 'Tümü',
+        'filter_children' => 'Çocuklar',
+        'filter_grandchildren' => 'Torunlar',
+        'filter_wives' => 'Eşler',
+        'search' => 'Ara',
+        'search_title' => 'Soy Ağacında Ara',
+        'search_placeholder' => 'İsme göre ara...',
+        'search_hint' => 'Anında filtrelemek için bir isim yazın.',
+        'prophet_relation' => 'Peygamberlerin ve Resullerin Sonuncusu',
+        'view_details' => 'Ayrıntıları Gör',
+        'historical_note' => 'Tarihî Not',
+        'virtues' => 'Faziletler',
+        'virtue_ahl_bayt' => 'Şerefli Peygamber\'in ﷺ ehl-i beytinden',
+        'virtue_beloved' => 'Allah ve Resulü katında sevgili',
+        'read_full' => 'Tam Biyografiyi Oku',
+        'close' => 'Kapat',
+        'no_biography' => 'Bu kişi için henüz tarihî bir not bulunmuyor.',
+        'tree_unavailable' => 'Soy ağacı şu anda oluşturulamadı; aşağıda kişilerin listesi gösterilmektedir.',
+        'empty_title' => 'Henüz ağaç verisi yok',
+        'empty_message' => 'Soy ağacına henüz kimse eklenmedi.',
+        'people_count' => 'kişi',
+    ],
+];

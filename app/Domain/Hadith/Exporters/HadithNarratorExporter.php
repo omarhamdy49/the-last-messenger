@@ -67,19 +67,19 @@ class HadithNarratorExporter extends BaseExporter
 
         foreach ($this->selectedColumns as $column) {
             $row[] = match ($column) {
-                'id'                => $narrator->id,
-                'name'              => $name,
-                'full_name'         => $fullName,
-                'kunya'             => $narrator->kunya ?? '',
-                'birth_year_hijri'  => $narrator->birth_year_hijri ?? '',
-                'death_year_hijri'  => $narrator->death_year_hijri ?? '',
+                'id' => $narrator->id,
+                'name' => $name,
+                'full_name' => $fullName,
+                'kunya' => $narrator->kunya ?? '',
+                'birth_year_hijri' => $narrator->birth_year_hijri ?? '',
+                'death_year_hijri' => $narrator->death_year_hijri ?? '',
                 'reliability_grade' => $narrator->reliability_grade ?? '',
-                'school'            => $narrator->school ?? '',
-                'region'            => $narrator->region ?? '',
-                'hadith_count'      => $narrator->isnads_count ?? 0,
-                'biography'         => $this->truncate($narrator->biography ?? '', 300),
-                'created_at'        => $this->formatDate($narrator->created_at),
-                default             => '',
+                'school' => $narrator->school ?? '',
+                'region' => $narrator->region ?? '',
+                'hadith_count' => $narrator->isnads_count ?? 0,
+                'biography' => $this->truncate($narrator->biography ?? '', 300),
+                'created_at' => $this->formatDate($narrator->created_at),
+                default => '',
             };
         }
 
@@ -89,18 +89,18 @@ class HadithNarratorExporter extends BaseExporter
     public function headings(): array
     {
         $translations = [
-            'id'                => ['ar' => 'المعرف', 'en' => 'ID', 'fr' => 'ID', 'tr' => 'Kimlik', 'ur' => 'شناخت'],
-            'name'              => ['ar' => 'الاسم', 'en' => 'Name', 'fr' => 'Nom', 'tr' => 'İsim', 'ur' => 'نام'],
-            'full_name'         => ['ar' => 'الاسم الكامل', 'en' => 'Full Name', 'fr' => 'Nom complet', 'tr' => 'Tam İsim', 'ur' => 'پورا نام'],
-            'kunya'             => ['ar' => 'الكنية', 'en' => 'Kunya', 'fr' => 'Kunya', 'tr' => 'Künye', 'ur' => 'کنیت'],
-            'birth_year_hijri'  => ['ar' => 'سنة الولادة هجري', 'en' => 'Birth Year (Hijri)', 'fr' => 'Naissance (Hégirien)', 'tr' => 'Doğum Yılı (Hicri)', 'ur' => 'سال پیدائش (ہجری)'],
-            'death_year_hijri'  => ['ar' => 'سنة الوفاة هجري', 'en' => 'Death Year (Hijri)', 'fr' => 'Décès (Hégirien)', 'tr' => 'Vefat Yılı (Hicri)', 'ur' => 'سال وفات (ہجری)'],
+            'id' => ['ar' => 'المعرف', 'en' => 'ID', 'fr' => 'ID', 'tr' => 'Kimlik', 'ur' => 'شناخت'],
+            'name' => ['ar' => 'الاسم', 'en' => 'Name', 'fr' => 'Nom', 'tr' => 'İsim', 'ur' => 'نام'],
+            'full_name' => ['ar' => 'الاسم الكامل', 'en' => 'Full Name', 'fr' => 'Nom complet', 'tr' => 'Tam İsim', 'ur' => 'پورا نام'],
+            'kunya' => ['ar' => 'الكنية', 'en' => 'Kunya', 'fr' => 'Kunya', 'tr' => 'Künye', 'ur' => 'کنیت'],
+            'birth_year_hijri' => ['ar' => 'سنة الولادة هجري', 'en' => 'Birth Year (Hijri)', 'fr' => 'Naissance (Hégirien)', 'tr' => 'Doğum Yılı (Hicri)', 'ur' => 'سال پیدائش (ہجری)'],
+            'death_year_hijri' => ['ar' => 'سنة الوفاة هجري', 'en' => 'Death Year (Hijri)', 'fr' => 'Décès (Hégirien)', 'tr' => 'Vefat Yılı (Hicri)', 'ur' => 'سال وفات (ہجری)'],
             'reliability_grade' => ['ar' => 'درجة التوثيق', 'en' => 'Reliability Grade', 'fr' => 'Degré de fiabilité', 'tr' => 'Güvenilirlik Derecesi', 'ur' => 'قابل اعتماد درجہ'],
-            'school'            => ['ar' => 'المدرسة الفقهية', 'en' => 'School', 'fr' => 'École', 'tr' => 'Mezhep', 'ur' => 'مکتب فکر'],
-            'region'            => ['ar' => 'المنطقة', 'en' => 'Region', 'fr' => 'Région', 'tr' => 'Bölge', 'ur' => 'علاقہ'],
-            'hadith_count'      => ['ar' => 'عدد الأحاديث', 'en' => 'Hadith Count', 'fr' => 'Nombre de hadiths', 'tr' => 'Hadis Sayısı', 'ur' => 'احادیث کی تعداد'],
-            'biography'         => ['ar' => 'السيرة', 'en' => 'Biography', 'fr' => 'Biographie', 'tr' => 'Biyografi', 'ur' => 'سوانح'],
-            'created_at'        => ['ar' => 'تاريخ الإنشاء', 'en' => 'Created At', 'fr' => 'Créé le', 'tr' => 'Oluşturulma', 'ur' => 'تخلیق کردہ'],
+            'school' => ['ar' => 'المدرسة الفقهية', 'en' => 'School', 'fr' => 'École', 'tr' => 'Mezhep', 'ur' => 'مکتب فکر'],
+            'region' => ['ar' => 'المنطقة', 'en' => 'Region', 'fr' => 'Région', 'tr' => 'Bölge', 'ur' => 'علاقہ'],
+            'hadith_count' => ['ar' => 'عدد الأحاديث', 'en' => 'Hadith Count', 'fr' => 'Nombre de hadiths', 'tr' => 'Hadis Sayısı', 'ur' => 'احادیث کی تعداد'],
+            'biography' => ['ar' => 'السيرة', 'en' => 'Biography', 'fr' => 'Biographie', 'tr' => 'Biyografi', 'ur' => 'سوانح'],
+            'created_at' => ['ar' => 'تاريخ الإنشاء', 'en' => 'Created At', 'fr' => 'Créé le', 'tr' => 'Oluşturulma', 'ur' => 'تخلیق کردہ'],
         ];
 
         $headers = [];

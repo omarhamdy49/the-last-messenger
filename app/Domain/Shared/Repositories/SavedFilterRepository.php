@@ -92,6 +92,39 @@ class SavedFilterRepository extends BaseRepository implements SavedFilterReposit
     /**
      * {@inheritdoc}
      */
+    public function clearDefaults(int $userId, string $module): void
+    {
+        $this->model
+            ->select(['id'])
+            ->where('user_id', $userId)
+            ->where('module', $module)
+            ->where('is_default', true)
+            ->update(['is_default' => false]);
+
+        $this->clearCache();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function updateFilter(int $id, array $data): SavedFilter
+    {
+        $columns = ['id', 'user_id', 'name', 'description', 'module', 'filters', 'sort_options', 'is_public', 'is_default', 'usage_count', 'last_used_at', 'created_at', 'updated_at'];
+
+        /** @var SavedFilter $filter */
+        $filter = $this->model->select($columns)->findOrFail($id);
+        $filter->update($data);
+        $this->clearCache();
+
+        /** @var SavedFilter $fresh */
+        $fresh = $this->model->select($columns)->findOrFail($id);
+
+        return $fresh;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function incrementUsage(int $filterId): bool
     {
         $filter = $this->findOrFail($filterId);

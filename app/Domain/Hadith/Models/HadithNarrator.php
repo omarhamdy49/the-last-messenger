@@ -2,10 +2,10 @@
 
 namespace App\Domain\Hadith\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Class HadithNarrator
@@ -20,7 +20,6 @@ use Illuminate\Database\Eloquent\Builder;
  * @property string|null $title Title/honorific
  * @property int|null $death_year_hijri Death year in Hijri calendar
  * @property string|null $notes Biographical notes
- *
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Domain\Hadith\Models\HadithIsnad[] $isnads
  * @property-read int|null $isnads_count
  *
@@ -56,6 +55,8 @@ class HadithNarrator extends Model
         'biography',
         'school',
         'region',
+        'source_system',
+        'source_narrator_id',
     ];
 
     /**
@@ -69,8 +70,6 @@ class HadithNarrator extends Model
 
     /**
      * Get all isnad (chain of narration) entries for this narrator.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function isnads(): HasMany
     {
@@ -92,25 +91,17 @@ class HadithNarrator extends Model
     /**
      * Scope to search narrators by name, full name, or notes.
      * Uses MySQL FULLTEXT search on indexed columns.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $term
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeSearch(Builder $query, string $term): Builder
     {
         return $query->whereRaw(
-            'MATCH(name_ar, full_name_ar, notes) AGAINST(? IN NATURAL LANGUAGE MODE)',
+            'MATCH(name_ar, name_en, full_name_ar, full_name_en, kunya) AGAINST(? IN NATURAL LANGUAGE MODE)',
             [$term]
         );
     }
 
     /**
      * Scope to filter narrators by death year.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $year
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByDeathYear(Builder $query, int $year): Builder
     {
@@ -119,9 +110,6 @@ class HadithNarrator extends Model
 
     /**
      * Scope to filter narrators who have a kunya.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithKunya(Builder $query): Builder
     {
@@ -130,11 +118,6 @@ class HadithNarrator extends Model
 
     /**
      * Scope to filter narrators by death year range.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $startYear
-     * @param int $endYear
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByDeathYearRange(Builder $query, int $startYear, int $endYear): Builder
     {
@@ -143,9 +126,6 @@ class HadithNarrator extends Model
 
     /**
      * Scope to get narrators with their isnad relationships.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithIsnads(Builder $query): Builder
     {
@@ -155,8 +135,6 @@ class HadithNarrator extends Model
     /**
      * Get the narrator's display name.
      * Returns kunya if available, otherwise name_ar.
-     *
-     * @return string
      */
     public function getDisplayName(): string
     {
@@ -165,15 +143,13 @@ class HadithNarrator extends Model
 
     /**
      * Get the narrator's full display name with title.
-     *
-     * @return string
      */
     public function getFullDisplayName(): string
     {
         $name = $this->full_name_ar ?? $this->name_ar;
 
         if ($this->title) {
-            return $this->title . ' ' . $name;
+            return $this->title.' '.$name;
         }
 
         return $name;
@@ -181,8 +157,6 @@ class HadithNarrator extends Model
 
     /**
      * Get the count of hadiths narrated by this narrator.
-     *
-     * @return int
      */
     public function getHadithsCount(): int
     {

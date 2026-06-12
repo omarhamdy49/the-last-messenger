@@ -12,7 +12,7 @@ use App\Domain\Shared\Application\Queries\Query;
 final readonly class SearchHadithQuery implements Query
 {
     /**
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      */
     public function __construct(
         public string $searchTerm = '',

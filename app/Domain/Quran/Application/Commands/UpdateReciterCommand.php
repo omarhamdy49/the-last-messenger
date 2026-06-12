@@ -10,8 +10,8 @@ namespace App\Domain\Quran\Application\Commands;
 final readonly class UpdateReciterCommand
 {
     /**
-     * @param array<string, string>|null $name
-     * @param array<string, string>|null $description
+     * @param  array<string, string>|null  $name
+     * @param  array<string, string>|null  $description
      */
     public function __construct(
         public int $id,

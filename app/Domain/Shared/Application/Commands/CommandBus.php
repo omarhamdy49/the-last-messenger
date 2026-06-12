@@ -26,8 +26,8 @@ final class CommandBus
     /**
      * Register a handler for a command
      *
-     * @param class-string<Command> $commandClass
-     * @param class-string<CommandHandler> $handlerClass
+     * @param  class-string<Command>  $commandClass
+     * @param  class-string<CommandHandler>  $handlerClass
      */
     public function register(string $commandClass, string $handlerClass): void
     {
@@ -38,6 +38,7 @@ final class CommandBus
      * Dispatch a command to its handler
      *
      * @return mixed The result from the handler
+     *
      * @throws InvalidArgumentException If no handler is registered
      */
     public function dispatch(Command $command): mixed
@@ -58,7 +59,7 @@ final class CommandBus
     /**
      * Check if a handler is registered for a command
      *
-     * @param class-string<Command> $commandClass
+     * @param  class-string<Command>  $commandClass
      */
     public function hasHandler(string $commandClass): bool
     {

@@ -32,14 +32,12 @@ class CategoryResource extends JsonResource
             'name' => $this->getNameInLanguage($language),
             'description' => $this->getDescriptionInLanguage($language),
             'translations' => [
-                'name' => $this->getNameTranslations(),
-                'description' => $this->getDescriptionTranslations(),
+                'name' => $this->getTranslations('name'),
+                'description' => $this->getTranslations('description'),
             ],
 
             // Hierarchy fields
             'parent_id' => $this->parent_id,
-            'lft' => $this->lft,
-            'rgt' => $this->rgt,
             'depth' => $this->depth,
 
             // Visual fields

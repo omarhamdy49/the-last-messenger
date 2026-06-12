@@ -10,17 +10,15 @@ use Exception;
  * Base SEO Exception
  *
  * Parent exception for all SEO-related errors in The Last Messenger platform.
- *
- * @package App\Exceptions
  */
 class SeoException extends Exception
 {
     /**
      * Create a new SEO exception instance
      *
-     * @param string $message Exception message
-     * @param int $code Exception code (default: 0)
-     * @param \Throwable|null $previous Previous exception
+     * @param  string  $message  Exception message
+     * @param  int  $code  Exception code (default: 0)
+     * @param  \Throwable|null  $previous  Previous exception
      */
     public function __construct(
         string $message = 'An SEO error occurred',
@@ -33,8 +31,7 @@ class SeoException extends Exception
     /**
      * Create exception for missing content
      *
-     * @param string $field Field name
-     * @return static
+     * @param  string  $field  Field name
      */
     public static function missingContent(string $field): static
     {
@@ -44,9 +41,8 @@ class SeoException extends Exception
     /**
      * Create exception for invalid locale
      *
-     * @param string $locale Invalid locale
-     * @param array<string> $supported Supported locales
-     * @return static
+     * @param  string  $locale  Invalid locale
+     * @param  array<string>  $supported  Supported locales
      */
     public static function invalidLocale(string $locale, array $supported): static
     {
@@ -58,9 +54,8 @@ class SeoException extends Exception
     /**
      * Create exception for generation failure
      *
-     * @param string $type Type of SEO data (e.g., 'JSON-LD', 'OpenGraph')
-     * @param string $reason Failure reason
-     * @return static
+     * @param  string  $type  Type of SEO data (e.g., 'JSON-LD', 'OpenGraph')
+     * @param  string  $reason  Failure reason
      */
     public static function generationFailed(string $type, string $reason): static
     {

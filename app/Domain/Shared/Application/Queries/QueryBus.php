@@ -26,8 +26,8 @@ final class QueryBus
     /**
      * Register a handler for a query
      *
-     * @param class-string<Query> $queryClass
-     * @param class-string<QueryHandler> $handlerClass
+     * @param  class-string<Query>  $queryClass
+     * @param  class-string<QueryHandler>  $handlerClass
      */
     public function register(string $queryClass, string $handlerClass): void
     {
@@ -38,6 +38,7 @@ final class QueryBus
      * Dispatch a query to its handler
      *
      * @return mixed The result from the handler
+     *
      * @throws InvalidArgumentException If no handler is registered
      */
     public function dispatch(Query $query): mixed
@@ -58,7 +59,7 @@ final class QueryBus
     /**
      * Check if a handler is registered for a query
      *
-     * @param class-string<Query> $queryClass
+     * @param  class-string<Query>  $queryClass
      */
     public function hasHandler(string $queryClass): bool
     {

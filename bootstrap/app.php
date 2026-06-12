@@ -39,6 +39,21 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\SetLocale::class,
         ]);
+
+        // Unauthenticated visitors: send admin-area requests to the admin login, but
+        // public-site requests (e.g. /profile, /favorites) to the public login — not the
+        // admin portal. JSON requests fall through to a 401 (return null).
+        $middleware->redirectGuestsTo(function (\Illuminate\Http\Request $request): ?string {
+            if ($request->expectsJson()) {
+                return null;
+            }
+
+            if ($request->is('su/portal', 'su/portal/*') || $request->routeIs('admin.*')) {
+                return route('login');
+            }
+
+            return route('public.login');
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Map EntityNotFoundException (404 not-found domain errors) to a 404 JSON response.
@@ -50,7 +65,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json([
                     'success' => false,
                     'error' => [
-                        'code'    => class_basename($e),
+                        'code' => class_basename($e),
                         'message' => __('errors.resource_not_found'),
                     ],
                 ], 404);
@@ -66,7 +81,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json([
                     'success' => false,
                     'error' => [
-                        'code'    => 'ARTICLE_NOT_FOUND',
+                        'code' => 'ARTICLE_NOT_FOUND',
                         'message' => __('errors.resource_not_found'),
                     ],
                 ], 404);
@@ -83,7 +98,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json([
                     'success' => false,
                     'error' => [
-                        'code'    => 'CATEGORY_NOT_FOUND',
+                        'code' => 'CATEGORY_NOT_FOUND',
                         'message' => __('errors.resource_not_found'),
                     ],
                 ], 404);
@@ -100,7 +115,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json([
                     'success' => false,
                     'error' => [
-                        'code'    => 'SEERAH_EVENT_NOT_FOUND',
+                        'code' => 'SEERAH_EVENT_NOT_FOUND',
                         'message' => __('errors.resource_not_found'),
                     ],
                 ], 404);
@@ -117,7 +132,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json([
                     'success' => false,
                     'error' => [
-                        'code'    => 'SAHABI_NOT_FOUND',
+                        'code' => 'SAHABI_NOT_FOUND',
                         'message' => __('errors.resource_not_found'),
                     ],
                 ], 404);
@@ -135,7 +150,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json([
                     'success' => false,
                     'error' => [
-                        'code'    => class_basename($e),
+                        'code' => class_basename($e),
                         'message' => __('errors.general'),
                     ],
                 ], 422);

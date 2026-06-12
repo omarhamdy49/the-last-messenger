@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace App\Domain\Blog\Services;
 
+use App\Domain\Blog\DTOs\CreateTagData;
+use App\Domain\Blog\DTOs\UpdateTagData;
+use App\Domain\Blog\Exceptions\CannotMergeTagException;
 use App\Domain\Blog\Models\Tag;
 use App\Domain\Blog\Repositories\TagRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 /**
  * TagService
@@ -18,22 +22,13 @@ class TagService
 {
     /**
      * Constructor with repository injection
-     *
-     * @param TagRepositoryInterface $repository
      */
     public function __construct(
         protected TagRepositoryInterface $repository
-    ) {
-    }
+    ) {}
 
     /**
      * Get paginated tags with search and filters
-     *
-     * @param int $perPage
-     * @param string $search
-     * @param array $filters
-     * @param array $with
-     * @return LengthAwarePaginator
      */
     public function paginate(
         int $perPage = 50,
@@ -51,37 +46,35 @@ class TagService
 
     /**
      * Create new tag
-     *
-     * @param array $data
-     * @return Model
      */
-    public function create(array $data): Model
+    public function create(CreateTagData $data): Model
     {
-        // Separate translatable fields
-        $translatableFields = ['name', 'description'];
-        $translatableData = [];
-        $nonTranslatableData = [];
-
-        foreach ($data as $key => $value) {
-            if (in_array($key, $translatableFields)) {
-                $translatableData[$key] = $value;
-            } else {
-                $nonTranslatableData[$key] = $value;
-            }
-        }
+        // Build the non-translatable column payload
+        $nonTranslatableData = [
+            'type' => $data->type,
+            'color' => $data->color,
+        ];
 
         // Generate slug if not provided
-        if (empty($nonTranslatableData['slug'])) {
-            $titleForSlug = $translatableData['name']['en'] ?? $translatableData['name']['ar'] ?? 'tag';
-            $nonTranslatableData['slug'] = \Illuminate\Support\Str::slug($titleForSlug);
-        }
+        $nonTranslatableData['slug'] = $data->slug
+            ?? \Illuminate\Support\Str::slug($data->name['en'] ?? $data->name['ar'] ?? 'tag');
 
         // Create tag with non-translatable data only
         /** @var Tag */
         $tag = $this->repository->create($nonTranslatableData);
 
-        // Sync translations
-        if (!empty($translatableData)) {
+        // Sync translations (name + description are locale-keyed arrays)
+        $translatableData = [];
+
+        if (! empty($data->name)) {
+            $translatableData['name'] = $data->name;
+        }
+
+        if (! empty($data->description)) {
+            $translatableData['description'] = $data->description;
+        }
+
+        if (! empty($translatableData)) {
             $tag->syncTranslations($translatableData);
         }
 
@@ -90,47 +83,26 @@ class TagService
 
     /**
      * Update tag
-     *
-     * @param int $id
-     * @param array $data
-     * @return Model
      */
-    public function update(int $id, array $data): Model
+    public function update(int $id, UpdateTagData $data): Model
     {
-        // Get current tag
+        // Get current tag (with translations for syncTranslations)
         /** @var Tag */
         $tag = $this->repository->findOrFail($id, with: ['translations']);
 
-        // Separate translatable fields
-        $translatableFields = ['name', 'description'];
-        $translatableData = [];
-        $nonTranslatableData = [];
-
-        foreach ($data as $key => $value) {
-            if (in_array($key, $translatableFields)) {
-                $translatableData[$key] = $value;
-            } else {
-                $nonTranslatableData[$key] = $value;
-            }
-        }
+        // Build the non-translatable column payload
+        $nonTranslatableData = ['type' => $data->type];
 
         // Generate slug if not provided
-        if (empty($nonTranslatableData['slug'])) {
-            if (!empty($translatableData['name'])) {
-                $nonTranslatableData['slug'] = \Illuminate\Support\Str::slug(
-                    $translatableData['name']['en'] ?? $translatableData['name']['ar']
-                );
-            }
-        }
+        $nonTranslatableData['slug'] = $data->slug
+            ?? \Illuminate\Support\Str::slug($data->name['en'] ?? $data->name['ar'] ?? 'tag');
 
         // Update non-translatable fields
-        if (!empty($nonTranslatableData)) {
-            $this->repository->update($id, $nonTranslatableData);
-        }
+        $this->repository->update($id, $nonTranslatableData);
 
         // Sync translations
-        if (!empty($translatableData)) {
-            $tag->syncTranslations($translatableData);
+        if (! empty($data->name)) {
+            $tag->syncTranslations(['name' => $data->name]);
         }
 
         return $this->repository->findOrFail($id);
@@ -138,9 +110,6 @@ class TagService
 
     /**
      * Delete tag
-     *
-     * @param int $id
-     * @return bool
      */
     public function delete(int $id): bool
     {
@@ -149,9 +118,6 @@ class TagService
 
     /**
      * Bulk delete multiple tags
-     *
-     * @param array $ids
-     * @return int
      */
     public function bulkDelete(array $ids): int
     {
@@ -160,9 +126,6 @@ class TagService
 
     /**
      * Find tag by ID or throw exception
-     *
-     * @param int $id
-     * @return Model
      */
     public function findOrFail(int $id): Model
     {
@@ -171,8 +134,6 @@ class TagService
 
     /**
      * Get total count of tags
-     *
-     * @return int
      */
     public function count(): int
     {
@@ -181,8 +142,6 @@ class TagService
 
     /**
      * Get total usage count (how many articles use tags)
-     *
-     * @return int
      */
     public function getTotalUsageCount(): int
     {
@@ -191,8 +150,6 @@ class TagService
 
     /**
      * Get most used tag
-     *
-     * @return Model|null
      */
     public function getMostUsedTag(): ?Model
     {
@@ -201,9 +158,6 @@ class TagService
 
     /**
      * Get recently added tags count
-     *
-     * @param int $days
-     * @return int
      */
     public function getRecentlyAddedCount(int $days = 7): int
     {
@@ -212,9 +166,6 @@ class TagService
 
     /**
      * Get usage count for a specific tag
-     *
-     * @param int $tagId
-     * @return int
      */
     public function getUsageCount(int $tagId): int
     {
@@ -223,9 +174,6 @@ class TagService
 
     /**
      * Get published articles count for a tag
-     *
-     * @param int $tagId
-     * @return int
      */
     public function getPublishedArticlesCount(int $tagId): int
     {
@@ -234,10 +182,6 @@ class TagService
 
     /**
      * Get articles for a specific tag (paginated)
-     *
-     * @param int $tagId
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getArticlesForTag(int $tagId, int $perPage = 20): LengthAwarePaginator
     {
@@ -246,9 +190,6 @@ class TagService
 
     /**
      * Find duplicate tag by name
-     *
-     * @param array $name
-     * @return Model|null
      */
     public function findDuplicate(array $name): ?Model
     {
@@ -258,48 +199,46 @@ class TagService
     /**
      * Merge two tags
      *
-     * Move all articles from source tag to destination tag, then delete source
+     * Move all articles from source tag to destination tag, then delete source.
+     * All write operations are wrapped in a single database transaction so that
+     * a mid-merge failure leaves the data in a consistent state.
      *
-     * @param int $sourceId
-     * @param int $destinationId
      * @return int Number of articles moved
-     * @throws \Exception
+     *
+     * @throws CannotMergeTagException
      */
     public function mergeTags(int $sourceId, int $destinationId): int
     {
         if ($sourceId === $destinationId) {
-            throw new \Exception('Cannot merge a tag with itself');
+            throw CannotMergeTagException::selfMerge();
         }
 
         $sourceTag = $this->findOrFail($sourceId);
         $destinationTag = $this->findOrFail($destinationId);
 
-        // Get all articles from source tag
-        $articles = $sourceTag->articles;
-        $count = $articles->count();
+        return DB::transaction(function () use ($sourceId, $destinationId, $sourceTag): int {
+            // Get all articles from source tag
+            $articles = $sourceTag->articles;
+            $count = $articles->count();
 
-        // Attach articles to destination tag (if not already attached)
-        foreach ($articles as $article) {
-            if (!$article->tags->contains($destinationId)) {
-                $article->tags()->attach($destinationId);
+            // Attach articles to destination tag (if not already attached)
+            foreach ($articles as $article) {
+                if (! $article->tags->contains($destinationId)) {
+                    $article->tags()->attach($destinationId);
+                }
+                // Detach from source tag
+                $article->tags()->detach($sourceId);
             }
-            // Detach from source tag
-            $article->tags()->detach($sourceId);
-        }
 
-        // Delete source tag
-        $this->delete($sourceId);
+            // Delete source tag
+            $this->delete($sourceId);
 
-        return $count;
+            return $count;
+        });
     }
 
     /**
      * Search tags for autocomplete
-     *
-     * @param string $query
-     * @param string|null $type
-     * @param int $limit
-     * @return \Illuminate\Support\Collection
      */
     public function searchForAutocomplete(string $query, ?string $type = null, int $limit = 10): \Illuminate\Support\Collection
     {
@@ -308,9 +247,6 @@ class TagService
 
     /**
      * Get unused tags (zero usage_count)
-     *
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getUnusedTags(int $perPage = 50): LengthAwarePaginator
     {

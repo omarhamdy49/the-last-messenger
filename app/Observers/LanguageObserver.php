@@ -18,15 +18,11 @@ class LanguageObserver
 {
     /**
      * Language cache service instance
-     *
-     * @var LanguageCacheService
      */
     protected LanguageCacheService $cacheService;
 
     /**
      * Create a new observer instance
-     *
-     * @param LanguageCacheService $cacheService
      */
     public function __construct(LanguageCacheService $cacheService)
     {
@@ -35,9 +31,6 @@ class LanguageObserver
 
     /**
      * Handle the Language "created" event.
-     *
-     * @param Language $language
-     * @return void
      */
     public function created(Language $language): void
     {
@@ -46,9 +39,6 @@ class LanguageObserver
 
     /**
      * Handle the Language "updated" event.
-     *
-     * @param Language $language
-     * @return void
      */
     public function updated(Language $language): void
     {
@@ -57,9 +47,6 @@ class LanguageObserver
 
     /**
      * Handle the Language "deleted" event.
-     *
-     * @param Language $language
-     * @return void
      */
     public function deleted(Language $language): void
     {
@@ -68,9 +55,6 @@ class LanguageObserver
 
     /**
      * Handle the Language "restored" event.
-     *
-     * @param Language $language
-     * @return void
      */
     public function restored(Language $language): void
     {
@@ -79,9 +63,6 @@ class LanguageObserver
 
     /**
      * Handle the Language "force deleted" event.
-     *
-     * @param Language $language
-     * @return void
      */
     public function forceDeleted(Language $language): void
     {
@@ -91,9 +72,8 @@ class LanguageObserver
     /**
      * Invalidate language cache and log the action
      *
-     * @param string $action The action that triggered cache invalidation
-     * @param Language $language The language model affected
-     * @return void
+     * @param  string  $action  The action that triggered cache invalidation
+     * @param  Language  $language  The language model affected
      */
     protected function invalidateCache(string $action, Language $language): void
     {

@@ -23,7 +23,7 @@ class ContentVersionRepository extends BaseRepository implements ContentVersionR
      */
     protected function getModel(): Model
     {
-        return new ContentVersion();
+        return new ContentVersion;
     }
 
     /**

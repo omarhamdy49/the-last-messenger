@@ -34,8 +34,8 @@ final class UpdateGradingHandler implements CommandHandler
     /**
      * Handle the command
      *
-     * @param UpdateGradingCommand $command
-     * @return HadithDTO
+     * @param  UpdateGradingCommand  $command
+     *
      * @throws HadithNotFoundException
      * @throws InvalidGradingException
      * @throws EntityNotFoundException
@@ -51,7 +51,7 @@ final class UpdateGradingHandler implements CommandHandler
         }
 
         // Validate grading status
-        if (!in_array($command->gradingStatus, Hadith::getGradingStatuses())) {
+        if (! in_array($command->gradingStatus, Hadith::getGradingStatuses())) {
             throw InvalidGradingException::forStatus($command->gradingStatus);
         }
 
@@ -112,6 +112,7 @@ final class UpdateGradingHandler implements CommandHandler
         if ($gradings->count() < 2) {
             $hadith->grading_agreement = null;
             $hadith->save();
+
             return;
         }
 

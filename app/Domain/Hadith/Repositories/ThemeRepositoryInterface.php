@@ -51,7 +51,7 @@ interface ThemeRepositoryInterface extends RepositoryInterface
     /**
      * Get paginated themes with filters
      *
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      */
     public function paginateWithFilters(
         int $perPage = 15,

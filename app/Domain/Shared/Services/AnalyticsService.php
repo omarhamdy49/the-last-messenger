@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace App\Domain\Shared\Services;
 
 use App\Domain\Blog\Models\Article;
-use App\Domain\Blog\Models\Category;
 use App\Domain\Genealogy\Models\Person;
 use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithBook;
-use App\Domain\Hadith\Models\HadithNarrator;
 use App\Domain\Quran\Models\Reciter;
 use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Models\Verse;
@@ -60,22 +58,59 @@ class AnalyticsService
                 return [
                     'total_content' => $this->getTotalContentCount($startDate, $endDate),
                     'by_module' => [
-                        'articles' => [
-                            'total' => $query(Article::class)->count(),
-                            'published' => $query(Article::class)->where('status', 'published')->count(),
-                            'draft' => $query(Article::class)->where('status', 'draft')->count(),
-                            'archived' => $query(Article::class)->where('status', 'archived')->count(),
-                        ],
-                        'hadith' => [
-                            'total' => $query(Hadith::class)->count(),
-                            'sahih' => $query(Hadith::class)->where('authenticity', 'sahih')->count(),
-                            'hasan' => $query(Hadith::class)->where('authenticity', 'hasan')->count(),
-                            'daif' => $query(Hadith::class)->where('authenticity', 'daif')->count(),
-                        ],
-                        'hadith_narrators' => [
-                            'total' => $query(HadithNarrator::class)->count(),
-                            'sahaba' => $query(HadithNarrator::class)->where('is_sahabi', true)->count(),
-                        ],
+                        'articles' => (function () use ($startDate, $endDate): array {
+                            $q = DB::table('articles')->whereNull('deleted_at');
+                            if ($startDate && $endDate) {
+                                $q->whereBetween('created_at', [$startDate, $endDate]);
+                            }
+                            $row = (clone $q)->selectRaw("
+                                COUNT(*) as total,
+                                SUM(status = 'published') as published,
+                                SUM(status = 'draft') as draft,
+                                SUM(status = 'archived') as archived
+                            ")->first();
+
+                            return [
+                                'total' => (int) ($row->total ?? 0),
+                                'published' => (int) ($row->published ?? 0),
+                                'draft' => (int) ($row->draft ?? 0),
+                                'archived' => (int) ($row->archived ?? 0),
+                            ];
+                        })(),
+                        'hadith' => (function () use ($startDate, $endDate): array {
+                            $q = DB::table('hadith_hadiths');
+                            if ($startDate && $endDate) {
+                                $q->whereBetween('created_at', [$startDate, $endDate]);
+                            }
+                            $row = (clone $q)->selectRaw("
+                                COUNT(*) as total,
+                                SUM(authenticity = 'sahih') as sahih,
+                                SUM(authenticity = 'hasan') as hasan,
+                                SUM(authenticity = 'daif') as daif
+                            ")->first();
+
+                            return [
+                                'total' => (int) ($row->total ?? 0),
+                                'sahih' => (int) ($row->sahih ?? 0),
+                                'hasan' => (int) ($row->hasan ?? 0),
+                                'daif' => (int) ($row->daif ?? 0),
+                            ];
+                        })(),
+                        'hadith_narrators' => (function () use ($startDate, $endDate): array {
+                            $q = DB::table('hadith_narrators');
+                            if ($startDate && $endDate) {
+                                $q->whereBetween('created_at', [$startDate, $endDate]);
+                            }
+                            $row = (clone $q)->selectRaw('
+                                COUNT(*) as total,
+                                SUM(is_sahabi = 1) as sahaba
+                            ')->first();
+
+                            return [
+                                'total' => (int) ($row->total ?? 0),
+                                'sahaba' => (int) ($row->sahaba ?? 0),
+                            ];
+                        })(),
                         'hadith_books' => [
                             'total' => $query(HadithBook::class)->count(),
                         ],
@@ -110,38 +145,57 @@ class AnalyticsService
     {
         $cacheKey = $this->getCacheKey('engagement_metrics', compact('startDate', 'endDate'));
 
-        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($startDate, $endDate): array {
+        return Cache::remember($cacheKey, self::CACHE_TTL, function (): array {
             try {
-                // Total views across all modules
-                $totalViews = Article::sum('views_count')
-                    + Hadith::sum('views_count');
+                // Single aggregate per table replaces repeated sum/count queries
+                $articleAgg = DB::table('articles')
+                    ->whereNull('deleted_at')
+                    ->selectRaw("
+                        COUNT(*) as total,
+                        SUM(status = 'published') as published_count,
+                        SUM(views_count) as total_views,
+                        SUM(favorites_count) as total_favorites
+                    ")
+                    ->first();
 
-                // Average engagement per module
-                $articlesCount = Article::where('status', 'published')->count();
-                $hadithCount = Hadith::count();
+                $hadithAgg = DB::table('hadith_hadiths')
+                    ->selectRaw('
+                        COUNT(*) as total,
+                        SUM(views_count) as total_views
+                    ')
+                    ->first();
+
+                $articleTotalViews = (int) ($articleAgg->total_views ?? 0);
+                $articleTotalFavs = (int) ($articleAgg->total_favorites ?? 0);
+                $articleTotal = (int) ($articleAgg->total ?? 0);
+                $articlePublished = (int) ($articleAgg->published_count ?? 0);
+                $hadithTotalViews = (int) ($hadithAgg->total_views ?? 0);
+                $hadithTotal = (int) ($hadithAgg->total ?? 0);
+
+                $totalViews = $articleTotalViews + $hadithTotalViews;
 
                 return [
                     'total_views' => $totalViews,
-                    'total_favorites' => Article::sum('favorites_count') ?? 0,
-                    'average_views_per_article' => $articlesCount > 0
-                        ? round($totalViews / $articlesCount, 2)
+                    'total_favorites' => $articleTotalFavs,
+                    'average_views_per_article' => $articlePublished > 0
+                        ? round($totalViews / $articlePublished, 2)
                         : 0,
                     'by_module' => [
                         'articles' => [
-                            'total_views' => Article::sum('views_count') ?? 0,
-                            'total_favorites' => Article::sum('favorites_count') ?? 0,
-                            'avg_views' => $articlesCount > 0
-                                ? round((Article::sum('views_count') ?? 0) / $articlesCount, 2)
+                            'total_views' => $articleTotalViews,
+                            'total_favorites' => $articleTotalFavs,
+                            'avg_views' => $articlePublished > 0
+                                ? round($articleTotalViews / $articlePublished, 2)
                                 : 0,
                         ],
                         'hadith' => [
-                            'total_views' => Hadith::sum('views_count') ?? 0,
-                            'avg_views' => $hadithCount > 0
-                                ? round((Hadith::sum('views_count') ?? 0) / $hadithCount, 2)
+                            'total_views' => $hadithTotalViews,
+                            'avg_views' => $hadithTotal > 0
+                                ? round($hadithTotalViews / $hadithTotal, 2)
                                 : 0,
                         ],
                     ],
-                    'engagement_rate' => $this->calculateEngagementRate($totalViews, Article::count()),
+                    'engagement_rate' => $this->calculateEngagementRate($totalViews, $articleTotal),
                 ];
             } catch (\Exception $e) {
                 return $this->getEmptyEngagementMetrics();
@@ -449,11 +503,16 @@ class AnalyticsService
     }
 
     /**
-     * Clear analytics cache
+     * Clear analytics cache.
+     *
+     * Cache::tags() requires Redis/Memcached and is unavailable with the file
+     * or database drivers. We bump a version counter embedded in every cache
+     * key so that stale entries are orphaned without needing tag support.
      */
     public function clearCache(): void
     {
-        Cache::tags([self::CACHE_PREFIX])->flush();
+        $versionKey = self::CACHE_PREFIX.':version';
+        Cache::forever($versionKey, ((int) Cache::get($versionKey, 0)) + 1);
     }
 
     /**
@@ -600,13 +659,18 @@ class AnalyticsService
     }
 
     /**
-     * Generate cache key
+     * Generate cache key.
+     *
+     * The version segment is read from cache so that after clearCache() bumps
+     * the counter, all previously-stored keys are effectively orphaned and
+     * subsequent reads repopulate fresh entries. This works with any driver.
      *
      * @param  array<string, mixed>  $parameters
      */
     private function getCacheKey(string $method, array $parameters = []): string
     {
-        $key = self::CACHE_PREFIX.':'.$method;
+        $version = (int) Cache::get(self::CACHE_PREFIX.':version', 0);
+        $key = self::CACHE_PREFIX.':v'.$version.':'.$method;
 
         if (! empty($parameters)) {
             $key .= ':'.md5(serialize($parameters));

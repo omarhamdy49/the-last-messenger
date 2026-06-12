@@ -18,15 +18,13 @@ interface SavedFilterRepositoryInterface extends RepositoryInterface
      *
      * @param  int  $userId  User ID
      * @param  string|null  $module  Filter by module
-     * @return Collection
      */
     public function getByUser(int $userId, ?string $module = null): Collection;
 
     /**
-     * Get public filters
+     * Get public filters ordered by usage
      *
      * @param  string|null  $module  Filter by module
-     * @return Collection
      */
     public function getPublic(?string $module = null): Collection;
 
@@ -47,6 +45,22 @@ interface SavedFilterRepositoryInterface extends RepositoryInterface
     public function setAsDefault(int $filterId, int $userId): bool;
 
     /**
+     * Clear all default flags for a user+module combination
+     *
+     * @param  int  $userId  User ID
+     * @param  string  $module  Module type
+     */
+    public function clearDefaults(int $userId, string $module): void;
+
+    /**
+     * Update a filter and return the refreshed model
+     *
+     * @param  int  $id  Filter ID
+     * @param  array<string, mixed>  $data  Attributes to update
+     */
+    public function updateFilter(int $id, array $data): SavedFilter;
+
+    /**
      * Increment filter usage
      *
      * @param  int  $filterId  Filter ID
@@ -58,7 +72,6 @@ interface SavedFilterRepositoryInterface extends RepositoryInterface
      *
      * @param  int  $userId  User ID
      * @param  int  $limit  Number of results
-     * @return Collection
      */
     public function getMostUsed(int $userId, int $limit = 10): Collection;
 }

@@ -17,8 +17,6 @@ class UpdateTagRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request
-     *
-     * @return bool
      */
     public function authorize(): bool
     {
@@ -83,13 +81,11 @@ class UpdateTagRequest extends FormRequest
 
     /**
      * Prepare the data for validation
-     *
-     * @return void
      */
     protected function prepareForValidation(): void
     {
         // Auto-generate slug from English name if not provided
-        if (empty($this->slug) && !empty($this->input('name.en'))) {
+        if (empty($this->slug) && ! empty($this->input('name.en'))) {
             $this->merge([
                 'slug' => Str::slug($this->input('name.en')),
             ]);
@@ -100,7 +96,7 @@ class UpdateTagRequest extends FormRequest
         $name = $this->input('name', []);
 
         foreach ($languages as $lang) {
-            if (!isset($name[$lang])) {
+            if (! isset($name[$lang])) {
                 $name[$lang] = null;
             }
         }

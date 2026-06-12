@@ -21,7 +21,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $chapter_title_en English chapter title
  * @property \Illuminate\Support\Carbon $created_at
  * @property \Illuminate\Support\Carbon $updated_at
- *
  * @property-read \App\Domain\Hadith\Models\HadithCollection $collection
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Domain\Hadith\Models\Hadith[] $hadiths
  * @property-read int|null $hadiths_count
@@ -46,6 +45,7 @@ class HadithBook extends Model
      */
     protected $fillable = [
         'collection_id',
+        'book_number',
         'title_ar',
         'title_en',
         'slug_ar',
@@ -61,14 +61,13 @@ class HadithBook extends Model
      */
     protected $casts = [
         'collection_id' => 'integer',
+        'book_number' => 'string',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
 
     /**
      * Get the collection that owns this book.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function collection(): BelongsTo
     {
@@ -77,8 +76,6 @@ class HadithBook extends Model
 
     /**
      * Get all hadiths in this book.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function hadiths(): HasMany
     {
@@ -87,8 +84,6 @@ class HadithBook extends Model
 
     /**
      * Get all chapters in this book.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function chapters(): HasMany
     {
@@ -97,33 +92,28 @@ class HadithBook extends Model
 
     /**
      * Get the book title in the specified language.
-     *
-     * @param string $locale
-     * @return string
      */
     public function getTitleInLocale(string $locale = 'ar'): string
     {
-        $field = 'title_' . $locale;
+        $field = 'title_'.$locale;
+
         return $this->$field ?? $this->title_en ?? '';
     }
 
     /**
      * Get the chapter title in the specified language.
-     *
-     * @param string $locale
-     * @return string|null
      */
     public function getChapterTitleInLocale(string $locale = 'ar'): ?string
     {
-        $field = 'chapter_title_' . $locale;
+        $field = 'chapter_title_'.$locale;
+
         return $this->$field ?? $this->chapter_title_en;
     }
 
     /**
      * Scope to filter books by collection.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $collectionId
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByCollection($query, int $collectionId)
@@ -134,7 +124,7 @@ class HadithBook extends Model
     /**
      * Scope to get books with their hadiths.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithHadiths($query)
@@ -145,7 +135,7 @@ class HadithBook extends Model
     /**
      * Scope to get books with their collection.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithCollection($query)
@@ -155,8 +145,6 @@ class HadithBook extends Model
 
     /**
      * Get the total count of hadiths in this book.
-     *
-     * @return int
      */
     public function getTotalHadithsCount(): int
     {

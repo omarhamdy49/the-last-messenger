@@ -25,7 +25,7 @@ class DashboardAnalyticsService
     private const CACHE_PREFIX = 'dashboard';
 
     /**
-     * @param DashboardStatsProviderInterface[] $statsProviders
+     * @param  DashboardStatsProviderInterface[]  $statsProviders
      */
     public function __construct(
         private readonly array $statsProviders = [],
@@ -62,22 +62,22 @@ class DashboardAnalyticsService
             self::CACHE_PREFIX.".content_growth_chart.{$days}",
             self::CACHE_TTL,
             function () use ($days): array {
-                $labels    = [];
+                $labels = [];
                 $usersData = [];
 
                 for ($i = $days - 1; $i >= 0; $i--) {
-                    $date        = now()->subDays($i)->toDateString();
-                    $labels[]    = $date;
+                    $date = now()->subDays($i)->toDateString();
+                    $labels[] = $date;
                     $usersData[] = DB::table('users')->whereDate('created_at', $date)->count();
                 }
 
                 return [
-                    'labels'   => $labels,
+                    'labels' => $labels,
                     'datasets' => [
                         [
-                            'label'           => 'Users',
-                            'data'            => $usersData,
-                            'borderColor'     => '#0056b3',
+                            'label' => 'Users',
+                            'data' => $usersData,
+                            'borderColor' => '#0056b3',
                             'backgroundColor' => 'rgba(0, 86, 179, 0.1)',
                         ],
                     ],
@@ -98,18 +98,18 @@ class DashboardAnalyticsService
             self::CACHE_TTL,
             function (): array {
                 $labels = [];
-                $data   = [];
+                $data = [];
                 $colors = ['#0056b3', '#218838', '#3B82F6', '#F59E0B', '#10B981', '#8B5CF6'];
 
                 foreach ($this->statsProviders as $provider) {
-                    $stats    = $provider->getStats();
+                    $stats = $provider->getStats();
                     $labels[] = ucfirst(str_replace('_', ' ', $provider->getModuleKey()));
-                    $data[]   = $stats['total'] ?? 0;
+                    $data[] = $stats['total'] ?? 0;
                 }
 
                 return [
                     'labels' => $labels,
-                    'data'   => $data,
+                    'data' => $data,
                     'colors' => array_slice($colors, 0, count($labels)),
                 ];
             }
@@ -131,9 +131,9 @@ class DashboardAnalyticsService
 
                 try {
                     for ($i = $days - 1; $i >= 0; $i--) {
-                        $date      = now()->subDays($i)->toDateString();
+                        $date = now()->subDays($i)->toDateString();
                         $heatmap[] = [
-                            'date'  => $date,
+                            'date' => $date,
                             'count' => AdminLog::whereDate('created_at', $date)->count(),
                         ];
                     }
@@ -161,7 +161,7 @@ class DashboardAnalyticsService
             function (): array {
                 try {
                     $databaseName = DB::getDatabaseName();
-                    $dbSize       = DB::select('
+                    $dbSize = DB::select('
                         SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS size
                         FROM information_schema.TABLES
                         WHERE table_schema = ?
@@ -173,16 +173,16 @@ class DashboardAnalyticsService
 
                     return [
                         'api_response_time' => 145,
-                        'database_size'     => $dbSize[0]->size ?? 0,
-                        'cache_hit_rate'    => 85.0,
-                        'active_sessions'   => $activeSessions,
+                        'database_size' => $dbSize[0]->size ?? 0,
+                        'cache_hit_rate' => 85.0,
+                        'active_sessions' => $activeSessions,
                     ];
                 } catch (\Throwable) {
                     return [
                         'api_response_time' => 0,
-                        'database_size'     => 0,
-                        'cache_hit_rate'    => 0,
-                        'active_sessions'   => 0,
+                        'database_size' => 0,
+                        'cache_hit_rate' => 0,
+                        'active_sessions' => 0,
                     ];
                 }
             }

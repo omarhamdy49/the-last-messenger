@@ -26,7 +26,7 @@ class JsonDataTransformer
         ?HadithJsonValidator $validator = null,
         ?HadithJsonTransformer $transformer = null,
     ) {
-        $this->validator   = $validator ?? new HadithJsonValidator();
+        $this->validator = $validator ?? new HadithJsonValidator;
         $this->transformer = $transformer ?? new HadithJsonTransformer($this->validator);
     }
 

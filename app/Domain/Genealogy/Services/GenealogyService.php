@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Genealogy\Services;
 
+use App\Domain\Genealogy\DTOs\CreatePersonData;
 use App\Domain\Genealogy\Enums\PersonType;
 use App\Domain\Genealogy\Models\Person;
 use App\Domain\Genealogy\Repositories\PersonRepositoryInterface;
@@ -119,12 +120,30 @@ class GenealogyService extends BaseService
 
     /**
      * Create new person
-     *
-     * @param  array<string, mixed>  $data
      */
-    public function createPerson(array $data): Person
+    public function createPerson(CreatePersonData $data): Person
     {
-        return $this->repository->create($data);
+        return $this->repository->create([
+            'name' => $data->name,
+            'title' => $data->title,
+            'person_type' => $data->personType,
+            'gender' => $data->gender,
+            'father_id' => $data->fatherId,
+            'mother_id' => $data->motherId,
+            'sahaba_id' => $data->sahabaId,
+            'birth_date_hijri' => $data->birthDateHijri,
+            'birth_date_gregorian' => $data->birthDateGregorian,
+            'birth_place' => $data->birthPlace,
+            'death_date_hijri' => $data->deathDateHijri,
+            'death_date_gregorian' => $data->deathDateGregorian,
+            'death_place' => $data->deathPlace,
+            'burial_place' => $data->burialPlace,
+            'tribe' => $data->tribe,
+            'occupation' => $data->occupation,
+            'biography' => $data->biography,
+            'notes' => $data->notes,
+            'is_verified' => $data->isVerified,
+        ]);
     }
 
     /**

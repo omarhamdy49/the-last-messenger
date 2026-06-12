@@ -16,7 +16,7 @@ final class QuranDataImported
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     /**
-     * @param array<string, mixed> $results
+     * @param  array<string, mixed>  $results
      */
     public function __construct(
         public readonly string $type,

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Blog\Repositories;
 
 use App\Domain\Blog\Enums\CategoryType;
+use App\Domain\Blog\Models\Category;
 use App\Domain\Shared\Contracts\RepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
@@ -67,7 +68,24 @@ interface CategoryRepositoryInterface extends RepositoryInterface
     public function updateDisplayOrder(array $items): void;
 
     /**
+     * Get root categories with children eager-loaded, optimised for public API
+     */
+    public function listRoots(): Collection;
+
+    /**
+     * Find a category by slug with children and parent eager-loaded
+     */
+    public function findBySlug(string $slug): ?Category;
+
+    /**
      * Clear cache
      */
     public function clearCache(): void;
+
+    /**
+     * Restore a soft-deleted category.
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     */
+    public function restoreById(int $id): Category;
 }

@@ -20,7 +20,7 @@ interface EventDispatcherInterface
     /**
      * Dispatch multiple domain events
      *
-     * @param DomainEvent[] $events
+     * @param  DomainEvent[]  $events
      */
     public function dispatchAll(array $events): void;
 }

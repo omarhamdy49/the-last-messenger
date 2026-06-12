@@ -121,12 +121,12 @@
                         <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                             السيرة الذاتية ({{ strtoupper($lang) }})
                         </label>
-                        <textarea name="biography[{{ $lang }}]"
-                                  rows="5"
-                                  class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all resize-none"
-                                  :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                                  dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                                  placeholder="أدخل السيرة الذاتية...">{{ old("biography.{$lang}") }}</textarea>
+                        <x-admin.form.wysiwyg
+                            name="biography[{{ $lang }}]"
+                            :value="old('biography.'.$lang)"
+                            dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
+                            height="240px"
+                            placeholder="أدخل السيرة الذاتية..." />
                         @error("biography.{$lang}")
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror

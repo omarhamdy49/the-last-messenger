@@ -173,7 +173,7 @@ class QuranService extends BaseService
     /**
      * Import Surahs from JSON data
      *
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
     public function importSurahs(array $data, bool $truncate = false): array
@@ -219,7 +219,7 @@ class QuranService extends BaseService
     /**
      * Import Verses from JSON data
      *
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
     public function importVerses(array $data, bool $truncate = false): array
@@ -239,8 +239,9 @@ class QuranService extends BaseService
             $surahNumber = $surahData['number'];
             $surah = Surah::find($surahNumber);
 
-            if (!$surah) {
+            if (! $surah) {
                 $failed += count($surahData['ayahs'] ?? []);
+
                 continue;
             }
 
@@ -285,7 +286,7 @@ class QuranService extends BaseService
         }
 
         return [
-            'total' => array_sum(array_map(fn($s) => count($s['ayahs'] ?? []), $surahs)),
+            'total' => array_sum(array_map(fn ($s) => count($s['ayahs'] ?? []), $surahs)),
             'created' => $created,
             'failed' => $failed,
         ];
@@ -294,7 +295,7 @@ class QuranService extends BaseService
     /**
      * Import Translations (placeholder for future use)
      *
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
     public function importTranslations(array $data, bool $truncate = false): array
@@ -310,7 +311,7 @@ class QuranService extends BaseService
     /**
      * Import Tafsir (placeholder for future use)
      *
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
     public function importTafsir(array $data, bool $truncate = false): array
@@ -326,7 +327,7 @@ class QuranService extends BaseService
     /**
      * Import Reciters (placeholder for future use)
      *
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
     public function importReciters(array $data, bool $truncate = false): array

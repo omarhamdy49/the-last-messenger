@@ -64,22 +64,31 @@ class HadithGradingLevel extends Model
      * Grading level constants (English codes)
      */
     public const SAHIH = 'sahih'; // Authentic
+
     public const HASAN = 'hasan'; // Good
+
     public const DAIF = 'daif'; // Weak
+
     public const MAWDU = 'mawdu'; // Fabricated
+
     public const MUTTASIL = 'muttasil'; // Connected chain
+
     public const MURSAL = 'mursal'; // Missing companion
+
     public const MUNQATI = 'munqati'; // Broken chain
+
     public const MUDALLAS = 'mudallas'; // Concealed defect
+
     public const SHADH = 'shadh'; // Irregular
+
     public const MUNKAR = 'munkar'; // Denounced
+
     public const SAHIH_LIGHAIRIHI = 'sahih_lighairihi'; // Authentic due to corroborating evidence
+
     public const HASAN_LIGHAIRIHI = 'hasan_lighairihi'; // Good due to corroborating evidence
 
     /**
      * Get all gradings with this level
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function gradings(): HasMany
     {
@@ -89,8 +98,7 @@ class HadithGradingLevel extends Model
     /**
      * Scope: Order by severity/authenticity rank
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $direction
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeOrderBySeverity($query, string $direction = 'asc')
@@ -101,7 +109,7 @@ class HadithGradingLevel extends Model
     /**
      * Scope: Get authentic levels only (Sahih and Hasan)
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeAuthentic($query)
@@ -112,7 +120,7 @@ class HadithGradingLevel extends Model
     /**
      * Scope: Get weak levels only
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWeak($query)
@@ -123,7 +131,7 @@ class HadithGradingLevel extends Model
     /**
      * Scope: Get fabricated levels only
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeFabricated($query)
@@ -134,8 +142,7 @@ class HadithGradingLevel extends Model
     /**
      * Scope: Filter by grade code
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $code
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByCode($query, string $code)
@@ -145,9 +152,6 @@ class HadithGradingLevel extends Model
 
     /**
      * Get grade display name
-     *
-     * @param string $language
-     * @return string
      */
     public function getDisplayName(string $language = 'ar'): string
     {
@@ -156,8 +160,6 @@ class HadithGradingLevel extends Model
 
     /**
      * Check if this is an authentic grade
-     *
-     * @return bool
      */
     public function isAuthentic(): bool
     {
@@ -171,8 +173,6 @@ class HadithGradingLevel extends Model
 
     /**
      * Check if this is a weak grade
-     *
-     * @return bool
      */
     public function isWeak(): bool
     {
@@ -188,8 +188,6 @@ class HadithGradingLevel extends Model
 
     /**
      * Check if this is a fabricated grade
-     *
-     * @return bool
      */
     public function isFabricated(): bool
     {
@@ -198,8 +196,6 @@ class HadithGradingLevel extends Model
 
     /**
      * Get CSS color class based on grade severity
-     *
-     * @return string
      */
     public function getColorClass(): string
     {
@@ -220,8 +216,6 @@ class HadithGradingLevel extends Model
 
     /**
      * Get badge color based on grade severity
-     *
-     * @return string
      */
     public function getBadgeColor(): string
     {

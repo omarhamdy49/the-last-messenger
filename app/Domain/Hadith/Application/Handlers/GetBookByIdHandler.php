@@ -25,8 +25,8 @@ final class GetBookByIdHandler implements QueryHandler
     /**
      * Handle the query
      *
-     * @param GetBookByIdQuery $query
-     * @return BookDTO
+     * @param  GetBookByIdQuery  $query
+     *
      * @throws EntityNotFoundException
      */
     public function handle(Query $query): BookDTO
@@ -46,7 +46,7 @@ final class GetBookByIdHandler implements QueryHandler
             $relations[] = 'collection';
         }
 
-        if (!empty($relations)) {
+        if (! empty($relations)) {
             $book->load($relations);
         }
 

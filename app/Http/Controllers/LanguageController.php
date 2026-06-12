@@ -10,7 +10,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Session;
-use Illuminate\Validation\Rule;
 
 /**
  * Language Controller
@@ -29,9 +28,6 @@ class LanguageController extends Controller
      * Switch application language
      *
      * POST /language/switch
-     *
-     * @param  Request  $request
-     * @return RedirectResponse|JsonResponse
      */
     public function switch(Request $request): RedirectResponse|JsonResponse
     {
@@ -79,8 +75,6 @@ class LanguageController extends Controller
      * Get list of active languages
      *
      * GET /api/languages/active
-     *
-     * @return JsonResponse
      */
     public function active(): JsonResponse
     {
@@ -93,8 +87,6 @@ class LanguageController extends Controller
      * Get all available languages (active and inactive)
      *
      * GET /api/languages/all
-     *
-     * @return JsonResponse
      */
     public function all(): JsonResponse
     {
@@ -110,8 +102,6 @@ class LanguageController extends Controller
      * Get current locale
      *
      * GET /api/languages/current
-     *
-     * @return JsonResponse
      */
     public function current(): JsonResponse
     {
@@ -127,8 +117,6 @@ class LanguageController extends Controller
 
     /**
      * Get active languages from cache
-     *
-     * @return array
      */
     private function getActiveLanguages(): array
     {
@@ -141,9 +129,6 @@ class LanguageController extends Controller
 
     /**
      * Check if language is active
-     *
-     * @param  string  $code
-     * @return bool
      */
     private function isLanguageActive(string $code): bool
     {
@@ -159,8 +144,6 @@ class LanguageController extends Controller
 
     /**
      * Get default languages configuration
-     *
-     * @return array
      */
     private function getDefaultLanguages(): array
     {

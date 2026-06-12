@@ -158,9 +158,8 @@ class UpdateCategoryRequest extends FormRequest
     /**
      * Check if setting the parent would create a circular reference
      *
-     * @param int $categoryId Current category ID
-     * @param int $parentId Proposed parent ID
-     * @return bool
+     * @param  int  $categoryId  Current category ID
+     * @param  int  $parentId  Proposed parent ID
      */
     protected function wouldCreateCircularReference(int $categoryId, int $parentId): bool
     {
@@ -173,9 +172,6 @@ class UpdateCategoryRequest extends FormRequest
 
     /**
      * Get all descendant IDs of a category (recursive)
-     *
-     * @param int $categoryId
-     * @return array
      */
     protected function getAllDescendants(int $categoryId): array
     {

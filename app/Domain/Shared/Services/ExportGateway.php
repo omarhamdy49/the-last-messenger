@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Shared\Services;
 
 use App\Domain\Shared\Contracts\ExportableModuleInterface;
-use App\Domain\Shared\Exporters\BaseExporter;
 use App\Domain\Shared\Exceptions\BusinessRuleViolationException;
+use App\Domain\Shared\Exporters\BaseExporter;
 
 /**
  * ExportGateway
@@ -24,7 +24,7 @@ class ExportGateway
     private array $modules = [];
 
     /**
-     * @param ExportableModuleInterface[] $modules
+     * @param  ExportableModuleInterface[]  $modules
      */
     public function __construct(array $modules = [])
     {
@@ -66,7 +66,7 @@ class ExportGateway
 
         return [
             'available_columns' => $module->getAvailableColumns(),
-            'default_columns'   => $module->getDefaultColumns(),
+            'default_columns' => $module->getDefaultColumns(),
         ];
     }
 
@@ -105,14 +105,14 @@ class ExportGateway
         string $moduleKey,
         string $format,
     ): void {
-        if (!in_array($format, $module->getSupportedFormats(), true)) {
+        if (! in_array($format, $module->getSupportedFormats(), true)) {
             throw BusinessRuleViolationException::forRule(
                 ruleName: 'UnsupportedExportFormat',
                 message: "Format [{$format}] is not supported by module [{$moduleKey}]. "
-                    . 'Supported: ' . implode(', ', $module->getSupportedFormats()),
+                    .'Supported: '.implode(', ', $module->getSupportedFormats()),
                 context: [
-                    'module_key'        => $moduleKey,
-                    'requested_format'  => $format,
+                    'module_key' => $moduleKey,
+                    'requested_format' => $format,
                     'supported_formats' => $module->getSupportedFormats(),
                 ],
             );

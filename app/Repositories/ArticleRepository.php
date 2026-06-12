@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Repositories;
 
+use App\Domain\Blog\Models\Category;
+use App\Domain\Blog\Models\Tag;
 use App\Models\Article;
 use App\Models\ArticleLocale;
+use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -153,12 +156,12 @@ class ArticleRepository
             ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,slug,type,status', 'category.translations:id,category_id,locale,name'])
             ->where('id', '!=', $articleId)
             ->where(function ($query) use ($categoryIds, $tagIds) {
-                if (!empty($categoryIds)) {
+                if (! empty($categoryIds)) {
                     $query->whereHas('categories', function ($q) use ($categoryIds) {
                         $q->whereIn('categories.id', $categoryIds);
                     });
                 }
-                if (!empty($tagIds)) {
+                if (! empty($tagIds)) {
                     $query->orWhereHas('tags', function ($q) use ($tagIds) {
                         $q->whereIn('tags.id', $tagIds);
                     });
@@ -168,6 +171,149 @@ class ArticleRepository
                 $q->where('is_ready', true);
             })
             ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Get published articles for the public index, with only the columns the
+     * card payload needs (no content/SEO/statistics JSON blobs).
+     *
+     * Locale rows are constrained to the active locale + the Arabic fallback,
+     * and tags are eager-loaded so the cards can power client-side tag filters.
+     */
+    public function getPublishedForPublicIndex(string $locale, int $limit = 500): Collection
+    {
+        return Article::query()
+            ->select(['id', 'slug', 'thumb', 'writer_id', 'category_id', 'read_time', 'views', 'is_featured', 'hijri_date', 'created_at'])
+            ->with([
+                'locales' => fn ($q) => $q
+                    ->select(['id', 'article_id', 'locale', 'title', 'slug', 'excerpt', 'description', 'is_ready'])
+                    ->whereIn('locale', array_unique([$locale, 'ar'])),
+                'writer:id,name',
+                'category:id,slug,type,status',
+                'category.translations:id,category_id,locale,name',
+                'tags:tags.id,tags.slug',
+                'tags.translations:id,tag_id,locale,name',
+            ])
+            ->whereHas('locales', function ($q) use ($locale) {
+                $q->where('locale', $locale)->where('is_ready', true);
+            })
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Get related published articles for the public single-article page.
+     *
+     * Same-category matches (primary or pivot) rank first, then shared-tag
+     * matches; the source article is excluded and results are capped.
+     */
+    public function getRelatedForPublic(int $articleId, int $limit = 6): Collection
+    {
+        $article = Article::query()
+            ->select(['id', 'category_id'])
+            ->with(['categories:categories.id', 'tags:tags.id'])
+            ->find($articleId);
+
+        if ($article === null) {
+            return new Collection;
+        }
+
+        $categoryIds = $article->categories->pluck('id')
+            ->when($article->category_id !== null, fn ($ids) => $ids->push($article->category_id))
+            ->unique()
+            ->values()
+            ->all();
+        $tagIds = $article->tags->pluck('id')->all();
+
+        if ($categoryIds === [] && $tagIds === []) {
+            return new Collection;
+        }
+
+        $query = Article::query()
+            ->select(['id', 'slug', 'thumb', 'writer_id', 'category_id', 'read_time', 'views', 'is_featured', 'hijri_date', 'created_at'])
+            ->with([
+                'locales:id,article_id,locale,title,slug,excerpt,description,is_ready',
+                'writer:id,name',
+                'category:id,slug,type,status',
+                'category.translations:id,category_id,locale,name',
+            ])
+            ->whereKeyNot($articleId)
+            ->where(function (Builder $q) use ($categoryIds, $tagIds) {
+                if ($categoryIds !== []) {
+                    $q->whereIn('category_id', $categoryIds)
+                        ->orWhereHas('categories', function ($c) use ($categoryIds) {
+                            $c->whereIn('categories.id', $categoryIds);
+                        });
+                }
+                if ($tagIds !== []) {
+                    $q->orWhereHas('tags', function ($t) use ($tagIds) {
+                        $t->whereIn('tags.id', $tagIds);
+                    });
+                }
+            })
+            ->whereHas('locales', function ($q) {
+                $q->where('is_ready', true);
+            });
+
+        if ($categoryIds !== [] && $tagIds !== []) {
+            // Same-category matches first, then shared-tag-only matches.
+            $placeholders = implode(',', array_fill(0, count($categoryIds), '?'));
+            $query->orderByRaw(
+                "CASE WHEN articles.category_id IN ({$placeholders}) OR EXISTS (
+                    SELECT 1 FROM article_category
+                    WHERE article_category.article_id = articles.id
+                      AND article_category.category_id IN ({$placeholders})
+                ) THEN 0 ELSE 1 END",
+                array_merge($categoryIds, $categoryIds),
+            );
+        }
+
+        return $query->orderByDesc('created_at')->limit($limit)->get();
+    }
+
+    /**
+     * Get categories that have at least one published article, with the real
+     * published-article count (primary category — matches the public index
+     * filter, which filters cards by their primary categoryId).
+     *
+     * @return Collection<int, Category>
+     */
+    public function getPublishedCategoryFacets(): Collection
+    {
+        $published = function ($q): void {
+            $q->whereHas('locales', fn ($l) => $l->where('is_ready', true));
+        };
+
+        return Category::query()
+            ->select(['id', 'slug'])
+            ->with(['translations:id,category_id,locale,name'])
+            ->withCount(['articles as published_articles_count' => $published])
+            ->whereHas('articles', $published)
+            ->orderByDesc('published_articles_count')
+            ->get();
+    }
+
+    /**
+     * Get tags attached to at least one published article, with the real
+     * published-article count, for the public index tag cloud.
+     *
+     * @return Collection<int, Tag>
+     */
+    public function getPublishedTagFacets(int $limit = 20): Collection
+    {
+        $published = function ($q): void {
+            $q->whereHas('locales', fn ($l) => $l->where('is_ready', true));
+        };
+
+        return Tag::query()
+            ->select(['id', 'slug'])
+            ->with(['translations:id,tag_id,locale,name'])
+            ->withCount(['articles as published_articles_count' => $published])
+            ->whereHas('articles', $published)
+            ->orderByDesc('published_articles_count')
             ->limit($limit)
             ->get();
     }
@@ -320,7 +466,7 @@ class ArticleRepository
             ->where('is_ready', true)
             ->first();
 
-        if (!$articleLocale) {
+        if (! $articleLocale) {
             return null;
         }
 
@@ -333,7 +479,7 @@ class ArticleRepository
             'categories.translations:id,category_id,locale,name',
             'tags:id,slug',
             'tags.translations:id,tag_id,locale,name',
-            'media',
+            'mediaItems',
         ])->find($articleLocale->article_id);
     }
 
@@ -369,6 +515,167 @@ class ArticleRepository
                 ->limit($limit)
                 ->get();
         });
+    }
+
+    /**
+     * Get aggregate stats for the admin index dashboard strip.
+     *
+     * Returns a plain object with keys: total, published, drafts, scheduled, featured.
+     * All counts exclude soft-deleted rows.
+     */
+    public function getIndexStats(): object
+    {
+        return DB::table('articles')
+            ->selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'published' THEN 1 ELSE 0 END) as published,
+                SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) as drafts,
+                SUM(CASE WHEN status = 'scheduled' THEN 1 ELSE 0 END) as scheduled,
+                SUM(CASE WHEN is_featured = 1 THEN 1 ELSE 0 END) as featured
+            ")
+            ->whereNull('deleted_at')
+            ->first();
+    }
+
+    /**
+     * Get all categories with their translations for article form dropdowns.
+     *
+     * @return Collection<int, Category>
+     */
+    public function getFormCategories(): Collection
+    {
+        return Category::with(['translations:id,category_id,locale,name'])
+            ->select(['id', 'slug', 'type', 'status'])
+            ->orderBy('id')
+            ->get();
+    }
+
+    /**
+     * Get all users with the 'writer' role for article author dropdowns.
+     *
+     * @return Collection<int, User>
+     */
+    public function getFormWriters(): Collection
+    {
+        return User::role('writer')
+            ->select(['id', 'name'])
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
+     * Get all article-type tags with their translations for article form dropdowns.
+     *
+     * @return Collection<int, Tag>
+     */
+    public function getFormTags(): Collection
+    {
+        return Tag::with(['translations:id,tag_id,locale,name'])
+            ->where('type', 'article')
+            ->select(['id', 'slug', 'type'])
+            ->orderBy('id')
+            ->get();
+    }
+
+    /**
+     * Soft-delete an article by ID.
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     */
+    public function deleteById(int $id): void
+    {
+        Article::findOrFail($id)->delete();
+    }
+
+    /**
+     * Mark all locales of an article as published (is_ready = true).
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     */
+    public function publishById(int $id): void
+    {
+        Article::findOrFail($id)->locales()->update(['is_ready' => true]);
+    }
+
+    /**
+     * Restore a soft-deleted article.
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     */
+    public function restoreById(int $id): Article
+    {
+        $article = Article::withTrashed()->findOrFail($id);
+        $article->restore();
+
+        return $article;
+    }
+
+    /**
+     * Force-delete an article and return its file paths for cleanup.
+     * Returns ['thumb' => string|null, 'gallery' => array<string>].
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     */
+    public function forceDeleteById(int $id): array
+    {
+        $article = Article::withTrashed()->with('gallery')->findOrFail($id);
+
+        $thumb = $article->thumb;
+        $gallery = $article->gallery->pluck('image')->filter()->values()->all();
+
+        $article->forceDelete();
+
+        return compact('thumb', 'gallery');
+    }
+
+    /**
+     * Get paginated trashed articles for the admin trash view.
+     */
+    public function getTrashed(int $perPage = 15): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    {
+        return Article::onlyTrashed()
+            ->with([
+                'locales:id,article_id,locale,title,slug,is_ready',
+                'writer:id,name',
+                'category:id,name,slug',
+            ])
+            ->orderBy('deleted_at', 'desc')
+            ->paginate($perPage);
+    }
+
+    /**
+     * Search articles for AJAX selectors (series article picker, SeerahEvent form).
+     *
+     * @param  array<int>  $excludeIds
+     */
+    public function searchForSelector(string $search, array $excludeIds = [], int $limit = 20): \Illuminate\Database\Eloquent\Collection
+    {
+        return Article::query()
+            ->select(['id', 'status', 'created_at'])
+            ->with(['locales:id,article_id,locale,title'])
+            ->when($search, function ($q) use ($search) {
+                $q->whereHas('locales', function ($lq) use ($search) {
+                    $lq->where('title', 'like', "%{$search}%");
+                });
+            })
+            ->when(! empty($excludeIds), function ($q) use ($excludeIds) {
+                $q->whereNotIn('id', $excludeIds);
+            })
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Get articles for form dropdowns (SeerahEvent create/edit).
+     */
+    public function getForDropdown(): \Illuminate\Database\Eloquent\Collection
+    {
+        return Article::query()
+            ->select(['id', 'status', 'created_at'])
+            ->with(['locales:id,article_id,locale,title,slug,is_ready'])
+            ->orderByDesc('id')
+            ->get();
     }
 
     /**

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Hadith\Services;
 
+use App\Domain\Hadith\Application\DTOs\HadithLookupData;
 use App\Domain\Hadith\Models\Hadith;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -17,6 +18,7 @@ class HadithDeduplicationService
     {
         // Normalize text: remove extra whitespace, trim
         $normalized = trim(preg_replace('/\s+/', ' ', $text));
+
         return hash('sha256', $normalized);
     }
 
@@ -35,11 +37,11 @@ class HadithDeduplicationService
     /**
      * Get or create hadith, checking for duplicates by text
      *
-     * @param array $hadithData Hadith attributes (book_id, hadith_number, etc.)
-     * @param string $arabicText Arabic translation text
+     * @param  HadithLookupData  $hadithData  Typed hadith attributes (book_id, hadith_number, etc.)
+     * @param  string  $arabicText  Arabic translation text
      * @return Hadith The existing or newly created hadith
      */
-    public function getOrCreateByText(array $hadithData, string $arabicText): Hadith
+    public function getOrCreateByText(HadithLookupData $hadithData, string $arabicText): Hadith
     {
         $hash = $this->calculateTextHash($arabicText);
 
@@ -49,23 +51,21 @@ class HadithDeduplicationService
         if ($existing) {
             Log::info('hadith.deduplication.found_existing', [
                 'existing_id' => $existing->id,
-                'book_id' => $hadithData['book_id'],
-                'hadith_number' => $hadithData['hadith_number'] ?? null,
+                'book_id' => $hadithData->bookId,
+                'hadith_number' => $hadithData->hadithNumber,
                 'text_hash' => $hash,
             ]);
 
             return $existing;
         }
 
-        // Create new hadith with hash
-        $hadithData['text_hash'] = $hash;
-
-        $hadith = Hadith::create($hadithData);
+        // Create new hadith; append the derived text_hash to the payload
+        $hadith = Hadith::create(array_merge($hadithData->toArray(), ['text_hash' => $hash]));
 
         Log::info('hadith.deduplication.created_new', [
             'hadith_id' => $hadith->id,
-            'book_id' => $hadithData['book_id'],
-            'hadith_number' => $hadithData['hadith_number'] ?? null,
+            'book_id' => $hadithData->bookId,
+            'hadith_number' => $hadithData->hadithNumber,
             'text_hash' => $hash,
         ]);
 
@@ -93,8 +93,9 @@ class HadithDeduplicationService
                     $hadith->load(['translations' => fn ($q) => $q->where('language_code', 'ar')]);
 
                     $arabicTranslation = $hadith->translations->first();
-                    if (!$arabicTranslation) {
+                    if (! $arabicTranslation) {
                         $stats['errors'][] = "Hadith {$hadith->id} has no Arabic translation";
+
                         continue;
                     }
 
@@ -138,7 +139,7 @@ class HadithDeduplicationService
                         'book_id' => $h->book_id,
                         'book_title' => $h->book?->title_ar,
                         'hadith_number' => $h->hadith_number,
-                        'text_preview' => substr($h->translations->first()?->text ?? '', 0, 100) . '...',
+                        'text_preview' => substr($h->translations->first()?->text ?? '', 0, 100).'...',
                     ])
                     ->toArray();
 

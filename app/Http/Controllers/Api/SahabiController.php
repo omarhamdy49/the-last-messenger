@@ -46,7 +46,7 @@ class SahabiController extends Controller
             return $this->success(
                 new SahabiResource($companion)
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return $this->notFound($e->getMessage());
         }
     }

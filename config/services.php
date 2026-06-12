@@ -35,6 +35,21 @@ return [
         ],
     ],
 
+    // Social login (Laravel Socialite). A provider whose client_id is empty
+    // is treated as "not configured": its button is hidden on the auth pages
+    // and its routes redirect back to login with a friendly message.
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT', '/auth/google/callback'),
+    ],
+
+    'facebook' => [
+        'client_id' => env('FACEBOOK_CLIENT_ID'),
+        'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
+        'redirect' => env('FACEBOOK_REDIRECT', '/auth/facebook/callback'),
+    ],
+
     'quran' => [
         'auth_url' => env('QURAN_AUTH_API_URL', 'https://oauth2.quran.foundation/oauth2/token'),
         'client_id' => env('QURAN_API_KEY'),

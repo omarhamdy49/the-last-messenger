@@ -45,4 +45,11 @@ interface SahabiRepositoryInterface extends RepositoryInterface
      * Search companions
      */
     public function search(string $query, int $perPage = 15): LengthAwarePaginator;
+
+    /**
+     * Get aggregate gender stats for the admin index page (single query).
+     *
+     * @return array{total: int, male: int, female: int}
+     */
+    public function getIndexStats(): array;
 }

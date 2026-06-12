@@ -21,9 +21,9 @@ class UserResource extends JsonResource
     public function toArray(Request $request): array
     {
         $shouldExposeEmail = $request->user()?->id === $this->id
-            || $request->routeIs('auth.login')
-            || $request->routeIs('auth.register')
-            || $request->routeIs('auth.user');
+            || $request->routeIs('v1.auth.login')
+            || $request->routeIs('v1.auth.register')
+            || $request->routeIs('v1.auth.user');
 
         return [
             'id' => $this->id,

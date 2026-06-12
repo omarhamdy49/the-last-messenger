@@ -30,14 +30,18 @@ class Companion extends Model
 
     public static function findOrCreateByName(array $data): self
     {
-        if (!empty($data['name_ar'])) {
+        if (! empty($data['name_ar'])) {
             $companion = static::where('name_ar', $data['name_ar'])->first();
-            if ($companion) return $companion;
+            if ($companion) {
+                return $companion;
+            }
         }
 
-        if (!empty($data['name_en'])) {
+        if (! empty($data['name_en'])) {
             $companion = static::where('name_en', $data['name_en'])->first();
-            if ($companion) return $companion;
+            if ($companion) {
+                return $companion;
+            }
         }
 
         return static::create($data);

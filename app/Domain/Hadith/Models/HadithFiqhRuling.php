@@ -12,11 +12,13 @@ class HadithFiqhRuling extends Model
     protected $table = 'hadith_fiqh_rulings';
 
     protected $fillable = [
-        'hadith_id', 'principle', 'language_code', 'display_order',
+        'hadith_id', 'scholar_id', 'principle', 'language_code', 'display_order',
+        'review_status', 'source_reference', 'source_url',
     ];
 
     protected $casts = [
         'hadith_id' => 'integer',
+        'scholar_id' => 'integer',
         'display_order' => 'integer',
     ];
 

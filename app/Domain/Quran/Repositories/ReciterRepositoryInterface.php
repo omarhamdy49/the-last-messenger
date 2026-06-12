@@ -16,100 +16,62 @@ interface ReciterRepositoryInterface
 {
     /**
      * Get paginated reciters
-     *
-     * @param int $perPage
-     * @param bool $activeOnly
-     * @return LengthAwarePaginator
      */
     public function paginate(int $perPage = 15, bool $activeOnly = true): LengthAwarePaginator;
 
     /**
      * Get reciter by ID
-     *
-     * @param int $id
-     * @return Reciter|null
      */
     public function getById(int $id): ?Reciter;
 
     /**
      * Get reciter by slug
-     *
-     * @param string $slug
-     * @return Reciter|null
      */
     public function getBySlug(string $slug): ?Reciter;
 
     /**
      * Get reciters by country
-     *
-     * @param string $country
-     * @param bool $activeOnly
-     * @return Collection
      */
     public function getByCountry(string $country, bool $activeOnly = true): Collection;
 
     /**
      * Get reciters by recitation style
-     *
-     * @param string $style
-     * @param bool $activeOnly
-     * @return Collection
      */
     public function getByStyle(string $style, bool $activeOnly = true): Collection;
 
     /**
      * Get featured reciters
-     *
-     * @param bool $activeOnly
-     * @return Collection
      */
     public function getFeatured(bool $activeOnly = true): Collection;
 
     /**
      * Get active reciters
-     *
-     * @return Collection
      */
     public function getActive(): Collection;
 
     /**
      * Search reciters by name (multi-language)
-     *
-     * @param string $query
-     * @param bool $activeOnly
-     * @return Collection
      */
     public function search(string $query, bool $activeOnly = true): Collection;
 
     /**
      * Create new reciter
-     *
-     * @param array $data
-     * @return Reciter
      */
     public function create(array $data): Reciter;
 
     /**
      * Update reciter
-     *
-     * @param Reciter $reciter
-     * @param array $data
-     * @return bool
      */
     public function update(Reciter $reciter, array $data): bool;
 
     /**
      * Delete reciter
-     *
-     * @param Reciter $reciter
-     * @return bool
      */
     public function delete(Reciter $reciter): bool;
 
     /**
      * Bulk delete reciters
      *
-     * @param array $ids
      * @return int Number of deleted reciters
      */
     public function bulkDelete(array $ids): int;
@@ -117,34 +79,51 @@ interface ReciterRepositoryInterface
     /**
      * Reorder reciters
      *
-     * @param array $ids Ordered array of IDs
-     * @return bool
+     * @param  array  $ids  Ordered array of IDs
      */
     public function reorder(array $ids): bool;
 
     /**
      * Update featured status
-     *
-     * @param Reciter $reciter
-     * @param bool $featured
-     * @return bool
      */
     public function updateFeatured(Reciter $reciter, bool $featured): bool;
 
     /**
      * Update active status
-     *
-     * @param Reciter $reciter
-     * @param bool $active
-     * @return bool
      */
     public function updateActive(Reciter $reciter, bool $active): bool;
 
     /**
      * Count recitations for reciter
-     *
-     * @param Reciter $reciter
-     * @return int
      */
     public function countRecitations(Reciter $reciter): int;
+
+    /**
+     * Get paginated reciters with search/filter support (admin list)
+     *
+     * @param  array{search?: string, country?: string, style?: string}  $filters
+     */
+    public function paginateWithFilters(array $filters, int $perPage): LengthAwarePaginator;
+
+    /**
+     * Get aggregate stats for the admin dashboard card
+     *
+     * @return array{total: int, featured: int, countries: int}
+     */
+    public function getStats(): array;
+
+    /**
+     * Get a sorted, distinct list of non-null country codes
+     *
+     * @return \Illuminate\Support\Collection<int, string>
+     */
+    public function getDistinctCountries(): \Illuminate\Support\Collection;
+
+    /**
+     * Get reciters whose image paths need to be cleaned up for a set of IDs
+     *
+     * @param  array<int>  $ids
+     * @return \Illuminate\Database\Eloquent\Collection<int, Reciter>
+     */
+    public function getByIds(array $ids): \Illuminate\Database\Eloquent\Collection;
 }

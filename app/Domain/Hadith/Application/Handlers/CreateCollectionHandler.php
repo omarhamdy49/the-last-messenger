@@ -29,8 +29,8 @@ final class CreateCollectionHandler implements CommandHandler
     /**
      * Handle the command
      *
-     * @param CreateCollectionCommand $command
-     * @return CollectionDTO
+     * @param  CreateCollectionCommand  $command
+     *
      * @throws EntityNotFoundException
      * @throws ValidationException
      */

@@ -10,7 +10,6 @@ use App\Domain\Hadith\Models\HadithSyncLog;
 use App\Services\Sunnah\SunnahApiClient;
 use App\Services\Sunnah\SunnahDataTransformer;
 use Exception;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -24,22 +23,18 @@ class BookSyncService
 {
     /**
      * Constructor
-     *
-     * @param SunnahApiClient $apiClient
-     * @param SunnahDataTransformer $transformer
      */
     public function __construct(
         protected SunnahApiClient $apiClient,
         protected SunnahDataTransformer $transformer
-    ) {
-    }
+    ) {}
 
     /**
      * Sync all books for a given collection
      *
-     * @param HadithCollection $collection The collection to sync books for
-     * @param HadithSyncLog|null $syncLog Optional sync log for progress tracking
-     * @param bool $dryRun If true, no database writes will occur
+     * @param  HadithCollection  $collection  The collection to sync books for
+     * @param  HadithSyncLog|null  $syncLog  Optional sync log for progress tracking
+     * @param  bool  $dryRun  If true, no database writes will occur
      * @return array Summary of sync operation with keys: total, successful, failed, skipped, books, errors
      */
     public function syncCollectionBooks(
@@ -68,7 +63,7 @@ class BookSyncService
 
         try {
             // Mark sync as started
-            if ($syncLog && !$dryRun) {
+            if ($syncLog && ! $dryRun) {
                 $syncLog->markStarted();
             }
 
@@ -83,7 +78,7 @@ class BookSyncService
                     $transformedData = $this->transformer->transformBook($bookData, $collectionName);
 
                     // Validate transformed data
-                    if (!$this->transformer->validateBook($transformedData)) {
+                    if (! $this->transformer->validateBook($transformedData)) {
                         Log::warning('Invalid book data', [
                             'collection' => $collectionName,
                             'book_number' => $transformedData['book_number'] ?? 'unknown',
@@ -93,10 +88,11 @@ class BookSyncService
                             'book_number' => $transformedData['book_number'] ?? 'unknown',
                             'error' => 'Invalid book data after transformation',
                         ];
+
                         continue;
                     }
 
-                    if (!$dryRun) {
+                    if (! $dryRun) {
                         // Upsert book to database using raw column names
                         $book = HadithBook::updateOrCreate(
                             [
@@ -129,7 +125,7 @@ class BookSyncService
                     $summary['books'][] = $transformedData['book_number'];
 
                     // Update sync log progress
-                    if ($syncLog && !$dryRun) {
+                    if ($syncLog && ! $dryRun) {
                         $syncLog->updateProgress(1, 0, [
                             'last_book' => $transformedData['book_number'],
                             'collection' => $collectionName,
@@ -155,14 +151,14 @@ class BookSyncService
                         'trace' => $e->getTraceAsString(),
                     ]);
 
-                    if ($syncLog && !$dryRun) {
+                    if ($syncLog && ! $dryRun) {
                         $syncLog->updateProgress(0, 1);
                     }
                 }
             }
 
             // Mark sync as completed
-            if ($syncLog && !$dryRun) {
+            if ($syncLog && ! $dryRun) {
                 $syncLog->markCompleted();
             }
 
@@ -176,7 +172,7 @@ class BookSyncService
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            if ($syncLog && !$dryRun) {
+            if ($syncLog && ! $dryRun) {
                 $syncLog->markFailed($e->getMessage());
             }
 
@@ -187,12 +183,13 @@ class BookSyncService
     /**
      * Sync a specific book by collection name and book number
      *
-     * @param string $collectionName The collection slug/name (e.g., 'bukhari', 'muslim')
-     * @param string $bookNumber The book number to sync
-     * @param int $collectionId The collection ID for database relationship
-     * @param HadithSyncLog|null $syncLog Optional sync log for progress tracking
-     * @param bool $dryRun If true, no database writes will occur
+     * @param  string  $collectionName  The collection slug/name (e.g., 'bukhari', 'muslim')
+     * @param  string  $bookNumber  The book number to sync
+     * @param  int  $collectionId  The collection ID for database relationship
+     * @param  HadithSyncLog|null  $syncLog  Optional sync log for progress tracking
+     * @param  bool  $dryRun  If true, no database writes will occur
      * @return HadithBook|null The synced book model (null if dry run)
+     *
      * @throws Exception
      */
     public function syncBook(
@@ -210,7 +207,7 @@ class BookSyncService
 
         try {
             // Mark sync as started
-            if ($syncLog && !$dryRun) {
+            if ($syncLog && ! $dryRun) {
                 $syncLog->markStarted();
             }
 
@@ -221,7 +218,7 @@ class BookSyncService
             $transformedData = $this->transformer->transformBook($bookData, $collectionName);
 
             // Validate transformed data
-            if (!$this->transformer->validateBook($transformedData)) {
+            if (! $this->transformer->validateBook($transformedData)) {
                 throw new Exception('Invalid book data after transformation');
             }
 
@@ -274,7 +271,7 @@ class BookSyncService
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            if ($syncLog && !$dryRun) {
+            if ($syncLog && ! $dryRun) {
                 $syncLog->markFailed($e->getMessage());
             }
 
@@ -287,8 +284,9 @@ class BookSyncService
      *
      * This method handles pagination and fetches all available books for a collection
      *
-     * @param string $collectionName The collection slug/name
+     * @param  string  $collectionName  The collection slug/name
      * @return array Array of stdClass book objects from API
+     *
      * @throws Exception
      */
     private function fetchCollectionBooks(string $collectionName): array
@@ -307,7 +305,7 @@ class BookSyncService
                 // Fetch page of books
                 $response = $this->apiClient->getBooks($collectionName, $limit, $page);
 
-                if (!isset($response->data) || !is_array($response->data)) {
+                if (! isset($response->data) || ! is_array($response->data)) {
                     Log::warning('No data in API response', [
                         'collection' => $collectionName,
                         'page' => $page,

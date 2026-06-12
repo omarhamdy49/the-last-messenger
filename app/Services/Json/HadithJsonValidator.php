@@ -21,7 +21,7 @@ class HadithJsonValidator
     /**
      * Detect JSON structure type
      *
-     * @param array $jsonData The complete JSON data
+     * @param  array  $jsonData  The complete JSON data
      * @return string 'collection_based', 'single_hadith', 'single_hadith_flat', 'nested_hadith', or 'unknown'
      */
     public function detectStructureType(array $jsonData): string
@@ -48,7 +48,7 @@ class HadithJsonValidator
     /**
      * Validate JSON data structure (auto-detects format)
      *
-     * @param array $data The JSON data to validate
+     * @param  array  $data  The JSON data to validate
      * @return bool True if valid, false otherwise
      */
     public function isValidData(array $data): bool
@@ -56,11 +56,11 @@ class HadithJsonValidator
         $type = $this->detectStructureType($data);
 
         return match ($type) {
-            'single_hadith'      => $this->validateSingleHadithFormat($data),
+            'single_hadith' => $this->validateSingleHadithFormat($data),
             'single_hadith_flat' => $this->validateSingleHadithFlatFormat($data),
-            'nested_hadith'      => $this->validateNestedHadithFormat($data),
-            'collection_based'   => $this->validateCollectionBasedFormat($data),
-            default              => $this->logUnknown(),
+            'nested_hadith' => $this->validateNestedHadithFormat($data),
+            'collection_based' => $this->validateCollectionBasedFormat($data),
+            default => $this->logUnknown(),
         };
     }
 
@@ -69,25 +69,29 @@ class HadithJsonValidator
      */
     protected function validateSingleHadithFormat(array $data): bool
     {
-        if (!isset($data['hadith_text']) || !is_array($data['hadith_text'])) {
+        if (! isset($data['hadith_text']) || ! is_array($data['hadith_text'])) {
             Log::warning('json.hadith.validation', ['error' => 'missing hadith_text', 'format' => 'single_hadith']);
+
             return false;
         }
 
         $hadithText = $data['hadith_text'];
         if (empty($hadithText['ar']) && empty($hadithText['en'])) {
             Log::warning('json.hadith.validation', ['error' => 'missing hadith text in both languages', 'format' => 'single_hadith']);
+
             return false;
         }
 
-        if (!isset($data['collections']) || !is_array($data['collections']) || empty($data['collections'])) {
+        if (! isset($data['collections']) || ! is_array($data['collections']) || empty($data['collections'])) {
             Log::warning('json.hadith.validation', ['error' => 'missing or empty collections', 'format' => 'single_hadith']);
+
             return false;
         }
 
         foreach ($data['collections'] as $index => $collection) {
             if (empty($collection['name_en']) && empty($collection['name_ar'])) {
                 Log::warning('json.hadith.validation', ['error' => 'missing collection name', 'index' => $index]);
+
                 return false;
             }
         }
@@ -100,19 +104,22 @@ class HadithJsonValidator
      */
     protected function validateSingleHadithFlatFormat(array $data): bool
     {
-        if (!isset($data['hadith_text']) || !is_array($data['hadith_text'])) {
+        if (! isset($data['hadith_text']) || ! is_array($data['hadith_text'])) {
             Log::warning('json.hadith.validation', ['error' => 'missing hadith_text', 'format' => 'single_hadith_flat']);
+
             return false;
         }
 
         $hadithText = $data['hadith_text'];
         if (empty($hadithText['ar']) && empty($hadithText['en'])) {
             Log::warning('json.hadith.validation', ['error' => 'missing hadith text in both languages', 'format' => 'single_hadith_flat']);
+
             return false;
         }
 
-        if (!isset($data['collection']) || !is_string($data['collection'])) {
+        if (! isset($data['collection']) || ! is_string($data['collection'])) {
             Log::warning('json.hadith.validation', ['error' => 'missing or non-string collection', 'format' => 'single_hadith_flat']);
+
             return false;
         }
 
@@ -125,18 +132,20 @@ class HadithJsonValidator
     protected function validateNestedHadithFormat(array $data): bool
     {
         $hadith = $data['hadith'] ?? null;
-        if (!is_array($hadith)) {
+        if (! is_array($hadith)) {
             return false;
         }
 
         if (empty($hadith['matn'])) {
             Log::warning('json.hadith.validation', ['error' => 'missing matn', 'format' => 'nested_hadith']);
+
             return false;
         }
 
         $matn = $hadith['matn'];
         if (empty($matn['arabic']['full_text'] ?? '') && empty($matn['english']['translation'] ?? '')) {
             Log::warning('json.hadith.validation', ['error' => 'missing text in both languages', 'format' => 'nested_hadith']);
+
             return false;
         }
 
@@ -148,26 +157,30 @@ class HadithJsonValidator
      */
     protected function validateCollectionBasedFormat(array $data): bool
     {
-        if (!isset($data['metadata']) || !is_array($data['metadata'])) {
+        if (! isset($data['metadata']) || ! is_array($data['metadata'])) {
             Log::warning('json.hadith.validation', ['error' => 'missing metadata', 'format' => 'collection_based']);
+
             return false;
         }
 
         $metadata = $data['metadata'];
 
-        if (!isset($metadata['id'])) {
+        if (! isset($metadata['id'])) {
             Log::warning('json.hadith.validation', ['error' => 'missing metadata.id', 'format' => 'collection_based']);
+
             return false;
         }
 
-        $hasTitle = !empty($metadata['arabic']['title'] ?? '') || !empty($metadata['english']['title'] ?? '');
-        if (!$hasTitle) {
+        $hasTitle = ! empty($metadata['arabic']['title'] ?? '') || ! empty($metadata['english']['title'] ?? '');
+        if (! $hasTitle) {
             Log::warning('json.hadith.validation', ['error' => 'missing title', 'format' => 'collection_based']);
+
             return false;
         }
 
-        if (!isset($data['hadiths']) || !is_array($data['hadiths'])) {
+        if (! isset($data['hadiths']) || ! is_array($data['hadiths'])) {
             Log::warning('json.hadith.validation', ['error' => 'missing hadiths array', 'format' => 'collection_based']);
+
             return false;
         }
 
@@ -180,6 +193,7 @@ class HadithJsonValidator
     private function logUnknown(): bool
     {
         Log::warning('json.hadith.validation', ['error' => 'unknown JSON structure type']);
+
         return false;
     }
 }

@@ -12,10 +12,10 @@ use App\Domain\Shared\Application\Commands\Command;
 final readonly class ImportHadithsCommand implements Command
 {
     /**
-     * @param string $filePath Path to the JSON file
-     * @param int $collectionId The collection ID to import into
-     * @param bool $validateOnly If true, only validate without persisting
-     * @param bool $skipExisting If true, skip hadiths that already exist
+     * @param  string  $filePath  Path to the JSON file
+     * @param  int  $collectionId  The collection ID to import into
+     * @param  bool  $validateOnly  If true, only validate without persisting
+     * @param  bool  $skipExisting  If true, skip hadiths that already exist
      */
     public function __construct(
         public string $filePath,

@@ -25,8 +25,8 @@ final class GetHadithByIdHandler implements QueryHandler
     /**
      * Handle the query
      *
-     * @param GetHadithByIdQuery $query
-     * @return HadithDTO
+     * @param  GetHadithByIdQuery  $query
+     *
      * @throws HadithNotFoundException
      */
     public function handle(Query $query): HadithDTO

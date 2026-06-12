@@ -46,10 +46,11 @@ class HadithDeduplicateCommand extends Command
 
         if ($choice === 'exit') {
             $this->info('Goodbye!');
+
             return 0;
         }
 
-        return $this->call('hadith:deduplicate', ['--' . $choice]);
+        return $this->call('hadith:deduplicate', ['--'.$choice]);
     }
 
     private function recalculateHashes(): int
@@ -73,14 +74,14 @@ class HadithDeduplicateCommand extends Command
                 ['Failed', $stats['failed']],
             ]);
 
-            if (!empty($stats['errors'])) {
+            if (! empty($stats['errors'])) {
                 $this->newLine();
                 $this->error('Errors encountered:');
                 foreach (array_slice($stats['errors'], 0, 10) as $error) {
                     $this->line("  • {$error}");
                 }
                 if (count($stats['errors']) > 10) {
-                    $this->line("  ... and " . (count($stats['errors']) - 10) . " more");
+                    $this->line('  ... and '.(count($stats['errors']) - 10).' more');
                 }
             }
 
@@ -88,7 +89,8 @@ class HadithDeduplicateCommand extends Command
         } catch (\Exception $e) {
             $bar->finish();
             $this->newLine(2);
-            $this->error('Error: ' . $e->getMessage());
+            $this->error('Error: '.$e->getMessage());
+
             return 1;
         }
     }
@@ -103,6 +105,7 @@ class HadithDeduplicateCommand extends Command
 
             if (empty($duplicates)) {
                 $this->info('✓ No duplicates found!');
+
                 return 0;
             }
 
@@ -121,14 +124,15 @@ class HadithDeduplicateCommand extends Command
             }
 
             if (count($duplicates) > 10) {
-                $this->line('... and ' . (count($duplicates) - 10) . ' more duplicate groups');
+                $this->line('... and '.(count($duplicates) - 10).' more duplicate groups');
             }
 
-            $this->info("Total duplicate groups: " . count($duplicates));
+            $this->info('Total duplicate groups: '.count($duplicates));
 
             return 0;
         } catch (\Exception $e) {
-            $this->error('Error: ' . $e->getMessage());
+            $this->error('Error: '.$e->getMessage());
+
             return 1;
         }
     }
@@ -139,8 +143,9 @@ class HadithDeduplicateCommand extends Command
         $this->info('Backups are recommended before proceeding.');
         $this->newLine();
 
-        if (!$this->confirm('Do you want to continue?')) {
+        if (! $this->confirm('Do you want to continue?')) {
             $this->info('Operation cancelled.');
+
             return 0;
         }
 
@@ -151,10 +156,11 @@ class HadithDeduplicateCommand extends Command
 
             if (empty($duplicates)) {
                 $this->info('✓ No duplicates found!');
+
                 return 0;
             }
 
-            $this->info("Found " . count($duplicates) . " groups of duplicates.");
+            $this->info('Found '.count($duplicates).' groups of duplicates.');
             $this->newLine();
 
             $bar = $this->output->createProgressBar(count($duplicates));
@@ -189,7 +195,8 @@ class HadithDeduplicateCommand extends Command
 
             return 0;
         } catch (\Exception $e) {
-            $this->error('Error: ' . $e->getMessage());
+            $this->error('Error: '.$e->getMessage());
+
             return 1;
         }
     }

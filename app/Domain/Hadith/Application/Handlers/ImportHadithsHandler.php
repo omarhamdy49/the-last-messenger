@@ -30,8 +30,8 @@ final class ImportHadithsHandler implements CommandHandler
     /**
      * Handle the command
      *
-     * @param ImportHadithsCommand $command
-     * @return Result
+     * @param  ImportHadithsCommand  $command
+     *
      * @throws EntityNotFoundException
      * @throws ValidationException
      */
@@ -40,7 +40,7 @@ final class ImportHadithsHandler implements CommandHandler
         /** @var ImportHadithsCommand $command */
 
         // Validate file exists
-        if (!file_exists($command->filePath)) {
+        if (! file_exists($command->filePath)) {
             throw ValidationException::withErrors([
                 'file_path' => ["File not found: {$command->filePath}"],
             ]);

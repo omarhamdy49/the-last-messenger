@@ -14,7 +14,7 @@ class ArticleOperationException extends DomainException
         ?\Throwable $previous = null,
     ) {
         parent::__construct(
-            message: "Article {$operation} failed" . ($articleId ? " for ID [{$articleId}]" : '') . '.',
+            message: "Article {$operation} failed".($articleId ? " for ID [{$articleId}]" : '').'.',
             context: array_filter(['operation' => $operation, 'article_id' => $articleId]),
             code: 0,
             previous: $previous,

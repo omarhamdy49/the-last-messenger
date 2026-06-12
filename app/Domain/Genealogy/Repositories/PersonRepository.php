@@ -22,7 +22,7 @@ class PersonRepository extends BaseRepository implements PersonRepositoryInterfa
      */
     protected function getModel(): \Illuminate\Database\Eloquent\Model
     {
-        return new Person();
+        return new Person;
     }
 
     /**
@@ -55,8 +55,8 @@ class PersonRepository extends BaseRepository implements PersonRepositoryInterfa
      */
     public function getByType(PersonType $type, int $perPage = 15, array $relations = []): LengthAwarePaginator
     {
-        return Cache::tags(['people', 'type:'.$type->value])->remember(
-            "people:type:{$type->value}:page:1",
+        return Cache::remember(
+            $this->versionedKey("people:type:{$type->value}:page:1"),
             now()->addMinutes(30),
             fn () => $this->getBaseQuery()
                 ->with($relations)
@@ -73,11 +73,11 @@ class PersonRepository extends BaseRepository implements PersonRepositoryInterfa
      */
     public function getFamilyTree(int $personId, int $generations = 3): array
     {
-        return Cache::tags(['people', "tree:{$personId}"])->remember(
-            "people:tree:{$personId}:gen:{$generations}",
+        return Cache::remember(
+            $this->versionedKey("people:tree:{$personId}:gen:{$generations}"),
             now()->addHour(),
             function () use ($personId, $generations) {
-                $person = $this->findOrFail($personId, ['father', 'mother', 'childrenAsFather', 'childrenAsMother']);
+                $person = $this->findOrFail($personId, ['*'], ['father', 'mother', 'childrenAsFather', 'childrenAsMother']);
 
                 return [
                     'person' => $person,
@@ -223,8 +223,8 @@ class PersonRepository extends BaseRepository implements PersonRepositoryInterfa
      */
     public function getVerified(int $perPage = 15, array $relations = []): LengthAwarePaginator
     {
-        return Cache::tags(['people', 'verified'])->remember(
-            'people:verified:page:1',
+        return Cache::remember(
+            $this->versionedKey('people:verified:page:1'),
             now()->addMinutes(30),
             fn () => $this->getBaseQuery()
                 ->with($relations)
@@ -235,10 +235,26 @@ class PersonRepository extends BaseRepository implements PersonRepositoryInterfa
     }
 
     /**
-     * Clear cache
+     * Clear cache.
+     *
+     * Cache::tags() requires Redis/Memcached and is unavailable with the file
+     * or database drivers. We bump a version counter so that all versioned
+     * keys written by this repository are orphaned on the next read cycle.
      */
     public function clearCache(): void
     {
-        Cache::tags(['people'])->flush();
+        $versionKey = 'people:version';
+        Cache::forever($versionKey, ((int) Cache::get($versionKey, 0)) + 1);
+    }
+
+    /**
+     * Prefix a cache key with the current version so that clearCache()
+     * effectively invalidates all keys written by this repository.
+     */
+    private function versionedKey(string $key): string
+    {
+        $version = (int) Cache::get('people:version', 0);
+
+        return "people:v{$version}:{$key}";
     }
 }

@@ -336,10 +336,11 @@ class AdminLoggerService
         $filtered = [];
 
         foreach ($data as $key => $value) {
-            // Check if key contains any sensitive field name (case-insensitive)
+            // Check if key contains any sensitive field name (case-insensitive).
+            // Nested list arrays have integer keys, so cast before matching.
             $isSensitive = false;
             foreach (self::SENSITIVE_FIELDS as $sensitiveField) {
-                if (stripos($key, $sensitiveField) !== false) {
+                if (stripos((string) $key, $sensitiveField) !== false) {
                     $isSensitive = true;
                     break;
                 }

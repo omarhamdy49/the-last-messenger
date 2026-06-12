@@ -45,9 +45,8 @@ abstract class AdminController extends Controller
      *
      * Check if the authenticated user has the required permission
      *
-     * @param string $permission Permission name (e.g., 'edit articles')
-     * @param mixed $model Optional model instance for model-based permissions
-     * @return bool
+     * @param  string  $permission  Permission name (e.g., 'edit articles')
+     * @param  mixed  $model  Optional model instance for model-based permissions
      */
     protected function authorizeAdmin(string $permission, mixed $model = null): bool
     {
@@ -59,7 +58,7 @@ abstract class AdminController extends Controller
         }
 
         // Check if user has the specific permission
-        if (!$user->hasPermissionTo($permission)) {
+        if (! $user->hasPermissionTo($permission)) {
             abort(403, 'You do not have permission to perform this action.');
         }
 
@@ -69,9 +68,8 @@ abstract class AdminController extends Controller
     /**
      * Validate request with custom error handling
      *
-     * @param Request $request
-     * @param array $rules Validation rules
-     * @param array $messages Custom error messages
+     * @param  array  $rules  Validation rules
+     * @param  array  $messages  Custom error messages
      * @return array Validated data
      */
     protected function validateRequest(Request $request, array $rules, array $messages = []): array
@@ -92,7 +90,6 @@ abstract class AdminController extends Controller
     /**
      * Get pagination parameters from request
      *
-     * @param Request $request
      * @return array{per_page: int, page: int, sort: string, order: string}
      */
     protected function getPaginationParams(Request $request): array
@@ -108,22 +105,19 @@ abstract class AdminController extends Controller
     /**
      * Get search query from request
      *
-     * @param Request $request
-     * @param string $param Query parameter name (default: 'q')
-     * @return string|null
+     * @param  string  $param  Query parameter name (default: 'q')
      */
     protected function getSearchQuery(Request $request, string $param = 'q'): ?string
     {
         $query = $request->string($param)->toString();
-        return !empty($query) ? $query : null;
+
+        return ! empty($query) ? $query : null;
     }
 
     /**
      * Get filter parameters from request
      *
-     * @param Request $request
-     * @param array $allowedFilters List of allowed filter keys
-     * @return array
+     * @param  array  $allowedFilters  List of allowed filter keys
      */
     protected function getFilters(Request $request, array $allowedFilters = []): array
     {
@@ -141,11 +135,10 @@ abstract class AdminController extends Controller
     /**
      * Log admin activity
      *
-     * @param string $action Action performed (e.g., 'created', 'updated', 'deleted')
-     * @param string $model Model name (e.g., 'Article', 'User')
-     * @param mixed $modelId Model ID
-     * @param array $metadata Additional metadata
-     * @return void
+     * @param  string  $action  Action performed (e.g., 'created', 'updated', 'deleted')
+     * @param  string  $model  Model name (e.g., 'Article', 'User')
+     * @param  mixed  $modelId  Model ID
+     * @param  array  $metadata  Additional metadata
      */
     protected function logActivity(string $action, string $model, mixed $modelId, array $metadata = []): void
     {
@@ -166,9 +159,8 @@ abstract class AdminController extends Controller
     /**
      * Handle bulk operations
      *
-     * @param Request $request
-     * @param string $action Bulk action to perform
-     * @param callable $callback Callback to execute for each item
+     * @param  string  $action  Bulk action to perform
+     * @param  callable  $callback  Callback to execute for each item
      * @return array{success: int, failed: int, errors: array}
      */
     protected function handleBulkOperation(Request $request, string $action, callable $callback): array
@@ -189,7 +181,7 @@ abstract class AdminController extends Controller
             try {
                 $callback($id);
                 $results['success']++;
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 $results['failed']++;
                 $results['errors'][$id] = $e->getMessage();
             }
@@ -206,9 +198,8 @@ abstract class AdminController extends Controller
     /**
      * Format response for datatables
      *
-     * @param mixed $data Query builder or collection
-     * @param callable|null $transformer Optional data transformer
-     * @return array
+     * @param  mixed  $data  Query builder or collection
+     * @param  callable|null  $transformer  Optional data transformer
      */
     protected function datatableResponse($data, ?callable $transformer = null): array
     {
@@ -226,9 +217,6 @@ abstract class AdminController extends Controller
 
     /**
      * Check if request expects JSON
-     *
-     * @param Request $request
-     * @return bool
      */
     protected function expectsJson(Request $request): bool
     {
@@ -238,12 +226,12 @@ abstract class AdminController extends Controller
     /**
      * Handle successful operation
      *
-     * @param string $message Success message
-     * @param mixed $data Response data
-     * @param string $redirectRoute Route to redirect (for web requests)
+     * @param  string  $message  Success message
+     * @param  mixed  $data  Response data
+     * @param  string  $redirectRoute  Route to redirect (for web requests)
      * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
      */
-    protected function success(string $message, mixed $data = null, string $redirectRoute = null)
+    protected function success(string $message, mixed $data = null, ?string $redirectRoute = null)
     {
         if ($this->expectsJson(request())) {
             return $this->successResponse($data, $message);
@@ -256,8 +244,8 @@ abstract class AdminController extends Controller
     /**
      * Handle failed operation
      *
-     * @param string $message Error message
-     * @param int $code HTTP status code
+     * @param  string  $message  Error message
+     * @param  int  $code  HTTP status code
      * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
      */
     protected function failure(string $message, int $code = 400)
@@ -272,7 +260,6 @@ abstract class AdminController extends Controller
     /**
      * Switch application locale
      *
-     * @param Request $request
      * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
      */
     public function switchLocale(Request $request)
@@ -281,7 +268,7 @@ abstract class AdminController extends Controller
 
         // Validate locale
         $supportedLocales = ['ar', 'en', 'fr', 'tr', 'ur'];
-        if (!in_array($locale, $supportedLocales)) {
+        if (! in_array($locale, $supportedLocales)) {
             return $this->failure(__('admin.locale_unsupported'), 400);
         }
 
@@ -310,7 +297,6 @@ abstract class AdminController extends Controller
     /**
      * Get current locale information
      *
-     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function getLocaleInfo(Request $request)

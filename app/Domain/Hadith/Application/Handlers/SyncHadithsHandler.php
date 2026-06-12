@@ -30,8 +30,8 @@ final class SyncHadithsHandler implements CommandHandler
     /**
      * Handle the command
      *
-     * @param SyncHadithsCommand $command
-     * @return Result
+     * @param  SyncHadithsCommand  $command
+     *
      * @throws EntityNotFoundException
      */
     public function handle(Command $command): Result

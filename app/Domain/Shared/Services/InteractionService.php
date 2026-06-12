@@ -5,14 +5,12 @@ declare(strict_types=1);
 namespace App\Domain\Shared\Services;
 
 use App\Domain\Shared\Enums\InteractionType;
-use App\Domain\Shared\Models\UserEngagementMetric;
 use App\Domain\Shared\Models\UserInteraction;
 use App\Domain\Shared\Repositories\UserEngagementMetricRepositoryInterface;
 use App\Domain\Shared\Repositories\UserInteractionRepositoryInterface;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 

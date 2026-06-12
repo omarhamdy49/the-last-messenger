@@ -34,7 +34,23 @@ class DashboardController extends Controller
      */
     public function index(): \Illuminate\View\View
     {
-        return view('admin.dashboard');
+        // The blade's stat cards read $stats[...] with `?? 0` fallbacks — rendering
+        // without this mapping silently shows zeros for every module.
+        $statistics = $this->dashboardService->getStatistics();
+
+        $stats = [
+            'total_users' => $statistics['users']['total'] ?? 0,
+            'new_users' => $statistics['users']['new'] ?? 0,
+            'users_change' => $statistics['users']['change'] ?? null,
+            'total_articles' => $statistics['articles']['total'] ?? 0,
+            'hadith_entries' => $statistics['hadith']['total'] ?? 0,
+            'quran_verses' => $statistics['quran_verses']['total'] ?? 0,
+            'seerah_events' => $statistics['seerah_events']['total'] ?? 0,
+            'sahaba_profiles' => $statistics['sahaba']['total'] ?? 0,
+            'media_items' => $statistics['media']['total'] ?? 0,
+        ];
+
+        return view('admin.dashboard', compact('stats'));
     }
 
     /**

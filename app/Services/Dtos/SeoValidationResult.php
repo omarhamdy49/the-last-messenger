@@ -9,20 +9,18 @@ namespace App\Services\Dtos;
  *
  * Contains validation results, errors, warnings, and SEO score for content.
  * Provides scoring logic and detailed feedback for SEO improvements.
- *
- * @package App\Services\Dtos
  */
 class SeoValidationResult
 {
     /**
      * Create new SEO Validation Result instance
      *
-     * @param bool $isValid Overall validation status
-     * @param array<string> $errors Critical issues that must be fixed
-     * @param array<string> $warnings Recommendations for improvement
-     * @param array<string> $successes Good practices that are followed
-     * @param float $seoScore SEO score (0-100)
-     * @param array<string, mixed> $metrics Detailed metrics
+     * @param  bool  $isValid  Overall validation status
+     * @param  array<string>  $errors  Critical issues that must be fixed
+     * @param  array<string>  $warnings  Recommendations for improvement
+     * @param  array<string>  $successes  Good practices that are followed
+     * @param  float  $seoScore  SEO score (0-100)
+     * @param  array<string, mixed>  $metrics  Detailed metrics
      */
     public function __construct(
         public bool $isValid,
@@ -60,8 +58,6 @@ class SeoValidationResult
 
     /**
      * Recalculate and update SEO score
-     *
-     * @return self
      */
     public function updateScore(): self
     {
@@ -72,8 +68,6 @@ class SeoValidationResult
 
     /**
      * Get score grade (A, B, C, D, F)
-     *
-     * @return string
      */
     public function getGrade(): string
     {
@@ -103,8 +97,6 @@ class SeoValidationResult
 
     /**
      * Check if there are any errors
-     *
-     * @return bool
      */
     public function hasErrors(): bool
     {
@@ -113,8 +105,6 @@ class SeoValidationResult
 
     /**
      * Check if there are any warnings
-     *
-     * @return bool
      */
     public function hasWarnings(): bool
     {
@@ -123,8 +113,6 @@ class SeoValidationResult
 
     /**
      * Check if there are any successes
-     *
-     * @return bool
      */
     public function hasSuccesses(): bool
     {
@@ -133,8 +121,6 @@ class SeoValidationResult
 
     /**
      * Get total issue count (errors + warnings)
-     *
-     * @return int
      */
     public function getIssueCount(): int
     {
@@ -143,8 +129,6 @@ class SeoValidationResult
 
     /**
      * Get summary text
-     *
-     * @return string
      */
     public function getSummary(): string
     {
@@ -165,9 +149,6 @@ class SeoValidationResult
 
     /**
      * Add error
-     *
-     * @param string $error
-     * @return self
      */
     public function addError(string $error): self
     {
@@ -179,9 +160,6 @@ class SeoValidationResult
 
     /**
      * Add warning
-     *
-     * @param string $warning
-     * @return self
      */
     public function addWarning(string $warning): self
     {
@@ -192,9 +170,6 @@ class SeoValidationResult
 
     /**
      * Add success
-     *
-     * @param string $success
-     * @return self
      */
     public function addSuccess(string $success): self
     {
@@ -205,10 +180,6 @@ class SeoValidationResult
 
     /**
      * Set metric value
-     *
-     * @param string $key
-     * @param mixed $value
-     * @return self
      */
     public function setMetric(string $key, mixed $value): self
     {
@@ -219,10 +190,6 @@ class SeoValidationResult
 
     /**
      * Get metric value
-     *
-     * @param string $key
-     * @param mixed $default
-     * @return mixed
      */
     public function getMetric(string $key, mixed $default = null): mixed
     {
@@ -252,8 +219,6 @@ class SeoValidationResult
 
     /**
      * Create a passing validation result
-     *
-     * @return self
      */
     public static function pass(): self
     {
@@ -269,8 +234,7 @@ class SeoValidationResult
     /**
      * Create a failing validation result
      *
-     * @param array<string> $errors
-     * @return self
+     * @param  array<string>  $errors
      */
     public static function fail(array $errors): self
     {

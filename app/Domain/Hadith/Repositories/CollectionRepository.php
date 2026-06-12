@@ -28,7 +28,7 @@ class CollectionRepository extends BaseRepository implements CollectionRepositor
      */
     protected function getModel(): Model
     {
-        return new HadithCollection();
+        return new HadithCollection;
     }
 
     /**
@@ -51,13 +51,14 @@ class CollectionRepository extends BaseRepository implements CollectionRepositor
      */
     public function getBySlug(string $slug, string $locale = 'ar'): ?HadithCollection
     {
-        $slugField = 'slug_' . $locale;
-
+        // Slugs are unique per column; matching either column keeps shared URLs
+        // working regardless of the visitor's locale (EN slug under AR locale and vice versa).
         return Cache::remember(
             "hadith_collection_slug_{$locale}_{$slug}",
             self::CACHE_TTL,
             fn () => $this->model
-                ->where($slugField, $slug)
+                ->where('slug_en', $slug)
+                ->orWhere('slug_ar', $slug)
                 ->first()
         );
     }
@@ -85,7 +86,10 @@ class CollectionRepository extends BaseRepository implements CollectionRepositor
             'hadith_collections_with_books_count',
             self::CACHE_TTL,
             fn () => $this->model
-                ->select(['id', 'name_ar', 'name_en', 'abbreviation', 'is_active'])
+                ->select([
+                    'id', 'name_ar', 'name_en', 'slug_ar', 'slug_en',
+                    'abbreviation', 'description_ar', 'description_en', 'total_hadiths',
+                ])
                 ->withCount('books')
                 ->orderBy('id')
                 ->get()
@@ -127,13 +131,55 @@ class CollectionRepository extends BaseRepository implements CollectionRepositor
             'hadith_collections_statistics',
             self::CACHE_TTL,
             fn () => $this->model
-                ->select(['id', 'name_ar', 'name_en', 'abbreviation', 'is_active'])
+                ->select(['id', 'name_ar', 'name_en', 'abbreviation'])
                 ->withCount(['books'])
                 ->withCount(['books as hadiths_count' => function ($query) {
                     $query->selectRaw('(SELECT COUNT(*) FROM hadith_hadiths WHERE hadith_hadiths.book_id = hadith_books.id)');
                 }])
                 ->get()
         );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getAllForDropdown(): Collection
+    {
+        return Cache::remember(
+            'hadith_collections_dropdown',
+            self::CACHE_TTL,
+            fn () => $this->model
+                ->select(['id', 'name_ar', 'name_en'])
+                ->orderBy('name_ar')
+                ->get()
+        );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function reorder(array $items): void
+    {
+        foreach ($items as $item) {
+            $this->model->newQuery()
+                ->where('id', $item['id'])
+                ->update(['display_order' => $item['order']]);
+        }
+
+        $this->clearCache();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function toggleField(int $id, string $field): HadithCollection
+    {
+        /** @var HadithCollection $collection */
+        $collection = $this->findOrFail($id);
+        $collection->update([$field => ! $collection->{$field}]);
+        $this->clearCache();
+
+        return $collection->fresh();
     }
 
     /**
@@ -148,7 +194,7 @@ class CollectionRepository extends BaseRepository implements CollectionRepositor
         $query = $this->model->newQuery();
 
         // Apply search
-        if (!empty($search)) {
+        if (! empty($search)) {
             $query->where(function ($q) use ($search) {
                 $q->where('name_ar', 'LIKE', "%{$search}%")
                     ->orWhere('name_en', 'LIKE', "%{$search}%")
@@ -156,10 +202,9 @@ class CollectionRepository extends BaseRepository implements CollectionRepositor
             });
         }
 
-        // Apply active filter
-        if (isset($filters['only_active']) && $filters['only_active']) {
-            $query->where('is_active', true);
-        }
+        // NOTE: the hadith_collections table has no `is_active` column — every canonical
+        // collection is always active — so the `only_active` filter is intentionally a no-op.
+        // It remains part of the query contract for forward-compatibility / callers.
 
         // Apply sorting
         $direction = $filters['sort_direction'] ?? 'asc';

@@ -8,7 +8,6 @@ use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Models\Series;
 use App\Domain\Blog\Models\Tag;
 use App\Models\Article;
-use App\Models\ArticleLocale;
 use App\Models\Media;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,6 +20,7 @@ class ArticleSeriesIntegrationTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private User $writer;
 
     protected function setUp(): void
@@ -536,16 +536,16 @@ class ArticleSeriesIntegrationTest extends TestCase
 
         $article->locales()->create([
             'locale' => 'ar',
-            'title' => 'مقالة اختبار ' . $article->id,
-            'slug' => 'test-article-ar-' . $article->id,
+            'title' => 'مقالة اختبار '.$article->id,
+            'slug' => 'test-article-ar-'.$article->id,
             'content' => ['body' => '<p>محتوى</p>'],
             'is_ready' => true,
         ]);
 
         $article->locales()->create([
             'locale' => 'en',
-            'title' => 'Test Article ' . $article->id,
-            'slug' => 'test-article-en-' . $article->id,
+            'title' => 'Test Article '.$article->id,
+            'slug' => 'test-article-en-'.$article->id,
             'content' => ['body' => '<p>Content</p>'],
             'is_ready' => true,
         ]);
@@ -559,7 +559,7 @@ class ArticleSeriesIntegrationTest extends TestCase
     private function createCategories(): array
     {
         $primary = Category::query()->create([
-            'slug' => 'seerah-' . uniqid(),
+            'slug' => 'seerah-'.uniqid(),
             'type' => 'blog',
             'status' => 'active',
             'name' => ['ar' => 'السيرة', 'en' => 'Seerah'],
@@ -571,7 +571,7 @@ class ArticleSeriesIntegrationTest extends TestCase
         ]);
 
         $secondary = Category::query()->create([
-            'slug' => 'timeline-' . uniqid(),
+            'slug' => 'timeline-'.uniqid(),
             'type' => 'blog',
             'status' => 'active',
             'name' => ['ar' => 'الخط الزمني', 'en' => 'Timeline'],
@@ -591,7 +591,7 @@ class ArticleSeriesIntegrationTest extends TestCase
     private function createTags(): array
     {
         $primary = Tag::query()->create([
-            'slug' => 'migration-' . uniqid(),
+            'slug' => 'migration-'.uniqid(),
             'name' => ['ar' => 'الهجرة', 'en' => 'Migration'],
             'description' => ['ar' => 'وسم', 'en' => 'Tag'],
             'type' => 'article',
@@ -599,7 +599,7 @@ class ArticleSeriesIntegrationTest extends TestCase
         ]);
 
         $secondary = Tag::query()->create([
-            'slug' => 'madinah-' . uniqid(),
+            'slug' => 'madinah-'.uniqid(),
             'name' => ['ar' => 'المدينة', 'en' => 'Madinah'],
             'description' => ['ar' => 'وسم', 'en' => 'Tag'],
             'type' => 'article',
@@ -615,7 +615,7 @@ class ArticleSeriesIntegrationTest extends TestCase
     private function createMediaFixtures(): array
     {
         $hero = Media::query()->create([
-            'filename' => 'hero-' . uniqid() . '.jpg',
+            'filename' => 'hero-'.uniqid().'.jpg',
             'original_filename' => 'hero.jpg',
             'path' => 'media/hero.jpg',
             'mime_type' => 'image/jpeg',
@@ -634,7 +634,7 @@ class ArticleSeriesIntegrationTest extends TestCase
         ]);
 
         $gallery = Media::query()->create([
-            'filename' => 'gallery-' . uniqid() . '.jpg',
+            'filename' => 'gallery-'.uniqid().'.jpg',
             'original_filename' => 'gallery.jpg',
             'path' => 'media/gallery.jpg',
             'mime_type' => 'image/jpeg',
@@ -657,7 +657,7 @@ class ArticleSeriesIntegrationTest extends TestCase
 
     private function buildArticlePayload(array $overrides = [], string $prefix = ''): array
     {
-        $arTitle = $prefix ? "المقالة المحدثة" : 'المقالة الأولى';
+        $arTitle = $prefix ? 'المقالة المحدثة' : 'المقالة الأولى';
         $enTitle = $prefix ? "{$prefix} Article" : 'First Article';
 
         return array_merge([
@@ -689,9 +689,9 @@ class ArticleSeriesIntegrationTest extends TestCase
         return [
             'ar' => $arabic,
             'en' => $english,
-            'fr' => $english . ' FR',
-            'tr' => $english . ' TR',
-            'ur' => $english . ' UR',
+            'fr' => $english.' FR',
+            'tr' => $english.' TR',
+            'ur' => $english.' UR',
         ];
     }
 }

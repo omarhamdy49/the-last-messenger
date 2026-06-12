@@ -8,16 +8,13 @@ namespace App\Exceptions;
  * SEO Generation Exception
  *
  * Thrown when SEO metadata generation fails.
- *
- * @package App\Exceptions
  */
 class SeoGenerationException extends SeoException
 {
     /**
      * Create exception for JSON-LD generation failure
      *
-     * @param string $reason Failure reason
-     * @return static
+     * @param  string  $reason  Failure reason
      */
     public static function jsonLdFailed(string $reason): static
     {
@@ -27,8 +24,7 @@ class SeoGenerationException extends SeoException
     /**
      * Create exception for OpenGraph generation failure
      *
-     * @param string $reason Failure reason
-     * @return static
+     * @param  string  $reason  Failure reason
      */
     public static function openGraphFailed(string $reason): static
     {
@@ -38,8 +34,7 @@ class SeoGenerationException extends SeoException
     /**
      * Create exception for Twitter Card generation failure
      *
-     * @param string $reason Failure reason
-     * @return static
+     * @param  string  $reason  Failure reason
      */
     public static function twitterCardFailed(string $reason): static
     {
@@ -49,8 +44,7 @@ class SeoGenerationException extends SeoException
     /**
      * Create exception for sitemap generation failure
      *
-     * @param string $reason Failure reason
-     * @return static
+     * @param  string  $reason  Failure reason
      */
     public static function sitemapFailed(string $reason): static
     {
@@ -60,8 +54,7 @@ class SeoGenerationException extends SeoException
     /**
      * Create exception for missing article data
      *
-     * @param string $field Missing field
-     * @return static
+     * @param  string  $field  Missing field
      */
     public static function missingArticleData(string $field): static
     {

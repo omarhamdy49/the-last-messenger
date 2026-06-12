@@ -35,8 +35,7 @@ class ChapterSyncService
     public function __construct(
         private readonly SunnahApiClient $apiClient,
         private readonly SunnahDataTransformer $transformer
-    ) {
-    }
+    ) {}
 
     /**
      * Sync all chapters for a specific book
@@ -47,11 +46,11 @@ class ChapterSyncService
      * CRITICAL: This method JSON-encodes name and description arrays before
      * insert to prevent "Array to string conversion" errors (per SYNC_STATUS_CURRENT.md)
      *
-     * @param HadithBook $book The book to sync chapters for
-     * @param string $collectionName API collection name (e.g., 'bukhari')
-     * @param string $bookNumber API book number
-     * @param HadithSyncLog|null $syncLog Optional sync log for progress tracking
-     * @param bool $dryRun If true, only validate without persisting
+     * @param  HadithBook  $book  The book to sync chapters for
+     * @param  string  $collectionName  API collection name (e.g., 'bukhari')
+     * @param  string  $bookNumber  API book number
+     * @param  HadithSyncLog|null  $syncLog  Optional sync log for progress tracking
+     * @param  bool  $dryRun  If true, only validate without persisting
      * @return int Number of chapters successfully synced
      */
     public function syncBookChapters(
@@ -78,7 +77,7 @@ class ChapterSyncService
                 // Fetch chapters from API with pagination
                 $response = $this->apiClient->getChapters($collectionName, $bookNumber, self::BATCH_SIZE, $page);
 
-                if (!isset($response->data) || empty($response->data)) {
+                if (! isset($response->data) || empty($response->data)) {
                     Log::debug("No more chapters found for book {$bookNumber} on page {$page}");
                     break;
                 }
@@ -96,12 +95,13 @@ class ChapterSyncService
                         );
 
                         // Validate transformed data
-                        if (!$this->transformer->validateChapter($transformed)) {
-                            Log::warning("Invalid chapter data, skipping", [
+                        if (! $this->transformer->validateChapter($transformed)) {
+                            Log::warning('Invalid chapter data, skipping', [
                                 'chapter_number' => $transformed['chapter_number'] ?? 'unknown',
                                 'book_id' => $book->id,
                             ]);
                             $failedCount++;
+
                             continue;
                         }
 
@@ -110,7 +110,7 @@ class ChapterSyncService
 
                         $transformedChapters[] = $transformed;
                     } catch (\Exception $e) {
-                        Log::error("Failed to transform chapter", [
+                        Log::error('Failed to transform chapter', [
                             'book_id' => $book->id,
                             'error' => $e->getMessage(),
                         ]);
@@ -119,7 +119,7 @@ class ChapterSyncService
                 }
 
                 // Perform bulk upsert if not dry run
-                if (!$dryRun && !empty($transformedChapters)) {
+                if (! $dryRun && ! empty($transformedChapters)) {
                     $count = $this->bulkUpsertChapters($transformedChapters, $book->id);
                     $syncedCount += $count;
 
@@ -136,7 +136,7 @@ class ChapterSyncService
                 $hasMore = isset($response->next) && $response->next !== null;
                 $page = $response->next ?? $page + 1;
 
-                Log::debug("Processed chapter batch", [
+                Log::debug('Processed chapter batch', [
                     'page' => $page - 1,
                     'synced' => $syncedCount,
                     'failed' => $failedCount,
@@ -177,8 +177,8 @@ class ChapterSyncService
      * Uses transaction wrapping with retry mechanism and fallback to individual
      * inserts if batch operation fails.
      *
-     * @param array $chapters Array of chapter data to upsert
-     * @param int $bookId The book ID these chapters belong to
+     * @param  array  $chapters  Array of chapter data to upsert
+     * @param  int  $bookId  The book ID these chapters belong to
      * @return int Number of chapters successfully upserted
      */
     private function bulkUpsertChapters(array $chapters, int $bookId): int
@@ -198,7 +198,7 @@ class ChapterSyncService
             $success = false;
 
             // Try bulk upsert with retries
-            while ($attempt < self::MAX_RETRIES && !$success) {
+            while ($attempt < self::MAX_RETRIES && ! $success) {
                 try {
                     DB::transaction(function () use ($chunk, &$successCount) {
                         // CRITICAL: JSON-encode translatable fields before upsert
@@ -224,7 +224,7 @@ class ChapterSyncService
 
                         $successCount += count($preparedData);
 
-                        Log::info("Bulk upsert succeeded", ['count' => count($preparedData)]);
+                        Log::info('Bulk upsert succeeded', ['count' => count($preparedData)]);
                     });
 
                     $success = true;
@@ -258,8 +258,8 @@ class ChapterSyncService
      *
      * CRITICAL: Also JSON-encodes name and description arrays
      *
-     * @param array $chapters Array of chapter data
-     * @param int $bookId The book ID
+     * @param  array  $chapters  Array of chapter data
+     * @param  int  $bookId  The book ID
      * @return int Number of successfully inserted chapters
      */
     private function fallbackIndividualInserts(array $chapters, int $bookId): int
@@ -291,7 +291,7 @@ class ChapterSyncService
                     $successCount++;
                 });
             } catch (\Exception $e) {
-                Log::error("Individual chapter insert failed", [
+                Log::error('Individual chapter insert failed', [
                     'chapter_number' => $chapter['chapter_number'],
                     'book_id' => $bookId,
                     'error' => $e->getMessage(),
@@ -299,7 +299,7 @@ class ChapterSyncService
             }
         }
 
-        Log::info("Fallback individual inserts completed", [
+        Log::info('Fallback individual inserts completed', [
             'success' => $successCount,
             'total' => count($chapters),
         ]);
@@ -310,7 +310,7 @@ class ChapterSyncService
     /**
      * Get chapter count for a specific book
      *
-     * @param int $bookId The book ID
+     * @param  int  $bookId  The book ID
      * @return int Number of chapters
      */
     public function getChapterCount(int $bookId): int

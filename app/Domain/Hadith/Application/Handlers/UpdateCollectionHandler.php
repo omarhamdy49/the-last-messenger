@@ -29,8 +29,8 @@ final class UpdateCollectionHandler implements CommandHandler
     /**
      * Handle the command
      *
-     * @param UpdateCollectionCommand $command
-     * @return CollectionDTO
+     * @param  UpdateCollectionCommand  $command
+     *
      * @throws CollectionNotFoundException
      * @throws EntityNotFoundException
      * @throws ValidationException
@@ -38,7 +38,6 @@ final class UpdateCollectionHandler implements CommandHandler
     public function handle(Command $command): CollectionDTO
     {
         /** @var UpdateCollectionCommand $command */
-
         $collection = $this->collectionRepository->find($command->collectionId);
         if ($collection === null) {
             throw CollectionNotFoundException::withCollectionId($command->collectionId);

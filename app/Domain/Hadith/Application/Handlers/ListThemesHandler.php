@@ -25,13 +25,11 @@ final class ListThemesHandler implements QueryHandler
     /**
      * Handle the query
      *
-     * @param ListThemesQuery $query
-     * @return PaginatedResult
+     * @param  ListThemesQuery  $query
      */
     public function handle(Query $query): PaginatedResult
     {
         /** @var ListThemesQuery $query */
-
         $filters = [];
         if ($query->onlyRoot) {
             $filters['only_root'] = true;
@@ -46,9 +44,9 @@ final class ListThemesHandler implements QueryHandler
 
         $locale = $query->locale ?? 'ar';
         $items = $paginator->getCollection()->map(
-            fn($theme) => ThemeDTO::fromModel($theme, $locale, $query->withChildren)
+            fn ($theme) => ThemeDTO::fromModel($theme, $locale, $query->withChildren)
         );
 
-        return PaginatedResult::fromPaginator($paginator, $items->toArray());
+        return PaginatedResult::fromPaginatorWithItems($paginator, $items->toArray());
     }
 }

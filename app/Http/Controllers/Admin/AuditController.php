@@ -61,7 +61,7 @@ class AuditController extends Controller
                     $logs->getCollection()->map(fn ($log) => new AuditLogResource($log))
                 )
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to retrieve audit logs', [
                 'error' => $e->getMessage(),
             ]);
@@ -85,7 +85,7 @@ class AuditController extends Controller
             }
 
             return $this->successResponse(new AuditLogResource($log));
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to retrieve audit log', [
                 'id' => $id,
                 'error' => $e->getMessage(),
@@ -111,7 +111,7 @@ class AuditController extends Controller
                     $logs->getCollection()->map(fn ($log) => new AuditLogResource($log))
                 )
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to get user activity', [
                 'user_id' => $userId,
                 'error' => $e->getMessage(),
@@ -148,7 +148,7 @@ class AuditController extends Controller
                 'format' => $format,
                 'generated_at' => now()->toIso8601String(),
             ], 'Report generated successfully');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to generate audit report', [
                 'error' => $e->getMessage(),
             ]);
@@ -180,13 +180,13 @@ class AuditController extends Controller
 
             $export = $this->auditService->exportLogs($filters, $format);
 
-            $filename = 'audit_logs_' . now()->format('Y_m_d_His') . '.' . $format;
+            $filename = 'audit_logs_'.now()->format('Y_m_d_His').'.'.$format;
 
             return response($export, 200, [
                 'Content-Type' => $format === 'csv' ? 'text/csv' : 'application/json',
                 'Content-Disposition' => "attachment; filename=\"{$filename}\"",
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to export audit logs', [
                 'error' => $e->getMessage(),
             ]);
@@ -206,7 +206,7 @@ class AuditController extends Controller
             $stats = $this->auditService->getAuditStats();
 
             return $this->successResponse($stats);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to get audit stats', [
                 'error' => $e->getMessage(),
             ]);
@@ -229,7 +229,7 @@ class AuditController extends Controller
             $report = $this->auditService->getActivityReport($startDate, $endDate);
 
             return $this->successResponse($report);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to get activity report', [
                 'error' => $e->getMessage(),
             ]);
@@ -254,7 +254,7 @@ class AuditController extends Controller
                     $logs->getCollection()->map(fn ($log) => new AuditLogResource($log))
                 )
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to get logs by IP', [
                 'ip_address' => $ipAddress,
                 'error' => $e->getMessage(),
@@ -280,7 +280,7 @@ class AuditController extends Controller
                     $logs->getCollection()->map(fn ($log) => new AuditLogResource($log))
                 )
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to get logs by action', [
                 'action' => $action,
                 'error' => $e->getMessage(),
@@ -304,7 +304,7 @@ class AuditController extends Controller
             $heatmap = $this->auditService->getActivityHeatmap($startDate, $endDate);
 
             return $this->successResponse($heatmap);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to get activity heatmap', [
                 'error' => $e->getMessage(),
             ]);
@@ -328,7 +328,7 @@ class AuditController extends Controller
                 'deleted_count' => $deleted,
                 'days_kept' => $daysToKeep,
             ], "Pruned {$deleted} old audit logs");
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to prune audit logs', [
                 'error' => $e->getMessage(),
             ]);
@@ -351,7 +351,7 @@ class AuditController extends Controller
             $report = $this->auditService->getUserActivityReport($userId, $startDate, $endDate);
 
             return $this->successResponse($report);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to get user activity report', [
                 'user_id' => $userId,
                 'error' => $e->getMessage(),

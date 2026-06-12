@@ -66,7 +66,8 @@ class TextUtil
             '\x{06ED}', // Small Low Meem
         ];
 
-        $pattern = '/[' . implode('', $tashkeel) . ']/u';
+        $pattern = '/['.implode('', $tashkeel).']/u';
+
         return preg_replace($pattern, '', $text);
     }
 
@@ -200,8 +201,8 @@ class TextUtil
     /**
      * Clean text with custom options
      *
-     * @param string $text Text to clean
-     * @param array $options Options: removeTashkeel, removeBrackets, removeHtml, removeAnnotations, normalizeWhitespace
+     * @param  string  $text  Text to clean
+     * @param  array  $options  Options: removeTashkeel, removeBrackets, removeHtml, removeAnnotations, normalizeWhitespace
      * @return string Cleaned text
      */
     public static function clean(string $text, array $options = []): string

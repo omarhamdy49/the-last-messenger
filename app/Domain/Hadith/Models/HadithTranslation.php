@@ -21,7 +21,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $notes Additional notes or commentary
  * @property \Illuminate\Support\Carbon $created_at
  * @property \Illuminate\Support\Carbon $updated_at
- *
  * @property-read \App\Domain\Hadith\Models\Hadith $hadith
  */
 class HadithTranslation extends Model
@@ -44,6 +43,11 @@ class HadithTranslation extends Model
         'hadith_id',
         'language_code',
         'text',
+        'translator_name',
+        'source_url',
+        'urn',
+        'verified',
+        'is_primary',
         'notes',
     ];
 
@@ -54,6 +58,9 @@ class HadithTranslation extends Model
      */
     protected $casts = [
         'hadith_id' => 'integer',
+        'urn' => 'integer',
+        'verified' => 'boolean',
+        'is_primary' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -62,9 +69,13 @@ class HadithTranslation extends Model
      * Supported language codes.
      */
     public const LANG_ARABIC = 'ar';
+
     public const LANG_ENGLISH = 'en';
+
     public const LANG_TURKISH = 'tr';
+
     public const LANG_FRENCH = 'fr';
+
     public const LANG_URDU = 'ur';
 
     /**
@@ -101,8 +112,6 @@ class HadithTranslation extends Model
 
     /**
      * Get the hadith that owns this translation.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function hadith(): BelongsTo
     {
@@ -112,8 +121,7 @@ class HadithTranslation extends Model
     /**
      * Scope to filter by language.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $languageCode
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByLanguage($query, string $languageCode)
@@ -124,7 +132,7 @@ class HadithTranslation extends Model
     /**
      * Scope to filter Arabic translations.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeArabic($query)
@@ -135,7 +143,7 @@ class HadithTranslation extends Model
     /**
      * Scope to filter English translations.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeEnglish($query)
@@ -144,52 +152,48 @@ class HadithTranslation extends Model
     }
 
     /**
-     * Scope to search in matn using fulltext search.
+     * Scope to search in text using fulltext search.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $searchTerm
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeSearchMatn($query, string $searchTerm)
     {
         return $query->whereRaw(
-            'MATCH(matn) AGAINST(? IN NATURAL LANGUAGE MODE)',
+            'MATCH(text) AGAINST(? IN NATURAL LANGUAGE MODE)',
             [$searchTerm]
         );
     }
 
     /**
-     * Scope to search in matn using boolean mode for advanced queries.
+     * Scope to search in text using boolean mode for advanced queries.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $searchTerm
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeSearchMatnBoolean($query, string $searchTerm)
     {
         return $query->whereRaw(
-            'MATCH(matn) AGAINST(? IN BOOLEAN MODE)',
+            'MATCH(text) AGAINST(? IN BOOLEAN MODE)',
             [$searchTerm]
         );
     }
 
     /**
-     * Scope to search in matn with basic LIKE (fallback for non-fulltext).
+     * Scope to search in text with basic LIKE (fallback for non-fulltext).
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $searchTerm
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeSearchMatnLike($query, string $searchTerm)
     {
-        return $query->where('matn', 'like', "%{$searchTerm}%");
+        return $query->where('text', 'like', "%{$searchTerm}%");
     }
 
     /**
      * Scope to filter by translator.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $translatorName
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByTranslator($query, string $translatorName)
@@ -200,7 +204,7 @@ class HadithTranslation extends Model
     /**
      * Scope to get translations with their hadith.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithHadith($query)
@@ -211,7 +215,7 @@ class HadithTranslation extends Model
     /**
      * Scope to get translations with full hadith relations.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithFullHadith($query)
@@ -219,25 +223,22 @@ class HadithTranslation extends Model
         return $query->with([
             'hadith.book.collection',
             'hadith.gradings',
-            'hadith.themes'
+            'hadith.themes',
         ]);
     }
 
     /**
      * Get the language name for this translation.
-     *
-     * @return string
      */
     public function getLanguageName(): string
     {
         $names = self::getLanguageNames();
+
         return $names[$this->language_code] ?? $this->language_code;
     }
 
     /**
      * Check if this translation is in Arabic.
-     *
-     * @return bool
      */
     public function isArabic(): bool
     {
@@ -246,8 +247,6 @@ class HadithTranslation extends Model
 
     /**
      * Check if this translation is in English.
-     *
-     * @return bool
      */
     public function isEnglish(): bool
     {
@@ -256,8 +255,6 @@ class HadithTranslation extends Model
 
     /**
      * Check if this translation is RTL (Right-to-Left) language.
-     *
-     * @return bool
      */
     public function isRtl(): bool
     {
@@ -265,23 +262,18 @@ class HadithTranslation extends Model
     }
 
     /**
-     * Get excerpt of matn (first N characters).
-     *
-     * @param int $length
-     * @return string
+     * Get excerpt of text (first N characters).
      */
     public function getExcerpt(int $length = 150): string
     {
-        return mb_substr($this->matn, 0, $length) . (mb_strlen($this->matn) > $length ? '...' : '');
+        return mb_substr($this->text, 0, $length).(mb_strlen($this->text) > $length ? '...' : '');
     }
 
     /**
-     * Get word count of matn.
-     *
-     * @return int
+     * Get word count of text.
      */
     public function getWordCount(): int
     {
-        return str_word_count(strip_tags($this->matn));
+        return str_word_count(strip_tags($this->text));
     }
 }

@@ -14,7 +14,7 @@ return new class extends Migration
         if (Schema::hasTable('people')) {
             $columns = Schema::getColumnListing('people');
             $columnsToRemove = array_intersect(['name', 'title', 'biography', 'birth_place', 'death_place', 'burial_place', 'occupation', 'notes'], $columns);
-            if (!empty($columnsToRemove)) {
+            if (! empty($columnsToRemove)) {
                 Schema::table('people', function (Blueprint $table) use ($columnsToRemove) {
                     $table->dropColumn($columnsToRemove);
                 });
@@ -25,7 +25,7 @@ return new class extends Migration
         if (Schema::hasTable('quran_reciters')) {
             $columns = Schema::getColumnListing('quran_reciters');
             $columnsToRemove = array_intersect(['name', 'description'], $columns);
-            if (!empty($columnsToRemove)) {
+            if (! empty($columnsToRemove)) {
                 Schema::table('quran_reciters', function (Blueprint $table) use ($columnsToRemove) {
                     $table->dropColumn($columnsToRemove);
                 });
@@ -36,7 +36,7 @@ return new class extends Migration
         if (Schema::hasTable('seerah_participants')) {
             $columns = Schema::getColumnListing('seerah_participants');
             $columnsToRemove = array_intersect(['name', 'description'], $columns);
-            if (!empty($columnsToRemove)) {
+            if (! empty($columnsToRemove)) {
                 Schema::table('seerah_participants', function (Blueprint $table) use ($columnsToRemove) {
                     $table->dropColumn($columnsToRemove);
                 });
@@ -47,7 +47,7 @@ return new class extends Migration
         if (Schema::hasTable('languages')) {
             $columns = Schema::getColumnListing('languages');
             $columnsToRemove = array_intersect(['name'], $columns);
-            if (!empty($columnsToRemove)) {
+            if (! empty($columnsToRemove)) {
                 Schema::table('languages', function (Blueprint $table) use ($columnsToRemove) {
                     $table->dropColumn($columnsToRemove);
                 });
@@ -61,28 +61,28 @@ return new class extends Migration
         if (Schema::hasTable('people')) {
             $columns = Schema::getColumnListing('people');
             Schema::table('people', function (Blueprint $table) use ($columns) {
-                if (!in_array('name', $columns)) {
+                if (! in_array('name', $columns)) {
                     $table->json('name')->nullable();
                 }
-                if (!in_array('title', $columns)) {
+                if (! in_array('title', $columns)) {
                     $table->json('title')->nullable();
                 }
-                if (!in_array('biography', $columns)) {
+                if (! in_array('biography', $columns)) {
                     $table->json('biography')->nullable();
                 }
-                if (!in_array('birth_place', $columns)) {
+                if (! in_array('birth_place', $columns)) {
                     $table->json('birth_place')->nullable();
                 }
-                if (!in_array('death_place', $columns)) {
+                if (! in_array('death_place', $columns)) {
                     $table->json('death_place')->nullable();
                 }
-                if (!in_array('burial_place', $columns)) {
+                if (! in_array('burial_place', $columns)) {
                     $table->json('burial_place')->nullable();
                 }
-                if (!in_array('occupation', $columns)) {
+                if (! in_array('occupation', $columns)) {
                     $table->json('occupation')->nullable();
                 }
-                if (!in_array('notes', $columns)) {
+                if (! in_array('notes', $columns)) {
                     $table->json('notes')->nullable();
                 }
             });
@@ -92,10 +92,10 @@ return new class extends Migration
         if (Schema::hasTable('quran_reciters')) {
             $columns = Schema::getColumnListing('quran_reciters');
             Schema::table('quran_reciters', function (Blueprint $table) use ($columns) {
-                if (!in_array('name', $columns)) {
+                if (! in_array('name', $columns)) {
                     $table->json('name')->nullable();
                 }
-                if (!in_array('description', $columns)) {
+                if (! in_array('description', $columns)) {
                     $table->json('description')->nullable();
                 }
             });
@@ -105,10 +105,10 @@ return new class extends Migration
         if (Schema::hasTable('seerah_participants')) {
             $columns = Schema::getColumnListing('seerah_participants');
             Schema::table('seerah_participants', function (Blueprint $table) use ($columns) {
-                if (!in_array('name', $columns)) {
+                if (! in_array('name', $columns)) {
                     $table->json('name')->nullable();
                 }
-                if (!in_array('description', $columns)) {
+                if (! in_array('description', $columns)) {
                     $table->json('description')->nullable();
                 }
             });
@@ -118,7 +118,7 @@ return new class extends Migration
         if (Schema::hasTable('languages')) {
             $columns = Schema::getColumnListing('languages');
             Schema::table('languages', function (Blueprint $table) use ($columns) {
-                if (!in_array('name', $columns)) {
+                if (! in_array('name', $columns)) {
                     $table->json('name')->nullable();
                 }
             });

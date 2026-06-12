@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
-use App\Domain\Blog\Models\Category;
+use App\Domain\Blog\Repositories\CategoryRepositoryInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CategoryResource;
 use App\Support\Traits\ApiResponse;
@@ -18,6 +18,10 @@ class CategoryController extends Controller
 {
     use ApiResponse;
 
+    public function __construct(
+        private readonly CategoryRepositoryInterface $categoryRepository,
+    ) {}
+
     /**
      * Display a listing of categories
      *
@@ -25,10 +29,7 @@ class CategoryController extends Controller
      */
     public function index(): JsonResponse
     {
-        $categories = Category::with(['children'])
-            ->root()
-            ->ordered()
-            ->get();
+        $categories = $this->categoryRepository->listRoots();
 
         return $this->successResponse(CategoryResource::collection($categories));
     }
@@ -40,9 +41,7 @@ class CategoryController extends Controller
      */
     public function show(string $slug): JsonResponse
     {
-        $category = Category::with(['children', 'parent'])
-            ->where('slug', $slug)
-            ->first();
+        $category = $this->categoryRepository->findBySlug($slug);
 
         if (! $category) {
             return $this->notFoundResponse('Category not found');

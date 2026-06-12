@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Hadith\Repositories;
 
 use App\Domain\Hadith\Models\HadithTheme;
+use App\Domain\Shared\Helpers\FullTextSearchHelper;
 use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -28,7 +29,7 @@ class ThemeRepository extends BaseRepository implements ThemeRepositoryInterface
      */
     protected function getModel(): Model
     {
-        return new HadithTheme();
+        return new HadithTheme;
     }
 
     /**
@@ -36,7 +37,7 @@ class ThemeRepository extends BaseRepository implements ThemeRepositoryInterface
      */
     public function getBySlug(string $slug, string $locale = 'ar'): ?HadithTheme
     {
-        $slugField = 'slug_' . $locale;
+        $slugField = 'slug_'.$locale;
 
         return Cache::remember(
             "hadith_theme_slug_{$locale}_{$slug}",
@@ -75,13 +76,17 @@ class ThemeRepository extends BaseRepository implements ThemeRepositoryInterface
 
     /**
      * {@inheritdoc}
+     *
+     * FULLTEXT index on hadith_themes covers (theme_ar, theme_en).
+     * Note: the real DB columns are theme_ar / theme_en (not name_ar / name_en).
      */
     public function search(string $query, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->model
-            ->where('name_ar', 'LIKE', "%{$query}%")
-            ->orWhere('name_en', 'LIKE', "%{$query}%")
-            ->paginate($perPage);
+        return FullTextSearchHelper::apply(
+            $this->model->newQuery(),
+            ['theme_ar', 'theme_en'],
+            $query
+        )->paginate($perPage);
     }
 
     /**
@@ -130,12 +135,9 @@ class ThemeRepository extends BaseRepository implements ThemeRepositoryInterface
     ): LengthAwarePaginator {
         $query = $this->model->newQuery();
 
-        // Apply search
-        if (!empty($search)) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name_ar', 'LIKE', "%{$search}%")
-                    ->orWhere('name_en', 'LIKE', "%{$search}%");
-            });
+        // Apply search — FULLTEXT index covers (theme_ar, theme_en) on hadith_themes.
+        if (! empty($search)) {
+            FullTextSearchHelper::apply($query, ['theme_ar', 'theme_en'], $search);
         }
 
         // Apply root only filter

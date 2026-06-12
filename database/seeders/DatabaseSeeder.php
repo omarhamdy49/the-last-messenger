@@ -24,7 +24,27 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolePermissionSeeder::class,
             AdminUserSeeder::class,
+            QuranReciterSeeder::class,
         ]);
+
+        // Public-site content (settings, menus, home cards/chips, pages, FAQs)
+        $this->call([
+            SiteSettingsSeeder::class,
+            MenuSeeder::class,
+            HomeModuleCardsSeeder::class,
+            QuickFilterChipsSeeder::class,
+            StaticPagesSeeder::class,
+            FaqSeeder::class,
+            MediaCategorySeeder::class,
+        ]);
+
+        // Topics auto-curate from EXISTING Quran/Hadith/Article content, so only
+        // run once that content has been imported. Otherwise it would create empty
+        // topics. Always runnable standalone via: php artisan db:seed --class=TopicSeeder
+        if (\Illuminate\Support\Facades\DB::table('quran_verse_translations')->exists()
+            && \Illuminate\Support\Facades\DB::table('hadith_translations')->exists()) {
+            $this->call(TopicSeeder::class);
+        }
 
         $this->command->newLine();
         $this->command->info('🎉 Database seeding completed successfully!');

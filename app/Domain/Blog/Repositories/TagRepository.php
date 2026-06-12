@@ -19,15 +19,11 @@ class TagRepository implements TagRepositoryInterface
 {
     /**
      * Model class
-     *
-     * @var string
      */
     protected string $model = Tag::class;
 
     /**
      * Get base query with eager loaded relationships
-     *
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     protected function getBaseQuery(): \Illuminate\Database\Eloquent\Builder
     {
@@ -36,12 +32,6 @@ class TagRepository implements TagRepositoryInterface
 
     /**
      * Get paginated tags with search and filters
-     *
-     * @param int $perPage
-     * @param string $search
-     * @param array $filters
-     * @param array $with
-     * @return LengthAwarePaginator
      */
     public function paginate(
         int $perPage = 50,
@@ -52,7 +42,7 @@ class TagRepository implements TagRepositoryInterface
         $query = $this->getBaseQuery();
 
         // Apply search across all language fields (via translation table)
-        if (!empty($search)) {
+        if (! empty($search)) {
             $query->where(function ($q) use ($search) {
                 // Search in translation table
                 $q->whereHas('translations', function ($sub) use ($search) {
@@ -62,26 +52,26 @@ class TagRepository implements TagRepositoryInterface
                     });
                 })
                 // Also search slug directly on tags table
-                ->orWhere('slug', 'like', "%{$search}%");
+                    ->orWhere('slug', 'like', "%{$search}%");
             });
         }
 
         // Apply type filter
-        if (!empty($filters['type'])) {
+        if (! empty($filters['type'])) {
             $query->where('type', $filters['type']);
         }
 
         // Apply date range filter
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $query->where('created_at', '>=', $filters['date_from']);
         }
 
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $query->where('created_at', '<=', $filters['date_to']);
         }
 
         // Apply additional eager loading
-        if (!empty($with)) {
+        if (! empty($with)) {
             $query->with($with);
         }
 
@@ -93,9 +83,6 @@ class TagRepository implements TagRepositoryInterface
 
     /**
      * Create new tag
-     *
-     * @param array $data
-     * @return Model
      */
     public function create(array $data): Model
     {
@@ -109,10 +96,6 @@ class TagRepository implements TagRepositoryInterface
 
     /**
      * Update tag
-     *
-     * @param int $id
-     * @param array $data
-     * @return Model
      */
     public function update(int $id, array $data): Model
     {
@@ -127,9 +110,6 @@ class TagRepository implements TagRepositoryInterface
 
     /**
      * Delete tag
-     *
-     * @param int $id
-     * @return bool
      */
     public function delete(int $id): bool
     {
@@ -148,9 +128,6 @@ class TagRepository implements TagRepositoryInterface
 
     /**
      * Bulk delete tags
-     *
-     * @param array $ids
-     * @return int
      */
     public function bulkDelete(array $ids): int
     {
@@ -170,9 +147,6 @@ class TagRepository implements TagRepositoryInterface
 
     /**
      * Find tag by ID or fail
-     *
-     * @param int $id
-     * @return Model
      */
     public function findOrFail(int $id): Model
     {
@@ -181,8 +155,6 @@ class TagRepository implements TagRepositoryInterface
 
     /**
      * Get total count
-     *
-     * @return int
      */
     public function count(): int
     {
@@ -195,8 +167,6 @@ class TagRepository implements TagRepositoryInterface
 
     /**
      * Get total usage count (total articles using any tag)
-     *
-     * @return int
      */
     public function getTotalUsageCount(): int
     {
@@ -212,8 +182,6 @@ class TagRepository implements TagRepositoryInterface
 
     /**
      * Get most used tag
-     *
-     * @return Model|null
      */
     public function getMostUsedTag(): ?Model
     {
@@ -228,9 +196,6 @@ class TagRepository implements TagRepositoryInterface
 
     /**
      * Get recently added tags count
-     *
-     * @param int $days
-     * @return int
      */
     public function getRecentlyAddedCount(int $days = 7): int
     {
@@ -239,9 +204,6 @@ class TagRepository implements TagRepositoryInterface
 
     /**
      * Get usage count for specific tag
-     *
-     * @param int $tagId
-     * @return int
      */
     public function getUsageCount(int $tagId): int
     {
@@ -252,9 +214,6 @@ class TagRepository implements TagRepositoryInterface
 
     /**
      * Get published articles count for tag
-     *
-     * @param int $tagId
-     * @return int
      */
     public function getPublishedArticlesCount(int $tagId): int
     {
@@ -265,10 +224,6 @@ class TagRepository implements TagRepositoryInterface
 
     /**
      * Get articles for tag (paginated)
-     *
-     * @param int $tagId
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getArticlesForTag(int $tagId, int $perPage = 20): LengthAwarePaginator
     {
@@ -284,9 +239,6 @@ class TagRepository implements TagRepositoryInterface
      * Find duplicate tag by name
      *
      * Checks if any language name matches an existing tag
-     *
-     * @param array $name
-     * @return Model|null
      */
     public function findDuplicate(array $name): ?Model
     {
@@ -295,7 +247,7 @@ class TagRepository implements TagRepositoryInterface
         $query->whereHas('translations', function ($q) use ($name) {
             $q->where(function ($inner) use ($name) {
                 foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $lang) {
-                    if (!empty($name[$lang])) {
+                    if (! empty($name[$lang])) {
                         $inner->orWhere('name', $name[$lang]);
                     }
                 }
@@ -307,11 +259,6 @@ class TagRepository implements TagRepositoryInterface
 
     /**
      * Search tags for autocomplete
-     *
-     * @param string $query
-     * @param string|null $type
-     * @param int $limit
-     * @return \Illuminate\Support\Collection
      */
     public function searchForAutocomplete(string $query, ?string $type = null, int $limit = 10): \Illuminate\Support\Collection
     {
@@ -325,7 +272,7 @@ class TagRepository implements TagRepositoryInterface
                         ->orWhere('description', 'like', "%{$query}%");
                 });
             })
-            ->orWhere('slug', 'like', "%{$query}%");
+                ->orWhere('slug', 'like', "%{$query}%");
         });
 
         // Filter by type if provided
@@ -341,15 +288,61 @@ class TagRepository implements TagRepositoryInterface
 
     /**
      * Get unused tags (zero usage_count)
-     *
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getUnusedTags(int $perPage = 50): LengthAwarePaginator
     {
         return $this->model::where('usage_count', 0)
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
+    }
+
+    /**
+     * Get paginated tags filtered by type, with locale-aware JSON name search
+     *
+     * Uses JSON_EXTRACT so each locale column of the JSON `name` field is
+     * searched independently — identical to the original controller logic.
+     */
+    public function paginateByType(
+        string $type,
+        int $perPage = 15,
+        string $search = '',
+        array $locales = ['ar', 'en'],
+        string $sortBy = 'created_at',
+        string $sortOrder = 'desc'
+    ): LengthAwarePaginator {
+        $query = $this->model::where('type', $type);
+
+        if (! empty($search)) {
+            $query->where(function ($q) use ($search, $locales) {
+                foreach ($locales as $locale) {
+                    $q->orWhereRaw("JSON_EXTRACT(name, '$.{$locale}') LIKE ?", ["%{$search}%"]);
+                }
+            });
+        }
+
+        $query->orderBy($sortBy, $sortOrder);
+
+        return $query->paginate($perPage);
+    }
+
+    /**
+     * Search tags by type for autocomplete
+     */
+    public function searchByType(
+        string $type,
+        string $search,
+        int $limit = 10,
+        array $columns = ['id', 'slug', 'name', 'color']
+    ): \Illuminate\Support\Collection {
+        return $this->model::where('type', $type)
+            ->where(function ($q) use ($search) {
+                // Reuse the JSON extract approach for consistency across all locales
+                foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $locale) {
+                    $q->orWhereRaw("JSON_EXTRACT(name, '$.{$locale}') LIKE ?", ["%{$search}%"]);
+                }
+            })
+            ->limit($limit)
+            ->get($columns);
     }
 
     /**

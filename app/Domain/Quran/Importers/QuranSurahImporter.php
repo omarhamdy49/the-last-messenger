@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Importers;
 
-use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Enums\RevelationPlace;
+use App\Domain\Quran\Models\Surah;
 use App\Domain\Shared\Importers\BaseImporter;
 
 /**
@@ -107,6 +107,7 @@ class QuranSurahImporter extends BaseImporter
             $surah = Surah::where('number', $row['number'])->first();
             if ($surah) {
                 $surah->update($this->buildSurahData($row));
+
                 return $surah;
             }
         }
@@ -130,36 +131,36 @@ class QuranSurahImporter extends BaseImporter
         ];
 
         // Optional fields
-        if (!empty($row['meaning_ar']) || !empty($row['meaning_en'])) {
+        if (! empty($row['meaning_ar']) || ! empty($row['meaning_en'])) {
             $data['meaning'] = $this->buildMultiLanguageField($row, 'meaning');
         }
 
-        if (!empty($row['description_ar']) || !empty($row['description_en'])) {
+        if (! empty($row['description_ar']) || ! empty($row['description_en'])) {
             $data['description'] = $this->buildMultiLanguageField($row, 'description');
         }
 
-        if (!empty($row['theme_ar']) || !empty($row['theme_en'])) {
+        if (! empty($row['theme_ar']) || ! empty($row['theme_en'])) {
             $data['theme'] = $this->buildMultiLanguageField($row, 'theme');
         }
 
-        if (isset($row['revelation_order']) && !empty($row['revelation_order'])) {
+        if (isset($row['revelation_order']) && ! empty($row['revelation_order'])) {
             $data['revelation_order'] = (int) $row['revelation_order'];
         }
 
-        if (isset($row['words_count']) && !empty($row['words_count'])) {
+        if (isset($row['words_count']) && ! empty($row['words_count'])) {
             $data['words_count'] = (int) $row['words_count'];
         }
 
-        if (isset($row['letters_count']) && !empty($row['letters_count'])) {
+        if (isset($row['letters_count']) && ! empty($row['letters_count'])) {
             $data['letters_count'] = (int) $row['letters_count'];
         }
 
-        if (isset($row['page_number']) && !empty($row['page_number'])) {
+        if (isset($row['page_number']) && ! empty($row['page_number'])) {
             $data['page_number'] = (int) $row['page_number'];
         }
 
         // Parse juz field (can be comma-separated for multi-juz surahs)
-        if (!empty($row['juz'])) {
+        if (! empty($row['juz'])) {
             $juzNumbers = array_map('trim', explode(',', $row['juz']));
             $data['juz'] = array_map('intval', $juzNumbers);
         }

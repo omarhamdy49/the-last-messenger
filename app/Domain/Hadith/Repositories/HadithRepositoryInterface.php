@@ -59,7 +59,7 @@ interface HadithRepositoryInterface extends RepositoryInterface
     /**
      * Get paginated hadiths with filters
      *
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      */
     public function paginateWithFilters(
         int $perPage = 15,
@@ -82,4 +82,75 @@ interface HadithRepositoryInterface extends RepositoryInterface
      * Get hadith with full relations
      */
     public function getWithFullRelations(int $id): ?Hadith;
+
+    /**
+     * Paginated list for the admin index view.
+     *
+     * Loads book, book.collection, and the Arabic translation only.
+     *
+     * @param  array<string, mixed>  $filters  Supported keys: collection_id, book_id, grading_status
+     */
+    public function listForAdmin(
+        int $perPage = 20,
+        string $search = '',
+        array $filters = []
+    ): LengthAwarePaginator;
+
+    /**
+     * Locale-aware search used by the admin search endpoint.
+     *
+     * Returns a paginator whose items are Hadith models ready for JSON
+     * serialisation (book, book.collection, and translations in the
+     * requested locale plus Arabic).
+     *
+     * @param  array<string, mixed>  $filters  Supported keys: collection_id
+     */
+    public function searchForAdmin(
+        string $search = '',
+        array $filters = [],
+        int $perPage = 15,
+        string $locale = 'ar'
+    ): LengthAwarePaginator;
+
+    /**
+     * Delete multiple hadiths by their IDs.
+     *
+     * @param  array<int>  $ids
+     */
+    public function bulkDelete(array $ids): int;
+
+    /**
+     * Paginate the hadiths of a book (public chapter reader).
+     *
+     * Search applies a parameterized LIKE on translations.text scoped to the
+     * book; gradingStatus is the canonical machine value (sahih/hasan/daif).
+     * Items carry book, book.collection and locale+Arabic translations with
+     * explicit column lists.
+     */
+    public function paginatePublicByBook(
+        int $bookId,
+        int $perPage = 15,
+        int $page = 1,
+        ?string $gradingStatus = null,
+        string $search = '',
+        string $locale = 'ar'
+    ): LengthAwarePaginator;
+
+    /**
+     * Get a hadith with every relation the public detail page renders
+     * (translations, isnad+narrators, commentaries+scholars,
+     * gradings+scholars+levels, themes), all with explicit column lists.
+     */
+    public function getWithPublicDetail(int $id): ?Hadith;
+
+    /**
+     * Get the parallel narrations of a text hash: hadiths sharing the same
+     * normalized Arabic text, excluding the given hadith.
+     */
+    public function getByTextHash(string $textHash, int $excludeHadithId): Collection;
+
+    /**
+     * Count parallel narrations for a text hash, excluding the given hadith.
+     */
+    public function countByTextHash(string $textHash, int $excludeHadithId): int;
 }

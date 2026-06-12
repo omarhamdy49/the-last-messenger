@@ -12,11 +12,11 @@ use App\Domain\Shared\Application\Commands\Command;
 final readonly class SyncHadithsCommand implements Command
 {
     /**
-     * @param int $bookId The book ID to sync hadiths for
-     * @param string $collectionName The API collection name (e.g., 'bukhari')
-     * @param string $bookNumber The API book number
-     * @param bool $dryRun If true, only validate without persisting
-     * @param int|null $syncLogId Optional sync log ID for progress tracking
+     * @param  int  $bookId  The book ID to sync hadiths for
+     * @param  string  $collectionName  The API collection name (e.g., 'bukhari')
+     * @param  string  $bookNumber  The API book number
+     * @param  bool  $dryRun  If true, only validate without persisting
+     * @param  int|null  $syncLogId  Optional sync log ID for progress tracking
      */
     public function __construct(
         public int $bookId,

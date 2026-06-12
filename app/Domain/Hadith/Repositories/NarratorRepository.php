@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Hadith\Repositories;
 
 use App\Domain\Hadith\Models\HadithNarrator;
+use App\Domain\Shared\Helpers\FullTextSearchHelper;
 use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -28,7 +29,7 @@ class NarratorRepository extends BaseRepository implements NarratorRepositoryInt
      */
     protected function getModel(): Model
     {
-        return new HadithNarrator();
+        return new HadithNarrator;
     }
 
     /**
@@ -38,7 +39,7 @@ class NarratorRepository extends BaseRepository implements NarratorRepositoryInt
     {
         $allowedLocales = ['ar', 'en', 'fr', 'tr', 'ur'];
         $safeLocale = in_array($locale, $allowedLocales, true) ? $locale : 'ar';
-        $nameField = 'name_' . $safeLocale;
+        $nameField = 'name_'.$safeLocale;
 
         return Cache::remember(
             "hadith_narrator_name_{$safeLocale}_{$name}",
@@ -67,13 +68,68 @@ class NarratorRepository extends BaseRepository implements NarratorRepositoryInt
 
     /**
      * {@inheritdoc}
+     *
+     * FULLTEXT index on hadith_narrators covers (name_ar, name_en, full_name_ar, full_name_en, kunya).
+     * MATCH must reference all columns in that composite index.
      */
     public function search(string $query, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->model
-            ->where('name_ar', 'LIKE', "%{$query}%")
-            ->orWhere('name_en', 'LIKE', "%{$query}%")
-            ->paginate($perPage);
+        return FullTextSearchHelper::apply(
+            $this->model->newQuery(),
+            ['name_ar', 'name_en', 'full_name_ar', 'full_name_en', 'kunya'],
+            $query
+        )->paginate($perPage);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function paginateWithFilters(
+        int $perPage = 15,
+        string $search = '',
+        string $sortBy = 'name_ar',
+        array $filters = []
+    ): LengthAwarePaginator {
+        $query = $this->model->newQuery();
+
+        // Apply column-level filters
+        if (! empty($filters['reliability_grade'])) {
+            $query->where('reliability_grade', $filters['reliability_grade']);
+        }
+
+        if (! empty($filters['region'])) {
+            $query->where('region', $filters['region']);
+        }
+
+        if (! empty($filters['school'])) {
+            $query->where('school', $filters['school']);
+        }
+
+        // Apply search across all name variants
+        if (! empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name_ar', 'LIKE', "%{$search}%")
+                    ->orWhere('name_en', 'LIKE', "%{$search}%")
+                    ->orWhere('full_name_ar', 'LIKE', "%{$search}%")
+                    ->orWhere('full_name_en', 'LIKE', "%{$search}%");
+            });
+        }
+
+        $direction = $filters['sort_direction'] ?? 'asc';
+        $query->orderBy($sortBy, $direction);
+
+        return $query->paginate($perPage);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function restoreById(int $id): HadithNarrator
+    {
+        $narrator = HadithNarrator::withTrashed()->findOrFail($id);
+        $narrator->restore();
+
+        return $narrator;
     }
 
     /**

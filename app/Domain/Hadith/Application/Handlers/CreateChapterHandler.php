@@ -29,8 +29,8 @@ final class CreateChapterHandler implements CommandHandler
     /**
      * Handle the command
      *
-     * @param CreateChapterCommand $command
-     * @return ChapterDTO
+     * @param  CreateChapterCommand  $command
+     *
      * @throws EntityNotFoundException
      * @throws ValidationException
      */

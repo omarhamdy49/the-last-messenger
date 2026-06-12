@@ -76,9 +76,14 @@ class VerseTranslation extends Model
      */
     public function scopeSearch($query, string $term)
     {
-        return $query->where(function ($q) use ($term) {
-            $q->whereRaw('MATCH(text, text_notashkeel) AGAINST(? IN NATURAL LANGUAGE MODE)', [$term])
-                ->orWhere('text', 'LIKE', "%{$term}%")
+        $supportsFullText = $query->getConnection()->getDriverName() === 'mysql';
+
+        return $query->where(function ($q) use ($term, $supportsFullText) {
+            if ($supportsFullText) {
+                $q->whereRaw('MATCH(text, text_notashkeel) AGAINST(? IN NATURAL LANGUAGE MODE)', [$term]);
+            }
+
+            $q->orWhere('text', 'LIKE', "%{$term}%")
                 ->orWhere('text_notashkeel', 'LIKE', "%{$term}%");
         });
     }

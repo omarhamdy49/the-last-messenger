@@ -25,8 +25,8 @@ final class GetCollectionByIdHandler implements QueryHandler
     /**
      * Handle the query
      *
-     * @param GetCollectionByIdQuery $query
-     * @return CollectionDTO
+     * @param  GetCollectionByIdQuery  $query
+     *
      * @throws CollectionNotFoundException
      */
     public function handle(Query $query): CollectionDTO

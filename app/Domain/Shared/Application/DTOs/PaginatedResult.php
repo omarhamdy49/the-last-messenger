@@ -16,7 +16,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 final readonly class PaginatedResult
 {
     /**
-     * @param array<T> $items
+     * @param  array<T>  $items
      */
     public function __construct(
         public array $items,
@@ -31,13 +31,37 @@ final readonly class PaginatedResult
      * Create from Laravel paginator
      *
      * @template TItem
-     * @param LengthAwarePaginator<TItem> $paginator
+     *
+     * @param  LengthAwarePaginator<TItem>  $paginator
      * @return PaginatedResult<TItem>
      */
     public static function fromPaginator(LengthAwarePaginator $paginator): self
     {
         return new self(
             items: $paginator->items(),
+            total: $paginator->total(),
+            perPage: $paginator->perPage(),
+            currentPage: $paginator->currentPage(),
+            lastPage: $paginator->lastPage(),
+            hasMorePages: $paginator->hasMorePages()
+        );
+    }
+
+    /**
+     * Create from a Laravel paginator while replacing the page items with an
+     * already-transformed set (e.g. DTOs mapped from the paginator's models).
+     * Pagination metadata still comes from the paginator.
+     *
+     * @template TItem
+     *
+     * @param  LengthAwarePaginator<mixed>  $paginator
+     * @param  array<TItem>  $items
+     * @return PaginatedResult<TItem>
+     */
+    public static function fromPaginatorWithItems(LengthAwarePaginator $paginator, array $items): self
+    {
+        return new self(
+            items: $items,
             total: $paginator->total(),
             perPage: $paginator->perPage(),
             currentPage: $paginator->currentPage(),

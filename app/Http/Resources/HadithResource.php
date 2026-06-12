@@ -63,7 +63,7 @@ class HadithResource extends JsonResource
             'gradings' => $this->whenLoaded('gradings', function () use ($locale) {
                 return $this->gradings->map(fn ($g) => [
                     'grade' => $g->grade,
-                    'scholar' => $g->scholar?->{'name_' . $locale},
+                    'scholar' => $g->scholar?->{'name_'.$locale},
                 ]);
             }),
             'significance' => $locale === 'ar' ? $this->significance_ar : $this->significance_en,

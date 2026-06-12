@@ -6,19 +6,21 @@ namespace App\Services\Sunnah;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
-use GuzzleHttp\RetryMiddleware;
-use GuzzleHttp\Psr7\Request as Psr7Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use stdClass;
 
 class SunnahApiClient
 {
     private Client $client;
+
     private string $baseUrl;
+
     private string $apiKey;
+
     private int $rateLimitDelay = 5000; // milliseconds (5 seconds)
+
     private float $lastRequestTime = 0;
+
     private int $delayOn429 = 30000; // milliseconds (30 seconds when rate limited)
 
     /**
@@ -225,6 +227,7 @@ class SunnahApiClient
             try {
                 $this->applyRateLimit();
                 $response = $this->client->request($method, $endpoint, $options);
+
                 return json_decode((string) $response->getBody());
             } catch (RequestException $e) {
                 $lastException = $e;
@@ -257,8 +260,8 @@ class SunnahApiClient
     /**
      * Paginate through all results using a callback
      *
-     * @param callable $callback Function that receives page data and returns true to continue
-     * @param int $limit Items per page
+     * @param  callable  $callback  Function that receives page data and returns true to continue
+     * @param  int  $limit  Items per page
      */
     public function paginateAll(callable $callback, string $endpoint, int $limit = 50): void
     {
@@ -284,7 +287,7 @@ class SunnahApiClient
 
                 $shouldContinue = $callback($data);
 
-                if (!$shouldContinue || !isset($data->next) || $data->next === null) {
+                if (! $shouldContinue || ! isset($data->next) || $data->next === null) {
                     $hasMore = false;
                 } else {
                     $page = $data->next;

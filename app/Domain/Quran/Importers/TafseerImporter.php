@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Importers;
 
-use App\Domain\Quran\Models\QuranTafseer;
 use App\Domain\Quran\Models\QuranSurah;
+use App\Domain\Quran\Models\QuranTafseer;
 use App\Domain\Quran\Models\QuranVerse;
 use App\Domain\Shared\Importers\BaseImporter;
 

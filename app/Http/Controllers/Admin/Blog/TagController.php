@@ -1,0 +1,340 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers\Admin\Blog;
+
+use App\Domain\Blog\DTOs\CreateTagData;
+use App\Domain\Blog\DTOs\UpdateTagData;
+use App\Domain\Blog\Services\TagService;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreTagRequest;
+use App\Http\Requests\Admin\UpdateTagRequest;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+/**
+ * TagController
+ *
+ * Manages tags for articles, hadith, programs, and events
+ */
+class TagController extends Controller
+{
+    /**
+     * Constructor with dependency injection
+     */
+    public function __construct(
+        protected TagService $service
+    ) {
+        // Protect routes - only authenticated admins
+        $this->middleware('auth');
+    }
+
+    /**
+     * Display paginated list of tags
+     *
+     * GET /su/portal/v1/admin/tags
+     */
+    public function index(Request $request): View|JsonResponse
+    {
+        // Get pagination and search parameters
+        $perPage = $request->integer('per_page', 50);
+        $search = $request->string('search')->toString();
+
+        // Get filters from request
+        $filters = $request->only(['type', 'date_from', 'date_to']);
+
+        // Fetch paginated data with filters applied
+        $tags = $this->service->paginate(
+            perPage: $perPage,
+            search: $search,
+            filters: $filters
+        );
+
+        // Get statistics for stats cards
+        $mostUsedTag = $this->service->getMostUsedTag();
+        $stats = [
+            'total' => $this->service->count(),
+            'total_uses' => $this->service->getTotalUsageCount(),
+            'most_used' => $mostUsedTag ? $mostUsedTag->getTranslation('name', app()->getLocale()) : 'N/A',
+            'recent' => $this->service->getRecentlyAddedCount(7),
+        ];
+
+        // Return JSON for AJAX requests, HTML for page loads
+        if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json([
+                'success' => true,
+                'data' => $tags->items(),
+                'stats' => $stats,
+                'meta' => [
+                    'current_page' => $tags->currentPage(),
+                    'per_page' => $tags->perPage(),
+                    'total' => $tags->total(),
+                    'last_page' => $tags->lastPage(),
+                ],
+            ]);
+        }
+
+        return view('admin.tags.index', compact('tags', 'stats'));
+    }
+
+    /**
+     * Show create form
+     *
+     * GET /su/portal/v1/admin/tags/create
+     */
+    public function create(): View
+    {
+        return view('admin.tags.create');
+    }
+
+    /**
+     * Store new tag
+     *
+     * POST /su/portal/v1/admin/tags
+     */
+    public function store(StoreTagRequest $request): JsonResponse
+    {
+        try {
+            // Check for duplicate tags
+            $duplicate = $this->service->findDuplicate($request->validated()['name']);
+            if ($duplicate) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('admin.tag_duplicate_exists'),
+                    'duplicate' => $duplicate,
+                ], 422);
+            }
+
+            $tag = $this->service->create(CreateTagData::fromRequest($request));
+
+            return response()->json([
+                'success' => true,
+                'message' => __('admin.tag_created'),
+                'data' => $tag,
+            ], 201);
+        } catch (\Throwable $e) {
+            \Log::error('admin.tag.create_failed', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => __('admin.operation_failed'),
+            ], 422);
+        }
+    }
+
+    /**
+     * Show edit form
+     *
+     * GET /su/portal/v1/admin/tags/{id}/edit
+     */
+    public function edit(int $id): View
+    {
+        $tag = $this->service->findOrFail($id);
+        $usageCount = $this->service->getUsageCount($id);
+
+        return view('admin.tags.edit', compact('tag', 'usageCount'));
+    }
+
+    /**
+     * Update tag
+     *
+     * PUT /su/portal/v1/admin/tags/{id}
+     */
+    public function update(UpdateTagRequest $request, int $id): JsonResponse
+    {
+        try {
+            $tag = $this->service->update($id, UpdateTagData::fromRequest($request));
+
+            return response()->json([
+                'success' => true,
+                'message' => __('admin.tag_updated'),
+                'data' => $tag,
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('admin.tag.update_failed', [
+                'user_id' => auth()->id(),
+                'tag_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => __('admin.operation_failed'),
+            ], 422);
+        }
+    }
+
+    /**
+     * Show tag details
+     *
+     * GET /su/portal/v1/admin/tags/{id}
+     */
+    public function show(int $id): View
+    {
+        $tag = $this->service->findOrFail($id);
+        $articles = $this->service->getArticlesForTag($id, perPage: 20);
+        $usageStats = [
+            'total_articles' => $this->service->getUsageCount($id),
+            'published_articles' => $this->service->getPublishedArticlesCount($id),
+        ];
+
+        return view('admin.tags.show', compact('tag', 'articles', 'usageStats'));
+    }
+
+    /**
+     * Delete tag
+     *
+     * DELETE /su/portal/v1/admin/tags/{id}
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        try {
+            $this->service->delete($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => __('admin.tag_deleted'),
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('admin.tag.delete_failed', [
+                'user_id' => auth()->id(),
+                'tag_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => __('admin.operation_failed'),
+            ], 422);
+        }
+    }
+
+    /**
+     * Merge two tags
+     *
+     * Move all articles from source tag to destination tag, then delete source tag
+     *
+     * POST /su/portal/v1/admin/tags/merge
+     */
+    public function merge(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'source_tag_id' => 'required|integer|exists:tags,id',
+            'destination_tag_id' => 'required|integer|exists:tags,id|different:source_tag_id',
+        ]);
+
+        try {
+            $mergedCount = $this->service->mergeTags(
+                sourceId: $validated['source_tag_id'],
+                destinationId: $validated['destination_tag_id']
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => __('admin.tags_merged', ['count' => $mergedCount]),
+                'count' => $mergedCount,
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('admin.tag.merge_failed', [
+                'user_id' => auth()->id(),
+                'source_tag_id' => $validated['source_tag_id'],
+                'destination_tag_id' => $validated['destination_tag_id'],
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => __('admin.operation_failed'),
+            ], 422);
+        }
+    }
+
+    /**
+     * Bulk delete multiple tags
+     *
+     * POST /su/portal/v1/admin/tags/bulk-delete
+     */
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $ids = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:tags,id',
+        ])['ids'];
+
+        try {
+            $count = $this->service->bulkDelete($ids);
+
+            return response()->json([
+                'success' => true,
+                'message' => __('admin.tags_bulk_deleted', ['count' => $count]),
+                'count' => $count,
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('admin.tag.bulk_delete_failed', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => __('admin.operation_failed'),
+            ], 422);
+        }
+    }
+
+    /**
+     * Search tags for autocomplete (AJAX endpoint)
+     *
+     * GET /su/portal/v1/admin/tags/search
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'q' => 'required|string|min:1|max:100',
+            'type' => 'nullable|in:article,hadith,program,event',
+            'limit' => 'nullable|integer|min:1|max:50',
+        ]);
+
+        $query = $validated['q'];
+        $type = $validated['type'] ?? null;
+        $limit = $validated['limit'] ?? 10;
+
+        $tags = $this->service->searchForAutocomplete($query, $type, $limit);
+
+        return response()->json([
+            'success' => true,
+            'data' => $tags,
+        ]);
+    }
+
+    /**
+     * Get unused tags (tags with zero usage_count)
+     *
+     * GET /su/portal/v1/admin/tags/unused
+     */
+    public function unused(Request $request): View|JsonResponse
+    {
+        $perPage = $request->integer('per_page', 50);
+        $unusedTags = $this->service->getUnusedTags($perPage);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'data' => $unusedTags->items(),
+                'meta' => [
+                    'current_page' => $unusedTags->currentPage(),
+                    'per_page' => $unusedTags->perPage(),
+                    'total' => $unusedTags->total(),
+                    'last_page' => $unusedTags->lastPage(),
+                ],
+            ]);
+        }
+
+        return view('admin.tags.unused', compact('unusedTags'));
+    }
+}

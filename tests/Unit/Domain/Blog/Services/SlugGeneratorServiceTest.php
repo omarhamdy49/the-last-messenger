@@ -19,7 +19,7 @@ class SlugGeneratorServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new SlugGeneratorService();
+        $this->service = new SlugGeneratorService;
     }
 
     public function test_generates_slug_from_english_title(): void
@@ -41,10 +41,10 @@ class SlugGeneratorServiceTest extends TestCase
         $article = Article::query()->create([]);
         ArticleLocale::query()->create([
             'article_id' => $article->id,
-            'locale'     => 'en',
-            'slug'       => 'test-article',
-            'title'      => 'Test Article',
-            'is_ready'   => false,
+            'locale' => 'en',
+            'slug' => 'test-article',
+            'title' => 'Test Article',
+            'is_ready' => false,
         ]);
 
         $slug = $this->service->generate('Test Article', 'en');
@@ -59,18 +59,18 @@ class SlugGeneratorServiceTest extends TestCase
 
         ArticleLocale::query()->create([
             'article_id' => $article1->id,
-            'locale'     => 'en',
-            'slug'       => 'migration',
-            'title'      => 'Migration',
-            'is_ready'   => false,
+            'locale' => 'en',
+            'slug' => 'migration',
+            'title' => 'Migration',
+            'is_ready' => false,
         ]);
 
         ArticleLocale::query()->create([
             'article_id' => $article2->id,
-            'locale'     => 'en',
-            'slug'       => 'migration-1',
-            'title'      => 'Migration',
-            'is_ready'   => false,
+            'locale' => 'en',
+            'slug' => 'migration-1',
+            'title' => 'Migration',
+            'is_ready' => false,
         ]);
 
         $slug = $this->service->generate('Migration', 'en');
@@ -83,10 +83,10 @@ class SlugGeneratorServiceTest extends TestCase
         $article = Article::query()->create([]);
         ArticleLocale::query()->create([
             'article_id' => $article->id,
-            'locale'     => 'en',
-            'slug'       => 'existing-slug',
-            'title'      => 'Existing Slug',
-            'is_ready'   => false,
+            'locale' => 'en',
+            'slug' => 'existing-slug',
+            'title' => 'Existing Slug',
+            'is_ready' => false,
         ]);
 
         // When updating this article's own locale, it should not see its own slug as a conflict
@@ -100,10 +100,10 @@ class SlugGeneratorServiceTest extends TestCase
         $article = Article::query()->create([]);
         ArticleLocale::query()->create([
             'article_id' => $article->id,
-            'locale'     => 'ar',
-            'slug'       => 'migration',
-            'title'      => 'الهجرة',
-            'is_ready'   => false,
+            'locale' => 'ar',
+            'slug' => 'migration',
+            'title' => 'الهجرة',
+            'is_ready' => false,
         ]);
 
         // Same slug in a different locale should not conflict

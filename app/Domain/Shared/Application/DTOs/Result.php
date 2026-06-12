@@ -14,8 +14,8 @@ namespace App\Domain\Shared\Application\DTOs;
 final readonly class Result
 {
     /**
-     * @param T|null $data
-     * @param array<string> $errors
+     * @param  T|null  $data
+     * @param  array<string>  $errors
      */
     private function __construct(
         public bool $success,
@@ -28,7 +28,8 @@ final readonly class Result
      * Create successful result with data
      *
      * @template TData
-     * @param TData $data
+     *
+     * @param  TData  $data
      * @return Result<TData>
      */
     public static function success(mixed $data = null, string $message = 'تمت العملية بنجاح'): self
@@ -43,7 +44,7 @@ final readonly class Result
     /**
      * Create failure result
      *
-     * @param array<string> $errors
+     * @param  array<string>  $errors
      * @return Result<null>
      */
     public static function failure(string $message, array $errors = []): self

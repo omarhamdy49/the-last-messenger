@@ -68,14 +68,18 @@ class HadithSyncLog extends Model
      * Status constants.
      */
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_IN_PROGRESS = 'in_progress';
+
     public const STATUS_COMPLETED = 'completed';
+
     public const STATUS_FAILED = 'failed';
 
     /**
      * Type constants.
      */
     public const TYPE_COLLECTION = 'collection';
+
     public const TYPE_BOOK = 'book';
 
     /**
@@ -133,7 +137,7 @@ class HadithSyncLog extends Model
      */
     public function hasCheckpoint(): bool
     {
-        return !empty($this->checkpoint) && is_array($this->checkpoint);
+        return ! empty($this->checkpoint) && is_array($this->checkpoint);
     }
 
     /**
@@ -154,6 +158,7 @@ class HadithSyncLog extends Model
 
     /**
      * Increment synced records counter.
+     *
      * @deprecated Use updateProgress() with summary array instead
      */
     public function incrementSynced(int $count = 1): void
@@ -164,6 +169,7 @@ class HadithSyncLog extends Model
 
     /**
      * Increment failed records counter.
+     *
      * @deprecated Use updateProgress() with summary array instead
      */
     public function incrementFailed(int $count = 1): void
@@ -210,11 +216,12 @@ class HadithSyncLog extends Model
      */
     public function getDurationInSeconds(): ?int
     {
-        if (!$this->started_at) {
+        if (! $this->started_at) {
             return null;
         }
 
         $endTime = $this->completed_at ?? now();
+
         return $this->started_at->diffInSeconds($endTime);
     }
 

@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Sahaba\Importers;
 
-use App\Domain\Sahaba\Models\Sahabi;
 use App\Domain\Sahaba\Enums\SahabiStatus;
+use App\Domain\Sahaba\Models\Sahabi;
+use App\Domain\Sahaba\Models\SahabiBattle;
 use App\Domain\Shared\Importers\BaseImporter;
 use Illuminate\Support\Str;
 
@@ -68,20 +69,27 @@ class SahabiImporter extends BaseImporter
     {
         $name = $this->buildMultiLanguageField($row, 'name');
 
-        // Parse battles (comma-separated)
-        $battles = [];
-        if (! empty($row['battles'])) {
-            $battles = array_map('trim', explode(',', $row['battles']));
-        }
-
-        return Sahabi::create([
+        $sahabi = Sahabi::create([
             'name' => $name,
             'slug' => Str::slug($name['en'] ?: $name['ar']),
             'tribe' => $row['tribe'] ?? null,
             'birth_date' => $row['birth_date'] ?? null,
             'death_date' => $row['death_date'] ?? null,
-            'battles' => $battles,
             'status' => SahabiStatus::tryFrom($row['status'] ?? 'pending') ?? SahabiStatus::PENDING,
         ]);
+
+        // Parse battles (comma-separated) and insert into the pivot table.
+        if (! empty($row['battles'])) {
+            $battleNames = array_filter(array_map('trim', explode(',', $row['battles'])));
+
+            foreach ($battleNames as $battleName) {
+                SahabiBattle::firstOrCreate([
+                    'sahabi_id' => $sahabi->id,
+                    'battle_name' => $battleName,
+                ]);
+            }
+        }
+
+        return $sahabi;
     }
 }

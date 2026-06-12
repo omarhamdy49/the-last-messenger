@@ -29,22 +29,21 @@ final class UpdateHadithHandler implements CommandHandler
     /**
      * Handle the command
      *
-     * @param UpdateHadithCommand $command
-     * @return HadithDTO
+     * @param  UpdateHadithCommand  $command
+     *
      * @throws HadithNotFoundException
      * @throws InvalidGradingException
      */
     public function handle(Command $command): HadithDTO
     {
         /** @var UpdateHadithCommand $command */
-
         $hadith = $this->repository->find($command->hadithId);
         if ($hadith === null) {
             throw HadithNotFoundException::withHadithId($command->hadithId);
         }
 
         // Validate grading status if provided
-        if ($command->gradingStatus !== null && !in_array($command->gradingStatus, Hadith::getGradingStatuses())) {
+        if ($command->gradingStatus !== null && ! in_array($command->gradingStatus, Hadith::getGradingStatuses())) {
             throw InvalidGradingException::forStatus($command->gradingStatus);
         }
 

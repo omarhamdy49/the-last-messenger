@@ -15,7 +15,7 @@ use JsonSerializable;
 final readonly class VerseDTO implements JsonSerializable
 {
     /**
-     * @param array<string, string> $translations
+     * @param  array<string, string>  $translations
      */
     public function __construct(
         public int $id,

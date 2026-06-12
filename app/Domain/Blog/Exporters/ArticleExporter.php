@@ -74,19 +74,19 @@ class ArticleExporter extends BaseExporter
 
         foreach ($this->selectedColumns as $column) {
             $row[] = match ($column) {
-                'id'          => $article->id,
-                'title'       => $locale?->title ?? '',
-                'slug'        => $locale?->slug ?? '',
-                'status'      => $locale?->is_ready ? 'published' : 'draft',
-                'category'    => $article->category?->name ?? '',
-                'author'      => $article->writer?->name ?? '',
-                'views'       => $article->views ?? 0,
-                'read_time'   => $article->read_time ?? 0,
+                'id' => $article->id,
+                'title' => $locale?->title ?? '',
+                'slug' => $locale?->slug ?? '',
+                'status' => $locale?->is_ready ? 'published' : 'draft',
+                'category' => $article->category?->name ?? '',
+                'author' => $article->writer?->name ?? '',
+                'views' => $article->views ?? 0,
+                'read_time' => $article->read_time ?? 0,
                 'is_featured' => $this->formatBoolean($article->is_featured),
-                'is_pinned'   => $this->formatBoolean($article->is_pinned),
-                'hijri_date'  => $article->hijri_date ?? '',
-                'created_at'  => $this->formatDate($article->created_at),
-                default       => '',
+                'is_pinned' => $this->formatBoolean($article->is_pinned),
+                'hijri_date' => $article->hijri_date ?? '',
+                'created_at' => $this->formatDate($article->created_at),
+                default => '',
             };
         }
 
@@ -96,18 +96,18 @@ class ArticleExporter extends BaseExporter
     public function headings(): array
     {
         $translations = [
-            'id'          => ['ar' => 'المعرف',         'en' => 'ID',          'fr' => 'ID',              'tr' => 'Kimlik',           'ur' => 'شناخت'],
-            'title'       => ['ar' => 'العنوان',        'en' => 'Title',       'fr' => 'Titre',            'tr' => 'Başlık',           'ur' => 'عنوان'],
-            'slug'        => ['ar' => 'الرابط',         'en' => 'Slug',        'fr' => 'Slug',             'tr' => 'Slug',             'ur' => 'سلگ'],
-            'status'      => ['ar' => 'الحالة',         'en' => 'Status',      'fr' => 'Statut',           'tr' => 'Durum',            'ur' => 'حالت'],
-            'category'    => ['ar' => 'التصنيف',        'en' => 'Category',    'fr' => 'Catégorie',        'tr' => 'Kategori',         'ur' => 'زمرہ'],
-            'author'      => ['ar' => 'الكاتب',         'en' => 'Author',      'fr' => 'Auteur',           'tr' => 'Yazar',            'ur' => 'مصنف'],
-            'views'       => ['ar' => 'المشاهدات',      'en' => 'Views',       'fr' => 'Vues',             'tr' => 'Görüntüleme',      'ur' => 'مشاہدات'],
-            'read_time'   => ['ar' => 'وقت القراءة',   'en' => 'Read Time',   'fr' => 'Temps de lecture', 'tr' => 'Okuma Süresi',     'ur' => 'پڑھنے کا وقت'],
+            'id' => ['ar' => 'المعرف',         'en' => 'ID',          'fr' => 'ID',              'tr' => 'Kimlik',           'ur' => 'شناخت'],
+            'title' => ['ar' => 'العنوان',        'en' => 'Title',       'fr' => 'Titre',            'tr' => 'Başlık',           'ur' => 'عنوان'],
+            'slug' => ['ar' => 'الرابط',         'en' => 'Slug',        'fr' => 'Slug',             'tr' => 'Slug',             'ur' => 'سلگ'],
+            'status' => ['ar' => 'الحالة',         'en' => 'Status',      'fr' => 'Statut',           'tr' => 'Durum',            'ur' => 'حالت'],
+            'category' => ['ar' => 'التصنيف',        'en' => 'Category',    'fr' => 'Catégorie',        'tr' => 'Kategori',         'ur' => 'زمرہ'],
+            'author' => ['ar' => 'الكاتب',         'en' => 'Author',      'fr' => 'Auteur',           'tr' => 'Yazar',            'ur' => 'مصنف'],
+            'views' => ['ar' => 'المشاهدات',      'en' => 'Views',       'fr' => 'Vues',             'tr' => 'Görüntüleme',      'ur' => 'مشاہدات'],
+            'read_time' => ['ar' => 'وقت القراءة',   'en' => 'Read Time',   'fr' => 'Temps de lecture', 'tr' => 'Okuma Süresi',     'ur' => 'پڑھنے کا وقت'],
             'is_featured' => ['ar' => 'مميز',           'en' => 'Featured',    'fr' => 'En vedette',       'tr' => 'Öne Çıkan',        'ur' => 'نمایاں'],
-            'is_pinned'   => ['ar' => 'مثبت',           'en' => 'Pinned',      'fr' => 'Épinglé',          'tr' => 'Sabitlenmiş',      'ur' => 'پن شدہ'],
-            'hijri_date'  => ['ar' => 'التاريخ الهجري', 'en' => 'Hijri Date',  'fr' => 'Date hégirien',    'tr' => 'Hicri Tarih',      'ur' => 'ہجری تاریخ'],
-            'created_at'  => ['ar' => 'تاريخ الإنشاء', 'en' => 'Created At',  'fr' => 'Créé le',          'tr' => 'Oluşturulma',      'ur' => 'تخلیق کردہ'],
+            'is_pinned' => ['ar' => 'مثبت',           'en' => 'Pinned',      'fr' => 'Épinglé',          'tr' => 'Sabitlenmiş',      'ur' => 'پن شدہ'],
+            'hijri_date' => ['ar' => 'التاريخ الهجري', 'en' => 'Hijri Date',  'fr' => 'Date hégirien',    'tr' => 'Hicri Tarih',      'ur' => 'ہجری تاریخ'],
+            'created_at' => ['ar' => 'تاريخ الإنشاء', 'en' => 'Created At',  'fr' => 'Créé le',          'tr' => 'Oluşturulma',      'ur' => 'تخلیق کردہ'],
         ];
 
         $headers = [];

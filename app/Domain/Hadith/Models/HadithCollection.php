@@ -19,7 +19,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null $death_year_hijri Death year of the compiler in Hijri calendar
  * @property \Illuminate\Support\Carbon $created_at
  * @property \Illuminate\Support\Carbon $updated_at
- *
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Domain\Hadith\Models\HadithBook[] $books
  * @property-read int|null $books_count
  */
@@ -47,6 +46,8 @@ class HadithCollection extends Model
         'description_ar',
         'description_en',
         'abbreviation',
+        'canonical_code',
+        'source_slug',
         'total_hadiths',
     ];
 
@@ -63,8 +64,6 @@ class HadithCollection extends Model
 
     /**
      * Get all books belonging to this collection.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function books(): HasMany
     {
@@ -73,31 +72,31 @@ class HadithCollection extends Model
 
     /**
      * Get the collection name in the specified language.
-     *
-     * @param string $locale
-     * @return string
      */
     public function getNameInLocale(string $locale = 'ar'): string
     {
-        return $this->getTranslation('name', $locale);
+        // Names are stored in dedicated columns (name_ar/name_en), not a translatable JSON
+        // column — fall back to Arabic, the canonical/primary language.
+        return $locale === 'ar'
+            ? (string) $this->name_ar
+            : (string) ($this->name_en ?? $this->name_ar);
     }
 
     /**
      * Get the collection description in the specified language.
-     *
-     * @param string $locale
-     * @return string|null
      */
     public function getDescriptionInLocale(string $locale = 'ar'): ?string
     {
-        return $this->getTranslation('description', $locale);
+        // Descriptions live in description_ar/description_en columns (no translatable JSON).
+        return $locale === 'ar'
+            ? $this->description_ar
+            : ($this->description_en ?? $this->description_ar);
     }
 
     /**
      * Scope to get collections by compiler name.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $compiler
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByCompiler($query, string $compiler)
@@ -108,7 +107,7 @@ class HadithCollection extends Model
     /**
      * Scope to get collections with their books.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithBooks($query)

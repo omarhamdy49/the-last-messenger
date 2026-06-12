@@ -13,7 +13,6 @@ use App\Jobs\SyncCollectionJob;
 use App\Services\Sunnah\SunnahApiClient;
 use App\Services\Sunnah\SunnahDataTransformer;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Console\Helper\Table;
 
@@ -51,16 +50,22 @@ class SyncHadithCommand extends Command
      * Exit codes
      */
     private const EXIT_SUCCESS = 0;
+
     private const EXIT_ERROR = 1;
 
     /**
      * Service dependencies
      */
     private SunnahApiClient $apiClient;
+
     private SunnahDataTransformer $transformer;
+
     private CollectionSyncService $collectionSyncService;
+
     private BookSyncService $bookSyncService;
+
     private ChapterSyncService $chapterSyncService;
+
     private HadithSyncService $hadithSyncService;
 
     /**
@@ -182,15 +187,17 @@ class SyncHadithCommand extends Command
 
             $this->error('❌ فشل الاتصال');
             $this->error('❌ Connection failed');
+
             return self::EXIT_ERROR;
 
         } catch (\Exception $e) {
-            $this->error('❌ خطأ في الاتصال: ' . $e->getMessage());
-            $this->error('❌ Connection error: ' . $e->getMessage());
+            $this->error('❌ خطأ في الاتصال: '.$e->getMessage());
+            $this->error('❌ Connection error: '.$e->getMessage());
             Log::error('Hadith sync test connection failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
             return self::EXIT_ERROR;
         }
     }
@@ -207,9 +214,10 @@ class SyncHadithCommand extends Command
         try {
             $response = $this->apiClient->getCollections(limit: 50);
 
-            if (!isset($response->data) || empty($response->data)) {
+            if (! isset($response->data) || empty($response->data)) {
                 $this->warn('⚠️  لم يتم العثور على مجموعات');
                 $this->warn('⚠️  No collections found');
+
                 return self::EXIT_SUCCESS;
             }
 
@@ -246,17 +254,18 @@ class SyncHadithCommand extends Command
             );
 
             $this->newLine();
-            $this->info('📊 إجمالي المجموعات: ' . count($tableData));
-            $this->info('📊 Total collections: ' . count($tableData));
+            $this->info('📊 إجمالي المجموعات: '.count($tableData));
+            $this->info('📊 Total collections: '.count($tableData));
 
             return self::EXIT_SUCCESS;
 
         } catch (\Exception $e) {
-            $this->error('❌ خطأ في جلب المجموعات: ' . $e->getMessage());
-            $this->error('❌ Error fetching collections: ' . $e->getMessage());
+            $this->error('❌ خطأ في جلب المجموعات: '.$e->getMessage());
+            $this->error('❌ Error fetching collections: '.$e->getMessage());
             Log::error('Hadith sync list collections failed', [
                 'error' => $e->getMessage(),
             ]);
+
             return self::EXIT_ERROR;
         }
     }
@@ -285,10 +294,11 @@ class SyncHadithCommand extends Command
             // Fetch all collections
             $response = $this->apiClient->getCollections(limit: 50);
 
-            if (!isset($response->data) || empty($response->data)) {
+            if (! isset($response->data) || empty($response->data)) {
                 $this->warn('⚠️  لم يتم العثور على مجموعات للمزامنة');
                 $this->warn('⚠️  No collections found to sync');
                 $masterLog->markCompleted(0, 0, 'No collections found');
+
                 return self::EXIT_SUCCESS;
             }
 
@@ -348,12 +358,13 @@ class SyncHadithCommand extends Command
             return $errorCount > 0 ? self::EXIT_ERROR : self::EXIT_SUCCESS;
 
         } catch (\Exception $e) {
-            $this->error('❌ خطأ فادح في المزامنة: ' . $e->getMessage());
-            $this->error('❌ Critical sync error: ' . $e->getMessage());
+            $this->error('❌ خطأ فادح في المزامنة: '.$e->getMessage());
+            $this->error('❌ Critical sync error: '.$e->getMessage());
             Log::error('Hadith sync all failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
             return self::EXIT_ERROR;
         }
     }
@@ -370,7 +381,7 @@ class SyncHadithCommand extends Command
         try {
             // Create sync log with correct schema fields
             $syncLog = null;
-            if (!$dryRun) {
+            if (! $dryRun) {
                 $syncLog = HadithSyncLog::create([
                     'collection_name' => $collectionName,
                     'type' => 'collection',
@@ -378,7 +389,7 @@ class SyncHadithCommand extends Command
                     'started_at' => now(),
                     'metadata' => [
                         'dry_run' => $dryRun,
-                        'command' => 'hadith:sync --collection=' . $collectionName,
+                        'command' => 'hadith:sync --collection='.$collectionName,
                     ],
                 ]);
             }
@@ -396,10 +407,10 @@ class SyncHadithCommand extends Command
             // Display results
             $this->newLine();
             if ($dryRun || $result !== null) {
-                $this->info("✅ تمت مزامنة المجموعة بنجاح!");
-                $this->info("✅ Collection synced successfully!");
+                $this->info('✅ تمت مزامنة المجموعة بنجاح!');
+                $this->info('✅ Collection synced successfully!');
 
-                if (!$dryRun && $result) {
+                if (! $dryRun && $result) {
                     $this->table(
                         ['Field', 'Value'],
                         [
@@ -411,19 +422,20 @@ class SyncHadithCommand extends Command
                     );
                 }
             } else {
-                $this->error("❌ فشلت مزامنة المجموعة");
-                $this->error("❌ Collection sync failed");
+                $this->error('❌ فشلت مزامنة المجموعة');
+                $this->error('❌ Collection sync failed');
             }
 
             return self::EXIT_SUCCESS;
 
         } catch (\Exception $e) {
-            $this->error('❌ خطأ في مزامنة المجموعة: ' . $e->getMessage());
-            $this->error('❌ Collection sync error: ' . $e->getMessage());
+            $this->error('❌ خطأ في مزامنة المجموعة: '.$e->getMessage());
+            $this->error('❌ Collection sync error: '.$e->getMessage());
             Log::error("Hadith sync collection {$collectionName} failed", [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
             return self::EXIT_ERROR;
         }
     }
@@ -468,9 +480,10 @@ class SyncHadithCommand extends Command
                 // Fetch all collections and dispatch jobs
                 $response = $this->apiClient->getCollections(limit: 50);
 
-                if (!isset($response->data) || empty($response->data)) {
+                if (! isset($response->data) || empty($response->data)) {
                     $this->warn('⚠️  لم يتم العثور على مجموعات');
                     $this->warn('⚠️  No collections found');
+
                     return self::EXIT_SUCCESS;
                 }
 
@@ -495,17 +508,18 @@ class SyncHadithCommand extends Command
             $this->newLine();
             $this->info("📊 معرف سجل المزامنة: {$parentLog->id}");
             $this->info("📊 Sync log ID: {$parentLog->id}");
-            $this->info("🔍 لمراقبة التقدم: php artisan queue:monitor");
-            $this->info("🔍 To monitor progress: php artisan queue:monitor");
+            $this->info('🔍 لمراقبة التقدم: php artisan queue:monitor');
+            $this->info('🔍 To monitor progress: php artisan queue:monitor');
 
             return self::EXIT_SUCCESS;
 
         } catch (\Exception $e) {
-            $this->error('❌ خطأ في إرسال المهام: ' . $e->getMessage());
-            $this->error('❌ Error dispatching jobs: ' . $e->getMessage());
+            $this->error('❌ خطأ في إرسال المهام: '.$e->getMessage());
+            $this->error('❌ Error dispatching jobs: '.$e->getMessage());
             Log::error('Hadith sync parallel dispatch failed', [
                 'error' => $e->getMessage(),
             ]);
+
             return self::EXIT_ERROR;
         }
     }
@@ -523,17 +537,19 @@ class SyncHadithCommand extends Command
             // Load sync log
             $syncLog = HadithSyncLog::find($logId);
 
-            if (!$syncLog) {
+            if (! $syncLog) {
                 $this->error("❌ لم يتم العثور على سجل المزامنة #{$logId}");
                 $this->error("❌ Sync log #{$logId} not found");
+
                 return self::EXIT_ERROR;
             }
 
             // Check if has checkpoint
             $checkpoint = $syncLog->checkpoint;
-            if (!$checkpoint) {
+            if (! $checkpoint) {
                 $this->warn('⚠️  لا توجد نقطة استئناف في هذا السجل');
                 $this->warn('⚠️  No checkpoint found in this log');
+
                 return self::EXIT_ERROR;
             }
 
@@ -553,16 +569,18 @@ class SyncHadithCommand extends Command
             $this->newLine();
 
             // Confirm resume
-            if (!$this->confirm('هل تريد الاستئناف من هذه النقطة؟ Resume from this checkpoint?', true)) {
+            if (! $this->confirm('هل تريد الاستئناف من هذه النقطة؟ Resume from this checkpoint?', true)) {
                 $this->info('تم الإلغاء. Cancelled.');
+
                 return self::EXIT_SUCCESS;
             }
 
             // Resume sync
             $collectionName = $checkpoint['collection'] ?? null;
-            if (!$collectionName) {
+            if (! $collectionName) {
                 $this->error('❌ معلومات المجموعة غير متوفرة في نقطة الاستئناف');
                 $this->error('❌ Collection information not available in checkpoint');
+
                 return self::EXIT_ERROR;
             }
 
@@ -572,20 +590,23 @@ class SyncHadithCommand extends Command
                 $this->info('✅ تمت عملية الاستئناف بنجاح!');
                 $this->info('✅ Resume completed successfully!');
                 $this->displaySyncStats($result);
+
                 return self::EXIT_SUCCESS;
             }
 
             $this->error("❌ فشل الاستئناف: {$result->error_message}");
             $this->error("❌ Resume failed: {$result->error_message}");
+
             return self::EXIT_ERROR;
 
         } catch (\Exception $e) {
-            $this->error('❌ خطأ في استئناف المزامنة: ' . $e->getMessage());
-            $this->error('❌ Resume sync error: ' . $e->getMessage());
+            $this->error('❌ خطأ في استئناف المزامنة: '.$e->getMessage());
+            $this->error('❌ Resume sync error: '.$e->getMessage());
             Log::error("Hadith sync resume from log {$logId} failed", [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
             return self::EXIT_ERROR;
         }
     }

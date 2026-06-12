@@ -2,10 +2,10 @@
 
 namespace App\Domain\Hadith\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Class HadithIsnad
@@ -15,11 +15,10 @@ use Illuminate\Database\Eloquent\Builder;
  *
  * @property int $id
  * @property int $hadith_id
- * @property int $order_number Position in the chain (1 = closest to compiler, higher = closer to Prophet)
+ * @property int $position_in_chain Position in the chain (1 = closest to compiler, higher = closer to Prophet)
  * @property int $narrator_id
  * @property string|null $verb Narration verb (e.g., حدثنا، أخبرنا، سمعت)
  * @property string|null $narrated_from Source of narration
- *
  * @property-read \App\Domain\Hadith\Models\Hadith $hadith
  * @property-read \App\Domain\Hadith\Models\HadithNarrator $narrator
  *
@@ -65,14 +64,12 @@ class HadithIsnad extends Model
      */
     protected $casts = [
         'hadith_id' => 'integer',
-        'order_number' => 'integer',
+        'position_in_chain' => 'integer',
         'narrator_id' => 'integer',
     ];
 
     /**
      * Get the hadith that this isnad belongs to.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function hadith(): BelongsTo
     {
@@ -81,8 +78,6 @@ class HadithIsnad extends Model
 
     /**
      * Get the narrator for this link in the chain.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function narrator(): BelongsTo
     {
@@ -92,22 +87,14 @@ class HadithIsnad extends Model
     /**
      * Scope to order isnad by chain position.
      * Order 1 = closest to the compiler, higher numbers = closer to the Prophet ﷺ
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $direction
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeOrderedByChain(Builder $query, string $direction = 'asc'): Builder
     {
-        return $query->orderBy('order_number', $direction);
+        return $query->orderBy('position_in_chain', $direction);
     }
 
     /**
      * Scope to filter isnad by hadith.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $hadithId
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeForHadith(Builder $query, int $hadithId): Builder
     {
@@ -116,10 +103,6 @@ class HadithIsnad extends Model
 
     /**
      * Scope to filter isnad by narrator.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $narratorId
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByNarrator(Builder $query, int $narratorId): Builder
     {
@@ -128,10 +111,6 @@ class HadithIsnad extends Model
 
     /**
      * Scope to filter isnad by narration verb.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $verb
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByVerb(Builder $query, string $verb): Builder
     {
@@ -140,9 +119,6 @@ class HadithIsnad extends Model
 
     /**
      * Scope to get isnad with narrator relationship.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithNarrator(Builder $query): Builder
     {
@@ -151,9 +127,6 @@ class HadithIsnad extends Model
 
     /**
      * Scope to get isnad with hadith relationship.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithHadith(Builder $query): Builder
     {
@@ -164,7 +137,6 @@ class HadithIsnad extends Model
      * Get the complete chain of narration for a hadith.
      * Returns collection ordered from compiler to Prophet ﷺ
      *
-     * @param int $hadithId
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public static function getChainForHadith(int $hadithId)
@@ -177,53 +149,45 @@ class HadithIsnad extends Model
 
     /**
      * Get the next narrator in the chain (higher order number).
-     *
-     * @return \App\Domain\Hadith\Models\HadithIsnad|null
      */
     public function getNextNarrator(): ?HadithIsnad
     {
         return static::where('hadith_id', $this->hadith_id)
-            ->where('order_number', '>', $this->order_number)
-            ->orderBy('order_number', 'asc')
+            ->where('position_in_chain', '>', $this->position_in_chain)
+            ->orderBy('position_in_chain', 'asc')
             ->first();
     }
 
     /**
      * Get the previous narrator in the chain (lower order number).
-     *
-     * @return \App\Domain\Hadith\Models\HadithIsnad|null
      */
     public function getPreviousNarrator(): ?HadithIsnad
     {
         return static::where('hadith_id', $this->hadith_id)
-            ->where('order_number', '<', $this->order_number)
-            ->orderBy('order_number', 'desc')
+            ->where('position_in_chain', '<', $this->position_in_chain)
+            ->orderBy('position_in_chain', 'desc')
             ->first();
     }
 
     /**
      * Check if this is the first narrator in the chain (closest to compiler).
-     *
-     * @return bool
      */
     public function isFirstInChain(): bool
     {
-        return $this->order_number === 1;
+        return $this->position_in_chain === 1;
     }
 
     /**
      * Get the formatted isnad link text.
      * Format: "{verb} {narrator_name}"
-     *
-     * @return string
      */
     public function getFormattedText(): string
     {
         $narrator = $this->narrator;
         $name = $narrator ? $narrator->getDisplayName() : '';
 
-        if ($this->verb) {
-            return $this->verb . ' ' . $name;
+        if ($this->transmission_method) {
+            return $this->transmission_method.' '.$name;
         }
 
         return $name;

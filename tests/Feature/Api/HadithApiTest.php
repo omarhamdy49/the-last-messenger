@@ -94,14 +94,13 @@ class HadithApiTest extends TestCase
         $response->assertOk();
     }
 
-    public function test_hadith_book_show_currently_triggers_sql_error_with_accept_language_header(): void
+    public function test_hadith_book_show_returns_404_for_nonexistent_slug(): void
     {
-        // KNOWN BUG: BookRepository::getBySlug() passes the raw Accept-Language header value
-        // (e.g. "en-US,en;q=0.5") as a SQL column name, producing a malformed query and a 500.
-        // When the bug is fixed the expected status should be 404 and success:false.
+        // Bug fixed: BookRepository::getBySlug() now validates Accept-Language header
+        // against an allowlist before using it as a column name.
         $response = $this->getJson('/api/v1/hadith/books/non-existent-book-slug');
 
-        $response->assertStatus(500);
+        $response->assertStatus(404);
     }
 
     public function test_hadith_narrators_returns_success_envelope(): void

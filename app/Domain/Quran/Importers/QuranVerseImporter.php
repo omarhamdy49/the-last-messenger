@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Importers;
 
-use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Models\Surah;
+use App\Domain\Quran\Models\Verse;
 use App\Domain\Shared\Importers\BaseImporter;
 
 /**
@@ -69,7 +69,7 @@ class QuranVerseImporter extends BaseImporter
         $surah = Surah::where('number', $row['surah_number'])->firstOrFail();
 
         // Build verse key (surah:verse format, e.g., 1:1)
-        $verseKey = $row['surah_number'] . ':' . $row['ayah_number'];
+        $verseKey = $row['surah_number'].':'.$row['ayah_number'];
 
         return Verse::create([
             'surah_id' => $surah->id,

@@ -270,6 +270,7 @@ abstract class BaseImporter
                     // Check if duplicate and skip if needed
                     if (($this->options['skip_duplicates'] ?? false) && $this->isDuplicate($row)) {
                         $this->skippedCount++;
+
                         continue;
                     }
 
@@ -443,7 +444,6 @@ abstract class BaseImporter
      * Build multi-language array from row
      *
      * @param  array<string, mixed>  $row
-     * @param  string  $fieldPrefix
      * @return array<string, string>
      */
     protected function buildMultiLanguageField(array $row, string $fieldPrefix): array

@@ -51,7 +51,7 @@ interface CollectionRepositoryInterface extends RepositoryInterface
     /**
      * Get paginated collections with filters
      *
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      */
     public function paginateWithFilters(
         int $perPage = 15,
@@ -59,4 +59,26 @@ interface CollectionRepositoryInterface extends RepositoryInterface
         string $sortBy = 'name_ar',
         array $filters = []
     ): LengthAwarePaginator;
+
+    /**
+     * Get a lightweight list of all collections for use in form dropdowns.
+     *
+     * Returns id, name_ar, name_en ordered by name_ar.
+     */
+    public function getAllForDropdown(): Collection;
+
+    /**
+     * Bulk-update display_order for a set of collections.
+     *
+     * @param  array<array{id: int, order: int}>  $items
+     */
+    public function reorder(array $items): void;
+
+    /**
+     * Toggle a boolean field on a single collection and return the updated record.
+     *
+     * @param  int  $id  Collection primary key
+     * @param  string  $field  Column name ('active' or 'featured')
+     */
+    public function toggleField(int $id, string $field): HadithCollection;
 }

@@ -34,12 +34,12 @@ class TocGeneratorService
 
         foreach ($matches as $match) {
             $level = (int) $match[1];
-            $text  = strip_tags($match[2]);
-            $id    = Str::slug($text);
+            $text = strip_tags($match[2]);
+            $id = Str::slug($text);
 
             $toc[] = [
                 'title' => $text,
-                'link'  => $id,
+                'link' => $id,
                 'level' => $level,
             ];
         }

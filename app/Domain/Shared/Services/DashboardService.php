@@ -29,7 +29,7 @@ class DashboardService
     private const CACHE_PREFIX = 'dashboard';
 
     /**
-     * @param DashboardStatsProviderInterface[] $statsProviders
+     * @param  DashboardStatsProviderInterface[]  $statsProviders
      */
     public function __construct(
         private readonly array $statsProviders = [],
@@ -53,8 +53,8 @@ class DashboardService
                 }
 
                 $stats['users'] = [
-                    'total'      => User::count(),
-                    'verified'   => User::whereNotNull('email_verified_at')->count(),
+                    'total' => User::count(),
+                    'verified' => User::whereNotNull('email_verified_at')->count(),
                     'unverified' => User::whereNull('email_verified_at')->count(),
                 ];
 
@@ -75,9 +75,9 @@ class DashboardService
             self::CACHE_TTL,
             function (): array {
                 try {
-                    $usersTotal        = User::count();
-                    $usersNew          = User::where('created_at', '>=', now()->subMonth())->count();
-                    $usersLastWeek     = User::where('created_at', '>=', now()->subWeek())->count();
+                    $usersTotal = User::count();
+                    $usersNew = User::where('created_at', '>=', now()->subMonth())->count();
+                    $usersLastWeek = User::where('created_at', '>=', now()->subWeek())->count();
                     $usersPreviousWeek = User::whereBetween('created_at', [now()->subWeeks(2), now()->subWeek()])->count();
 
                     $moduleStats = [];
@@ -87,9 +87,9 @@ class DashboardService
 
                     return array_merge($moduleStats, [
                         'users' => [
-                            'total'     => $usersTotal,
-                            'new'       => $usersNew,
-                            'change'    => $this->calculatePercentageChange($usersLastWeek, $usersPreviousWeek),
+                            'total' => $usersTotal,
+                            'new' => $usersNew,
+                            'change' => $this->calculatePercentageChange($usersLastWeek, $usersPreviousWeek),
                             'sparkline' => $this->getSparklineDataForTable('users', 7),
                         ],
                     ]);
@@ -120,17 +120,17 @@ class DashboardService
                         ->limit($limit)
                         ->get()
                         ->map(fn ($log) => [
-                            'id'          => $log->id,
-                            'user'        => [
-                                'name'   => $log->user?->name ?? 'Unknown User',
+                            'id' => $log->id,
+                            'user' => [
+                                'name' => $log->user?->name ?? 'Unknown User',
                                 'avatar' => $log->user?->avatar ?? null,
                             ],
-                            'action'      => $log->action,
-                            'model'       => class_basename($log->model_type ?? 'Unknown'),
+                            'action' => $log->action,
+                            'model' => class_basename($log->model_type ?? 'Unknown'),
                             'description' => $this->formatActionDescription($log),
-                            'timestamp'   => $log->created_at->diffForHumans(),
-                            'icon'        => $this->getActionIcon($log->action),
-                            'color'       => $this->getActionColor($log->action),
+                            'timestamp' => $log->created_at->diffForHumans(),
+                            'icon' => $this->getActionIcon($log->action),
+                            'color' => $this->getActionColor($log->action),
                         ]);
                 } catch (\Throwable) {
                     return collect();
@@ -160,24 +160,24 @@ class DashboardService
                         ->first();
 
                     return [
-                        'most_active_day'  => $mostActiveDay ? [
-                            'date'  => $mostActiveDay->date,
+                        'most_active_day' => $mostActiveDay ? [
+                            'date' => $mostActiveDay->date,
                             'count' => $mostActiveDay->count,
                         ] : null,
-                        'top_article'      => null,
+                        'top_article' => null,
                         'popular_category' => null,
-                        'top_narrator'     => null,
-                        'latest_upload'    => null,
-                        'pending_reviews'  => 0,
+                        'top_narrator' => null,
+                        'latest_upload' => null,
+                        'pending_reviews' => 0,
                     ];
                 } catch (\Throwable) {
                     return [
-                        'top_article'      => null,
-                        'most_active_day'  => null,
+                        'top_article' => null,
+                        'most_active_day' => null,
                         'popular_category' => null,
-                        'top_narrator'     => null,
-                        'latest_upload'    => null,
-                        'pending_reviews'  => 0,
+                        'top_narrator' => null,
+                        'latest_upload' => null,
+                        'pending_reviews' => 0,
                     ];
                 }
             }
@@ -197,8 +197,8 @@ class DashboardService
             function (): array {
                 return collect($this->statsProviders)
                     ->map(function (DashboardStatsProviderInterface $provider): array {
-                        $stats  = $provider->getStats();
-                        $count  = $stats['total'] ?? 0;
+                        $stats = $provider->getStats();
+                        $count = $stats['total'] ?? 0;
                         $status = 'healthy';
 
                         if ($count < 50) {
@@ -208,11 +208,11 @@ class DashboardService
                         }
 
                         return [
-                            'name'          => ucfirst(str_replace('_', ' ', $provider->getModuleKey())),
-                            'status'        => $status,
-                            'count'         => $count,
+                            'name' => ucfirst(str_replace('_', ' ', $provider->getModuleKey())),
+                            'status' => $status,
+                            'count' => $count,
                             'last_activity' => null,
-                            'icon'          => 'book-open',
+                            'icon' => 'book-open',
                         ];
                     })
                     ->toArray();
@@ -262,24 +262,47 @@ class DashboardService
     // ============================================================================
 
     /**
-     * Get sparkline data for last N days using a raw table name
+     * Get sparkline data for last N days using a raw table name.
+     *
+     * Uses a single aggregated query with a range predicate on created_at so
+     * the database can satisfy the scan with the existing index instead of
+     * applying DATE() to every row (which bypasses the index entirely).
+     * Missing days are back-filled with 0 to preserve the fixed-length array
+     * format expected by callers.
+     *
+     * Before: N queries, each a full-table scan via whereDate()/DATE() wrap.
+     * After:  1 query with index-range seek + GROUP BY on the DATE expression.
      *
      * @return array<int, int>
      */
     private function getSparklineDataForTable(string $table, int $days = 7): array
     {
-        $data = [];
-
         try {
-            for ($i = $days - 1; $i >= 0; $i--) {
-                $date   = now()->subDays($i)->toDateString();
-                $data[] = DB::table($table)->whereDate('created_at', $date)->count();
-            }
-        } catch (\Throwable) {
-            $data = array_fill(0, $days, 0);
-        }
+            $start = now()->subDays($days - 1)->startOfDay();
+            $end = now()->endOfDay();
 
-        return $data;
+            // Single query: range predicate keeps the index seek, GROUP BY
+            // aggregates per calendar day. keyBy('day') gives O(1) lookups.
+            $results = DB::table($table)
+                ->selectRaw('DATE(created_at) as day, COUNT(*) as count')
+                ->where('created_at', '>=', $start)
+                ->where('created_at', '<=', $end)
+                ->groupBy(DB::raw('DATE(created_at)'))
+                ->orderBy('day')
+                ->get()
+                ->keyBy('day');
+
+            // Build the ordered array, filling gaps (days with no rows) with 0.
+            $data = [];
+            for ($i = $days - 1; $i >= 0; $i--) {
+                $dateKey = now()->subDays($i)->toDateString();
+                $data[] = (int) ($results[$dateKey]->count ?? 0);
+            }
+
+            return $data;
+        } catch (\Throwable) {
+            return array_fill(0, $days, 0);
+        }
     }
 
     /**
@@ -300,7 +323,7 @@ class DashboardService
     private function formatActionDescription(AdminLog $log): string
     {
         $modelName = class_basename($log->model_type ?? 'Unknown');
-        $userName  = $log->user?->name ?? 'Unknown User';
+        $userName = $log->user?->name ?? 'Unknown User';
 
         $modelTitle = null;
 
@@ -324,9 +347,9 @@ class DashboardService
             'created' => "{$userName} أنشأ {$modelName} '{$modelTitle}'",
             'updated' => "{$userName} حدّث {$modelName} '{$modelTitle}'",
             'deleted' => "{$userName} حذف {$modelName} '{$modelTitle}'",
-            'login'   => "{$userName} سجل الدخول",
-            'logout'  => "{$userName} سجل الخروج",
-            default   => "{$userName} {$log->action} {$modelName}"
+            'login' => "{$userName} سجل الدخول",
+            'logout' => "{$userName} سجل الخروج",
+            default => "{$userName} {$log->action} {$modelName}"
         };
     }
 
@@ -339,9 +362,9 @@ class DashboardService
             'created' => 'plus-circle',
             'updated' => 'edit',
             'deleted' => 'trash-2',
-            'login'   => 'log-in',
-            'logout'  => 'log-out',
-            default   => 'activity'
+            'login' => 'log-in',
+            'logout' => 'log-out',
+            default => 'activity'
         };
     }
 
@@ -354,9 +377,9 @@ class DashboardService
             'created' => 'green',
             'updated' => 'blue',
             'deleted' => 'red',
-            'login'   => 'yellow',
-            'logout'  => 'gray',
-            default   => 'gray'
+            'login' => 'yellow',
+            'logout' => 'gray',
+            default => 'gray'
         };
     }
 }

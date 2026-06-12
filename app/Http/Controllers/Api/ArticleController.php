@@ -27,14 +27,14 @@ class ArticleController extends Controller
     {
         $validated = $request->validate([
             'category_id' => ['sometimes', 'integer', 'min:1'],
-            'tag'         => ['sometimes', 'integer', 'min:1'],
-            'q'           => ['sometimes', 'string', 'min:2', 'max:255'],
-            'per_page'    => ['sometimes', 'integer', 'min:1', 'max:100'],
-            'locale'      => ['sometimes', 'string', 'in:ar,en,fr,tr,ur'],
+            'tag' => ['sometimes', 'integer', 'min:1'],
+            'q' => ['sometimes', 'string', 'min:2', 'max:255'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'locale' => ['sometimes', 'string', 'in:ar,en,fr,tr,ur'],
         ]);
 
         $perPage = (int) ($validated['per_page'] ?? 20);
-        $locale  = $validated['locale'] ?? $request->header('Accept-Language', 'ar');
+        $locale = $validated['locale'] ?? $request->header('Accept-Language', 'ar');
 
         $filters = ['status' => 'published'];
 
@@ -75,8 +75,8 @@ class ArticleController extends Controller
      */
     public function featured(Request $request): JsonResponse
     {
-        $limit   = $request->integer('limit', 10);
-        $limit   = max(1, min(50, $limit));
+        $limit = $request->integer('limit', 10);
+        $limit = max(1, min(50, $limit));
         $articles = $this->repository->getFeaturedArticles($limit);
 
         return $this->successResponse(
@@ -90,10 +90,10 @@ class ArticleController extends Controller
      */
     public function popular(Request $request): JsonResponse
     {
-        $limit   = $request->integer('limit', 10);
-        $limit   = max(1, min(50, $limit));
-        $days    = $request->integer('days', 30);
-        $days    = max(1, min(365, $days));
+        $limit = $request->integer('limit', 10);
+        $limit = max(1, min(50, $limit));
+        $days = $request->integer('days', 30);
+        $days = max(1, min(365, $days));
         $articles = $this->repository->getPopularArticles($days, $limit);
 
         return $this->successResponse(
@@ -107,8 +107,8 @@ class ArticleController extends Controller
      */
     public function recent(Request $request): JsonResponse
     {
-        $limit   = $request->integer('limit', 10);
-        $limit   = max(1, min(50, $limit));
+        $limit = $request->integer('limit', 10);
+        $limit = max(1, min(50, $limit));
         $articles = $this->repository->getRecentArticles($limit);
 
         return $this->successResponse(
@@ -123,13 +123,13 @@ class ArticleController extends Controller
     public function search(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'q'        => ['required', 'string', 'min:2', 'max:255'],
+            'q' => ['required', 'string', 'min:2', 'max:255'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
-            'locale'   => ['sometimes', 'string', 'in:ar,en,fr,tr,ur'],
+            'locale' => ['sometimes', 'string', 'in:ar,en,fr,tr,ur'],
         ]);
 
-        $locale   = $validated['locale'] ?? $request->header('Accept-Language', 'ar');
-        $perPage  = (int) ($validated['per_page'] ?? 20);
+        $locale = $validated['locale'] ?? $request->header('Accept-Language', 'ar');
+        $perPage = (int) ($validated['per_page'] ?? 20);
         $paginator = $this->repository->searchArticles(
             query: $validated['q'],
             locale: $locale,
@@ -147,7 +147,7 @@ class ArticleController extends Controller
     {
         $allowedLocales = ['ar', 'en', 'fr', 'tr', 'ur'];
         $requestedLocale = request()->header('Accept-Language', 'ar');
-        $locale  = in_array($requestedLocale, $allowedLocales, true) ? $requestedLocale : 'ar';
+        $locale = in_array($requestedLocale, $allowedLocales, true) ? $requestedLocale : 'ar';
         $article = $this->repository->findBySlug($slug, $locale);
 
         if ($article === null) {

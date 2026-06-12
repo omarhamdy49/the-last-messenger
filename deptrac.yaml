@@ -1,0 +1,198 @@
+deptrac:
+  paths:
+    - ./app
+
+  exclude_files:
+    - '#.*[Tt]est.*#'
+    - '#.*Mock.*#'
+    - '#.*Fake.*#'
+
+  layers:
+    # -------------------------------------------------------------------------
+    # HTTP Layer
+    # -------------------------------------------------------------------------
+    - name: Controllers
+      collectors:
+        - type: directory
+          value: app/Http/Controllers/
+
+    - name: Middleware
+      collectors:
+        - type: directory
+          value: app/Http/Middleware/
+
+    # -------------------------------------------------------------------------
+    # Domain Modules — isolated from each other; communicate only via Shared
+    # -------------------------------------------------------------------------
+    - name: DomainBlog
+      collectors:
+        - type: directory
+          value: app/Domain/Blog/
+
+    - name: DomainContent
+      collectors:
+        - type: directory
+          value: app/Domain/Content/
+
+    - name: DomainHadith
+      collectors:
+        - type: directory
+          value: app/Domain/Hadith/
+
+    - name: DomainQuran
+      collectors:
+        - type: directory
+          value: app/Domain/Quran/
+
+    - name: DomainSahaba
+      collectors:
+        - type: directory
+          value: app/Domain/Sahaba/
+
+    - name: DomainSeerah
+      collectors:
+        - type: directory
+          value: app/Domain/Seerah/
+
+    - name: DomainGenealogy
+      collectors:
+        - type: directory
+          value: app/Domain/Genealogy/
+
+    - name: DomainMedia
+      collectors:
+        - type: directory
+          value: app/Domain/Media/
+
+    - name: DomainTopics
+      collectors:
+        - type: directory
+          value: app/Domain/Topics/
+
+    # -------------------------------------------------------------------------
+    # Shared Layer — cross-cutting contracts, DTOs, models, and queries used
+    # by all domain modules. Must never import from any domain module.
+    # -------------------------------------------------------------------------
+    - name: Shared
+      collectors:
+        - type: directory
+          value: app/Domain/Shared/
+        - type: directory
+          value: app/Support/
+
+    # -------------------------------------------------------------------------
+    # Infrastructure Layer — top-level repositories and services that are
+    # not yet co-located with a domain module (legacy location; migrate over
+    # time into the appropriate Domain/X/Repositories or Domain/X/Services
+    # subdirectory).
+    # -------------------------------------------------------------------------
+    - name: Infrastructure
+      collectors:
+        - type: directory
+          value: app/Repositories/
+        - type: directory
+          value: app/Services/
+
+    # -------------------------------------------------------------------------
+    # App-level Models — top-level Eloquent models not yet inside a domain
+    # (Article, Tag, User, Media, etc.). Controllers may not depend on these
+    # directly; they should go through a domain service or repository.
+    # -------------------------------------------------------------------------
+    - name: Models
+      collectors:
+        - type: directory
+          value: app/Models/
+
+    # -------------------------------------------------------------------------
+    # Providers & Console — framework bootstrap; allowed to wire everything
+    # -------------------------------------------------------------------------
+    - name: Bootstrap
+      collectors:
+        - type: directory
+          value: app/Providers/
+        - type: directory
+          value: app/Console/
+
+  # ---------------------------------------------------------------------------
+  # Ruleset
+  #
+  # Each entry lists the layers a given layer is ALLOWED to depend on.
+  # Any dependency not listed here is a violation.
+  #
+  # Design intent:
+  #   Controllers  → domain layers + Shared + Infrastructure (no raw Models)
+  #   Domain/X     → Shared only (no sibling domain imports)
+  #   Shared       → nothing inside app/ (only PHP builtins and vendor)
+  #   Infrastructure → Shared + Models (concrete implementations reference ORM)
+  #   Models       → Shared (traits, value objects, enums are acceptable)
+  #   Middleware   → Shared
+  #   Bootstrap    → everything (service providers wire the whole graph)
+  # ---------------------------------------------------------------------------
+  ruleset:
+    Controllers:
+      - Shared
+      - DomainBlog
+      - DomainContent
+      - DomainHadith
+      - DomainQuran
+      - DomainSahaba
+      - DomainSeerah
+      - DomainGenealogy
+      - DomainMedia
+      - DomainTopics
+      - Infrastructure
+
+    Middleware:
+      - Shared
+
+    DomainBlog:
+      - Shared
+
+    DomainContent:
+      - Shared
+
+    DomainHadith:
+      - Shared
+
+    DomainQuran:
+      - Shared
+
+    DomainSahaba:
+      - Shared
+
+    DomainSeerah:
+      - Shared
+
+    DomainGenealogy:
+      - Shared
+
+    DomainMedia:
+      - Shared
+
+    DomainTopics:
+      - Shared
+
+    Shared: []
+
+    Infrastructure:
+      - Shared
+      - Models
+
+    Models:
+      - Shared
+
+    Bootstrap:
+      - Shared
+      - DomainBlog
+      - DomainContent
+      - DomainHadith
+      - DomainQuran
+      - DomainSahaba
+      - DomainSeerah
+      - DomainGenealogy
+      - DomainMedia
+      - DomainTopics
+      - Infrastructure
+      - Models
+      - Controllers
+      - Middleware

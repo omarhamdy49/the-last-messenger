@@ -104,7 +104,7 @@ trait DisplaysHadithSyncOutput
     protected function displayImportFailed(string $message): void
     {
         $this->newLine();
-        $this->error('❌ فشل الاستيراد - Import failed: ' . $message);
+        $this->error('❌ فشل الاستيراد - Import failed: '.$message);
     }
 
     /**
@@ -171,7 +171,7 @@ trait DisplaysHadithSyncOutput
     protected function displayCompletionMessage(SyncStatistics $stats): void
     {
         $this->newLine();
-        if (!$stats->hasErrors()) {
+        if (! $stats->hasErrors()) {
             $this->info('✅ اكتملت جميع الملفات بنجاح!');
             $this->info('✅ All files completed successfully!');
         } else {
@@ -186,7 +186,7 @@ trait DisplaysHadithSyncOutput
      */
     protected function startTimer(): void
     {
-        $this->operationStartTime = new \DateTimeImmutable();
+        $this->operationStartTime = new \DateTimeImmutable;
     }
 
     /**
@@ -194,7 +194,7 @@ trait DisplaysHadithSyncOutput
      */
     protected function displayDuration(string $label = 'المدة - Duration'): void
     {
-        if (!$this->operationStartTime) {
+        if (! $this->operationStartTime) {
             return;
         }
 
@@ -208,7 +208,7 @@ trait DisplaysHadithSyncOutput
      */
     protected function formatDuration(DateTimeInterface $startTime): string
     {
-        $now = new \DateTimeImmutable();
+        $now = new \DateTimeImmutable;
         $diff = $startTime->diff($now);
 
         if ($diff->h > 0) {

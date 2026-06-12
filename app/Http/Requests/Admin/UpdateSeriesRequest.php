@@ -14,8 +14,6 @@ class UpdateSeriesRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request
-     *
-     * @return bool
      */
     public function authorize(): bool
     {
@@ -50,7 +48,7 @@ class UpdateSeriesRequest extends FormRequest
             'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
 
             // Slug (unique except for current series)
-            'slug' => 'nullable|string|max:255|unique:series,slug,' . $seriesId,
+            'slug' => 'nullable|string|max:255|unique:series,slug,'.$seriesId,
 
             // Articles
             'article_ids' => 'nullable|array',
@@ -78,5 +76,4 @@ class UpdateSeriesRequest extends FormRequest
             'slug.unique' => 'الرابط المختصر مستخدم بالفعل',
         ];
     }
-
 }

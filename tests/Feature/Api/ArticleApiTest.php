@@ -145,14 +145,12 @@ class ArticleApiTest extends TestCase
         $response->assertStatus(422);
     }
 
-    public function test_articles_index_with_per_page_param_currently_triggers_type_error(): void
+    public function test_articles_index_with_per_page_param_returns_ok(): void
     {
-        // KNOWN BUG: ArticleController passes $validated['per_page'] (string) directly
-        // to ArticleRepository::getAllWithFilters(int $perPage), causing a TypeError (500).
-        // When the bug is fixed this test should be updated to assertOk().
+        // Bug fixed: ArticleController now casts per_page to int before passing to repository.
         $response = $this->getJson('/api/v1/articles?per_page=10');
 
-        $response->assertStatus(500);
+        $response->assertOk();
     }
 
     public function test_articles_index_rejects_invalid_locale(): void

@@ -127,8 +127,7 @@ return new class extends Migration
      * Input: a DB row with JSON columns like title='{"ar":"...","en":"..."}'
      * Output: ['ar' => ['title' => '...'], 'en' => ['title' => '...']]
      *
-     * @param object $row
-     * @param array<string> $fields
+     * @param  array<string>  $fields
      * @return array<string, array<string, string|null>>
      */
     private function extractLocalesFromJsonFields(object $row, array $fields): array

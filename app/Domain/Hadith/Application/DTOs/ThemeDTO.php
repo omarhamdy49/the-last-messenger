@@ -15,7 +15,7 @@ use JsonSerializable;
 final readonly class ThemeDTO implements JsonSerializable
 {
     /**
-     * @param array<ThemeDTO> $children
+     * @param  array<ThemeDTO>  $children
      */
     public function __construct(
         public int $id,
@@ -93,7 +93,7 @@ final readonly class ThemeDTO implements JsonSerializable
      */
     public function hasChildren(): bool
     {
-        return !empty($this->children);
+        return ! empty($this->children);
     }
 
     /**
@@ -121,7 +121,7 @@ final readonly class ThemeDTO implements JsonSerializable
             'parent_name' => $this->parentName,
             'sort_order' => $this->sortOrder,
             'hadiths_count' => $this->hadithsCount,
-            'children' => array_map(fn(ThemeDTO $child) => $child->toArray(), $this->children),
+            'children' => array_map(fn (ThemeDTO $child) => $child->toArray(), $this->children),
             'created_at' => $this->createdAt,
             'updated_at' => $this->updatedAt,
         ];

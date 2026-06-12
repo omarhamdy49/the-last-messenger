@@ -52,7 +52,7 @@ class BulkOperationService extends BaseService
     /**
      * Create and immediately start (or queue) a bulk operation.
      *
-     * @param  int[]                 $itemIds
+     * @param  int[]  $itemIds
      * @param  array<string, mixed>  $parameters
      */
     public function createOperation(
@@ -65,13 +65,13 @@ class BulkOperationService extends BaseService
     ): BulkOperation {
         $operation = $this->repository->create([
             'operation_type' => $operationType,
-            'module'         => $module,
-            'status'         => BulkOperationStatusEnum::PENDING->value,
-            'total_items'    => count($itemIds),
-            'item_ids'       => $itemIds,
-            'parameters'     => $parameters,
-            'created_by'     => $userId,
-            'dry_run'        => $dryRun,
+            'module' => $module,
+            'status' => BulkOperationStatusEnum::PENDING->value,
+            'total_items' => count($itemIds),
+            'item_ids' => $itemIds,
+            'parameters' => $parameters,
+            'created_by' => $userId,
+            'dry_run' => $dryRun,
         ]);
 
         $this->adminLogger->logCustomAction(
@@ -80,8 +80,8 @@ class BulkOperationService extends BaseService
             user: $operation->creator,
             newValues: [
                 'operation_type' => $operationType,
-                'module'         => $module,
-                'total_items'    => count($itemIds),
+                'module' => $module,
+                'total_items' => count($itemIds),
             ]
         );
 
@@ -126,8 +126,8 @@ class BulkOperationService extends BaseService
                 user: $operation->creator,
                 newValues: [
                     'success_count' => $operation->success_count,
-                    'failed_count'  => $operation->failed_count,
-                    'success_rate'  => $operation->getSuccessRate(),
+                    'failed_count' => $operation->failed_count,
+                    'success_rate' => $operation->getSuccessRate(),
                 ]
             );
         } catch (\Throwable $e) {
@@ -135,8 +135,8 @@ class BulkOperationService extends BaseService
 
             Log::error('bulk_operation.failed', [
                 'operation_id' => $operation->id,
-                'module'       => $operation->module,
-                'error'        => $e->getMessage(),
+                'module' => $operation->module,
+                'error' => $e->getMessage(),
             ]);
 
             throw $e;
@@ -183,7 +183,7 @@ class BulkOperationService extends BaseService
     private function dispatchToHandler(BulkOperation $operation): void
     {
         $handler = $this->resolveHandler($operation->module);
-        $chunks  = array_chunk($operation->item_ids, self::CHUNK_SIZE);
+        $chunks = array_chunk($operation->item_ids, self::CHUNK_SIZE);
 
         foreach ($chunks as $chunk) {
             $result = $handler->handle(
@@ -205,25 +205,25 @@ class BulkOperationService extends BaseService
      */
     private function processExport(BulkOperation $operation): void
     {
-        $handler  = $this->resolveHandler($operation->module);
-        $format   = $operation->parameters['format'] ?? 'json';
-        $itemIds  = $operation->item_ids;
+        $handler = $this->resolveHandler($operation->module);
+        $format = $operation->parameters['format'] ?? 'json';
+        $itemIds = $operation->item_ids;
 
         try {
             $exportData = $handler->export($itemIds, $format);
 
             $operation->update([
                 'result_data' => [
-                    'format'    => $format,
+                    'format' => $format,
                     'file_size' => strlen($exportData),
-                    'data'      => $exportData,
+                    'data' => $exportData,
                 ],
-                'success_count'   => count($itemIds),
+                'success_count' => count($itemIds),
                 'processed_count' => count($itemIds),
             ]);
         } catch (\Throwable $e) {
             $operation->update([
-                'failed_count'    => count($itemIds),
+                'failed_count' => count($itemIds),
                 'processed_count' => count($itemIds),
             ]);
             $operation->addError(0, $e->getMessage());
@@ -237,14 +237,14 @@ class BulkOperationService extends BaseService
      */
     private function processDryRun(BulkOperation $operation): void
     {
-        $handler     = $this->resolveHandler($operation->module);
-        $itemIds     = $operation->item_ids;
+        $handler = $this->resolveHandler($operation->module);
+        $itemIds = $operation->item_ids;
         $sampleItems = $handler->preview($itemIds);
 
         $operation->update([
-            'status'      => BulkOperationStatusEnum::COMPLETED->value,
+            'status' => BulkOperationStatusEnum::COMPLETED->value,
             'result_data' => [
-                'dry_run'      => true,
+                'dry_run' => true,
                 'would_affect' => count($itemIds),
                 'sample_items' => $sampleItems,
             ],
@@ -266,24 +266,32 @@ class BulkOperationService extends BaseService
     }
 
     /**
-     * Flush cache tags associated with the given module after a successful operation.
+     * Invalidate the cache for the given module after a successful bulk operation.
+     *
+     * Cache::tags() requires Redis/Memcached and is unavailable with the file
+     * or database drivers. Each affected repository uses a version counter
+     * (stored under "{prefix}:version") as a tag emulation. Bumping that
+     * counter orphans every versioned key previously written by that repository,
+     * which is equivalent to a tag flush and works with any cache driver.
      */
     private function clearModuleCache(string $module): void
     {
-        $tagMap = [
-            'articles'     => ['articles'],
-            'hadith'       => ['hadith'],
-            'seerah_events' => ['seerah_events'],
-            'sahaba'       => ['sahaba'],
-            'quran_verses' => ['verses'],
+        // Map module names to their repository cache-version keys.
+        // These match the cachePrefix values derived from each model's
+        // class basename (lowercased) in BaseRepository::getCachePrefix().
+        $versionKeyMap = [
+            'articles' => 'article:version',
+            'hadith' => 'hadith:version',
+            'seerah_events' => 'seerahevent:version',
+            'sahaba' => 'sahabi:version',
+            'quran_verses' => 'verse:version',
         ];
 
-        if (! isset($tagMap[$module])) {
+        if (! isset($versionKeyMap[$module])) {
             return;
         }
 
-        foreach ($tagMap[$module] as $tag) {
-            Cache::tags([$tag])->flush();
-        }
+        $versionKey = $versionKeyMap[$module];
+        Cache::forever($versionKey, ((int) Cache::get($versionKey, 0)) + 1);
     }
 }

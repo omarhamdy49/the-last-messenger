@@ -177,6 +177,7 @@ class SeoServiceTest extends TestCase
             'content' => ['ar' => 'قصير جدا'], // Too short
             'seo_keywords' => null,
             'featured_image' => null,
+            'slug' => null, // Missing slug adds an error so the score stays below 60
         ]);
 
         // Act

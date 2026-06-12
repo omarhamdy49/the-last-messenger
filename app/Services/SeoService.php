@@ -6,20 +6,16 @@ namespace App\Services;
 
 use App\Exceptions\SeoException;
 use App\Exceptions\SeoGenerationException;
-use App\Exceptions\SeoValidationException;
 use App\Models\Article;
 use App\Services\Dtos\SeoMetadata;
 use App\Services\Dtos\SeoValidationResult;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 /**
  * SEO Service
  *
  * Comprehensive SEO metadata generation service for The Last Messenger platform.
  * Handles Schema.org JSON-LD, OpenGraph, Twitter Cards, and standard meta tags.
- *
- * @package App\Services
  */
 class SeoService
 {
@@ -67,9 +63,8 @@ class SeoService
     /**
      * Generate complete SEO metadata for article
      *
-     * @param Article $article
-     * @param string $locale Language code (default: 'ar')
-     * @return SeoMetadata
+     * @param  string  $locale  Language code (default: 'ar')
+     *
      * @throws SeoException
      */
     public function generateSeoData(Article $article, string $locale = 'ar'): SeoMetadata
@@ -103,9 +98,9 @@ class SeoService
     /**
      * Generate Schema.org JSON-LD structured data
      *
-     * @param Article $article
-     * @param string $type Schema type (default: 'Article')
+     * @param  string  $type  Schema type (default: 'Article')
      * @return string JSON-LD string
+     *
      * @throws SeoGenerationException
      */
     public function generateJsonLd(Article $article, string $type = 'Article'): string
@@ -122,8 +117,7 @@ class SeoService
     /**
      * Generate JSON-LD as array
      *
-     * @param Article $article
-     * @param string $type Schema type
+     * @param  string  $type  Schema type
      * @return array<string, mixed>
      */
     private function generateJsonLdArray(Article $article, string $type = 'Article'): array
@@ -153,11 +147,16 @@ class SeoService
 
         // Add author information
         if ($article->author) {
-            $jsonLd['author'] = [
+            $authorData = [
                 '@type' => 'Person',
                 'name' => $article->author->name,
-                'url' => route('profile.show', $article->author->id),
             ];
+
+            if (\Illuminate\Support\Facades\Route::has('profile.show')) {
+                $authorData['url'] = route('profile.show', $article->author->id);
+            }
+
+            $jsonLd['author'] = $authorData;
         }
 
         // Add publisher information
@@ -177,9 +176,9 @@ class SeoService
     /**
      * Generate OpenGraph meta tags
      *
-     * @param Article $article
-     * @param string $locale Language code
+     * @param  string  $locale  Language code
      * @return array<string, mixed> OpenGraph tags
+     *
      * @throws SeoGenerationException
      */
     public function generateOpenGraphTags(Article $article, string $locale = 'ar'): array
@@ -241,9 +240,9 @@ class SeoService
     /**
      * Generate Twitter Card meta tags
      *
-     * @param Article $article
-     * @param string $locale Language code
+     * @param  string  $locale  Language code
      * @return array<string, mixed> Twitter Card tags
+     *
      * @throws SeoGenerationException
      */
     public function generateTwitterCardTags(Article $article, string $locale = 'ar'): array
@@ -290,8 +289,7 @@ class SeoService
     /**
      * Generate standard meta tags
      *
-     * @param Article $article
-     * @param string $locale Language code
+     * @param  string  $locale  Language code
      * @return array<string, string> Meta tags
      */
     public function generateMetaTags(Article $article, string $locale = 'ar'): array
@@ -308,12 +306,12 @@ class SeoService
         }
 
         $tags['publisher'] = self::SEO_SETTINGS['organization_name'];
-        $tags['copyright'] = self::SEO_SETTINGS['organization_name'] . ' © ' . now()->year;
+        $tags['copyright'] = self::SEO_SETTINGS['organization_name'].' © '.now()->year;
         $tags['revisit-after'] = '7 days';
 
         // Add reading time
         if ($article->reading_time_minutes > 0) {
-            $tags['article:reading_time'] = $article->reading_time_minutes . ' minutes';
+            $tags['article:reading_time'] = $article->reading_time_minutes.' minutes';
         }
 
         return $tags;
@@ -322,9 +320,7 @@ class SeoService
     /**
      * Validate SEO data for article
      *
-     * @param Article $article
-     * @param string $locale Language code
-     * @return SeoValidationResult
+     * @param  string  $locale  Language code
      */
     public function validateSeoData(Article $article, string $locale = 'ar'): SeoValidationResult
     {
@@ -340,9 +336,9 @@ class SeoService
         $titleLength = mb_strlen($title);
 
         if ($titleLength < self::SEO_SETTINGS['title_min_length']) {
-            $result->addError("Title is too short ({$titleLength} chars). Minimum: " . self::SEO_SETTINGS['title_min_length']);
+            $result->addError("Title is too short ({$titleLength} chars). Minimum: ".self::SEO_SETTINGS['title_min_length']);
         } elseif ($titleLength > self::SEO_SETTINGS['title_max_length']) {
-            $result->addWarning("Title is too long ({$titleLength} chars). Maximum: " . self::SEO_SETTINGS['title_max_length']);
+            $result->addWarning("Title is too long ({$titleLength} chars). Maximum: ".self::SEO_SETTINGS['title_max_length']);
         } else {
             $result->addSuccess('Title length is optimal');
         }
@@ -354,9 +350,9 @@ class SeoService
         if (empty($description)) {
             $result->addError('SEO description is missing');
         } elseif ($descriptionLength < self::SEO_SETTINGS['description_min_length']) {
-            $result->addError("Description is too short ({$descriptionLength} chars). Minimum: " . self::SEO_SETTINGS['description_min_length']);
+            $result->addError("Description is too short ({$descriptionLength} chars). Minimum: ".self::SEO_SETTINGS['description_min_length']);
         } elseif ($descriptionLength > self::SEO_SETTINGS['description_max_length']) {
-            $result->addWarning("Description is too long ({$descriptionLength} chars). Maximum: " . self::SEO_SETTINGS['description_max_length']);
+            $result->addWarning("Description is too long ({$descriptionLength} chars). Maximum: ".self::SEO_SETTINGS['description_max_length']);
         } else {
             $result->addSuccess('Description length is optimal');
         }
@@ -369,9 +365,9 @@ class SeoService
             $keywordCount = count($keywords);
 
             if ($keywordCount < self::SEO_SETTINGS['keywords_min_count']) {
-                $result->addWarning("Too few keywords ({$keywordCount}). Recommended: " . self::SEO_SETTINGS['keywords_min_count'] . '-' . self::SEO_SETTINGS['keywords_max_count']);
+                $result->addWarning("Too few keywords ({$keywordCount}). Recommended: ".self::SEO_SETTINGS['keywords_min_count'].'-'.self::SEO_SETTINGS['keywords_max_count']);
             } elseif ($keywordCount > self::SEO_SETTINGS['keywords_max_count']) {
-                $result->addWarning("Too many keywords ({$keywordCount}). Recommended: " . self::SEO_SETTINGS['keywords_min_count'] . '-' . self::SEO_SETTINGS['keywords_max_count']);
+                $result->addWarning("Too many keywords ({$keywordCount}). Recommended: ".self::SEO_SETTINGS['keywords_min_count'].'-'.self::SEO_SETTINGS['keywords_max_count']);
             } else {
                 $result->addSuccess('Keyword count is optimal');
             }
@@ -382,7 +378,7 @@ class SeoService
         $wordCount = str_word_count(strip_tags($content));
 
         if ($wordCount < self::SEO_SETTINGS['min_content_length']) {
-            $result->addWarning("Content is too short ({$wordCount} words). Minimum recommended: " . self::SEO_SETTINGS['min_content_length']);
+            $result->addWarning("Content is too short ({$wordCount} words). Minimum recommended: ".self::SEO_SETTINGS['min_content_length']);
         } else {
             $result->addSuccess('Content length is sufficient');
         }
@@ -416,8 +412,7 @@ class SeoService
     /**
      * Generate SEO improvement suggestions
      *
-     * @param Article $article
-     * @param string $locale Language code
+     * @param  string  $locale  Language code
      * @return array<string> Suggestions
      */
     public function generateSuggestions(Article $article, string $locale = 'ar'): array
@@ -441,7 +436,7 @@ class SeoService
             $suggestions[] = 'Consider linking this article to a series for better content structure';
         }
 
-        if (!$article->featured) {
+        if (! $article->featured) {
             $suggestions[] = 'Consider featuring this article if it\'s high-quality content';
         }
 
@@ -462,14 +457,14 @@ class SeoService
     /**
      * Generate XML sitemap entry for article
      *
-     * @param Article $article
      * @return array<string, mixed> Sitemap entry data
+     *
      * @throws SeoGenerationException
      */
     public function generateSitemapEntry(Article $article): array
     {
         try {
-            if (!$article->isPublished()) {
+            if (! $article->isPublished()) {
                 throw SeoGenerationException::sitemapFailed('Article is not published');
             }
 
@@ -490,10 +485,9 @@ class SeoService
     /**
      * Get content in specific locale from translatable field
      *
-     * @param Article|object $model Model with translatable fields
-     * @param string $field Field name
-     * @param string $locale Locale code
-     * @return string
+     * @param  Article|object  $model  Model with translatable fields
+     * @param  string  $field  Field name
+     * @param  string  $locale  Locale code
      */
     public function getContent(object $model, string $field, string $locale): string
     {
@@ -512,8 +506,8 @@ class SeoService
     /**
      * Generate excerpt from content
      *
-     * @param string $content Full content
-     * @param int $length Maximum length in characters
+     * @param  string  $content  Full content
+     * @param  int  $length  Maximum length in characters
      * @return string Excerpt
      */
     public function generateExcerpt(string $content, int $length = 160): string
@@ -531,9 +525,9 @@ class SeoService
     /**
      * Truncate text to maximum length
      *
-     * @param string $text Text to truncate
-     * @param int $maxLength Maximum length
-     * @param string $suffix Suffix to add if truncated
+     * @param  string  $text  Text to truncate
+     * @param  int  $maxLength  Maximum length
+     * @param  string  $suffix  Suffix to add if truncated
      * @return string Truncated text
      */
     public function truncateText(string $text, int $maxLength, string $suffix = '...'): string
@@ -550,13 +544,13 @@ class SeoService
             $truncated = mb_substr($truncated, 0, $lastSpace);
         }
 
-        return $truncated . $suffix;
+        return $truncated.$suffix;
     }
 
     /**
      * Sanitize text for HTML attributes
      *
-     * @param string $text Text to sanitize
+     * @param  string  $text  Text to sanitize
      * @return string Sanitized text
      */
     public function sanitizeText(string $text): string
@@ -567,7 +561,7 @@ class SeoService
     /**
      * Get OpenGraph locale code from language code
      *
-     * @param string $locale Language code (ar, en, etc.)
+     * @param  string  $locale  Language code (ar, en, etc.)
      * @return string OpenGraph locale code (ar_SA, en_US, etc.)
      */
     public function getLocaleCode(string $locale): string
@@ -578,7 +572,6 @@ class SeoService
     /**
      * Get featured image URL
      *
-     * @param Article $article
      * @return string|null Full URL to featured image
      */
     public function getFeaturedImageUrl(Article $article): ?string
@@ -601,12 +594,11 @@ class SeoService
     /**
      * Validate locale
      *
-     * @param string $locale
      * @throws SeoException
      */
     private function validateLocale(string $locale): void
     {
-        if (!in_array($locale, self::SUPPORTED_LOCALES, true)) {
+        if (! in_array($locale, self::SUPPORTED_LOCALES, true)) {
             throw SeoException::invalidLocale($locale, self::SUPPORTED_LOCALES);
         }
     }

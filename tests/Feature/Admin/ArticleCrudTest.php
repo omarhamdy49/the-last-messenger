@@ -278,9 +278,9 @@ class ArticleCrudTest extends TestCase
         return [
             'ar' => $arabic,
             'en' => $english,
-            'fr' => $english . ' FR',
-            'tr' => $english . ' TR',
-            'ur' => $english . ' UR',
+            'fr' => $english.' FR',
+            'tr' => $english.' TR',
+            'ur' => $english.' UR',
         ];
     }
 }

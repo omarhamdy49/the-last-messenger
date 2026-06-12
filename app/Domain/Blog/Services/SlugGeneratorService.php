@@ -21,16 +21,16 @@ class SlugGeneratorService
      * Appends an incrementing counter suffix when the base slug is already
      * taken by another article locale.
      *
-     * @param string      $title            The human-readable title to slugify.
-     * @param string      $locale           The locale the slug belongs to (e.g. 'ar', 'en').
-     * @param int|null    $excludeArticleId When updating, exclude this article's own locales
+     * @param  string  $title  The human-readable title to slugify.
+     * @param  string  $locale  The locale the slug belongs to (e.g. 'ar', 'en').
+     * @param  int|null  $excludeArticleId  When updating, exclude this article's own locales
      *                                      from the uniqueness check.
      */
     public function generate(string $title, string $locale, ?int $excludeArticleId = null): string
     {
-        $slug         = Str::slug($title);
+        $slug = Str::slug($title);
         $originalSlug = $slug;
-        $counter      = 1;
+        $counter = 1;
 
         while (true) {
             $query = ArticleLocale::where('slug', $slug)
@@ -44,7 +44,7 @@ class SlugGeneratorService
                 break;
             }
 
-            $slug = $originalSlug . '-' . $counter++;
+            $slug = $originalSlug.'-'.$counter++;
         }
 
         return $slug;

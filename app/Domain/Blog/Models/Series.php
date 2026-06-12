@@ -79,5 +79,4 @@ class Series extends Model
     {
         $this->updateQuietly(['total_articles' => $this->articles()->count()]);
     }
-
 }

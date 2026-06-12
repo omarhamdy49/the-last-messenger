@@ -12,13 +12,13 @@ use App\Domain\Shared\Application\Commands\Command;
 final readonly class UpdateCollectionCommand implements Command
 {
     /**
-     * @param int $collectionId The collection ID to update
-     * @param array<string, string>|null $name Collection name translations
-     * @param string|null $slug URL-friendly slug
-     * @param array<string, string>|null $description Description translations
-     * @param int|null $scholarId Author/compiler scholar ID
-     * @param int|null $hadithCount Total hadith count
-     * @param bool|null $isActive Whether collection is active
+     * @param  int  $collectionId  The collection ID to update
+     * @param  array<string, string>|null  $name  Collection name translations
+     * @param  string|null  $slug  URL-friendly slug
+     * @param  array<string, string>|null  $description  Description translations
+     * @param  int|null  $scholarId  Author/compiler scholar ID
+     * @param  int|null  $hadithCount  Total hadith count
+     * @param  bool|null  $isActive  Whether collection is active
      */
     public function __construct(
         public int $collectionId,

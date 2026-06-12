@@ -22,10 +22,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $biography
  * @property string|null $virtues
  * @property string|null $famous_narrations
+ * @property string|null $martyrdom
  * @property bool $is_ready
  * @property \Illuminate\Support\Carbon $created_at
  * @property \Illuminate\Support\Carbon $updated_at
- *
  * @property-read Sahabi $sahabi
  */
 class SahabiTranslation extends Model
@@ -52,6 +52,7 @@ class SahabiTranslation extends Model
         'biography',
         'virtues',
         'famous_narrations',
+        'martyrdom',
         'is_ready',
     ];
 
@@ -76,8 +77,7 @@ class SahabiTranslation extends Model
     /**
      * Scope: Filter by locale.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $locale
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByLocale($query, string $locale)
@@ -88,7 +88,7 @@ class SahabiTranslation extends Model
     /**
      * Scope: Only ready translations.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeReady($query)
@@ -99,8 +99,7 @@ class SahabiTranslation extends Model
     /**
      * Scope: Search name field.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $term
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeSearchName($query, string $term)
@@ -111,8 +110,7 @@ class SahabiTranslation extends Model
     /**
      * Scope: Search full name field.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $term
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeSearchFullName($query, string $term)
@@ -123,8 +121,7 @@ class SahabiTranslation extends Model
     /**
      * Scope: Search across name-related fields.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $term
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeSearchAllNames($query, string $term)

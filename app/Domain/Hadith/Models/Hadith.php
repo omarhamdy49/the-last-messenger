@@ -17,12 +17,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * @property int $id
  * @property int $book_id
+ * @property int|null $chapter_id Chapter (باب) within the book, when the source provides one
  * @property string $hadith_number Hadith number within the book
  * @property string $grading_status Overall grading status (sahih, hasan, daif, etc.)
  * @property bool $grading_agreement Whether scholars agree on the grading
  * @property \Illuminate\Support\Carbon $created_at
  * @property \Illuminate\Support\Carbon $updated_at
- *
  * @property-read \App\Domain\Hadith\Models\HadithBook $book
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Domain\Hadith\Models\HadithTranslation[] $translations
  * @property-read int|null $translations_count
@@ -51,7 +51,13 @@ class Hadith extends Model
      */
     protected $fillable = [
         'book_id',
+        'chapter_id',
         'companion_id',
+        'local_source_id',
+        'source_file',
+        'source_url',
+        'sunnah_urn_ar',
+        'sunnah_urn_en',
         'hadith_number',
         'grading_status',
         'grading_agreement',
@@ -60,6 +66,8 @@ class Hadith extends Model
         'historical_context_ar',
         'historical_context_en',
         'verification_status',
+        'source_verified_at',
+        'source_verification_method',
         'uncertainty_notes',
         'text_hash',
         'merged_into_id',
@@ -72,7 +80,16 @@ class Hadith extends Model
      */
     protected $casts = [
         'book_id' => 'integer',
+        'chapter_id' => 'integer',
+        'companion_id' => 'integer',
+        // hadith_number is a string column; sqlite (test driver) returns
+        // numeric-looking values as ints, which breaks the typed DTOs.
+        'hadith_number' => 'string',
+        'sunnah_urn_ar' => 'integer',
+        'sunnah_urn_en' => 'integer',
         'grading_agreement' => 'boolean',
+        'source_verified_at' => 'datetime',
+        'merged_into_id' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -81,10 +98,15 @@ class Hadith extends Model
      * Grading status constants.
      */
     public const GRADING_SAHIH = 'sahih';           // Authentic
+
     public const GRADING_HASAN = 'hasan';           // Good
+
     public const GRADING_DAIF = 'daif';             // Weak
+
     public const GRADING_MAWDU = 'mawdu';           // Fabricated
+
     public const GRADING_MUTAWATIR = 'mutawatir';   // Mass transmitted
+
     public const GRADING_MURSAL = 'mursal';         // Missing companion in chain
 
     /**
@@ -106,8 +128,6 @@ class Hadith extends Model
 
     /**
      * Get the book that owns this hadith.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function book(): BelongsTo
     {
@@ -115,9 +135,15 @@ class Hadith extends Model
     }
 
     /**
+     * Get the chapter (باب) this hadith belongs to, when the source provides one.
+     */
+    public function chapter(): BelongsTo
+    {
+        return $this->belongsTo(HadithChapter::class, 'chapter_id');
+    }
+
+    /**
      * Get the companion who narrated this hadith.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function companion(): BelongsTo
     {
@@ -126,8 +152,6 @@ class Hadith extends Model
 
     /**
      * Get the hadith this one was merged into (for deduplication).
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function mergedInto(): BelongsTo
     {
@@ -136,8 +160,6 @@ class Hadith extends Model
 
     /**
      * Get hadiths that were merged into this one.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function mergedDuplicates(): HasMany
     {
@@ -146,8 +168,6 @@ class Hadith extends Model
 
     /**
      * Get all translations of this hadith.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function translations(): HasMany
     {
@@ -156,8 +176,6 @@ class Hadith extends Model
 
     /**
      * Get all isnads (chain of narrators) for this hadith.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function isnads(): HasMany
     {
@@ -166,8 +184,6 @@ class Hadith extends Model
 
     /**
      * Get all gradings for this hadith.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function gradings(): HasMany
     {
@@ -175,9 +191,15 @@ class Hadith extends Model
     }
 
     /**
+     * Get all scholarly commentaries (shuruh) for this hadith.
+     */
+    public function commentaries(): HasMany
+    {
+        return $this->hasMany(HadithCommentary::class, 'hadith_id');
+    }
+
+    /**
      * Get all themes associated with this hadith.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
     public function themes(): BelongsToMany
     {
@@ -191,9 +213,6 @@ class Hadith extends Model
 
     /**
      * Get translation in specific language.
-     *
-     * @param string $languageCode
-     * @return \App\Domain\Hadith\Models\HadithTranslation|null
      */
     public function getTranslation(string $languageCode): ?HadithTranslation
     {
@@ -205,8 +224,7 @@ class Hadith extends Model
     /**
      * Scope to filter by book.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $bookId
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByBook($query, int $bookId)
@@ -217,8 +235,7 @@ class Hadith extends Model
     /**
      * Scope to filter by hadith number.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $hadithNumber
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByNumber($query, string $hadithNumber)
@@ -229,8 +246,7 @@ class Hadith extends Model
     /**
      * Scope to filter by grading status.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $gradingStatus
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByGrading($query, string $gradingStatus)
@@ -241,7 +257,7 @@ class Hadith extends Model
     /**
      * Scope to get only authentic hadiths (sahih).
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeAuthentic($query)
@@ -252,7 +268,7 @@ class Hadith extends Model
     /**
      * Scope to get hadiths with scholarly agreement.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithAgreement($query)
@@ -263,8 +279,7 @@ class Hadith extends Model
     /**
      * Scope to get hadiths with their translations.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string|null $languageCode
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithTranslations($query, ?string $languageCode = null)
@@ -279,7 +294,7 @@ class Hadith extends Model
     /**
      * Scope to get hadiths with full relations.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithFullRelations($query)
@@ -289,14 +304,12 @@ class Hadith extends Model
             'translations',
             'isnads',
             'gradings',
-            'themes'
+            'themes',
         ]);
     }
 
     /**
      * Check if this hadith is authentic (sahih).
-     *
-     * @return bool
      */
     public function isAuthentic(): bool
     {
@@ -305,8 +318,6 @@ class Hadith extends Model
 
     /**
      * Check if scholars agree on the grading.
-     *
-     * @return bool
      */
     public function hasScholarlyAgreement(): bool
     {
@@ -315,8 +326,6 @@ class Hadith extends Model
 
     /**
      * Get the full hadith reference (Collection > Book > Number).
-     *
-     * @return string
      */
     public function getFullReference(): string
     {

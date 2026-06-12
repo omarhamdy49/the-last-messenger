@@ -330,7 +330,7 @@ class VersionService
                 'added' => "Added: {$new}",
                 'deleted' => "Deleted: {$old}",
                 'modified' => "Changed from '{$old}' to '{$new}'",
-                default => "Changed",
+                default => 'Changed',
             };
         }
 

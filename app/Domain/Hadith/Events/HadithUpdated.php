@@ -12,7 +12,7 @@ use App\Domain\Shared\Events\DomainEvent;
 final class HadithUpdated extends DomainEvent
 {
     /**
-     * @param array<string, mixed> $changedFields
+     * @param  array<string, mixed>  $changedFields
      */
     public function __construct(
         public readonly int $hadithId,

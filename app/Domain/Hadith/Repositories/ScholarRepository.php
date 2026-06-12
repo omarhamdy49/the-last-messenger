@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Hadith\Repositories;
 
 use App\Domain\Hadith\Models\HadithScholar;
+use App\Domain\Shared\Helpers\FullTextSearchHelper;
 use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -28,7 +29,7 @@ class ScholarRepository extends BaseRepository implements ScholarRepositoryInter
      */
     protected function getModel(): Model
     {
-        return new HadithScholar();
+        return new HadithScholar;
     }
 
     /**
@@ -36,7 +37,7 @@ class ScholarRepository extends BaseRepository implements ScholarRepositoryInter
      */
     public function getByName(string $name, string $locale = 'ar'): ?HadithScholar
     {
-        $nameField = 'name_' . $locale;
+        $nameField = 'name_'.$locale;
 
         return Cache::remember(
             "hadith_scholar_name_{$locale}_{$name}",
@@ -64,13 +65,17 @@ class ScholarRepository extends BaseRepository implements ScholarRepositoryInter
 
     /**
      * {@inheritdoc}
+     *
+     * FULLTEXT index on hadith_scholars covers (name_ar, name_en, full_name).
+     * MATCH must reference all columns in that composite index.
      */
     public function search(string $query, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->model
-            ->where('name_ar', 'LIKE', "%{$query}%")
-            ->orWhere('name_en', 'LIKE', "%{$query}%")
-            ->paginate($perPage);
+        return FullTextSearchHelper::apply(
+            $this->model->newQuery(),
+            ['name_ar', 'name_en', 'full_name'],
+            $query
+        )->paginate($perPage);
     }
 
     /**

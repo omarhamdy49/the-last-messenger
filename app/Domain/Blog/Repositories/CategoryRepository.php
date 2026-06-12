@@ -52,7 +52,7 @@ class CategoryRepository extends BaseRepository implements CategoryRepositoryInt
                     });
                 })
                 // Also search slug directly on categories table
-                ->orWhere('slug', 'LIKE', "%{$search}%");
+                    ->orWhere('slug', 'LIKE', "%{$search}%");
             });
         }
 
@@ -186,6 +186,60 @@ class CategoryRepository extends BaseRepository implements CategoryRepositoryInt
     }
 
     /**
+     * {@inheritdoc}
+     */
+    public function listRoots(): Collection
+    {
+        $columns = [
+            'id', 'slug', 'type', 'status', 'name', 'description',
+            'parent_id', 'depth',
+            'icon', 'color', 'display_order',
+            'created_at', 'updated_at',
+        ];
+
+        $childColumns = implode(',', array_map(
+            fn (string $col) => "children:{$col}",
+            $columns
+        ));
+
+        return $this->model->query()
+            ->select($columns)
+            ->with([$childColumns])
+            ->whereNull('parent_id')
+            ->orderBy('display_order')
+            ->get();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function findBySlug(string $slug): ?Category
+    {
+        $columns = [
+            'id', 'slug', 'type', 'status', 'name', 'description',
+            'parent_id', 'depth',
+            'icon', 'color', 'display_order',
+            'created_at', 'updated_at',
+        ];
+
+        $childColumns = implode(',', array_map(
+            fn (string $col) => "children:{$col}",
+            $columns
+        ));
+
+        $parentColumns = implode(',', array_map(
+            fn (string $col) => "parent:{$col}",
+            $columns
+        ));
+
+        return $this->model->query()
+            ->select($columns)
+            ->with([$childColumns, $parentColumns])
+            ->where('slug', $slug)
+            ->first();
+    }
+
+    /**
      * Clear cache for all categories
      */
     public function clearCache(): void
@@ -240,5 +294,18 @@ class CategoryRepository extends BaseRepository implements CategoryRepositoryInt
         }
 
         return $result;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function restoreById(int $id): Category
+    {
+        /** @var Category $category */
+        $category = Category::withTrashed()->findOrFail($id);
+        $category->restore();
+        $this->clearCache();
+
+        return $category;
     }
 }

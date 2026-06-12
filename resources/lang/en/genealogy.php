@@ -1,0 +1,45 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    // Public site (Prophetic genealogy tree)
+    'public' => [
+        'page_title' => 'The Prophetic Genealogy Tree',
+        'page_description' => 'Explore the lineage of the Seal of the Prophets, Muhammad ﷺ, and his noble family through a modern interactive tree.',
+        'hero_badge' => 'Interactive Exploration',
+        'hero_title' => 'Genealogy Tree',
+        'hero_subtitle' => 'of the Noble Prophet',
+        'hero_lead' => 'Explore the lineage of the Seal of the Prophets, Muhammad ﷺ, and his noble family through a modern, interactive tree.',
+        'stat_people' => 'Family Members',
+        'stat_children' => 'Sons & Daughters',
+        'stat_generations' => 'Generations',
+        'explore_tree' => 'Explore the Tree',
+        'view_list' => 'List View',
+        'view_tree' => 'Tree View',
+        'zoom_in' => 'Zoom In',
+        'zoom_out' => 'Zoom Out',
+        'reset_zoom' => 'Reset',
+        'filter_all' => 'All',
+        'filter_children' => 'Children',
+        'filter_grandchildren' => 'Grandchildren',
+        'filter_wives' => 'Wives',
+        'search' => 'Search',
+        'search_title' => 'Search the Genealogy',
+        'search_placeholder' => 'Search by name...',
+        'search_hint' => 'Type a name to filter people instantly.',
+        'prophet_relation' => 'Seal of the Prophets and Messengers',
+        'view_details' => 'View Details',
+        'historical_note' => 'Historical Note',
+        'virtues' => 'Virtues',
+        'virtue_ahl_bayt' => 'From the household of the noble Prophet ﷺ',
+        'virtue_beloved' => 'Beloved to Allah and His Messenger',
+        'read_full' => 'Read Full Biography',
+        'close' => 'Close',
+        'no_biography' => 'No historical note is available for this person yet.',
+        'tree_unavailable' => 'The genealogy tree could not be built right now; a list of people is shown below.',
+        'empty_title' => 'No tree data yet',
+        'empty_message' => 'No people have been added to the genealogy tree yet.',
+        'people_count' => 'people',
+    ],
+];

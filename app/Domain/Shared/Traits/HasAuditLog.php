@@ -28,7 +28,7 @@ trait HasAuditLog
                 return;
             }
 
-            $model->logAudit('created', 'Created new ' . class_basename($model), null, $model->getAuditableAttributes());
+            $model->logAudit('created', 'Created new '.class_basename($model), null, $model->getAuditableAttributes());
         });
 
         // Log updates
@@ -43,7 +43,7 @@ trait HasAuditLog
             $changes = array_diff_assoc($newValues, $oldValues);
 
             if (! empty($changes)) {
-                $model->logAudit('updated', 'Updated ' . class_basename($model), $oldValues, $newValues);
+                $model->logAudit('updated', 'Updated '.class_basename($model), $oldValues, $newValues);
             }
         });
 
@@ -53,7 +53,7 @@ trait HasAuditLog
                 return;
             }
 
-            $model->logAudit('deleted', 'Deleted ' . class_basename($model), $model->getAuditableAttributes(), null);
+            $model->logAudit('deleted', 'Deleted '.class_basename($model), $model->getAuditableAttributes(), null);
         });
 
         // Log restoration (if soft deletes)
@@ -63,7 +63,7 @@ trait HasAuditLog
                     return;
                 }
 
-                $model->logAudit('restored', 'Restored ' . class_basename($model), null, $model->getAuditableAttributes());
+                $model->logAudit('restored', 'Restored '.class_basename($model), null, $model->getAuditableAttributes());
             });
         }
     }
@@ -90,7 +90,7 @@ trait HasAuditLog
         return $this->auditLogs()->create([
             'user_id' => Auth::id(),
             'action' => $action,
-            'description' => $description ?? ucfirst($action) . ' ' . class_basename($this),
+            'description' => $description ?? ucfirst($action).' '.class_basename($this),
             'old_values' => $oldValues,
             'new_values' => $newValues,
             'metadata' => $metadata,
