@@ -9,6 +9,25 @@
 @endpush
 @endif
 
+@push('head')
+    <style>
+        /* Seek (±10s) buttons: the arrow arc nudges in its travel direction; the number stays upright. */
+        .seek-btn .seek-arc {
+            transition: transform .25s cubic-bezier(.34, 1.56, .64, 1);
+            transform-origin: center;
+            transform-box: view-box;
+        }
+        .seek-btn:hover .seek-arc-back { transform: rotate(-22deg); }
+        .seek-btn:hover .seek-arc-fwd { transform: rotate(22deg); }
+        .seek-btn:active .seek-arc-back { transform: rotate(-60deg) scale(.9); }
+        .seek-btn:active .seek-arc-fwd { transform: rotate(60deg) scale(.9); }
+        @media (prefers-reduced-motion: reduce) {
+            .seek-btn .seek-arc { transition: none; }
+            .seek-btn:hover .seek-arc, .seek-btn:active .seek-arc { transform: none; }
+        }
+    </style>
+@endpush
+
 @section('content')
 @php $isRtl = in_array(app()->getLocale(), ['ar', 'ur'], true); @endphp
 
@@ -97,9 +116,16 @@
                                 {{-- Rewind 10s --}}
                                 <button type="button" @click="skip(-10)"
                                         aria-label="{{ __('media.public.player_rewind') }}"
-                                        class="relative w-11 h-11 sm:w-10 sm:h-10 rounded-full hover:bg-white/15 flex items-center justify-center transition-colors">
-                                    <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
-                                    <span class="absolute inset-0 flex items-center justify-center text-[8px] font-bold pt-0.5 pointer-events-none select-none">10</span>
+                                        class="seek-btn w-11 h-11 sm:w-10 sm:h-10 rounded-full hover:bg-white/15 flex items-center justify-center transition-colors">
+                                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <g class="seek-arc seek-arc-back">
+                                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                            <path d="M3 3v5h5"/>
+                                        </g>
+                                        <text x="12" y="15.5" text-anchor="middle" font-size="7.5" font-weight="800"
+                                              fill="currentColor" stroke="none" style="font-family: inherit;">10</text>
+                                    </svg>
                                 </button>
 
                                 {{-- Play / pause --}}
@@ -113,9 +139,16 @@
                                 {{-- Forward 10s --}}
                                 <button type="button" @click="skip(10)"
                                         aria-label="{{ __('media.public.player_forward') }}"
-                                        class="relative w-11 h-11 sm:w-10 sm:h-10 rounded-full hover:bg-white/15 flex items-center justify-center transition-colors">
-                                    <i data-lucide="rotate-cw" class="w-5 h-5"></i>
-                                    <span class="absolute inset-0 flex items-center justify-center text-[8px] font-bold pt-0.5 pointer-events-none select-none">10</span>
+                                        class="seek-btn w-11 h-11 sm:w-10 sm:h-10 rounded-full hover:bg-white/15 flex items-center justify-center transition-colors">
+                                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <g class="seek-arc seek-arc-fwd">
+                                            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+                                            <path d="M21 3v5h-5"/>
+                                        </g>
+                                        <text x="12" y="15.5" text-anchor="middle" font-size="7.5" font-weight="800"
+                                              fill="currentColor" stroke="none" style="font-family: inherit;">10</text>
+                                    </svg>
                                 </button>
 
                                 {{-- Mute + volume --}}
@@ -215,7 +248,7 @@
                                         <circle cx="48" cy="48" r="44" stroke="rgba(255,255,255,0.15)" stroke-width="4" fill="none"/>
                                         <circle cx="48" cy="48" r="44" stroke="url(#countdown-gradient)" stroke-width="4" fill="none"
                                                 stroke-linecap="round" stroke-dasharray="276"
-                                                :stroke-dashoffset="276 - (276 * (10 - countdown) / 10)"
+                                                :stroke-dashoffset="276 * countdown / countdownTotal"
                                                 class="transition-all duration-1000"/>
                                         <defs>
                                             <linearGradient id="countdown-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -232,8 +265,35 @@
 
                             <p class="text-sm text-gray-300 mb-5" x-show="!reducedMotion">{{ __('media.public.next_episode_starts_in') }}</p>
 
-                            <p class="text-base font-bold text-white mb-1 line-clamp-2">{{ $nextEpisode['title'] }}</p>
-                            <p class="text-xs text-gray-400 mb-6">{{ $program['title'] }} · {{ __('media.public.episode_label', ['number' => $nextEpisode['number']]) }}</p>
+                            {{-- Next episode card (thumbnail + play), as in the premium prototype --}}
+                            <a href="{{ $nextEpisode['url'] }}"
+                               class="group/next block glass rounded-2xl overflow-hidden shadow-2xl mb-6 text-start">
+                                <div class="relative h-40 sm:h-44">
+                                    @if ($nextEpisode['thumbnail'])
+                                        <img src="{{ $nextEpisode['thumbnail'] }}" alt="" loading="lazy"
+                                             class="absolute inset-0 w-full h-full object-cover">
+                                    @else
+                                        <div class="absolute inset-0 bg-gradient-to-br {{ $program['gradient'] }}"></div>
+                                    @endif
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" aria-hidden="true"></div>
+
+                                    <span class="absolute inset-0 flex items-center justify-center">
+                                        <span class="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-2xl group-hover/next:scale-110 motion-reduce:transform-none transition-transform duration-300">
+                                            <i data-lucide="play" class="w-7 h-7 text-gray-900 ms-1"></i>
+                                        </span>
+                                    </span>
+
+                                    <span class="absolute bottom-0 start-0 w-full p-4">
+                                        <span class="block text-base font-bold text-white mb-0.5 line-clamp-1">{{ $nextEpisode['title'] }}</span>
+                                        <span class="block text-xs text-gray-300 mb-1">{{ $program['title'] }} · {{ __('media.public.episode_label', ['number' => $nextEpisode['number']]) }}</span>
+                                        @if ($nextEpisode['duration'])
+                                            <span class="inline-flex items-center gap-1 text-xs text-gray-400">
+                                                <i data-lucide="clock" class="w-3.5 h-3.5"></i>{{ $nextEpisode['duration'] }}
+                                            </span>
+                                        @endif
+                                    </span>
+                                </div>
+                            </a>
 
                             <div class="flex flex-wrap gap-3 justify-center">
                                 <a href="{{ $nextEpisode['url'] }}"
@@ -444,8 +504,11 @@
             showMore: false,
             transcriptOpen: false,
             overlayVisible: false,
-            countdown: 10,
-            countdownInterval: null,
+            // "Up next" opens during the closing seconds of playback; the countdown
+            // follows the video clock, so pausing the video pauses the countdown too.
+            countdownTotal: 5,
+            countdown: 5,
+            overlayDismissed: false,
             reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
             hasNext: @json($nextEpisode !== null),
             nextUrl: @js($nextEpisode['url'] ?? null),
@@ -490,7 +553,7 @@
                     this.yt = new YT.Player('episode-player', {
                         videoId: this.videoId,
                         playerVars: {
-                            autoplay: 1,
+                            autoplay: 0, // never start on the visitor's behalf — playback is always an explicit click
                             controls: 0,       // our control bar only
                             rel: 0,
                             fs: 0,
@@ -505,7 +568,9 @@
                                 this.duration = e.target.getDuration() || 0;
                                 this.volume = e.target.getVolume();
                                 this.muted = e.target.isMuted();
-                                e.target.playVideo();
+                                // No playVideo() here: the player loads paused and waits for the visitor.
+                                this.buffering = false;
+                                this.refreshIcons();
                             },
                             onStateChange: (e) => this.onPlayerState(e),
                             onError: () => { this.playerError = true; this.buffering = false; this.refreshIcons(); },
@@ -555,7 +620,15 @@
                     this.buffering = false;
                     this.stopTick();
                     this.current = this.duration;
-                    if (this.hasNext) this.showOverlay();
+                    if (this.hasNext && !this.overlayDismissed) {
+                        if (this.reducedMotion) {
+                            // No auto-advance — the overlay stays for an explicit click.
+                            this.countdown = 0;
+                            this.showOverlay();
+                        } else {
+                            window.location.href = this.nextUrl;
+                        }
+                    }
                 }
                 this.refreshIcons();
             },
@@ -566,7 +639,23 @@
                     if (!this.yt || typeof this.yt.getCurrentTime !== 'function') return;
                     this.current = this.yt.getCurrentTime() || 0;
                     if (!this.duration) this.duration = this.yt.getDuration() || 0;
+                    this.syncUpNextOverlay();
                 }, 500);
+            },
+
+            // Show "up next" during the last seconds of the episode; hide it again
+            // if the visitor seeks back out of the closing window.
+            syncUpNextOverlay() {
+                if (!this.hasNext || this.overlayDismissed || !this.duration) return;
+                const remaining = this.duration - this.current;
+
+                if (remaining <= this.countdownTotal && remaining >= 0) {
+                    this.countdown = Math.max(0, Math.ceil(remaining));
+                    if (!this.overlayVisible) this.showOverlay();
+                } else if (this.overlayVisible) {
+                    this.overlayVisible = false;
+                    this.countdown = this.countdownTotal;
+                }
             },
             stopTick() { clearInterval(this.tickTimer); this.tickTimer = null; },
 
@@ -696,19 +785,10 @@
             showOverlay() {
                 this.overlayVisible = true;
                 this.$nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); });
-                if (this.reducedMotion) return; // no auto-countdown — user clicks explicitly
-                this.countdown = 10;
-                this.countdownInterval = setInterval(() => {
-                    this.countdown--;
-                    if (this.countdown <= 0) {
-                        clearInterval(this.countdownInterval);
-                        window.location.href = this.nextUrl;
-                    }
-                }, 1000);
             },
 
             cancelAutoplay() {
-                clearInterval(this.countdownInterval);
+                this.overlayDismissed = true; // don't re-open or auto-advance for this view
                 this.overlayVisible = false;
             },
         };
