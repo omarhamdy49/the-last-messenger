@@ -32,6 +32,7 @@ Route::patch('media-categories/{key}', [MediaCategoryController::class, 'update'
 // Media Episodes
 Route::prefix('media-episodes')->group(function (): void {
     Route::post('/bulk-delete', [MediaEpisodeController::class, 'bulkDelete'])->name('admin.media-episodes.bulk-delete');
+    Route::post('/{media_episode}/thumbnail', [MediaEpisodeController::class, 'updateThumbnail'])->name('admin.media-episodes.thumbnail');
 });
 Route::resource('media-episodes', MediaEpisodeController::class)->names([
     'index' => 'admin.media-episodes.index',

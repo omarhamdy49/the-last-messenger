@@ -34,6 +34,75 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
             ->paginate($perPage);
     }
 
+    public function paginateEpisodes(
+        int $perPage = 20,
+        ?int $programId = null,
+        ?string $search = null,
+        ?int $excludeProgramId = null,
+        string $sortBy = 'created_at',
+        string $sortDir = 'desc',
+        ?string $status = null
+    ): LengthAwarePaginator {
+        $allowedSorts = ['created_at', 'episode_number', 'views_count', 'duration_seconds'];
+        $sortBy = in_array($sortBy, $allowedSorts, true) ? $sortBy : 'created_at';
+        $sortDir = $sortDir === 'asc' ? 'asc' : 'desc';
+
+        $query = MediaEpisode::query()
+            ->select(['id', 'program_id', 'season_number', 'episode_number', 'slug', 'video_url', 'duration_seconds', 'views_count', 'is_featured', 'is_published', 'publish_at', 'created_at'])
+            ->with([
+                'translations:id,media_episode_id,locale,title,is_ready',
+                'program:id,slug',
+                'program.translations:id,media_program_id,locale,title,is_ready',
+                'media',
+            ])
+            ->when($programId, fn ($q) => $q->where('program_id', $programId))
+            ->when($excludeProgramId, fn ($q) => $q->where('program_id', '!=', $excludeProgramId))
+            ->when($search !== null && $search !== '', function ($q) use ($search) {
+                $q->where(function ($q) use ($search) {
+                    $q->where('slug', 'LIKE', "%{$search}%")
+                        ->orWhereHas('translations', fn ($t) => $t->where('title', 'LIKE', "%{$search}%"));
+                });
+            })
+            ->when($status !== null, function ($q) use ($status) {
+                match ($status) {
+                    'published' => $q->where('is_published', true),
+                    'scheduled' => $q->where('is_published', false)->whereNotNull('publish_at'),
+                    'draft' => $q->where('is_published', false)->whereNull('publish_at'),
+                    default => null,
+                };
+            });
+
+        // Within one program the natural season/episode order beats any
+        // generic sort; the sort selector applies on the global list only.
+        if ($programId) {
+            $query->orderBy('season_number')->orderBy('episode_number');
+        } else {
+            $query->orderBy($sortBy, $sortDir)->orderBy('id', 'desc');
+        }
+
+        return $query->paginate($perPage);
+    }
+
+    public function getIndexStats(?int $programId = null): array
+    {
+        $row = DB::table('media_episodes')
+            ->when($programId, fn ($q) => $q->where('program_id', $programId))
+            ->selectRaw('
+                COUNT(*) as total,
+                SUM(CASE WHEN is_featured = 1 THEN 1 ELSE 0 END) as featured,
+                SUM(views_count) as total_views,
+                SUM(duration_seconds) as total_duration
+            ')
+            ->first();
+
+        return [
+            'total' => (int) ($row->total ?? 0),
+            'featured' => (int) ($row->featured ?? 0),
+            'total_views' => (int) ($row->total_views ?? 0),
+            'total_duration_seconds' => (int) ($row->total_duration ?? 0),
+        ];
+    }
+
     public function getByProgram(int $programId): Collection
     {
         return Cache::remember(
@@ -43,6 +112,7 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
                 ->select(['id', 'program_id', 'season_number', 'episode_number', 'slug', 'video_url', 'duration_seconds', 'views_count', 'is_featured', 'created_at'])
                 ->with(['translations:id,media_episode_id,locale,title,is_ready', 'media'])
                 ->where('program_id', $programId)
+                ->published()
                 ->orderBy('season_number')
                 ->orderBy('episode_number')
                 ->get()
@@ -60,6 +130,7 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
                 ->where('program_id', $programId)
                 ->where('season_number', $season)
                 ->where('episode_number', $episodeNumber)
+                ->published()
                 ->first()
         );
     }
@@ -71,6 +142,7 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
             ->select(['id', 'program_id', 'season_number', 'episode_number', 'slug', 'video_url', 'duration_seconds', 'is_featured'])
             ->with(['translations:id,media_episode_id,locale,title,is_ready', 'media'])
             ->where('program_id', $episode->program_id)
+            ->published()
             ->where(function ($q) use ($episode) {
                 $q->where(function ($inner) use ($episode) {
                     $inner->where('season_number', $episode->season_number)
@@ -85,6 +157,14 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
     public function reorderForProgram(int $programId, array $orderedIds): void
     {
         $orderedIds = array_values(array_map('intval', $orderedIds));
+
+        // Renumbering remaps which episode answers a given (season, number) —
+        // the per-number public cache must drop both old and new keys.
+        $previousNumbers = MediaEpisode::query()
+            ->select(['id', 'season_number', 'episode_number'])
+            ->where('program_id', $programId)
+            ->whereIn('id', $orderedIds)
+            ->get();
 
         DB::transaction(function () use ($programId, $orderedIds) {
             // Phase 1: park current numbers out of range so the per-row unique
@@ -105,15 +185,24 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
 
         $this->clearCache();
         $this->clearCacheForProgram($programId);
+        foreach ($previousNumbers as $episode) {
+            $this->clearCacheForEpisodeNumber($programId, (int) $episode->season_number, (int) $episode->episode_number);
+        }
+        foreach ($orderedIds as $index => $episodeId) {
+            $season = (int) ($previousNumbers->firstWhere('id', $episodeId)?->season_number ?? 1);
+            $this->clearCacheForEpisodeNumber($programId, $season, $index + 1);
+        }
     }
 
     public function assignToProgram(int $programId, array $episodeIds): int
     {
         $episodeIds = array_values(array_map('intval', $episodeIds));
 
-        $moved = DB::transaction(function () use ($programId, $episodeIds) {
+        $assignedNumbers = [];
+
+        $moved = DB::transaction(function () use ($programId, $episodeIds, &$assignedNumbers) {
             $episodes = MediaEpisode::query()
-                ->select(['id', 'program_id'])
+                ->select(['id', 'program_id', 'season_number', 'episode_number'])
                 ->whereIn('id', $episodeIds)
                 ->where('program_id', '!=', $programId)
                 ->lockForUpdate()
@@ -133,8 +222,9 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
                     ->update([
                         'program_id' => $programId,
                         'season_number' => 1,
-                        'episode_number' => $nextNumber++,
+                        'episode_number' => $nextNumber,
                     ]);
+                $assignedNumbers[] = $nextNumber++;
             }
 
             return $episodes;
@@ -146,6 +236,13 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
             foreach ($moved->pluck('program_id')->unique() as $sourceProgramId) {
                 $this->clearCacheForProgram((int) $sourceProgramId);
             }
+            // Drop per-number public cache for the vacated and newly taken slots.
+            foreach ($moved as $episode) {
+                $this->clearCacheForEpisodeNumber((int) $episode->program_id, (int) $episode->season_number, (int) $episode->episode_number);
+            }
+            foreach ($assignedNumbers as $number) {
+                $this->clearCacheForEpisodeNumber($programId, 1, $number);
+            }
         }
 
         return $moved->count();
@@ -154,6 +251,38 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
     public function clearCacheForProgram(int $programId): void
     {
         Cache::forget(MediaCacheKeys::episodesByProgram($programId));
+    }
+
+    public function clearCacheForEpisodeNumber(int $programId, int $season, int $episodeNumber): void
+    {
+        Cache::forget(MediaCacheKeys::episodeByProgramAndNumber($programId, $season, $episodeNumber));
+    }
+
+    public function publishDue(): int
+    {
+        $due = MediaEpisode::query()
+            ->select(['id', 'program_id'])
+            ->where('is_published', false)
+            ->whereNotNull('publish_at')
+            ->where('publish_at', '<=', now())
+            ->get();
+
+        if ($due->isEmpty()) {
+            return 0;
+        }
+
+        MediaEpisode::query()
+            ->whereIn('id', $due->pluck('id'))
+            ->update(['is_published' => true]);
+
+        // Bulk update bypasses BaseRepository::update(), so invalidate both
+        // the versioned base cache (find/findBy) and the per-program lists.
+        $this->clearCache();
+        foreach ($due->pluck('program_id')->unique() as $programId) {
+            $this->clearCacheForProgram((int) $programId);
+        }
+
+        return $due->count();
     }
 
     public function getContinueWatching(int $userId, int $limit = 10): Collection
@@ -170,6 +299,7 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
             ])
             ->where('user_id', $userId)
             ->where('completed', false)
+            ->whereHas('episode', fn ($q) => $q->published())
             ->orderByDesc('updated_at')
             ->limit($limit)
             ->get();

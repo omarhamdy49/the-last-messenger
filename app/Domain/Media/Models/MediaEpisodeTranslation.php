@@ -29,6 +29,9 @@ class MediaEpisodeTranslation extends Model
         'title',
         'description',
         'transcript',
+        'seo_title',
+        'seo_description',
+        'seo_keywords',
         'is_ready',
     ];
 

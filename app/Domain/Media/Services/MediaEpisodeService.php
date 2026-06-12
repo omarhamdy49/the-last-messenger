@@ -31,6 +31,36 @@ class MediaEpisodeService extends BaseService
         return $this->repository->getByProgram($programId);
     }
 
+    public function paginateEpisodes(
+        int $perPage = 20,
+        ?int $programId = null,
+        ?string $search = null,
+        ?int $excludeProgramId = null,
+        string $sortBy = 'created_at',
+        string $sortDir = 'desc',
+        ?string $status = null
+    ): LengthAwarePaginator {
+        return $this->repository->paginateEpisodes($perPage, $programId, $search, $excludeProgramId, $sortBy, $sortDir, $status);
+    }
+
+    /**
+     * Publish every episode whose scheduled publish_at has passed.
+     *
+     * @return int Number of episodes published
+     */
+    public function publishDueEpisodes(): int
+    {
+        return $this->repository->publishDue();
+    }
+
+    /**
+     * @return array{total:int,featured:int,total_views:int,total_duration_seconds:int}
+     */
+    public function getIndexStats(?int $programId = null): array
+    {
+        return $this->repository->getIndexStats($programId);
+    }
+
     /**
      * Renumber a program's episodes to the given id order (1-based).
      *
@@ -94,6 +124,8 @@ class MediaEpisodeService extends BaseService
             'video_url' => $data->videoUrl,
             'duration_seconds' => $data->durationSeconds,
             'is_featured' => $data->isFeatured,
+            'is_published' => $data->isPublished,
+            'publish_at' => $data->publishAt,
             'views_count' => 0,
         ]);
 
@@ -105,6 +137,8 @@ class MediaEpisodeService extends BaseService
      */
     public function updateEpisode(int $id, UpdateMediaEpisodeData $data): MediaEpisode
     {
+        $previous = $this->repository->find($id);
+
         $updated = $this->repository->update($id, [
             'season_number' => $data->seasonNumber,
             'episode_number' => $data->episodeNumber,
@@ -112,6 +146,8 @@ class MediaEpisodeService extends BaseService
             'video_url' => $data->videoUrl,
             'duration_seconds' => $data->durationSeconds,
             'is_featured' => $data->isFeatured,
+            'is_published' => $data->isPublished,
+            'publish_at' => $data->publishAt,
         ]);
 
         if (! $updated) {
@@ -120,6 +156,13 @@ class MediaEpisodeService extends BaseService
 
         $episode = $this->repository->find($id);
         $this->repository->clearCacheForProgram($episode->program_id);
+
+        // The public episode page caches by (program, season, number) — drop
+        // both the previous slot (numbers may have changed) and the current one.
+        if ($previous !== null) {
+            $this->repository->clearCacheForEpisodeNumber($previous->program_id, $previous->season_number, $previous->episode_number);
+        }
+        $this->repository->clearCacheForEpisodeNumber($episode->program_id, $episode->season_number, $episode->episode_number);
 
         return $episode;
     }
@@ -139,6 +182,7 @@ class MediaEpisodeService extends BaseService
 
         $this->repository->delete($id);
         $this->repository->clearCacheForProgram($programId);
+        $this->repository->clearCacheForEpisodeNumber($programId, $episode->season_number, $episode->episode_number);
 
         return true;
     }

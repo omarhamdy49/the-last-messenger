@@ -171,7 +171,7 @@ class MediaProgramController extends Controller
 
         $this->logger->logUpdate($program, $oldValues, $program->toArray(), $request->user());
 
-        return redirect()->route('admin.media-programs.index')
+        return redirect()->route('admin.media-programs.show', $program->id)
             ->with('success', __('admin.program_updated'));
     }
 

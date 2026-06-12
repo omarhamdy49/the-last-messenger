@@ -43,6 +43,8 @@ class MediaEpisode extends Model implements \Spatie\MediaLibrary\HasMedia
         'duration_seconds',
         'views_count',
         'is_featured',
+        'is_published',
+        'publish_at',
     ];
 
     protected $casts = [
@@ -52,6 +54,8 @@ class MediaEpisode extends Model implements \Spatie\MediaLibrary\HasMedia
         'duration_seconds' => 'integer',
         'views_count' => 'integer',
         'is_featured' => 'boolean',
+        'is_published' => 'boolean',
+        'publish_at' => 'datetime',
     ];
 
     // ------------------------------------------------------------------
@@ -65,7 +69,7 @@ class MediaEpisode extends Model implements \Spatie\MediaLibrary\HasMedia
 
     public function getTranslatableFields(): array
     {
-        return ['title', 'description', 'transcript'];
+        return ['title', 'description', 'transcript', 'seo_title', 'seo_description', 'seo_keywords'];
     }
 
     public function getTranslationForeignKey(): string
@@ -100,6 +104,17 @@ class MediaEpisode extends Model implements \Spatie\MediaLibrary\HasMedia
         }
     }
 
+    /** Small admin-list thumbnail: 'thumb' conversion with original fallback. */
+    public function getThumbUrlAttribute(): ?string
+    {
+        try {
+            return $this->getFirstMediaUrl('thumbnail', 'thumb')
+                ?: ($this->getFirstMediaUrl('thumbnail') ?: null);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     public function getDurationFormattedAttribute(): string
     {
         if (! $this->duration_seconds) {
@@ -124,6 +139,21 @@ class MediaEpisode extends Model implements \Spatie\MediaLibrary\HasMedia
     public function scopeOrdered($query)
     {
         return $query->orderBy('season_number')->orderBy('episode_number');
+    }
+
+    public function scopePublished($query)
+    {
+        return $query->where('is_published', true);
+    }
+
+    /** Admin-facing lifecycle label: published | scheduled | draft. */
+    public function publishStatus(): string
+    {
+        if ($this->is_published) {
+            return 'published';
+        }
+
+        return $this->publish_at !== null ? 'scheduled' : 'draft';
     }
 
     public function scopeFeatured($query)

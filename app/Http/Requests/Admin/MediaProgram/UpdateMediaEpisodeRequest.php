@@ -25,6 +25,10 @@ class UpdateMediaEpisodeRequest extends FormRequest
             'video_url' => ['nullable', 'url', 'max:500'],
             'duration_seconds' => ['nullable', 'integer', 'min:0'],
             'is_featured' => ['nullable', 'boolean'],
+            'thumbnail' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:10240'],
+            'thumbnail_id' => ['nullable', 'integer', 'exists:media,id'],
+            'is_published' => ['nullable', 'boolean'],
+            'publish_at' => ['nullable', 'date'],
             'title' => ['required', 'array'],
             'title.ar' => ['required', 'string', 'max:500'],
             'title.en' => ['nullable', 'string', 'max:500'],
@@ -43,6 +47,12 @@ class UpdateMediaEpisodeRequest extends FormRequest
             'transcript.fr' => ['nullable', 'string'],
             'transcript.tr' => ['nullable', 'string'],
             'transcript.ur' => ['nullable', 'string'],
+            'seo_title' => ['nullable', 'array'],
+            'seo_title.*' => ['nullable', 'string', 'max:255'],
+            'seo_description' => ['nullable', 'array'],
+            'seo_description.*' => ['nullable', 'string', 'max:500'],
+            'seo_keywords' => ['nullable', 'array'],
+            'seo_keywords.*' => ['nullable', 'string', 'max:255'],
         ];
     }
 

@@ -209,7 +209,8 @@ final class MediaProgramAdminTest extends TestCase
             $this->validPayload(['slug' => $program->slug, 'total_seasons' => 4, 'total_episodes' => 60])
         );
 
-        $response->assertRedirect(route('admin.media-programs.index'));
+        // Saving an edit returns to the program details page, not the list.
+        $response->assertRedirect(route('admin.media-programs.show', $program->id));
         $this->assertDatabaseHas('media_programs', [
             'id' => $program->id,
             'total_seasons' => 4,
@@ -269,7 +270,7 @@ final class MediaProgramAdminTest extends TestCase
         $draft = $this->createProgram(['is_published' => false]);
 
         $this->artisan('media:publish-scheduled')
-            ->expectsOutput('Published 1 scheduled media program(s).')
+            ->expectsOutput('Published 1 scheduled media program(s) and 0 episode(s).')
             ->assertExitCode(0);
 
         $this->assertTrue($due->fresh()->is_published);

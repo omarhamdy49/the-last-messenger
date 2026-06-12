@@ -244,6 +244,9 @@ final class MediaController extends Controller
         $card['video_id'] = $this->youtubeVideoId($episode->video_url);
         $card['views_count'] = (int) $episode->views_count;
         $card['transcript'] = $this->transcriptLines($episode->trans('transcript'));
+        $card['seo_title'] = $episode->trans('seo_title');
+        $card['seo_description'] = $episode->trans('seo_description');
+        $card['seo_keywords'] = $episode->trans('seo_keywords');
 
         return $card;
     }
@@ -252,11 +255,23 @@ final class MediaController extends Controller
      * Split a transcript into display lines; a leading "mm:ss" / "hh:mm:ss"
      * becomes a YouTube-style time chip.
      *
+     * Transcripts authored before the WYSIWYG editor are plain text with
+     * newlines; newer ones are HTML where each block element is one line.
+     *
      * @return list<array{time: string|null, text: string}>
      */
     private function transcriptLines(?string $transcript): array
     {
         if ($transcript === null || trim($transcript) === '') {
+            return [];
+        }
+
+        if (str_contains($transcript, '<')) {
+            $transcript = preg_replace('/<(?:br|\/p|\/div|\/li|\/h[1-6])[^>]*>/i', "\n", $transcript);
+            $transcript = html_entity_decode(strip_tags($transcript), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+
+        if (trim($transcript) === '') {
             return [];
         }
 

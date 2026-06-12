@@ -17,6 +17,34 @@ interface MediaEpisodeRepositoryInterface extends RepositoryInterface
     public function paginateByProgram(int $programId, int $perPage = 20): LengthAwarePaginator;
 
     /**
+     * Admin list/picker query: optional program filter, title/slug search,
+     * exclusion (episodes-library modal) and whitelisted sorting.
+     */
+    public function paginateEpisodes(
+        int $perPage = 20,
+        ?int $programId = null,
+        ?string $search = null,
+        ?int $excludeProgramId = null,
+        string $sortBy = 'created_at',
+        string $sortDir = 'desc',
+        ?string $status = null
+    ): LengthAwarePaginator;
+
+    /**
+     * Publish every episode whose scheduled publish_at has passed.
+     *
+     * @return int Number of episodes published
+     */
+    public function publishDue(): int;
+
+    /**
+     * Aggregate counters for the admin index header (single query).
+     *
+     * @return array{total:int,featured:int,total_views:int,total_duration_seconds:int}
+     */
+    public function getIndexStats(?int $programId = null): array;
+
+    /**
      * All episodes for a program (for small programs).
      */
     public function getByProgram(int $programId): Collection;
@@ -33,6 +61,9 @@ interface MediaEpisodeRepositoryInterface extends RepositoryInterface
 
     /** Clear per-program episode cache. */
     public function clearCacheForProgram(int $programId): void;
+
+    /** Clear the public per-number episode cache entry. */
+    public function clearCacheForEpisodeNumber(int $programId, int $season, int $episodeNumber): void;
 
     /**
      * Renumber a program's episodes to match the given id order (1-based).

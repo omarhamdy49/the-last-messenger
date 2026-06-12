@@ -1,7 +1,13 @@
 @extends('layouts.public')
 
-@section('title', $episode['title'] . ' — ' . $program['title'])
-@section('meta_description', \Illuminate\Support\Str::limit((string) ($episode['description'] ?? $program['description']), 160))
+@section('title', $episode['seo_title'] ?: $episode['title'] . ' — ' . $program['title'])
+@section('meta_description', $episode['seo_description'] ?: \Illuminate\Support\Str::limit(strip_tags((string) ($episode['description'] ?? $program['description'])), 160))
+
+@if($episode['seo_keywords'])
+@push('head')
+    <meta name="keywords" content="{{ $episode['seo_keywords'] }}">
+@endpush
+@endif
 
 @section('content')
 @php $isRtl = in_array(app()->getLocale(), ['ar', 'ur'], true); @endphp
