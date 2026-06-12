@@ -50,6 +50,11 @@ interface MediaEpisodeRepositoryInterface extends RepositoryInterface
     public function getByProgram(int $programId): Collection;
 
     /**
+     * Whether an episode already uses the given slug.
+     */
+    public function slugExists(string $slug): bool;
+
+    /**
      * Single episode by program + season + episode number.
      */
     public function findByNumber(int $programId, int $season, int $episodeNumber): ?MediaEpisode;

@@ -19,7 +19,8 @@ class StoreMediaEpisodeRequest extends FormRequest
             'program_id' => ['required', 'integer', 'exists:media_programs,id'],
             'season_number' => ['nullable', 'integer', 'min:1'],
             'episode_number' => ['required', 'integer', 'min:1'],
-            'slug' => ['required', 'string', 'max:255', 'unique:media_episodes,slug'],
+            // Optional on create: when omitted the service derives "{program_slug}-s{episode_number}".
+            'slug' => ['nullable', 'string', 'max:255', 'unique:media_episodes,slug'],
             'video_url' => ['nullable', 'url', 'max:500'],
             'duration_seconds' => ['nullable', 'integer', 'min:0'],
             'is_featured' => ['nullable', 'boolean'],

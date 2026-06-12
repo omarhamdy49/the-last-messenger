@@ -121,10 +121,11 @@ class MediaEpisode extends Model implements \Spatie\MediaLibrary\HasMedia
             return '';
         }
 
-        $minutes = intdiv($this->duration_seconds, 60);
+        $hours = intdiv($this->duration_seconds, 3600);
+        $minutes = intdiv($this->duration_seconds % 3600, 60);
         $seconds = $this->duration_seconds % 60;
 
-        return sprintf('%d:%02d', $minutes, $seconds);
+        return sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
     }
 
     public function incrementViews(int $amount = 1): void

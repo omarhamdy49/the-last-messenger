@@ -7,16 +7,20 @@ namespace App\Domain\Media\Services;
 use App\Domain\Media\DTOs\CreateMediaEpisodeData;
 use App\Domain\Media\DTOs\UpdateMediaEpisodeData;
 use App\Domain\Media\Models\MediaEpisode;
+use App\Domain\Media\Models\MediaProgram;
 use App\Domain\Media\Repositories\MediaEpisodeRepositoryInterface;
+use App\Domain\Media\Repositories\MediaProgramRepositoryInterface;
 use App\Domain\Shared\Services\BaseService;
 use App\Exceptions\Domain\ResourceNotFoundException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Str;
 
 class MediaEpisodeService extends BaseService
 {
     public function __construct(
-        MediaEpisodeRepositoryInterface $repository
+        MediaEpisodeRepositoryInterface $repository,
+        private readonly MediaProgramRepositoryInterface $programRepository
     ) {
         $this->repository = $repository;
     }
@@ -120,7 +124,7 @@ class MediaEpisodeService extends BaseService
             'program_id' => $data->programId,
             'season_number' => $data->seasonNumber,
             'episode_number' => $data->episodeNumber,
-            'slug' => $data->slug,
+            'slug' => $data->slug ?? $this->generateSlug($data->programId, $data->seasonNumber, $data->episodeNumber),
             'video_url' => $data->videoUrl,
             'duration_seconds' => $data->durationSeconds,
             'is_featured' => $data->isFeatured,
@@ -130,6 +134,24 @@ class MediaEpisodeService extends BaseService
         ]);
 
         return $episode;
+    }
+
+    /**
+     * Default episode slug: "{program_slug}-s{season}e{episode}" (e.g. "el-hesn-s1e2"),
+     * with a numeric suffix when that slug is already taken by another episode.
+     */
+    private function generateSlug(int $programId, int $seasonNumber, int $episodeNumber): string
+    {
+        /** @var MediaProgram|null $program */
+        $program = $this->programRepository->find($programId, ['id', 'slug']);
+        $base = Str::slug(($program?->slug ?? 'episode')."-s{$seasonNumber}e{$episodeNumber}");
+
+        $candidate = $base;
+        for ($suffix = 2; $this->repository->slugExists($candidate); $suffix++) {
+            $candidate = "{$base}-{$suffix}";
+        }
+
+        return $candidate;
     }
 
     /**

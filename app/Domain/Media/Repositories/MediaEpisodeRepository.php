@@ -34,6 +34,11 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
             ->paginate($perPage);
     }
 
+    public function slugExists(string $slug): bool
+    {
+        return MediaEpisode::query()->where('slug', $slug)->exists();
+    }
+
     public function paginateEpisodes(
         int $perPage = 20,
         ?int $programId = null,

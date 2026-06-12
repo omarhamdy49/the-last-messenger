@@ -298,12 +298,14 @@
 
                     <div>
                         <label class="block text-sm font-medium mb-1" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            {{ __('admin.slug') }} *
+                            {{ __('admin.slug') }} {{ $isEdit ? '*' : '' }}
                         </label>
-                        <input type="text" name="slug" value="{{ old('slug', $episode?->slug) }}" required dir="ltr"
+                        <input type="text" name="slug" value="{{ old('slug', $episode?->slug) }}" {{ $isEdit ? 'required' : '' }} dir="ltr"
                                class="{{ $inputClasses }}"
                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                        <p class="mt-1 text-xs" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">{{ __('admin.url_friendly_hint') }}</p>
+                        <p class="mt-1 text-xs" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                            {{ $isEdit ? __('admin.url_friendly_hint') : __('admin.episode_slug_auto_hint') }}
+                        </p>
                         @error('slug')
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
@@ -322,13 +324,37 @@
                         @enderror
                     </div>
 
-                    <div>
+                    @php $durationTotal = (int) old('duration_seconds', $episode?->duration_seconds ?? 0); @endphp
+                    <div x-data="{
+                            h: {{ intdiv($durationTotal, 3600) }},
+                            m: {{ intdiv($durationTotal % 3600, 60) }},
+                            s: {{ $durationTotal % 60 }},
+                            clamp(v, max) { v = Math.max(0, Math.floor(Number(v) || 0)); return Math.min(v, max); },
+                            total() { return this.clamp(this.h, 99) * 3600 + this.clamp(this.m, 59) * 60 + this.clamp(this.s, 59); },
+                         }">
                         <label class="block text-sm font-medium mb-1" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            {{ __('admin.duration_seconds') }}
+                            {{ __('admin.duration') }} ({{ __('admin.duration_hms') }})
                         </label>
-                        <input type="number" name="duration_seconds" value="{{ old('duration_seconds', $episode?->duration_seconds) }}" min="0"
-                               class="{{ $inputClasses }}"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                        <div class="flex items-center gap-1.5" dir="ltr">
+                            <input type="number" x-model="h" @blur="h = clamp(h, 99)" min="0" max="99" placeholder="00"
+                                   aria-label="{{ __('admin.duration_hours') }}"
+                                   class="{{ $inputClasses }} text-center tabular-nums"
+                                   :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                            <span class="font-bold" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">:</span>
+                            <input type="number" x-model="m" @blur="m = clamp(m, 59)" min="0" max="59" placeholder="00"
+                                   aria-label="{{ __('admin.duration_minutes') }}"
+                                   class="{{ $inputClasses }} text-center tabular-nums"
+                                   :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                            <span class="font-bold" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">:</span>
+                            <input type="number" x-model="s" @blur="s = clamp(s, 59)" min="0" max="59" placeholder="00"
+                                   aria-label="{{ __('admin.duration_secs') }}"
+                                   class="{{ $inputClasses }} text-center tabular-nums"
+                                   :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                        </div>
+                        <input type="hidden" name="duration_seconds" :value="total()">
+                        <p class="mt-1 text-xs" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                            {{ __('admin.duration_saved_as_seconds') }} (<span dir="ltr" x-text="total()"></span>)
+                        </p>
                         @error('duration_seconds')
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror

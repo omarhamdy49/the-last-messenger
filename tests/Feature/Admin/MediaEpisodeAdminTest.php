@@ -241,6 +241,63 @@ final class MediaEpisodeAdminTest extends TestCase
         ]);
     }
 
+    public function test_store_generates_slug_from_program_when_left_empty(): void
+    {
+        $admin = $this->createAdminUser();
+        $program = $this->createProgram();
+
+        $this->actingAs($admin)
+            ->post('/su/portal/v1/admin/media-episodes', $this->validPayload($program, [
+                'slug' => null,
+                'episode_number' => 7,
+            ]))
+            ->assertRedirect('/su/portal/v1/admin/media-episodes?program_id='.$program->id)
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('media_episodes', [
+            'program_id' => $program->id,
+            'episode_number' => 7,
+            'slug' => $program->slug.'-s1e7',
+        ]);
+    }
+
+    public function test_generated_slug_gets_numeric_suffix_on_collision(): void
+    {
+        $admin = $this->createAdminUser();
+        $program = $this->createProgram();
+        // Another episode already claimed the default slug manually.
+        $this->createEpisode($program, 8, ['slug' => $program->slug.'-s1e7']);
+
+        $this->actingAs($admin)
+            ->post('/su/portal/v1/admin/media-episodes', $this->validPayload($program, [
+                'slug' => null,
+                'season_number' => 1,
+                'episode_number' => 7,
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('media_episodes', [
+            'program_id' => $program->id,
+            'season_number' => 1,
+            'episode_number' => 7,
+            'slug' => $program->slug.'-s1e7-2',
+        ]);
+    }
+
+    public function test_store_still_honors_explicit_slug(): void
+    {
+        $admin = $this->createAdminUser();
+        $program = $this->createProgram();
+
+        $this->actingAs($admin)
+            ->post('/su/portal/v1/admin/media-episodes', $this->validPayload($program, [
+                'slug' => 'my-custom-slug',
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('media_episodes', ['slug' => 'my-custom-slug']);
+    }
+
     public function test_store_requires_episode_number_and_arabic_title(): void
     {
         $admin = $this->createAdminUser();
