@@ -184,7 +184,7 @@
                             <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                         </a>
                         <form method="POST" action="{{ route('admin.media-episodes.destroy', $episode->id) }}"
-                              onsubmit="return confirm('{{ __('admin.confirm_delete') }}')" class="inline">
+                              onsubmit="return window.confirmSubmit(this, { message: '{{ __('admin.confirm_delete') }}' })" class="inline">
                             @csrf
                             @method('DELETE')
                             <input type="hidden" name="from_program" value="1">
@@ -357,7 +357,7 @@
 
         <!-- Delete -->
         <form method="POST" action="{{ route('admin.media-programs.destroy', $program->id) }}"
-              onsubmit="return confirm('{{ __('admin.confirm_delete') }}')">
+              onsubmit="return window.confirmSubmit(this, { message: '{{ __('admin.confirm_delete') }}' })">
             @csrf
             @method('DELETE')
             <button type="submit"

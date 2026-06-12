@@ -25,9 +25,12 @@ Route::resource('media-programs', MediaProgramController::class)->names([
     'destroy' => 'admin.media-programs.destroy',
 ]);
 
-// Media Categories — visibility flags for the public programs list
+// Media Categories — presentation, visibility and order for the public programs list
 Route::get('media-categories', [MediaCategoryController::class, 'index'])->name('admin.media-categories.index');
+Route::post('media-categories/reorder', [MediaCategoryController::class, 'reorder'])->name('admin.media-categories.reorder');
+Route::get('media-categories/{key}', [MediaCategoryController::class, 'show'])->name('admin.media-categories.show');
 Route::patch('media-categories/{key}', [MediaCategoryController::class, 'update'])->name('admin.media-categories.update');
+Route::delete('media-categories/{key}', [MediaCategoryController::class, 'destroy'])->name('admin.media-categories.destroy');
 
 // Media Episodes
 Route::prefix('media-episodes')->group(function (): void {

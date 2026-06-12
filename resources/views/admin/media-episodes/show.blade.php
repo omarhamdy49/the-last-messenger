@@ -87,7 +87,7 @@
 
                 @if($thumbUrl)
                 <form method="POST" action="{{ route('admin.media-episodes.thumbnail', $episode->id) }}"
-                      onsubmit="return confirm('{{ __('admin.confirm_delete') }}')"
+                      onsubmit="return window.confirmSubmit(this, { message: '{{ __('admin.confirm_delete') }}' })"
                       class="absolute -top-2 -start-2">
                     @csrf
                     <input type="hidden" name="remove" value="1">
@@ -366,7 +366,7 @@
             </a>
             @endif
             <form method="POST" action="{{ route('admin.media-episodes.destroy', $episode->id) }}"
-                  onsubmit="return confirm('{{ __('admin.confirm_delete') }}')">
+                  onsubmit="return window.confirmSubmit(this, { message: '{{ __('admin.confirm_delete') }}' })">
                 @csrf
                 @method('DELETE')
                 <button type="submit"

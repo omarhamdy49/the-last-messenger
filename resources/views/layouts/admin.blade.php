@@ -270,6 +270,20 @@
     {{-- Global Toast Notifications --}}
     <x-admin.toast-container />
 
+    {{-- Flash messages surface as toasts --}}
+    @if(session('success') || session('error'))
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            @if(session('success'))
+            window.showToast(@json(session('success')), 'success');
+            @endif
+            @if(session('error'))
+            window.showToast(@json(session('error')), 'error');
+            @endif
+        });
+    </script>
+    @endif
+
     {{-- Global Confirm Modal --}}
     <x-admin.confirm-modal />
 

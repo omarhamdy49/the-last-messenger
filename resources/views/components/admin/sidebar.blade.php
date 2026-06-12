@@ -200,15 +200,6 @@
                         <i data-lucide="images" class="w-4 h-4"></i>
                         <span>{{ __('media.title') }}</span>
                     </a>
-                    <a href="{{ route('admin.media-programs.index') }}"
-                       @click="activeMenu = 'media-programs'"
-                       :class="isActive('media-programs') ?
-                           'text-accent font-semibold' :
-                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
-                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
-                        <i data-lucide="tv" class="w-4 h-4"></i>
-                        <span>{{ __('admin.media_programs') }}</span>
-                    </a>
                     <a href="{{ route('admin.media-categories.index') }}"
                        @click="activeMenu = 'media-categories'"
                        :class="isActive('media-categories') ?
@@ -217,6 +208,15 @@
                        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
                         <i data-lucide="layout-grid" class="w-4 h-4"></i>
                         <span>{{ __('admin.media_categories') }}</span>
+                    </a>
+                    <a href="{{ route('admin.media-programs.index') }}"
+                       @click="activeMenu = 'media-programs'"
+                       :class="isActive('media-programs') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="tv" class="w-4 h-4"></i>
+                        <span>{{ __('admin.media_programs') }}</span>
                     </a>
                     <a href="{{ route('admin.media-episodes.index') }}"
                        @click="activeMenu = 'media-episodes'"

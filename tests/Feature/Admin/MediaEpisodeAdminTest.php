@@ -323,6 +323,26 @@ final class MediaEpisodeAdminTest extends TestCase
         $this->assertDatabaseMissing('media_episodes', ['id' => $episode->id]);
     }
 
+    public function test_deleting_episode_removes_its_thumbnail_files(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $admin = $this->createAdminUser();
+        $program = $this->createProgram();
+        $episode = $this->createEpisode($program, 1);
+        $episode->addMedia(\Illuminate\Http\UploadedFile::fake()->image('thumb.jpg', 800, 450))
+            ->toMediaCollection('thumbnail');
+
+        $this->assertNotEmpty(\Illuminate\Support\Facades\Storage::disk('public')->allFiles());
+
+        $this->actingAs($admin)->delete('/su/portal/v1/admin/media-episodes/'.$episode->id);
+
+        $this->assertDatabaseMissing('spatie_media', [
+            'model_type' => (new MediaEpisode)->getMorphClass(),
+            'model_id' => $episode->id,
+        ]);
+        $this->assertEmpty(\Illuminate\Support\Facades\Storage::disk('public')->allFiles());
+    }
+
     // ------------------------------------------------------------------
     // Publishing & scheduling
     // ------------------------------------------------------------------

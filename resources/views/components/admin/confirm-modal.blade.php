@@ -139,4 +139,19 @@ function confirmModal() {
 window.showConfirm = function(options) {
     window.dispatchEvent(new CustomEvent('show-confirm', { detail: options }));
 };
+
+// Form-submit guard replacing native confirm():
+//   <form onsubmit="return window.confirmSubmit(this, { message: '...' })">
+// form.submit() bypasses onsubmit, so confirming can't re-trigger the dialog.
+window.confirmSubmit = function(form, options = {}) {
+    window.showConfirm({
+        title: options.title,
+        message: options.message,
+        confirmText: options.confirmText,
+        cancelText: options.cancelText,
+        type: options.type || 'danger',
+        onConfirm: () => form.submit(),
+    });
+    return false;
+};
 </script>

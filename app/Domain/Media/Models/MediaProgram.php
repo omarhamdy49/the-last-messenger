@@ -93,6 +93,28 @@ class MediaProgram extends Model implements HasMedia
         return 'media_program_id';
     }
 
+    protected static function booted(): void
+    {
+        // Episode rows die via the DB-level cascade, which skips Eloquent
+        // events — so their attachments (files + conversions) would be
+        // orphaned. Delete them before the cascade runs; the program's own
+        // poster/banner are cleaned up by InteractsWithMedia itself.
+        static::deleting(function (self $program): void {
+            $episodeIds = $program->episodes()->pluck('id');
+
+            if ($episodeIds->isEmpty()) {
+                return;
+            }
+
+            \App\Domain\Shared\Models\SpatieMedia::query()
+                ->where('model_type', (new MediaEpisode)->getMorphClass())
+                ->whereIn('model_id', $episodeIds)
+                ->get()
+                ->each
+                ->delete();
+        });
+    }
+
     // ------------------------------------------------------------------
     // Relations
     // ------------------------------------------------------------------

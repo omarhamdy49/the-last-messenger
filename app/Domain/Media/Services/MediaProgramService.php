@@ -187,4 +187,36 @@ class MediaProgramService extends BaseService
     {
         $this->repository->setCategoryFeatured($key, $isFeatured);
     }
+
+    /** Single category row with program count and aggregate views. */
+    public function findCategoryByKey(string $key): ?\App\Domain\Media\Models\MediaCategory
+    {
+        return $this->repository->findCategoryByKey($key);
+    }
+
+    /**
+     * Update a category's presentation fields.
+     *
+     * @param  array{name?:array|null,description?:array|null,icon?:string|null,color?:string|null,is_featured?:bool,display_order?:int}  $attributes
+     */
+    public function updateCategory(string $key, array $attributes): bool
+    {
+        return $this->repository->updateCategory($key, $attributes);
+    }
+
+    /** Delete a category; refused while programs are still assigned. */
+    public function deleteCategory(string $key): bool
+    {
+        return $this->repository->deleteCategory($key);
+    }
+
+    /**
+     * Persist display_order to match the given key order.
+     *
+     * @param  list<string>  $orderedKeys
+     */
+    public function reorderCategories(array $orderedKeys): void
+    {
+        $this->repository->reorderCategories($orderedKeys);
+    }
 }

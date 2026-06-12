@@ -245,7 +245,7 @@
                                     <i data-lucide="pencil" class="w-4 h-4"></i>
                                 </a>
                                 <form method="POST" action="{{ route('admin.media-episodes.destroy', $episode->id) }}"
-                                      onsubmit="return confirm('{{ __('admin.confirm_delete') }}')" class="inline">
+                                      onsubmit="return window.confirmSubmit(this, { message: '{{ __('admin.confirm_delete') }}' })" class="inline">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit"

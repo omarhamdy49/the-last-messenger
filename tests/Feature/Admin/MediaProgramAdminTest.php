@@ -477,4 +477,29 @@ final class MediaProgramAdminTest extends TestCase
 
         $this->assertDatabaseMissing('media_programs', ['id' => $program->id]);
     }
+
+    public function test_deleting_program_removes_its_images_and_cascaded_episode_thumbnails(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $admin = $this->createAdminUser();
+        $program = $this->createProgram();
+        $program->addMedia(\Illuminate\Http\UploadedFile::fake()->image('poster.jpg', 300, 450))
+            ->toMediaCollection('poster');
+        $program->addMedia(\Illuminate\Http\UploadedFile::fake()->image('banner.jpg', 1200, 675))
+            ->toMediaCollection('banner');
+
+        $episode = $this->createEpisode($program, 1);
+        $episode->addMedia(\Illuminate\Http\UploadedFile::fake()->image('thumb.jpg', 800, 450))
+            ->toMediaCollection('thumbnail');
+
+        $this->assertNotEmpty(\Illuminate\Support\Facades\Storage::disk('public')->allFiles());
+
+        $this->actingAs($admin)->delete('/su/portal/v1/admin/media-programs/'.$program->id);
+
+        // Episodes die via DB-level cascade — their attachments must be
+        // cleaned up explicitly, not just the program's own poster/banner.
+        $this->assertDatabaseMissing('spatie_media', ['model_id' => $program->id, 'model_type' => $program->getMorphClass()]);
+        $this->assertDatabaseMissing('spatie_media', ['model_id' => $episode->id, 'model_type' => $episode->getMorphClass()]);
+        $this->assertEmpty(\Illuminate\Support\Facades\Storage::disk('public')->allFiles());
+    }
 }

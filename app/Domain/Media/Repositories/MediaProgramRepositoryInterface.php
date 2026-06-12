@@ -77,6 +77,29 @@ interface MediaProgramRepositoryInterface extends RepositoryInterface
     /** Toggle a category's visibility on the public programs list. */
     public function setCategoryFeatured(string $key, bool $isFeatured): void;
 
+    /** Single category row with program count and aggregate views. */
+    public function findCategoryByKey(string $key): ?\App\Domain\Media\Models\MediaCategory;
+
+    /**
+     * Update a category's presentation fields.
+     *
+     * @param  array{name?:array|null,description?:array|null,icon?:string|null,color?:string|null,is_featured?:bool,display_order?:int}  $attributes
+     */
+    public function updateCategory(string $key, array $attributes): bool;
+
+    /**
+     * Delete a category row. Refused (returns false) while programs are
+     * still assigned to the key.
+     */
+    public function deleteCategory(string $key): bool;
+
+    /**
+     * Persist display_order to match the given key order (0-based).
+     *
+     * @param  list<string>  $orderedKeys
+     */
+    public function reorderCategories(array $orderedKeys): void;
+
     /** Clear all cache entries touching this program. */
     public function clearCacheForModel(int $id): void;
 

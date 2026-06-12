@@ -245,12 +245,18 @@ class MediaProgramRepository extends BaseRepository implements MediaProgramRepos
     public function getAllCategoriesWithProgramCounts(): Collection
     {
         return MediaCategory::query()
-            ->select(['media_categories.id', 'media_categories.key', 'media_categories.is_featured', 'media_categories.display_order'])
+            ->select(['media_categories.id', 'media_categories.key', 'media_categories.name', 'media_categories.description', 'media_categories.icon', 'media_categories.color', 'media_categories.is_featured', 'media_categories.display_order'])
             ->selectSub(
                 MediaProgram::query()
                     ->selectRaw('COUNT(*)')
                     ->whereColumn('media_programs.category', 'media_categories.key'),
                 'programs_count'
+            )
+            ->selectSub(
+                MediaProgram::query()
+                    ->selectRaw('COALESCE(SUM(views_count), 0)')
+                    ->whereColumn('media_programs.category', 'media_categories.key'),
+                'total_views'
             )
             ->ordered()
             ->get();
@@ -261,6 +267,65 @@ class MediaProgramRepository extends BaseRepository implements MediaProgramRepos
         MediaCategory::query()
             ->where('key', $key)
             ->update(['is_featured' => $isFeatured]);
+
+        Cache::forget(MediaCacheKeys::featuredCategoryKeys());
+    }
+
+    public function findCategoryByKey(string $key): ?MediaCategory
+    {
+        return MediaCategory::query()
+            ->select(['media_categories.id', 'media_categories.key', 'media_categories.name', 'media_categories.description', 'media_categories.icon', 'media_categories.color', 'media_categories.is_featured', 'media_categories.display_order'])
+            ->selectSub(
+                MediaProgram::query()
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('media_programs.category', 'media_categories.key'),
+                'programs_count'
+            )
+            ->selectSub(
+                MediaProgram::query()
+                    ->selectRaw('COALESCE(SUM(views_count), 0)')
+                    ->whereColumn('media_programs.category', 'media_categories.key'),
+                'total_views'
+            )
+            ->where('key', $key)
+            ->first();
+    }
+
+    public function updateCategory(string $key, array $attributes): bool
+    {
+        $category = MediaCategory::query()->where('key', $key)->first();
+
+        if ($category === null) {
+            return false;
+        }
+
+        $category->fill($attributes)->save();
+        Cache::forget(MediaCacheKeys::featuredCategoryKeys());
+
+        return true;
+    }
+
+    public function deleteCategory(string $key): bool
+    {
+        $hasPrograms = MediaProgram::query()->where('category', $key)->exists();
+
+        if ($hasPrograms) {
+            return false;
+        }
+
+        MediaCategory::query()->where('key', $key)->delete();
+        Cache::forget(MediaCacheKeys::featuredCategoryKeys());
+
+        return true;
+    }
+
+    public function reorderCategories(array $orderedKeys): void
+    {
+        foreach (array_values($orderedKeys) as $index => $key) {
+            MediaCategory::query()
+                ->where('key', $key)
+                ->update(['display_order' => $index]);
+        }
 
         Cache::forget(MediaCacheKeys::featuredCategoryKeys());
     }
