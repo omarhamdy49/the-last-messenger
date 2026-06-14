@@ -8,6 +8,7 @@ use App\Domain\Media\Models\MediaProgram;
 use App\Domain\Shared\Contracts\RepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection as SupportCollection;
 
 interface MediaProgramRepositoryInterface extends RepositoryInterface
 {
@@ -55,6 +56,16 @@ interface MediaProgramRepositoryInterface extends RepositoryInterface
 
     /** Programs of one category for a horizontal row, with episode count. */
     public function getByCategory(string $category, int $limit = 12): Collection;
+
+    /**
+     * Published programs across the given categories, fetched in one query and
+     * grouped by category value (each capped at {$perCategory}). Avoids the
+     * N+1 of calling getByCategory() once per featured category.
+     *
+     * @param  list<string>  $categoryKeys
+     * @return SupportCollection<string, Collection<int, MediaProgram>>
+     */
+    public function getPublishedGroupedByCategories(array $categoryKeys, int $perCategory = 12): SupportCollection;
 
     /** Full-text / LIKE search across translations. */
     public function search(string $term, int $perPage = 15, bool $publishedOnly = false): LengthAwarePaginator;

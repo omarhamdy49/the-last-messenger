@@ -12,6 +12,7 @@ use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -182,7 +183,7 @@ class MediaProgramRepository extends BaseRepository implements MediaProgramRepos
             MediaCacheKeys::programsRow($category, $limit),
             self::CACHE_TTL,
             fn () => MediaProgram::query()
-                ->select(['id', 'slug', 'category', 'maturity_rating', 'year', 'rating', 'views_count', 'display_order', 'created_at'])
+                ->select(['id', 'slug', 'category', 'maturity_rating', 'year', 'rating', 'is_trending', 'views_count', 'display_order', 'created_at'])
                 ->with(['translations:id,media_program_id,locale,title,is_ready', 'media'])
                 ->withCount('episodes')
                 ->published()
@@ -190,6 +191,39 @@ class MediaProgramRepository extends BaseRepository implements MediaProgramRepos
                 ->orderBy('display_order')
                 ->limit($limit)
                 ->get()
+        );
+    }
+
+    /**
+     * Fetch every published program across the given categories in ONE query
+     * (no N+1 row-by-row loop), then group by category and cap each row.
+     *
+     * Returns a map keyed by the category value, each holding an ordered
+     * collection of at most {$perCategory} programs (display_order ascending).
+     * Categories with no published programs are simply absent from the map.
+     *
+     * @param  list<string>  $categoryKeys
+     * @return SupportCollection<string, Collection<int, MediaProgram>>
+     */
+    public function getPublishedGroupedByCategories(array $categoryKeys, int $perCategory = 12): SupportCollection
+    {
+        if ($categoryKeys === []) {
+            return new SupportCollection;
+        }
+
+        return Cache::remember(
+            MediaCacheKeys::programsGroupedByCategories($categoryKeys, $perCategory),
+            self::CACHE_TTL,
+            fn () => MediaProgram::query()
+                ->select(['id', 'slug', 'category', 'maturity_rating', 'year', 'rating', 'is_trending', 'views_count', 'display_order', 'created_at'])
+                ->with(['translations:id,media_program_id,locale,title,is_ready', 'media'])
+                ->withCount('episodes')
+                ->published()
+                ->whereIn('category', $categoryKeys)
+                ->orderBy('display_order')
+                ->get()
+                ->groupBy(fn (MediaProgram $program): string => $program->category->value)
+                ->map(fn (Collection $group): Collection => $group->take($perCategory)->values())
         );
     }
 
@@ -346,6 +380,9 @@ class MediaProgramRepository extends BaseRepository implements MediaProgramRepos
         foreach (\App\Domain\Media\Enums\ProgramCategory::cases() as $category) {
             Cache::forget(MediaCacheKeys::programsRow($category->value, 12));
         }
+        // Grouped category rows are keyed by the current featured-category set;
+        // forget the entry index() would build so edits don't serve stale rows.
+        Cache::forget(MediaCacheKeys::programsGroupedByCategories($this->getFeaturedCategoryKeys(), 12));
         Cache::forget(MediaCacheKeys::stats());
     }
 

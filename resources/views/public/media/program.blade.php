@@ -17,9 +17,9 @@
      class="min-h-screen font-['Cairo'] bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
 
     {{-- ============================================================ --}}
-    {{-- HERO — full-bleed banner with poster (Shahid-style)          --}}
+    {{-- HERO — Shahid-style full-bleed backdrop, info + actions      --}}
     {{-- ============================================================ --}}
-    <section class="relative min-h-[60vh] md:min-h-[70vh] flex flex-col justify-end overflow-hidden bg-gray-950">
+    <section class="relative min-h-[65vh] md:min-h-[78vh] flex flex-col justify-end overflow-hidden bg-gray-950">
         {{-- Backdrop --}}
         @if ($program['banner'])
             <img src="{{ $program['banner'] }}" alt=""
@@ -36,209 +36,203 @@
                 </div>
             </div>
         @endif
-        {{-- Scrim: lighter in light mode so the scheme toggle is visible in the hero --}}
-        <div class="absolute inset-0 bg-gradient-to-t from-black/75 via-black/40 to-black/15 dark:from-black/95 dark:via-black/60 dark:to-black/25" aria-hidden="true"></div>
-
-        {{-- Blend the hero bottom into the page background (light/dark aware); kept
-             short so it never washes out the bottom-aligned action buttons --}}
-        <div class="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-gray-50 to-transparent dark:from-gray-950 pointer-events-none" aria-hidden="true"></div>
-
-        {{-- Breadcrumb --}}
-        <nav class="absolute top-6 start-0 w-full z-10" aria-label="breadcrumb">
-            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-                <a href="{{ route('public.media') }}"
-                   class="inline-flex items-center gap-2 text-sm font-semibold text-white/80 hover:text-white transition-colors">
-                    <i data-lucide="{{ $isRtl ? 'arrow-right' : 'arrow-left' }}" class="w-4 h-4"></i>
-                    {{ __('media.public.back_to_programs') }}
-                </a>
-            </div>
-        </nav>
+        {{-- Scrim: bottom-heavy like Shahid + side gradient toward the content --}}
+        <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/15 dark:from-black/95 dark:via-black/60 dark:to-black/25" aria-hidden="true"></div>
+        <div class="absolute inset-0 {{ $isRtl ? 'bg-gradient-to-l' : 'bg-gradient-to-r' }} from-black/55 via-black/15 to-transparent" aria-hidden="true"></div>
 
         {{-- Program info --}}
-        <div class="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-10 md:pb-14">
-            <div class="flex flex-col sm:flex-row items-start sm:items-end gap-5 md:gap-8">
-                {{-- Poster --}}
-                <div class="w-28 sm:w-36 md:w-44 shrink-0 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/20 animate-fade-in-up motion-reduce:animate-none">
-                    <div class="relative aspect-[2/3] bg-gradient-to-br {{ $program['gradient'] }}">
-                        @if ($program['poster'])
-                            <img src="{{ $program['poster'] }}" alt="" class="absolute inset-0 w-full h-full object-cover">
-                        @else
-                            <div class="absolute inset-0 flex items-center justify-center opacity-30" aria-hidden="true">
-                                <i data-lucide="{{ ['seerah' => 'map-pin', 'quran' => 'book-open', 'hadith' => 'scroll-text', 'kids' => 'baby', 'documentary' => 'film'][$program['category']] ?? 'monitor-play' }}"
-                                   class="w-12 h-12 text-white"></i>
-                            </div>
-                        @endif
-                    </div>
+        <div class="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-8 md:pb-10">
+            <div class="max-w-3xl mx-auto sm:mx-0 text-center sm:text-start">
+                <h1 class="text-4xl sm:text-5xl md:text-6xl font-black text-white mb-4 leading-tight break-words">{{ $program['title'] }}</h1>
+
+                @if ($program['is_trending'])
+                    <p class="inline-flex items-center gap-2 text-[#64CCC5] text-sm font-bold mb-3">
+                        <i data-lucide="trending-up" class="w-4 h-4" aria-hidden="true"></i>{{ __('media.public.trending_now') }}
+                    </p>
+                @endif
+
+                {{-- Season line (Shahid) --}}
+                @if (! empty($seasons))
+                    <p class="text-white font-bold mb-3">{{ __('media.public.season_label', ['number' => $seasons[0]]) }}</p>
+                @endif
+
+                {{-- Meta line: count • genre | year • age chip --}}
+                <div class="flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-2 mb-4 text-sm text-gray-200">
+                    <span>{{ __('media.public.episodes_count', ['count' => $program['episodes_count']]) }}</span>
+                    <span class="text-white/40" aria-hidden="true">•</span>
+                    <span>{{ $program['category_label'] }}</span>
+                    @if ($program['year'])
+                        <span class="text-white/40" aria-hidden="true">•</span>
+                        <span>{{ $program['year'] }}</span>
+                    @endif
+                    <span class="px-2 py-0.5 border border-gray-400/60 rounded text-xs">{{ $program['maturity_label'] }}</span>
                 </div>
 
-                <div class="min-w-0 flex-1">
-                    <div class="flex flex-wrap items-center gap-2 mb-4">
-                        <span class="inline-flex items-center gap-2 glass !bg-white/10 text-white text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wide">
-                            {{ $program['category_label'] }}
-                        </span>
-                        @if ($program['is_trending'])
-                            <span class="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#0056b3] to-[#218838] text-white text-xs font-bold px-3 py-1.5 rounded-full">
-                                <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>{{ __('media.public.trending_now') }}
-                            </span>
-                        @endif
-                    </div>
+                @if ($program['description'])
+                    <p class="text-sm md:text-base text-gray-200 leading-relaxed max-w-2xl line-clamp-2 md:line-clamp-3 break-words mb-3 mx-auto sm:mx-0">{{ strip_tags((string) $program['description']) }}</p>
+                @endif
 
-                    <h1 class="text-3xl sm:text-4xl md:text-6xl font-black text-white mb-4 leading-tight break-words">{{ $program['title'] }}</h1>
+                @if ($program['host'])
+                    <p class="text-sm text-gray-300 mb-4">
+                        <span class="font-semibold text-white">{{ __('media.public.presented_by') }}:</span> {{ $program['host'] }}
+                    </p>
+                @endif
+            </div>
 
-                    <div class="flex flex-wrap items-center gap-3 mb-4 text-sm text-gray-200">
-                        @if ($program['rating'] > 0)
-                            <span class="flex items-center gap-1 text-yellow-400 font-semibold">
-                                <i data-lucide="star" class="w-4 h-4"></i>{{ number_format($program['rating'], 1) }}
-                            </span>
-                        @endif
-                        @if ($program['year'])<span>{{ $program['year'] }}</span>@endif
-                        <span class="px-2.5 py-0.5 border border-gray-400/60 rounded text-xs">{{ $program['maturity_label'] }}</span>
-                        <span>{{ __('media.public.episodes_count', ['count' => $program['episodes_count']]) }}</span>
-                        <span class="flex items-center gap-1">
-                            <i data-lucide="eye" class="w-4 h-4"></i>{{ number_format($program['views_count']) }} {{ __('media.public.views') }}
-                        </span>
-                    </div>
+            {{-- Shahid action row: white pill CTA + circular glass buttons --}}
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-2 border-t border-white/10 pt-5">
+                @if (! empty($episodes))
+                    <a href="{{ $episodes[0]['url'] }}"
+                       {{-- bg-[#ffffff] (not bg-white): app.css force-darkens .bg-white in dark mode --}}
+                       class="inline-flex items-center justify-center gap-2 bg-[#ffffff] text-gray-900 font-bold px-10 py-3.5 rounded-full shadow-2xl hover:bg-gray-100 hover:scale-[1.03] motion-reduce:transform-none transition-all duration-300">
+                        <i data-lucide="play" class="w-5 h-5"></i>{{ __('media.public.watch_now') }}
+                    </a>
+                @endif
 
-                    @if ($program['host'])
-                        <p class="text-sm text-gray-300 mb-3">
-                            <span class="font-semibold text-white">{{ __('media.public.presented_by') }}:</span> {{ $program['host'] }}
-                        </p>
-                    @endif
-
-                    @if ($program['description'])
-                        <p class="text-sm md:text-base text-gray-200 leading-relaxed max-w-3xl line-clamp-2 md:line-clamp-3 break-words mb-6">{{ strip_tags((string) $program['description']) }}</p>
-                    @endif
-
-                    <div class="flex flex-wrap items-center gap-3">
-                        @if (! empty($episodes))
-                            <a href="{{ $episodes[0]['url'] }}"
-                               {{-- bg-[#ffffff] (not bg-white): app.css force-darkens .bg-white in dark mode --}}
-                               class="inline-flex items-center gap-2 bg-[#ffffff] text-gray-900 font-bold px-7 py-3.5 rounded-full shadow-2xl hover:bg-gray-100 hover:scale-105 motion-reduce:transform-none transition-all duration-300">
-                                <i data-lucide="play" class="w-5 h-5"></i>{{ __('media.public.watch_now') }}
-                            </a>
-                        @endif
-
+                <div class="flex items-center justify-center gap-5 sm:gap-3">
+                    <span class="inline-flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2">
                         <button type="button" @click="toggleSave()" :aria-pressed="saved ? 'true' : 'false'"
                                 :disabled="savePending"
                                 :title="isAuthenticated ? '' : @js(__('media.public.login_to_save'))"
-                                class="inline-flex items-center gap-2 glass !bg-white/10 text-white font-bold px-7 py-3.5 rounded-full hover:bg-white/20 transition-all duration-300 disabled:opacity-60">
+                                class="w-12 h-12 rounded-full glass !bg-white/10 text-white flex items-center justify-center hover:bg-white/20 hover:scale-105 motion-reduce:transform-none transition-all duration-300 disabled:opacity-60">
                             <i data-lucide="loader-2" class="w-5 h-5 animate-spin" x-show="savePending" x-cloak></i>
                             <i data-lucide="plus" class="w-5 h-5" x-show="!savePending && !saved"></i>
                             <i data-lucide="check" class="w-5 h-5 text-[#64CCC5]" x-show="!savePending && saved" x-cloak></i>
-                            <span x-text="saved ? @js(__('media.public.in_my_list')) : @js(__('media.public.my_list'))"></span>
                         </button>
+                        <span class="text-xs sm:text-sm text-white/90" x-text="saved ? @js(__('media.public.in_my_list')) : @js(__('media.public.my_list'))"></span>
+                    </span>
 
+                    <span class="inline-flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2">
                         <button type="button" @click="share()"
-                                class="inline-flex items-center gap-2 glass !bg-white/10 text-white font-bold px-5 py-3.5 rounded-full hover:bg-white/20 transition-all duration-300">
+                                class="w-12 h-12 rounded-full glass !bg-white/10 text-white flex items-center justify-center hover:bg-white/20 hover:scale-105 motion-reduce:transform-none transition-all duration-300">
                             <i data-lucide="share-2" class="w-5 h-5"></i>
-                            <span x-text="shareCopied ? @js(__('media.public.link_copied')) : @js(__('media.public.share'))"></span>
                         </button>
-                    </div>
+                        <span class="text-xs sm:text-sm text-white/90" x-text="shareCopied ? @js(__('media.public.link_copied')) : @js(__('media.public.share'))"></span>
+                    </span>
                 </div>
             </div>
         </div>
     </section>
 
     {{-- ============================================================ --}}
-    {{-- EPISODES — season selector + responsive grid                 --}}
+    {{-- TABS — Shahid: episodes (N) / more info, season filter       --}}
     {{-- ============================================================ --}}
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-            <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                <span class="w-1 h-8 bg-gradient-to-b from-[#0056b3] to-[#218838] rounded-full" aria-hidden="true"></span>
-                <i data-lucide="list-video" class="w-6 h-6 text-[#0056b3] dark:text-[#64CCC5]" aria-hidden="true"></i>
-                {{ __('media.public.episodes_title') }}
-            </h2>
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="border-b border-gray-200 dark:border-white/10 mb-6">
+            <div class="flex items-center gap-6 overflow-x-auto scrollbar-hide" role="tablist" aria-label="{{ $program['title'] }}">
+                <button type="button" role="tab" @click="activeTab = 'episodes'"
+                        :aria-selected="activeTab === 'episodes' ? 'true' : 'false'"
+                        :class="activeTab === 'episodes' ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
+                        class="relative pb-3 text-sm sm:text-base font-bold whitespace-nowrap transition-colors">
+                    {{ __('media.public.episodes_title') }} ({{ $program['episodes_count'] }})
+                    <span x-show="activeTab === 'episodes'" class="absolute bottom-0 inset-x-0 h-0.5 rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838]"></span>
+                </button>
+                <button type="button" role="tab" @click="activeTab = 'about'"
+                        :aria-selected="activeTab === 'about' ? 'true' : 'false'"
+                        :class="activeTab === 'about' ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
+                        class="relative pb-3 text-sm sm:text-base font-bold whitespace-nowrap transition-colors">
+                    {{ __('media.public.about_program') }}
+                    <span x-show="activeTab === 'about'" class="absolute bottom-0 inset-x-0 h-0.5 rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838]"></span>
+                </button>
 
-            @if (count($seasons) > 1)
-                <div class="flex items-center gap-2 overflow-x-auto scrollbar-hide" role="tablist" aria-label="{{ __('media.public.episodes_title') }}">
-                    @foreach ($seasons as $season)
-                        <button type="button" role="tab"
-                                @click="activeSeason = {{ $season }}"
-                                :aria-selected="activeSeason === {{ $season }} ? 'true' : 'false'"
-                                :class="activeSeason === {{ $season }}
-                                    ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg'
-                                    : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100 dark:bg-gray-900 dark:text-gray-300 dark:border-gray-800 dark:hover:text-white'"
-                                class="whitespace-nowrap shrink-0 px-5 py-2 rounded-full text-sm font-semibold transition-all">
-                            {{ __('media.public.season_label', ['number' => $season]) }}
-                        </button>
+                @if (count($seasons) > 1)
+                    <div class="ms-auto flex items-center gap-2 pb-2" role="tablist" aria-label="{{ __('media.public.episodes_title') }}">
+                        @foreach ($seasons as $season)
+                            <button type="button" role="tab"
+                                    @click="activeSeason = {{ $season }}"
+                                    :aria-selected="activeSeason === {{ $season }} ? 'true' : 'false'"
+                                    :class="activeSeason === {{ $season }}
+                                        ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow'
+                                        : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100 dark:bg-white/10 dark:text-gray-200 dark:border-transparent dark:hover:bg-white/20'"
+                                    class="whitespace-nowrap shrink-0 px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-colors">
+                                {{ __('media.public.season_label', ['number' => $season]) }}
+                            </button>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        {{-- ============================================================ --}}
+        {{-- EPISODES TAB — Shahid grid: in-card label + duration         --}}
+        {{-- ============================================================ --}}
+        <div x-show="activeTab === 'episodes'" role="tabpanel">
+            @if (empty($episodes))
+                <div class="rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40">
+                    <x-site.empty-state icon="list-video"
+                        :title="__('media.public.no_episodes_title')"
+                        :message="__('media.public.no_episodes_message')" class="py-12" />
+                </div>
+            @else
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-x-3 gap-y-5">
+                    @foreach ($episodes as $episode)
+                        <div @if (count($seasons) > 1) x-show="activeSeason === {{ $episode['season'] }}" @endif>
+                            <a href="{{ $episode['url'] }}"
+                               class="group relative block aspect-video rounded-xl overflow-hidden bg-gradient-to-br {{ $program['gradient'] }} shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#64CCC5]">
+                                @if ($episode['thumbnail'])
+                                    <img src="{{ $episode['thumbnail'] }}" alt="" loading="lazy"
+                                         class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 motion-reduce:transform-none transition-transform duration-500">
+                                @else
+                                    <div class="absolute inset-0 flex items-center justify-center opacity-30" aria-hidden="true">
+                                        <i data-lucide="{{ $episode['has_video'] ? 'monitor-play' : 'video-off' }}" class="w-9 h-9 text-white"></i>
+                                    </div>
+                                @endif
+
+                                {{-- Bottom scrim, episode label (start) + duration (end) — Shahid --}}
+                                <div class="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/85 via-black/30 to-transparent" aria-hidden="true"></div>
+                                <span class="absolute bottom-2.5 start-3 text-white font-bold text-base sm:text-lg">
+                                    {{ __('media.public.episode_label', ['number' => $episode['number']]) }}
+                                </span>
+                                @if ($episode['duration'])
+                                    {{-- dir=ltr must be on an inner element: inset-inline-end resolves
+                                         against the element's own direction, which would flip end-3 in RTL --}}
+                                    <span class="absolute bottom-3 end-3 text-white/90 text-xs font-medium"><span dir="ltr">{{ $episode['duration'] }}</span></span>
+                                @endif
+
+                                @unless ($episode['has_video'])
+                                    <span class="absolute top-2.5 start-3 glass !bg-black/60 text-white text-[11px] font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1">
+                                        <i data-lucide="video-off" class="w-3 h-3"></i>{{ __('media.public.video_unavailable_title') }}
+                                    </span>
+                                @endunless
+
+                                {{-- Hover play overlay --}}
+                                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-300 flex items-center justify-center motion-reduce:transition-none">
+                                    <span class="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-xl">
+                                        <i data-lucide="play" class="w-6 h-6 text-gray-900 ms-0.5"></i>
+                                    </span>
+                                </div>
+                            </a>
+
+                            @if ($episode['title'])
+                                <p class="mt-2 text-center text-xs sm:text-sm text-gray-600 dark:text-gray-300 line-clamp-1 break-words">{{ $episode['title'] }}</p>
+                            @endif
+                        </div>
                     @endforeach
                 </div>
             @endif
         </div>
 
-        @if (empty($episodes))
-            <div class="rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40">
-                <x-site.empty-state icon="list-video"
-                    :title="__('media.public.no_episodes_title')"
-                    :message="__('media.public.no_episodes_message')" class="py-12" />
-            </div>
-        @else
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
-                @foreach ($episodes as $episode)
-                    <a href="{{ $episode['url'] }}"
-                       @if (count($seasons) > 1) x-show="activeSeason === {{ $episode['season'] }}" @endif
-                       class="premium-card group block rounded-2xl overflow-hidden shadow-lg bg-white dark:bg-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#64CCC5]">
-                        <div class="relative aspect-video bg-gradient-to-br {{ $program['gradient'] }}">
-                            @if ($episode['thumbnail'])
-                                <img src="{{ $episode['thumbnail'] }}" alt="" loading="lazy"
-                                     class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 motion-reduce:transform-none transition-transform duration-500">
-                            @else
-                                <div class="absolute inset-0 flex items-center justify-center opacity-30" aria-hidden="true">
-                                    <i data-lucide="{{ $episode['has_video'] ? 'monitor-play' : 'video-off' }}" class="w-9 h-9 text-white"></i>
-                                </div>
-                            @endif
-
-                            <span class="absolute top-2 start-2 glass !bg-black/50 text-white text-[11px] font-bold px-2.5 py-1 rounded-full">
-                                {{ __('media.public.episode_label', ['number' => $episode['number']]) }}
-                            </span>
-
-                            @if ($episode['duration'])
-                                <span class="absolute bottom-2 end-2 bg-black/80 text-white text-[11px] px-2 py-0.5 rounded">{{ $episode['duration'] }}</span>
-                            @endif
-
-                            <div class="card-overlay absolute inset-0 bg-black/45 opacity-0 transition-opacity duration-300 flex items-center justify-center motion-reduce:transition-none">
-                                <span class="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-xl">
-                                    <i data-lucide="play" class="w-6 h-6 text-gray-900 ms-0.5"></i>
-                                </span>
-                            </div>
-                        </div>
-
-                        <div class="p-4">
-                            <h3 class="text-sm sm:text-base font-bold text-gray-900 dark:text-white line-clamp-2 break-words group-hover:text-[#0056b3] dark:group-hover:text-[#64CCC5] transition-colors">
-                                {{ $episode['title'] }}
-                            </h3>
-                            @unless ($episode['has_video'])
-                                <span class="inline-flex items-center gap-1 mt-2 text-[11px] text-gray-500 dark:text-gray-300">
-                                    <i data-lucide="video-off" class="w-3.5 h-3.5"></i>{{ __('media.public.video_unavailable_title') }}
-                                </span>
-                            @endunless
-                        </div>
-                    </a>
-                @endforeach
-            </div>
-        @endif
-
         {{-- ============================================================ --}}
-        {{-- ABOUT                                                        --}}
+        {{-- ABOUT TAB                                                    --}}
         {{-- ============================================================ --}}
-        @if ($program['description'] || $program['host'])
-            <div class="mt-10 rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm p-6">
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                    <i data-lucide="info" class="w-5 h-5 text-[#0056b3] dark:text-[#64CCC5]"></i>
-                    {{ __('media.public.about_program') }}
-                </h3>
+        <div x-show="activeTab === 'about'" x-cloak role="tabpanel">
+            <div class="rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm p-6 max-w-3xl">
                 @if ($program['description'])
                     {{-- Admin WYSIWYG content (trusted, same convention as articles) --}}
-                    <div class="text-sm leading-relaxed text-gray-600 dark:text-gray-300 break-words mb-3 prose prose-sm dark:prose-invert max-w-none">{!! $program['description'] !!}</div>
+                    <div class="text-sm leading-relaxed text-gray-600 dark:text-gray-300 break-words mb-4 prose prose-sm dark:prose-invert max-w-none">{!! $program['description'] !!}</div>
                 @endif
                 @if ($program['host'])
-                    <p class="text-sm text-gray-600 dark:text-gray-300">
+                    <p class="text-sm text-gray-600 dark:text-gray-300 mb-2">
                         <span class="font-semibold text-gray-900 dark:text-white">{{ __('media.public.presented_by') }}:</span> {{ $program['host'] }}
                     </p>
                 @endif
+                <p class="text-sm text-gray-600 dark:text-gray-300">
+                    <span class="font-semibold text-gray-900 dark:text-white">{{ $program['category_label'] }}</span>
+                    @if ($program['year']) · {{ $program['year'] }}@endif
+                    · {{ __('media.public.episodes_count', ['count' => $program['episodes_count']]) }}
+                </p>
             </div>
-        @endif
+        </div>
     </div>
 </div>
 
@@ -254,6 +248,7 @@
             saved: @json($programIsSaved ?? false),
             savePending: false,
             shareCopied: false,
+            activeTab: 'episodes',
             activeSeason: {{ (int) ($seasons[0] ?? 1) }},
 
             // Saves the program to the visitor's bookmarks (My List).

@@ -12,6 +12,7 @@ use App\Domain\Shared\Services\BaseService;
 use App\Exceptions\Domain\ResourceNotFoundException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection as SupportCollection;
 
 class MediaProgramService extends BaseService
 {
@@ -61,6 +62,18 @@ class MediaProgramService extends BaseService
     public function getByCategory(string $category, int $limit = 12): Collection
     {
         return $this->repository->getByCategory($category, $limit);
+    }
+
+    /**
+     * Published programs across all given categories in a single query,
+     * grouped by category value (each capped at {$perCategory}).
+     *
+     * @param  list<string>  $categoryKeys
+     * @return SupportCollection<string, Collection<int, MediaProgram>>
+     */
+    public function getProgramsGroupedByCategories(array $categoryKeys, int $perCategory = 12): SupportCollection
+    {
+        return $this->repository->getPublishedGroupedByCategories($categoryKeys, $perCategory);
     }
 
     public function search(string $term, int $perPage = 15, bool $publishedOnly = false): LengthAwarePaginator
