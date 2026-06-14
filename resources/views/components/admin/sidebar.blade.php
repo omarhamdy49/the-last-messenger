@@ -175,7 +175,7 @@
             <div>
                 <button @click="toggleSubmenu('media')"
                         :class="openSubmenu === 'media' ||
-                                ['media-programs','media-episodes','media-categories','media-library'].includes(activeMenu) ?
+                                ['media-programs','media-episodes','media-categories','media-library','live-channels'].includes(activeMenu) ?
                             'bg-gradient-primary text-white shadow-lg' :
                             (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
                         class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
@@ -226,6 +226,15 @@
                        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
                         <i data-lucide="film" class="w-4 h-4"></i>
                         <span>{{ __('admin.episodes') }}</span>
+                    </a>
+                    <a href="{{ route('admin.live-channels.index') }}"
+                       @click="activeMenu = 'live-channels'"
+                       :class="isActive('live-channels') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="radio" class="w-4 h-4"></i>
+                        <span>{{ __('admin.live_channels') }}</span>
                     </a>
                 </div>
             </div>

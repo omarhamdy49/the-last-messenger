@@ -8,6 +8,15 @@ return [
     ],
     // Public "coming soon" programs page
     'public' => [
+        // Live channels
+        'live_channels' => 'Chaînes en direct',
+        'live_now' => 'En direct',
+        'watch_live' => 'Regarder en direct',
+        'related_channels' => 'Chaînes susceptibles de vous plaire',
+        'no_live_channels' => 'Aucune chaîne en direct disponible pour le moment.',
+        'live_status_live' => 'En direct',
+        'live_status_scheduled' => 'Programmé',
+        'live_status_offline' => 'Hors ligne',
         'page_title' => 'Programmes et Vidéos',
         'page_description' => 'Programmes visuels, documentaires et conférences sur la biographie prophétique, le Coran et le Hadith — bientôt disponibles.',
         'hero_kicker' => 'Section Vidéo',

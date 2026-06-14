@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Site;
 
 use App\Domain\Media\Enums\ProgramCategory;
+use App\Domain\Media\Models\LiveChannel;
 use App\Domain\Media\Models\MediaEpisode;
 use App\Domain\Media\Models\MediaProgram;
+use App\Domain\Media\Services\LiveChannelService;
 use App\Domain\Media\Services\MediaEpisodeService;
 use App\Domain\Media\Services\MediaProgramService;
 use App\Domain\Shared\Enums\FavorableType;
@@ -38,6 +40,7 @@ final class MediaController extends Controller
     public function __construct(
         private readonly MediaProgramService $programService,
         private readonly MediaEpisodeService $episodeService,
+        private readonly LiveChannelService $liveChannelService,
         private readonly InteractionService $interactionService,
         private readonly FavoriteService $favoriteService,
     ) {}
@@ -66,16 +69,25 @@ final class MediaController extends Controller
                 ->map(fn (MediaProgram $program): array => $this->mapProgramCard($program))
                 ->values()->all();
 
+            $liveChannels = $this->liveChannelService->getPublishedForRow(12)
+                ->map(fn (LiveChannel $channel): array => $this->mapLiveCard($channel))
+                ->values()->all();
+
             // Only categories flagged is_featured (admin-managed) load on the list.
             $featuredCategoryKeys = $this->programService->getFeaturedCategoryKeys();
+
+            // One query for every featured category's programs, grouped in PHP —
+            // no per-category N+1. Iterate the featured keys to preserve the
+            // admin-defined category order; skip categories with no programs.
+            $groupedPrograms = $this->programService->getProgramsGroupedByCategories($featuredCategoryKeys, 12);
 
             $categoryRows = [];
             foreach ($featuredCategoryKeys as $categoryKey) {
                 if (ProgramCategory::tryFrom($categoryKey) === null) {
                     continue;
                 }
-                $programs = $this->programService->getByCategory($categoryKey, 12);
-                if ($programs->isEmpty()) {
+                $programs = $groupedPrograms->get($categoryKey);
+                if ($programs === null || $programs->isEmpty()) {
                     continue;
                 }
                 $categoryRows[$categoryKey] = [
@@ -91,6 +103,7 @@ final class MediaController extends Controller
             $featured = [];
             $trending = [];
             $popular = [];
+            $liveChannels = [];
             $categoryRows = [];
         }
 
@@ -99,9 +112,9 @@ final class MediaController extends Controller
             'featured' => $featured,
             'trending' => $trending,
             'popular' => $popular,
+            'liveChannels' => $liveChannels,
             'categoryRows' => $categoryRows,
             'continueWatching' => $this->resolveContinueWatching($request),
-            'categories' => $this->categoryPills(array_keys($categoryRows)),
             'myListIds' => $this->resolveFavoritedProgramIds($request),
         ]);
     }
@@ -164,6 +177,27 @@ final class MediaController extends Controller
                 ->reject(fn (MediaEpisode $other): bool => $other->id === $episode->id)
                 ->map(fn (MediaEpisode $other): array => $this->mapEpisodeCard($other, $program->slug))
                 ->values()->all(),
+        ]);
+    }
+
+    /**
+     * Live channel page — player + info + related channels (no chat).
+     */
+    public function live(Request $request, string $slug): View
+    {
+        try {
+            $channel = $this->liveChannelService->getPublishedBySlug($slug);
+        } catch (Throwable) {
+            abort(404);
+        }
+
+        $related = $this->liveChannelService->getRelated($channel->id, 6)
+            ->map(fn (LiveChannel $other): array => $this->mapLiveCard($other))
+            ->values()->all();
+
+        return view('public.media.live', [
+            'channel' => $this->mapLiveDetail($channel),
+            'related' => $related,
         ]);
     }
 
@@ -249,6 +283,62 @@ final class MediaController extends Controller
         $card['seo_keywords'] = $episode->trans('seo_keywords');
 
         return $card;
+    }
+
+    /**
+     * Live channel card (row + related list).
+     *
+     * @return array<string, mixed>
+     */
+    private function mapLiveCard(LiveChannel $channel): array
+    {
+        return [
+            'id' => (int) $channel->id,
+            'slug' => $channel->slug,
+            'title' => (string) ($channel->trans('title') ?? $channel->slug),
+            'status' => $channel->status->value,
+            'is_live' => $channel->isLive(),
+            'thumbnail' => $channel->thumbnail_url ?? $this->youtubeThumbnail($channel->streaming_url),
+            'views_count' => (int) $channel->views_count,
+            'url' => route('public.media.live', $channel->slug),
+        ];
+    }
+
+    /**
+     * Live channel detail for the single page.
+     *
+     * @return array<string, mixed>
+     */
+    private function mapLiveDetail(LiveChannel $channel): array
+    {
+        $card = $this->mapLiveCard($channel);
+        $card['description'] = $channel->trans('description');
+        $card['streaming_url'] = $channel->streaming_url;
+        $card['embed_url'] = $this->liveEmbedUrl($channel->streaming_url);
+
+        return $card;
+    }
+
+    /**
+     * Normalize a stream URL to an embeddable form. A bare YouTube watch/short
+     * link becomes an /embed/ URL; anything already embeddable passes through.
+     */
+    private function liveEmbedUrl(?string $url): ?string
+    {
+        if ($url === null || trim($url) === '') {
+            return null;
+        }
+
+        $videoId = $this->youtubeVideoId($url);
+        if ($videoId !== null) {
+            return "https://www.youtube.com/embed/{$videoId}";
+        }
+
+        if (preg_match('#(?:youtube\.com/watch\?v=|youtu\.be/)([A-Za-z0-9_-]{11})#', $url, $m) === 1) {
+            return "https://www.youtube.com/embed/{$m[1]}";
+        }
+
+        return $url;
     }
 
     /**
@@ -407,23 +497,5 @@ final class MediaController extends Controller
         $videoId = $this->youtubeVideoId($videoUrl);
 
         return $videoId !== null ? "https://img.youtube.com/vi/{$videoId}/hqdefault.jpg" : null;
-    }
-
-    /**
-     * Category filter pills: "All" plus one pill per category row that loaded
-     * (featured categories with at least one program).
-     *
-     * @param  list<string>  $categoryKeys
-     * @return array<int, array<string, string>>
-     */
-    private function categoryPills(array $categoryKeys): array
-    {
-        $pills = [['value' => 'all', 'label' => __('media.public.filter_all')]];
-
-        foreach ($categoryKeys as $key) {
-            $pills[] = ['value' => $key, 'label' => __('media.public.category_'.$key)];
-        }
-
-        return $pills;
     }
 }

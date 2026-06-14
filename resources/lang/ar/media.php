@@ -5,6 +5,15 @@ declare(strict_types=1);
 return [
     // Public "coming soon" programs page
     'public' => [
+        // Live channels
+        'live_channels' => 'القنوات المباشرة',
+        'live_now' => 'مباشر الآن',
+        'watch_live' => 'مشاهدة البث',
+        'related_channels' => 'قنوات قد تعجبك',
+        'no_live_channels' => 'لا توجد قنوات مباشرة متاحة حالياً.',
+        'live_status_live' => 'مباشر',
+        'live_status_scheduled' => 'مجدول',
+        'live_status_offline' => 'غير متصل',
         'page_title' => 'البرامج والمرئيات',
         'page_description' => 'برامج ووثائقيات ومحاضرات مرئية حول السيرة النبوية والقرآن والحديث — قريباً بإذن الله.',
         'hero_kicker' => 'قسم المرئيات',

@@ -5,6 +5,15 @@ declare(strict_types=1);
 return [
     // Public "coming soon" programs page
     'public' => [
+        // Live channels
+        'live_channels' => 'Live Channels',
+        'live_now' => 'Live now',
+        'watch_live' => 'Watch live',
+        'related_channels' => 'Channels you may like',
+        'no_live_channels' => 'No live channels available right now.',
+        'live_status_live' => 'Live',
+        'live_status_scheduled' => 'Scheduled',
+        'live_status_offline' => 'Offline',
         'page_title' => 'Programs & Videos',
         'page_description' => 'Visual programs, documentaries, and lectures on the Prophetic biography, Quran, and Hadith — coming soon.',
         'hero_kicker' => 'Video Section',

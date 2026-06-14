@@ -8,6 +8,15 @@ return [
     ],
     // Public "coming soon" programs page
     'public' => [
+        // Live channels
+        'live_channels' => 'لائیو چینلز',
+        'live_now' => 'ابھی لائیو',
+        'watch_live' => 'لائیو دیکھیں',
+        'related_channels' => 'چینلز جو آپ کو پسند آ سکتے ہیں',
+        'no_live_channels' => 'اس وقت کوئی لائیو چینل دستیاب نہیں۔',
+        'live_status_live' => 'لائیو',
+        'live_status_scheduled' => 'شیڈولڈ',
+        'live_status_offline' => 'آف لائن',
         'page_title' => 'پروگرامز اور ویڈیوز',
         'page_description' => 'سیرت، قرآن اور حدیث پر بصری پروگرامز، دستاویزی فلمیں اور لیکچرز — جلد آ رہے ہیں۔',
         'hero_kicker' => 'ویڈیو سیکشن',

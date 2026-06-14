@@ -45,6 +45,17 @@ final class MediaCacheKeys
         return "media_programs_row_{$category}_{$limit}";
     }
 
+    /**
+     * Grouped category rows fetched in a single query. The key folds in the
+     * exact category set + per-row cap so it busts when either changes.
+     *
+     * @param  list<string>  $categoryKeys
+     */
+    public static function programsGroupedByCategories(array $categoryKeys, int $perCategory): string
+    {
+        return 'media_programs_grouped_'.md5(implode(',', $categoryKeys))."_{$perCategory}";
+    }
+
     public static function episodeByProgramAndNumber(int $programId, int $season, int $number): string
     {
         return "media_episode_{$programId}_s{$season}_e{$number}";
@@ -58,6 +69,16 @@ final class MediaCacheKeys
     public static function featuredCategoryKeys(): string
     {
         return 'media_featured_category_keys';
+    }
+
+    public static function liveChannelsRow(int $limit): string
+    {
+        return "media_live_channels_row_{$limit}";
+    }
+
+    public static function liveChannelBySlug(string $slug): string
+    {
+        return "media_live_channel_{$slug}";
     }
 
     public static function stats(): string

@@ -8,6 +8,15 @@ return [
     ],
     // Public "coming soon" programs page
     'public' => [
+        // Live channels
+        'live_channels' => 'Canlı Kanallar',
+        'live_now' => 'Şimdi canlı',
+        'watch_live' => 'Canlı izle',
+        'related_channels' => 'Beğenebileceğiniz kanallar',
+        'no_live_channels' => 'Şu anda canlı kanal yok.',
+        'live_status_live' => 'Canlı',
+        'live_status_scheduled' => 'Planlandı',
+        'live_status_offline' => 'Çevrimdışı',
         'page_title' => 'Programlar ve Videolar',
         'page_description' => 'Siyer, Kuran ve Hadis üzerine görsel programlar, belgeseller ve dersler — yakında.',
         'hero_kicker' => 'Video Bölümü',

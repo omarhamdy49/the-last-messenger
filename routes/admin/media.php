@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Admin\Media\LiveChannelController;
 use App\Http\Controllers\Admin\Media\MediaCategoryController;
 use App\Http\Controllers\Admin\Media\MediaEpisodeController;
 use App\Http\Controllers\Admin\Media\MediaProgramController;
@@ -45,4 +46,16 @@ Route::resource('media-episodes', MediaEpisodeController::class)->names([
     'edit' => 'admin.media-episodes.edit',
     'update' => 'admin.media-episodes.update',
     'destroy' => 'admin.media-episodes.destroy',
+]);
+
+// Live Channels
+Route::post('live-channels/bulk-delete', [LiveChannelController::class, 'bulkDelete'])->name('admin.live-channels.bulk-delete');
+Route::resource('live-channels', LiveChannelController::class)->names([
+    'index' => 'admin.live-channels.index',
+    'create' => 'admin.live-channels.create',
+    'store' => 'admin.live-channels.store',
+    'show' => 'admin.live-channels.show',
+    'edit' => 'admin.live-channels.edit',
+    'update' => 'admin.live-channels.update',
+    'destroy' => 'admin.live-channels.destroy',
 ]);
