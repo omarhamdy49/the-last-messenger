@@ -84,10 +84,15 @@ class SetLocale
             }
         }
 
-        // 3. Check Accept-Language header
-        $headerLocale = $this->getLocaleFromHeader($request);
-        if ($this->isValidLocale($headerLocale)) {
-            return $headerLocale;
+        // 3. Accept-Language header — ONLY for API clients doing content
+        //    negotiation. The public site is Arabic-first: a browser sending
+        //    "en" must never override the Arabic default. Visitors change
+        //    language explicitly (stored in the session, handled above).
+        if ($request->is('api/*')) {
+            $headerLocale = $this->getLocaleFromHeader($request);
+            if ($this->isValidLocale($headerLocale)) {
+                return $headerLocale;
+            }
         }
 
         // 4. Use default locale (check cache first for admin-configured default)
