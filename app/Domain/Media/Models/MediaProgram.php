@@ -45,6 +45,7 @@ class MediaProgram extends Model implements HasMedia
 
     protected $fillable = [
         'slug',
+        'youtube_playlist_id',
         'category',
         'maturity_rating',
         'year',

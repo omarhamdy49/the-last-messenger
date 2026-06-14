@@ -16,6 +16,24 @@
         </h1>
     </div>
     <div class="flex flex-wrap items-center gap-3">
+        @if($episode->video_url)
+        {{-- Sync this episode's data from its YouTube video (synchronous) --}}
+        <form method="POST" action="{{ route('admin.media-episodes.youtube.sync', $episode->id) }}"
+              x-data="{ busy: false }"
+              @submit="if (!confirm(@js(__('admin.yt_confirm_episode_sync')))) { $event.preventDefault(); return; } busy = true;">
+            @csrf
+            <button type="submit" :disabled="busy" title="{{ __('admin.yt_sync_hint') }}"
+                    class="px-5 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 border disabled:opacity-60 disabled:cursor-wait"
+                    :class="darkMode ? 'border-gray-700 text-gray-200 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'">
+                <i data-lucide="youtube" class="w-4 h-4 text-red-600" x-show="!busy"></i>
+                <svg x-show="busy" x-cloak class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+                <span x-text="busy ? @js(__('admin.yt_importing')) : @js(__('admin.sync_from_youtube'))"></span>
+            </button>
+        </form>
+        @endif
         <a href="{{ route('admin.media-episodes.edit', $episode->id) }}"
            class="px-6 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 shadow-lg bg-gradient-to-r from-[#0056b3] to-[#218838] text-white">
             <i data-lucide="pencil" class="w-4 h-4"></i>

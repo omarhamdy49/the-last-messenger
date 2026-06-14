@@ -10,6 +10,7 @@ use App\Domain\Media\Repositories\MediaEpisodeRepository;
 use App\Domain\Media\Repositories\MediaEpisodeRepositoryInterface;
 use App\Domain\Media\Repositories\MediaProgramRepository;
 use App\Domain\Media\Repositories\MediaProgramRepositoryInterface;
+use App\Domain\Media\Support\YouTubeClient;
 use Illuminate\Support\ServiceProvider;
 
 class MediaServiceProvider extends ServiceProvider
@@ -30,5 +31,12 @@ class MediaServiceProvider extends ServiceProvider
             LiveChannelRepositoryInterface::class,
             LiveChannelRepository::class
         );
+
+        // yt-dlp adapter — config-driven, swappable with a fake in tests.
+        $this->app->singleton(YouTubeClient::class, static fn (): YouTubeClient => new YouTubeClient(
+            binary: (string) config('youtube.yt_dlp_path', 'yt-dlp'),
+            timeout: (int) config('youtube.process_timeout', 600),
+            subtitleLanguages: (array) config('youtube.subtitle_languages', ['ar', 'en']),
+        ));
     }
 }

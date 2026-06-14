@@ -8,6 +8,7 @@ use App\Domain\Media\DTOs\CreateMediaEpisodeData;
 use App\Domain\Media\DTOs\UpdateMediaEpisodeData;
 use App\Domain\Media\Services\MediaEpisodeService;
 use App\Domain\Media\Services\MediaProgramService;
+use App\Domain\Media\Services\YouTubeSyncService;
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\MediaProgram\StoreMediaEpisodeRequest;
@@ -225,6 +226,33 @@ class MediaEpisodeController extends Controller
 
         return redirect()->route('admin.media-episodes.show', $id)
             ->with('success', __('admin.episode_updated'));
+    }
+
+    /**
+     * POST /su/portal/v1/admin/media-episodes/{id}/youtube/sync
+     * Refresh this episode's title/description/transcript/duration/thumbnail
+     * from its YouTube video. Synchronous — a single video is quick.
+     */
+    public function syncYoutube(YouTubeSyncService $service, int $id): RedirectResponse
+    {
+        $episode = $this->episodeService->find($id);
+
+        if (! $episode) {
+            abort(404, 'Episode not found');
+        }
+
+        @set_time_limit(0);
+
+        try {
+            $service->syncEpisode($episode);
+            $this->logger->logUpdate($episode, [], ['youtube_sync' => 'applied'], request()->user());
+
+            return redirect()->route('admin.media-episodes.show', $id)
+                ->with('success', __('admin.yt_episode_synced'));
+        } catch (\Throwable $e) {
+            return redirect()->route('admin.media-episodes.show', $id)
+                ->with('error', __('admin.yt_sync_failed').': '.$e->getMessage());
+        }
     }
 
     /**

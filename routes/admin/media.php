@@ -15,7 +15,12 @@ Route::prefix('media-programs')->group(function (): void {
     Route::post('/{media_program}/images', [MediaProgramController::class, 'updateImages'])->name('admin.media-programs.images');
     Route::post('/{media_program}/episodes/reorder', [MediaProgramController::class, 'reorderEpisodes'])->name('admin.media-programs.episodes.reorder');
     Route::post('/{media_program}/episodes/assign', [MediaProgramController::class, 'assignEpisodes'])->name('admin.media-programs.episodes.assign');
+    Route::post('/{media_program}/youtube/analyze', [MediaProgramController::class, 'analyzeYoutube'])->name('admin.media-programs.youtube.analyze');
+    Route::post('/{media_program}/youtube/sync', [MediaProgramController::class, 'syncYoutube'])->name('admin.media-programs.youtube.sync');
 });
+
+// Shared YouTube import progress poll (program + episode flows).
+Route::get('media/youtube/sync-status/{run}', [MediaProgramController::class, 'youtubeSyncStatus'])->name('admin.media.youtube.sync-status');
 Route::resource('media-programs', MediaProgramController::class)->names([
     'index' => 'admin.media-programs.index',
     'create' => 'admin.media-programs.create',
@@ -37,6 +42,7 @@ Route::delete('media-categories/{key}', [MediaCategoryController::class, 'destro
 Route::prefix('media-episodes')->group(function (): void {
     Route::post('/bulk-delete', [MediaEpisodeController::class, 'bulkDelete'])->name('admin.media-episodes.bulk-delete');
     Route::post('/{media_episode}/thumbnail', [MediaEpisodeController::class, 'updateThumbnail'])->name('admin.media-episodes.thumbnail');
+    Route::post('/{media_episode}/youtube/sync', [MediaEpisodeController::class, 'syncYoutube'])->name('admin.media-episodes.youtube.sync');
 });
 Route::resource('media-episodes', MediaEpisodeController::class)->names([
     'index' => 'admin.media-episodes.index',

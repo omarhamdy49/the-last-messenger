@@ -1,0 +1,117 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domain\Media\Models;
+
+use App\Domain\Media\Enums\YouTubeSyncStatus;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+/**
+ * Progress ledger for one queued playlist import. The job mutates it as it
+ * works; the admin modal polls it for a live progress bar.
+ *
+ * @property int $id
+ * @property int $program_id
+ * @property string $playlist_url
+ * @property YouTubeSyncStatus $status
+ * @property int $total
+ * @property int $processed
+ * @property int $created_count
+ * @property int $updated_count
+ * @property string|null $message
+ * @property string|null $error
+ * @property int|null $created_by
+ * @property \Carbon\Carbon|null $started_at
+ * @property \Carbon\Carbon|null $finished_at
+ */
+class YouTubeSyncRun extends Model
+{
+    use HasFactory;
+
+    protected $table = 'youtube_sync_runs';
+
+    protected $fillable = [
+        'program_id',
+        'playlist_url',
+        'status',
+        'total',
+        'processed',
+        'created_count',
+        'updated_count',
+        'message',
+        'error',
+        'created_by',
+        'started_at',
+        'finished_at',
+    ];
+
+    protected $casts = [
+        'program_id' => 'integer',
+        'status' => YouTubeSyncStatus::class,
+        'total' => 'integer',
+        'processed' => 'integer',
+        'created_count' => 'integer',
+        'updated_count' => 'integer',
+        'created_by' => 'integer',
+        'started_at' => 'datetime',
+        'finished_at' => 'datetime',
+    ];
+
+    public function program(): BelongsTo
+    {
+        return $this->belongsTo(MediaProgram::class, 'program_id');
+    }
+
+    public function progressPercent(): int
+    {
+        return $this->total > 0 ? (int) floor(min($this->processed, $this->total) / $this->total * 100) : 0;
+    }
+
+    // ------------------------------------------------------------------
+    // State transitions — kept here so the service reads as a workflow.
+    // ------------------------------------------------------------------
+
+    public function markRunning(int $total, ?string $message = null): void
+    {
+        $this->forceFill([
+            'status' => YouTubeSyncStatus::Running,
+            'total' => $total,
+            'message' => $message,
+            'started_at' => $this->started_at ?? now(),
+        ])->save();
+    }
+
+    public function recordItem(bool $created, string $message): void
+    {
+        $this->increment('processed');
+        $this->increment($created ? 'created_count' : 'updated_count');
+        $this->forceFill(['message' => $message])->save();
+    }
+
+    public function recordSkip(string $message): void
+    {
+        $this->increment('processed');
+        $this->forceFill(['message' => $message])->save();
+    }
+
+    public function markCompleted(?string $message = null): void
+    {
+        $this->forceFill([
+            'status' => YouTubeSyncStatus::Completed,
+            'message' => $message,
+            'finished_at' => now(),
+        ])->save();
+    }
+
+    public function markFailed(string $error): void
+    {
+        $this->forceFill([
+            'status' => YouTubeSyncStatus::Failed,
+            'error' => mb_substr($error, 0, 60000),
+            'finished_at' => now(),
+        ])->save();
+    }
+}

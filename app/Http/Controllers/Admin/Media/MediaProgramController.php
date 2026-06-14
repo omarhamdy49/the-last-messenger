@@ -7,13 +7,19 @@ namespace App\Http\Controllers\Admin\Media;
 use App\Domain\Media\DTOs\CreateMediaProgramData;
 use App\Domain\Media\DTOs\UpdateMediaProgramData;
 use App\Domain\Media\Enums\ProgramCategory;
+use App\Domain\Media\Enums\YouTubeSyncStatus;
+use App\Domain\Media\Models\YouTubeSyncRun;
 use App\Domain\Media\Services\MediaEpisodeService;
 use App\Domain\Media\Services\MediaProgramService;
+use App\Domain\Media\Services\YouTubeSyncService;
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Media\AnalyzeYoutubePlaylistRequest;
+use App\Http\Requests\Admin\Media\SyncYoutubePlaylistRequest;
 use App\Http\Requests\Admin\MediaProgram\StoreMediaProgramRequest;
 use App\Http\Requests\Admin\MediaProgram\UpdateMediaProgramImagesRequest;
 use App\Http\Requests\Admin\MediaProgram\UpdateMediaProgramRequest;
+use App\Jobs\SyncYouTubePlaylistJob;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -287,6 +293,84 @@ class MediaProgramController extends Controller
         $assigned = $episodeService->assignEpisodes($id, $validated['episode_ids']);
 
         return response()->json(['success' => true, 'assigned' => $assigned]);
+    }
+
+    /**
+     * POST /su/portal/v1/admin/media-programs/{id}/youtube/analyze
+     * Read-only playlist preview for the import modal (runs yt-dlp inline).
+     */
+    public function analyzeYoutube(AnalyzeYoutubePlaylistRequest $request, YouTubeSyncService $service, int $id): JsonResponse
+    {
+        if (! $this->programService->find($id)) {
+            return response()->json(['success' => false, 'message' => __('admin.not_found')], 404);
+        }
+
+        @set_time_limit(0);
+
+        try {
+            return response()->json([
+                'success' => true,
+                'data' => $service->analyzePlaylist($request->validated()['playlist_url']),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * POST /su/portal/v1/admin/media-programs/{id}/youtube/sync
+     * Create a sync run + dispatch the background import job.
+     */
+    public function syncYoutube(SyncYoutubePlaylistRequest $request, int $id): JsonResponse
+    {
+        $program = $this->programService->find($id);
+
+        if (! $program) {
+            return response()->json(['success' => false, 'message' => __('admin.not_found')], 404);
+        }
+
+        $run = YouTubeSyncRun::create([
+            'program_id' => $program->id,
+            'playlist_url' => $request->validated()['playlist_url'],
+            'status' => YouTubeSyncStatus::Pending,
+            'created_by' => $request->user()?->id,
+        ]);
+
+        SyncYouTubePlaylistJob::dispatch($run->id);
+
+        return response()->json([
+            'success' => true,
+            'run_id' => $run->id,
+            'status_url' => route('admin.media.youtube.sync-status', $run->id),
+        ]);
+    }
+
+    /**
+     * GET /su/portal/v1/admin/media/youtube/sync-status/{run}
+     * Progress poll target for the import modal.
+     */
+    public function youtubeSyncStatus(int $runId): JsonResponse
+    {
+        $run = YouTubeSyncRun::find($runId);
+
+        if (! $run) {
+            return response()->json(['success' => false, 'message' => __('admin.not_found')], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'status' => $run->status->value,
+                'is_terminal' => $run->status->isTerminal(),
+                'total' => $run->total,
+                'processed' => $run->processed,
+                'created' => $run->created_count,
+                'updated' => $run->updated_count,
+                'percent' => $run->progressPercent(),
+                'message' => $run->message,
+                'error' => $run->error,
+            ],
+        ]);
     }
 
     /**
