@@ -26,7 +26,7 @@
 <div x-data="languageSettings()">
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <x-admin.stats-card
             icon="languages"
             title="إجمالي اللغات"

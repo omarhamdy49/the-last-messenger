@@ -176,7 +176,7 @@
 <div x-data="{ filtersOpen: false }">
 
     <!-- Stats Cards Row -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <x-admin.stats-card
             icon="file-text"
             title="Total Articles"

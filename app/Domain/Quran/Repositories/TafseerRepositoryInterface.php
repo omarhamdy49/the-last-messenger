@@ -22,6 +22,19 @@ interface TafseerRepositoryInterface extends RepositoryInterface
     public function paginateWithFilters(int $perPage, array $filters): LengthAwarePaginator;
 
     /**
+     * Active tafsir editions (resources) ordered for the reader's source selector.
+     *
+     * @return Collection<int, \App\Domain\Quran\Models\TafsirResource>
+     */
+    public function getActiveResources(): Collection;
+
+    /**
+     * One verse's tafsir text for a single edition, or null when absent.
+     * Loaded per-verse on demand (no whole-surah blob).
+     */
+    public function getVerseText(int $verseId, int $resourceId): ?string;
+
+    /**
      * Get tafseer by verse reference and source
      */
     public function getByVerseAndSource(string $verseReference, string $source): ?Model;

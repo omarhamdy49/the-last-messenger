@@ -6,14 +6,13 @@ namespace App\Http\Controllers\Site;
 
 use App\Domain\Quran\Application\Handlers\ListRevelationContextsHandler;
 use App\Domain\Quran\Application\Queries\ListRevelationContextsQuery;
-use App\Domain\Quran\Models\Recitation;
-use App\Domain\Quran\Models\TafsirResource;
-use App\Domain\Quran\Models\VerseTafsir;
 use App\Domain\Quran\Services\QuranQueryService;
+use App\Domain\Quran\Services\QuranReaderService;
 use App\Domain\Quran\Services\ReciterService;
 use App\Domain\Quran\Services\VerseAudioUrlResolver;
 use App\Http\Controllers\Controller;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Throwable;
@@ -22,6 +21,7 @@ final class QuranController extends Controller
 {
     public function __construct(
         private readonly QuranQueryService $quranQueryService,
+        private readonly QuranReaderService $quranReaderService,
         private readonly ReciterService $reciterService,
         private readonly VerseAudioUrlResolver $audioUrlResolver,
         private readonly ListRevelationContextsHandler $listRevelationContextsHandler,
@@ -91,22 +91,21 @@ final class QuranController extends Controller
                     withTranslations: true,
                 );
 
-                // Batch-load all tafsir sources for every verse (single query, no N+1).
-                $tafsirMap = $this->getTafsirsForVerses($allVerses->pluck('id')->all());
-
-                $versesData = $allVerses->map(function ($verse) use ($tafsirMap) {
+                // Tafsir and non-default translation editions are loaded lazily per
+                // selected edition (see surahTafsir / surahTranslation). The surah page
+                // inlines only the default translation per language — inlining every
+                // edition's full text for every verse bloats both the page payload and
+                // its cached entry, and exhausts memory on large surahs.
+                $versesData = $allVerses->map(function ($verse) use ($locale) {
                     return [
                         'id' => $verse->id,
                         'number' => $verse->verseNumber,
                         'verse_key' => $verse->verseKey,
                         'arabic' => $verse->textArabic,
                         'transliteration' => $this->cleanTransliteration($verse->translations['en-tl'] ?? null),
-                        'translation_ar' => $verse->translations['ar'] ?? null,
-                        'translation_en' => $verse->translations['en'] ?? null,
-                        'translation_fr' => $verse->translations['fr'] ?? null,
-                        'translation_tr' => $verse->translations['tr'] ?? null,
-                        'translation_ur' => $verse->translations['ur'] ?? null,
-                        'tafsirs' => (object) ($tafsirMap[$verse->id] ?? []),
+                        // The default translation (Saheeh International, English) is inlined;
+                        // any other edition loads lazily when selected (see surahTranslation).
+                        'translation' => $verse->translations['en'] ?? $verse->translations[$locale] ?? null,
                         'juz' => $verse->juzNumber,
                         'page' => $verse->pageNumber,
                         'has_sajdah' => $verse->hasSajdah(),
@@ -188,10 +187,25 @@ final class QuranController extends Controller
         $prevSurah = $surahNumber > 1 ? $surahNumber - 1 : null;
         $nextSurah = $surahNumber < 114 ? $surahNumber + 1 : null;
 
+        // The edition whose text is inlined per verse: Saheeh International (the
+        // default English edition). Other editions load lazily on selection.
+        $translationResources = $this->getTranslationResources($locale);
+        $defaultTranslationId = 0;
+        foreach ($translationResources as $resource) {
+            if ($resource['language'] === 'en' && $resource['is_default']) {
+                $defaultTranslationId = $resource['id'];
+                break;
+            }
+        }
+
         return view('public.quran.surah', array_merge($payload, [
             'reciters' => $reciters,
             'firstRecitationUrl' => $firstRecitationUrl,
             'tafsirResources' => $this->getTafsirResources($locale),
+            'translationResources' => $translationResources,
+            'currentLocale' => $locale,
+            'defaultTranslationLang' => 'en',
+            'defaultTranslationId' => $defaultTranslationId,
             'prevSurah' => $prevSurah,
             'nextSurah' => $nextSurah,
             'prevSurahName' => $this->surahDisplayName($prevSurah, $locale),
@@ -585,18 +599,7 @@ final class QuranController extends Controller
      */
     private function getSurahAudioUrls(int $surahNumber): array
     {
-        return Cache::remember("public_quran_surah_audio_urls_{$surahNumber}", 86400, function () use ($surahNumber): array {
-            try {
-                return Recitation::query()
-                    ->where('surah_id', $surahNumber)
-                    ->select(['reciter_id', 'audio_url'])
-                    ->get()
-                    ->pluck('audio_url', 'reciter_id')
-                    ->all();
-            } catch (Throwable) {
-                return [];
-            }
-        });
+        return $this->quranReaderService->getSurahAudioUrls($surahNumber);
     }
 
     /**
@@ -606,50 +609,44 @@ final class QuranController extends Controller
      */
     private function getTafsirResources(string $locale): array
     {
-        return Cache::remember("public_quran_tafsir_resources_{$locale}", 3600, function () use ($locale) {
-            try {
-                return TafsirResource::query()
-                    ->where('is_active', true)
-                    ->orderBy('display_order')
-                    ->orderBy('id')
-                    ->get(['id', 'slug', 'name', 'language'])
-                    ->map(fn ($r) => [
-                        'id' => $r->id,
-                        'name' => $r->getName($locale),
-                        'language' => $r->language,
-                    ])
-                    ->all();
-            } catch (Throwable) {
-                return [];
-            }
-        });
+        return $this->quranReaderService->getTafsirResources($locale);
     }
 
     /**
-     * Tafsir text for the given verses, grouped [verse_id => [resource_id => text]].
-     * Single query — avoids a per-verse N+1 across the page.
-     *
-     * @param  array<int, int>  $verseIds
-     * @return array<int, array<int, string>>
+     * Per-verse tafsir endpoint: one verse's text for one edition. The reader
+     * fetches this only when a verse's tafsir accordion is opened, so a verbose
+     * edition never ships a whole-surah blob.
      */
-    private function getTafsirsForVerses(array $verseIds): array
+    public function verseTafsir(int $verseId, int $resourceId): JsonResponse
     {
-        if ($verseIds === []) {
-            return [];
+        return response()->json(['text' => $this->quranReaderService->getVerseTafsir($verseId, $resourceId)]);
+    }
+
+    /**
+     * Active translation editions for the reader's translation selector.
+     * The Arabic source text (ar-uthmani) is excluded — it is the verse text,
+     * not a switchable translation.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function getTranslationResources(string $locale): array
+    {
+        return $this->quranReaderService->getTranslationResources($locale);
+    }
+
+    /**
+     * Lazy translation endpoint: one edition's text for a whole surah, grouped
+     * [verse_id => text]. The reader fetches this on demand only when a NON-default
+     * translation edition is selected; the default edition per language is inlined
+     * in the surah payload for an instant first render. This keeps the surah page
+     * (and its cached payload) from carrying every edition's full text.
+     */
+    public function surahTranslation(int $surahNumber, int $resourceId): JsonResponse
+    {
+        if ($surahNumber < 1 || $surahNumber > 114) {
+            abort(404);
         }
 
-        $map = [];
-        VerseTafsir::query()
-            ->whereIn('verse_id', $verseIds)
-            ->where('active', true)
-            ->select(['verse_id', 'resource_id', 'text'])
-            ->get()
-            ->each(function ($row) use (&$map) {
-                if ($row->resource_id !== null) {
-                    $map[$row->verse_id][$row->resource_id] = $row->text;
-                }
-            });
-
-        return $map;
+        return response()->json($this->quranReaderService->getSurahTranslation($surahNumber, $resourceId));
     }
 }

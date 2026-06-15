@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Repositories;
 
+use App\Domain\Quran\Models\TranslationResource;
 use App\Domain\Quran\Models\Verse;
+use App\Domain\Quran\Models\VerseTranslation;
 use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Shared\Helpers\FullTextSearchHelper;
 use App\Domain\Shared\Repositories\BaseRepository;
@@ -64,7 +66,13 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
     /**
      * Constrained translations eager load columns
      */
-    private const TRANSLATIONS_EAGER = 'translations:id,verse_id,lang,text,text_notashkeel';
+    private const TRANSLATIONS_EAGER = 'translations:id,verse_id,resource_id,lang,text,text_notashkeel';
+
+    /**
+     * Resource (edition) of each translation — lets the DTO pick the default
+     * edition per language deterministically when several editions exist.
+     */
+    private const TRANSLATION_RESOURCE_EAGER = 'translations.resource:id,is_default,language';
 
     /**
      * Get model instance
@@ -72,6 +80,51 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
     protected function getModel(): Model
     {
         return new Verse;
+    }
+
+    /**
+     * Active translation editions (resources) for the reader's translation
+     * selector, excluding the Arabic source text. Cached — metadata changes rarely.
+     *
+     * @return Collection<int, TranslationResource>
+     */
+    public function getActiveTranslationResources(): Collection
+    {
+        return Cache::remember('quran_translation_resources_active', self::CACHE_TTL, fn () => TranslationResource::query()
+            ->where('is_active', true)
+            ->where('language', '!=', 'ar')
+            ->orderBy('language')
+            ->orderBy('display_order')
+            ->orderBy('id')
+            ->get(['id', 'slug', 'name', 'language', 'direction', 'is_default']));
+    }
+
+    /**
+     * One translation edition's text for a whole surah, keyed by verse id. Cached
+     * per (surah, resource) so non-default editions load lazily without inlining
+     * every edition into the surah page.
+     *
+     * @return array<int, string>
+     */
+    public function getSurahTranslationByResource(int $surahNumber, int $resourceId): array
+    {
+        return Cache::remember(
+            "public_quran_surah_translation_{$surahNumber}_{$resourceId}",
+            self::CACHE_TTL,
+            function () use ($surahNumber, $resourceId): array {
+                $verseIds = Verse::query()
+                    ->whereHas('surah', fn ($q) => $q->where('revelation_order', $surahNumber))
+                    ->pluck('id');
+
+                return VerseTranslation::query()
+                    ->whereIn('verse_id', $verseIds)
+                    ->where('resource_id', $resourceId)
+                    ->select(['verse_id', 'text'])
+                    ->get()
+                    ->pluck('text', 'verse_id')
+                    ->all();
+            }
+        );
     }
 
     /**
@@ -85,7 +138,7 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
             fn () => $this->model
                 ->select(self::VERSE_COLUMNS)
                 ->where('surah_id', $surahId)
-                ->with([self::TRANSLATIONS_EAGER])
+                ->with([self::TRANSLATIONS_EAGER, self::TRANSLATION_RESOURCE_EAGER])
                 ->orderBy('verse_number')
                 ->get()
         );
@@ -106,7 +159,7 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
                     $query->where('revelation_order', $surahNumber);
                 })
                 ->where('verse_number', $verseNumber)
-                ->with([self::SURAH_EAGER, self::TRANSLATIONS_EAGER])
+                ->with([self::SURAH_EAGER, self::TRANSLATIONS_EAGER, self::TRANSLATION_RESOURCE_EAGER])
                 ->first()
         );
     }
@@ -196,7 +249,7 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
                 );
             })
             ->groupBy('quran_verses.id')
-            ->with([self::SURAH_EAGER, self::TRANSLATIONS_EAGER])
+            ->with([self::SURAH_EAGER, self::TRANSLATIONS_EAGER, self::TRANSLATION_RESOURCE_EAGER])
             ->orderBy('quran_verses.surah_id')
             ->orderBy('quran_verses.verse_number')
             ->paginate($perPage);
@@ -223,7 +276,7 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
                 );
             })
             ->groupBy('quran_verses.id')
-            ->with([self::SURAH_EAGER, self::TRANSLATIONS_EAGER])
+            ->with([self::SURAH_EAGER, self::TRANSLATIONS_EAGER, self::TRANSLATION_RESOURCE_EAGER])
             ->orderBy('quran_verses.surah_id')
             ->orderBy('quran_verses.verse_number')
             ->paginate($perPage);
@@ -236,7 +289,7 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
     {
         return $this->model
             ->select(self::VERSE_COLUMNS)
-            ->with([self::SURAH_EAGER, self::TRANSLATIONS_EAGER])
+            ->with([self::SURAH_EAGER, self::TRANSLATIONS_EAGER, self::TRANSLATION_RESOURCE_EAGER])
             ->inRandomOrder()
             ->first();
     }

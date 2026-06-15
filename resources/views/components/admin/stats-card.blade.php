@@ -34,7 +34,7 @@
     if ($compact) {
         $baseClasses = 'flex items-center gap-3 rounded-xl p-3 shadow-md transition-all duration-300 group';
     } else {
-        $baseClasses = 'block rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group';
+        $baseClasses = 'block rounded-xl p-4 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group';
     }
 @endphp
 
@@ -93,10 +93,10 @@
 
         @else
             {{-- DEFAULT: full card layout --}}
-            <div class="flex items-start justify-between mb-4">
-                <div class="p-3 rounded-xl {{ $gradient ? 'bg-white/20' : 'bg-gradient-to-br from-brand to-secondary' }}
+            <div class="flex items-start justify-between mb-3">
+                <div class="p-2.5 rounded-lg {{ $gradient ? 'bg-white/20' : 'bg-gradient-to-br from-brand to-secondary' }}
                             group-hover:scale-110 transition-transform duration-300">
-                    <i data-lucide="{{ $icon }}" class="w-6 h-6 text-white"></i>
+                    <i data-lucide="{{ $icon }}" class="w-5 h-5 text-white"></i>
                 </div>
 
                 @if($change)
@@ -108,12 +108,12 @@
                 @endif
             </div>
 
-            <div class="mb-2">
+            <div class="mb-1">
                 @if(is_numeric($value))
-                    <h3 class="text-3xl font-bold {{ $gradient ? 'text-white' : 'gradient-text' }}"
+                    <h3 class="text-2xl font-bold {{ $gradient ? 'text-white' : 'gradient-text' }}"
                         x-text="countValue.toLocaleString()">0</h3>
                 @else
-                    <h3 class="text-3xl font-bold {{ $gradient ? 'text-white' : 'gradient-text' }}">{{ $value }}</h3>
+                    <h3 class="text-2xl font-bold {{ $gradient ? 'text-white' : 'gradient-text' }}">{{ $value }}</h3>
                 @endif
             </div>
 
@@ -123,7 +123,7 @@
             </p>
 
             @if($isClickable)
-                <div class="mt-4 pt-4 border-t {{ $gradient ? 'border-white/20' : '' }}"
+                <div class="mt-3 pt-3 border-t {{ $gradient ? 'border-white/20' : '' }}"
                      :class="!{{ $gradient ? 'true' : 'false' }} && (darkMode ? 'border-gray-800' : 'border-gray-200')">
                     <div class="flex items-center gap-2 text-sm font-semibold group-hover:gap-3 transition-all
                                 {{ $gradient ? 'text-white' : 'text-brand' }}">

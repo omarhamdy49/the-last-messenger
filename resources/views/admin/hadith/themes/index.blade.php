@@ -32,7 +32,7 @@
 <div x-data="{ filtersOpen: {{ request()->hasAny(['search']) ? 'true' : 'false' }} }" @toggle-filters.window="filtersOpen = !filtersOpen">
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <x-admin.stats-card icon="tag" title="إجمالي الموضوعات" :value="$themes->total() ?? 0" :gradient="true" />
         <x-admin.stats-card icon="file-text" title="إجمالي المقالات المرتبطة" :value="$themes->sum('articles_count') ?? 0" delay="delay-100" />
         <x-admin.stats-card icon="palette" title="بألوان مخصصة" :value="$themes->filter(fn($t) => $t->color && $t->color !== '#0056b3')->count() ?? 0" delay="delay-200" />

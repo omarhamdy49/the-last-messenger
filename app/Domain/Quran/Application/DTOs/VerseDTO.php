@@ -45,11 +45,21 @@ final readonly class VerseDTO implements JsonSerializable
         $textArabic = null;
 
         if ($verse->relationLoaded('translations')) {
+            // Several editions may now exist per language; the lang-keyed map must
+            // resolve to the default edition deterministically (an edition flagged
+            // is_default always wins; otherwise the first seen is kept).
             foreach ($verse->translations as $translation) {
-                if ($translation->lang === 'ar') {
+                $lang = $translation->lang;
+                $isDefault = $translation->relationLoaded('resource')
+                    && $translation->resource?->is_default === true;
+
+                if (! array_key_exists($lang, $translations) || $isDefault) {
+                    $translations[$lang] = $translation->text;
+                }
+
+                if ($lang === 'ar' && ($textArabic === null || $isDefault)) {
                     $textArabic = $translation->text;
                 }
-                $translations[$translation->lang] = $translation->text;
             }
         }
 

@@ -23,6 +23,10 @@ class QuranServiceProvider extends ServiceProvider
             \App\Domain\Quran\Repositories\ReciterRepository::class
         );
         $this->app->bind(
+            \App\Domain\Quran\Repositories\RecitationRepositoryInterface::class,
+            \App\Domain\Quran\Repositories\RecitationRepository::class
+        );
+        $this->app->bind(
             \App\Domain\Quran\Repositories\TafseerRepositoryInterface::class,
             \App\Domain\Quran\Repositories\TafseerRepository::class
         );

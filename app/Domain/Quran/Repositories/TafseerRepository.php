@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Repositories;
 
+use App\Domain\Quran\Models\TafsirResource;
 use App\Domain\Quran\Models\VerseTafsir as Tafseer;
 use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Shared\Repositories\BaseRepository;
@@ -28,6 +29,38 @@ class TafseerRepository extends BaseRepository implements TafseerRepositoryInter
     protected function getModel(): Model
     {
         return new Tafseer;
+    }
+
+    /**
+     * Active tafsir editions (resources) ordered for the reader's source selector.
+     * Cached — edition metadata changes rarely.
+     *
+     * @return Collection<int, TafsirResource>
+     */
+    public function getActiveResources(): Collection
+    {
+        return Cache::remember('quran_tafsir_resources_active', self::CACHE_TTL, fn () => TafsirResource::query()
+            ->where('is_active', true)
+            ->orderBy('display_order')
+            ->orderBy('id')
+            ->get(['id', 'slug', 'name', 'language']));
+    }
+
+    /**
+     * One verse's tafsir text for a single edition, or null when absent.
+     *
+     * Tafsir is loaded per-verse on demand (only when a verse's accordion is
+     * opened), so a verbose edition (e.g. al-Tabari) never ships a whole-surah
+     * blob. The lookup hits the unique (verse_id, resource_id) index and is fast
+     * enough to skip caching — which also keeps large tafsir text out of the cache.
+     */
+    public function getVerseText(int $verseId, int $resourceId): ?string
+    {
+        return Tafseer::query()
+            ->where('verse_id', $verseId)
+            ->where('resource_id', $resourceId)
+            ->where('active', true)
+            ->value('text');
     }
 
     /**

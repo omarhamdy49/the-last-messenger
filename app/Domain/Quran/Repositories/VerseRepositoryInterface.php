@@ -16,6 +16,20 @@ interface VerseRepositoryInterface extends RepositoryInterface
     public function getBySurah(int $surahId): Collection;
 
     /**
+     * Active translation editions (resources), excluding the Arabic source text.
+     *
+     * @return Collection<int, \App\Domain\Quran\Models\TranslationResource>
+     */
+    public function getActiveTranslationResources(): Collection;
+
+    /**
+     * One translation edition's text for a whole surah, keyed by verse id (cached).
+     *
+     * @return array<int, string>
+     */
+    public function getSurahTranslationByResource(int $surahNumber, int $resourceId): array;
+
+    /**
      * Get verse by surah number and verse number
      */
     public function getBySurahAndVerse(int $surahNumber, int $verseNumber): ?\App\Domain\Quran\Models\Verse;

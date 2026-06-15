@@ -3,11 +3,13 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Admin\Quran\QuranController;
+use App\Http\Controllers\Admin\Quran\RecitationController;
 use App\Http\Controllers\Admin\Quran\ReciterController;
 use App\Http\Controllers\Admin\Quran\RevelationContextController;
 use App\Http\Controllers\Admin\Quran\SurahController;
 use App\Http\Controllers\Admin\Quran\TafseerController;
 use App\Http\Controllers\Admin\Quran\TafsirResourceController;
+use App\Http\Controllers\Admin\Quran\TranslationResourceController;
 use App\Http\Controllers\Admin\Quran\VerseController;
 use Illuminate\Support\Facades\Route;
 
@@ -59,6 +61,17 @@ Route::prefix('reciters')->group(function (): void {
     Route::post('/bulk-delete', [ReciterController::class, 'bulkDelete'])->name('admin.reciters.bulk-delete');
     Route::post('/reorder', [ReciterController::class, 'reorder'])->name('admin.reciters.reorder');
     Route::post('/{id}/toggle-featured', [ReciterController::class, 'toggleFeatured'])->name('admin.reciters.toggle-featured');
+
+    // Per-surah audio recordings (recitations) nested under a reciter
+    Route::post('/{reciter}/recitations', [RecitationController::class, 'store'])
+        ->whereNumber('reciter')
+        ->name('admin.reciters.recitations.store');
+    Route::put('/{reciter}/recitations/{recitation}', [RecitationController::class, 'update'])
+        ->whereNumber(['reciter', 'recitation'])
+        ->name('admin.reciters.recitations.update');
+    Route::delete('/{reciter}/recitations/{recitation}', [RecitationController::class, 'destroy'])
+        ->whereNumber(['reciter', 'recitation'])
+        ->name('admin.reciters.recitations.destroy');
 });
 Route::resource('reciters', ReciterController::class)->names([
     'index' => 'admin.reciters.index',
@@ -93,6 +106,16 @@ Route::resource('tafsir-resources', TafsirResourceController::class)->except(['s
     'edit' => 'admin.tafsir-resources.edit',
     'update' => 'admin.tafsir-resources.update',
     'destroy' => 'admin.tafsir-resources.destroy',
+]);
+
+// Translation Edition (resource) Routes
+Route::resource('translation-resources', TranslationResourceController::class)->except(['show'])->names([
+    'index' => 'admin.translation-resources.index',
+    'create' => 'admin.translation-resources.create',
+    'store' => 'admin.translation-resources.store',
+    'edit' => 'admin.translation-resources.edit',
+    'update' => 'admin.translation-resources.update',
+    'destroy' => 'admin.translation-resources.destroy',
 ]);
 
 // Revelation Context (Asbab al-Nuzul) Routes

@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * @property int $id
  * @property int $verse_id
+ * @property int|null $resource_id
  * @property string $lang
  * @property string $text
  * @property string|null $text_notashkeel
@@ -35,6 +36,7 @@ class VerseTranslation extends Model
      */
     protected $fillable = [
         'verse_id',
+        'resource_id',
         'lang',
         'text',
         'text_notashkeel',
@@ -47,6 +49,7 @@ class VerseTranslation extends Model
      */
     protected $casts = [
         'verse_id' => 'integer',
+        'resource_id' => 'integer',
     ];
 
     /**
@@ -55,6 +58,25 @@ class VerseTranslation extends Model
     public function verse(): BelongsTo
     {
         return $this->belongsTo(Verse::class, 'verse_id');
+    }
+
+    /**
+     * Get the translation resource (edition) this row belongs to.
+     */
+    public function resource(): BelongsTo
+    {
+        return $this->belongsTo(TranslationResource::class, 'resource_id');
+    }
+
+    /**
+     * Scope: Filter by translation resource (edition)
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeByResource($query, int $resourceId)
+    {
+        return $query->where('resource_id', $resourceId);
     }
 
     /**

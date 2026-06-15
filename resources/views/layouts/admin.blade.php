@@ -208,8 +208,9 @@
             <main class="flex-1 overflow-y-auto custom-scrollbar"
                   :class="darkMode ? 'bg-gray-950' : 'bg-gray-50'">
 
-                <!-- Content Wrapper with Padding -->
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fadeInUp">
+                <!-- Content Wrapper with Padding (extra bottom space when the player bar is visible) -->
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fadeInUp"
+                     :style="$store.audioPlayer && $store.audioPlayer.track ? 'padding-bottom: 6rem' : ''">
 
                     <!-- Page Title Section (Optional - Can be yielded) -->
                     @hasSection('page-header')
@@ -286,6 +287,9 @@
 
     {{-- Global Confirm Modal --}}
     <x-admin.confirm-modal />
+
+    {{-- Global audio player (persists across admin pages) --}}
+    <x-admin.audio-player />
 
     <!-- Initialize Lucide Icons -->
     <script>

@@ -393,6 +393,24 @@
                         <i data-lucide="mic" class="w-4 h-4"></i>
                         <span>{{ __('quran.reciters.title') }}</span>
                     </a>
+                    <a href="{{ route('admin.translation-resources.index') }}"
+                       @click="activeMenu = 'translation-resources'"
+                       :class="isActive('translation-resources') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="languages" class="w-4 h-4"></i>
+                        <span>{{ __('quran.admin.translation_sources') }}</span>
+                    </a>
+                    <a href="{{ route('admin.tafsir-resources.index') }}"
+                       @click="activeMenu = 'tafsir-resources'"
+                       :class="isActive('tafsir-resources') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="book-marked" class="w-4 h-4"></i>
+                        <span>{{ __('quran.admin.tafsir_sources') }}</span>
+                    </a>
                 </div>
             </div>
 

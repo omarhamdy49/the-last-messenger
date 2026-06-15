@@ -276,10 +276,348 @@
 
     </div>
 </div>
+
+@php
+    $isRtl = in_array(app()->getLocale(), ['ar', 'ur']);
+    $withAudio = $surahs->filter(fn ($row) => $row['recitation'] !== null)->count();
+@endphp
+
+<!-- Surah Recitations (per-surah audio management) -->
+<div class="mt-6 rounded-2xl border overflow-hidden"
+     :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'"
+     x-data="recitationManager({
+        reciterId: {{ $reciter->id }},
+        storeUrl: '{{ route('admin.reciters.recitations.store', $reciter->id) }}',
+     })">
+
+    <!-- Section Header -->
+    <div class="p-6 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+         :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
+        <div>
+            <h2 class="text-xl font-bold flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                <i data-lucide="audio-lines" class="w-5 h-5 text-accent"></i>
+                {{ __('quran.recitations.section_title') }}
+            </h2>
+            <p class="text-sm mt-1" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">
+                {{ __('quran.recitations.section_subtitle') }}
+            </p>
+        </div>
+        <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold self-start"
+              :class="darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-gray-700'">
+            <i data-lucide="check-circle" class="w-4 h-4 text-accent"></i>
+            {{ __('quran.recitations.with_audio_count', ['count' => $withAudio]) }}
+        </span>
+    </div>
+
+    @if($surahs->isEmpty())
+        <!-- Empty state -->
+        <div class="p-12 text-center">
+            <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 text-gray-400"></i>
+            <p class="font-medium" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">
+                {{ __('quran.recitations.empty') }}
+            </p>
+        </div>
+    @else
+        <!-- Surah table -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-start" :class="darkMode ? 'bg-gray-800/50 text-gray-300' : 'bg-gray-50 text-gray-600'">
+                        <th class="px-4 py-3 text-start font-semibold w-12">{{ __('quran.recitations.surah_number') }}</th>
+                        <th class="px-4 py-3 text-start font-semibold">{{ __('quran.recitations.surah_name') }}</th>
+                        <th class="px-4 py-3 text-start font-semibold hidden md:table-cell">{{ __('quran.recitations.verses_count') }}</th>
+                        <th class="px-4 py-3 text-start font-semibold">{{ __('quran.recitations.status') }}</th>
+                        <th class="px-4 py-3 text-start font-semibold hidden lg:table-cell">{{ __('quran.recitations.format') }}</th>
+                        <th class="px-4 py-3 text-start font-semibold hidden lg:table-cell">{{ __('quran.recitations.quality') }}</th>
+                        <th class="px-4 py-3 text-end font-semibold">{{ __('quran.recitations.actions') }}</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y" :class="darkMode ? 'divide-gray-800' : 'divide-gray-100'">
+                    @foreach($surahs as $row)
+                        @php
+                            $rec = $row['recitation'];
+                            $surahLabel = $row['number'].' · '.$row['name_ar'];
+                            $addPayload = json_encode([
+                                'surah_id' => $row['surah_id'],
+                                'surah_label' => $surahLabel,
+                            ], JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT);
+                            $editPayload = $rec ? json_encode([
+                                'id' => $rec->id,
+                                'surah_id' => $row['surah_id'],
+                                'surah_label' => $surahLabel,
+                                'audio_url' => $rec->audio_url,
+                                'format' => $rec->format,
+                                'quality' => $rec->quality,
+                                'duration_seconds' => $rec->duration_seconds,
+                                'file_size_kb' => $rec->file_size_kb,
+                            ], JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT) : '{}';
+                        @endphp
+                        <tr :class="darkMode ? 'hover:bg-gray-800/40' : 'hover:bg-gray-50'">
+                            <td class="px-4 py-3 font-mono" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                                {{ $row['number'] }}
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="font-semibold truncate max-w-[16rem]" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                    {{ $row['name_ar'] }}
+                                </div>
+                                <div class="text-xs truncate max-w-[16rem]" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                                    {{ $row['name_en'] }}
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 hidden md:table-cell" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">
+                                {{ $row['verses_count'] }}
+                            </td>
+                            <td class="px-4 py-3">
+                                @if($rec)
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                        {{ __('quran.recitations.has_audio') }}
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
+                                          :class="darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500'">
+                                        <i data-lucide="minus" class="w-3.5 h-3.5"></i>
+                                        {{ __('quran.recitations.no_audio') }}
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 hidden lg:table-cell uppercase" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">
+                                {{ $rec?->format ?? '—' }}
+                            </td>
+                            <td class="px-4 py-3 hidden lg:table-cell" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">
+                                @if($rec?->quality)
+                                    {{ __('quran.recitations.' . $rec->quality) }}
+                                @else
+                                    —
+                                @endif
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="flex flex-wrap items-center justify-end gap-2">
+                                    @if($rec)
+                                        @if($rec->audio_url)
+                                            <button type="button"
+                                               @click="$store.audioPlayer.play({{ \Illuminate\Support\Js::from([
+                                                   'url' => $rec->audio_url,
+                                                   'title' => $surahLabel,
+                                                   'subtitle' => $reciter->getDisplayName(app()->getLocale()),
+                                               ]) }})"
+                                               class="p-2 rounded-lg transition-colors"
+                                               :class="darkMode ? 'bg-gray-800 hover:bg-gray-700 text-accent' : 'bg-gray-100 hover:bg-gray-200 text-accent'"
+                                               title="{{ __('quran.recitations.play') }}">
+                                                <i data-lucide="play" class="w-4 h-4"></i>
+                                            </button>
+                                        @endif
+                                        <button type="button"
+                                                @click="openEdit({{ $editPayload }})"
+                                                class="p-2 rounded-lg transition-colors"
+                                                :class="darkMode ? 'bg-gray-800 hover:bg-gray-700 text-blue-400' : 'bg-blue-50 hover:bg-blue-100 text-blue-600'"
+                                                title="{{ __('quran.recitations.edit_audio') }}">
+                                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                                        </button>
+                                        <form method="POST"
+                                              action="{{ route('admin.reciters.recitations.destroy', [$reciter->id, $rec->id]) }}"
+                                              @submit.prevent="$dispatch('show-confirm', { title: '{{ __('quran.recitations.confirm_delete') }}', message: '{{ __('quran.recitations.confirm_delete_message') }}', type: 'danger', onConfirm: () => $el.submit() })">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                    class="p-2 rounded-lg transition-colors bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/20 dark:hover:bg-red-900/40 dark:text-red-400"
+                                                    title="{{ __('quran.recitations.delete_audio') }}">
+                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                            </button>
+                                        </form>
+                                    @else
+                                        <button type="button"
+                                                @click="openAdd({{ $addPayload }})"
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-105 bg-gradient-to-r from-[#0056b3] to-[#218838] text-white">
+                                            <i data-lucide="plus" class="w-4 h-4"></i>
+                                            <span>{{ __('quran.recitations.add_audio') }}</span>
+                                        </button>
+                                    @endif
+                                </div>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @endif
+
+    <!-- Add/Edit Modal -->
+    <div x-show="open" x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center p-4"
+         x-transition.opacity>
+        <div class="absolute inset-0 bg-black/50" @click="close()"></div>
+
+        <div class="relative w-full max-w-lg rounded-2xl border shadow-2xl max-h-[80vh] overflow-y-auto"
+             :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'"
+             @keydown.escape.window="close()">
+
+            <!-- Modal Header -->
+            <div class="p-5 border-b flex items-center justify-between" :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
+                <div>
+                    <h3 class="text-lg font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'"
+                        x-text="mode === 'edit' ? '{{ __('quran.recitations.modal_edit_title') }}' : '{{ __('quran.recitations.modal_add_title') }}'"></h3>
+                    <p class="text-sm mt-0.5" :class="darkMode ? 'text-gray-400' : 'text-gray-500'" x-text="form.surah_label"></p>
+                </div>
+                <button type="button" @click="close()" class="p-2 rounded-lg transition-colors"
+                        :class="darkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Modal Form -->
+            <form :action="formAction" method="POST" @submit="submitting = true">
+                @csrf
+                <input type="hidden" name="_method" x-bind:value="mode === 'edit' ? 'PUT' : 'POST'">
+                <input type="hidden" name="surah_id" x-model="form.surah_id">
+
+                <div class="p-5 space-y-4">
+                    <!-- Audio URL -->
+                    <div>
+                        <label class="block text-sm font-medium mb-1.5" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            {{ __('quran.recitations.audio_url') }} <span class="text-red-500">*</span>
+                        </label>
+                        <input type="url" name="audio_url" x-model="form.audio_url" required
+                               dir="ltr"
+                               placeholder="{{ __('quran.recitations.audio_url_placeholder') }}"
+                               class="w-full px-4 py-2.5 rounded-xl border text-base sm:text-sm focus:ring-2 focus:ring-accent focus:border-accent outline-none transition-all"
+                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Format -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1.5" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                                {{ __('quran.recitations.format') }} <span class="text-red-500">*</span>
+                            </label>
+                            <select name="format" x-model="form.format" required
+                                    class="w-full px-4 py-2.5 rounded-xl border text-base sm:text-sm focus:ring-2 focus:ring-accent outline-none"
+                                    :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                                <option value="">{{ __('quran.recitations.select_format') }}</option>
+                                <option value="mp3">MP3</option>
+                                <option value="aac">AAC</option>
+                                <option value="opus">OPUS</option>
+                            </select>
+                        </div>
+
+                        <!-- Quality -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1.5" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                                {{ __('quran.recitations.quality') }}
+                            </label>
+                            <select name="quality" x-model="form.quality"
+                                    class="w-full px-4 py-2.5 rounded-xl border text-base sm:text-sm focus:ring-2 focus:ring-accent outline-none"
+                                    :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                                <option value="">{{ __('quran.recitations.no_quality') }}</option>
+                                <option value="high">{{ __('quran.recitations.high') }}</option>
+                                <option value="medium">{{ __('quran.recitations.medium') }}</option>
+                                <option value="low">{{ __('quran.recitations.low') }}</option>
+                            </select>
+                        </div>
+
+                        <!-- Duration -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1.5" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                                {{ __('quran.recitations.duration_seconds') }}
+                            </label>
+                            <input type="number" name="duration_seconds" x-model="form.duration_seconds" min="0" dir="ltr"
+                                   class="w-full px-4 py-2.5 rounded-xl border text-base sm:text-sm focus:ring-2 focus:ring-accent outline-none"
+                                   :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                        </div>
+
+                        <!-- File size -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1.5" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                                {{ __('quran.recitations.file_size_kb') }}
+                            </label>
+                            <input type="number" name="file_size_kb" x-model="form.file_size_kb" min="0" dir="ltr"
+                                   class="w-full px-4 py-2.5 rounded-xl border text-base sm:text-sm focus:ring-2 focus:ring-accent outline-none"
+                                   :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="p-5 border-t flex flex-wrap items-center justify-end gap-3" :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
+                    <button type="button" @click="close()" :disabled="submitting"
+                            class="px-5 py-2.5 rounded-xl font-semibold border-2 transition-all disabled:opacity-50"
+                            :class="darkMode ? 'border-gray-700 bg-gray-800 text-white hover:bg-gray-700' : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'">
+                        {{ __('quran.recitations.cancel') }}
+                    </button>
+                    <button type="submit" :disabled="submitting"
+                            class="px-6 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 bg-gradient-to-r from-[#0056b3] to-[#218838] text-white disabled:opacity-60 disabled:hover:scale-100">
+                        <i data-lucide="loader-2" class="w-5 h-5 animate-spin" x-show="submitting"></i>
+                        <span x-text="submitting ? '{{ __('quran.recitations.saving') }}' : '{{ __('quran.recitations.save') }}'"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
 <script>
+    function recitationManager(config) {
+        return {
+            open: false,
+            mode: 'add',
+            submitting: false,
+            storeUrl: config.storeUrl,
+            reciterId: config.reciterId,
+            formAction: config.storeUrl,
+            form: {
+                id: null,
+                surah_id: '',
+                surah_label: '',
+                audio_url: '',
+                format: '',
+                quality: '',
+                duration_seconds: '',
+                file_size_kb: '',
+            },
+            openAdd(data) {
+                this.mode = 'add';
+                this.formAction = this.storeUrl;
+                this.form = {
+                    id: null,
+                    surah_id: data.surah_id,
+                    surah_label: data.surah_label,
+                    audio_url: '',
+                    format: '',
+                    quality: '',
+                    duration_seconds: '',
+                    file_size_kb: '',
+                };
+                this.show();
+            },
+            openEdit(data) {
+                this.mode = 'edit';
+                this.formAction = `{{ url('su/portal/v1/admin/reciters') }}/${this.reciterId}/recitations/${data.id}`;
+                this.form = {
+                    id: data.id,
+                    surah_id: data.surah_id,
+                    surah_label: data.surah_label,
+                    audio_url: data.audio_url ?? '',
+                    format: data.format ?? '',
+                    quality: data.quality ?? '',
+                    duration_seconds: data.duration_seconds ?? '',
+                    file_size_kb: data.file_size_kb ?? '',
+                };
+                this.show();
+            },
+            show() {
+                this.submitting = false;
+                this.open = true;
+                this.$nextTick(() => window.lucide && lucide.createIcons());
+            },
+            close() {
+                if (this.submitting) return;
+                this.open = false;
+            },
+        };
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         lucide.createIcons();
     });

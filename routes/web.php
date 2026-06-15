@@ -30,6 +30,12 @@ Route::get('/quran/live', [QuranController::class, 'live'])->name('public.quran.
 Route::get('/quran/asbab-al-nuzul', [QuranController::class, 'asbab'])->name('public.quran.asbab');
 Route::get('/quran/surah/{surahNumber}', [QuranController::class, 'surah'])
     ->whereNumber('surahNumber')->name('public.quran.surah');
+// Lazy editions (keep the surah page light): tafsir is fetched per verse on demand;
+// a non-default translation edition is fetched once per surah when selected.
+Route::get('/quran/verse/{verseId}/tafsir/{resourceId}', [QuranController::class, 'verseTafsir'])
+    ->whereNumber('verseId')->whereNumber('resourceId')->name('public.quran.verse.tafsir');
+Route::get('/quran/surah/{surahNumber}/translation/{resourceId}', [QuranController::class, 'surahTranslation'])
+    ->whereNumber('surahNumber')->whereNumber('resourceId')->name('public.quran.surah.translation');
 Route::get('/quran/juz/{juz}', [QuranController::class, 'juz'])
     ->whereNumber('juz')->name('public.quran.juz');
 Route::get('/quran/hizb/{hizb}', [QuranController::class, 'hizb'])

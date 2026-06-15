@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Admin\Quran;
 use App\Domain\Quran\DTOs\CreateReciterData;
 use App\Domain\Quran\DTOs\UpdateReciterData;
 use App\Domain\Quran\Models\Reciter;
+use App\Domain\Quran\Services\RecitationService;
 use App\Domain\Quran\Services\ReciterService;
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
@@ -42,6 +43,7 @@ class ReciterController extends Controller
      */
     public function __construct(
         protected ReciterService $reciterService,
+        protected RecitationService $recitationService,
         protected AdminLoggerService $logger
     ) {}
 
@@ -151,7 +153,11 @@ class ReciterController extends Controller
         $reciter = $this->reciterService->findOrFail($id);
         $recitationsCount = $this->reciterService->countRecitations($reciter);
 
-        return view('admin.reciters.show', compact('reciter', 'recitationsCount'));
+        // All 114 surahs merged with this reciter's recitation (when present),
+        // built in two queries (surahs + recitations) and merged in PHP.
+        $surahs = $this->recitationService->getReciterSurahs($reciter->id);
+
+        return view('admin.reciters.show', compact('reciter', 'recitationsCount', 'surahs'));
     }
 
     /**
