@@ -436,98 +436,86 @@
             {{-- Reading Controls --}}
             <div class="mb-6 p-4 sm:p-6 rounded-2xl shadow-lg" :class="$store.theme.dark ? 'bg-gray-900' : 'bg-white'">
                 @php
-                    $ctlLabel = "text-xs font-medium px-1";
-                    $selCls = "px-3 py-2 text-base sm:text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0056b3]/20";
+                    // Shared control tokens for a consistent, aligned toolbar (all controls 40px tall).
+                    $lblCls  = 'block text-[11px] font-semibold tracking-wide mb-1.5 ps-0.5';
+                    $segWrap = 'inline-flex items-center gap-1 p-1 rounded-xl h-10';
+                    $segBtn  = 'inline-flex items-center px-3 h-8 rounded-lg text-sm font-semibold transition-all whitespace-nowrap';
+                    $segOn   = 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-sm';
+                    $selCls  = 'h-10 ps-3 pe-8 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-[#0056b3]/30 cursor-pointer min-w-[9.5rem] max-w-[14rem] transition-colors';
                 @endphp
-                <div class="flex flex-wrap items-end gap-x-5 gap-y-3">
+                <div class="flex flex-wrap items-end gap-x-5 gap-y-4">
 
-                    {{-- Display: what to show for each verse --}}
-                    <div class="flex flex-col gap-1">
-                        <span class="{{ $ctlLabel }}" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">{{ __('quran.public.filter_display') }}</span>
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <button @click="setReadingMode('arabic')"
-                                class="px-3 py-2 rounded-lg text-sm font-semibold transition-all"
-                                :class="readingMode === 'arabic'
-                                    ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white'
-                                    : ($store.theme.dark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')"
-                            >{{ __('quran.public.mode_arabic') }}</button>
-                            <button @click="setReadingMode('translation')"
-                                class="px-3 py-2 rounded-lg text-sm font-semibold transition-all"
-                                :class="readingMode === 'translation'
-                                    ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white'
-                                    : ($store.theme.dark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')"
-                            >{{ __('quran.public.mode_translation') }}</button>
-                            <button @click="setReadingMode('both')"
-                                class="px-3 py-2 rounded-lg text-sm font-semibold transition-all"
-                                :class="readingMode === 'both'
-                                    ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white'
-                                    : ($store.theme.dark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')"
-                            >{{ __('quran.public.mode_both') }}</button>
+                    {{-- View controls: how to read --}}
+                    <div class="flex flex-wrap items-end gap-3 sm:gap-4">
+
+                        {{-- Display: Arabic / translation / both --}}
+                        <div>
+                            <span class="{{ $lblCls }}" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'">{{ __('quran.public.filter_display') }}</span>
+                            <div class="{{ $segWrap }}" :class="$store.theme.dark ? 'bg-gray-800' : 'bg-gray-100'">
+                                <button @click="setReadingMode('arabic')" class="{{ $segBtn }}"
+                                    :class="readingMode === 'arabic' ? '{{ $segOn }}' : ($store.theme.dark ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900')">{{ __('quran.public.mode_arabic') }}</button>
+                                <button @click="setReadingMode('translation')" class="{{ $segBtn }}"
+                                    :class="readingMode === 'translation' ? '{{ $segOn }}' : ($store.theme.dark ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900')">{{ __('quran.public.mode_translation') }}</button>
+                                <button @click="setReadingMode('both')" class="{{ $segBtn }}"
+                                    :class="readingMode === 'both' ? '{{ $segOn }}' : ($store.theme.dark ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900')">{{ __('quran.public.mode_both') }}</button>
+                            </div>
+                        </div>
+
+                        {{-- Layout: verse cards vs continuous mushaf flow --}}
+                        <div>
+                            <span class="{{ $lblCls }}" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'">{{ __('quran.public.filter_layout') }}</span>
+                            <div class="{{ $segWrap }}" :class="$store.theme.dark ? 'bg-gray-800' : 'bg-gray-100'">
+                                <button @click="setViewMode('verses')" class="{{ $segBtn }}"
+                                    :class="viewMode === 'verses' ? '{{ $segOn }}' : ($store.theme.dark ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900')">{{ __('quran.public.view_by_verse') }}</button>
+                                <button @click="setViewMode('reading')" class="{{ $segBtn }}"
+                                    :class="viewMode === 'reading' ? '{{ $segOn }}' : ($store.theme.dark ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900')">{{ __('quran.public.view_reading') }}</button>
+                            </div>
+                        </div>
+
+                        {{-- Font size stepper --}}
+                        <div>
+                            <span class="{{ $lblCls }}" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'">{{ __('quran.public.filter_font') }}</span>
+                            <div class="inline-flex items-center h-10 rounded-xl overflow-hidden" :class="$store.theme.dark ? 'bg-gray-800' : 'bg-gray-100'">
+                                <button @click="adjustFontSize(-2)" class="h-10 w-10 inline-flex items-center justify-center transition-colors"
+                                    :class="$store.theme.dark ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'"
+                                    aria-label="{{ __('quran.public.decrease_font') }}">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M20 12H4"/></svg>
+                                </button>
+                                <span class="min-w-[3.25rem] text-center text-sm font-semibold tabular-nums" :class="$store.theme.dark ? 'text-white' : 'text-gray-900'" x-text="fontSize + 'px'"></span>
+                                <button @click="adjustFontSize(2)" class="h-10 w-10 inline-flex items-center justify-center transition-colors"
+                                    :class="$store.theme.dark ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'"
+                                    aria-label="{{ __('quran.public.increase_font') }}">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    {{-- Layout: verse cards vs continuous mushaf flow --}}
-                    <div class="flex flex-col gap-1">
-                        <span class="{{ $ctlLabel }}" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">{{ __('quran.public.filter_layout') }}</span>
-                        <div class="flex items-center gap-1 rounded-lg p-1" :class="$store.theme.dark ? 'bg-gray-800' : 'bg-gray-200'">
-                            <button @click="setViewMode('verses')" class="px-3 py-2 rounded-md text-sm font-semibold transition-all"
-                                :class="viewMode === 'verses' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white' : ($store.theme.dark ? 'text-gray-300' : 'text-gray-700')"
-                            >{{ __('quran.public.view_by_verse') }}</button>
-                            <button @click="setViewMode('reading')" class="px-3 py-2 rounded-md text-sm font-semibold transition-all"
-                                :class="viewMode === 'reading' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white' : ($store.theme.dark ? 'text-gray-300' : 'text-gray-700')"
-                            >{{ __('quran.public.view_reading') }}</button>
+                    {{-- Source controls: translation edition + tafsir source.
+                         The language follows the site locale; select options are
+                         server-rendered so x-model selects the right one on init. --}}
+                    <div class="flex flex-wrap items-end gap-3 sm:gap-4">
+                        <div x-show="editionsForLang.length > 1" x-cloak>
+                            <span class="{{ $lblCls }}" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'">{{ __('quran.public.translation_edition') }}</span>
+                            <select x-model.number="selectedTranslationId" @change="setTranslationEdition(selectedTranslationId)"
+                                class="{{ $selCls }}" :class="$store.theme.dark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                                @foreach($translationResources as $tr)
+                                    @if($tr['language'] === $defaultTranslationLang)
+                                    <option value="{{ $tr['id'] }}">{{ $tr['name'] }}</option>
+                                    @endif
+                                @endforeach
+                            </select>
                         </div>
-                    </div>
 
-                    {{-- Font size --}}
-                    <div class="flex flex-col gap-1">
-                        <span class="{{ $ctlLabel }}" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">{{ __('quran.public.filter_font') }}</span>
-                        <div class="flex items-center gap-2">
-                            <button @click="adjustFontSize(-2)"
-                                class="p-2 rounded-lg transition-colors"
-                                :class="$store.theme.dark ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'"
-                                aria-label="{{ __('quran.public.decrease_font') }}">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
-                            </button>
-                            <span class="px-3 py-1 rounded-lg text-sm font-semibold min-w-[3.5rem] text-center"
-                                  :class="$store.theme.dark ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-900'"
-                                  x-text="fontSize + 'px'"></span>
-                            <button @click="adjustFontSize(2)"
-                                class="p-2 rounded-lg transition-colors"
-                                :class="$store.theme.dark ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'"
-                                aria-label="{{ __('quran.public.increase_font') }}">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                            </button>
-                        </div>
-                    </div>
-
-                    {{-- Translation language follows the site locale (no picker); the
-                         "Display" radio above toggles whether the translation shows. --}}
-
-                    {{-- Translation edition (only when the language offers several).
-                         Options are server-rendered so x-model selects the right one on
-                         init — x-for options aren't in the DOM yet when x-model first syncs. --}}
-                    <div class="flex flex-col gap-1" x-show="editionsForLang.length > 1" x-cloak>
-                        <span class="{{ $ctlLabel }}" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">{{ __('quran.public.translation_edition') }}</span>
-                        <select x-model.number="selectedTranslationId" @change="setTranslationEdition(selectedTranslationId)"
-                            class="{{ $selCls }}" :class="$store.theme.dark ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-900'">
-                            @foreach($translationResources as $tr)
-                                @if($tr['language'] === $defaultTranslationLang)
+                        <div x-show="tafsirResources.length > 1" x-cloak>
+                            <span class="{{ $lblCls }}" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'">{{ __('quran.public.tafsir_source') }}</span>
+                            <select x-model.number="selectedTafsirId" @change="setTafsirSource(selectedTafsirId)"
+                                class="{{ $selCls }}" :class="$store.theme.dark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                                @foreach($tafsirResources as $tr)
                                 <option value="{{ $tr['id'] }}">{{ $tr['name'] }}</option>
-                                @endif
-                            @endforeach
-                        </select>
-                    </div>
-
-                    {{-- Tafsir source (only when more than one tafsir exists) --}}
-                    <div class="flex flex-col gap-1" x-show="tafsirResources.length > 1" x-cloak>
-                        <span class="{{ $ctlLabel }}" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">{{ __('quran.public.tafsir_source') }}</span>
-                        <select x-model.number="selectedTafsirId" @change="setTafsirSource(selectedTafsirId)"
-                            class="{{ $selCls }}" :class="$store.theme.dark ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-900'">
-                            @foreach($tafsirResources as $tr)
-                            <option value="{{ $tr['id'] }}">{{ $tr['name'] }}</option>
-                            @endforeach
-                        </select>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
 
                 </div>
@@ -800,36 +788,34 @@
                 {{-- Audio player (compact) --}}
                 <div class="rounded-2xl shadow-lg overflow-hidden" :class="$store.theme.dark ? 'bg-gray-900' : 'bg-white'">
                     {{-- Gradient header: now playing + seek --}}
-                    <div class="p-3.5 bg-gradient-to-br from-[#0056b3] to-[#218838] text-white">
-                        <div class="flex items-center justify-between gap-2">
-                            <div class="min-w-0">
-                                <p class="font-['Amiri'] text-lg leading-tight truncate">{{ $surah['nameAr'] }}</p>
-                                <p class="text-[11px] text-white/70 truncate" x-text="(reciters.find(r => r.id === selectedReciterId) || {}).nameAr || ''"></p>
-                            </div>
-                            <span class="inline-flex items-center gap-1 text-[11px] text-white/80 flex-shrink-0">
-                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z"/></svg>
-                                {{ __('quran.public.listen') }}
-                            </span>
+                    <div class="p-4 bg-gradient-to-br from-[#0056b3] to-[#218838] text-white">
+                        {{-- "Now playing" label --}}
+                        <div class="flex items-center gap-1.5 text-[11px] font-medium text-white/80 mb-2">
+                            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z"/></svg>
+                            <span>{{ __('quran.public.listen') }}</span>
                         </div>
+                        <p class="font-['Amiri'] text-xl leading-normal truncate">{{ $surah['nameAr'] }}</p>
+                        <p class="text-xs text-white/70 truncate mt-0.5" x-text="(reciters.find(r => r.id === selectedReciterId) || {}).nameAr || ''"></p>
 
-                        {{-- Seekable progress --}}
-                        <div class="mt-2.5">
-                            <div class="h-1.5 rounded-full bg-white/25 cursor-pointer group" @click="seekSurah($event)"
+                        {{-- Seekable progress: darker groove + white fill for clear
+                             visibility on the bright gradient --}}
+                        <div class="mt-3">
+                            <div class="h-2 rounded-full bg-black/25 cursor-pointer group" @click="seekSurah($event)"
                                  role="slider" :aria-valuenow="Math.round(surahProgress)" aria-valuemin="0" aria-valuemax="100" aria-label="{{ __('quran.public.listen') }}">
-                                <div class="h-full rounded-full bg-white relative" :style="`width: ${surahProgress}%`">
-                                    <span class="absolute end-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 rounded-full bg-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                                <div class="h-full rounded-full bg-white shadow-sm relative" :style="`width: ${surahProgress}%`">
+                                    <span class="absolute end-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-md ring-2 ring-white/40 opacity-0 group-hover:opacity-100 transition-opacity"></span>
                                 </div>
                             </div>
-                            <div class="flex items-center justify-between mt-1 text-[10px] text-white/80 tabular-nums">
+                            <div class="flex items-center justify-between mt-1.5 text-[11px] text-white/90 tabular-nums">
                                 <span x-text="formatTime(surahCurrentTime)">0:00</span>
                                 <span x-text="formatTime(surahDuration)">0:00</span>
                             </div>
                         </div>
                     </div>
 
-                    {{-- Transport controls + reciter on one compact row --}}
-                    <div class="p-3">
-                        <div class="flex items-center justify-center gap-2">
+                    {{-- Transport controls + reciter --}}
+                    <div class="p-4 pt-3">
+                        <div class="flex items-center justify-center gap-3">
                             @if($prevSurah)
                             <a href="{{ route('public.quran.surah', $prevSurah) }}"
                                class="p-1.5 rounded-full transition-colors" :class="$store.theme.dark ? 'text-gray-300 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100'"
