@@ -140,6 +140,9 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
 
         // Search
         Route::get('/search', [QuranController::class, 'search'])->name('quran.search');
+        Route::get('/search/suggest', [QuranController::class, 'suggest'])
+            ->middleware('throttle:search')
+            ->name('quran.search.suggest');
     });
 
     // Language routes

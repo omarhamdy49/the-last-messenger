@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\Quran\ReciterController;
 use App\Http\Controllers\Admin\Quran\RevelationContextController;
 use App\Http\Controllers\Admin\Quran\SurahController;
 use App\Http\Controllers\Admin\Quran\TafseerController;
+use App\Http\Controllers\Admin\Quran\TafsirResourceController;
 use App\Http\Controllers\Admin\Quran\VerseController;
 use Illuminate\Support\Facades\Route;
 
@@ -82,6 +83,16 @@ Route::resource('tafseer', TafseerController::class)->names([
     'edit' => 'admin.tafseer.edit',
     'update' => 'admin.tafseer.update',
     'destroy' => 'admin.tafseer.destroy',
+]);
+
+// Tafsir Resource (source) Routes
+Route::resource('tafsir-resources', TafsirResourceController::class)->except(['show'])->names([
+    'index' => 'admin.tafsir-resources.index',
+    'create' => 'admin.tafsir-resources.create',
+    'store' => 'admin.tafsir-resources.store',
+    'edit' => 'admin.tafsir-resources.edit',
+    'update' => 'admin.tafsir-resources.update',
+    'destroy' => 'admin.tafsir-resources.destroy',
 ]);
 
 // Revelation Context (Asbab al-Nuzul) Routes

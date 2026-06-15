@@ -26,6 +26,11 @@ interface VerseRepositoryInterface extends RepositoryInterface
     public function getByJuz(int $juz, int $perPage = 50): LengthAwarePaginator;
 
     /**
+     * Get verses by Hizb (1-60), paginated and grouped by surah order.
+     */
+    public function getByHizb(int $hizb, int $perPage = 50): LengthAwarePaginator;
+
+    /**
      * Get verses by page
      */
     public function getByPage(int $page): Collection;

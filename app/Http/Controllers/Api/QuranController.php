@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Domain\Quran\Services\QuranNavigationService;
 use App\Domain\Quran\Services\QuranService;
 use App\Http\Resources\SurahResource;
 use App\Http\Resources\VerseResource;
@@ -21,7 +22,8 @@ class QuranController extends Controller
      * QuranController constructor
      */
     public function __construct(
-        private readonly QuranService $quranService
+        private readonly QuranService $quranService,
+        private readonly QuranNavigationService $navigationService,
     ) {}
 
     // ===================== SURAH ENDPOINTS =====================
@@ -209,5 +211,42 @@ class QuranController extends Controller
         } catch (\Throwable $e) {
             return $this->serverErrorResponse('Search failed. Please try again.');
         }
+    }
+
+    /**
+     * Navigational search suggestions (autocomplete).
+     *
+     * Resolves direct jump targets the way quran.com's search box does:
+     * "2:255" → verse, "juz 5"/"page 50"/"hizb 12" → division, a bare number
+     * 1–114 or a surah name → surah. Returns a small, ordered list.
+     *
+     * Query params:
+     *   q      string  required  min:1, max:100
+     *   limit  int     optional  1–20  default 8
+     */
+    public function suggest(Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'q' => 'required|string|min:1|max:100',
+                'limit' => 'sometimes|integer|min:1|max:20',
+                'locale' => 'sometimes|string|in:ar,en,fr,tr,ur',
+            ]);
+        } catch (ValidationException $e) {
+            return $this->validationErrorResponse($e->errors());
+        }
+
+        // Labels are localized via __(); honor an explicit locale so the
+        // autocomplete matches the page even when the browser's Accept-Language
+        // (which fetch() cannot override) differs.
+        if (isset($validated['locale'])) {
+            app()->setLocale($validated['locale']);
+        }
+
+        $limit = isset($validated['limit']) ? (int) $validated['limit'] : 8;
+
+        return $this->success(
+            $this->navigationService->suggest($validated['q'], $limit)
+        );
     }
 }

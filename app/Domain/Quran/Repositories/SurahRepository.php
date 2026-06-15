@@ -167,7 +167,7 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
         return Cache::remember(
             QuranCacheKeys::surahTotalVerses(),
             self::CACHE_TTL,
-            fn () => $this->model->sum('verses_count')
+            fn () => (int) $this->model->sum('verses_count')
         );
     }
 

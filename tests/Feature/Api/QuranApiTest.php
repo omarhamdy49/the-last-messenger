@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Api;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -19,6 +21,15 @@ use Tests\TestCase;
 class QuranApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Surah lookups are cached and the 'search' rate limiter is cache-backed;
+        // flushing per test keeps cross-test state out of navigational search.
+        Cache::flush();
+    }
 
     // ===================== SURAH ENDPOINTS =====================
 
@@ -172,5 +183,141 @@ class QuranApiTest extends TestCase
         $response = $this->getJson('/api/v1/quran/search?q=test&type=translation');
 
         $response->assertOk();
+    }
+
+    // ===================== NAVIGATIONAL SEARCH (suggest) =====================
+
+    public function test_suggest_requires_query_param(): void
+    {
+        $this->getJson('/api/v1/quran/search/suggest')
+            ->assertStatus(422)
+            ->assertJson(['success' => false]);
+    }
+
+    public function test_suggest_rejects_overlong_query(): void
+    {
+        $this->getJson('/api/v1/quran/search/suggest?q='.str_repeat('a', 101))
+            ->assertStatus(422)
+            ->assertJson(['success' => false]);
+    }
+
+    public function test_suggest_does_not_require_authentication(): void
+    {
+        $this->getJson('/api/v1/quran/search/suggest?q=2:255')->assertOk();
+    }
+
+    public function test_suggest_resolves_verse_key(): void
+    {
+        $response = $this->getJson('/api/v1/quran/search/suggest?q=2:255')->assertOk();
+
+        $this->assertSame('verse', $response->json('data.0.type'));
+        $this->assertSame('2:255', $response->json('data.0.verse_key'));
+        $this->assertSame(2, $response->json('data.0.surah_number'));
+        $this->assertSame(255, $response->json('data.0.verse_number'));
+    }
+
+    public function test_suggest_resolves_juz(): void
+    {
+        $response = $this->getJson('/api/v1/quran/search/suggest?q=juz 5')->assertOk();
+
+        $this->assertSame('juz', $response->json('data.0.type'));
+        $this->assertSame(5, $response->json('data.0.number'));
+    }
+
+    public function test_suggest_resolves_page(): void
+    {
+        $response = $this->getJson('/api/v1/quran/search/suggest?q=page 50')->assertOk();
+
+        $this->assertSame('page', $response->json('data.0.type'));
+        $this->assertSame(50, $response->json('data.0.number'));
+    }
+
+    public function test_suggest_resolves_bare_surah_number(): void
+    {
+        $response = $this->getJson('/api/v1/quran/search/suggest?q=5')->assertOk();
+
+        $this->assertSame('surah', $response->json('data.0.type'));
+        $this->assertSame(5, $response->json('data.0.surah_number'));
+    }
+
+    public function test_suggest_normalizes_arabic_indic_digits(): void
+    {
+        // ٢:٢٥٥ is the Arabic-Indic spelling of 2:255.
+        $response = $this->getJson('/api/v1/quran/search/suggest?q='.urlencode('٢:٢٥٥'))->assertOk();
+
+        $this->assertSame('verse', $response->json('data.0.type'));
+        $this->assertSame('2:255', $response->json('data.0.verse_key'));
+    }
+
+    public function test_suggest_returns_empty_for_out_of_range_division(): void
+    {
+        // Only 30 juz exist.
+        $response = $this->getJson('/api/v1/quran/search/suggest?q=juz 99')->assertOk();
+
+        $this->assertSame([], $response->json('data'));
+    }
+
+    public function test_suggest_matches_surah_by_name(): void
+    {
+        $this->seedSurah(2, 'البقرة', 'Al-Baqarah', 286);
+
+        $response = $this->getJson('/api/v1/quran/search/suggest?q=Baqarah')->assertOk();
+
+        $surah = collect($response->json('data'))->firstWhere('type', 'surah');
+        $this->assertNotNull($surah);
+        $this->assertSame(2, $surah['surah_number']);
+    }
+
+    public function test_suggest_rejects_verse_number_beyond_surah_length(): void
+    {
+        // Al-Fatihah has 7 verses, so 1:8 must not resolve.
+        $this->seedSurah(1, 'الفاتحة', 'Al-Fatihah', 7);
+
+        $response = $this->getJson('/api/v1/quran/search/suggest?q=1:8')->assertOk();
+
+        $this->assertSame([], $response->json('data'));
+    }
+
+    public function test_suggest_label_respects_locale_param(): void
+    {
+        $en = $this->getJson('/api/v1/quran/search/suggest?q=2:255&locale=en')->assertOk();
+        $this->assertStringContainsString('Verse', (string) $en->json('data.0.label'));
+
+        $ar = $this->getJson('/api/v1/quran/search/suggest?q=2:255&locale=ar')->assertOk();
+        $this->assertStringContainsString('آية', (string) $ar->json('data.0.label'));
+    }
+
+    public function test_suggest_rejects_invalid_locale(): void
+    {
+        $this->getJson('/api/v1/quran/search/suggest?q=2:255&locale=xx')
+            ->assertStatus(422)
+            ->assertJson(['success' => false]);
+    }
+
+    public function test_suggest_does_not_match_single_letter_surah_loosely(): void
+    {
+        // "ق" (Surah Qaf) must not match a query just because it contains that letter.
+        $this->seedSurah(50, 'ق', 'Qaf', 45);
+
+        $response = $this->getJson('/api/v1/quran/search/suggest?q='.urlencode('بقرة').'&locale=ar')->assertOk();
+
+        $numbers = collect($response->json('data'))->pluck('surah_number');
+        $this->assertFalse($numbers->contains(50));
+    }
+
+    private function seedSurah(int $number, string $nameAr, string $nameEn, int $versesCount): void
+    {
+        DB::table('quran_surahs')->insert([
+            'revelation_order' => $number,
+            'revelation_place' => 'makkah',
+            'bismillah_pre' => true,
+            'name_ar' => $nameAr,
+            'name_en' => $nameEn,
+            'transliteration' => $nameEn,
+            'verses_count' => $versesCount,
+            'pages' => json_encode([1]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 }

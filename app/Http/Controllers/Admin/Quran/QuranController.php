@@ -36,10 +36,10 @@ class QuranController extends Controller
     public function index(Request $request): View|JsonResponse
     {
         $perPage = $request->integer('per_page', 15);
-        $verses = $this->quranService->paginate($perPage, ['*'], []);
+        $verses = $this->quranService->paginateVerses($perPage);
 
         $stats = [
-            'total' => $this->quranService->count(),
+            'total' => $verses->total(),
             'surahs' => 114, // Total surahs in Quran
         ];
 

@@ -3,6 +3,15 @@
 declare(strict_types=1);
 
 return [
+    // Navigational search target labels (autocomplete)
+    'nav' => [
+        'surah' => 'سورہ',
+        'verse' => 'آیت',
+        'juz' => 'پارہ',
+        'page' => 'صفحہ',
+        'hizb' => 'حزب',
+    ],
+
     'title' => 'قرآن مجید',
     'singular' => 'قرآن',
     'plural' => 'قرآن',
@@ -28,6 +37,20 @@ return [
 
     // Public frontend keys
     'public' => [
+        'juz_label' => 'پارہ',
+        'page_label' => 'مصحف کا صفحہ',
+        'previous' => 'پچھلا',
+        'next' => 'اگلا',
+        'go_to_juz' => 'پارے پر جائیں',
+        'go_to_page' => 'صفحے پر جائیں',
+        'go_to_hizb' => 'حزب پر جائیں',
+        'hizb_label' => 'حزب',
+        'view_by_verse' => 'آیات',
+        'view_reading' => 'مطالعہ',
+        'tafsir_source' => 'تفسیر کا ماخذ',
+        'suggest_loading' => 'تلاش جاری ہے…',
+        'suggest_empty' => 'کوئی مماثل سورہ یا آیت نہیں',
+        'suggest_error' => 'تجاویز لوڈ نہ ہو سکیں — دوبارہ کوشش کے لیے دبائیں',
         'live_title' => 'براہِ راست نشریات',
         'live_coming_soon_title' => 'براہِ راست نشریات جلد آرہی ہیں',
         'live_coming_soon_message' => 'ہم قرآن کریم کی تلاوت کی براہِ راست نشریات شروع کرنے پر کام کر رہے ہیں۔ منتظر رہیں۔',

@@ -30,6 +30,21 @@ class QuranService extends BaseService
         $this->repository = $surahRepository;
     }
 
+    /**
+     * Paginate verses for the admin list with surah + translations eager-loaded.
+     *
+     * The inherited paginate() uses the surah repository; verse listings must go
+     * through the verse repository. Translations are batch-loaded (single query)
+     * so the blade's per-row $verse->translations access does not trigger N+1.
+     */
+    public function paginateVerses(int $perPage = 15): LengthAwarePaginator
+    {
+        $verses = $this->verseRepository->paginateWithFilters($perPage, '', 'verse_key', []);
+        $verses->getCollection()->load('translations');
+
+        return $verses;
+    }
+
     // ===================== SURAH METHODS =====================
 
     /**

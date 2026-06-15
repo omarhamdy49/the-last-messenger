@@ -36,6 +36,7 @@ class VerseTafsir extends Model
      */
     protected $fillable = [
         'verse_id',
+        'resource_id',
         'verse_key',
         'lang',
         'text',
@@ -49,6 +50,7 @@ class VerseTafsir extends Model
      */
     protected $casts = [
         'verse_id' => 'integer',
+        'resource_id' => 'integer',
         'active' => 'boolean',
     ];
 
@@ -58,6 +60,25 @@ class VerseTafsir extends Model
     public function verse(): BelongsTo
     {
         return $this->belongsTo(Verse::class, 'verse_id');
+    }
+
+    /**
+     * Get the tafsir resource (source work) this tafsir belongs to.
+     */
+    public function resource(): BelongsTo
+    {
+        return $this->belongsTo(TafsirResource::class, 'resource_id');
+    }
+
+    /**
+     * Scope: filter by tafsir resource (source).
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeByResource($query, int $resourceId)
+    {
+        return $query->where('resource_id', $resourceId);
     }
 
     /**

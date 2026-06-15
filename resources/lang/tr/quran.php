@@ -3,6 +3,15 @@
 declare(strict_types=1);
 
 return [
+    // Navigational search target labels (autocomplete)
+    'nav' => [
+        'surah' => 'Sure',
+        'verse' => 'Ayet',
+        'juz' => 'Cüz',
+        'page' => 'Sayfa',
+        'hizb' => 'Hizb',
+    ],
+
     'title' => 'Kutsal Kur\'an',
     'singular' => 'Kur\'an',
     'plural' => 'Kur\'an',
@@ -28,6 +37,20 @@ return [
 
     // Public frontend keys
     'public' => [
+        'juz_label' => 'Cüz',
+        'page_label' => 'Mushaf Sayfası',
+        'previous' => 'Önceki',
+        'next' => 'Sonraki',
+        'go_to_juz' => 'Cüze git',
+        'go_to_page' => 'Sayfaya git',
+        'go_to_hizb' => 'Hizb\'e git',
+        'hizb_label' => 'Hizb',
+        'view_by_verse' => 'Ayetler',
+        'view_reading' => 'Okuma',
+        'tafsir_source' => 'Tefsir kaynağı',
+        'suggest_loading' => 'Aranıyor…',
+        'suggest_empty' => 'Eşleşen sure veya ayet yok',
+        'suggest_error' => 'Öneriler yüklenemedi — yeniden denemek için dokunun',
         'live_title' => 'Canlı Yayın',
         'live_coming_soon_title' => 'Canlı yayın çok yakında',
         'live_coming_soon_message' => 'Canlı Kur\'an tilaveti yayınlarını başlatmak için çalışıyoruz. Takipte kalın.',

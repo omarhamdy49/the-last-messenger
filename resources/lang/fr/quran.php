@@ -3,6 +3,15 @@
 declare(strict_types=1);
 
 return [
+    // Navigational search target labels (autocomplete)
+    'nav' => [
+        'surah' => 'Sourate',
+        'verse' => 'Verset',
+        'juz' => 'Juz',
+        'page' => 'Page',
+        'hizb' => 'Hizb',
+    ],
+
     'title' => 'Le Saint Coran',
     'singular' => 'Coran',
     'plural' => 'Coran',
@@ -28,6 +37,20 @@ return [
 
     // Public frontend keys
     'public' => [
+        'juz_label' => 'Juz',
+        'page_label' => 'Page du Mushaf',
+        'previous' => 'Précédent',
+        'next' => 'Suivant',
+        'go_to_juz' => 'Aller au Juz',
+        'go_to_page' => 'Aller à la page',
+        'go_to_hizb' => 'Aller au Hizb',
+        'hizb_label' => 'Hizb',
+        'view_by_verse' => 'Versets',
+        'view_reading' => 'Lecture',
+        'tafsir_source' => 'Source du tafsir',
+        'suggest_loading' => 'Recherche…',
+        'suggest_empty' => 'Aucune sourate ou verset correspondant',
+        'suggest_error' => 'Échec du chargement — appuyez pour réessayer',
         'live_title' => 'Diffusion en direct',
         'live_coming_soon_title' => 'La diffusion en direct arrive bientôt',
         'live_coming_soon_message' => 'Nous préparons le lancement des récitations du Coran en direct. Restez à l\'écoute.',

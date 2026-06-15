@@ -30,6 +30,16 @@ Route::get('/quran/live', [QuranController::class, 'live'])->name('public.quran.
 Route::get('/quran/asbab-al-nuzul', [QuranController::class, 'asbab'])->name('public.quran.asbab');
 Route::get('/quran/surah/{surahNumber}', [QuranController::class, 'surah'])
     ->whereNumber('surahNumber')->name('public.quran.surah');
+Route::get('/quran/juz/{juz}', [QuranController::class, 'juz'])
+    ->whereNumber('juz')->name('public.quran.juz');
+Route::get('/quran/hizb/{hizb}', [QuranController::class, 'hizb'])
+    ->whereNumber('hizb')->name('public.quran.hizb');
+Route::get('/quran/page/{page}', [QuranController::class, 'page'])
+    ->whereNumber('page')->name('public.quran.page');
+// Short surah URL (e.g. /quran/2). Numeric-only so it never shadows the named
+// routes above (reciters, live, juz, hizb, page).
+Route::get('/quran/{surahNumber}', [QuranController::class, 'surah'])
+    ->whereNumber('surahNumber')->name('public.quran.surah.short');
 
 // Articles / Blog
 Route::get('/articles', [ArticleController::class, 'index'])->name('public.articles');

@@ -126,6 +126,20 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
     }
 
     /**
+     * Get verses by hizb
+     */
+    public function getByHizb(int $hizb, int $perPage = 50): LengthAwarePaginator
+    {
+        return $this->model
+            ->select(self::VERSE_COLUMNS)
+            ->where('hizb_number', $hizb)
+            ->with([self::SURAH_EAGER])
+            ->orderBy('surah_id')
+            ->orderBy('verse_number')
+            ->paginate($perPage);
+    }
+
+    /**
      * Get verses by page
      */
     public function getByPage(int $page): Collection

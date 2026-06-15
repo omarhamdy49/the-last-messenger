@@ -114,6 +114,7 @@
 <div
     x-data="{
         searchQuery: '',
+        suggest: { items: [], open: false, loading: false, error: false, active: -1, timer: null },
         activeFilter: 'all',
         viewMode: localStorage.getItem('quranViewMode') || 'grid',
         sortBy: localStorage.getItem('quranSortBy') || 'number',
@@ -165,6 +166,43 @@
         },
         isFavorite(n) { return this.favorites.includes(n); },
         getProgress(n){ return this.progress[n] || 0; },
+
+        onSearchInput() {
+            clearTimeout(this.suggest.timer);
+            const q = this.searchQuery.trim();
+            if (q.length < 1) { this.suggest.items = []; this.suggest.open = false; this.suggest.error = false; return; }
+            this.suggest.timer = setTimeout(() => this.fetchSuggest(q), 250);
+        },
+        async fetchSuggest(q) {
+            this.suggest.loading = true; this.suggest.error = false; this.suggest.open = true; this.suggest.active = -1;
+            try {
+                const loc = document.documentElement.lang || 'ar';
+                const res = await fetch('/api/v1/quran/search/suggest?q=' + encodeURIComponent(q) + '&limit=8&locale=' + encodeURIComponent(loc), { headers: { Accept: 'application/json' } });
+                if (!res.ok) { throw new Error('status ' + res.status); }
+                const json = await res.json();
+                this.suggest.items = (json.data || []).filter(s => ['surah', 'verse', 'juz', 'hizb', 'page'].includes(s.type));
+            } catch (e) {
+                this.suggest.error = true; this.suggest.items = [];
+            } finally {
+                this.suggest.loading = false;
+                this.$nextTick(() => { if (window.lucide) { window.lucide.createIcons(); } });
+            }
+        },
+        gotoSuggestion(s) {
+            if (!s) { return; }
+            let url = '/quran/surah/' + s.surah_number;
+            if (s.type === 'juz') { url = '/quran/juz/' + s.number; }
+            else if (s.type === 'hizb') { url = '/quran/hizb/' + s.number; }
+            else if (s.type === 'page') { url = '/quran/page/' + s.number; }
+            window.location.href = url;
+        },
+        suggestKeydown(e) {
+            if (!this.suggest.open) { return; }
+            if (e.key === 'ArrowDown') { e.preventDefault(); this.suggest.active = Math.min(this.suggest.active + 1, this.suggest.items.length - 1); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); this.suggest.active = Math.max(this.suggest.active - 1, 0); }
+            else if (e.key === 'Enter' && this.suggest.active >= 0) { e.preventDefault(); this.gotoSuggestion(this.suggest.items[this.suggest.active]); }
+            else if (e.key === 'Escape') { this.suggest.open = false; }
+        },
     }"
     :class="$store.theme.dark ? 'bg-gray-950' : 'bg-gray-50'"
     class="min-h-screen font-['Cairo'] transition-colors duration-300"
@@ -231,12 +269,18 @@
 
             {{-- Search --}}
             <div class="lg:col-span-5">
-                <div class="relative">
-                    <i data-lucide="search" class="absolute end-4 top-1/2 -translate-y-1/2 w-5 h-5"
+                <div class="relative" @click.outside="suggest.open = false" @keydown="suggestKeydown($event)">
+                    <i data-lucide="search" class="absolute end-4 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none"
                        :class="$store.theme.dark ? 'text-gray-500' : 'text-gray-400'"></i>
                     <input
                         type="search"
                         x-model="searchQuery"
+                        @input="onSearchInput()"
+                        @focus="if (suggest.items.length || suggest.error) { suggest.open = true; }"
+                        autocomplete="off"
+                        role="combobox"
+                        :aria-expanded="suggest.open"
+                        aria-controls="quran-suggest-list"
                         placeholder="{{ __('quran.public.search_placeholder') }}"
                         class="w-full pe-12 ps-4 py-3 text-base sm:text-sm rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-[#64CCC5] transition-all"
                         :class="$store.theme.dark
@@ -244,6 +288,59 @@
                             : 'bg-white border-gray-200 text-gray-900'"
                         aria-label="{{ __('quran.public.search_placeholder') }}"
                     >
+
+                    {{-- Navigational autocomplete — powered by /api/v1/quran/search/suggest --}}
+                    <div
+                        x-show="suggest.open"
+                        x-transition.opacity
+                        x-cloak
+                        id="quran-suggest-list"
+                        role="listbox"
+                        class="absolute z-50 mt-2 w-full rounded-xl border-2 shadow-xl overflow-hidden max-h-80 overflow-y-auto"
+                        :class="$store.theme.dark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'"
+                    >
+                        <template x-if="suggest.loading">
+                            <div class="px-4 py-3 flex items-center gap-3 text-sm"
+                                 :class="$store.theme.dark ? 'text-gray-300' : 'text-gray-600'">
+                                <span class="w-4 h-4 border-2 border-[#64CCC5] border-t-transparent rounded-full animate-spin"></span>
+                                <span>{{ __('quran.public.suggest_loading') }}</span>
+                            </div>
+                        </template>
+
+                        <template x-if="!suggest.loading && suggest.error">
+                            <button type="button" @click="fetchSuggest(searchQuery.trim())"
+                                    class="w-full text-start px-4 py-3 text-sm flex items-center gap-2"
+                                    :class="$store.theme.dark ? 'text-red-300 hover:bg-gray-800' : 'text-red-600 hover:bg-gray-50'">
+                                <i data-lucide="rotate-cw" class="w-4 h-4 flex-shrink-0"></i>
+                                <span>{{ __('quran.public.suggest_error') }}</span>
+                            </button>
+                        </template>
+
+                        <template x-if="!suggest.loading && !suggest.error && suggest.items.length === 0">
+                            <div class="px-4 py-3 text-sm"
+                                 :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">
+                                {{ __('quran.public.suggest_empty') }}
+                            </div>
+                        </template>
+
+                        <template x-for="(s, i) in suggest.items" :key="s.type + '-' + (s.verse_key || s.surah_number)">
+                            <button
+                                type="button"
+                                role="option"
+                                :aria-selected="suggest.active === i"
+                                @click="gotoSuggestion(s)"
+                                @mouseenter="suggest.active = i"
+                                class="w-full text-start px-4 py-3 flex items-center gap-3 transition-colors"
+                                :class="suggest.active === i ? ($store.theme.dark ? 'bg-gray-800' : 'bg-gray-100') : ''"
+                            >
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0 bg-gradient-to-r from-[#0056b3] to-[#218838] text-white">
+                                    <i :data-lucide="s.type === 'verse' ? 'bookmark' : (s.type === 'juz' ? 'layers' : (s.type === 'hizb' ? 'square-stack' : (s.type === 'page' ? 'file-text' : 'book-open')))" class="w-4 h-4"></i>
+                                </span>
+                                <span class="truncate" x-text="s.label"
+                                      :class="$store.theme.dark ? 'text-gray-100' : 'text-gray-900'"></span>
+                            </button>
+                        </template>
+                    </div>
                 </div>
             </div>
 
@@ -322,6 +419,45 @@
                     <option value="verses">{{ __('quran.public.sort_verses') }}</option>
                 </select>
             </div>
+        </div>
+
+        {{-- Quick jump: Juz / Page --}}
+        <div class="mb-6 flex flex-wrap items-center gap-3 stagger-2 fade-in-up">
+            <select
+                @change="if ($event.target.value) { window.location.href = '{{ url('/quran/juz') }}/' + $event.target.value; }"
+                class="px-4 py-2.5 text-base sm:text-sm rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-[#64CCC5] transition-all"
+                :class="$store.theme.dark ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'"
+                aria-label="{{ __('quran.public.go_to_juz') }}"
+            >
+                <option value="">{{ __('quran.public.go_to_juz') }}</option>
+                @for($j = 1; $j <= 30; $j++)
+                    <option value="{{ $j }}">{{ __('quran.nav.juz') }} {{ $j }}</option>
+                @endfor
+            </select>
+
+            <select
+                @change="if ($event.target.value) { window.location.href = '{{ url('/quran/hizb') }}/' + $event.target.value; }"
+                class="px-4 py-2.5 text-base sm:text-sm rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-[#64CCC5] transition-all"
+                :class="$store.theme.dark ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'"
+                aria-label="{{ __('quran.public.go_to_hizb') }}"
+            >
+                <option value="">{{ __('quran.public.go_to_hizb') }}</option>
+                @for($h = 1; $h <= 60; $h++)
+                    <option value="{{ $h }}">{{ __('quran.nav.hizb') }} {{ $h }}</option>
+                @endfor
+            </select>
+
+            <select
+                @change="if ($event.target.value) { window.location.href = '{{ url('/quran/page') }}/' + $event.target.value; }"
+                class="px-4 py-2.5 text-base sm:text-sm rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-[#64CCC5] transition-all"
+                :class="$store.theme.dark ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'"
+                aria-label="{{ __('quran.public.go_to_page') }}"
+            >
+                <option value="">{{ __('quran.public.go_to_page') }}</option>
+                @for($p = 1; $p <= 604; $p++)
+                    <option value="{{ $p }}">{{ __('quran.nav.page') }} {{ $p }}</option>
+                @endfor
+            </select>
         </div>
 
         {{-- Results count + progress --}}

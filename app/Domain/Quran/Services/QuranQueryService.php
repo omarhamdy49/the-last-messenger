@@ -22,6 +22,7 @@ use App\Domain\Quran\Application\Handlers\GetVerseByKeyHandler;
 use App\Domain\Quran\Application\Handlers\ListRecitersHandler;
 use App\Domain\Quran\Application\Handlers\ListSurahsHandler;
 use App\Domain\Quran\Application\Handlers\ListTafsirBySurahHandler;
+use App\Domain\Quran\Application\Handlers\ListVersesByHizbHandler;
 use App\Domain\Quran\Application\Handlers\ListVersesByJuzHandler;
 use App\Domain\Quran\Application\Handlers\ListVersesByPageHandler;
 use App\Domain\Quran\Application\Handlers\ListVersesBySurahHandler;
@@ -42,6 +43,7 @@ use App\Domain\Quran\Application\Queries\GetVerseByKeyQuery;
 use App\Domain\Quran\Application\Queries\ListRecitersQuery;
 use App\Domain\Quran\Application\Queries\ListSurahsQuery;
 use App\Domain\Quran\Application\Queries\ListTafsirBySurahQuery;
+use App\Domain\Quran\Application\Queries\ListVersesByHizbQuery;
 use App\Domain\Quran\Application\Queries\ListVersesByJuzQuery;
 use App\Domain\Quran\Application\Queries\ListVersesByPageQuery;
 use App\Domain\Quran\Application\Queries\ListVersesBySurahQuery;
@@ -69,6 +71,7 @@ final class QuranQueryService
         private readonly GetVerseByIdHandler $getVerseByIdHandler,
         private readonly GetVerseByKeyHandler $getVerseByKeyHandler,
         private readonly ListVersesBySurahHandler $listVersesBySurahHandler,
+        private readonly ListVersesByHizbHandler $listVersesByHizbHandler,
         private readonly ListVersesByJuzHandler $listVersesByJuzHandler,
         private readonly ListVersesByPageHandler $listVersesByPageHandler,
         private readonly SearchVersesHandler $searchVersesHandler,
@@ -256,6 +259,25 @@ final class QuranQueryService
         );
 
         return $this->listVersesByJuzHandler->handle($query);
+    }
+
+    /**
+     * List verses by Hizb
+     */
+    public function listVersesByHizb(
+        int $hizb,
+        int $perPage = 50,
+        string $locale = 'ar',
+        bool $withTranslations = true,
+    ): LengthAwarePaginator {
+        $query = new ListVersesByHizbQuery(
+            hizb: $hizb,
+            perPage: $perPage,
+            locale: $locale,
+            withTranslations: $withTranslations,
+        );
+
+        return $this->listVersesByHizbHandler->handle($query);
     }
 
     /**

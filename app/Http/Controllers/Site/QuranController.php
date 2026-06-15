@@ -6,6 +6,9 @@ namespace App\Http\Controllers\Site;
 
 use App\Domain\Quran\Application\Handlers\ListRevelationContextsHandler;
 use App\Domain\Quran\Application\Queries\ListRevelationContextsQuery;
+use App\Domain\Quran\Models\Recitation;
+use App\Domain\Quran\Models\TafsirResource;
+use App\Domain\Quran\Models\VerseTafsir;
 use App\Domain\Quran\Services\QuranQueryService;
 use App\Domain\Quran\Services\ReciterService;
 use App\Domain\Quran\Services\VerseAudioUrlResolver;
@@ -70,47 +73,32 @@ final class QuranController extends Controller
         }
 
         $locale = app()->getLocale();
-        $page = max(1, (int) $request->query('page', 1));
-        $perPage = (int) $request->query('per_page', 10);
-        $perPage = in_array($perPage, [5, 10, 20, 50], true) ? $perPage : 10;
 
-        $cacheKey = "public_quran_surah_{$surahNumber}_{$locale}_{$page}_{$perPage}";
+        // Full surah, no pagination — verses carry their mushaf page so the
+        // reader can separate them by Quran page (like a printed mushaf).
+        $cacheKey = "public_quran_surah_full_{$surahNumber}_{$locale}";
 
-        $payload = Cache::remember($cacheKey, 3600, function () use ($surahNumber, $locale, $page, $perPage) {
+        $payload = Cache::remember($cacheKey, 3600, function () use ($surahNumber, $locale) {
             try {
                 $surahDto = $this->quranQueryService->getSurahByNumber(
                     number: $surahNumber,
                     locale: $locale,
                 );
 
-                // Fetch all verses for this surah then paginate manually
-                // (ListVersesBySurah returns a Collection with all verses)
                 $allVerses = $this->quranQueryService->listVersesBySurah(
                     surahId: $surahNumber,
                     locale: $locale,
                     withTranslations: true,
                 );
 
-                $total = $allVerses->count();
-                $offset = ($page - 1) * $perPage;
-                $pageVerses = $allVerses->slice($offset, $perPage)->values();
+                // Batch-load all tafsir sources for every verse (single query, no N+1).
+                $tafsirMap = $this->getTafsirsForVerses($allVerses->pluck('id')->all());
 
-                // Build verse array with tafsir loaded per-verse from cache
-                $versesData = $pageVerses->map(function ($verse) {
-                    $tafsirText = null;
-                    try {
-                        $tafsir = $this->quranQueryService->getTafsirByVerse(
-                            verseId: $verse->id,
-                            locale: 'ar', // Muyassar tafsir is Arabic only
-                        );
-                        $tafsirText = $tafsir->first()?->text;
-                    } catch (Throwable) {
-                        $tafsirText = null;
-                    }
-
+                $versesData = $allVerses->map(function ($verse) use ($tafsirMap) {
                     return [
                         'id' => $verse->id,
                         'number' => $verse->verseNumber,
+                        'verse_key' => $verse->verseKey,
                         'arabic' => $verse->textArabic,
                         'transliteration' => $this->cleanTransliteration($verse->translations['en-tl'] ?? null),
                         'translation_ar' => $verse->translations['ar'] ?? null,
@@ -118,7 +106,7 @@ final class QuranController extends Controller
                         'translation_fr' => $verse->translations['fr'] ?? null,
                         'translation_tr' => $verse->translations['tr'] ?? null,
                         'translation_ur' => $verse->translations['ur'] ?? null,
-                        'tafsir' => $tafsirText,
+                        'tafsirs' => (object) ($tafsirMap[$verse->id] ?? []),
                         'juz' => $verse->juzNumber,
                         'page' => $verse->pageNumber,
                         'has_sajdah' => $verse->hasSajdah(),
@@ -133,8 +121,6 @@ final class QuranController extends Controller
                 } catch (Throwable) {
                     $surahInfo = null;
                 }
-
-                $totalPages = (int) ceil($total / $perPage);
 
                 return [
                     'surah' => [
@@ -151,14 +137,6 @@ final class QuranController extends Controller
                         'info' => $surahInfo,
                     ],
                     'verses' => $versesData,
-                    'pagination' => [
-                        'current_page' => $page,
-                        'per_page' => $perPage,
-                        'total' => $total,
-                        'total_pages' => $totalPages,
-                        'has_prev' => $page > 1,
-                        'has_next' => $page < $totalPages,
-                    ],
                 ];
             } catch (Throwable $e) {
                 report($e);
@@ -196,14 +174,185 @@ final class QuranController extends Controller
             }
         });
 
-        // Get the first reciter's first-surah recitation URL for the main player
-        $firstRecitationUrl = $this->getFirstRecitationUrl($payload['surah']['number']);
+        // Attach each reciter's per-surah audio URL so the dropdown can switch the
+        // surah-level player (per-verse audio uses the everyayah resolver instead).
+        $surahAudioUrls = $this->getSurahAudioUrls($payload['surah']['number']);
+        $reciters = array_map(function (array $reciter) use ($surahAudioUrls) {
+            $reciter['surahAudioUrl'] = $surahAudioUrls[$reciter['id']] ?? null;
+
+            return $reciter;
+        }, $reciters);
+
+        $firstRecitationUrl = $reciters[0]['surahAudioUrl'] ?? null;
+
+        $prevSurah = $surahNumber > 1 ? $surahNumber - 1 : null;
+        $nextSurah = $surahNumber < 114 ? $surahNumber + 1 : null;
 
         return view('public.quran.surah', array_merge($payload, [
             'reciters' => $reciters,
             'firstRecitationUrl' => $firstRecitationUrl,
+            'tafsirResources' => $this->getTafsirResources($locale),
+            'prevSurah' => $prevSurah,
+            'nextSurah' => $nextSurah,
+            'prevSurahName' => $this->surahDisplayName($prevSurah, $locale),
+            'nextSurahName' => $this->surahDisplayName($nextSurah, $locale),
+        ]));
+    }
+
+    /**
+     * Localized surah name for prev/next navigation; null when out of range.
+     */
+    private function surahDisplayName(?int $number, string $locale): ?string
+    {
+        if ($number === null) {
+            return null;
+        }
+
+        try {
+            return $this->quranQueryService->getSurahByNumber($number, $locale)->nameAr;
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Juz reader page — verses of a juz (1-30), paginated, grouped by surah.
+     */
+    public function juz(Request $request, int $juz): View
+    {
+        if ($juz < 1 || $juz > 30) {
+            abort(404);
+        }
+
+        $locale = app()->getLocale();
+        $page = max(1, (int) $request->query('page', 1));
+        $perPage = (int) $request->query('per_page', 20);
+        $perPage = in_array($perPage, [10, 20, 50], true) ? $perPage : 20;
+
+        $cacheKey = "public_quran_juz_{$juz}_{$locale}_{$page}_{$perPage}";
+
+        $payload = Cache::remember($cacheKey, 3600, function () use ($juz, $locale, $perPage) {
+            try {
+                $paginator = $this->quranQueryService->listVersesByJuz($juz, $perPage, $locale, true);
+
+                return [
+                    'verses' => $this->mapReaderVerses($paginator->items(), $locale),
+                    'pagination' => [
+                        'current_page' => $paginator->currentPage(),
+                        'per_page' => $perPage,
+                        'total' => $paginator->total(),
+                        'total_pages' => $paginator->lastPage(),
+                        'has_prev' => $paginator->currentPage() > 1,
+                        'has_next' => $paginator->currentPage() < $paginator->lastPage(),
+                    ],
+                ];
+            } catch (Throwable $e) {
+                report($e);
+
+                return null;
+            }
+        });
+
+        if ($payload === null) {
+            abort(404);
+        }
+
+        return view('public.quran.juz', array_merge($payload, [
+            'juz' => $juz,
+            'hasPrevJuz' => $juz > 1,
+            'hasNextJuz' => $juz < 30,
             'currentPage' => $page,
             'perPage' => $perPage,
+        ]));
+    }
+
+    /**
+     * Hizb reader page — verses of a hizb (1-60), paginated, grouped by surah.
+     */
+    public function hizb(Request $request, int $hizb): View
+    {
+        if ($hizb < 1 || $hizb > 60) {
+            abort(404);
+        }
+
+        $locale = app()->getLocale();
+        $page = max(1, (int) $request->query('page', 1));
+        $perPage = (int) $request->query('per_page', 20);
+        $perPage = in_array($perPage, [10, 20, 50], true) ? $perPage : 20;
+
+        $cacheKey = "public_quran_hizb_{$hizb}_{$locale}_{$page}_{$perPage}";
+
+        $payload = Cache::remember($cacheKey, 3600, function () use ($hizb, $locale, $perPage) {
+            try {
+                $paginator = $this->quranQueryService->listVersesByHizb($hizb, $perPage, $locale, true);
+
+                return [
+                    'verses' => $this->mapReaderVerses($paginator->items(), $locale),
+                    'pagination' => [
+                        'current_page' => $paginator->currentPage(),
+                        'per_page' => $perPage,
+                        'total' => $paginator->total(),
+                        'total_pages' => $paginator->lastPage(),
+                        'has_prev' => $paginator->currentPage() > 1,
+                        'has_next' => $paginator->currentPage() < $paginator->lastPage(),
+                    ],
+                ];
+            } catch (Throwable $e) {
+                report($e);
+
+                return null;
+            }
+        });
+
+        if ($payload === null) {
+            abort(404);
+        }
+
+        return view('public.quran.hizb', array_merge($payload, [
+            'hizb' => $hizb,
+            'hasPrevHizb' => $hizb > 1,
+            'hasNextHizb' => $hizb < 60,
+            'currentPage' => $page,
+            'perPage' => $perPage,
+        ]));
+    }
+
+    /**
+     * Mushaf page reader — all verses on a printed page (1-604), grouped by surah.
+     */
+    public function page(int $page): View
+    {
+        if ($page < 1 || $page > 604) {
+            abort(404);
+        }
+
+        $locale = app()->getLocale();
+        $cacheKey = "public_quran_mushaf_page_{$page}_{$locale}";
+
+        $payload = Cache::remember($cacheKey, 3600, function () use ($page, $locale) {
+            try {
+                $verses = $this->quranQueryService->listVersesByPage($page, $locale, true);
+
+                if ($verses->isEmpty()) {
+                    return null;
+                }
+
+                return ['verses' => $this->mapReaderVerses($verses, $locale)];
+            } catch (Throwable $e) {
+                report($e);
+
+                return null;
+            }
+        });
+
+        if ($payload === null) {
+            abort(404);
+        }
+
+        return view('public.quran.page', array_merge($payload, [
+            'pageNumber' => $page,
+            'hasPrevPage' => $page > 1,
+            'hasNextPage' => $page < 604,
         ]));
     }
 
@@ -225,6 +374,12 @@ final class QuranController extends Controller
                     locale: $locale,
                 );
 
+                // listReciters returns a paginator; collect($all) would serialize its
+                // meta array (current_page, ...) and silently yield zero reciters.
+                $items = $allReciters instanceof \Illuminate\Contracts\Pagination\LengthAwarePaginator
+                    ? collect($allReciters->items())
+                    : collect($allReciters);
+
                 $mapReciter = fn ($r) => [
                     'id' => $r->id,
                     'nameAr' => $r->getDisplayName('ar'),
@@ -241,17 +396,17 @@ final class QuranController extends Controller
                 ];
 
                 return [
-                    'featured' => collect($allReciters)
+                    'featured' => $items
                         ->filter(fn ($r) => $r->isFeatured)
                         ->take(3)
                         ->map($mapReciter)
                         ->values()
                         ->all(),
-                    'all' => collect($allReciters)
+                    'all' => $items
                         ->map($mapReciter)
                         ->values()
                         ->all(),
-                    'total' => collect($allReciters)->count(),
+                    'total' => $items->count(),
                 ];
             } catch (Throwable) {
                 return ['featured' => [], 'all' => [], 'total' => 0];
@@ -331,6 +486,37 @@ final class QuranController extends Controller
     }
 
     /**
+     * Shape verse DTOs for the juz/page reader views. Tafsir is intentionally
+     * omitted here (it would be a per-verse query across a whole juz); the surah
+     * page remains the place for tafsir. The Arabic translation equals the verse
+     * text, so it is nulled to avoid showing the same line twice.
+     *
+     * @param  iterable<\App\Domain\Quran\Application\DTOs\VerseDTO>  $verses
+     * @return array<int, array<string, mixed>>
+     */
+    private function mapReaderVerses(iterable $verses, string $locale): array
+    {
+        $out = [];
+
+        foreach ($verses as $verse) {
+            $surahNumber = (int) explode(':', $verse->verseKey)[0];
+
+            $out[] = [
+                'surahNumber' => $surahNumber,
+                'surahName' => $verse->surahName,
+                'number' => $verse->verseNumber,
+                'verseKey' => $verse->verseKey,
+                'arabic' => $verse->textArabic,
+                'translation' => $locale === 'ar' ? null : $verse->getTranslation($locale),
+                'transliteration' => $this->cleanTransliteration($verse->translations['en-tl'] ?? null),
+                'has_sajdah' => $verse->hasSajdah(),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
      * The imported transliteration carries tajwid markup tags (<u>/<b>) that leak as
      * literal text in the UI. Strip them and collapse whitespace for a clean reading line.
      */
@@ -391,26 +577,79 @@ final class QuranController extends Controller
     /**
      * Get first recitation URL for the surah audio player.
      */
-    private function getFirstRecitationUrl(int $surahNumber): ?string
+    /**
+     * Per-surah recitation URLs keyed by reciter id, so the audio dropdown can
+     * switch the surah-level player between reciters.
+     *
+     * @return array<int, string>
+     */
+    private function getSurahAudioUrls(int $surahNumber): array
     {
-        return Cache::remember("public_quran_recitation_url_{$surahNumber}", 86400, function () use ($surahNumber): ?string {
+        return Cache::remember("public_quran_surah_audio_urls_{$surahNumber}", 86400, function () use ($surahNumber): array {
             try {
-                $featured = $this->reciterService->getFeatured();
-                $reciter = collect($featured)->first();
-                if ($reciter === null) {
-                    return null;
-                }
-
-                // Check recitations table first
-                $recitation = $reciter->recitations()
+                return Recitation::query()
                     ->where('surah_id', $surahNumber)
-                    ->select(['audio_url'])
-                    ->first();
-
-                return $recitation?->audio_url;
+                    ->select(['reciter_id', 'audio_url'])
+                    ->get()
+                    ->pluck('audio_url', 'reciter_id')
+                    ->all();
             } catch (Throwable) {
-                return null;
+                return [];
             }
         });
+    }
+
+    /**
+     * Active tafsir sources for the reader's source selector.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function getTafsirResources(string $locale): array
+    {
+        return Cache::remember("public_quran_tafsir_resources_{$locale}", 3600, function () use ($locale) {
+            try {
+                return TafsirResource::query()
+                    ->where('is_active', true)
+                    ->orderBy('display_order')
+                    ->orderBy('id')
+                    ->get(['id', 'slug', 'name', 'language'])
+                    ->map(fn ($r) => [
+                        'id' => $r->id,
+                        'name' => $r->getName($locale),
+                        'language' => $r->language,
+                    ])
+                    ->all();
+            } catch (Throwable) {
+                return [];
+            }
+        });
+    }
+
+    /**
+     * Tafsir text for the given verses, grouped [verse_id => [resource_id => text]].
+     * Single query — avoids a per-verse N+1 across the page.
+     *
+     * @param  array<int, int>  $verseIds
+     * @return array<int, array<int, string>>
+     */
+    private function getTafsirsForVerses(array $verseIds): array
+    {
+        if ($verseIds === []) {
+            return [];
+        }
+
+        $map = [];
+        VerseTafsir::query()
+            ->whereIn('verse_id', $verseIds)
+            ->where('active', true)
+            ->select(['verse_id', 'resource_id', 'text'])
+            ->get()
+            ->each(function ($row) use (&$map) {
+                if ($row->resource_id !== null) {
+                    $map[$row->verse_id][$row->resource_id] = $row->text;
+                }
+            });
+
+        return $map;
     }
 }
