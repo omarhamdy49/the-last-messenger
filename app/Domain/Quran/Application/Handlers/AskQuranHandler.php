@@ -39,9 +39,13 @@ final readonly class AskQuranHandler
     {
         $limit = (int) config('services.quran_ai.monthly_quota', 10);
         $period = Carbon::now()->format('Y-m');
+        // A detailed answer is a separate, richer generation — it costs 2 quota
+        // slots and is cached independently of the concise answer (hash folds the
+        // mode in) so the two never overwrite or get served for one another.
+        $cost = $query->detailed ? 2 : 1;
 
         $normalized = $this->normalize($query->question);
-        $hash = hash('sha256', $normalized.'|'.$query->locale);
+        $hash = $this->cacheHash($normalized, $query->locale, $query->detailed);
         $cacheKey = QuranCacheKeys::aiAnswer($hash, $query->locale);
 
         // 1. Free path — cross-user answer cache (no quota consumed).
@@ -61,20 +65,20 @@ final readonly class AskQuranHandler
             );
         }
 
-        // 2. Reserve a quota slot atomically.
-        if (! $this->quota->tryReserve($query->userId, $period, $limit)) {
+        // 2. Reserve the quota slot(s) atomically (2 for a detailed answer).
+        if (! $this->quota->tryReserve($query->userId, $period, $limit, $cost)) {
             throw MonthlyQuotaExceededException::forPeriod($limit, $period);
         }
 
-        // 3. Paid path — refund the slot on ANY failure.
+        // 3. Paid path — refund the slot(s) on ANY failure.
         try {
-            $answer = $this->service->answer($query->question, $query->locale);
+            $answer = $this->service->answer($query->question, $query->locale, $query->detailed);
 
             if ($answer->answer === '') {
                 throw new \RuntimeException('quran_ai_empty_answer');
             }
         } catch (\Throwable $e) {
-            $this->quota->refund($query->userId, $period);
+            $this->quota->refund($query->userId, $period, $cost);
             throw $e;
         }
 
@@ -125,9 +129,10 @@ final readonly class AskQuranHandler
     {
         $limit = (int) config('services.quran_ai.monthly_quota', 10);
         $period = Carbon::now()->format('Y-m');
+        $cost = $query->detailed ? 2 : 1;
 
         $normalized = $this->normalize($query->question);
-        $hash = hash('sha256', $normalized.'|'.$query->locale);
+        $hash = $this->cacheHash($normalized, $query->locale, $query->detailed);
         $cacheKey = QuranCacheKeys::aiAnswer($hash, $query->locale);
 
         // 1. Free path — replay the cached answer (no quota consumed).
@@ -150,22 +155,22 @@ final readonly class AskQuranHandler
             return;
         }
 
-        // 2. Reserve a quota slot atomically.
-        if (! $this->quota->tryReserve($query->userId, $period, $limit)) {
+        // 2. Reserve the quota slot(s) atomically (2 for a detailed answer).
+        if (! $this->quota->tryReserve($query->userId, $period, $limit, $cost)) {
             $emit(['type' => 'quota', 'limit' => $limit]);
 
             return;
         }
 
-        // 3. Paid path — refund the slot on ANY failure.
+        // 3. Paid path — refund the slot(s) on ANY failure.
         try {
-            $answer = $this->service->streamAnswer($query->question, $query->locale, $emit);
+            $answer = $this->service->streamAnswer($query->question, $query->locale, $emit, $query->detailed);
 
             if ($answer->answer === '') {
                 throw new \RuntimeException('quran_ai_empty_answer');
             }
         } catch (\Throwable $e) {
-            $this->quota->refund($query->userId, $period);
+            $this->quota->refund($query->userId, $period, $cost);
             report($e);
             $emit(['type' => 'error']);
 
@@ -251,5 +256,15 @@ final readonly class AskQuranHandler
         $collapsed = preg_replace('/\s+/u', ' ', $stripped) ?? $stripped;
 
         return mb_strtolower(trim($collapsed));
+    }
+
+    /**
+     * Cross-user cache / dedup key. Folds in the answer mode ('c' concise / 'd'
+     * detailed) so the two variants of the same question are cached separately
+     * and a concise answer is never served for a detailed request (or vice versa).
+     */
+    private function cacheHash(string $normalized, string $locale, bool $detailed): string
+    {
+        return hash('sha256', $normalized.'|'.$locale.'|'.($detailed ? 'd' : 'c'));
     }
 }

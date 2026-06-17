@@ -67,6 +67,55 @@ final class AskQuranHandlerTest extends TestCase
         };
     }
 
+    /**
+     * A chat client that emits a tool-use preamble + a tool call on the first
+     * (tool) round, then the real answer on the second round — reproducing the
+     * provider behaviour that leaked "let me fetch…" narration into saved answers.
+     */
+    private function fakeChatNarratesThenAnswers(): ChatClientInterface
+    {
+        return new class implements ChatClientInterface
+        {
+            private int $calls = 0;
+
+            public function chat(array $messages, array $tools = [], string $toolChoice = 'auto'): ChatResult
+            {
+                return new ChatResult(message: ['role' => 'assistant', 'content' => 'unused'], usage: []);
+            }
+
+            public function streamChat(array $messages, array $tools, string $toolChoice, callable $onContentDelta): ChatResult
+            {
+                $this->calls++;
+
+                if ($this->calls === 1) {
+                    $preamble = 'Let me search for the verse and fetch its tafsir.';
+                    $onContentDelta($preamble);
+
+                    return new ChatResult(
+                        message: [
+                            'role' => 'assistant',
+                            'content' => $preamble,
+                            'tool_calls' => [[
+                                'id' => 'call_1',
+                                'type' => 'function',
+                                'function' => ['name' => 'search_quran', 'arguments' => '{"query":"patience"}'],
+                            ]],
+                        ],
+                        usage: ['prompt_tokens' => 500, 'completion_tokens' => 20, 'prompt_cache_hit_tokens' => 400, 'prompt_cache_miss_tokens' => 100],
+                    );
+                }
+
+                $answer = 'Patience is praised in [[2:153]].';
+                $onContentDelta($answer);
+
+                return new ChatResult(
+                    message: ['role' => 'assistant', 'content' => $answer],
+                    usage: ['prompt_tokens' => 800, 'completion_tokens' => 30, 'prompt_cache_hit_tokens' => 700, 'prompt_cache_miss_tokens' => 100],
+                );
+            }
+        };
+    }
+
     private function bindClients(ChatClientInterface $chat): void
     {
         $this->app->instance(ChatClientInterface::class, $chat);
@@ -125,6 +174,31 @@ final class AskQuranHandlerTest extends TestCase
 
         $this->assertDatabaseHas('ai_inquiries', ['user_id' => $user->id, 'source' => 'llm']);
         $this->assertSame(1, app(AiInquiryQuotaRepositoryInterface::class)->used($user->id, now()->format('Y-m')));
+    }
+
+    public function test_streaming_discards_tool_round_narration_from_the_saved_answer(): void
+    {
+        config()->set('services.quran_ai.monthly_quota', 10);
+        $this->bindClients($this->fakeChatNarratesThenAnswers());
+        $user = User::factory()->create();
+
+        $events = [];
+        app(AskQuranHandler::class)->handleStreaming(
+            new AskQuranQuery($user->id, 'What does the Quran say about patience in trials?', 'en'),
+            function (array $event) use (&$events): void {
+                $events[] = $event;
+            },
+        );
+
+        // The persisted/cached answer must be only the final round — the tool-use
+        // preamble that streamed live must NOT survive into the saved answer.
+        $inquiry = \App\Domain\Quran\Models\AiInquiry::where('user_id', $user->id)->firstOrFail();
+        $this->assertStringNotContainsString('Let me search', $inquiry->answer);
+        $this->assertStringContainsString('[[2:153]]', $inquiry->answer);
+
+        $done = end($events);
+        $this->assertSame('done', $done['type']);
+        $this->assertSame('2:153', $done['verses'][0]['key']);
     }
 
     public function test_streaming_path_emits_a_quota_event_when_exhausted(): void
@@ -209,5 +283,60 @@ final class AskQuranHandlerTest extends TestCase
         // The reserved slot must have been refunded — user lost nothing.
         $this->assertSame(0, app(AiInquiryQuotaRepositoryInterface::class)->used($user->id, now()->format('Y-m')));
         $this->assertDatabaseCount('ai_inquiries', 0);
+    }
+
+    public function test_detailed_answer_reserves_two_quota_slots(): void
+    {
+        config()->set('services.quran_ai.monthly_quota', 10);
+        $this->bindClients($this->fakeChatSucceeds());
+        $user = User::factory()->create();
+
+        $result = app(AskQuranHandler::class)->handle(new AskQuranQuery(
+            userId: $user->id,
+            question: 'Explain patience in the Quran in detail',
+            locale: 'en',
+            detailed: true,
+        ));
+
+        $this->assertSame('llm', $result->source);
+        $this->assertSame(8, $result->remaining); // 10 - 2
+        $this->assertSame(2, app(AiInquiryQuotaRepositoryInterface::class)->used($user->id, now()->format('Y-m')));
+    }
+
+    public function test_detailed_answer_is_blocked_when_fewer_than_two_slots_remain(): void
+    {
+        config()->set('services.quran_ai.monthly_quota', 1);
+        $this->bindClients($this->fakeChatSucceeds());
+        $user = User::factory()->create();
+
+        $this->expectException(MonthlyQuotaExceededException::class);
+        app(AskQuranHandler::class)->handle(new AskQuranQuery(
+            userId: $user->id,
+            question: 'A detailed question with only one slot left',
+            locale: 'en',
+            detailed: true,
+        ));
+    }
+
+    public function test_detailed_and_concise_answers_are_cached_separately(): void
+    {
+        config()->set('services.quran_ai.monthly_quota', 10);
+        $this->bindClients($this->fakeChatSucceeds());
+        $user = User::factory()->create();
+        $handler = app(AskQuranHandler::class);
+        $question = 'What is the meaning of sabr?';
+
+        $concise = $handler->handle(new AskQuranQuery($user->id, $question, 'en'));
+        $detailed = $handler->handle(new AskQuranQuery($user->id, $question, 'en', detailed: true));
+
+        // Different cache keys → both hit the LLM; quota used = 1 (concise) + 2 (detailed).
+        $this->assertSame('llm', $concise->source);
+        $this->assertSame('llm', $detailed->source);
+        $this->assertSame(3, app(AiInquiryQuotaRepositoryInterface::class)->used($user->id, now()->format('Y-m')));
+
+        // Re-asking each variant is a free cache hit (no further quota consumed).
+        $this->assertSame('cache', $handler->handle(new AskQuranQuery($user->id, $question, 'en'))->source);
+        $this->assertSame('cache', $handler->handle(new AskQuranQuery($user->id, $question, 'en', detailed: true))->source);
+        $this->assertSame(3, app(AiInquiryQuotaRepositoryInterface::class)->used($user->id, now()->format('Y-m')));
     }
 }

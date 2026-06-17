@@ -98,4 +98,12 @@ interface VerseRepositoryInterface extends RepositoryInterface
      * Count Sajda verses
      */
     public function countSajdaVerses(): int;
+
+    /**
+     * Printed-mushaf word layout for a surah, ordered for line-by-line rendering
+     * (page → line → position).
+     *
+     * @return Collection<int, \App\Domain\Quran\Models\Word>
+     */
+    public function getMushafWordsBySurah(int $surahNumber): Collection;
 }

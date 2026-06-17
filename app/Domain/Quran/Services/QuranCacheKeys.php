@@ -77,6 +77,15 @@ final class QuranCacheKeys
         return 'quran:verses:sajda';
     }
 
+    /**
+     * Printed-mushaf word layout for a surah (VerseRepository), ordered by
+     * page/line/position for line-by-line rendering on the public reader.
+     */
+    public static function mushafWordsBySurah(int $surahNumber): string
+    {
+        return "quran:mushaf:words:surah:{$surahNumber}";
+    }
+
     public static function sajdaVersesCount(): string
     {
         return 'quran:verses:sajda:count';

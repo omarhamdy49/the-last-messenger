@@ -62,4 +62,19 @@ interface AiInquiryRepositoryInterface
      * Fetch one inquiry owned by the given user (IDOR-safe history fetch).
      */
     public function findForUser(int $id, int $userId): ?AiInquiry;
+
+    /**
+     * Hard-delete soft-deleted (moderated-away) inquiries trashed before $cutoff,
+     * reclaiming disk. Batched to avoid long table locks at scale. With $dryRun,
+     * returns the count that would be deleted without deleting. Used by the
+     * scheduled `quran:ai-prune` retention job.
+     */
+    public function purgeTrashedBefore(\DateTimeInterface $cutoff, bool $dryRun = false, int $chunk = 1000): int;
+
+    /**
+     * Hard-delete inquiries (live or trashed) created before $cutoff — the history
+     * retention sweep. Batched. With $dryRun, counts only. The caller disables this
+     * (keeps history forever) by not invoking it when the retention window is 0.
+     */
+    public function purgeCreatedBefore(\DateTimeInterface $cutoff, bool $dryRun = false, int $chunk = 1000): int;
 }

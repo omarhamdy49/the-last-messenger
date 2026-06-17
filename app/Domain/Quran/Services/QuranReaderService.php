@@ -110,4 +110,44 @@ final class QuranReaderService
             return [];
         }
     }
+
+    /**
+     * Printed-mushaf layout for a surah, shaped for line-by-line rendering:
+     * an ordered list of pages, each an ordered list of lines, each an ordered
+     * list of words. Mirrors the printed mushaf (which word sits on which line
+     * and page). Empty array on failure so the reader can fall back gracefully.
+     *
+     * @return list<array{
+     *     page: int,
+     *     lines: list<array{line: int, words: list<array{text: string, type: string, verse: int, location: string}>}>
+     * }>
+     */
+    public function getMushafLayout(int $surahNumber): array
+    {
+        try {
+            $words = $this->verseRepository->getMushafWordsBySurah($surahNumber);
+        } catch (Throwable) {
+            return [];
+        }
+
+        // Group the already-ordered words (page → line → verse → position) into
+        // nested page/line maps, then re-index to ordered lists for the view.
+        $pages = [];
+        foreach ($words as $word) {
+            $pages[$word->page_number]['page'] = $word->page_number;
+            $pages[$word->page_number]['lines'][$word->line_number]['line'] = $word->line_number;
+            $pages[$word->page_number]['lines'][$word->line_number]['words'][] = [
+                'text' => $word->text_uthmani,
+                'type' => $word->char_type,
+                'verse' => $word->verse_number,
+                'location' => $word->location,
+            ];
+        }
+
+        return array_values(array_map(static function (array $page): array {
+            $page['lines'] = array_values($page['lines']);
+
+            return $page;
+        }, $pages));
+    }
 }

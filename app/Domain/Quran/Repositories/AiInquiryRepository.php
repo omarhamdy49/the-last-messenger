@@ -98,4 +98,46 @@ final class AiInquiryRepository implements AiInquiryRepositoryInterface
             ->where('user_id', $userId)
             ->first();
     }
+
+    public function purgeTrashedBefore(\DateTimeInterface $cutoff, bool $dryRun = false, int $chunk = 1000): int
+    {
+        return $this->purge(
+            fn () => AiInquiry::onlyTrashed()->where('deleted_at', '<', $cutoff),
+            $dryRun,
+            $chunk,
+        );
+    }
+
+    public function purgeCreatedBefore(\DateTimeInterface $cutoff, bool $dryRun = false, int $chunk = 1000): int
+    {
+        return $this->purge(
+            fn () => AiInquiry::withTrashed()->where('created_at', '<', $cutoff),
+            $dryRun,
+            $chunk,
+        );
+    }
+
+    /**
+     * Batched hard-delete shared by the retention sweeps. Deletes by id in chunks
+     * so a large backlog never holds a long table lock; with $dryRun it only counts.
+     *
+     * @param  \Closure(): \Illuminate\Database\Eloquent\Builder<AiInquiry>  $query
+     */
+    private function purge(\Closure $query, bool $dryRun, int $chunk): int
+    {
+        if ($dryRun) {
+            return $query()->count();
+        }
+
+        $total = 0;
+        do {
+            $ids = $query()->limit($chunk)->pluck('id');
+            if ($ids->isEmpty()) {
+                break;
+            }
+            $total += AiInquiry::withTrashed()->whereIn('id', $ids)->forceDelete();
+        } while ($ids->count() === $chunk);
+
+        return $total;
+    }
 }

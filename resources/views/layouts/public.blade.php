@@ -134,6 +134,13 @@
         @include('components.site.login-modal')
     @endguest
 
+    {{-- Shared persistent audio player (Quran reader recitations). Hidden until a track loads.
+         Pages that declare @section('hide_player') (e.g. the Ask-Quran chat shell) suppress it. --}}
+    @hasSection('hide_player')
+    @else
+        @include('components.site.audio-player')
+    @endif
+
     @stack('scripts')
 </body>
 </html>

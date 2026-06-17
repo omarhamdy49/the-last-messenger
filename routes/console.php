@@ -71,3 +71,15 @@ Schedule::command('media:publish-scheduled')
     ->onFailure(function () {
         \Illuminate\Support\Facades\Log::error('Failed to publish scheduled media programs');
     });
+
+/**
+ * Prune old Ask Quran AI inquiries + stale quota rows so saved questions don't
+ * grow disk/queries unbounded. Runs daily off-peak; deletes are batched.
+ */
+Schedule::command('quran:ai-prune')
+    ->dailyAt('03:30')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->onFailure(function () {
+        \Illuminate\Support\Facades\Log::error('Failed to prune Ask Quran AI inquiries');
+    });

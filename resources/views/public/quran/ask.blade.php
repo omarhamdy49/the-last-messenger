@@ -2,9 +2,21 @@
 
 @section('title', __('quran.public.ask_page_title'))
 @section('meta_description', __('quran.public.ask_ai_subtitle'))
-{{-- Focused, ChatGPT-style full-screen app shell: suppress the site header AND footer. --}}
+{{-- Focused, ChatGPT-style full-screen app shell: suppress the site header, footer AND
+     the shared recitation player (the chat shell shouldn't carry an audio bar). --}}
 @section('hide_header', 'true')
 @section('hide_footer', 'true')
+@section('hide_player', 'true')
+
+@push('scripts')
+<script>
+    {{-- Terminate any persisted recitation so it neither shows nor resumes on this page. --}}
+    try {
+        localStorage.removeItem('sitePlayerTrack');
+        document.body.classList.remove('site-has-audio');
+    } catch (e) { /* ignore */ }
+</script>
+@endpush
 
 @php
     $isRtl = in_array(app()->getLocale(), ['ar', 'ur']);
@@ -295,7 +307,7 @@
             <div class="shrink-0 border-t backdrop-blur-md" :class="$store.theme.dark ? 'bg-[#0b0f1a]/90 border-white/10' : 'bg-white/90 border-gray-200'">
                 <div class="container mx-auto px-4 sm:px-6 max-w-3xl py-3">
                     {{-- Mode switch — segmented control (clearly toggled), aligned to the right (RTL start) --}}
-                    <div class="flex {{ $isRtl ? 'justify-start' : 'justify-end' }} mb-2.5">
+                    <div class="flex items-center justify-between gap-2 mb-2.5">
                         <div role="tablist" aria-label="{{ __('quran.public.ask_mode') }}"
                              class="inline-flex items-center gap-1 p-1 rounded-xl border"
                              :class="$store.theme.dark ? 'bg-gray-900 border-white/10' : 'bg-gray-100 border-gray-200'">
@@ -322,7 +334,42 @@
                                 <i data-lucide="search" class="w-4 h-4"></i>{{ __('quran.public.ask_tab_search') }}
                             </button>
                         </div>
+                        {{-- Detailed-answer toggle — a switch chip on the end side (AI mode only). --}}
+                        <div>
+                            @auth
+                            <label x-show="mode === 'ai'" x-cloak x-effect="if (remaining < 2 && detailed) detailed = false"
+                                   class="inline-flex items-center gap-2 ps-3 pe-2 py-1.5 rounded-full border transition-all select-none focus-within:ring-2 focus-within:ring-[#64CCC5]/50"
+                                   :class="(busy || remaining < 2 ? 'opacity-50 cursor-not-allowed ' : 'cursor-pointer ') + (detailed
+                                       ? ($store.theme.dark ? 'bg-[#64CCC5]/10 border-[#64CCC5]/40 text-[#64CCC5]' : 'bg-[#0056b3]/10 border-[#0056b3]/40 text-[#0056b3]')
+                                       : ($store.theme.dark ? 'bg-gray-900 border-white/10 text-gray-300' : 'bg-white border-gray-200 text-gray-600'))"
+                                   :title="@js(__('quran.public.ask_detailed_note'))">
+                                <input type="checkbox" x-model="detailed" :disabled="busy || remaining < 2" class="sr-only"
+                                       aria-label="{{ __('quran.public.ask_detailed_label') }}">
+                                <i data-lucide="file-text" class="w-4 h-4 shrink-0"></i>
+                                <span class="text-xs font-semibold whitespace-nowrap">{{ __('quran.public.ask_detailed_label') }}</span>
+                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0"
+                                      :class="$store.theme.dark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-100 text-amber-700'">&times;2</span>
+                                <span class="relative inline-block w-9 h-5 rounded-full transition-colors shrink-0"
+                                      :class="detailed ? ($store.theme.dark ? 'bg-[#64CCC5]' : 'bg-[#0056b3]') : ($store.theme.dark ? 'bg-gray-600' : 'bg-gray-300')">
+                                    <span class="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all"
+                                          :class="detailed ? 'end-0.5' : 'start-0.5'"></span>
+                                </span>
+                            </label>
+                            @endauth
+                        </div>
                     </div>
+
+                    {{-- Detailed-answer cost notes (the toggle itself is the switch chip in the controls bar above). --}}
+                    @auth
+                    <p x-show="mode === 'ai' && detailed" x-cloak
+                       class="mb-2 text-[11px] flex items-center gap-1 {{ $isRtl ? 'justify-start' : 'justify-end' }}"
+                       :class="$store.theme.dark ? 'text-amber-300/90' : 'text-amber-600'">
+                        <i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i><span>{{ __('quran.public.ask_detailed_note') }}</span>
+                    </p>
+                    <p x-show="mode === 'ai' && remaining < 2 && remaining > 0" x-cloak
+                       class="mb-2 text-[11px] {{ $isRtl ? 'text-start' : 'text-end' }}"
+                       :class="$store.theme.dark ? 'text-gray-500' : 'text-gray-400'">{{ __('quran.public.ask_detailed_need_two') }}</p>
+                    @endauth
 
                     <form @submit.prevent="submit()" class="flex items-end gap-2">
                         <div class="relative flex-1">
@@ -368,6 +415,7 @@
             current: null,
             activeId: null,
             input: '',
+            detailed: false,
             busy: false,
             seq: 0,
             sidebarOpen: true,
@@ -435,9 +483,11 @@
             get currentMin() { return this.mode === 'ai' ? this.minChars : 2; },
             get tooShort() { return this.input.trim().length < this.currentMin; },
             get tooLong() { return this.input.length > this.maxChars; },
+            // A detailed AI answer costs 2 quota slots; everything else costs 1.
+            get cost() { return (this.mode === 'ai' && this.detailed) ? 2 : 1; },
             get canSend() {
                 if (this.busy || this.tooShort || this.tooLong) return false;
-                return this.mode !== 'ai' || this.remaining > 0;
+                return this.mode !== 'ai' || this.remaining >= this.cost;
             },
 
             quotaLabel() { return this.quotaTpl.replace('__R__', this.remaining).replace('__L__', this.limit); },
@@ -449,11 +499,13 @@
                 });
             },
 
-            newView(kind, query) {
+            newView(kind, query, detailed = false) {
                 return {
                     viewId: ++this.seq, kind, query, status: 'loading',
                     answer: '', html: '', source: null, statusText: '',
                     results: [], translationName: null,
+                    // Sticky per-view so retry() re-asks in the same mode.
+                    detailed: !!detailed && kind === 'ai',
                 };
             },
 
@@ -485,19 +537,19 @@
             submit() {
                 const q = this.input.trim();
                 if (q.length < this.currentMin || q.length > this.maxChars || this.busy) return;
-                if (this.mode === 'ai' && this.remaining <= 0) return;
+                if (this.mode === 'ai' && this.remaining < this.cost) return;
                 this.input = '';
                 this.$nextTick(() => { if (this.$refs.input) this.$refs.input.style.height = 'auto'; });
-                this.ask(q, this.mode);
+                this.ask(q, this.mode, this.detailed);
             },
 
-            retry() { if (this.current) this.ask(this.current.query, this.current.kind); },
+            retry() { if (this.current) this.ask(this.current.query, this.current.kind, this.current.detailed); },
 
-            ask(query, kind) {
+            ask(query, kind, detailed = false) {
                 query = (query || '').trim();
                 if (!query) return;
                 this.activeId = null;
-                this.current = this.newView(kind, query);
+                this.current = this.newView(kind, query, detailed);
                 this.scrollToBottom(false);
                 this.run();
             },
@@ -524,7 +576,7 @@
                     res = await window.apiFetch(this.streamEndpoint, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
-                        body: JSON.stringify({ question: view.query }),
+                        body: JSON.stringify({ question: view.query, detailed: view.detailed }),
                     });
                 } catch (e) {
                     return this.runAiFallback(view);
@@ -587,7 +639,7 @@
                 const res = await window.apiFetch(this.aiEndpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question: view.query }),
+                    body: JSON.stringify({ question: view.query, detailed: view.detailed }),
                 });
                 const data = await res.json().catch(() => ({}));
                 if (!this.isCurrent(view)) return;

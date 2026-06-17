@@ -32,6 +32,8 @@ final class AskQuranRequest extends FormRequest
             // The string is already reduced to the allowlist in prepareForValidation;
             // the regex makes that contract explicit and rejects anything that slips through.
             'question' => ['required', 'string', 'min:'.$min, 'max:'.$max, 'regex:'.QuestionSanitizer::PATTERN],
+            // Opt-in to a thorough answer (costs an extra quota slot). Read via boolean().
+            'detailed' => ['sometimes', 'boolean'],
         ];
     }
 

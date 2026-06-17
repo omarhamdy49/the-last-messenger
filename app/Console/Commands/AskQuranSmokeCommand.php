@@ -18,7 +18,7 @@ use Illuminate\Console\Command;
  */
 final class AskQuranSmokeCommand extends Command
 {
-    protected $signature = 'quran:ai-smoke {question : The question to ask} {--locale=en : Answer locale (ar|en|fr|tr|ur)} {--stream : Exercise the streaming (SSE) path}';
+    protected $signature = 'quran:ai-smoke {question : The question to ask} {--locale=en : Answer locale (ar|en|fr|tr|ur)} {--stream : Exercise the streaming (SSE) path} {--detailed : Request the thorough (2-slot) answer variant}';
 
     protected $description = 'Live smoke test of the Ask Quran AI bridge (DeepSeek + quran.ai MCP). Requires DEEPSEEK_API_KEY.';
 
@@ -32,8 +32,9 @@ final class AskQuranSmokeCommand extends Command
 
         $question = (string) $this->argument('question');
         $locale = (string) $this->option('locale');
+        $detailed = (bool) $this->option('detailed');
 
-        $this->info("Asking ({$locale}): {$question}");
+        $this->info("Asking ({$locale}".($detailed ? ', detailed' : '')."): {$question}");
         $this->newLine();
 
         try {
@@ -45,10 +46,10 @@ final class AskQuranSmokeCommand extends Command
                     } elseif (($event['type'] ?? '') === 'status') {
                         $this->output->write("\n  · {$event['tool']}".(isset($event['ref']) ? " ({$event['ref']})" : '')."\n");
                     }
-                });
+                }, $detailed);
                 $this->newLine(2);
             } else {
-                $answer = $service->answer($question, $locale);
+                $answer = $service->answer($question, $locale, $detailed);
             }
         } catch (\Throwable $e) {
             $this->error('Bridge failed: '.$e->getMessage());

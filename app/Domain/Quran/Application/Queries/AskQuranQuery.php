@@ -20,5 +20,6 @@ final readonly class AskQuranQuery
         public string $question,
         public string $locale = 'ar',
         public ?array $geo = null,
+        public bool $detailed = false,
     ) {}
 }

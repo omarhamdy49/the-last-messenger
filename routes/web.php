@@ -25,6 +25,7 @@ Route::get('/', [HomeController::class, 'index'])->name('public.home');
 
 // Quran public pages
 Route::get('/quran', [QuranController::class, 'index'])->name('public.quran');
+Route::get('/quran/surahs', [QuranController::class, 'surahsJson'])->name('public.quran.surahs.json');
 Route::get('/quran/reciters', [QuranController::class, 'reciters'])->name('public.quran.reciters');
 Route::get('/quran/live', [QuranController::class, 'live'])->name('public.quran.live');
 Route::get('/quran/asbab-al-nuzul', [QuranController::class, 'asbab'])->name('public.quran.asbab');

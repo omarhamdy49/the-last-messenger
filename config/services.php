@@ -96,6 +96,11 @@ return [
         'min_chars' => (int) env('QURAN_AI_MIN_CHARS', 10),
         'max_chars' => (int) env('QURAN_AI_MAX_CHARS', 200),
         'answer_cache_days' => (int) env('QURAN_AI_ANSWER_CACHE_DAYS', 60),
+        // Retention used by `quran:ai-prune` (scheduled) to bound disk growth.
+        // history_retention_days = 0 keeps user history forever (default).
+        'history_retention_days' => (int) env('QURAN_AI_HISTORY_RETENTION_DAYS', 0),
+        'trashed_retention_days' => (int) env('QURAN_AI_TRASHED_RETENTION_DAYS', 30),
+        'usage_retention_months' => (int) env('QURAN_AI_USAGE_RETENTION_MONTHS', 12),
     ],
 
 ];

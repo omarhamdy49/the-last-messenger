@@ -162,6 +162,7 @@ final class QuranController extends Controller
                 question: (string) $request->validated('question'),
                 locale: app()->getLocale(),
                 geo: $this->extractGeo($request),
+                detailed: $request->boolean('detailed'),
             ));
         } catch (MonthlyQuotaExceededException $e) {
             return response()->json([
@@ -201,6 +202,7 @@ final class QuranController extends Controller
         $question = (string) $request->validated('question');
         $locale = app()->getLocale();
         $geo = $this->extractGeo($request);
+        $detailed = $request->boolean('detailed');
 
         // Release the session lock so the long-lived stream cannot block the
         // user's other requests (history aside, navigation) for its duration.
@@ -208,7 +210,7 @@ final class QuranController extends Controller
             $request->session()->save();
         }
 
-        return response()->stream(function () use ($userId, $question, $locale, $geo): void {
+        return response()->stream(function () use ($userId, $question, $locale, $geo, $detailed): void {
             $emit = static function (array $event): void {
                 echo 'data: '.json_encode($event, JSON_UNESCAPED_UNICODE)."\n\n";
                 if (ob_get_level() > 0) {
@@ -223,6 +225,7 @@ final class QuranController extends Controller
                     question: $question,
                     locale: $locale,
                     geo: $geo,
+                    detailed: $detailed,
                 ), $emit);
             } catch (Throwable $e) {
                 report($e);
@@ -268,9 +271,38 @@ final class QuranController extends Controller
      */
     public function index(): View
     {
-        $locale = app()->getLocale();
+        $surahs = $this->cachedSurahList(app()->getLocale());
 
-        $surahs = Cache::remember(
+        $stats = [
+            'total' => 114,
+            'verses' => 6236,
+            'makki' => 86,
+            'madani' => 28,
+        ];
+
+        return view('public.quran.index', compact('surahs', 'stats'));
+    }
+
+    /**
+     * Lightweight JSON list of all 114 surahs for the reader's lazy-loaded surah
+     * switcher modal (fetched on first open, then cached client-side).
+     */
+    public function surahsJson(): JsonResponse
+    {
+        return response()->json([
+            'surahs' => $this->cachedSurahList(app()->getLocale()),
+        ]);
+    }
+
+    /**
+     * Cached, presentation-shaped list of all 114 surahs (shared by the index
+     * page and the switcher JSON endpoint).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function cachedSurahList(string $locale): array
+    {
+        return Cache::remember(
             "public_quran_index_{$locale}",
             3600,
             fn () => $this->quranQueryService->listSurahs(locale: $locale)
@@ -286,15 +318,6 @@ final class QuranController extends Controller
                 ->values()
                 ->all(),
         );
-
-        $stats = [
-            'total' => 114,
-            'verses' => 6236,
-            'makki' => 86,
-            'madani' => 28,
-        ];
-
-        return view('public.quran.index', compact('surahs', 'stats'));
     }
 
     /**
@@ -434,6 +457,7 @@ final class QuranController extends Controller
         }
 
         return view('public.quran.surah', array_merge($payload, [
+            'mushaf' => $this->getMushafLayout($surahNumber),
             'reciters' => $reciters,
             'firstRecitationUrl' => $firstRecitationUrl,
             'tafsirResources' => $this->getTafsirResources($locale),
@@ -845,6 +869,15 @@ final class QuranController extends Controller
     private function getTafsirResources(string $locale): array
     {
         return $this->quranReaderService->getTafsirResources($locale);
+    }
+
+    /**
+     * Printed-mushaf word layout (pages → lines → words) for the reader's
+     * mushaf view. Empty when the layout hasn't been imported yet.
+     */
+    private function getMushafLayout(int $surahNumber): array
+    {
+        return $this->quranReaderService->getMushafLayout($surahNumber);
     }
 
     /**

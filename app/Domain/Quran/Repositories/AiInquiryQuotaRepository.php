@@ -10,43 +10,60 @@ use Illuminate\Support\Facades\DB;
 
 final class AiInquiryQuotaRepository implements AiInquiryQuotaRepositoryInterface
 {
-    public function tryReserve(int $userId, string $period, int $limit): bool
+    public function tryReserve(int $userId, string $period, int $limit, int $cost = 1): bool
     {
-        // A non-positive limit means the feature is effectively disabled.
-        if ($limit <= 0) {
+        // A non-positive limit means the feature is effectively disabled; a
+        // non-positive cost is a programming error we refuse rather than crash.
+        if ($limit <= 0 || $cost <= 0) {
             return false;
         }
 
         $this->ensureRow($userId, $period);
 
         // Short, local transaction: lock the single counter row, re-check the
-        // limit under the lock, then increment. Two concurrent requests at
-        // count = limit-1 serialize here, so exactly one wins. The lock is
-        // released the moment this commits — well before the LLM call runs.
-        return DB::transaction(function () use ($userId, $period, $limit): bool {
+        // limit under the lock, then increment by $cost. Two concurrent requests
+        // that would together exceed the limit serialize here, so at most one
+        // wins. The lock is released the moment this commits — well before the
+        // LLM call runs.
+        return DB::transaction(function () use ($userId, $period, $limit, $cost): bool {
             $row = AiInquiryUsage::query()
                 ->where('user_id', $userId)
                 ->where('period', $period)
                 ->lockForUpdate()
                 ->first();
 
-            if ($row === null || $row->count >= $limit) {
+            if ($row === null || $row->count + $cost > $limit) {
                 return false;
             }
 
-            $row->increment('count');
+            $row->increment('count', $cost);
 
             return true;
         });
     }
 
-    public function refund(int $userId, string $period): void
+    public function refund(int $userId, string $period, int $cost = 1): void
     {
-        AiInquiryUsage::query()
-            ->where('user_id', $userId)
-            ->where('period', $period)
-            ->where('count', '>', 0)
-            ->decrement('count');
+        if ($cost <= 0) {
+            return;
+        }
+
+        // Lock + clamp so a refund can never push the counter below zero, even if
+        // it is called with a larger $cost than was actually reserved.
+        DB::transaction(function () use ($userId, $period, $cost): void {
+            $row = AiInquiryUsage::query()
+                ->where('user_id', $userId)
+                ->where('period', $period)
+                ->lockForUpdate()
+                ->first();
+
+            if ($row === null) {
+                return;
+            }
+
+            $row->count = max(0, $row->count - $cost);
+            $row->save();
+        });
     }
 
     public function used(int $userId, string $period): int
@@ -55,6 +72,15 @@ final class AiInquiryQuotaRepository implements AiInquiryQuotaRepositoryInterfac
             ->where('user_id', $userId)
             ->where('period', $period)
             ->value('count') ?? 0);
+    }
+
+    public function purgePeriodsBefore(string $period, bool $dryRun = false): int
+    {
+        // 'Y-m' strings sort lexicographically, so a string comparison is a correct
+        // chronological filter. Rows are tiny and few, so no batching is needed.
+        $query = AiInquiryUsage::query()->where('period', '<', $period);
+
+        return $dryRun ? $query->count() : $query->delete();
     }
 
     /**

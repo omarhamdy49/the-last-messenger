@@ -7,6 +7,7 @@ namespace App\Domain\Quran\Repositories;
 use App\Domain\Quran\Models\TranslationResource;
 use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Models\VerseTranslation;
+use App\Domain\Quran\Models\Word;
 use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Shared\Helpers\FullTextSearchHelper;
 use App\Domain\Shared\Repositories\BaseRepository;
@@ -424,6 +425,39 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
             QuranCacheKeys::sajdaVersesCount(),
             self::CACHE_TTL,
             fn () => $this->model->whereNotNull('sajdah_number')->count()
+        );
+    }
+
+    /**
+     * Printed-mushaf word layout for a surah, ordered for line-by-line rendering
+     * (by page, then line, then word position). Cached — the layout is static.
+     *
+     * @return Collection<int, Word>
+     */
+    public function getMushafWordsBySurah(int $surahNumber): Collection
+    {
+        return Cache::remember(
+            QuranCacheKeys::mushafWordsBySurah($surahNumber),
+            self::CACHE_TTL,
+            fn () => Word::query()
+                ->select([
+                    'id',
+                    'verse_id',
+                    'surah_number',
+                    'verse_number',
+                    'position',
+                    'location',
+                    'text_uthmani',
+                    'char_type',
+                    'line_number',
+                    'page_number',
+                ])
+                ->where('surah_number', $surahNumber)
+                ->orderBy('page_number')
+                ->orderBy('line_number')
+                ->orderBy('verse_number') // verses share lines; order by verse before word position
+                ->orderBy('position')
+                ->get()
         );
     }
 }
