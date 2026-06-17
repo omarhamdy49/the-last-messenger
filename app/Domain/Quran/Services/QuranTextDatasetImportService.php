@@ -7,6 +7,7 @@ namespace App\Domain\Quran\Services;
 use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Models\VerseTafsir;
 use App\Domain\Quran\Models\VerseTranslation;
+use App\Domain\Quran\Models\TranslationResource;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -35,11 +36,13 @@ class QuranTextDatasetImportService
     {
         $lines = $this->readVerseLines($filePath);
         $verseIds = $this->getVerseIdsInMushafOrder();
+        $resourceId = $this->resolveDefaultTranslationResource($lang);
 
         $rows = [];
         foreach ($lines as $index => $text) {
             $rows[] = [
                 'verse_id' => $verseIds[$index],
+                'resource_id' => $resourceId,
                 'lang' => $lang,
                 'text' => $text,
                 'text_notashkeel' => null,
@@ -47,7 +50,7 @@ class QuranTextDatasetImportService
         }
 
         $written = $this->upsertChunked(
-            fn (array $chunk) => VerseTranslation::upsert($chunk, ['verse_id', 'lang'], ['text']),
+            fn (array $chunk) => VerseTranslation::upsert($chunk, ['verse_id', 'resource_id'], ['lang', 'text', 'text_notashkeel']),
             $rows,
         );
 
@@ -173,6 +176,43 @@ class QuranTextDatasetImportService
                 self::EXPECTED_VERSE_COUNT,
             ));
         }
+    }
+
+    private function resolveDefaultTranslationResource(string $lang): int
+    {
+        $resource = TranslationResource::query()
+            ->where('language', $lang)
+            ->where('is_default', true)
+            ->first();
+
+        if ($resource !== null) {
+            return (int) $resource->id;
+        }
+
+        $entry = match ($lang) {
+            'en-tl' => config('quran-editions.transliteration'),
+            default => collect(config('quran-editions.translations', []))
+                ->first(fn (array $entry): bool => ($entry['lang'] ?? null) === $lang && ! empty($entry['default'])),
+        };
+
+        if (! is_array($entry)) {
+            throw new InvalidArgumentException("No default Quran translation resource configured for [{$lang}].");
+        }
+
+        $resource = TranslationResource::query()->updateOrCreate(
+            ['slug' => $entry['slug']],
+            [
+                'name' => $entry['name'],
+                'author' => $entry['author'] ?? null,
+                'language' => $lang,
+                'direction' => in_array($lang, ['ar', 'ur'], true) ? 'rtl' : 'ltr',
+                'source' => 'tanzil.net',
+                'is_default' => true,
+                'is_active' => true,
+            ],
+        );
+
+        return (int) $resource->id;
     }
 
     /**

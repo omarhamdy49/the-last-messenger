@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands\IslamicData;
 
 use App\Domain\Quran\Models\Surah;
+use App\Domain\Quran\Models\TranslationResource;
 use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Models\VerseTafsir;
 use App\Domain\Quran\Models\VerseTranslation;
@@ -123,10 +124,18 @@ class ImportQuranCommand extends Command
 
     private function displayFinalCounts(int $surahCount, int $ayahCount): void
     {
-        $translationsByLang = VerseTranslation::query()
-            ->selectRaw('lang, COUNT(*) AS row_count')
-            ->groupBy('lang')
+        $defaultTranslationsByLang = VerseTranslation::query()
+            ->join('quran_translation_resources', 'quran_translation_resources.id', '=', 'quran_verse_translations.resource_id')
+            ->where('quran_translation_resources.is_default', true)
+            ->selectRaw('quran_verse_translations.lang, COUNT(*) AS row_count')
+            ->groupBy('quran_verse_translations.lang')
             ->pluck('row_count', 'lang')
+            ->all();
+
+        $resourcesByLang = TranslationResource::query()
+            ->selectRaw('language, COUNT(*) AS resource_count')
+            ->groupBy('language')
+            ->pluck('resource_count', 'language')
             ->all();
 
         $rows = [
@@ -134,8 +143,11 @@ class ImportQuranCommand extends Command
             ['Verses', Verse::count(), $ayahCount],
             ['Tafsir rows', VerseTafsir::count(), '—'],
         ];
-        foreach ($translationsByLang as $lang => $rowCount) {
-            $rows[] = ["Translations [{$lang}]", $rowCount, $ayahCount];
+        foreach ($defaultTranslationsByLang as $lang => $rowCount) {
+            $rows[] = ["Default translations [{$lang}]", $rowCount, $ayahCount];
+        }
+        foreach ($resourcesByLang as $lang => $resourceCount) {
+            $rows[] = ["Translation resources [{$lang}]", $resourceCount, '—'];
         }
 
         $this->newLine();

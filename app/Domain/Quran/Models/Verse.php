@@ -99,7 +99,12 @@ class Verse extends Model
      */
     public function getTranslation(string $lang = 'ar'): ?VerseTranslation
     {
-        return $this->translations()->where('lang', $lang)->first();
+        $query = $this->translations()->where('lang', $lang);
+
+        return (clone $query)
+            ->whereHas('resource', fn ($resource) => $resource->where('is_default', true))
+            ->first()
+            ?? $query->first();
     }
 
     /**

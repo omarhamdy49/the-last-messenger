@@ -7,10 +7,12 @@ namespace App\Console\Commands\IslamicData;
 use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithCollection;
 use App\Domain\Quran\Models\Surah;
+use App\Domain\Quran\Models\TranslationResource;
 use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Models\VerseTafsir;
 use App\Domain\Quran\Models\VerseTranslation;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 class VerifyCommand extends Command
 {
@@ -49,10 +51,19 @@ class VerifyCommand extends Command
         $surahs = Surah::count();
         $verses = Verse::count();
 
-        $translationsByLang = VerseTranslation::query()
-            ->selectRaw('lang, COUNT(*) AS row_count')
-            ->groupBy('lang')
+        $defaultTranslationsByLang = VerseTranslation::query()
+            ->join('quran_translation_resources', 'quran_translation_resources.id', '=', 'quran_verse_translations.resource_id')
+            ->where('quran_translation_resources.is_default', true)
+            ->selectRaw('quran_verse_translations.lang, COUNT(*) AS row_count')
+            ->groupBy('quran_verse_translations.lang')
             ->pluck('row_count', 'lang')
+            ->all();
+
+        $defaultResourcesByLang = TranslationResource::query()
+            ->where('is_default', true)
+            ->selectRaw('language, COUNT(*) AS resource_count')
+            ->groupBy('language')
+            ->pluck('resource_count', 'language')
             ->all();
 
         $versesMissingArabic = Verse::query()
@@ -72,9 +83,38 @@ class VerifyCommand extends Command
         ];
 
         foreach (['en', 'fr', 'tr', 'ur'] as $lang) {
-            $rowCount = (int) ($translationsByLang[$lang] ?? 0);
-            $rows[] = $this->check("Translations [{$lang}]", $rowCount, "= {$expectedVerses}", $rowCount === $expectedVerses);
+            $defaultResources = (int) ($defaultResourcesByLang[$lang] ?? 0);
+            $rowCount = (int) ($defaultTranslationsByLang[$lang] ?? 0);
+            $rows[] = $this->check("Default translation resources [{$lang}]", $defaultResources, '= 1', $defaultResources === 1);
+            $rows[] = $this->check("Default translations [{$lang}]", $rowCount, "= {$expectedVerses}", $rowCount === $expectedVerses);
         }
+
+        $nullResourceTranslations = VerseTranslation::query()->whereNull('resource_id')->count();
+        $rows[] = $this->check('Translations without resource', $nullResourceTranslations, '= 0', $nullResourceTranslations === 0);
+
+        $duplicateVerseResourceRows = DB::query()
+            ->fromSub(
+                DB::table('quran_verse_translations')
+                    ->select('verse_id', 'resource_id')
+                    ->groupBy('verse_id', 'resource_id')
+                    ->havingRaw('COUNT(*) > 1'),
+                'duplicate_translations',
+            )
+            ->count();
+        $rows[] = $this->check('Duplicate verse/resource translations', $duplicateVerseResourceRows, '= 0', $duplicateVerseResourceRows === 0);
+
+        $incompleteActiveResources = DB::query()
+            ->fromSub(
+                DB::table('quran_translation_resources as r')
+                    ->leftJoin('quran_verse_translations as t', 't.resource_id', '=', 'r.id')
+                    ->where('r.is_active', true)
+                    ->selectRaw('r.id, COUNT(DISTINCT t.verse_id) AS verse_count')
+                    ->groupBy('r.id')
+                    ->havingRaw('COUNT(DISTINCT t.verse_id) <> ?', [$expectedVerses]),
+                'incomplete_resources',
+            )
+            ->count();
+        $rows[] = $this->check('Incomplete active translation resources', $incompleteActiveResources, '= 0', $incompleteActiveResources === 0);
 
         $this->table(['Check', 'Actual', 'Expected', 'Status'], $rows);
     }

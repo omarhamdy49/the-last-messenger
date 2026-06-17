@@ -1,7 +1,7 @@
 # TODO — Quran Module: quran.com Parity Roadmap
 
 > **Role:** system/backend/database-architect (combined)
-> **Generated:** 2026-06-14 · **Statuses verified against the live DB on 2026-06-14.**
+> **Generated:** 2026-06-14 · **Statuses verified against the live DB on 2026-06-17.**
 > **Goal:** Feature parity with [quran.com](https://quran.com) (Quran Foundation).
 
 ## Product decisions locked
@@ -9,7 +9,7 @@
 | Decision | Choice | Consequence |
 |---|---|---|
 | Scope | **Full parity roadmap** | All phases in scope. |
-| Translation/tafsir model | **Keep one-per-language** | ⚠️ Cap = 5 translations + 5 tafsirs. **F1/F2 side-by-side multi-source DEFERRED.** Upgrade path = [Q-UP1](#q-up1). |
+| Translation/tafsir model | **Multi-resource with one default per language** | Translation and tafsir resources are stored by `resource_id`; legacy single-language read paths use the default resource. |
 | Content source | **Quran Foundation / QUL** ([qul.tarteel.ai](https://qul.tarteel.ai), [API v4](https://api-docs.quran.com)) | Import, don't author. |
 
 **Deferred per existing product decisions (UI hooks only):** community reflections (comments), reading streaks/plans (gamification), live streaming.
@@ -20,7 +20,7 @@
 
 The earlier gap docs (`QURAN_MODULE_IMPROVEMENT_PLAN.md`, `WEB_APP_MODULES_ANALYSIS.md`) were **stale**. Confirmed present:
 
-- 114 surahs · 6,236 verses · **37,416 translations** (ar/en/fr/tr/ur **+ `en-tl` transliteration**) · 6,236 tafsirs (Arabic Muyassar).
+- 114 surahs · 6,236 verses · **112,248 translation rows** across **18 translation resources** (ar source, en×7, fr×3, tr×2, ur×4, `en-tl` transliteration) · **50,277 tafsir rows** across 10 tafsir resources.
 - **11 reciters, all with `everyayah_folder`** · **1,254 per-surah recitations** (11×114) with `audio_url`.
 - `VerseAudioUrlResolver` (per-verse everyayah URLs) is **wired** into `Site/QuranController` + `surah.blade.php`.
 - ⇒ **Q-P1-01 (audio) and Q-P1-02 (transliteration) are DONE.**
@@ -62,7 +62,8 @@ The earlier gap docs (`QURAN_MODULE_IMPROVEMENT_PLAN.md`, `WEB_APP_MODULES_ANALY
 ### [ ] Q-P2-03 🟠 Audio repeat/loop + speed controls (F10)
 - Frontend-only (Alpine) on top of existing audio. Repeat verse ×N / range / surah; 0.75–2× speed.
 
-### [-] Q-P2-05 🟢 Multiple side-by-side translations/tafsir (F1/F2) — **DEFERRED** (see [Q-UP1](#q-up1)).
+### [x] Q-P2-05 🟢 Multiple translation/tafsir sources (F1/F2) — **DONE**
+- Translation and tafsir resources are selectable in the reader; non-default editions lazy-load on demand to keep payloads small. Legacy single-language helpers resolve to the configured default resource.
 
 ---
 
@@ -113,8 +114,10 @@ The earlier gap docs (`QURAN_MODULE_IMPROVEMENT_PLAN.md`, `WEB_APP_MODULES_ANALY
 - ✅ Admin: `tafsir-resources` CRUD module (index/create/edit/delete) at `/su/portal/v1/admin/tafsir-resources`, RTL + dark mode. E2E verified.
 - Note: translations (F1) still single-per-language — see Q-UP1b.
 
-### <a name="q-up1-translations"></a>[ ] Q-UP1b — Multi-source translations (un-defer F1)
-- Add `quran_translation_resources` + `quran_tafsir_resources`; add `resource_id`; swap `UNIQUE(verse_id, lang)` → `UNIQUE(verse_id, resource_id)`; backfill existing rows to a default resource per lang. Reversible. No Phase-1/2 task blocks this.
+### <a name="q-up1-translations"></a>[x] Q-UP1b — Multi-source translations — **DONE**
+- `quran_translation_resources` + `resource_id` on `quran_verse_translations`; uniqueness is `(verse_id, resource_id)` on MySQL.
+- Imported 18 complete translation resources / 112,248 rows.
+- `islamic-data:verify` validates one default resource per rendered language, complete default coverage, complete active resource coverage, zero resource-less rows, and zero duplicate `(verse_id, resource_id)` rows.
 
 ### [ ] Q-X-01 — Public API parity (F20)
 - Add: `?include=words`, audio segments, topics, related verses, **search/suggest (this session)**.

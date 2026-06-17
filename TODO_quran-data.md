@@ -48,6 +48,8 @@
 - [x] ✅ Tests: DTO unit (3) + recitation admin (9) = 12 pass; Quran suite 48 pass / 3 skipped (MySQL FULLTEXT) — no regressions.
 - [x] ✅ `composer deptrac` — 0 errors, 0 warnings (module isolation holds).
 - [x] ✅ Frontend smoke: surah reader HTTP 200; translation-edition switcher present; default English = Saheeh International via live read path.
+- [x] ✅ `php artisan islamic-data:verify` now passes end-to-end: Quran default translation resources are validated per language, every active translation resource has 6,236 verses, and there are zero resource-less or duplicate `(verse_id, resource_id)` translation rows.
+- [x] ✅ `php scripts/audit_quran_translation_resources.php` confirms 18 translation resources / 112,248 rows with complete per-resource coverage.
 
 ## G. Data-hygiene  ✅
 - [x] ✅ Removed the 3 legacy duplicate tafsir resources, keeping the catalog slugs only: `ar-muyassar` (preserved the complete 6,236-row per-verse data over the range-grouped 5,278), `ar-saadi`, `en-ibn-kathir`. Now **10 tafsir editions, zero duplicates, zero orphan rows** (`verse_tafsirs` 63,627 → 50,277).

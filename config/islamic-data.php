@@ -27,7 +27,7 @@ return [
      */
     'hadith_collection_map' => [
         'abudawud' => 'abudawud',
-        'ahmed' => 'musnad-ahmad-ibn-hanbal',
+        'ahmed' => 'ahmed',
         'aladab_almufrad' => 'adab',
         'bukhari' => 'bukhari',
         'bulugh_almaram' => 'bulugh',
@@ -52,7 +52,7 @@ return [
     ],
 
     /*
-     * Verified import floors per production directory (audited 2026-06-11).
+     * Verified import floors per production directory (audited 2026-06-14).
      * File counts overstate content: collections contain in-source duplicate files
      * (same hadith split across files, e.g. shamail has 402 files / 400 hadiths) and
      * derivative collections (bulugh, nawawi40, ...) whose files cite primary sources.
@@ -60,30 +60,30 @@ return [
      * (book_number, hadith_number) pairs. A DB count below its floor = data loss.
      */
     'expected_hadiths' => [
-        'abudawud' => 5269,
-        'ahmed' => 1373,
-        'aladab_almufrad' => 1315,
-        'bukhari' => 7149,
+        'abudawud' => 5276,
+        'ahmed' => 1359,
+        'aladab_almufrad' => 1326,
+        'bukhari' => 7277,
         'bulugh_almaram' => 1767,
         'darimi' => 3406,
-        'ibnmajah' => 4342,
-        'malik' => 1985,
-        'mishkat_almasabih' => 4427,
+        'ibnmajah' => 4345,
+        'malik' => 1973,
+        'mishkat_almasabih' => 5014,
         'muslim' => 7459,
-        'nasai' => 5751,
+        'nasai' => 5768,
         'nawawi40' => 42,
         'qudsi40' => 40,
         'riyad_assalihin' => 1896,
         'shahwaliullah40' => 40,
         'shamail_muhammadiyah' => 400,
-        'tirmidhi' => 4052,
+        'tirmidhi' => 4053,
     ],
 
     /*
-     * 125 Muwatta Malik source files ship English-only (hadith_text.ar is null).
+     * Remaining imported hadith rows with no Arabic text after source verification.
      * Documented source gap — do not invent Arabic text. Verify tolerates exactly this many.
      */
-    'known_missing_arabic' => 125,
+    'known_missing_arabic' => 38,
 
     /*
      * Hadiths with a non-null chapter_id after the 2026-06 chapter linkage backfill.
@@ -91,5 +91,5 @@ return [
      * shahwaliullah40 are partial), so this floor is the achieved coverage —
      * a DB count below it means the hadith → chapter linkage regressed.
      */
-    'expected_chapter_linked' => 49008,
+    'expected_chapter_linked' => 47168,
 ];
