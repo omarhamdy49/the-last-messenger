@@ -9,6 +9,7 @@ return [
 
     // Navigation
     'home' => 'Accueil',
+    'toggle_theme' => 'Basculer le mode sombre',
     'seerah' => 'Biographie',
     'hadith' => 'Hadith',
     'media' => 'Médias',

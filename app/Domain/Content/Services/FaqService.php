@@ -6,6 +6,8 @@ namespace App\Domain\Content\Services;
 
 use App\Domain\Content\Models\Faq;
 use App\Domain\Content\Repositories\FaqRepositoryInterface;
+use App\Domain\Shared\Contracts\FaqPublisherInterface;
+use App\Domain\Shared\ValueObjects\FaqDraft;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -14,8 +16,11 @@ use Illuminate\Support\Facades\Cache;
  * Serves active FAQs per locale, forever-cached (stable data), flushed on
  * writes. Category filtering happens on the cached list so one cache entry
  * per locale covers all category views.
+ *
+ * Implements the Shared FaqPublisherInterface so other domains can publish a
+ * FAQ (e.g. Quran "Ask AI" moderation) without importing the Content domain.
  */
-final class FaqService
+final class FaqService implements FaqPublisherInterface
 {
     public function __construct(
         private readonly FaqRepositoryInterface $repository,
@@ -126,5 +131,33 @@ final class FaqService
         }
 
         return $deleted;
+    }
+
+    /**
+     * Publish a FAQ from a cross-domain draft (Shared FaqPublisherInterface).
+     * Only the draft's source locale is filled; other languages are left blank
+     * for an admin to complete in the FAQ editor.
+     */
+    public function publish(FaqDraft $draft): int
+    {
+        $faq = $this->create(
+            ['category' => $draft->category, 'is_active' => $draft->isActive, 'sort_order' => null],
+            [
+                'question' => [$draft->locale => $draft->question],
+                'answer' => [$draft->locale => $draft->answer],
+            ],
+        );
+
+        return (int) $faq->id;
+    }
+
+    /**
+     * Existing FAQ categories (Shared FaqPublisherInterface).
+     *
+     * @return list<string>
+     */
+    public function categories(): array
+    {
+        return $this->repository->distinctCategories();
     }
 }

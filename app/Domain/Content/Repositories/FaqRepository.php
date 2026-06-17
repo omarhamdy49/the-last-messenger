@@ -84,4 +84,15 @@ class FaqRepository implements FaqRepositoryInterface
         // Translations cascade via the faq_id FK.
         return Faq::query()->whereKey($id)->delete() > 0;
     }
+
+    public function distinctCategories(): array
+    {
+        return Faq::query()
+            ->whereNotNull('category')
+            ->where('category', '!=', '')
+            ->distinct()
+            ->orderBy('category')
+            ->pluck('category')
+            ->all();
+    }
 }

@@ -113,4 +113,35 @@ final class QuranCacheKeys
     {
         return 'quran:surahs:selector';
     }
+
+    // -----------------------------------------------------------------------
+    // Ask Quran AI keys (DeepSeek + quran.ai MCP)
+    // -----------------------------------------------------------------------
+
+    /**
+     * The quran.ai MCP grounding rules + nonce, fetched once and shared across
+     * all inquiries so the ~2.5K rules block is paid roughly once.
+     */
+    public static function aiGroundingRules(): string
+    {
+        return 'quran:ai:grounding_rules';
+    }
+
+    /**
+     * Cross-user answer cache. Keyed by the normalized-question hash + locale so
+     * an identical question (any user) is served free, without an LLM call.
+     */
+    public static function aiAnswer(string $questionHash, string $locale): string
+    {
+        return "quran:ai:answer:{$locale}:{$questionHash}";
+    }
+
+    /**
+     * Normalized surah-name => number lookup, built once from the surahs table
+     * and used to linkify verse references written by name in AI answers.
+     */
+    public static function surahNameIndex(): string
+    {
+        return 'quran:surah_name_index';
+    }
 }

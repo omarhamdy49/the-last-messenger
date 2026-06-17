@@ -9,6 +9,7 @@ return [
 
     // Navigation
     'home' => 'ہوم',
+    'toggle_theme' => 'ڈارک موڈ تبدیل کریں',
     'seerah' => 'سیرت',
     'hadith' => 'حدیث',
     'media' => 'میڈیا',

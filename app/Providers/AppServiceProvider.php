@@ -113,6 +113,12 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('api', static function (Request $request): Limit {
             return Limit::perMinute(60)->by($request->ip());
         });
+
+        // ai_inquiry: 5 requests/minute per authenticated user — burst protection
+        // layered under the monthly "Ask Quran" AI quota (enforced in the handler).
+        RateLimiter::for('ai_inquiry', static function (Request $request): Limit {
+            return Limit::perMinute(5)->by((string) (optional($request->user())->id ?? $request->ip()));
+        });
     }
 
     /**

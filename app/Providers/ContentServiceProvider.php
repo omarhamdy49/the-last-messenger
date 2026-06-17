@@ -45,6 +45,13 @@ class ContentServiceProvider extends ServiceProvider
             \App\Domain\Content\Repositories\ContactMessageRepositoryInterface::class,
             \App\Domain\Content\Repositories\ContactMessageRepository::class
         );
+
+        // Cross-domain FAQ publishing (Shared contract) — lets the Quran "Ask AI"
+        // moderation publish an inquiry as a FAQ without importing the Content domain.
+        $this->app->bind(
+            \App\Domain\Shared\Contracts\FaqPublisherInterface::class,
+            \App\Domain\Content\Services\FaqService::class
+        );
     }
 
     /**

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Admin\Quran\AiInquiryController;
 use App\Http\Controllers\Admin\Quran\QuranController;
 use App\Http\Controllers\Admin\Quran\RecitationController;
 use App\Http\Controllers\Admin\Quran\ReciterController;
@@ -12,6 +13,16 @@ use App\Http\Controllers\Admin\Quran\TafsirResourceController;
 use App\Http\Controllers\Admin\Quran\TranslationResourceController;
 use App\Http\Controllers\Admin\Quran\VerseController;
 use Illuminate\Support\Facades\Route;
+
+// Ask Quran AI inquiries — moderation + publish-as-FAQ
+Route::prefix('ai-inquiries')->name('admin.quran.ai-inquiries.')->group(function (): void {
+    Route::get('/', [AiInquiryController::class, 'index'])->name('index');
+    Route::get('/categories', [AiInquiryController::class, 'categories'])->name('categories');
+    Route::get('/{inquiry}', [AiInquiryController::class, 'show'])->whereNumber('inquiry')->name('show');
+    Route::put('/{inquiry}/answer', [AiInquiryController::class, 'updateAnswer'])->whereNumber('inquiry')->name('answer');
+    Route::post('/{inquiry}/publish', [AiInquiryController::class, 'publishAsFaq'])->whereNumber('inquiry')->name('publish');
+    Route::delete('/{inquiry}', [AiInquiryController::class, 'destroy'])->whereNumber('inquiry')->name('destroy');
+});
 
 // Quran Routes (main entry point for Quran management)
 Route::prefix('quran')->group(function (): void {

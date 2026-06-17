@@ -194,6 +194,7 @@
                         </div>
                     @else
                         <a href="{{ route('public.login') }}"
+                           @click.prevent="$dispatch('open-login')"
                            class="hidden sm:inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50">
                             {{ __('site.login') }}
                         </a>

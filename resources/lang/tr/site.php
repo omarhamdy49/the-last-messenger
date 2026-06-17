@@ -9,6 +9,7 @@ return [
 
     // Navigation
     'home' => 'Ana Sayfa',
+    'toggle_theme' => 'Karanlık modu değiştir',
     'seerah' => 'Siyer',
     'hadith' => 'Hadis',
     'media' => 'Medya',

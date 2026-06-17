@@ -28,6 +28,20 @@ Route::get('/quran', [QuranController::class, 'index'])->name('public.quran');
 Route::get('/quran/reciters', [QuranController::class, 'reciters'])->name('public.quran.reciters');
 Route::get('/quran/live', [QuranController::class, 'live'])->name('public.quran.live');
 Route::get('/quran/asbab-al-nuzul', [QuranController::class, 'asbab'])->name('public.quran.asbab');
+// "Ask the Quran" inquiry search (canonical verse retrieval, no LLM).
+Route::get('/quran/ask', [QuranController::class, 'ask'])->name('public.quran.ask');
+Route::get('/quran/ask/search', [QuranController::class, 'askSearch'])
+    ->middleware('throttle:search')->name('public.quran.ask.search');
+// AI answer (DeepSeek + quran.ai MCP): registered users only, monthly-quota
+// limited (enforced in the handler) with a per-minute burst throttle keyed by user.
+Route::post('/quran/ask', [QuranController::class, 'askAi'])
+    ->middleware(['auth', 'throttle:ai_inquiry'])->name('public.quran.ask.submit');
+// Streaming (SSE) variant of the AI answer — same auth + monthly-quota policy.
+Route::post('/quran/ask/stream', [QuranController::class, 'askAiStream'])
+    ->middleware(['auth', 'throttle:ai_inquiry'])->name('public.quran.ask.stream');
+// One past inquiry (Q&A) for the history aside — auth + IDOR-safe (scoped to user).
+Route::get('/quran/ask/history/{inquiry}', [QuranController::class, 'askHistory'])
+    ->whereNumber('inquiry')->middleware('auth')->name('public.quran.ask.history');
 Route::get('/quran/surah/{surahNumber}', [QuranController::class, 'surah'])
     ->whereNumber('surahNumber')->name('public.quran.surah');
 // Lazy editions (keep the surah page light): tafsir is fetched per verse on demand;
@@ -54,6 +68,8 @@ Route::get('/articles/{slug}', [ArticleController::class, 'show'])->name('public
 // Hadith
 Route::get('/hadith', [HadithController::class, 'index'])->name('public.hadith');
 Route::get('/hadith/explorer', [HadithController::class, 'explorer'])->name('public.hadith.explorer');
+Route::get('/hadith/translations', [HadithController::class, 'translations'])
+    ->middleware('throttle:120,1')->name('public.hadith.translations');
 Route::get('/hadith/book/{slug}', [HadithController::class, 'book'])->name('public.hadith.book');
 Route::get('/hadith/book/{slug}/chapter/{chapter}', [HadithController::class, 'chapter'])
     ->whereNumber('chapter')->name('public.hadith.chapter');

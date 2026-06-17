@@ -47,6 +47,14 @@
             transform: translateY(0);
         }
     }
+    /* Brief highlight for a deep-linked verse (#v65). */
+    .verse-target { animation: verseTargetPulse 2.4s ease-out 1; border-radius: 1rem; }
+    @keyframes verseTargetPulse {
+        0% { box-shadow: 0 0 0 0 rgba(100,204,197,0.0); }
+        15% { box-shadow: 0 0 0 4px rgba(100,204,197,0.55); }
+        100% { box-shadow: 0 0 0 4px rgba(100,204,197,0.0); }
+    }
+    @media (prefers-reduced-motion: reduce) { .verse-target { animation: none; } }
 </style>
 @endpush
 
@@ -71,7 +79,10 @@
 
         sidebarOpen: false,
         readingMode: localStorage.getItem('readingMode') || 'both',
-        viewMode: localStorage.getItem('quranSurahView') || 'verses',
+        // A #v<n> deep link forces verse view from the start (no flash of reading
+        // view); otherwise honour the saved preference. The forced switch is not
+        // persisted, so the user's chosen view is kept for normal visits.
+        viewMode: (/^#v\d+$/.test(window.location.hash) ? 'verses' : (localStorage.getItem('quranSurahView') || 'verses')),
         fontSize: parseInt(localStorage.getItem('fontSize')) || 28,
         showTransliteration: localStorage.getItem('showTransliteration') !== 'false',
         currentLocale: '{{ $currentLocale }}',
@@ -118,6 +129,30 @@
             // Nothing eager: tafsir loads per verse on open; the locale-default
             // translation is inlined. Only a non-locale selection needs a fetch.
             this.loadTranslation(this.selectedTranslationId);
+
+            // Deep link to a specific verse (#v65): the native jump fires before
+            // Alpine renders the cards, so scroll after render + on later hash changes.
+            this.$nextTick(() => this.scrollToHashVerse());
+            window.addEventListener('hashchange', () => this.scrollToHashVerse());
+        },
+
+        // Scroll the #v<n> target verse into view (switching to verse view if needed)
+        // and briefly highlight it. Safe no-op when there is no verse hash.
+        scrollToHashVerse() {
+            const match = window.location.hash.match(/^#v(\d+)$/);
+            if (!match) { return; }
+            // The verse cards only exist in the verse view. Force it (without
+            // persisting) so a deep link never gets stuck on the reading layout.
+            if (this.viewMode !== 'verses') { this.viewMode = 'verses'; }
+            this.$nextTick(() => {
+                setTimeout(() => {
+                    const el = document.getElementById('v' + match[1]);
+                    if (!el) { return; }
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    el.classList.add('verse-target');
+                    setTimeout(() => el.classList.remove('verse-target'), 2400);
+                }, 120);
+            });
         },
 
         // Fetch one verse's tafsir for the selected edition, only when its accordion
@@ -170,6 +205,11 @@
         setViewMode(m) {
             this.viewMode = m;
             localStorage.setItem('quranSurahView', m);
+            // Reading view has no per-verse anchors — drop a stale #v<n> deep link
+            // so the URL stays clean and a refresh won't force verse view again.
+            if (m === 'reading' && /^#v\d+$/.test(window.location.hash)) {
+                history.replaceState(null, '', window.location.pathname + window.location.search);
+            }
         },
 
         adjustFontSize(d) {

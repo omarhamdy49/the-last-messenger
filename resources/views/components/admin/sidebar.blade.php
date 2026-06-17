@@ -27,6 +27,10 @@
         'verses'          => 'quran',
         'tafseer'         => 'quran',
         'reciters'        => 'quran',
+        'translation-resources' => 'quran',
+        'tafsir-resources' => 'quran',
+        'revelation-contexts' => 'quran',
+        'ai-inquiries'    => 'quran',
         'media-programs'  => 'media',
         'media-episodes'  => 'media',
         'media-categories' => 'media',
@@ -341,7 +345,7 @@
             <div>
                 <button @click="toggleSubmenu('quran')"
                         :class="openSubmenu === 'quran' ||
-                                ['quran','surahs','verses','tafseer','reciters'].includes(activeMenu) ?
+                                ['quran','surahs','verses','tafseer','reciters','translation-resources','tafsir-resources','revelation-contexts','ai-inquiries'].includes(activeMenu) ?
                             'bg-gradient-primary text-white shadow-lg' :
                             (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
                         class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
@@ -410,6 +414,15 @@
                        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
                         <i data-lucide="book-marked" class="w-4 h-4"></i>
                         <span>{{ __('quran.admin.tafsir_sources') }}</span>
+                    </a>
+                    <a href="{{ route('admin.quran.ai-inquiries.index') }}"
+                       @click="activeMenu = 'ai-inquiries'"
+                       :class="isActive('ai-inquiries') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        <span>{{ __('admin.quran_ai_inquiries') }}</span>
                     </a>
                 </div>
             </div>

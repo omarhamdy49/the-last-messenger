@@ -50,4 +50,11 @@ interface FaqRepositoryInterface
      * Delete a FAQ. Returns false when the FAQ does not exist.
      */
     public function delete(int $id): bool;
+
+    /**
+     * Distinct, non-empty FAQ categories (for category pickers).
+     *
+     * @return list<string>
+     */
+    public function distinctCategories(): array;
 }

@@ -43,8 +43,23 @@ final class AuthController extends Controller
         Auth::user()->updateLastLogin();
 
         return redirect()
-            ->intended(route('public.home'))
+            ->intended($this->safeRedirectTarget($request) ?? route('public.home'))
             ->with('toast', __('auth_web.login_success'));
+    }
+
+    /**
+     * A same-app relative redirect target from the login form, or null. Guards
+     * against open-redirects: only in-app absolute paths (e.g. "/quran/ask") pass.
+     */
+    private function safeRedirectTarget(LoginRequest $request): ?string
+    {
+        $target = trim((string) $request->input('redirect', ''));
+
+        if ($target === '' || ! str_starts_with($target, '/') || str_starts_with($target, '//')) {
+            return null;
+        }
+
+        return $target;
     }
 
     public function showRegister(): View

@@ -76,13 +76,23 @@
 </head>
 <body class="antialiased bg-[#F8F9FA] text-[#212529] min-h-screen flex flex-col">
 
-    <x-site.header />
+    {{-- Pages that want a focused, full-screen app shell (e.g. the ChatGPT-style
+         Quran inquiry) declare @section('hide_header') to suppress the site header. --}}
+    @hasSection('hide_header')
+    @else
+        <x-site.header />
+    @endif
 
     <main class="flex-1">
         @yield('content')
     </main>
 
-    <x-site.footer />
+    {{-- Pages that want a focused, full-height layout (e.g. the chat-style Quran
+         inquiry) declare @section('hide_footer') to suppress the site footer. --}}
+    @hasSection('hide_footer')
+    @else
+        <x-site.footer />
+    @endif
 
     {{-- Global toast region --}}
     <div class="fixed bottom-4 end-4 z-[100] space-y-2" aria-live="polite">
@@ -118,6 +128,11 @@
             });
         </script>
     @endif
+
+    {{-- Global login modal (guests only) — opened via the `open-login` event. --}}
+    @guest
+        @include('components.site.login-modal')
+    @endguest
 
     @stack('scripts')
 </body>

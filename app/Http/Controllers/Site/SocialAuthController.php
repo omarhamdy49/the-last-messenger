@@ -34,10 +34,17 @@ use Laravel\Socialite\Facades\Socialite;
  */
 final class SocialAuthController extends Controller
 {
-    public function redirect(string $provider): RedirectResponse
+    public function redirect(Request $request, string $provider): RedirectResponse
     {
         if (! $this->isConfigured($provider)) {
             return $this->failToLogin(__('auth_web.social_unavailable'));
+        }
+
+        // Remember where to return after a successful social login (e.g. the page
+        // that opened the login modal). Same-app relative paths only.
+        $target = trim((string) $request->query('redirect', ''));
+        if ($target !== '' && str_starts_with($target, '/') && ! str_starts_with($target, '//')) {
+            $request->session()->put('url.intended', url($target));
         }
 
         return Socialite::driver($provider)->redirect();

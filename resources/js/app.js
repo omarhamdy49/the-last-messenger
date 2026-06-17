@@ -45,6 +45,75 @@ Alpine.store('toast', {
 });
 window.toast = (message, type) => Alpine.store('toast').push(message, type);
 
+/* ----------------------------------------------------------------- geo --- */
+// Coarse visitor location (country + city only), loaded once and cached for the
+// session so every authenticated request can share it without re-fetching.
+// Source is a third-party CMP endpoint that ad-blockers/DNS often block — this
+// always fails open: a missing geo never blocks anything.
+Alpine.store('geo', {
+    data: null,
+    loaded: false,
+    async load() {
+        if (this.loaded) return this.data;
+        this.loaded = true;
+
+        try {
+            const cached = sessionStorage.getItem('tlm.geo');
+            if (cached) {
+                this.data = JSON.parse(cached);
+                return this.data;
+            }
+        } catch (_) { /* sessionStorage unavailable — ignore */ }
+
+        try {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 2500);
+            const res = await fetch('https://cmp.inmobi.com/geoip', { signal: controller.signal });
+            clearTimeout(timer);
+
+            if (res.ok) {
+                const raw = await res.json();
+                const country = String(raw.countryCode || raw.country_code || raw.country || '')
+                    .slice(0, 2).toUpperCase();
+                const city = String(raw.city || raw.cityName || '').slice(0, 64);
+
+                const data = {};
+                if (/^[A-Z]{2}$/.test(country)) data.country = country;
+                if (city) data.city = city;
+                this.data = data;
+
+                try { sessionStorage.setItem('tlm.geo', JSON.stringify(data)); } catch (_) { /* ignore */ }
+            }
+        } catch (_) { /* fail-open: geo is optional, never block the request */ }
+
+        return this.data;
+    },
+    headers() {
+        const h = {};
+        if (this.data?.country) h['X-Geo-Country'] = this.data.country;
+        if (this.data?.city) h['X-Geo-City'] = this.data.city;
+        return h;
+    },
+});
+
+/* ------------------------------------------------------------- apiFetch --- */
+// One request wrapper: merges CSRF + JSON headers + the shared geo headers into
+// every call, so feature code never re-implements header wiring (DRY).
+window.apiFetch = (url, options = {}) => {
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+    return fetch(url, {
+        ...options,
+        headers: {
+            Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': csrf,
+            ...(Alpine.store('geo')?.headers() || {}),
+            ...(options.headers || {}),
+        },
+    });
+};
+
 /* ------------------------------------------------ reusable components --- */
 
 // Horizontal scroll row with RTL-aware arrow visibility.

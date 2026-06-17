@@ -232,7 +232,19 @@
                 </div>
 
                 <h1 class="text-4xl md:text-5xl font-bold mb-4">{{ __('quran.public.hero_title') }}</h1>
-                <p class="text-xl mb-8 opacity-90">{{ __('quran.public.hero_subtitle') }}</p>
+                <p class="text-xl mb-6 opacity-90">{{ __('quran.public.hero_subtitle') }}</p>
+
+                {{-- Premium CTA — AI "Ask the Quran" (replaces the inline search bar) --}}
+                <div class="mb-8">
+                    <a href="{{ route('public.quran.ask') }}"
+                       class="group inline-flex items-center gap-3 px-7 py-4 rounded-2xl bg-white text-[#0056b3] font-bold text-base shadow-xl shadow-black/10 hover:shadow-2xl hover:-translate-y-0.5 active:scale-[0.98] transition-all">
+                        <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-[#0056b3] to-[#218838] text-white">
+                            <x-icons.quran-book class="w-5 h-5" />
+                        </span>
+                        <span>{{ __('quran.public.ask_page_title') }}</span>
+                    </a>
+                    <p class="mt-3 text-sm text-white/80 max-w-xl mx-auto">{{ __('quran.public.ask_hero_subtitle') }}</p>
+                </div>
 
                 {{-- Statistics --}}
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
