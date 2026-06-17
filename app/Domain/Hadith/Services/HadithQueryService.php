@@ -40,6 +40,7 @@ use App\Domain\Hadith\Application\Queries\ListHadithsByBookQuery;
 use App\Domain\Hadith\Application\Queries\ListHadithsByThemeQuery;
 use App\Domain\Hadith\Application\Queries\ListThemesQuery;
 use App\Domain\Hadith\Application\Queries\SearchHadithQuery;
+use App\Domain\Hadith\Repositories\HadithRepositoryInterface;
 use App\Domain\Shared\Application\DTOs\PaginatedResult;
 
 /**
@@ -66,7 +67,31 @@ final class HadithQueryService
         private readonly ListChapterHadithsHandler $listChapterHadithsHandler,
         private readonly GetHadithDetailHandler $getHadithDetailHandler,
         private readonly GetParallelNarrationsHandler $getParallelNarrationsHandler,
+        private readonly HadithRepositoryInterface $hadithRepository,
     ) {}
+
+    /**
+     * Hadith ids (within the given set) that have a translation in the given
+     * language — used to decide whether to surface the lazy translation toggle.
+     *
+     * @param  array<int, int>  $hadithIds
+     * @return array<int, int>
+     */
+    public function hadithIdsWithTranslation(array $hadithIds, string $languageCode): array
+    {
+        return $this->hadithRepository->hadithIdsWithTranslation($hadithIds, $languageCode);
+    }
+
+    /**
+     * Lazy translation payload: translation text keyed by hadith id.
+     *
+     * @param  array<int, int>  $hadithIds
+     * @return array<int, string>
+     */
+    public function hadithTranslations(array $hadithIds, string $languageCode): array
+    {
+        return $this->hadithRepository->translationsForHadiths($hadithIds, $languageCode);
+    }
 
     // ========================================
     // Hadith Queries

@@ -41,7 +41,11 @@ class CollectionController extends AdminController
             perPage: $pagination['per_page'],
             search: $search,
             sortBy: $pagination['sort'],
-            filters: ['sort_direction' => $pagination['order']],
+            filters: [
+                'sort_direction' => $pagination['order'],
+                'active' => $request->query('active', ''),
+                'featured' => $request->query('featured', ''),
+            ],
         );
 
         if ($this->expectsJson($request)) {
@@ -81,6 +85,9 @@ class CollectionController extends AdminController
                 'description_en' => $validated['description_en'] ?? null,
                 'abbreviation' => $validated['abbreviation'] ?? null,
                 'total_hadiths' => $validated['total_hadiths'] ?? 0,
+                'featured' => $request->boolean('featured'),
+                'active' => $request->has('active') ? $request->boolean('active') : true,
+                'display_order' => $validated['display_order'] ?? 0,
             ]);
 
             DB::commit();
@@ -159,6 +166,9 @@ class CollectionController extends AdminController
                 'description_en' => $validated['description_en'] ?? $collection->description_en,
                 'abbreviation' => $validated['abbreviation'] ?? $collection->abbreviation,
                 'total_hadiths' => $validated['total_hadiths'] ?? $collection->total_hadiths,
+                'featured' => $request->boolean('featured'),
+                'active' => $request->boolean('active'),
+                'display_order' => $validated['display_order'] ?? $collection->display_order,
             ]);
 
             $collection = $this->collectionRepository->findOrFail($id);

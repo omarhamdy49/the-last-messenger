@@ -49,6 +49,9 @@ class HadithCollection extends Model
         'canonical_code',
         'source_slug',
         'total_hadiths',
+        'featured',
+        'active',
+        'display_order',
     ];
 
     /**
@@ -58,6 +61,9 @@ class HadithCollection extends Model
      */
     protected $casts = [
         'death_year_hijri' => 'integer',
+        'featured' => 'boolean',
+        'active' => 'boolean',
+        'display_order' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

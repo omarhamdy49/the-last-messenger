@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Hadith\Repositories;
 
 use App\Domain\Hadith\Models\Hadith;
+use App\Domain\Hadith\Models\HadithTranslation;
 use App\Domain\Shared\Helpers\FullTextSearchHelper;
 use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Collection;
@@ -369,6 +370,9 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             ->with([
                 'book:id,collection_id,title_ar,title_en',
                 'book.collection:id,name_ar,name_en',
+                // Only the active locale + the Arabic matn are loaded up front; the
+                // (potentially huge) opposite-language translation is fetched lazily
+                // by the chapter reader when the visitor opens the translation toggle.
                 'translations' => fn ($q) => $q
                     ->select(['id', 'hadith_id', 'language_code', 'text'])
                     ->whereIn('language_code', array_unique([$locale, 'ar'])),
@@ -469,5 +473,54 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             'gradings.gradingLevel:id,grade_ar,grade_en,rank',
             'themes:id,theme_ar,theme_en',
         ];
+    }
+
+    /**
+     * Hadith ids (within the given set) that have a non-empty translation in the
+     * given language — used to decide whether to surface the translation toggle
+     * without loading the (potentially large) translation text.
+     *
+     * @param  array<int, int>  $hadithIds
+     * @return array<int, int>
+     */
+    public function hadithIdsWithTranslation(array $hadithIds, string $languageCode): array
+    {
+        if ($hadithIds === []) {
+            return [];
+        }
+
+        return HadithTranslation::query()
+            ->whereIn('hadith_id', $hadithIds)
+            ->where('language_code', $languageCode)
+            ->whereNotNull('text')
+            ->where('text', '!=', '')
+            ->distinct()
+            ->pluck('hadith_id')
+            ->map(static fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
+     * Translation text keyed by hadith id, for the given language — the lazy
+     * payload behind the chapter reader's translation toggle.
+     *
+     * @param  array<int, int>  $hadithIds
+     * @return array<int, string>
+     */
+    public function translationsForHadiths(array $hadithIds, string $languageCode): array
+    {
+        if ($hadithIds === []) {
+            return [];
+        }
+
+        return HadithTranslation::query()
+            ->select(['hadith_id', 'text'])
+            ->whereIn('hadith_id', $hadithIds)
+            ->where('language_code', $languageCode)
+            ->whereNotNull('text')
+            ->where('text', '!=', '')
+            ->get()
+            ->mapWithKeys(static fn ($t) => [(int) $t->hadith_id => (string) $t->text])
+            ->all();
     }
 }

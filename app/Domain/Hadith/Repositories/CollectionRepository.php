@@ -202,13 +202,24 @@ class CollectionRepository extends BaseRepository implements CollectionRepositor
             });
         }
 
-        // NOTE: the hadith_collections table has no `is_active` column — every canonical
-        // collection is always active — so the `only_active` filter is intentionally a no-op.
-        // It remains part of the query contract for forward-compatibility / callers.
+        // Status filters — applied only when the caller passes an explicit value so the
+        // public listing (which omits them) keeps seeing every collection.
+        if (array_key_exists('active', $filters) && $filters['active'] !== '' && $filters['active'] !== null) {
+            $query->where('active', (bool) $filters['active']);
+        } elseif (! empty($filters['only_active'])) {
+            $query->where('active', true);
+        }
 
-        // Apply sorting
+        if (array_key_exists('featured', $filters) && $filters['featured'] !== '' && $filters['featured'] !== null) {
+            $query->where('featured', (bool) $filters['featured']);
+        }
+
+        // Curated collections surface first, then the admin-defined order, then the
+        // requested sort column as the stable tie-breaker.
         $direction = $filters['sort_direction'] ?? 'asc';
-        $query->orderBy($sortBy, $direction);
+        $query->orderByDesc('featured')
+            ->orderBy('display_order')
+            ->orderBy($sortBy, $direction);
 
         // Include counts
         $query->withCount('books');

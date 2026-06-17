@@ -26,6 +26,8 @@ final readonly class CollectionDTO implements JsonSerializable
         public int $hadithCount,
         public int $booksCount,
         public bool $isActive,
+        public bool $isFeatured,
+        public int $displayOrder,
         public ?string $createdAt,
         public ?string $updatedAt,
     ) {}
@@ -51,8 +53,10 @@ final readonly class CollectionDTO implements JsonSerializable
             authorName: null,
             hadithCount: (int) ($collection->total_hadiths ?? 0),
             booksCount: (int) ($collection->books_count ?? $collection->books()->count()),
-            // The hadith_collections table has no is_active column; collections are always active.
-            isActive: true,
+            // `active` defaults true for legacy rows where the flag was never set.
+            isActive: (bool) ($collection->active ?? true),
+            isFeatured: (bool) ($collection->featured ?? false),
+            displayOrder: (int) ($collection->display_order ?? 0),
             createdAt: $collection->created_at?->toIso8601String(),
             updatedAt: $collection->updated_at?->toIso8601String(),
         );
@@ -91,6 +95,8 @@ final readonly class CollectionDTO implements JsonSerializable
             'hadith_count' => $this->hadithCount,
             'books_count' => $this->booksCount,
             'is_active' => $this->isActive,
+            'is_featured' => $this->isFeatured,
+            'display_order' => $this->displayOrder,
             'created_at' => $this->createdAt,
             'updated_at' => $this->updatedAt,
         ];

@@ -16,6 +16,11 @@
     };
 
     $metaTitle = trim($chapter['title'].' - '.$collection['name']);
+
+    // Whether the page-level "show translation" control is worth rendering — true when
+    // at least one hadith on the page has an opposite-language translation. The text
+    // itself is fetched lazily (see loadTranslations) so it never loads up front.
+    $anyTranslation = ! empty($translatableIds);
 @endphp
 
 @section('title', $metaTitle)
@@ -58,10 +63,55 @@
         darkMode: ($store.theme && $store.theme.dark) ?? (localStorage.getItem('darkMode') === 'true'),
         loading: false,
         density: localStorage.getItem('hadithChapterDensity') || 'normal',
+        // Per request: translations are hidden on every page load (not persisted).
+        // Per-hadith open state; the toolbar control just flips them all at once.
+        openTranslations: @js((object) array_fill_keys(array_values($translatableIds), false)),
+        // Lazy translation payload — fetched on first toggle, never on page load.
+        translationsUrl: '{{ route('public.hadith.translations') }}',
+        altLang: @js($altLang),
+        translatableIds: @js(array_values($translatableIds)),
+        translations: {},
+        translationsLoading: false,
+        translationsLoaded: false,
+        get anyTranslationOpen() { return this.translatableIds.some(id => this.openTranslations[id]); },
 
         setDensity(value) {
             this.density = value;
             localStorage.setItem('hadithChapterDensity', value);
+        },
+
+        async loadTranslations() {
+            if (this.translationsLoaded || this.translationsLoading || this.translatableIds.length === 0) return;
+            this.translationsLoading = true;
+            try {
+                const url = new URL(this.translationsUrl, window.location.origin);
+                this.translatableIds.forEach(id => url.searchParams.append('ids[]', id));
+                url.searchParams.set('lang', this.altLang);
+                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                if (res.ok) {
+                    const data = await res.json();
+                    this.translations = data.translations || {};
+                    this.translationsLoaded = true;
+                }
+            } catch (e) {
+                // Leave translationsLoaded false so a later toggle retries.
+            } finally {
+                this.translationsLoading = false;
+                this.$nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); });
+            }
+        },
+
+        toggleAllTranslations() {
+            const target = ! this.anyTranslationOpen;
+            if (target) this.loadTranslations();
+            this.translatableIds.forEach(id => { this.openTranslations[id] = target; });
+            this.$nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); });
+        },
+
+        toggleHadithTranslation(id) {
+            this.openTranslations[id] = ! this.openTranslations[id];
+            if (this.openTranslations[id]) this.loadTranslations();
+            this.$nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); });
         },
 
         startLoading() { this.loading = true; },
@@ -196,6 +246,19 @@
                         @endforeach
                     </div>
 
+                  <div class="flex flex-wrap items-center gap-3">
+                    @if ($anyTranslation)
+                        <!-- Show/hide ALL translations on the page (default off) -->
+                        <button type="button" @click="toggleAllTranslations()" :aria-pressed="anyTranslationOpen"
+                                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0056b3]"
+                                :class="anyTranslationOpen
+                                    ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow'
+                                    : (darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')">
+                            <i data-lucide="languages" class="w-4 h-4"></i>
+                            <span x-text="anyTranslationOpen ? @js(__('hadith.public.chapter_hide_all_translations')) : @js(__('hadith.public.chapter_show_all_translations'))"></span>
+                        </button>
+                    @endif
+
                     <!-- Density toggle -->
                     <div class="flex items-center gap-2">
                         <span class="text-xs hidden sm:inline" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
@@ -222,6 +285,7 @@
                             </button>
                         </div>
                     </div>
+                  </div>
                 </div>
             </section>
 
@@ -265,17 +329,53 @@
                                     @endif
                                 </div>
 
-                                @if ($hadith['text'])
-                                    <p dir="rtl" class="hadith-arabic break-words"
+                                @php
+                                    $primaryText = $hadith['primaryText'] ?? $hadith['text'];
+                                    $primaryRtl = in_array($hadith['primaryLang'] ?? 'ar', ['ar', 'ur'], true);
+                                @endphp
+
+                                @if ($primaryText)
+                                    <p dir="{{ $primaryRtl ? 'rtl' : 'ltr' }}"
+                                       class="break-words {{ $primaryRtl ? 'hadith-arabic' : 'leading-relaxed' }}"
                                        :class="[darkMode ? 'text-gray-100' : 'text-gray-900',
                                                 density === 'compact' ? 'text-base line-clamp-2'
                                                     : (density === 'expanded' ? 'text-xl' : 'text-lg line-clamp-3')]">
-                                        {{ $hadith['text'] }}
+                                        {{ $primaryText }}
                                     </p>
                                 @else
                                     <p class="text-sm italic" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
                                         {{ __('hadith.public.single_no_translation') }}
                                     </p>
+                                @endif
+
+                                @if (in_array($hadith['id'], $translatableIds, true))
+                                    {{-- Per-hadith translation toggle (the toolbar control flips all of these at once). --}}
+                                    <button type="button" @click="toggleHadithTranslation({{ $hadith['id'] }})"
+                                            :aria-expanded="openTranslations[{{ $hadith['id'] }}]"
+                                            class="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0056b3]"
+                                            :class="openTranslations[{{ $hadith['id'] }}]
+                                                ? 'bg-[#0056b3]/10 text-[#0056b3] dark:bg-[#64CCC5]/15 dark:text-[#64CCC5]'
+                                                : (darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')">
+                                        <i data-lucide="languages" class="w-3.5 h-3.5"></i>
+                                        <span x-text="openTranslations[{{ $hadith['id'] }}] ? @js(__('hadith.public.chapter_hide_translation')) : @js(__('hadith.public.chapter_show_translation'))"></span>
+                                        <span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold" :class="darkMode ? 'bg-white/10' : 'bg-black/5'">{{ $altLabel }}</span>
+                                    </button>
+
+                                    {{-- Translation — text fetched lazily on first open. --}}
+                                    <div x-show="openTranslations[{{ $hadith['id'] }}]" x-collapse x-cloak
+                                         class="mt-3 pt-3 border-t" :class="darkMode ? 'border-gray-800' : 'border-gray-100'">
+                                        <div class="flex items-center gap-1.5 mb-1.5 text-[11px] font-bold text-[#0056b3] dark:text-[#64CCC5]">
+                                            <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+                                            {{ $altLabel }}
+                                            <span x-show="translationsLoading && !translations[{{ $hadith['id'] }}]" class="font-normal text-gray-400">
+                                                <i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i>
+                                            </span>
+                                        </div>
+                                        <p dir="{{ $altRtl ? 'rtl' : 'ltr' }}"
+                                           class="break-words {{ $altRtl ? 'hadith-arabic text-lg' : 'leading-relaxed' }}"
+                                           :class="darkMode ? 'text-gray-300' : 'text-gray-700'"
+                                           x-text="translations[{{ $hadith['id'] }}] || ''"></p>
+                                    </div>
                                 @endif
 
                                 <div class="mt-4 pt-4 border-t flex items-center justify-between" :class="darkMode ? 'border-gray-800' : 'border-gray-100'">

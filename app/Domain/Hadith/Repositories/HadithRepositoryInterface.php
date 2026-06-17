@@ -153,4 +153,21 @@ interface HadithRepositoryInterface extends RepositoryInterface
      * Count parallel narrations for a text hash, excluding the given hadith.
      */
     public function countByTextHash(string $textHash, int $excludeHadithId): int;
+
+    /**
+     * Hadith ids (within the given set) that have a non-empty translation in the
+     * given language — lightweight existence check (no text loaded).
+     *
+     * @param  array<int, int>  $hadithIds
+     * @return array<int, int>
+     */
+    public function hadithIdsWithTranslation(array $hadithIds, string $languageCode): array;
+
+    /**
+     * Translation text keyed by hadith id, for the given language.
+     *
+     * @param  array<int, int>  $hadithIds
+     * @return array<int, string>
+     */
+    public function translationsForHadiths(array $hadithIds, string $languageCode): array;
 }

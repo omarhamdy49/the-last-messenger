@@ -25,6 +25,9 @@ class UpdateCollectionRequest extends FormRequest
             'description_en' => ['nullable', 'string'],
             'abbreviation' => ['nullable', 'string', 'max:50'],
             'total_hadiths' => ['nullable', 'integer', 'min:0'],
+            'featured' => ['nullable', 'boolean'],
+            'active' => ['nullable', 'boolean'],
+            'display_order' => ['nullable', 'integer', 'min:0'],
         ];
     }
 }

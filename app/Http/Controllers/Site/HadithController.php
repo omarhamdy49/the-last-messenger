@@ -34,6 +34,15 @@ final class HadithController extends Controller
     /** Canonical grading filter values the chapter reader accepts. */
     private const CHAPTER_GRADING_FILTERS = ['sahih', 'hasan', 'daif'];
 
+    /** Native language names (endonyms) for the chapter reader's translation toggle. */
+    private const LANGUAGE_ENDONYMS = [
+        'ar' => 'العربية',
+        'en' => 'English',
+        'fr' => 'Français',
+        'tr' => 'Türkçe',
+        'ur' => 'اردو',
+    ];
+
     public function __construct(
         private readonly HadithQueryService $hadithQueryService,
     ) {}
@@ -215,6 +224,20 @@ final class HadithController extends Controller
             report($e);
         }
 
+        // The "translation" is the opposite of the active reading language. Decide
+        // which hadiths on this page actually have one — a cheap existence check
+        // (no text loaded); the text itself is fetched lazily on toggle.
+        $altLang = $locale === 'ar' ? 'en' : 'ar';
+        $translatableIds = [];
+        try {
+            $ids = array_column($hadiths, 'id');
+            $translatableIds = $ids !== []
+                ? $this->hadithQueryService->hadithIdsWithTranslation($ids, $altLang)
+                : [];
+        } catch (Throwable $e) {
+            report($e);
+        }
+
         return view('public.hadith.chapter', [
             'collection' => $this->mapCollection($context->collection, $locale),
             'chapter' => [
@@ -237,7 +260,37 @@ final class HadithController extends Controller
             'hadiths' => $hadiths,
             'paginator' => $paginator,
             'total' => $total,
+            'altLang' => $altLang,
+            'altLabel' => self::LANGUAGE_ENDONYMS[$altLang] ?? strtoupper($altLang),
+            'altRtl' => in_array($altLang, ['ar', 'ur'], true),
+            'translatableIds' => $translatableIds,
         ]);
+    }
+
+    /**
+     * Lazy translation payload for the chapter reader: returns the opposite-language
+     * translation text for the requested hadith ids, keyed by id. Loaded on demand
+     * when the visitor opens the translation toggle so chapter pages never ship the
+     * (often large) translation text up front.
+     */
+    public function translations(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'max:60'],
+            'ids.*' => ['integer', 'min:1'],
+            'lang' => ['required', 'string', \Illuminate\Validation\Rule::in(array_keys(self::LANGUAGE_ENDONYMS))],
+        ]);
+
+        $ids = array_slice(array_values(array_unique(array_map('intval', $validated['ids']))), 0, 60);
+
+        try {
+            $translations = $this->hadithQueryService->hadithTranslations($ids, $validated['lang']);
+        } catch (Throwable $e) {
+            report($e);
+            $translations = [];
+        }
+
+        return response()->json(['translations' => $translations]);
     }
 
     /**
@@ -472,6 +525,7 @@ final class HadithController extends Controller
             'hadithCount' => $collection->hadithCount,
             'bookCount' => $collection->booksCount,
             'category' => $this->categoryFor($collection->nameAr),
+            'featured' => $collection->isFeatured,
         ];
     }
 
@@ -607,6 +661,14 @@ final class HadithController extends Controller
             ?? ($translations[$locale]['text'] ?? null)
             ?? (reset($translations)['text'] ?? null);
 
+        // Locale-aware primary text: the matn in the active locale, falling back to
+        // Arabic. The opposite-language translation is fetched lazily by the chapter
+        // reader (see HadithController::translations) so it never loads up front.
+        $primaryLang = (isset($translations[$locale]) && trim((string) ($translations[$locale]['text'] ?? '')) !== '')
+            ? $locale
+            : 'ar';
+        $primaryText = $translations[$primaryLang]['text'] ?? $text;
+
         return [
             'id' => $hadith->id,
             'number' => $hadith->hadithNumber,
@@ -614,6 +676,8 @@ final class HadithController extends Controller
             'bookTitle' => $hadith->bookTitle,
             'grading' => $this->gradingDescriptor($hadith->gradingStatus),
             'text' => $text,
+            'primaryText' => $primaryText,
+            'primaryLang' => $primaryLang,
         ];
     }
 

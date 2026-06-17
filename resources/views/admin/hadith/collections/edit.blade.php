@@ -49,9 +49,10 @@
                     الاسم والوصف
                 </h2>
 
+                {{-- Only Arabic + English are persisted (hadith_collections has *_ar / *_en columns only). --}}
                 <!-- Language Tabs -->
                 <div class="flex flex-wrap gap-2 border-b pb-4 mb-6" :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
-                    @foreach(['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'] as $lang => $label)
+                    @foreach(['ar' => 'العربية', 'en' => 'English'] as $lang => $label)
                     <button type="button"
                             @click="activeTab = '{{ $lang }}'"
                             class="px-4 py-2 rounded-lg font-medium transition-all"
@@ -64,39 +65,41 @@
                 </div>
 
                 <!-- Tab Contents -->
-                @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $lang)
+                @foreach(['ar' => 'العربية', 'en' => 'English'] as $lang => $label)
                 <div x-show="activeTab === '{{ $lang }}'" class="space-y-4">
                     <!-- Name -->
                     <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            الاسم ({{ strtoupper($lang) }})
+                        <label for="name_{{ $lang }}" class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            الاسم ({{ $label }})
                             @if($lang === 'ar') <span class="text-red-500">*</span> @endif
                         </label>
                         <input type="text"
-                               name="name[{{ $lang }}]"
-                               value="{{ old("name.{$lang}", $collection->{"name_{$lang}"} ?? ($collection->name[$lang] ?? '')) }}"
+                               id="name_{{ $lang }}"
+                               name="name_{{ $lang }}"
+                               value="{{ old('name_'.$lang, $collection->{'name_'.$lang}) }}"
                                class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
                                dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
                                placeholder="أدخل اسم المجموعة..."
                                {{ $lang === 'ar' ? 'required' : '' }}>
-                        @error("name.{$lang}")
+                        @error('name_'.$lang)
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
 
                     <!-- Description -->
                     <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            الوصف ({{ strtoupper($lang) }})
+                        <label for="description_{{ $lang }}" class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            الوصف ({{ $label }})
                         </label>
-                        <textarea name="description[{{ $lang }}]"
+                        <textarea id="description_{{ $lang }}"
+                                  name="description_{{ $lang }}"
                                   rows="4"
                                   class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all resize-none"
                                   :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
                                   dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                                  placeholder="أدخل وصف المجموعة...">{{ old("description.{$lang}", $collection->{"description_{$lang}"} ?? ($collection->description[$lang] ?? '')) }}</textarea>
-                        @error("description.{$lang}")
+                                  placeholder="أدخل وصف المجموعة...">{{ old('description_'.$lang, $collection->{'description_'.$lang}) }}</textarea>
+                        @error('description_'.$lang)
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
@@ -113,14 +116,16 @@
                 </h2>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Slug -->
+                    <!-- Slug (Arabic) -->
                     <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            الرابط المختصر (Slug)
+                        <label for="slug_ar" class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            الرابط المختصر العربي (Slug) <span class="text-red-500">*</span>
                         </label>
                         <input type="text"
-                               name="slug"
-                               value="{{ old('slug', $collection->slug ?? '') }}"
+                               id="slug_ar"
+                               name="slug_ar"
+                               value="{{ old('slug_ar', $collection->slug_ar) }}"
+                               required
                                class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
                                placeholder="sahih-bukhari"
@@ -128,17 +133,36 @@
                         <p class="mt-1 text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
                             أحرف إنجليزية صغيرة وأرقام وشرطات فقط
                         </p>
-                        @error('slug')
+                        @error('slug_ar')
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Slug (English) -->
+                    <div>
+                        <label for="slug_en" class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            الرابط المختصر الإنجليزي (Slug)
+                        </label>
+                        <input type="text"
+                               id="slug_en"
+                               name="slug_en"
+                               value="{{ old('slug_en', $collection->slug_en) }}"
+                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                               placeholder="sahih-bukhari"
+                               pattern="[a-z0-9\-]+">
+                        @error('slug_en')
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
 
                     <!-- Abbreviation -->
                     <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                        <label for="abbreviation" class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                             الاختصار
                         </label>
                         <input type="text"
+                               id="abbreviation"
                                name="abbreviation"
                                value="{{ old('abbreviation', $collection->abbreviation ?? '') }}"
                                class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
@@ -149,28 +173,30 @@
                         @enderror
                     </div>
 
-                    <!-- Author Name -->
+                    <!-- Total Hadiths -->
                     <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            اسم المؤلف
+                        <label for="total_hadiths" class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            عدد الأحاديث
                         </label>
-                        <input type="text"
-                               name="author_name"
-                               value="{{ old('author_name', $collection->author_name ?? '') }}"
+                        <input type="number"
+                               id="total_hadiths"
+                               name="total_hadiths"
+                               value="{{ old('total_hadiths', $collection->total_hadiths ?? 0) }}"
+                               min="0"
                                class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                               placeholder="الإمام البخاري">
-                        @error('author_name')
+                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                        @error('total_hadiths')
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
 
                     <!-- Display Order -->
                     <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                        <label for="display_order" class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                             ترتيب العرض
                         </label>
                         <input type="number"
+                               id="display_order"
                                name="display_order"
                                value="{{ old('display_order', $collection->display_order ?? 0) }}"
                                min="0"

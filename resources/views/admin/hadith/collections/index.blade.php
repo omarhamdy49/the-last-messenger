@@ -217,6 +217,26 @@
                         </td>
                         <td class="px-6 py-4">
                             <div class="flex items-center justify-center gap-2">
+                                {{-- Featured toggle (one-click curation; hits the JSON toggle-featured route) --}}
+                                <button type="button"
+                                        x-data="{ featured: {{ ($collection->featured ?? false) ? 'true' : 'false' }}, busy: false }"
+                                        :disabled="busy"
+                                        @click="busy = true;
+                                            fetch('{{ route('admin.hadith.collections.toggle-featured', $collection->id) }}', {
+                                                method: 'POST',
+                                                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+                                            })
+                                            .then(r => r.ok ? r.json() : Promise.reject())
+                                            .then(d => { featured = d?.data?.featured ?? !featured; })
+                                            .catch(() => {})
+                                            .finally(() => busy = false)"
+                                        class="p-2 rounded-lg transition-colors disabled:opacity-50"
+                                        :class="featured
+                                            ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                                            : (darkMode ? 'text-gray-500 hover:bg-gray-700 hover:text-amber-400' : 'text-gray-400 hover:bg-gray-100 hover:text-amber-500')"
+                                        :title="featured ? 'إلغاء التمييز' : 'تمييز كمجموعة مميزة'">
+                                    <i data-lucide="star" class="w-4 h-4"></i>
+                                </button>
                                 <a href="{{ route('admin.hadith.collections.show', $collection->id) }}"
                                    class="p-2 rounded-lg transition-colors"
                                    :class="darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'"
