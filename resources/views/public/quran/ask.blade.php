@@ -59,7 +59,7 @@
         {{-- Brand --}}
         <div class="flex items-center gap-2 font-bold truncate" :class="$store.theme.dark ? 'text-white' : 'text-gray-900'">
             <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-[#0056b3] to-[#218838] text-white shrink-0">
-                <x-icons.quran-book class="w-5 h-5" />
+                <i data-lucide="sparkles" class="w-5 h-5"></i>
             </span>
             <span class="truncate text-sm sm:text-base">{{ __('quran.public.ask_page_title') }}</span>
         </div>
@@ -173,7 +173,7 @@
                     <template x-if="!current">
                         <div class="ask-fade min-h-[55vh] flex flex-col items-center justify-center text-center px-2">
                             <div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 bg-gradient-to-br from-[#0056b3] to-[#218838] text-white shadow-lg shadow-[#0056b3]/25">
-                                <x-icons.quran-book class="w-9 h-9" />
+                                <i data-lucide="sparkles" class="w-9 h-9"></i>
                             </div>
                             <h1 class="text-2xl md:text-3xl font-bold mb-2 font-['Amiri']" :class="$store.theme.dark ? 'text-white' : 'text-gray-900'">{{ __('quran.public.ask_page_title') }}</h1>
                             <p class="text-sm md:text-base max-w-xl" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'"

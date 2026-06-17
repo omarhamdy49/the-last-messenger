@@ -10,6 +10,8 @@ return [
     // Navigation
     'home' => 'Home',
     'toggle_theme' => 'Toggle dark mode',
+    'ask_ai' => 'Ask the Quran (AI)',
+    'makkah_live' => 'Makkah live',
     'seerah' => 'Biography',
     'hadith' => 'Hadith',
     'media' => 'Media',

@@ -10,6 +10,8 @@ return [
     // Navigation
     'home' => 'Ana Sayfa',
     'toggle_theme' => 'Karanlık modu değiştir',
+    'ask_ai' => 'Kur\'an\'a sor (YZ)',
+    'makkah_live' => 'Mekke canlı',
     'seerah' => 'Siyer',
     'hadith' => 'Hadis',
     'media' => 'Medya',

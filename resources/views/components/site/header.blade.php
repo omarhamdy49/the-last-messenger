@@ -127,30 +127,23 @@
                         <i x-show="$store.theme.dark" class="w-5 h-5" data-lucide="sun" x-cloak></i>
                     </button>
 
-                    <!-- Notifications -->
-                    <div class="relative" x-data="{ notifOpen: false }">
-                        <button @click="notifOpen = !notifOpen"
-                                class="p-2.5 rounded-full hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 relative"
-                                aria-label="{{ __('site.notifications') }}">
-                            <i class="w-5 h-5" data-lucide="bell"></i>
-                            <span class="absolute top-1 end-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                        </button>
+                    <!-- Ask Quran AI -->
+                    <a href="{{ route('public.quran.ask') }}"
+                       class="p-2.5 rounded-full hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 text-[#0056b3] dark:text-[#64CCC5]"
+                       aria-label="{{ __('site.ask_ai') }}" title="{{ __('site.ask_ai') }}">
+                        <i class="w-5 h-5" data-lucide="sparkles"></i>
+                    </a>
 
-                        <div x-show="notifOpen"
-                             @click.away="notifOpen = false"
-                             x-transition
-                             x-cloak
-                             class="absolute end-0 mt-2 w-80 bg-white dark:bg-[#16213e] rounded-lg shadow-2xl border border-[#DEE2E6] dark:border-[#0f3460] z-50">
-                            <div class="p-4 border-b border-[#DEE2E6] dark:border-[#0f3460]">
-                                <h3 class="font-bold">{{ __('site.notifications') }}</h3>
-                            </div>
-                            <div class="max-h-96 overflow-y-auto">
-                                <div class="p-4 text-sm text-gray-500 dark:text-gray-400 text-center">
-                                    {{ __('site.no_notifications') }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Makkah live channel -->
+                    <a href="{{ route('public.media.live', 'el-quran-makkah') }}"
+                       class="relative p-2.5 rounded-full hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50"
+                       aria-label="{{ __('site.makkah_live') }}" title="{{ __('site.makkah_live') }}">
+                        <x-icons.kaaba class="w-5 h-5" />
+                        <span class="absolute top-1.5 end-1.5 flex h-2.5 w-2.5">
+                            <span class="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75 motion-safe:animate-ping"></span>
+                            <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-[#1a1a2e]"></span>
+                        </span>
+                    </a>
 
                     <!-- User / Auth menu -->
                     @auth

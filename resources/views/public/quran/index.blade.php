@@ -223,23 +223,20 @@
                 </svg>
             </div>
 
-            <div class="relative px-6 py-12 md:px-12 md:py-16 text-center text-white">
-                {{-- Icon --}}
-                <div class="flex justify-center mb-6">
-                    <div class="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                        <i data-lucide="book-open" class="w-10 h-10 text-white"></i>
-                    </div>
+            <div class="relative px-6 py-7 md:px-12 md:py-9 text-center text-white">
+                {{-- Logo lockup: glyph sized to the title's height for a balanced row --}}
+                <div class="flex items-center justify-center gap-3 mb-3">
+                    <x-icons.quran-book class="w-12 h-12 md:w-16 md:h-16 text-white/95 shrink-0" />
+                    <h1 class="text-4xl md:text-5xl font-bold leading-none">{{ __('quran.public.hero_title') }}</h1>
                 </div>
-
-                <h1 class="text-4xl md:text-5xl font-bold mb-4">{{ __('quran.public.hero_title') }}</h1>
-                <p class="text-xl mb-6 opacity-90">{{ __('quran.public.hero_subtitle') }}</p>
+                <p class="text-base md:text-lg opacity-90 max-w-xl mx-auto mb-6">{{ __('quran.public.hero_subtitle') }}</p>
 
                 {{-- Premium CTA — AI "Ask the Quran" (replaces the inline search bar) --}}
                 <div class="mb-8">
                     <a href="{{ route('public.quran.ask') }}"
                        class="group inline-flex items-center gap-3 px-7 py-4 rounded-2xl bg-white text-[#0056b3] font-bold text-base shadow-xl shadow-black/10 hover:shadow-2xl hover:-translate-y-0.5 active:scale-[0.98] transition-all">
                         <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-[#0056b3] to-[#218838] text-white">
-                            <x-icons.quran-book class="w-5 h-5" />
+                            <i data-lucide="sparkles" class="w-5 h-5"></i>
                         </span>
                         <span>{{ __('quran.public.ask_page_title') }}</span>
                     </a>

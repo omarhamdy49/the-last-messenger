@@ -10,6 +10,8 @@ return [
     // Navigation
     'home' => 'ہوم',
     'toggle_theme' => 'ڈارک موڈ تبدیل کریں',
+    'ask_ai' => 'قرآن سے پوچھیں (AI)',
+    'makkah_live' => 'مکہ لائیو',
     'seerah' => 'سیرت',
     'hadith' => 'حدیث',
     'media' => 'میڈیا',
