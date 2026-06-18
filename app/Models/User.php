@@ -36,6 +36,16 @@ class User extends Authenticatable implements MustVerifyEmail
     use HasApiTokens, HasFactory, HasRoles, Notifiable;
 
     /**
+     * Pin Spatie role/permission resolution to the `web` guard.
+     *
+     * The same user model is reachable through multiple auth guards (web, sanctum,
+     * admin), but roles and permissions are defined once for the `web` guard. This
+     * keeps every hasRole()/hasPermissionTo() check resolving against those records,
+     * regardless of which guard authenticated the request.
+     */
+    protected string $guard_name = 'web';
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>

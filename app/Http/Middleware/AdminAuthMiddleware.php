@@ -10,10 +10,16 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Admin Authentication Middleware
- * Verifies user has admin or super_admin role
+ *
+ * Verifies the request is authenticated on the dedicated `admin` session guard
+ * and holds an admin-tier role. Reading from the admin guard (not `web`) means a
+ * public visitor's session is never treated as an admin, independent of roles.
  */
 class AdminAuthMiddleware
 {
+    /** The session guard that backs the admin portal. */
+    private const GUARD = 'admin';
+
     /**
      * Handle an incoming request.
      *
@@ -21,7 +27,9 @@ class AdminAuthMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (! $request->user()) {
+        $user = $request->user(self::GUARD);
+
+        if (! $user) {
             // Redirect to login for web requests
             if ($request->expectsJson()) {
                 return response()->json([
@@ -34,12 +42,12 @@ class AdminAuthMiddleware
         }
 
         // Super admin users have unrestricted access
-        if ($request->user()->hasRole('super_admin')) {
+        if ($user->hasRole('super_admin')) {
             return $next($request);
         }
 
         // Admin and editor users need proper authorization
-        if (! $request->user()->hasAnyRole(['admin', 'editor'])) {
+        if (! $user->hasAnyRole(['admin', 'editor'])) {
             // Return JSON for API requests, redirect for web
             if ($request->expectsJson()) {
                 return response()->json([

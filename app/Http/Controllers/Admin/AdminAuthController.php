@@ -15,17 +15,20 @@ use Illuminate\Support\Facades\Auth;
 /**
  * Admin portal authentication.
  *
- * Separate from the public site auth (App\Http\Controllers\Site\AuthController),
- * even though both share the `users` table and the `web` guard. Credentials are
- * verified WITHOUT establishing a session; a session is created only for users
- * holding an admin-tier role, so a public/non-admin account can never obtain an
- * authenticated admin session — not even momentarily.
+ * Separate from the public site auth (App\Http\Controllers\Site\AuthController):
+ * the portal uses the dedicated `admin` session guard, so a public `web` session
+ * never carries admin authentication. Credentials are verified WITHOUT logging
+ * in; a session is created only for users holding an admin-tier role, so a
+ * public/non-admin account can never obtain an admin session — not even briefly.
  *
  * This controller intentionally extends the base Controller (not AdminController),
  * because the login/logout endpoints must be reachable by guests.
  */
 final class AdminAuthController extends Controller
 {
+    /** The session guard that backs the admin portal. */
+    private const GUARD = 'admin';
+
     /**
      * Roles permitted to reach the admin portal. Kept in sync with
      * AdminAuthMiddleware, which is the route-level enforcement layer.
@@ -47,9 +50,11 @@ final class AdminAuthController extends Controller
             ->where('email', $credentials['email'])
             ->first();
 
-        // Verify the password against the web provider WITHOUT logging in, so a
-        // non-admin (or wrong password) never gets an authenticated session.
-        if ($user === null || ! Auth::getProvider()->validateCredentials($user, $credentials)) {
+        // Verify the password against the admin guard's provider WITHOUT logging
+        // in, so a non-admin (or wrong password) never gets an admin session.
+        $provider = Auth::guard(self::GUARD)->getProvider();
+
+        if ($user === null || ! $provider->validateCredentials($user, $credentials)) {
             return back()
                 ->withErrors(['email' => __('auth.failed')])
                 ->withInput($request->only('email'));
@@ -61,7 +66,7 @@ final class AdminAuthController extends Controller
                 ->withInput($request->only('email'));
         }
 
-        Auth::login($user, $request->boolean('remember'));
+        Auth::guard(self::GUARD)->login($user, $request->boolean('remember'));
         $request->session()->regenerate();
         $user->updateLastLogin();
 
@@ -70,7 +75,7 @@ final class AdminAuthController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
-        Auth::logout();
+        Auth::guard(self::GUARD)->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 

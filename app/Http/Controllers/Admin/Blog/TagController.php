@@ -27,8 +27,8 @@ class TagController extends Controller
     public function __construct(
         protected TagService $service
     ) {
-        // Protect routes - only authenticated admins
-        $this->middleware('auth');
+        // Protect routes - only authenticated admins (admin session guard)
+        $this->middleware('auth:admin');
     }
 
     /**

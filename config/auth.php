@@ -46,7 +46,11 @@ return [
             'provider' => 'users',
         ],
 
-        'super_admin' => [
+        // Dedicated session guard for the admin portal. Shares the `users` table
+        // but stores its auth state under a separate session key, so a public
+        // `web` session never carries admin authentication — the admin/public
+        // boundary is enforced at the guard level, not only by role checks.
+        'admin' => [
             'driver' => 'session',
             'provider' => 'users',
         ],

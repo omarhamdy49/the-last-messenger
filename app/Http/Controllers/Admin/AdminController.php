@@ -36,8 +36,8 @@ abstract class AdminController extends Controller
      */
     public function __construct()
     {
-        // Ensure user is authenticated and has admin access
-        $this->middleware(['auth', 'admin']);
+        // Ensure user is authenticated on the admin guard and has admin access
+        $this->middleware(['auth:admin', 'admin']);
     }
 
     /**

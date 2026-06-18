@@ -69,8 +69,10 @@ class AdminAuthSeparationTest extends TestCase
             'password' => 'password',
         ]);
 
-        // No session is established for a non-admin, even with valid credentials.
-        $this->assertGuest();
+        // No session is established on any guard for a non-admin, even with valid
+        // credentials.
+        $this->assertGuest('web');
+        $this->assertGuest('admin');
         $response->assertSessionHasErrors('email');
     }
 
@@ -83,7 +85,7 @@ class AdminAuthSeparationTest extends TestCase
             'password' => 'wrong-password',
         ]);
 
-        $this->assertGuest();
+        $this->assertGuest('admin');
         $response->assertSessionHasErrors('email');
     }
 
@@ -97,7 +99,7 @@ class AdminAuthSeparationTest extends TestCase
         ]);
 
         $response->assertRedirect(route('admin.dashboard'));
-        $this->assertAuthenticatedAs($admin);
+        $this->assertAuthenticatedAs($admin, 'admin');
     }
 
     public function test_editor_can_authenticate_via_admin_login(): void
@@ -110,7 +112,26 @@ class AdminAuthSeparationTest extends TestCase
         ]);
 
         $response->assertRedirect(route('admin.dashboard'));
-        $this->assertAuthenticatedAs($editor);
+        $this->assertAuthenticatedAs($editor, 'admin');
+    }
+
+    public function test_public_web_login_creates_no_admin_session(): void
+    {
+        $this->seedRolesAndPermissions();
+        $user = $this->createUser(['email' => 'pub@example.com']);
+        $user->assignRole('user');
+
+        // A real public login authenticates on the `web` guard only.
+        $this->post(route('public.login.submit'), [
+            'email' => 'pub@example.com',
+            'password' => 'password',
+        ]);
+
+        $this->assertAuthenticated('web');
+        $this->assertGuest('admin');
+
+        // ...and that web session grants no access to the admin portal.
+        $this->get('/su/portal/v1/admin/dashboard')->assertRedirect(route('login'));
     }
 
     public function test_admin_login_requires_email_and_password(): void

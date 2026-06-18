@@ -6,6 +6,7 @@ namespace Tests;
 
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -73,6 +74,28 @@ abstract class TestCase extends BaseTestCase
             $_ENV[$key] = $value;
             $_SERVER[$key] = $value;
         }
+    }
+
+    /**
+     * Authenticate as the given user.
+     *
+     * Admin portal routes use the dedicated `admin` session guard, so mirror the
+     * acting user onto it whenever the default/web guard is used. This lets admin
+     * feature tests keep calling actingAs() without a guard argument; authorization
+     * is still enforced by the role middleware, and the guard separation itself is
+     * covered explicitly by AdminAuthSeparationTest.
+     *
+     * @param  string|null  $guard
+     */
+    public function be(Authenticatable $user, $guard = null): static
+    {
+        parent::be($user, $guard);
+
+        if ($guard === null || $guard === 'web') {
+            $this->app['auth']->guard('admin')->setUser($user);
+        }
+
+        return $this;
     }
 
     /**

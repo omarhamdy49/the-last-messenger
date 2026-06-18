@@ -57,18 +57,18 @@ Route::middleware(['web'])->group(function () {
 
 // Main Dashboard Route (must be defined before the group to avoid override)
 Route::get('su/portal/v1/admin/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['web', 'auth', 'admin', 'role:super_admin|admin|editor', 'throttle:60,1'])
+    ->middleware(['web', 'auth:admin', 'admin', 'role:super_admin|admin|editor,admin', 'throttle:60,1'])
     ->name('admin.dashboard');
 
 // Analytics Route Alias
 Route::get('su/portal/v1/admin/analytics', [AnalyticsController::class, 'dashboard'])
-    ->middleware(['web', 'auth', 'admin', 'role:super_admin|admin|editor', 'throttle:60,1'])
+    ->middleware(['web', 'auth:admin', 'admin', 'role:super_admin|admin|editor,admin', 'throttle:60,1'])
     ->name('admin.analytics');
 
 // Settings Route Placeholder (coming soon)
 Route::get('su/portal/v1/admin/settings', function () {
     return view('admin.coming-soon', ['module' => 'Settings']);
-})->middleware(['web', 'auth', 'admin', 'role:super_admin|admin|editor', 'throttle:60,1'])
+})->middleware(['web', 'auth:admin', 'admin', 'role:super_admin|admin|editor,admin', 'throttle:60,1'])
     ->name('admin.settings');
 
 // Programs & Episodes — now handled by full domain routes below
@@ -76,17 +76,17 @@ Route::get('su/portal/v1/admin/settings', function () {
 // Help Route
 Route::get('su/portal/v1/admin/help', function () {
     return view('admin.help');
-})->middleware(['web', 'auth', 'admin', 'role:super_admin|admin|editor', 'throttle:60,1'])
+})->middleware(['web', 'auth:admin', 'admin', 'role:super_admin|admin|editor,admin', 'throttle:60,1'])
     ->name('admin.help');
 
 // Profile Route
 Route::get('su/portal/v1/admin/profile', function () {
     return view('admin.coming-soon', ['module' => 'Profile']);
-})->middleware(['web', 'auth', 'admin', 'role:super_admin|admin|editor', 'throttle:60,1'])
+})->middleware(['web', 'auth:admin', 'admin', 'role:super_admin|admin|editor,admin', 'throttle:60,1'])
     ->name('admin.profile');
 
 Route::prefix('su/portal/v1/admin')
-    ->middleware(['web', 'auth', 'admin', 'role:super_admin|admin|editor', 'throttle:60,1'])
+    ->middleware(['web', 'auth:admin', 'admin', 'role:super_admin|admin|editor,admin', 'throttle:60,1'])
     ->group(function (): void {
 
         // Dashboard Routes
