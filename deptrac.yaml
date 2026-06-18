@@ -1,3 +1,9 @@
+# Pre-existing layer/boundary violations are recorded in the baseline so CI fails
+# only on NEW violations. Regenerate after intentionally clearing debt:
+#   vendor/bin/deptrac analyse --formatter=baseline --output=deptrac.baseline.yaml
+imports:
+  - deptrac.baseline.yaml
+
 deptrac:
   paths:
     - ./app

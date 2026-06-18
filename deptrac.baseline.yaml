@@ -1,0 +1,148 @@
+deptrac:
+  skip_violations:
+    App\Domain\Blog\Actions\CreateArticleAction:
+      - App\Models\Article
+    App\Domain\Blog\Actions\UpdateArticleAction:
+      - App\Models\Article
+    App\Domain\Blog\DTOs\UpdateArticleData:
+      - App\Models\Article
+    App\Domain\Blog\Exporters\ArticleExporter:
+      - App\Models\Article
+    App\Domain\Blog\Importers\ArticleImporter:
+      - App\Models\Article
+      - App\Models\ArticleLocale
+    App\Domain\Blog\Models\Category:
+      - App\Models\Article
+    App\Domain\Blog\Models\Series:
+      - App\Models\Article
+    App\Domain\Blog\Models\Tag:
+      - App\Models\Article
+    App\Domain\Blog\Models\UserInteraction:
+      - App\Models\User
+    App\Domain\Blog\Services\ArticleBulkHandler:
+      - App\Models\Article
+    App\Domain\Blog\Services\BlogDashboardStatsProvider:
+      - App\Models\Article
+    App\Domain\Blog\Services\SlugGeneratorService:
+      - App\Models\ArticleLocale
+    App\Domain\Hadith\Importers\HadithJsonParser:
+      - App\Services\Json\JsonDataTransformer
+    App\Domain\Hadith\Services\BookSyncService:
+      - App\Services\Sunnah\SunnahApiClient
+      - App\Services\Sunnah\SunnahDataTransformer
+    App\Domain\Hadith\Services\ChapterSyncService:
+      - App\Services\Sunnah\SunnahApiClient
+      - App\Services\Sunnah\SunnahDataTransformer
+    App\Domain\Hadith\Services\CollectionSyncService:
+      - App\Services\Sunnah\SunnahApiClient
+      - App\Services\Sunnah\SunnahDataTransformer
+    App\Domain\Hadith\Services\HadithSyncService:
+      - App\Services\Sunnah\SunnahApiClient
+      - App\Services\Sunnah\SunnahDataTransformer
+    App\Domain\Sahaba\Models\Sahabi:
+      - App\Models\Article
+      - App\Models\User
+    App\Domain\Seerah\Models\SeerahEvent:
+      - App\Models\Article
+      - App\Models\User
+    App\Domain\Shared\Enums\SearchModule:
+      - App\Domain\Genealogy\Models\Person
+      - App\Domain\Hadith\Models\Hadith
+      - App\Domain\Media\Models\MediaProgram
+      - App\Domain\Quran\Models\Verse
+      - App\Domain\Sahaba\Models\Sahabi
+      - App\Domain\Seerah\Models\SeerahEvent
+      - App\Models\Article
+    App\Domain\Shared\Models\AdminLog:
+      - App\Models\User
+    App\Domain\Shared\Models\AuditLog:
+      - App\Models\User
+    App\Domain\Shared\Models\BulkOperation:
+      - App\Models\User
+    App\Domain\Shared\Models\ContentSchedule:
+      - App\Models\User
+    App\Domain\Shared\Models\ContentVersion:
+      - App\Models\User
+    App\Domain\Shared\Models\Export:
+      - App\Models\User
+    App\Domain\Shared\Models\Import:
+      - App\Models\User
+    App\Domain\Shared\Models\SavedFilter:
+      - App\Models\User
+    App\Domain\Shared\Models\SearchHistory:
+      - App\Models\User
+    App\Domain\Shared\Models\SearchPreference:
+      - App\Models\User
+    App\Domain\Shared\Models\UserEngagementMetric:
+      - App\Models\User
+    App\Domain\Shared\Models\UserInteraction:
+      - App\Models\User
+    App\Domain\Shared\Services\AdminLoggerService:
+      - App\Models\User
+    App\Domain\Shared\Services\AnalyticsService:
+      - App\Domain\Genealogy\Models\Person
+      - App\Domain\Hadith\Models\Hadith
+      - App\Domain\Hadith\Models\HadithBook
+      - App\Domain\Quran\Models\Reciter
+      - App\Domain\Quran\Models\Surah
+      - App\Domain\Quran\Models\Verse
+      - App\Domain\Sahaba\Models\Sahabi
+      - App\Domain\Seerah\Models\SeerahEvent
+      - App\Models\User
+    App\Domain\Shared\Services\DashboardService:
+      - App\Models\User
+    App\Domain\Shared\Services\FavoriteService:
+      - App\Models\User
+    App\Domain\Shared\Services\InteractionService:
+      - App\Models\User
+    App\Domain\Shared\Services\SavedFilterService:
+      - App\Models\User
+    App\Domain\Shared\Services\SearchService:
+      - App\Models\User
+    App\Domain\Shared\Traits\HasInteractions:
+      - App\Models\User
+    App\Http\Controllers\Admin\ActivityLogController:
+      - App\Models\User
+    App\Http\Controllers\Admin\AdminAuthController:
+      - App\Models\User
+    App\Http\Controllers\Admin\Blog\ArticleController:
+      - App\Models\Article
+      - App\Models\ArticleLocale
+    App\Http\Controllers\Admin\MediaController:
+      - App\Models\Media
+    App\Http\Controllers\Admin\MediaSettingsController:
+      - App\Models\MediaSizePreset
+    App\Http\Controllers\Admin\UserController:
+      - App\Models\User
+    App\Http\Controllers\Api\AuthController:
+      - App\Models\User
+    App\Http\Controllers\Api\InteractionController:
+      - App\Models\User
+    App\Http\Controllers\Site\ArticleController:
+      - App\Models\Article
+      - App\Models\ArticleLocale
+    App\Http\Controllers\Site\AuthController:
+      - App\Models\User
+    App\Http\Controllers\Site\PasswordResetController:
+      - App\Models\User
+    App\Http\Controllers\Site\SocialAuthController:
+      - App\Models\User
+    App\Models\Article:
+      - App\Domain\Blog\Models\Category
+      - App\Domain\Blog\Models\Series
+      - App\Domain\Blog\Models\Tag
+      - App\Domain\Seerah\Models\SeerahEvent
+    App\Models\Tag:
+      - App\Domain\Blog\Models\TagTranslation
+    App\Repositories\ArticleRepository:
+      - App\Domain\Blog\Models\Category
+      - App\Domain\Blog\Models\Tag
+    App\Services\Hadith\JsonImportService:
+      - App\Domain\Hadith\Models\Hadith
+      - App\Domain\Hadith\Models\HadithBook
+      - App\Domain\Hadith\Models\HadithChapter
+      - App\Domain\Hadith\Models\HadithCollection
+      - App\Domain\Hadith\Models\HadithSyncLog
+      - App\Domain\Hadith\Models\HadithTranslation
+    App\Services\Sunnah\SunnahDataTransformer:
+      - App\Domain\Hadith\Enums\HadithGrade
