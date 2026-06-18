@@ -14,6 +14,7 @@ use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Spatie\Permission\Models\Role;
 
 /**
  * Session-based (cookie) authentication for public site visitors.
@@ -76,6 +77,12 @@ final class AuthController extends Controller
             'language' => app()->getLocale(),
             'last_login_at' => now(),
         ]);
+
+        // Public visitors get the non-privileged `user` role explicitly (never an
+        // admin-tier role), consistent with the Sanctum API registration.
+        // findOrCreate keeps this safe if role seeding has not run yet.
+        Role::findOrCreate('user', 'web');
+        $user->assignRole('user');
 
         // Dispatches the framework listener that emails the verification link
         // (User implements MustVerifyEmail). Browsing is NOT gated on it.

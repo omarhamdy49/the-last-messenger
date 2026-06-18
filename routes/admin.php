@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\AuditController;
 use App\Http\Controllers\Admin\BulkOperationController;
@@ -26,7 +27,6 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SchedulerController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VersionController;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -40,60 +40,35 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Admin Web Login Routes (no auth required)
-// Apply web middleware for session and CSRF support
+// Admin Web Login Routes (no auth required).
+// Credential + role checks live in AdminAuthController, which only establishes a
+// session for admin-tier users so a public account can never reach the portal.
 Route::middleware(['web'])->group(function () {
-    Route::get('su/portal/v1/admin/login', function () {
-        return view('admin.auth.login');
-    })->name('login'); // Named 'login' for auth middleware redirect
+    Route::get('su/portal/v1/admin/login', [AdminAuthController::class, 'showLogin'])
+        ->name('login'); // Named 'login' for auth middleware redirect
 
-    Route::post('su/portal/v1/admin/login', function (\Illuminate\Http\Request $request) {
-        $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
+    Route::post('su/portal/v1/admin/login', [AdminAuthController::class, 'login'])
+        ->middleware('throttle:5,1')
+        ->name('admin.web.login.submit');
 
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
-            $request->session()->regenerate();
-
-            // Check if user has admin role
-            if (! auth()->user()->hasAnyRole(['admin', 'super_admin', 'editor'])) {
-                Auth::logout();
-
-                return redirect()->back()->withErrors(['email' => 'ليس لديك صلاحية الوصول للوحة التحكم.']);
-            }
-
-            return redirect()->intended('/su/portal/v1/admin/dashboard');
-        }
-
-        return redirect()->back()->withErrors([
-            'email' => 'بيانات الدخول غير صحيحة. يرجى المحاولة مرة أخرى.',
-        ])->withInput($request->only('email'));
-    })->name('admin.web.login.submit')->middleware('throttle:5,1');
-
-    Route::post('su/portal/v1/admin/logout', function (\Illuminate\Http\Request $request) {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return redirect()->route('login');
-    })->name('admin.logout');
+    Route::post('su/portal/v1/admin/logout', [AdminAuthController::class, 'logout'])
+        ->name('admin.logout');
 });
 
 // Main Dashboard Route (must be defined before the group to avoid override)
 Route::get('su/portal/v1/admin/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['web', 'auth', 'admin', 'throttle:60,1'])
+    ->middleware(['web', 'auth', 'admin', 'role:super_admin|admin|editor', 'throttle:60,1'])
     ->name('admin.dashboard');
 
 // Analytics Route Alias
 Route::get('su/portal/v1/admin/analytics', [AnalyticsController::class, 'dashboard'])
-    ->middleware(['web', 'auth', 'admin', 'throttle:60,1'])
+    ->middleware(['web', 'auth', 'admin', 'role:super_admin|admin|editor', 'throttle:60,1'])
     ->name('admin.analytics');
 
 // Settings Route Placeholder (coming soon)
 Route::get('su/portal/v1/admin/settings', function () {
     return view('admin.coming-soon', ['module' => 'Settings']);
-})->middleware(['web', 'auth', 'admin', 'throttle:60,1'])
+})->middleware(['web', 'auth', 'admin', 'role:super_admin|admin|editor', 'throttle:60,1'])
     ->name('admin.settings');
 
 // Programs & Episodes — now handled by full domain routes below
@@ -101,17 +76,17 @@ Route::get('su/portal/v1/admin/settings', function () {
 // Help Route
 Route::get('su/portal/v1/admin/help', function () {
     return view('admin.help');
-})->middleware(['web', 'auth', 'admin', 'throttle:60,1'])
+})->middleware(['web', 'auth', 'admin', 'role:super_admin|admin|editor', 'throttle:60,1'])
     ->name('admin.help');
 
 // Profile Route
 Route::get('su/portal/v1/admin/profile', function () {
     return view('admin.coming-soon', ['module' => 'Profile']);
-})->middleware(['web', 'auth', 'admin', 'throttle:60,1'])
+})->middleware(['web', 'auth', 'admin', 'role:super_admin|admin|editor', 'throttle:60,1'])
     ->name('admin.profile');
 
 Route::prefix('su/portal/v1/admin')
-    ->middleware(['web', 'auth', 'admin', 'throttle:60,1'])
+    ->middleware(['web', 'auth', 'admin', 'role:super_admin|admin|editor', 'throttle:60,1'])
     ->group(function (): void {
 
         // Dashboard Routes
