@@ -6,8 +6,10 @@ namespace App\Http\Controllers\Site;
 
 use App\Domain\Seerah\Enums\EventPhase;
 use App\Domain\Seerah\Models\SeerahEvent;
+use App\Domain\Seerah\Models\SeerahMilestone;
 use App\Domain\Seerah\Services\SeerahEventService;
 use App\Domain\Seerah\Services\SeerahEventTypeService;
+use App\Domain\Seerah\Services\SeerahMilestoneService;
 use App\Http\Controllers\Controller;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -19,57 +21,111 @@ final class SeerahController extends Controller
     public function __construct(
         private readonly SeerahEventService $seerahEventService,
         private readonly SeerahEventTypeService $eventTypeService,
+        private readonly SeerahMilestoneService $milestoneService,
     ) {}
 
     /**
-     * Seerah timeline — full chronological vertical timeline with phase navigation.
-     * All events server-rendered once; Alpine handles client-side search + category filtering.
+     * Seerah hero-journey — milestones (الحِقَب) as story chapters along a spine
+     * timeline, plus a flat "articles" mode. Fully server-rendered; Alpine handles
+     * the mode toggle and milestone scroll-spy navigation.
      */
     public function index(): View
     {
         $locale = app()->getLocale();
 
         $payload = Cache::remember(
-            "public_seerah_index_{$locale}",
+            "public_seerah_journey_{$locale}",
             1800,
             function () use ($locale): array {
                 try {
-                    // All 62 events, chronological. perPage large enough to render the full timeline.
-                    $paginator = $this->seerahEventService->getAllEvents(perPage: 500);
+                    $journey = $this->buildJourney($locale);
 
-                    $events = collect($paginator->items())
+                    // Flat chronological list (all published events) for "articles" mode.
+                    $paginator = $this->seerahEventService->getAllEvents(perPage: 500);
+                    $articles = collect($paginator->items())
                         ->map(fn (SeerahEvent $event) => $this->mapTimelineEvent($event, $locale))
                         ->values()
                         ->all();
 
-                    $stats = $this->seerahEventService->getIndexStats();
-                    $categoryCounts = $this->seerahEventService->countByCategory();
+                    $totalEvents = array_sum(array_column($journey, 'eventCount'));
 
                     return [
-                        'events' => $events,
-                        'total' => (int) ($stats['total'] ?? count($events)),
-                        'categoryCounts' => $categoryCounts,
+                        'journey' => $journey,
+                        'articles' => $articles,
+                        'stats' => [
+                            'milestones' => count($journey),
+                            'events' => $totalEvents,
+                            'articles' => count($articles),
+                            'span' => $this->journeySpan($journey, $locale),
+                        ],
                     ];
                 } catch (Throwable $e) {
                     report($e);
 
-                    return ['events' => [], 'total' => 0, 'categoryCounts' => []];
+                    return ['journey' => [], 'articles' => [], 'stats' => ['milestones' => 0, 'events' => 0, 'articles' => 0, 'span' => '']];
                 }
             },
         );
 
-        $events = $payload['events'];
+        return view('public.seerah.index', [
+            'journey' => $payload['journey'],
+            'articles' => $payload['articles'],
+            'stats' => $payload['stats'],
+        ]);
+    }
 
-        $stats = [
-            'total' => $payload['total'],
-            'pivotal' => collect($events)->where('isPivotal', true)->count(),
-            'phases' => count($this->phaseMeta()),
-        ];
+    /**
+     * Build the milestone journey: each active milestone with its published events.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildJourney(string $locale): array
+    {
+        return $this->milestoneService->getJourney()
+            ->map(function (SeerahMilestone $milestone) use ($locale): array {
+                $events = $milestone->events
+                    ->map(fn (SeerahEvent $event) => $this->mapTimelineEvent($event, $locale))
+                    ->values()
+                    ->all();
 
-        $categoryPills = $this->buildCategoryPills($payload['categoryCounts'], $locale);
-        $phases = $this->phaseMeta($locale);
+                return [
+                    'slug' => $milestone->slug,
+                    'order' => $milestone->order_index,
+                    'anchor' => 'milestone-'.$milestone->slug,
+                    'title' => $milestone->getTranslation('title', $locale) ?? '',
+                    'subtitle' => $milestone->getTranslation('subtitle', $locale),
+                    'description' => $milestone->getTranslation('description', $locale),
+                    'icon' => $milestone->icon ?: 'milestone',
+                    'gradient' => $milestone->gradient ?: 'from-[#0056b3] to-[#218838]',
+                    'hijriRange' => $milestone->hijriRangeLabel(),
+                    'gregorianRange' => $milestone->gregorianRangeLabel(),
+                    'events' => $events,
+                    'eventCount' => count($events),
+                ];
+            })
+            ->filter(fn (array $milestone): bool => $milestone['eventCount'] > 0)
+            ->values()
+            ->all();
+    }
 
-        return view('public.seerah.index', compact('events', 'stats', 'categoryPills', 'phases'));
+    /**
+     * Compact "first → last" Hijri span label across the whole journey.
+     *
+     * @param  array<int, array<string, mixed>>  $journey
+     */
+    private function journeySpan(array $journey, string $locale): string
+    {
+        if ($journey === []) {
+            return '';
+        }
+
+        $first = $journey[0]['hijriRange'] ?? '';
+        $last = end($journey)['hijriRange'] ?? '';
+
+        $from = trim(explode('–', $first)[0] ?? '');
+        $to = trim(array_slice(explode('–', $last), -1)[0] ?? '');
+
+        return $from && $to ? "{$from} — {$to}" : ($from ?: $to);
     }
 
     /**

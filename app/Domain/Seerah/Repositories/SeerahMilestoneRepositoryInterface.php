@@ -19,6 +19,14 @@ interface SeerahMilestoneRepositoryInterface extends RepositoryInterface
     public function allActiveOrdered(): Collection;
 
     /**
+     * Active milestones (ordered) each eager-loaded with their published events in
+     * chronological order — for the public hero-journey timeline.
+     *
+     * @return Collection<int, \App\Domain\Seerah\Models\SeerahMilestone>
+     */
+    public function getActiveWithPublishedEvents(): Collection;
+
+    /**
      * Paginate milestones for the admin index with optional filters (search, status).
      *
      * @param  array<string, mixed>  $filters

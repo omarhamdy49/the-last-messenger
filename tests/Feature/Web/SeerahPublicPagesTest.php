@@ -157,14 +157,15 @@ final class SeerahPublicPagesTest extends TestCase
         $response = $this->withSession(['locale' => 'en'])->get('/seerah');
 
         $response->assertOk()
-            // English UI chrome rendered from lang files...
-            ->assertSee('A Journey of Light and Guidance')
-            ->assertSee('Years of Life')
-            ->assertSee('Historical Events')
-            // ...and the previously hardcoded Arabic UI strings are gone (KI-14).
-            ->assertDontSee('رحلة النور والهداية')
-            ->assertDontSee('عاماً من الحياة')
-            ->assertDontSee('حدثاً تاريخياً');
+            // English UI chrome (hero-journey redesign) rendered from lang files...
+            ->assertSee('The Journey of Light')   // journey badge
+            ->assertSee('Milestones')             // stat label / rail
+            ->assertSee('Time Span')              // stat label
+            ->assertSee('Articles')               // mode toggle
+            // ...and the Arabic UI strings are not hardcoded.
+            ->assertDontSee('رحلة النور')
+            ->assertDontSee('النطاق الزمني')
+            ->assertDontSee('الرحلة');
     }
 
     public function test_seerah_events_directory_ui_chrome_is_localized_in_english(): void

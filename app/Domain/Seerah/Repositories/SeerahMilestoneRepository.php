@@ -37,6 +37,29 @@ class SeerahMilestoneRepository extends BaseRepository implements SeerahMileston
     /**
      * {@inheritdoc}
      */
+    public function getActiveWithPublishedEvents(): Collection
+    {
+        return Cache::remember(
+            $this->getCacheKey('journey'),
+            $this->cacheTTL,
+            fn () => $this->model->newQuery()
+                ->with([
+                    'translations',
+                    'events' => fn ($q) => $q->published()->chronological()->with([
+                        'translations:id,seerah_event_id,locale,title',
+                        'type:id,slug,icon,color,gradient',
+                        'type.translations:id,seerah_event_type_id,locale,name',
+                    ]),
+                ])
+                ->active()
+                ->ordered()
+                ->get()
+        );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function paginateWithFilters(array $filters, int $perPage = 15): LengthAwarePaginator
     {
         $query = $this->model->newQuery()->with('translations');

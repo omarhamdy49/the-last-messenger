@@ -355,5 +355,19 @@ return [
         'like' => 'إعجاب',
         'print' => 'طباعة',
         'close' => 'إغلاق',
+
+        // Hero-journey timeline (milestones / الحِقَب)
+        'journey_badge' => 'رحلة النور.. ملحمة سيّد المرسلين ﷺ',
+        'journey_subtitle' => 'تتبّع السيرة النبوية كرحلةٍ ملحمية عبر حِقَبها الكبرى، من المولد الشريف إلى الرفيق الأعلى.',
+        'mode_journey' => 'الرحلة',
+        'mode_articles' => 'المقالات',
+        'stat_milestones' => 'حقبة',
+        'stat_stations' => 'محطة',
+        'stat_span' => 'النطاق الزمني',
+        'milestone_chapter' => 'الحقبة',
+        'jump_to_milestone' => 'الحِقَب',
+        'stations_count' => 'محطات',
+        'articles_mode_hint' => 'كل محطات السيرة مرتّبة زمنياً',
+        'empty_journey' => 'لا توجد حِقَب منشورة بعد',
     ],
 ];

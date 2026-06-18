@@ -93,5 +93,19 @@ return [
         'like' => 'Like',
         'print' => 'Print',
         'close' => 'Close',
+
+        // Hero-journey timeline (milestones)
+        'journey_badge' => 'The Journey of Light — the Epic of the Seal of Messengers ﷺ',
+        'journey_subtitle' => 'Follow the Prophetic biography as an epic journey through its great eras, from the noble birth to the highest companionship.',
+        'mode_journey' => 'Journey',
+        'mode_articles' => 'Articles',
+        'stat_milestones' => 'Milestones',
+        'stat_stations' => 'Stations',
+        'stat_span' => 'Time Span',
+        'milestone_chapter' => 'Era',
+        'jump_to_milestone' => 'Milestones',
+        'stations_count' => 'stations',
+        'articles_mode_hint' => 'All Seerah stations in chronological order',
+        'empty_journey' => 'No published milestones yet',
     ],
 ];

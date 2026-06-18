@@ -93,5 +93,19 @@ return [
         'like' => 'Beğen',
         'print' => 'Yazdır',
         'close' => 'Kapat',
+
+        // Hero-journey timeline (milestones)
+        'journey_badge' => 'Nur Yolculuğu — Peygamberlerin Mührü\'nün ﷺ destanı',
+        'journey_subtitle' => 'Siyer-i Nebî\'yi, mübarek doğumdan Refîk-i A\'lâ\'ya uzanan büyük dönemleri boyunca destansı bir yolculuk olarak takip edin.',
+        'mode_journey' => 'Yolculuk',
+        'mode_articles' => 'Makaleler',
+        'stat_milestones' => 'Dönem',
+        'stat_stations' => 'Durak',
+        'stat_span' => 'Zaman Aralığı',
+        'milestone_chapter' => 'Dönem',
+        'jump_to_milestone' => 'Dönemler',
+        'stations_count' => 'durak',
+        'articles_mode_hint' => 'Tüm Siyer durakları kronolojik sırayla',
+        'empty_journey' => 'Henüz yayımlanmış dönem yok',
     ],
 ];

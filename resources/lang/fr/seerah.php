@@ -93,5 +93,19 @@ return [
         'like' => 'J’aime',
         'print' => 'Imprimer',
         'close' => 'Fermer',
+
+        // Hero-journey timeline (milestones)
+        'journey_badge' => 'Le voyage de la Lumière — l’épopée du Sceau des Messagers ﷺ',
+        'journey_subtitle' => 'Suivez la biographie prophétique comme une épopée à travers ses grandes ères, de la noble naissance au plus haut compagnonnage.',
+        'mode_journey' => 'Le voyage',
+        'mode_articles' => 'Articles',
+        'stat_milestones' => 'Jalons',
+        'stat_stations' => 'Étapes',
+        'stat_span' => 'Période',
+        'milestone_chapter' => 'Ère',
+        'jump_to_milestone' => 'Jalons',
+        'stations_count' => 'étapes',
+        'articles_mode_hint' => 'Toutes les étapes de la Sîra par ordre chronologique',
+        'empty_journey' => 'Aucun jalon publié pour le moment',
     ],
 ];

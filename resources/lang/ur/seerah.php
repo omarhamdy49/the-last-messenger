@@ -93,5 +93,19 @@ return [
         'like' => 'پسند',
         'print' => 'پرنٹ کریں',
         'close' => 'بند کریں',
+
+        // Hero-journey timeline (milestones)
+        'journey_badge' => 'نور کا سفر — خاتم المرسلین ﷺ کی داستان',
+        'journey_subtitle' => 'سیرتِ نبوی کو ایک عظیم داستان کے طور پر اس کے بڑے ادوار کے ذریعے دیکھیں، مبارک ولادت سے رفیقِ اعلیٰ تک۔',
+        'mode_journey' => 'سفر',
+        'mode_articles' => 'مضامین',
+        'stat_milestones' => 'ادوار',
+        'stat_stations' => 'مراحل',
+        'stat_span' => 'زمانی دورانیہ',
+        'milestone_chapter' => 'دور',
+        'jump_to_milestone' => 'ادوار',
+        'stations_count' => 'مراحل',
+        'articles_mode_hint' => 'سیرت کے تمام مراحل ترتیبِ زمانی کے ساتھ',
+        'empty_journey' => 'ابھی کوئی شائع شدہ دور موجود نہیں',
     ],
 ];

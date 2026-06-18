@@ -29,6 +29,17 @@ class SeerahMilestoneService extends BaseService
     }
 
     /**
+     * Active milestones with their published events (chronological) for the public
+     * hero-journey timeline.
+     *
+     * @return Collection<int, SeerahMilestone>
+     */
+    public function getJourney(): Collection
+    {
+        return $this->milestoneRepository->getActiveWithPublishedEvents();
+    }
+
+    /**
      * Paginate milestones for the admin index.
      *
      * @param  array<string, mixed>  $filters
