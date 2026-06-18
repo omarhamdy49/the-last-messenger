@@ -6,6 +6,7 @@ namespace Database\Seeders\Seerah;
 
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Models\SeerahEventTimelineItem;
+use App\Domain\Seerah\Models\SeerahEventType;
 use App\Domain\Seerah\Models\SeerahParticipant;
 use App\Domain\Seerah\Models\SeerahParticipantTranslation;
 use Illuminate\Database\Seeder;
@@ -20,6 +21,13 @@ use Illuminate\Support\Facades\DB;
  */
 abstract class SeerahEventSeederBase extends Seeder
 {
+    /**
+     * Cache of type slug => id resolved from seerah_event_types.
+     *
+     * @var array<string, int|null>
+     */
+    private array $typeIdCache = [];
+
     /**
      * The event definitions this seeder owns.
      *
@@ -49,7 +57,8 @@ abstract class SeerahEventSeederBase extends Seeder
         $event = SeerahEvent::query()->updateOrCreate(
             ['slug' => $eventDefinition['slug']],
             [
-                'event_type' => $eventDefinition['event_type'],
+                'seerah_event_type_id' => $this->resolveTypeId($eventDefinition['event_type'] ?? null),
+                'status' => $eventDefinition['status'] ?? 'published',
                 'importance' => $eventDefinition['importance'],
                 'era' => $eventDefinition['era'],
                 'phase' => $eventDefinition['phase'],
@@ -72,6 +81,27 @@ abstract class SeerahEventSeederBase extends Seeder
         $this->upsertEventTranslations($event, $eventDefinition['translations']);
         $this->upsertTimelineItems($event, $eventDefinition['timeline'] ?? []);
         $this->upsertParticipants($event, $eventDefinition['participants'] ?? []);
+    }
+
+    /**
+     * Resolve a type slug to its id (cached), creating the type if missing so
+     * content seeders can run independently of the type seed migration.
+     */
+    private function resolveTypeId(?string $slug): ?int
+    {
+        if ($slug === null) {
+            return null;
+        }
+
+        if (! isset($this->typeIdCache[$slug])) {
+            $type = SeerahEventType::query()->firstOrCreate(['slug' => $slug], ['is_active' => true]);
+            if ($type->translations()->where('locale', 'ar')->doesntExist()) {
+                $type->syncTranslations(['name' => ['ar' => $slug, 'en' => ucfirst($slug)]]);
+            }
+            $this->typeIdCache[$slug] = $type->id;
+        }
+
+        return $this->typeIdCache[$slug];
     }
 
     /**

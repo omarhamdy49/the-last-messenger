@@ -6,7 +6,8 @@ namespace App\Domain\Seerah\Services;
 
 use App\Domain\Seerah\DTOs\CreateSeerahEventData;
 use App\Domain\Seerah\DTOs\UpdateSeerahEventData;
-use App\Domain\Seerah\Enums\EventType;
+use App\Domain\Seerah\Enums\EventImportance;
+use App\Domain\Seerah\Enums\SeerahEventStatus;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Repositories\SeerahEventRepositoryInterface;
 use App\Domain\Shared\Services\BaseService;
@@ -53,9 +54,9 @@ class SeerahEventService extends BaseService
     }
 
     /**
-     * Get events by type
+     * Get events by type (type id or slug)
      */
-    public function getEventsByType(EventType|string $type, int $perPage = 15): LengthAwarePaginator
+    public function getEventsByType(int|string $type, int $perPage = 15): LengthAwarePaginator
     {
         return $this->repository->getByType($type, $perPage);
     }
@@ -113,8 +114,10 @@ class SeerahEventService extends BaseService
             'hijri_day' => $data->hijriDay,
             'gregorian_date' => $data->gregorianDate,
             'gregorian_year' => $data->gregorianYear,
-            'event_type' => $data->eventType,
-            'importance' => $data->importance,
+            'seerah_event_type_id' => $data->seerahEventTypeId,
+            'seerah_milestone_id' => $data->seerahMilestoneId,
+            'importance' => $data->importance ?? EventImportance::MEDIUM->value,
+            'status' => $data->status ?? SeerahEventStatus::PUBLISHED->value,
             'location' => $data->location,
             'latitude' => $data->latitude,
             'longitude' => $data->longitude,
@@ -141,8 +144,10 @@ class SeerahEventService extends BaseService
             'hijri_day' => $data->hijriDay,
             'gregorian_date' => $data->gregorianDate,
             'gregorian_year' => $data->gregorianYear,
-            'event_type' => $data->eventType,
+            'seerah_event_type_id' => $data->seerahEventTypeId,
+            'seerah_milestone_id' => $data->seerahMilestoneId,
             'importance' => $data->importance,
+            'status' => $data->status,
             'location' => $data->location,
             'latitude' => $data->latitude,
             'longitude' => $data->longitude,
@@ -182,22 +187,33 @@ class SeerahEventService extends BaseService
     }
 
     /**
-     * Count events by category (event type)
+     * Count events by category (event type slug), single aggregate query.
      *
      * @return array<string, int>
      */
     public function countByCategory(): array
     {
-        $eventTypes = EventType::cases();
-        $counts = [];
+        return $this->repository->getIndexStats()['categories'];
+    }
 
-        foreach ($eventTypes as $type) {
-            $counts[$type->value] = $this->repository->count([
-                'event_type' => $type->value,
-            ]);
-        }
+    /**
+     * Paginate events for the admin index with optional whitelisted filters.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function paginateWithFilters(array $filters, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->paginateWithFilters($filters, $perPage);
+    }
 
-        return $counts;
+    /**
+     * Bulk-update the publication status of the given events.
+     *
+     * @param  array<int>  $ids
+     */
+    public function bulkUpdateStatus(array $ids, string $status): int
+    {
+        return $this->repository->bulkUpdateStatus($ids, $status);
     }
 
     /**

@@ -22,6 +22,9 @@
         'hadith-scholars' => 'hadith',
         'hadith-themes'   => 'hadith',
         'hadith-grading'  => 'hadith',
+        'seerah-events'   => 'seerah',
+        'seerah-event-types' => 'seerah',
+        'seerah-milestones' => 'seerah',
         'quran'           => 'quran',
         'surahs'          => 'quran',
         'verses'          => 'quran',
@@ -320,15 +323,53 @@
             </div>
 
             <!-- Seerah (Timeline & Events) -->
-            <a href="{{ route('admin.seerah-events.index') }}"
-               @click="activeMenu = 'seerah-events'; openSubmenu = null"
-               :class="isActive('seerah-events') ?
-                   'bg-gradient-primary text-white shadow-lg' :
-                   (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
-                <i data-lucide="clock" class="w-5 h-5"></i>
-                <span class="font-semibold">{{ __('admin.seerah_events') }}</span>
-            </a>
+            <div>
+                <button @click="toggleSubmenu('seerah')"
+                        :class="openSubmenu === 'seerah' || activeMenu === 'seerah' ?
+                            'bg-gradient-primary text-white shadow-lg' :
+                            (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+                        class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="scroll" class="w-5 h-5"></i>
+                        <span class="font-semibold">{{ __('admin.seerah') }}</span>
+                    </div>
+                    <i data-lucide="chevron-down"
+                       class="w-4 h-4 transition-transform duration-200"
+                       :class="openSubmenu === 'seerah' ? 'rotate-180' : ''"></i>
+                </button>
+
+                <div x-show="openSubmenu === 'seerah'"
+                     x-collapse
+                     class="mt-2 ms-6 space-y-1">
+                    <a href="{{ route('admin.seerah-events.index') }}"
+                       @click="activeMenu = 'seerah-events'"
+                       :class="isActive('seerah-events') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="clock" class="w-4 h-4"></i>
+                        <span>{{ __('admin.seerah_events') }}</span>
+                    </a>
+                    <a href="{{ route('admin.seerah-event-types.index') }}"
+                       @click="activeMenu = 'seerah-event-types'"
+                       :class="isActive('seerah-event-types') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="tags" class="w-4 h-4"></i>
+                        <span>{{ __('admin.seerah_event_types') }}</span>
+                    </a>
+                    <a href="{{ route('admin.seerah-milestones.index') }}"
+                       @click="activeMenu = 'seerah-milestones'"
+                       :class="isActive('seerah-milestones') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="milestone" class="w-4 h-4"></i>
+                        <span>{{ __('admin.seerah_milestones') }}</span>
+                    </a>
+                </div>
+            </div>
 
             <!-- Sahaba (Companions) -->
             <a href="{{ route('admin.sahaba.index') }}"

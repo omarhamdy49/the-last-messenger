@@ -302,23 +302,62 @@
                         @enderror
                     </div>
 
-                    <!-- Event Type -->
+                    <!-- Event Type (DB-driven) -->
                     <div>
                         <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                             نوع الحدث <span class="text-red-500">*</span>
                         </label>
-                        <select name="event_type"
+                        <select name="seerah_event_type_id"
                                 required
-                                class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                                class="w-full px-4 py-3 text-base sm:text-sm rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                                 :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
                             <option value="">اختر النوع</option>
-                            @foreach(\App\Domain\Seerah\Enums\EventType::cases() as $type)
-                                <option value="{{ $type->value }}" {{ old('event_type') == $type->value ? 'selected' : '' }}>
-                                    {{ $type->labelArabic() }}
+                            @foreach($eventTypes as $type)
+                                <option value="{{ $type->id }}" {{ (string) old('seerah_event_type_id') === (string) $type->id ? 'selected' : '' }}>
+                                    {{ $type->getTranslation('name', 'ar') }}
                                 </option>
                             @endforeach
                         </select>
-                        @error('event_type')
+                        @error('seerah_event_type_id')
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Milestone (الحقبة) -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            {{ __('admin.milestone') }}
+                        </label>
+                        <select name="seerah_milestone_id"
+                                class="w-full px-4 py-3 text-base sm:text-sm rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                            <option value="">{{ __('admin.no_milestone') }}</option>
+                            @foreach($milestones as $milestone)
+                                <option value="{{ $milestone->id }}" {{ (string) old('seerah_milestone_id') === (string) $milestone->id ? 'selected' : '' }}>
+                                    {{ $milestone->order_index }}. {{ $milestone->getTranslation('title', 'ar') }}@if($milestone->gregorianRangeLabel()) ({{ $milestone->gregorianRangeLabel() }})@endif
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('seerah_milestone_id')
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Status -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            {{ __('admin.status') }}
+                        </label>
+                        <select name="status"
+                                class="w-full px-4 py-3 text-base sm:text-sm rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                            @foreach($statuses as $status)
+                                <option value="{{ $status->value }}" {{ old('status', 'published') === $status->value ? 'selected' : '' }}>
+                                    {{ $status->labelArabic() }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('status')
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
                     </div>

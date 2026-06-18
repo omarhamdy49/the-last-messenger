@@ -86,7 +86,7 @@ enum SearchModule: string
                 'year' => FilterType::RANGE,
             ],
             self::SEERAH => [
-                'event_type' => FilterType::SELECT,
+                'seerah_event_type_id' => FilterType::SELECT,
                 'importance_level' => FilterType::SELECT,
                 'hijri_date' => FilterType::DATE_RANGE,
                 'gregorian_date' => FilterType::DATE_RANGE,

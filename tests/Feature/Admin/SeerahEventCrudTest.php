@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Admin;
 
 use App\Domain\Seerah\Models\SeerahEvent;
+use App\Domain\Seerah\Models\SeerahEventType;
 use App\Models\Article;
 use App\Models\Media;
 use App\Models\User;
@@ -34,6 +35,8 @@ class SeerahEventCrudTest extends TestCase
         $sourceArticle = $this->createArticleWithMedia($admin, 'الهجرة إلى المدينة', 'Migration to Madinah', 'migration');
         $updatedArticle = $this->createArticleWithMedia($admin, 'بناء المسجد النبوي', 'Building the Prophet Mosque', 'mosque');
 
+        $battleTypeId = SeerahEventType::query()->where('slug', 'battle')->value('id');
+
         $createPayload = [
             'slug' => 'battle-of-badr',
             'title' => $this->localizedField('غزوة بدر', 'Battle of Badr'),
@@ -45,7 +48,8 @@ class SeerahEventCrudTest extends TestCase
             'hijri_day' => 17,
             'gregorian_date' => '0624-03-13',
             'gregorian_year' => 624,
-            'event_type' => 'battle',
+            'seerah_event_type_id' => $battleTypeId,
+            'status' => 'published',
             'importance' => 'high',
             'location' => 'Badr',
             'latitude' => '23.7833',
@@ -65,6 +69,9 @@ class SeerahEventCrudTest extends TestCase
         $this->assertSame('Battle of Badr FR', $event->getTranslation('title', 'fr'));
         $this->assertSame('Battle of Badr UR', $event->getTranslation('title', 'ur'));
         $this->assertSame($sourceArticle->id, $event->related_article_id);
+        $this->assertSame($battleTypeId, $event->seerah_event_type_id);
+        $this->assertSame('battle', $event->type->slug);
+        $this->assertSame('published', $event->status->value);
         $this->assertTrue($event->is_featured);
         $this->assertNotNull($event->featured_image);
         Storage::disk('public')->assertExists($event->featured_image);
@@ -87,7 +94,8 @@ class SeerahEventCrudTest extends TestCase
             'hijri_day' => 17,
             'gregorian_date' => '0624-03-13',
             'gregorian_year' => 624,
-            'event_type' => 'battle',
+            'seerah_event_type_id' => $battleTypeId,
+            'status' => 'published',
             'importance' => 'high',
             'location' => 'Badr Valley',
             'latitude' => '23.7900',

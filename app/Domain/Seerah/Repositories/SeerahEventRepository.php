@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Domain\Seerah\Repositories;
 
-use App\Domain\Seerah\Enums\EventType;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Shared\Helpers\FullTextSearchHelper;
 use App\Domain\Shared\Repositories\BaseRepository;
@@ -30,43 +29,46 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     }
 
     /**
-     * Get events by type
+     * Get events by type (type id or slug). Public read — published only.
      */
-    public function getByType(EventType|string $type, int $perPage = 15): LengthAwarePaginator
+    public function getByType(int|string $type, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model
             ->with($this->listRelations())
+            ->published()
             ->byType($type)
             ->chronological()
             ->paginate($perPage);
     }
 
     /**
-     * Get events by Hijri year
+     * Get events by Hijri year. Public read — published only.
      */
     public function getByHijriYear(int $year, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model
             ->with($this->listRelations())
+            ->published()
             ->byHijriYear($year)
             ->chronological()
             ->paginate($perPage);
     }
 
     /**
-     * Get events by Gregorian year
+     * Get events by Gregorian year. Public read — published only.
      */
     public function getByGregorianYear(int $year, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model
             ->with($this->listRelations())
+            ->published()
             ->byGregorianYear($year)
             ->chronological()
             ->paginate($perPage);
     }
 
     /**
-     * Get featured events
+     * Get featured events. Public read — published only.
      */
     public function getFeatured(int $limit = 10): Collection
     {
@@ -75,6 +77,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
             self::CACHE_TTL,
             fn () => $this->model
                 ->with($this->listRelations())
+                ->published()
                 ->featured()
                 ->chronological()
                 ->limit($limit)
@@ -83,7 +86,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     }
 
     /**
-     * Get events with location
+     * Get events with location (for map). Public read — published only.
      */
     public function getEventsWithLocation(): Collection
     {
@@ -91,15 +94,20 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
             'seerah_events_with_location',
             self::CACHE_TTL,
             fn () => $this->model
-                ->with('translations:id,seerah_event_id,locale,title')
+                ->with([
+                    'translations:id,seerah_event_id,locale,title',
+                    'type:id,slug,icon,color,gradient',
+                    'type.translations:id,seerah_event_type_id,locale,name',
+                ])
+                ->published()
                 ->withLocation()
                 ->chronological()
-                ->get(['id', 'slug', 'location', 'latitude', 'longitude', 'event_type', 'hijri_year'])
+                ->get(['id', 'slug', 'location', 'latitude', 'longitude', 'seerah_event_type_id', 'hijri_year'])
         );
     }
 
     /**
-     * Search events via translation table.
+     * Search events via translation table. Public read — published only.
      * FULLTEXT index covers (title, description) on seerah_event_translations.
      * 'location' on seerah_events has no FULLTEXT index and keeps LIKE.
      */
@@ -107,6 +115,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     {
         return $this->model
             ->with($this->listRelations())
+            ->published()
             ->where(function ($q) use ($query) {
                 $q->whereHas('translations', function ($tq) use ($query) {
                     FullTextSearchHelper::apply($tq, ['title', 'description'], $query);
@@ -118,14 +127,71 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     }
 
     /**
-     * Get events in chronological order
+     * Get events in chronological order. Public read — published only.
      */
     public function getChronological(int $perPage = 15): LengthAwarePaginator
     {
         return $this->model
             ->with($this->listRelations())
+            ->published()
             ->chronological()
             ->paginate($perPage);
+    }
+
+    /**
+     * Paginate events for the admin index with whitelisted filters.
+     * Admin path — NOT restricted to published so editors see drafts too.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function paginateWithFilters(array $filters, int $perPage = 15): LengthAwarePaginator
+    {
+        $query = $this->model
+            ->with($this->listRelations())
+            ->select([
+                'id', 'slug', 'seerah_event_type_id', 'importance', 'status',
+                'hijri_year', 'location', 'is_featured', 'display_order',
+                'hijri_month', 'hijri_day',
+            ]);
+
+        if (! empty($filters['type'])) {
+            $query->byType($filters['type']);
+        }
+
+        if (! empty($filters['importance'])) {
+            $query->where('importance', $filters['importance']);
+        }
+
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (! empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('translations', function ($tq) use ($search) {
+                    $tq->where('title', 'LIKE', "%{$search}%");
+                })->orWhere('location', 'LIKE', "%{$search}%");
+            });
+        }
+
+        return $query->chronological()->paginate($perPage)->withQueryString();
+    }
+
+    /**
+     * Bulk-update publication status in a single query.
+     *
+     * @param  array<int>  $ids
+     */
+    public function bulkUpdateStatus(array $ids, string $status): int
+    {
+        $affected = DB::transaction(
+            fn () => $this->model->newQuery()->whereIn('id', $ids)->update(['status' => $status])
+        );
+
+        $this->clearCache();
+
+        return $affected;
     }
 
     /**
@@ -140,6 +206,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
             self::CACHE_TTL,
             fn () => $this->model
                 ->with($relations)
+                ->published()
                 ->where('slug', $slug)
                 ->first($columns)
         );
@@ -156,6 +223,8 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     {
         return [
             'translations:id,seerah_event_id,locale,title',
+            'type:id,slug,icon,color,gradient',
+            'type.translations:id,seerah_event_type_id,locale,name',
         ];
     }
 
@@ -170,6 +239,8 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     {
         return [
             'translations:id,seerah_event_id,locale,title,description,content,is_ready',
+            'type:id,slug,icon,color,gradient',
+            'type.translations:id,seerah_event_type_id,locale,name',
             'participants:id,event_id,participant_type,participant_id,role',
             'participants.translations:id,seerah_participant_id,locale,name,description',
             'timelineItems' => fn ($query) => $query
@@ -217,10 +288,11 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
      */
     public function getIndexStats(): array
     {
-        $rows = DB::table('seerah_events')
-            ->selectRaw('event_type, COUNT(*) as count')
-            ->groupBy('event_type')
-            ->pluck('count', 'event_type');
+        $rows = DB::table('seerah_events as e')
+            ->leftJoin('seerah_event_types as t', 't.id', '=', 'e.seerah_event_type_id')
+            ->selectRaw("COALESCE(t.slug, 'unknown') as type_slug, COUNT(*) as count")
+            ->groupBy('type_slug')
+            ->pluck('count', 'type_slug');
 
         return [
             'total' => (int) $rows->sum(),

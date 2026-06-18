@@ -11,7 +11,7 @@
         </div>
         <h1 class="text-3xl font-bold gradient-text flex items-center gap-3">
             <div class="p-3 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] shadow-lg">
-                <i data-lucide="{{ $event->event_type?->icon() ?? 'calendar' }}" class="w-7 h-7 text-white"></i>
+                <i data-lucide="{{ $event->type?->icon ?? 'calendar' }}" class="w-7 h-7 text-white"></i>
             </div>
             {{ $event->getTranslation('title', 'ar') }}
         </h1>
@@ -60,22 +60,28 @@
                 </div>
                 @endif
 
-                @if($event->event_type)
+                @if($event->type)
                 <div class="absolute bottom-4 start-4">
                     <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-white/20 backdrop-blur-sm text-white">
-                        <i data-lucide="{{ $event->event_type->icon() }}" class="w-4 h-4"></i>
-                        {{ $event->event_type->labelArabic() }}
+                        <i data-lucide="{{ $event->type->icon ?? 'tag' }}" class="w-4 h-4"></i>
+                        {{ $event->type->getTranslation('name', 'ar') }}
                     </span>
                 </div>
                 @endif
 
-                @if($event->importance)
-                <div class="absolute bottom-4 end-4">
+                <div class="absolute bottom-4 end-4 flex items-center gap-2">
+                    @if($event->status)
+                    <span class="inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-semibold bg-white/20 backdrop-blur-sm text-white">
+                        <i data-lucide="{{ $event->status->icon() }}" class="w-4 h-4"></i>
+                        {{ $event->status->labelArabic() }}
+                    </span>
+                    @endif
+                    @if($event->importance)
                     <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-white/20 backdrop-blur-sm text-white">
                         {{ $event->importance->labelArabic() }}
                     </span>
+                    @endif
                 </div>
-                @endif
             </div>
 
             <div class="p-6">
@@ -200,7 +206,11 @@
                 </div>
                 <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
                     <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">نوع الحدث</span>
-                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $event->event_type?->labelArabic() ?? '-' }}</span>
+                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $event->type?->getTranslation('name', 'ar') ?? '-' }}</span>
+                </div>
+                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ __('admin.status') }}</span>
+                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $event->status?->labelArabic() ?? '-' }}</span>
                 </div>
                 <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
                     <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">الأهمية</span>

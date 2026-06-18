@@ -6,7 +6,10 @@ namespace App\Http\Controllers\Admin\Seerah;
 
 use App\Domain\Seerah\DTOs\CreateSeerahEventData;
 use App\Domain\Seerah\DTOs\UpdateSeerahEventData;
+use App\Domain\Seerah\Enums\SeerahEventStatus;
 use App\Domain\Seerah\Services\SeerahEventService;
+use App\Domain\Seerah\Services\SeerahEventTypeService;
+use App\Domain\Seerah\Services\SeerahMilestoneService;
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreSeerahEventRequest;
@@ -30,6 +33,8 @@ class SeerahEventController extends Controller
      */
     public function __construct(
         protected SeerahEventService $seerahEventService,
+        protected SeerahEventTypeService $eventTypeService,
+        protected SeerahMilestoneService $milestoneService,
         protected AdminLoggerService $logger,
         protected ArticleRepository $articleRepository
     ) {}
@@ -42,10 +47,20 @@ class SeerahEventController extends Controller
     public function index(Request $request): View|JsonResponse
     {
         $perPage = $request->integer('per_page', 15);
-        $events = $this->seerahEventService->paginate($perPage, ['*'], ['translations']);
+
+        $filters = array_filter([
+            'type' => $request->string('event_type')->toString() ?: null,
+            'importance' => $request->string('importance')->toString() ?: null,
+            'status' => $request->string('status')->toString() ?: null,
+            'search' => $request->string('search')->toString() ?: null,
+        ]);
+
+        $events = $this->seerahEventService->paginateWithFilters($filters, $perPage);
 
         // Single aggregate query delegated to repository via service
         $stats = $this->seerahEventService->getIndexStats();
+        $eventTypes = $this->eventTypeService->getForDropdown();
+        $statuses = SeerahEventStatus::cases();
 
         // Return JSON for AJAX requests
         if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
@@ -62,7 +77,7 @@ class SeerahEventController extends Controller
             ]);
         }
 
-        return view('admin.seerah-events.index', compact('events', 'stats'));
+        return view('admin.seerah-events.index', compact('events', 'stats', 'eventTypes', 'statuses'));
     }
 
     /**
@@ -73,8 +88,11 @@ class SeerahEventController extends Controller
     public function create(): View
     {
         $articles = $this->articleRepository->getForDropdown();
+        $eventTypes = $this->eventTypeService->getForDropdown();
+        $milestones = $this->milestoneService->getForDropdown();
+        $statuses = SeerahEventStatus::cases();
 
-        return view('admin.seerah-events.create', compact('articles'));
+        return view('admin.seerah-events.create', compact('articles', 'eventTypes', 'milestones', 'statuses'));
     }
 
     /**
@@ -126,7 +144,7 @@ class SeerahEventController extends Controller
             abort(404, 'Seerah event not found');
         }
 
-        $event->loadMissing(['translations', 'article.locales:id,article_id,locale,title,slug,is_ready', 'article.mediaItems', 'participants']);
+        $event->loadMissing(['translations', 'type:id,slug,icon,color,gradient', 'type.translations:id,seerah_event_type_id,locale,name', 'article.locales:id,article_id,locale,title,slug,is_ready', 'article.mediaItems', 'participants']);
 
         return view('admin.seerah-events.show', compact('event'));
     }
@@ -146,8 +164,11 @@ class SeerahEventController extends Controller
 
         $event->loadMissing(['translations', 'article.locales:id,article_id,locale,title,slug,is_ready']);
         $articles = $this->articleRepository->getForDropdown();
+        $eventTypes = $this->eventTypeService->getForDropdown();
+        $milestones = $this->milestoneService->getForDropdown();
+        $statuses = SeerahEventStatus::cases();
 
-        return view('admin.seerah-events.edit', compact('event', 'articles'));
+        return view('admin.seerah-events.edit', compact('event', 'articles', 'eventTypes', 'milestones', 'statuses'));
     }
 
     /**
@@ -230,11 +251,11 @@ class SeerahEventController extends Controller
             'ids.*' => ['integer', 'exists:seerah_events,id'],
         ]);
 
-        $ids = $request->input('ids');
+        $ids = array_map('intval', $request->input('ids'));
         $deleted = 0;
         foreach ($ids as $id) {
             try {
-                $event = $this->seerahEventService->findOrFail((int) $id);
+                $event = $this->seerahEventService->findOrFail($id);
                 $this->deleteFeaturedImage($event->featured_image);
                 $this->seerahEventService->delete($id);
                 $deleted++;
@@ -253,6 +274,32 @@ class SeerahEventController extends Controller
 
         return redirect()->route('admin.seerah-events.index')
             ->with('success', "تم حذف {$deleted} حدث بنجاح");
+    }
+
+    /**
+     * Bulk-update the publication status of Seerah events.
+     *
+     * POST /su/portal/v1/admin/seerah-events/bulk-status
+     */
+    public function bulkUpdateStatus(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:seerah_events,id'],
+            'status' => ['required', 'string', 'in:draft,published'],
+        ]);
+
+        $updated = $this->seerahEventService->bulkUpdateStatus($validated['ids'], $validated['status']);
+
+        $this->logger->logBulkAction(
+            'bulk_status_'.$validated['status'],
+            \App\Domain\Seerah\Models\SeerahEvent::class,
+            $validated['ids'],
+            $request->user()
+        );
+
+        return redirect()->route('admin.seerah-events.index')
+            ->with('success', __('admin.bulk_status_updated', ['count' => $updated]));
     }
 
     /**

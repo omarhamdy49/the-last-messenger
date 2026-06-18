@@ -190,7 +190,7 @@ class TranslationMigrationE2ETest extends TestCase
     {
         $event = SeerahEvent::create([
             'slug' => 'migration-to-medina',
-            'event_type' => 'other',
+            'seerah_event_type_id' => \App\Domain\Seerah\Models\SeerahEventType::query()->where('slug', 'other')->value('id'),
         ]);
 
         // Verify translation table exists

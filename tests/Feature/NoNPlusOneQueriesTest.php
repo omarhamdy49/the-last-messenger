@@ -22,7 +22,7 @@ class NoNPlusOneQueriesTest extends TestCase
         for ($i = 1; $i <= 5; $i++) {
             SeerahEvent::query()->create([
                 'slug' => "event-{$i}",
-                'event_type' => 'other',
+                'seerah_event_type_id' => \App\Domain\Seerah\Models\SeerahEventType::query()->where('slug', 'other')->value('id'),
                 'importance' => 'medium',
                 'is_featured' => false,
                 'display_order' => $i,

@@ -7,7 +7,7 @@ namespace App\Domain\Seerah\Models;
 use App\Domain\Seerah\Enums\EventEra;
 use App\Domain\Seerah\Enums\EventImportance;
 use App\Domain\Seerah\Enums\EventPhase;
-use App\Domain\Seerah\Enums\EventType;
+use App\Domain\Seerah\Enums\SeerahEventStatus;
 use App\Domain\Shared\Traits\HasInteractions;
 use App\Domain\Shared\Traits\HasLocalizedContent;
 use App\Models\Article;
@@ -31,12 +31,14 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property int|null $hijri_day
  * @property string|null $gregorian_date
  * @property int|null $gregorian_year
- * @property EventType $event_type
+ * @property int|null $seerah_event_type_id
  * @property EventImportance $importance
+ * @property SeerahEventStatus $status
  * @property EventEra|null $era
  * @property EventPhase|null $phase
  * @property array|null $statistics
  * @property bool $is_pivotal
+ * @property-read SeerahEventType|null $type
  * @property string|null $location
  * @property float|null $latitude
  * @property float|null $longitude
@@ -75,8 +77,10 @@ class SeerahEvent extends Model implements HasMedia
         'hijri_day',
         'gregorian_date',
         'gregorian_year',
-        'event_type',
+        'seerah_event_type_id',
+        'seerah_milestone_id',
         'importance',
+        'status',
         'era',
         'phase',
         'location',
@@ -103,8 +107,10 @@ class SeerahEvent extends Model implements HasMedia
         'hijri_day' => 'integer',
         'gregorian_date' => 'date',
         'gregorian_year' => 'integer',
-        'event_type' => EventType::class,
+        'seerah_event_type_id' => 'integer',
+        'seerah_milestone_id' => 'integer',
         'importance' => EventImportance::class,
+        'status' => SeerahEventStatus::class,
         'era' => EventEra::class,
         'phase' => EventPhase::class,
         'latitude' => 'decimal:7',
@@ -116,6 +122,14 @@ class SeerahEvent extends Model implements HasMedia
         'is_featured' => 'boolean',
         'is_pivotal' => 'boolean',
     ];
+
+    /**
+     * Resolve the factory for this model (custom Domain namespace).
+     */
+    protected static function newFactory(): \Database\Factories\SeerahEventFactory
+    {
+        return \Database\Factories\SeerahEventFactory::new();
+    }
 
     /**
      * Get the translation model class.
@@ -147,6 +161,33 @@ class SeerahEvent extends Model implements HasMedia
     public function article(): BelongsTo
     {
         return $this->belongsTo(Article::class, 'related_article_id');
+    }
+
+    /**
+     * Get the event type (DB-driven taxonomy)
+     */
+    public function type(): BelongsTo
+    {
+        return $this->belongsTo(SeerahEventType::class, 'seerah_event_type_id');
+    }
+
+    /**
+     * Get the milestone (الحقبة) this event belongs to.
+     */
+    public function milestone(): BelongsTo
+    {
+        return $this->belongsTo(SeerahMilestone::class, 'seerah_milestone_id');
+    }
+
+    /**
+     * Scope: filter events by milestone id.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeByMilestone($query, int $milestoneId)
+    {
+        return $query->where('seerah_milestone_id', $milestoneId);
     }
 
     /**
@@ -243,16 +284,42 @@ class SeerahEvent extends Model implements HasMedia
     }
 
     /**
-     * Scope: Filter by event type
+     * Scope: Filter by event type.
+     *
+     * Accepts a type id (int) or a type slug (string, resolved via the relation).
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function scopeByType($query, EventType|string $type)
+    public function scopeByType($query, int|string $type)
     {
-        $typeValue = $type instanceof EventType ? $type->value : $type;
+        if (is_int($type) || ctype_digit((string) $type)) {
+            return $query->where('seerah_event_type_id', (int) $type);
+        }
 
-        return $query->where('event_type', $typeValue);
+        return $query->whereHas('type', fn ($q) => $q->where('slug', $type));
+    }
+
+    /**
+     * Scope: Published events only (visible to the public)
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopePublished($query)
+    {
+        return $query->where('status', SeerahEventStatus::PUBLISHED->value);
+    }
+
+    /**
+     * Scope: Draft events only
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeDraft($query)
+    {
+        return $query->where('status', SeerahEventStatus::DRAFT->value);
     }
 
     /**

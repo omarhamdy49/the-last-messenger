@@ -6,6 +6,7 @@ namespace Tests\Feature\Repositories;
 
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Models\SeerahEventTranslation;
+use App\Domain\Seerah\Models\SeerahEventType;
 use App\Domain\Seerah\Repositories\SeerahEventRepositoryInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -57,7 +58,8 @@ class SeerahEventRepositoryTest extends TestCase
 
         $defaults = [
             'slug' => "event-{$counter}",
-            'event_type' => 'other',
+            'seerah_event_type_id' => SeerahEventType::query()->where('slug', 'other')->value('id'),
+            'status' => 'published',
             'importance' => 'medium',
             'is_featured' => false,
             'display_order' => $counter,
@@ -235,16 +237,19 @@ class SeerahEventRepositoryTest extends TestCase
 
     public function test_get_by_type_returns_only_matching_event_type(): void
     {
-        $this->createEvent(['event_type' => 'battle']);
-        $this->createEvent(['event_type' => 'battle']);
-        $this->createEvent(['event_type' => 'revelation']);
+        $battleId = SeerahEventType::query()->where('slug', 'battle')->value('id');
+        $revelationId = SeerahEventType::query()->where('slug', 'revelation')->value('id');
+
+        $this->createEvent(['seerah_event_type_id' => $battleId]);
+        $this->createEvent(['seerah_event_type_id' => $battleId]);
+        $this->createEvent(['seerah_event_type_id' => $revelationId]);
 
         $repo = app(SeerahEventRepositoryInterface::class);
         $results = $repo->getByType('battle');
 
         $this->assertEquals(2, $results->total());
         foreach ($results->items() as $event) {
-            $this->assertEquals('battle', $event->event_type->value);
+            $this->assertEquals('battle', $event->type->slug);
         }
     }
 
@@ -309,12 +314,13 @@ class SeerahEventRepositoryTest extends TestCase
         $repo = app(SeerahEventRepositoryInterface::class);
         $repo->getChronological(5);
 
-        // 1 count + 1 data + 1 translations batch = 3 queries max
+        // 1 count + 1 data + 1 translations batch + 1 type batch + 1 type-translations
+        // batch = 5 queries max (all constant — no per-row queries).
         $this->assertLessThanOrEqual(
-            3,
+            5,
             $queryCount,
             "getChronological() issued {$queryCount} queries for 5 events. ".
-            'Expected ≤ 3 (list path loads translations only).'
+            'Expected ≤ 5 (translations + type + type translations, all batched).'
         );
     }
 }

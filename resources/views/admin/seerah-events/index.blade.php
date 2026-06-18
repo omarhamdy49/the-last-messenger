@@ -10,18 +10,16 @@
             </div>
             أحداث السيرة النبوية
         </h1>
-        <p class="mt-2 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+        <p class="mt-2 text-sm" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">
             إدارة أحداث السيرة النبوية والتسلسل الزمني
         </p>
     </div>
 
     <!-- Action Buttons -->
     <div class="flex flex-wrap items-center gap-3">
-        <!-- Filter Toggle Button -->
         <button @click="$dispatch('toggle-filters')"
                 x-data
-                class="px-4 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2
-                       border-2"
+                class="px-4 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 border-2"
                 :class="darkMode ?
                     'border-gray-700 bg-gray-800 text-white hover:bg-gray-700' :
                     'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'">
@@ -29,7 +27,6 @@
             <span class="hidden sm:inline">{{ __('admin.filters') }}</span>
         </button>
 
-        <!-- Create New Button -->
         <a href="{{ route('admin.seerah-events.create') }}"
            class="px-6 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 shadow-lg
                   bg-gradient-to-r from-[#0056b3] to-[#218838] text-white">
@@ -41,9 +38,7 @@
 @endsection
 
 @section('content')
-<div x-data="{
-    filtersOpen: {{ request()->hasAny(['event_type', 'importance', 'search']) ? 'true' : 'false' }}
-}"
+<div x-data="seerahEventsIndex()"
      @toggle-filters.window="filtersOpen = !filtersOpen">
 
     <!-- Stats Cards Row -->
@@ -72,9 +67,9 @@
          x-collapse
          class="mb-6 p-6 rounded-2xl border"
          :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-        <form method="GET" action="{{ route('admin.seerah-events.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <form method="GET" action="{{ route('admin.seerah-events.index') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4">
             <!-- Search -->
-            <div>
+            <div class="md:col-span-2">
                 <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                     بحث
                 </label>
@@ -82,39 +77,39 @@
                        name="search"
                        value="{{ request('search') }}"
                        placeholder="ابحث باسم الحدث..."
-                       class="w-full px-4 py-2.5 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                       class="w-full px-4 py-2.5 text-base sm:text-sm rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                        :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
             </div>
 
-            <!-- Event Type Filter -->
+            <!-- Event Type Filter (DB-driven) -->
             <div>
                 <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                     نوع الحدث
                 </label>
                 <select name="event_type"
-                        class="w-full px-4 py-2.5 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                        class="w-full px-4 py-2.5 text-base sm:text-sm rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                         :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
                     <option value="">{{ __('admin.all') }}</option>
-                    @foreach(\App\Domain\Seerah\Enums\EventType::cases() as $type)
-                        <option value="{{ $type->value }}" {{ request('event_type') == $type->value ? 'selected' : '' }}>
-                            {{ $type->labelArabic() }}
+                    @foreach($eventTypes as $type)
+                        <option value="{{ $type->slug }}" {{ request('event_type') == $type->slug ? 'selected' : '' }}>
+                            {{ $type->getTranslation('name', 'ar') }}
                         </option>
                     @endforeach
                 </select>
             </div>
 
-            <!-- Importance Filter -->
+            <!-- Status Filter -->
             <div>
                 <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                    الأهمية
+                    {{ __('admin.status') }}
                 </label>
-                <select name="importance"
-                        class="w-full px-4 py-2.5 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                <select name="status"
+                        class="w-full px-4 py-2.5 text-base sm:text-sm rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                         :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
                     <option value="">{{ __('admin.all') }}</option>
-                    @foreach(\App\Domain\Seerah\Enums\EventImportance::cases() as $imp)
-                        <option value="{{ $imp->value }}" {{ request('importance') == $imp->value ? 'selected' : '' }}>
-                            {{ $imp->labelArabic() }}
+                    @foreach($statuses as $status)
+                        <option value="{{ $status->value }}" {{ request('status') == $status->value ? 'selected' : '' }}>
+                            {{ $status->labelArabic() }}
                         </option>
                     @endforeach
                 </select>
@@ -124,7 +119,7 @@
             <div class="flex items-end gap-3">
                 <a href="{{ route('admin.seerah-events.index') }}"
                    class="px-4 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 border-2"
-                   :class="darkMode ? 'border-gray-700 text-gray-400 hover:bg-gray-800' : 'border-gray-300 text-gray-600 hover:bg-gray-100'">
+                   :class="darkMode ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-600 hover:bg-gray-100'">
                     {{ __('admin.reset_filters') }}
                 </a>
                 <button type="submit"
@@ -135,6 +130,30 @@
         </form>
     </div>
 
+    <!-- Bulk Actions Toolbar -->
+    <div x-show="selected.length > 0" x-cloak x-transition
+         class="mb-4 flex flex-wrap items-center gap-3 px-4 py-3 rounded-xl border"
+         :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+        <span class="text-sm font-medium" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+            <span x-text="selected.length"></span> {{ __('admin.selected') }}
+        </span>
+        <button type="button" @click="setStatus('published')"
+                class="px-3 py-1.5 rounded-lg text-sm font-medium bg-green-500 text-white hover:bg-green-600 flex items-center gap-1">
+            <i data-lucide="check-circle" class="w-4 h-4"></i> {{ __('admin.set_published') }}
+        </button>
+        <button type="button" @click="setStatus('draft')"
+                class="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-500 text-white hover:bg-gray-600 flex items-center gap-1">
+            <i data-lucide="file-edit" class="w-4 h-4"></i> {{ __('admin.set_draft') }}
+        </button>
+        <button type="button" @click="bulkDelete()"
+                class="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 flex items-center gap-1">
+            <i data-lucide="trash-2" class="w-4 h-4"></i> {{ __('admin.delete_selected') }}
+        </button>
+        <button type="button" @click="selected = []" class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+            {{ __('admin.clear') }}
+        </button>
+    </div>
+
     <!-- Events Table -->
     <div class="rounded-2xl border overflow-hidden"
          :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
@@ -142,31 +161,39 @@
             <table class="w-full">
                 <thead>
                     <tr :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                        <th class="px-4 py-4 text-start">
+                            <input type="checkbox" @change="toggleAll($event)"
+                                   class="w-4 h-4 rounded text-accent border-gray-300 focus:ring-accent">
+                        </th>
                         <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">#</th>
                         <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">العنوان</th>
                         <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">النوع</th>
                         <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الأهمية</th>
+                        <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.status') }}</th>
                         <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">التاريخ الهجري</th>
-                        <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الموقع</th>
                         <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y" :class="darkMode ? 'divide-gray-800' : 'divide-gray-100'">
                     @forelse($events ?? [] as $event)
                     <tr class="transition-colors" :class="darkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'">
+                        <td class="px-4 py-4">
+                            <input type="checkbox" value="{{ $event->id }}" x-model.number="selected"
+                                   class="w-4 h-4 rounded text-accent border-gray-300 focus:ring-accent">
+                        </td>
                         <td class="px-6 py-4 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
                             {{ $event->id }}
                         </td>
                         <td class="px-6 py-4">
                             <div class="flex flex-wrap items-center gap-3">
                                 <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center flex-shrink-0">
-                                    <i data-lucide="{{ $event->event_type?->icon() ?? 'calendar' }}" class="w-5 h-5 text-white"></i>
+                                    <i data-lucide="{{ $event->type?->icon ?? 'calendar' }}" class="w-5 h-5 text-white"></i>
                                 </div>
-                                <div>
-                                    <h4 class="font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                <div class="min-w-0">
+                                    <h4 class="font-semibold truncate" :class="darkMode ? 'text-white' : 'text-gray-900'">
                                         {{ $event->getTranslation('title', 'ar') }}
                                     </h4>
-                                    <p class="text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
+                                    <p class="text-xs truncate" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
                                         {{ $event->getTranslation('title', 'en') }}
                                     </p>
                                 </div>
@@ -178,12 +205,14 @@
                             </div>
                         </td>
                         <td class="px-6 py-4">
-                            @if($event->event_type)
+                            @if($event->type)
                             <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold"
                                   :class="darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-800'">
-                                <i data-lucide="{{ $event->event_type->icon() }}" class="w-3 h-3"></i>
-                                {{ $event->event_type->labelArabic() }}
+                                <i data-lucide="{{ $event->type->icon ?? 'tag' }}" class="w-3 h-3"></i>
+                                {{ $event->type->getTranslation('name', 'ar') }}
                             </span>
+                            @else
+                            <span class="text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">—</span>
                             @endif
                         </td>
                         <td class="px-6 py-4">
@@ -196,19 +225,18 @@
                             </span>
                             @endif
                         </td>
-                        <td class="px-6 py-4 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                            @if($event->hijri_year)
-                                {{ $event->hijri_year }} هـ
-                            @else
-                                -
+                        <td class="px-6 py-4">
+                            @if($event->status)
+                            <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold
+                                {{ $event->status->value === 'published' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400' }}">
+                                <i data-lucide="{{ $event->status->icon() }}" class="w-3 h-3"></i>
+                                {{ $event->status->labelArabic() }}
+                            </span>
                             @endif
                         </td>
                         <td class="px-6 py-4 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                            @if($event->location)
-                                <span class="inline-flex items-center gap-1">
-                                    <i data-lucide="map-pin" class="w-3 h-3"></i>
-                                    {{ $event->location }}
-                                </span>
+                            @if($event->hijri_year)
+                                {{ $event->hijri_year }} هـ
                             @else
                                 -
                             @endif
@@ -244,9 +272,9 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="px-6 py-12 text-center">
+                        <td colspan="8" class="px-6 py-12 text-center">
                             <i data-lucide="calendar" class="w-16 h-16 mx-auto mb-4" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
-                            <p class="text-lg font-medium mb-4" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                            <p class="text-lg font-medium mb-4" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">
                                 لا توجد أحداث حالياً
                             </p>
                             <a href="{{ route('admin.seerah-events.create') }}"
@@ -274,6 +302,48 @@
 
 @push('scripts')
 <script>
+    function seerahEventsIndex() {
+        return {
+            filtersOpen: {{ request()->hasAny(['event_type', 'importance', 'status', 'search']) ? 'true' : 'false' }},
+            selected: [],
+            toggleAll(e) {
+                const ids = Array.from(document.querySelectorAll('tbody input[type=checkbox]')).map(c => Number(c.value));
+                this.selected = e.target.checked ? ids : [];
+                document.querySelectorAll('tbody input[type=checkbox]').forEach(c => c.checked = e.target.checked);
+            },
+            setStatus(status) {
+                if (this.selected.length === 0) return;
+                this.postBulk('{{ route('admin.seerah-events.bulk-status') }}', { status });
+            },
+            bulkDelete() {
+                if (this.selected.length === 0) return;
+                this.$dispatch('show-confirm', {
+                    title: '{{ __('admin.confirm_delete') }}',
+                    message: '{{ __('admin.delete_warning') }}',
+                    type: 'danger',
+                    onConfirm: () => this.postBulk('{{ route('admin.seerah-events.bulk-delete') }}'),
+                });
+            },
+            postBulk(url, extra = {}) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = url;
+                form.innerHTML = '<input type="hidden" name="_token" value="{{ csrf_token() }}">';
+                this.selected.forEach(id => {
+                    const i = document.createElement('input');
+                    i.type = 'hidden'; i.name = 'ids[]'; i.value = id;
+                    form.appendChild(i);
+                });
+                Object.entries(extra).forEach(([k, v]) => {
+                    const i = document.createElement('input');
+                    i.type = 'hidden'; i.name = k; i.value = v;
+                    form.appendChild(i);
+                });
+                document.body.appendChild(form);
+                form.submit();
+            },
+        };
+    }
     document.addEventListener('DOMContentLoaded', () => {
         lucide.createIcons();
     });

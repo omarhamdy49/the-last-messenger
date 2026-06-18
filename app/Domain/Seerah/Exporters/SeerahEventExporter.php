@@ -33,10 +33,10 @@ class SeerahEventExporter extends BaseExporter
     {
         if (! empty($this->filters)) {
             $query = $this->seerahEventRepository->getModel()::query()
-                ->with(['participants', 'sources']);
+                ->with(['participants', 'sources', 'type']);
 
             if (isset($this->filters['event_type'])) {
-                $query->where('event_type', $this->filters['event_type']);
+                $query->whereHas('type', fn ($q) => $q->where('slug', $this->filters['event_type']));
             }
 
             if (isset($this->filters['start_date'])) {
@@ -75,7 +75,7 @@ class SeerahEventExporter extends BaseExporter
                 'slug' => $event->slug ?? '',
                 'event_date_gregorian' => $this->formatDate($event->event_date_gregorian),
                 'event_date_hijri' => $event->event_date_hijri ?? '',
-                'event_type' => ucfirst($event->event_type ?? ''),
+                'event_type' => $event->type?->getTranslation('name', $this->language) ?? '',
                 'location' => $this->formatMultiLanguageField($event->location),
                 'description' => $this->truncate($this->formatMultiLanguageField($event->description), 300),
                 'participants' => $event->participants?->pluck('name.'.$this->language)->filter()->implode(', ') ?? '',

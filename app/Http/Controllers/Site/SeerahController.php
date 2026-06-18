@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Site;
 
 use App\Domain\Seerah\Enums\EventPhase;
-use App\Domain\Seerah\Enums\EventType;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Services\SeerahEventService;
+use App\Domain\Seerah\Services\SeerahEventTypeService;
 use App\Http\Controllers\Controller;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -18,6 +18,7 @@ final class SeerahController extends Controller
 {
     public function __construct(
         private readonly SeerahEventService $seerahEventService,
+        private readonly SeerahEventTypeService $eventTypeService,
     ) {}
 
     /**
@@ -82,8 +83,9 @@ final class SeerahController extends Controller
         $search = trim((string) $request->query('q', ''));
         $category = (string) $request->query('category', 'all');
 
-        // Whitelist the category against known event types to prevent invalid filtering.
-        $validCategory = $category !== 'all' && in_array($category, EventType::values(), true)
+        // Whitelist the category against active DB event-type slugs to prevent invalid filtering.
+        $activeSlugs = $this->eventTypeService->getForDropdown()->pluck('slug')->all();
+        $validCategory = $category !== 'all' && in_array($category, $activeSlugs, true)
             ? $category
             : 'all';
 
@@ -213,17 +215,17 @@ final class SeerahController extends Controller
      */
     private function mapTimelineEvent(SeerahEvent $event, string $locale): array
     {
-        $type = $event->event_type;
+        $type = $event->type;
         $phase = $event->phase;
 
         return [
             'slug' => $event->slug,
             'title' => $event->getTranslation('title', $locale) ?? __('seerah.public.untitled_event'),
             'description' => $event->getTranslation('description', $locale),
-            'type' => $type->value,
-            'typeLabel' => $locale === 'ar' ? $type->labelArabic() : $type->label(),
-            'icon' => $type->icon(),
-            'gradient' => $this->typeGradient($type),
+            'type' => $type?->slug,
+            'typeLabel' => $type?->getTranslation('name', $locale) ?? '',
+            'icon' => $type?->icon ?? 'circle',
+            'gradient' => $type?->gradient ?? 'from-slate-400 to-slate-500',
             'phase' => $phase?->value,
             'hijriDate' => $event->hijri_date,
             'hijriYear' => $event->hijri_year,
@@ -242,7 +244,7 @@ final class SeerahController extends Controller
      */
     private function mapEventDetail(SeerahEvent $event, string $locale): array
     {
-        $type = $event->event_type;
+        $type = $event->type;
         $phase = $event->phase;
         $era = $event->era;
 
@@ -273,10 +275,10 @@ final class SeerahController extends Controller
             'title' => $event->getTranslation('title', $locale) ?? __('seerah.public.untitled_event'),
             'description' => $event->getTranslation('description', $locale),
             'content' => $event->getTranslation('content', $locale),
-            'type' => $type->value,
-            'typeLabel' => $locale === 'ar' ? $type->labelArabic() : $type->label(),
-            'icon' => $type->icon(),
-            'gradient' => $this->typeGradient($type),
+            'type' => $type?->slug,
+            'typeLabel' => $type?->getTranslation('name', $locale) ?? '',
+            'icon' => $type?->icon ?? 'circle',
+            'gradient' => $type?->gradient ?? 'from-slate-400 to-slate-500',
             'phase' => $phase?->value,
             'phaseLabel' => $phase ? ($locale === 'ar' ? $phase->labelArabic() : $phase->label()) : null,
             'era' => $era?->value,
@@ -314,19 +316,19 @@ final class SeerahController extends Controller
             'url' => route('public.seerah.events', array_filter(['q' => $search ?: null])),
         ]];
 
-        foreach (EventType::cases() as $type) {
-            $count = $counts[$type->value] ?? 0;
+        foreach ($this->eventTypeService->getForDropdown() as $type) {
+            $count = $counts[$type->slug] ?? 0;
             if ($count === 0) {
                 continue;
             }
 
             $pills[] = [
-                'value' => $type->value,
-                'label' => $locale === 'ar' ? $type->labelArabic() : $type->label(),
-                'icon' => $type->icon(),
+                'value' => $type->slug,
+                'label' => $type->getTranslation('name', $locale),
+                'icon' => $type->icon ?? 'circle',
                 'count' => $count,
                 'url' => route('public.seerah.events', array_filter([
-                    'category' => $type->value,
+                    'category' => $type->slug,
                     'q' => $search ?: null,
                 ])),
             ];
@@ -356,25 +358,5 @@ final class SeerahController extends Controller
                 },
             ])
             ->all();
-    }
-
-    /**
-     * Tailwind gradient classes per event type (colour-coded timeline dots / cards).
-     */
-    private function typeGradient(EventType $type): string
-    {
-        return match ($type) {
-            EventType::BIRTH => 'from-green-400 to-emerald-500',
-            EventType::DEATH => 'from-gray-500 to-slate-600',
-            EventType::BATTLE => 'from-red-500 to-orange-500',
-            EventType::MIGRATION => 'from-blue-500 to-cyan-500',
-            EventType::REVELATION => 'from-yellow-400 to-amber-500',
-            EventType::TREATY => 'from-emerald-500 to-teal-500',
-            EventType::MARRIAGE => 'from-pink-400 to-rose-500',
-            EventType::MIRACLE => 'from-indigo-500 to-purple-600',
-            EventType::DELEGATION => 'from-teal-400 to-cyan-500',
-            EventType::PERSONAL => 'from-amber-400 to-orange-500',
-            EventType::OTHER => 'from-slate-400 to-slate-500',
-        };
     }
 }

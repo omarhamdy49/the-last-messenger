@@ -42,11 +42,17 @@ function iconPicker() {
             'feather', 'anchor', 'briefcase', 'tool',
             'wrench', 'hammer', 'scissors', 'paperclip',
             'pen-tool', 'edit', 'trash', 'save', 'download',
-            'upload', 'printer', 'copy', 'clipboard'
+            'upload', 'printer', 'copy', 'clipboard',
+            // Seerah / history-relevant icons
+            'swords', 'sword', 'shield-check', 'baby', 'cross',
+            'move', 'sparkles', 'circle', 'crown', 'mountain',
+            'scroll', 'scroll-text', 'book-marked', 'tent', 'milestone',
+            'footprints', 'sunrise', 'sunset', 'flag-triangle-right', 'route',
+            'landmark', 'gem', 'moon-star', 'baby'
         ],
         popularIcons: [
-            'folder', 'book', 'star', 'heart', 'tag',
-            'user', 'home', 'calendar', 'image', 'video'
+            'swords', 'baby', 'cross', 'book-open', 'heart',
+            'sparkles', 'move', 'crown', 'milestone', 'tag'
         ],
 
         init() {
@@ -84,7 +90,7 @@ function iconPicker() {
 </script>
 @endonce
 
-<div x-data="iconPicker()" x-init="selectedIcon = '{{ $value }}'; filteredIcons = allIcons" class="icon-picker">
+<div x-data="iconPicker()" x-init="selectedIcon = '{{ $value }}'; filteredIcons = allIcons" class="icon-picker relative">
     <!-- Hidden Input -->
     <input type="hidden"
            name="{{ $name }}"

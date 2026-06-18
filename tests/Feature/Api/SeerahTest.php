@@ -20,7 +20,8 @@ class SeerahTest extends TestCase
     {
         $defaults = [
             'slug' => 'birth-of-the-prophet',
-            'event_type' => 'birth',
+            'seerah_event_type_id' => \App\Domain\Seerah\Models\SeerahEventType::query()->where('slug', 'birth')->value('id'),
+            'status' => 'published',
             'importance' => 'high',
             'hijri_year' => -53,
             'is_featured' => false,

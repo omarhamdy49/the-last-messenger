@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Domain\Seerah\Enums\EventImportance;
-use App\Domain\Seerah\Enums\EventType;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Models\SeerahEventTranslation;
+use App\Domain\Seerah\Models\SeerahEventType;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -103,8 +103,9 @@ class SeerahEventFactory extends Factory
             'hijri_day' => $this->faker->numberBetween(1, 29),
             'gregorian_date' => $this->faker->dateTimeBetween('-1500 years', '-1400 years'),
             'gregorian_year' => $gregorianYear,
-            'event_type' => $this->faker->randomElement(EventType::cases()),
+            'seerah_event_type_id' => $this->randomTypeId(),
             'importance' => $this->faker->randomElement(EventImportance::cases()),
+            'status' => 'published',
             'location' => $this->faker->randomElement($this->famousLocations),
             'latitude' => $this->faker->optional(0.7)->latitude(),
             'longitude' => $this->faker->optional(0.7)->longitude(),
@@ -114,11 +115,34 @@ class SeerahEventFactory extends Factory
                 $this->faker->imageUrl(800, 600, 'islamic', true),
                 $this->faker->imageUrl(800, 600, 'islamic', true),
             ]),
-            'related_article_id' => $this->faker->optional(0.4)->numberBetween(1, 100),
+            // No bogus FK: callers attach a real article explicitly when needed.
+            'related_article_id' => null,
             'views_count' => $this->faker->numberBetween(0, 100000),
             'display_order' => $this->faker->numberBetween(1, 1000),
             'is_featured' => $this->faker->boolean(25), // 25% chance
         ];
+    }
+
+    /**
+     * Resolve a type id by slug, creating the type if it does not exist.
+     */
+    private function typeIdBySlug(string $slug): int
+    {
+        $type = SeerahEventType::query()->firstOrCreate(['slug' => $slug], ['is_active' => true]);
+
+        if ($type->translations()->where('locale', 'ar')->doesntExist()) {
+            $type->syncTranslations(['name' => ['ar' => $slug, 'en' => Str::title($slug)]]);
+        }
+
+        return $type->id;
+    }
+
+    /**
+     * Pick a random existing type id (falling back to "other").
+     */
+    private function randomTypeId(): int
+    {
+        return SeerahEventType::query()->inRandomOrder()->value('id') ?? $this->typeIdBySlug('other');
     }
 
     /**
@@ -156,7 +180,7 @@ class SeerahEventFactory extends Factory
         $battle = $this->faker->randomElement($battles);
 
         return $this->state(fn (array $attributes) => [
-            'event_type' => EventType::BATTLE,
+            'seerah_event_type_id' => $this->typeIdBySlug('battle'),
             'importance' => EventImportance::HIGH,
         ])->afterCreating(function (SeerahEvent $event) use ($battle) {
             foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $locale) {
@@ -176,7 +200,7 @@ class SeerahEventFactory extends Factory
         $titles = ['ar' => 'الهجرة', 'en' => 'Migration', 'fr' => 'Migration', 'tr' => 'Hicret', 'ur' => 'ہجرت'];
 
         return $this->state(fn (array $attributes) => [
-            'event_type' => EventType::MIGRATION,
+            'seerah_event_type_id' => $this->typeIdBySlug('migration'),
             'importance' => EventImportance::HIGH,
         ])->afterCreating(function (SeerahEvent $event) use ($titles) {
             foreach ($titles as $locale => $title) {
@@ -194,7 +218,7 @@ class SeerahEventFactory extends Factory
     public function revelation(): static
     {
         return $this->state(fn (array $attributes) => [
-            'event_type' => EventType::REVELATION,
+            'seerah_event_type_id' => $this->typeIdBySlug('revelation'),
             'importance' => EventImportance::HIGH,
         ]);
     }
@@ -205,7 +229,7 @@ class SeerahEventFactory extends Factory
     public function miracle(): static
     {
         return $this->state(fn (array $attributes) => [
-            'event_type' => EventType::MIRACLE,
+            'seerah_event_type_id' => $this->typeIdBySlug('miracle'),
             'importance' => $this->faker->randomElement([EventImportance::HIGH, EventImportance::MEDIUM]),
         ]);
     }

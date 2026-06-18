@@ -22,7 +22,8 @@ final class SearchPageTest extends TestCase
     {
         $eventId = (int) DB::table('seerah_events')->insertGetId([
             'slug' => $slug,
-            'event_type' => 'other',
+            'seerah_event_type_id' => DB::table('seerah_event_types')->where('slug', 'other')->value('id'),
+            'status' => 'published',
             'importance' => 'medium',
             'views_count' => 0,
             'display_order' => 0,
