@@ -10,6 +10,7 @@ return [
     // Navigation
     'home' => 'Accueil',
     'toggle_theme' => 'Basculer le mode sombre',
+    'language' => 'Langue',
     'ask_ai' => 'Interroger le Coran (IA)',
     'makkah_live' => 'La Mecque en direct',
     'seerah' => 'Biographie',

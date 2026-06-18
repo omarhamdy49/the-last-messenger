@@ -10,6 +10,7 @@ return [
     // Navigation
     'home' => 'Ana Sayfa',
     'toggle_theme' => 'Karanlık modu değiştir',
+    'language' => 'Dil',
     'ask_ai' => 'Kur\'an\'a sor (YZ)',
     'makkah_live' => 'Mekke canlı',
     'seerah' => 'Siyer',

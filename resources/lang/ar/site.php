@@ -10,6 +10,7 @@ return [
     // Navigation
     'home' => 'الرئيسية',
     'toggle_theme' => 'تبديل الوضع الداكن',
+    'language' => 'اللغة',
     'ask_ai' => 'اسأل القرآن (ذكاء اصطناعي)',
     'makkah_live' => 'مكة بث مباشر',
     'seerah' => 'السيرة النبوية',

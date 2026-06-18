@@ -84,6 +84,46 @@
             </span>
             @endauth
 
+            {{-- Language switcher (the site header that normally carries it is hidden here) --}}
+            @php
+                $askLanguages = [
+                    'ar' => ['name' => 'العربية', 'flag' => '🇸🇦'],
+                    'en' => ['name' => 'English', 'flag' => '🇬🇧'],
+                    'fr' => ['name' => 'Français', 'flag' => '🇫🇷'],
+                    'tr' => ['name' => 'Türkçe', 'flag' => '🇹🇷'],
+                    'ur' => ['name' => 'اردو', 'flag' => '🇵🇰'],
+                ];
+            @endphp
+            <div class="relative shrink-0" x-data="{ langOpen: false }">
+                <button type="button" @click="langOpen = !langOpen" :aria-expanded="langOpen.toString()"
+                        class="inline-flex items-center gap-1 p-2 rounded-lg transition-colors"
+                        :class="$store.theme.dark ? 'text-gray-300 hover:bg-white/10' : 'text-gray-600 hover:bg-gray-100'"
+                        aria-label="{{ __('site.language') }}" title="{{ __('site.language') }}">
+                    <i data-lucide="globe" class="w-5 h-5"></i>
+                    <span class="hidden sm:block text-xs font-semibold uppercase">{{ app()->getLocale() }}</span>
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                </button>
+                <div x-show="langOpen" @click.away="langOpen = false" x-transition x-cloak
+                     class="absolute end-0 mt-2 w-44 rounded-xl shadow-2xl border py-1.5 z-50"
+                     :class="$store.theme.dark ? 'bg-[#16213e] border-white/10' : 'bg-white border-gray-200'">
+                    @foreach ($askLanguages as $code => $lang)
+                        <form method="POST" action="{{ route('language.switch') }}">
+                            @csrf
+                            <input type="hidden" name="language" value="{{ $code }}">
+                            <button type="submit"
+                                    class="w-full text-start px-4 py-2.5 flex items-center gap-3 text-sm transition-colors {{ app()->getLocale() === $code ? 'font-bold' : '' }}"
+                                    :class="$store.theme.dark ? 'text-gray-200 hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                                <span class="text-xl leading-none">{{ $lang['flag'] }}</span>
+                                <span>{{ $lang['name'] }}</span>
+                                @if (app()->getLocale() === $code)
+                                    <i data-lucide="check" class="w-4 h-4 ms-auto text-[#64CCC5]"></i>
+                                @endif
+                            </button>
+                        </form>
+                    @endforeach
+                </div>
+            </div>
+
             {{-- Theme toggle (the site header that normally carries it is hidden here) --}}
             <button type="button" @click="$store.theme.toggle()"
                     class="p-2 rounded-lg transition-colors shrink-0"
@@ -313,11 +353,19 @@
                              :class="$store.theme.dark ? 'bg-gray-900 border-white/10' : 'bg-gray-100 border-gray-200'">
                             @auth
                                 <button type="button" role="tab" :aria-selected="(mode === 'ai').toString()" @click="setMode('ai')"
+                                        :disabled="remaining <= 0"
+                                        :title="remaining <= 0 ? @js(__('quran.public.ask_quota_exceeded', ['limit' => $limit])) : ''"
+                                        :aria-label="@js(__('quran.public.ask_tab_ai')) + ' — ' + quotaLabel()"
                                         class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-                                        :class="mode === 'ai'
+                                        :class="(mode === 'ai'
                                             ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-sm'
-                                            : ($store.theme.dark ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900')">
+                                            : ($store.theme.dark ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'))
+                                            + (remaining <= 0 ? ' opacity-40 cursor-not-allowed' : '')">
                                     <i data-lucide="sparkles" class="w-4 h-4"></i>{{ __('quran.public.ask_tab_ai') }}
+                                    {{-- Remaining quota, always visible on the tab. --}}
+                                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md tabular-nums leading-none"
+                                          :class="mode === 'ai' ? 'bg-white/20 text-white' : ($store.theme.dark ? 'bg-white/10 text-gray-300' : 'bg-gray-200 text-gray-600')"
+                                          x-text="remaining" aria-hidden="true"></span>
                                 </button>
                             @else
                                 <a href="{{ route('public.login') }}" role="tab" :aria-selected="false" @click.prevent="$dispatch('open-login')"
@@ -456,6 +504,17 @@
                 if (this.isAuth) this.$store.geo?.load();
                 window.addEventListener('popstate', () => this.syncFromUrl());
 
+                // Quota exhausted → AI is unavailable: fall back to search (the AI tab is
+                // dimmed/disabled). Deep-linked history still opens in AI view to read.
+                if (this.isAuth && this.remaining <= 0 && this.mode === 'ai' && !this.initialInquiryId) {
+                    this.mode = 'search';
+                }
+                // The moment the last slot is spent (remaining hits 0 after an ask), switch
+                // to search automatically. Does not fire while reading history (activeId set).
+                this.$watch('remaining', (val) => {
+                    if (val <= 0 && this.mode === 'ai' && !this.activeId) this.mode = 'search';
+                });
+
                 if (this.initialInquiryId) {
                     this.openHistory(this.initialInquiryId, false);
                 } else if (this.initialQuery && this.initialQuery.trim().length >= this.currentMin) {
@@ -477,6 +536,7 @@
 
             setMode(m) {
                 if (m === 'ai' && !this.isAuth) return;
+                if (m === 'ai' && this.remaining <= 0) return; // quota exhausted — AI tab is disabled
                 this.mode = m;
             },
 
@@ -696,7 +756,7 @@
                 this.activeId = null;
                 this.input = '';
                 if (!this.isDesktop()) this.sidebarOpen = false;
-                if (this.mode !== 'search') this.mode = this.isAuth ? 'ai' : 'search';
+                if (this.mode !== 'search') this.mode = (this.isAuth && this.remaining > 0) ? 'ai' : 'search';
                 this.pushUrl(null);
                 this.$nextTick(() => this.$refs.input?.focus());
             },
