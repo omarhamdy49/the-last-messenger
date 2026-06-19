@@ -107,5 +107,9 @@ return [
         'stations_count' => 'durak',
         'articles_mode_hint' => 'Tüm Siyer durakları kronolojik sırayla',
         'empty_journey' => 'Henüz yayımlanmış dönem yok',
+        'start_label' => 'Yolculuk başlıyor',
+        'finish_label' => 'Yolculuk tamamlandı',
+        'finish_hint' => 'Mübarek doğumdan Refîk-i A\'lâ\'ya',
+        'you_are_here' => 'Buradasınız',
     ],
 ];

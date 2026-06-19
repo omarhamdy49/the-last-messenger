@@ -369,5 +369,9 @@ return [
         'stations_count' => 'محطات',
         'articles_mode_hint' => 'كل محطات السيرة مرتّبة زمنياً',
         'empty_journey' => 'لا توجد حِقَب منشورة بعد',
+        'start_label' => 'بداية الرحلة',
+        'finish_label' => 'اكتملت الرحلة',
+        'finish_hint' => 'من المولد الشريف إلى الرفيق الأعلى',
+        'you_are_here' => 'أنت هنا',
     ],
 ];

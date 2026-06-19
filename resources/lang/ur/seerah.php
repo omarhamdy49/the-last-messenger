@@ -107,5 +107,9 @@ return [
         'stations_count' => 'مراحل',
         'articles_mode_hint' => 'سیرت کے تمام مراحل ترتیبِ زمانی کے ساتھ',
         'empty_journey' => 'ابھی کوئی شائع شدہ دور موجود نہیں',
+        'start_label' => 'سفر کا آغاز',
+        'finish_label' => 'سفر مکمل ہوا',
+        'finish_hint' => 'مبارک ولادت سے رفیقِ اعلیٰ تک',
+        'you_are_here' => 'آپ یہاں ہیں',
     ],
 ];

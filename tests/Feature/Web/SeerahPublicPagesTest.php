@@ -157,14 +157,13 @@ final class SeerahPublicPagesTest extends TestCase
         $response = $this->withSession(['locale' => 'en'])->get('/seerah');
 
         $response->assertOk()
-            // English UI chrome (hero-journey redesign) rendered from lang files...
-            ->assertSee('The Journey of Light')   // journey badge
-            ->assertSee('Milestones')             // stat label / rail
-            ->assertSee('Time Span')              // stat label
-            ->assertSee('Articles')               // mode toggle
+            // English UI chrome (quest-map redesign) rendered from lang files...
+            ->assertSee('The Journey of Light')      // journey badge
+            ->assertSee('The Prophetic Biography')   // hero heading
+            ->assertSee('Journey')                   // mode toggle
+            ->assertSee('Articles')                  // mode toggle
             // ...and the Arabic UI strings are not hardcoded.
             ->assertDontSee('رحلة النور')
-            ->assertDontSee('النطاق الزمني')
             ->assertDontSee('الرحلة');
     }
 

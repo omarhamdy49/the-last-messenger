@@ -13,7 +13,7 @@
 <html lang="{{ str_replace('_', '-', $locale) }}"
       dir="{{ $isRtl ? 'rtl' : 'ltr' }}"
       :class="$store.theme.dark ? 'dark' : ''"
-      class="antialiased scroll-smooth">
+      class="antialiased scroll-smooth overflow-x-clip">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">

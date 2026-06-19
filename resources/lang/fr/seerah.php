@@ -107,5 +107,9 @@ return [
         'stations_count' => 'étapes',
         'articles_mode_hint' => 'Toutes les étapes de la Sîra par ordre chronologique',
         'empty_journey' => 'Aucun jalon publié pour le moment',
+        'start_label' => 'Le voyage commence',
+        'finish_label' => 'Voyage terminé',
+        'finish_hint' => 'De la noble naissance au plus haut compagnonnage',
+        'you_are_here' => 'Vous êtes ici',
     ],
 ];

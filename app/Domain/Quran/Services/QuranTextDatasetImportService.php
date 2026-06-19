@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Services;
 
+use App\Domain\Quran\Models\TranslationResource;
 use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Models\VerseTafsir;
 use App\Domain\Quran\Models\VerseTranslation;
-use App\Domain\Quran\Models\TranslationResource;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 

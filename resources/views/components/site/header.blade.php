@@ -52,7 +52,7 @@
     $navUrl = fn (string $route) => Route::has($route) ? route($route) : '#';
 @endphp
 
-<div x-data="{ mobileMenuOpen: false, searchOpen: false }">
+<div x-data="{ mobileMenuOpen: false, searchOpen: false }" class="contents">
     <!-- Header with Glassmorphism -->
     <header class="glass shadow-lg sticky top-0 z-50 border-b"
             :class="$store.theme.dark ? 'border-white/20' : 'border-gray-200'">
@@ -127,16 +127,16 @@
                         <i x-show="$store.theme.dark" class="w-5 h-5" data-lucide="sun" x-cloak></i>
                     </button>
 
-                    <!-- Ask Quran AI -->
+                    <!-- Ask Quran AI (hidden on phones — surfaced in the mobile menu instead) -->
                     <a href="{{ route('public.quran.ask') }}"
-                       class="p-2.5 rounded-full hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 text-[#0056b3] dark:text-[#64CCC5]"
+                       class="hidden sm:inline-flex p-2.5 rounded-full hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 text-[#0056b3] dark:text-[#64CCC5]"
                        aria-label="{{ __('site.ask_ai') }}" title="{{ __('site.ask_ai') }}">
                         <i class="w-5 h-5" data-lucide="sparkles"></i>
                     </a>
 
-                    <!-- Makkah live channel -->
+                    <!-- Makkah live channel (hidden on phones — surfaced in the mobile menu instead) -->
                     <a href="{{ route('public.media.live', 'el-quran-makkah') }}"
-                       class="relative p-2.5 rounded-full hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50"
+                       class="relative hidden sm:inline-flex p-2.5 rounded-full hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50"
                        aria-label="{{ __('site.makkah_live') }}" title="{{ __('site.makkah_live') }}">
                         <x-icons.kaaba class="w-5 h-5" />
                         <span class="absolute top-1.5 end-1.5 flex h-2.5 w-2.5">
@@ -219,6 +219,15 @@
                         {{ $item['label'] }}
                     </a>
                 @endforeach
+                {{-- Secondary actions hidden from the action bar on phones --}}
+                <a href="{{ route('public.quran.ask') }}"
+                   class="sm:hidden flex items-center space-s-3 px-4 py-3 rounded-lg hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 font-semibold text-[#0056b3] dark:text-[#64CCC5]">
+                    <i class="w-5 h-5" data-lucide="sparkles"></i><span>{{ __('site.ask_ai') }}</span>
+                </a>
+                <a href="{{ route('public.media.live', 'el-quran-makkah') }}"
+                   class="sm:hidden flex items-center space-s-3 px-4 py-3 rounded-lg hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 font-semibold">
+                    <x-icons.kaaba class="w-5 h-5" /><span>{{ __('site.makkah_live') }}</span>
+                </a>
             </div>
         </nav>
     </header>

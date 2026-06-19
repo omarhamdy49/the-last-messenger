@@ -107,5 +107,9 @@ return [
         'stations_count' => 'stations',
         'articles_mode_hint' => 'All Seerah stations in chronological order',
         'empty_journey' => 'No published milestones yet',
+        'start_label' => 'The journey begins',
+        'finish_label' => 'Journey complete',
+        'finish_hint' => 'From the noble birth to the highest companionship',
+        'you_are_here' => 'You are here',
     ],
 ];
