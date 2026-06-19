@@ -39,7 +39,7 @@
                     <i class="w-20 h-20 text-white" data-lucide="{{ $avatarIcon }}"></i>
                 </div>
                 {{-- Badge circle --}}
-                <div class="absolute -bottom-2 {{ $isRtl ? '-right-2' : '-right-2' }} w-12 h-12 bg-gradient-to-br {{ $ringColor }} rounded-full flex items-center justify-center shadow-lg">
+                <div class="absolute -bottom-2 -end-2 w-12 h-12 bg-gradient-to-br {{ $ringColor }} rounded-full flex items-center justify-center shadow-lg">
                     <i class="w-7 h-7 text-white" data-lucide="{{ $icon }}"></i>
                 </div>
             </div>
@@ -74,7 +74,7 @@
             <div class="flex items-center justify-between text-sm">
                 <div class="flex items-center gap-2 {{ $accent }} font-semibold">
                     <span>{{ __('site.read_biography') }}</span>
-                    <i class="w-4 h-4 transform group-hover:translate-x-1 transition"
+                    <i class="w-4 h-4 transform {{ $isRtl ? 'group-hover:-translate-x-1' : 'group-hover:translate-x-1' }} transition"
                        data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}"></i>
                 </div>
                 {{-- Reading time, as in the prototype (derived from biography length) --}}

@@ -172,7 +172,7 @@
                                 </span>
 
                                 {{-- Playback speed --}}
-                                <div class="relative ml-auto" @click.away="speedOpen = false">
+                                <div class="relative ms-auto" @click.away="speedOpen = false">
                                     <button type="button" @click="speedOpen = !speedOpen; refreshIcons()"
                                             :aria-expanded="speedOpen ? 'true' : 'false'"
                                             aria-label="{{ __('media.public.player_speed') }}"
@@ -183,7 +183,7 @@
                                     <div x-show="speedOpen" x-cloak
                                          x-transition:enter="transition ease-out duration-150 motion-reduce:duration-0"
                                          x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
-                                         class="absolute bottom-full right-0 mb-2 w-36 rounded-xl bg-black/90 backdrop-blur-sm border border-white/10 py-1.5 shadow-2xl z-50">
+                                         class="absolute bottom-full end-0 mb-2 w-36 rounded-xl bg-black/90 backdrop-blur-sm border border-white/10 py-1.5 shadow-2xl z-50">
                                         <p class="px-3 py-1 text-[11px] font-semibold text-gray-400">{{ __('media.public.player_speed') }}</p>
                                         <template x-for="option in [0.5, 0.75, 1, 1.25, 1.5, 2]" :key="option">
                                             <button type="button" @click="setRate(option)"

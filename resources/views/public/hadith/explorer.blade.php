@@ -4,7 +4,8 @@
 @section('meta_description', 'ابحث وتصفح في مجموعة واسعة من الأحاديث النبوية الموثوقة من الكتب الستة وغيرها')
 
 @push('head')
-<style type="text/tailwindcss">
+{{-- Plain CSS (was type="text/tailwindcss", which this Tailwind v3 build never parsed). --}}
+<style>
     @layer utilities {
       .glass {
         background: rgba(255, 255, 255, 0.05);

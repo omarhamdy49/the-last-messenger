@@ -55,14 +55,14 @@
 
                 {{-- Search --}}
                 <div class="relative max-w-2xl mx-auto">
-                    <i data-lucide="search" class="absolute end-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"></i>
+                    <i data-lucide="search" class="absolute start-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"></i>
                     <input
                         type="search"
                         x-model.debounce.250ms="search"
                         @input="page = 1"
                         placeholder="{{ __('articles.public.search_placeholder') }}"
                         aria-label="{{ __('articles.public.search_placeholder') }}"
-                        class="w-full pe-12 ps-5 py-4 text-base sm:text-sm rounded-full border-2 border-gray-200 dark:border-[#0f3460] bg-white dark:bg-[#16213e] text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all"
+                        class="w-full ps-12 pe-5 py-4 text-base sm:text-sm rounded-full border-2 border-gray-200 dark:border-[#0f3460] bg-white dark:bg-[#16213e] text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all"
                     >
                 </div>
             </div>

@@ -271,7 +271,7 @@
       <nav class="flex mb-8 text-sm fade-in-up stagger-1" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
         <ol class="inline-flex items-center space-s-2">
           <li>
-            <a href="{{ url('/') }}" class="hover:text-[#0056b3] transition-colors">{{ __('site.nav_home') }}</a>
+            <a href="{{ url('/') }}" class="hover:text-[#0056b3] transition-colors">{{ __('site.home') }}</a>
           </li>
           <li><i class="w-3 h-3" data-lucide="{{ $isRtl ? 'chevron-left' : 'chevron-right' }}"></i></li>
           <li>
@@ -285,7 +285,7 @@
       </nav>
 
       <!-- Hero Content -->
-      <div class="grid lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
 
         <!-- Profile Card - Left Side (Desktop) / Top (Mobile) -->
         <div class="lg:col-span-4 xl:col-span-3">
@@ -405,8 +405,8 @@
 
               @if ($profile['fullName'] && $profile['fullName'] !== $profile['name'])
                 <!-- Quote Box -->
-                <div class="relative mb-8 p-8 rounded-2xl bg-gradient-to-br from-[#0056b3]/5 to-[#218838]/5 border-r-4 border-[#0056b3]">
-                  <div class="quote-mark absolute top-4 right-4 text-[#0056b3]">"</div>
+                <div class="relative mb-8 p-8 rounded-2xl bg-gradient-to-br from-[#0056b3]/5 to-[#218838]/5 border-s-4 border-[#0056b3]">
+                  <div class="quote-mark absolute top-4 start-4 text-[#0056b3]">"</div>
                   <p class="text-lg leading-relaxed relative z-10 break-words" :class="darkMode ? 'text-gray-200' : 'text-gray-700'">
                     {{ $profile['fullName'] }}
                   </p>
@@ -505,14 +505,14 @@
               <!-- Timeline Items -->
               <div class="relative pe-8">
                 <!-- Timeline Line -->
-                <div class="absolute right-0 top-0 w-1 bg-gradient-to-b from-[#0056b3] via-[#218838] to-[#64CCC5] timeline-line" style="height: 100%;"></div>
+                <div class="absolute end-0 top-0 w-1 bg-gradient-to-b from-[#0056b3] via-[#218838] to-[#64CCC5] timeline-line" style="height: 100%;"></div>
 
                 <!-- Timeline Events -->
                 <div class="space-y-8">
                   @foreach ($profile['timeline'] as $item)
                     @php $dotColor = $timelineColors[$item['color']] ?? '#0056b3'; @endphp
                     <div class="relative">
-                      <div class="absolute -right-3 top-0 w-7 h-7 rounded-full border-4" style="background-color: {{ $dotColor }}" :class="darkMode ? 'border-black' : 'border-white'"></div>
+                      <div class="absolute -end-3 top-0 w-7 h-7 rounded-full border-4" style="background-color: {{ $dotColor }}" :class="darkMode ? 'border-black' : 'border-white'"></div>
                       <div class="premium-card p-6 rounded-2xl me-12" :class="darkMode ? 'bg-gray-800/50' : 'bg-white'">
                         <div class="flex items-start justify-between gap-3 mb-2 flex-wrap">
                           <h3 class="text-xl font-bold break-words">{{ $item['title'] }}</h3>

@@ -97,14 +97,14 @@
             <form method="GET" action="{{ route('public.sahaba') }}" class="lg:w-2/5">
                 <input type="hidden" name="filter" value="{{ $activeFilter }}">
                 <div class="relative">
-                    <i data-lucide="search" class="absolute end-4 top-1/2 -translate-y-1/2 w-5 h-5"
+                    <i data-lucide="search" class="absolute start-4 top-1/2 -translate-y-1/2 w-5 h-5"
                        :class="$store.theme.dark ? 'text-gray-500' : 'text-gray-400'"></i>
                     <input
                         type="search"
                         name="q"
                         value="{{ $search }}"
                         placeholder="{{ __('sahaba.search_placeholder') }}"
-                        class="w-full pe-12 ps-4 py-3 text-base sm:text-sm rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-[#64CCC5] transition-all"
+                        class="w-full ps-12 pe-4 py-3 text-base sm:text-sm rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-[#64CCC5] transition-all"
                         :class="$store.theme.dark
                             ? 'bg-gray-900 border-gray-800 text-white placeholder-gray-500'
                             : 'bg-white border-gray-200 text-gray-900'"

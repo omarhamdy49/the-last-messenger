@@ -128,7 +128,7 @@
     /* Timeline Line */
     .timeline-line {
       position: absolute;
-      right: 1.5rem;
+      inset-inline-start: 1.5rem;
       top: 0;
       bottom: 0;
       width: 3px;
@@ -165,7 +165,7 @@
     .event-card::after {
       content: '';
       position: absolute;
-      right: 0;
+      inset-inline-start: 0;
       top: 0;
       width: 4px;
       height: 100%;
@@ -181,12 +181,12 @@
     /* Timeline View Styles */
     .timeline-view {
       position: relative;
-      padding-right: 4rem;
+      padding-inline-start: 4rem;
     }
 
     .timeline-dot {
       position: absolute;
-      right: 1rem;
+      inset-inline-start: 1rem;
       width: 1.5rem;
       height: 1.5rem;
       border-radius: 50%;
@@ -252,7 +252,7 @@
     /* Mobile Timeline Adjustment */
     @media (max-width: 768px) {
       .timeline-view {
-        padding-right: 0;
+        padding-inline-start: 0;
       }
     }
 
@@ -319,13 +319,13 @@
       <!-- Search -->
       <div class="lg:col-span-9">
         <div class="relative">
-          <i data-lucide="search" class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5" :class="darkMode ? 'text-gray-500' : 'text-gray-400'"></i>
+          <i data-lucide="search" class="absolute start-4 top-1/2 -translate-y-1/2 w-5 h-5" :class="darkMode ? 'text-gray-500' : 'text-gray-400'"></i>
           <input
             type="search"
             name="q"
             value="{{ $searchQuery }}"
             placeholder="{{ __('seerah.public.search_placeholder') }}"
-            class="w-full pr-12 pl-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-[#64CCC5] transition-all"
+            class="w-full ps-12 pe-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-[#64CCC5] transition-all"
             :class="darkMode ? 'bg-gray-900 border-gray-800 text-white placeholder-gray-500' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'"
           >
         </div>
@@ -623,7 +623,7 @@
     x-transition:leave-start="opacity-100 scale-100"
     x-transition:leave-end="opacity-0 scale-0"
     x-cloak
-    class="scroll-top-btn fixed bottom-8 left-8 z-40 w-12 h-12 rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-xl flex items-center justify-center"
+    class="scroll-top-btn fixed bottom-8 end-8 z-40 w-12 h-12 rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-xl flex items-center justify-center"
     aria-label="{{ __('seerah.public.scroll_to_top') }}"
   >
     <i data-lucide="arrow-up" class="w-6 h-6"></i>

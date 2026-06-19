@@ -276,7 +276,7 @@
 
             {{-- Search --}}
             <div class="relative flex-1 min-w-0" @click.outside="suggest.open = false" @keydown="suggestKeydown($event)">
-                    <i data-lucide="search" class="absolute end-4 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none"
+                    <i data-lucide="search" class="absolute start-4 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none"
                        :class="$store.theme.dark ? 'text-gray-500' : 'text-gray-400'"></i>
                     <input
                         type="search"
@@ -288,7 +288,7 @@
                         :aria-expanded="suggest.open"
                         aria-controls="quran-suggest-list"
                         placeholder="{{ __('quran.public.search_placeholder') }}"
-                        class="w-full pe-12 ps-4 py-3 text-base sm:text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-[#64CCC5]/60 focus:border-[#64CCC5] transition-all"
+                        class="w-full ps-12 pe-4 py-3 text-base sm:text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-[#64CCC5]/60 focus:border-[#64CCC5] transition-all"
                         :class="$store.theme.dark
                             ? 'bg-gray-950 border-gray-800 text-white placeholder-gray-500'
                             : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'"

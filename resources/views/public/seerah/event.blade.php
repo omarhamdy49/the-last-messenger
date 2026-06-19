@@ -18,24 +18,11 @@
 @endpush
 
 @push('head')
-<style type="text/tailwindcss">
-    @theme {
-        --font-family-cairo: 'Cairo', sans-serif;
-        --font-family-amiri: 'Amiri', serif;
-
-        --color-brand: #0056b3;
-        --color-secondary: #218838;
-        --color-accent: #64CCC5;
-
-        --animate-fade-in-up: fade-in-up 0.8s ease-out;
-        --animate-fade-in: fade-in 1s ease-out;
-        --animate-slide-in-right: slide-in-right 0.6s ease-out;
-        --animate-scale-in: scale-in 0.5s ease-out;
-        --animate-float: float 6s ease-in-out infinite;
-        --animate-pulse-slow: pulse-slow 3s ease-in-out infinite;
-        --animate-glow: glow 2s ease-in-out infinite;
-    }
-
+<style>
+    /* Was <style type="text/tailwindcss"> with a v4 @theme{} block — inert under this
+       project's Tailwind v3 build (the browser never parsed it), so every rule below
+       silently failed. Switched to plain CSS and bound the animation utilities the
+       page uses (the @theme map used to generate them in v4). */
     @keyframes fade-in-up {
         0% { opacity: 0; transform: translateY(30px); }
         100% { opacity: 1; transform: translateY(0); }
@@ -76,6 +63,13 @@
     .stagger-3 { animation-delay: 0.3s; }
     .stagger-4 { animation-delay: 0.4s; }
 
+    /* animate-fade-in-up and animate-float are provided globally by app.css. */
+    .animate-fade-in { animation: fade-in 1s ease-out; }
+    .animate-slide-in-right { animation: slide-in-right 0.6s ease-out; }
+    .animate-scale-in { animation: scale-in 0.5s ease-out; }
+    .animate-pulse-slow { animation: pulse-slow 3s ease-in-out infinite; }
+    .animate-glow { animation: glow 2s ease-in-out infinite; }
+
     .glass {
         background: rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(10px);
@@ -113,13 +107,13 @@
     /* Timeline Styles */
     .timeline-item {
         position: relative;
-        padding-right: 2rem;
+        padding-inline-start: 2rem;
     }
 
     .timeline-item::before {
         content: '';
         position: absolute;
-        right: 0;
+        inset-inline-start: 0;
         top: 0;
         bottom: -2rem;
         width: 2px;
@@ -132,7 +126,7 @@
 
     .timeline-dot {
         position: absolute;
-        right: -0.5rem;
+        inset-inline-start: -0.5rem;
         top: 0.5rem;
         width: 1rem;
         height: 1rem;
@@ -221,7 +215,7 @@
     .fab {
         position: fixed;
         bottom: 2rem;
-        left: 2rem;
+        inset-inline-end: 2rem;
         z-index: 50;
     }
 
@@ -230,7 +224,7 @@
         position: relative;
         padding: 2rem;
         background: linear-gradient(135deg, rgba(0, 86, 179, 0.05) 0%, rgba(33, 136, 56, 0.05) 100%);
-        border-right: 4px solid;
+        border-inline-start: 4px solid;
         border-image: linear-gradient(135deg, #0056b3 0%, #218838 100%) 1;
     }
 
@@ -238,7 +232,7 @@
         content: '"';
         position: absolute;
         top: 0;
-        right: 1rem;
+        inset-inline-start: 1rem;
         font-size: 4rem;
         font-family: 'Amiri', serif;
         color: #0056b3;
@@ -723,9 +717,9 @@
     </main>
 
     <!-- Style Switch: view as timeline -->
-    {{-- Pinned with physical `left` to stack above the existing .fab (left: 2rem) --}}
+    {{-- Pinned with logical `end` to stack above the existing .fab (inset-inline-end: 2rem) --}}
     <a href="{{ $timelineStyleUrl }}"
-       class="fixed bottom-[5.5rem] left-8 z-50 w-14 h-14 rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-2xl hover:shadow-3xl hover:scale-110 transition-all flex items-center justify-center"
+       class="fixed bottom-[5.5rem] end-8 z-50 w-14 h-14 rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-2xl hover:shadow-3xl hover:scale-110 transition-all flex items-center justify-center"
        title="{{ __('seerah.public.read_as_timeline') }}"
        aria-label="{{ __('seerah.public.read_as_timeline') }}">
         <i data-lucide="git-commit-vertical" class="w-6 h-6"></i>

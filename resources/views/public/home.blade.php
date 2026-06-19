@@ -155,7 +155,7 @@
                         </div>
                         <h2 class="text-3xl md:text-4xl font-bold mb-3">{{ __('site.seerah') }}</h2>
                         <p class="max-w-md text-white/90 leading-relaxed">{{ __('site.seerah_hero_desc') }}</p>
-                        <div class="mt-4 font-semibold flex items-center group-hover:translate-x-2 transition-transform">
+                        <div class="mt-4 font-semibold flex items-center {{ $isRtl ? 'group-hover:-translate-x-2' : 'group-hover:translate-x-2' }} transition-transform">
                             {{ __('site.discover_seerah') }}
                             <i class="w-5 h-5 ms-2" data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}"></i>
                         </div>
@@ -712,12 +712,12 @@
                         @endif
 
                         {{-- Quick action buttons (hover) --}}
-                        <div class="absolute top-2 start-2 z-10 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button class="w-7 h-7 bg-white dark:bg-gray-800 rounded-full shadow-md flex items-center justify-center hover:scale-110 transition"
+                        <div class="absolute top-2 start-2 z-10 flex gap-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                            <button type="button" class="w-7 h-7 bg-white dark:bg-gray-800 rounded-full shadow-md flex items-center justify-center hover:scale-110 transition focus-visible:ring-2 focus-visible:ring-[#64CCC5] focus:outline-none"
                                     aria-label="{{ __('site.bookmark') }}">
                                 <i class="w-3.5 h-3.5 text-gray-700 dark:text-gray-300" data-lucide="bookmark"></i>
                             </button>
-                            <button class="w-7 h-7 bg-white dark:bg-gray-800 rounded-full shadow-md flex items-center justify-center hover:scale-110 transition"
+                            <button type="button" class="w-7 h-7 bg-white dark:bg-gray-800 rounded-full shadow-md flex items-center justify-center hover:scale-110 transition focus-visible:ring-2 focus-visible:ring-[#64CCC5] focus:outline-none"
                                     aria-label="{{ __('site.share') }}">
                                 <i class="w-3.5 h-3.5 text-gray-700 dark:text-gray-300" data-lucide="share-2"></i>
                             </button>
@@ -744,7 +744,7 @@
                                 <div class="flex items-center space-s-1.5 font-semibold text-sm"
                                      style="color: {{ $accent }};">
                                     <span>{{ __('site.explore') }}</span>
-                                    <i class="w-4 h-4 transform group-hover:translate-x-1 transition"
+                                    <i class="w-4 h-4 transform {{ $isRtl ? 'group-hover:-translate-x-1' : 'group-hover:translate-x-1' }} transition"
                                        data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}"></i>
                                 </div>
                                 <div class="opacity-0 group-hover:opacity-100 transition-opacity"
