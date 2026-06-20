@@ -19,7 +19,10 @@
                 {{-- Marketing / hero column --}}
                 <div class="hidden md:flex relative bg-gradient-to-br from-[#0056b3] to-[#218838] p-12 text-white flex-col justify-center overflow-hidden">
                     <div class="relative z-10">
-                        <i data-lucide="book-open" class="w-16 h-16 mb-6"></i>
+                        {{-- Brand seal on a frosted backing so it reads on the gradient panel --}}
+                        <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/25 shadow-lg mb-6">
+                            <x-site.brand-icon size="w-14 h-14" :eager="true" />
+                        </div>
                         <h2 class="text-3xl lg:text-4xl font-bold font-amiri mb-4">{{ __('auth_web.login_heading') }}</h2>
                         <p class="text-lg text-white/90 mb-10">{{ __('auth_web.login_subheading') }}</p>
 

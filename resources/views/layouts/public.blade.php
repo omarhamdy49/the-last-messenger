@@ -22,6 +22,12 @@
     <title>@yield('title', $seoDefaultTitle)</title>
     <meta name="description" content="@yield('meta_description', $seoDefaultDescription)">
 
+    {{-- Favicon — the Seal of the Prophet ﷺ (محمد رسول الله). Scalable SVG for modern
+         browsers, PNG apple-touch-icon for iOS home screens. --}}
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
+    <meta name="theme-color" content="#0056b3">
+
     {{-- SEO: canonical + locale alternates (ar default, en) --}}
     @php $canonicalUrl = url()->current(); @endphp
     <link rel="canonical" href="@yield('canonical', $canonicalUrl)">

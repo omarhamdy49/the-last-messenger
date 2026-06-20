@@ -21,7 +21,7 @@ return [
     // Search & filters
     'search_placeholder' => 'نام سے کسی صحابی کو تلاش کریں...',
     'filter_all' => 'سب',
-    'filter_featured' => 'نمایاں',
+    'filter_featured' => 'قریب ترین',
     'filter_ansar' => 'انصار',
     'filter_muhajir' => 'مہاجرین',
     'companions_unit' => 'صحابہ',

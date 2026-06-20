@@ -47,6 +47,12 @@ interface SahabiRepositoryInterface extends RepositoryInterface
     public function search(string $query, int $perPage = 15): LengthAwarePaginator;
 
     /**
+     * Paginate all companions for the public listing (importance-ordered,
+     * lightweight translations).
+     */
+    public function getAllPaginated(int $perPage = 15): LengthAwarePaginator;
+
+    /**
      * Get aggregate gender stats for the admin index page (single query).
      *
      * @return array{total: int, male: int, female: int}

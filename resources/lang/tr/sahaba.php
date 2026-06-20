@@ -21,7 +21,7 @@ return [
     // Search & filters
     'search_placeholder' => 'İsme göre bir sahabe arayın...',
     'filter_all' => 'Tümü',
-    'filter_featured' => 'Öne çıkanlar',
+    'filter_featured' => 'En yakınlar',
     'filter_ansar' => 'Ensar',
     'filter_muhajir' => 'Muhacirler',
     'companions_unit' => 'sahabe',

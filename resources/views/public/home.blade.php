@@ -69,13 +69,69 @@
 
 @section('content')
 
+@push('head')
+<style>
+    /* ── Signature hero moment ──────────────────────────────────────────────
+       Refined entrance easing + CSS scroll-driven parallax. Pure progressive
+       enhancement: no JS, GPU-only (transform/opacity), and fully disabled for
+       reduced-motion or browsers without scroll-timeline — the hero stays a
+       clean static composition in those cases. */
+
+    /* Headroom so the parallax drift never exposes an edge; the hero section's
+       own overflow-hidden clips the overscan. */
+    .hero-parallax { inset: -12% 0; }
+
+    @media (prefers-reduced-motion: no-preference) {
+        /* Premium expo-out entrance (no bounce), scoped to the hero only. */
+        .hero-section .fade-slide-up {
+            animation-duration: 0.9s;
+            animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+    }
+
+    @supports (animation-timeline: scroll()) {
+        @media (prefers-reduced-motion: no-preference) {
+            /* Background drifts slower than the page → parallax depth. */
+            .hero-parallax {
+                animation: heroParallax linear both;
+                animation-timeline: scroll(root);
+                animation-range: 0 100vh;
+                will-change: transform;
+            }
+            @keyframes heroParallax { to { transform: translateY(12%); } }
+
+            /* Hero content lifts and dissolves as it scrolls away → cinematic exit. */
+            .hero-fade-out {
+                animation: heroFadeOut linear both;
+                animation-timeline: scroll(root);
+                animation-range: 8vh 88vh;
+                will-change: transform, opacity;
+            }
+            @keyframes heroFadeOut { to { opacity: 0; transform: translateY(-36px); } }
+        }
+    }
+
+    /* ── Sahaba carousel — clean card alignment on swipe/arrow scroll.
+       scroll-snap works in both directions; the JS handles RTL-safe paging. */
+    .home-sahaba-row {
+        scroll-snap-type: x mandatory;
+        scroll-padding-inline-start: 0.5rem;
+        scroll-behavior: smooth;
+    }
+    .home-sahaba-row > * { scroll-snap-align: start; }
+    @media (prefers-reduced-motion: reduce) {
+        .home-sahaba-row { scroll-behavior: auto; }
+    }
+</style>
+@endpush
+
 {{-- ===================================================================
      SECTION 1 — PREMIUM HERO
      Verbatim port of index-enhanced.html lines ~544-650
      =================================================================== --}}
-<section class="relative py-20 md:py-32 pb-32 md:pb-40 overflow-hidden">
-    {{-- Background Image with Ken Burns --}}
-    <div class="absolute inset-0 w-full h-full">
+<section class="hero-section relative py-20 md:py-32 pb-32 md:pb-40 overflow-hidden">
+    {{-- Background Image with Ken Burns + scroll parallax (.hero-parallax) --}}
+    <div class="hero-parallax absolute">
         <img class="w-full h-full object-cover ken-burns-subtle"
              alt="{{ __('site.hero_image_alt') }}"
              src="{{ asset('images/site/rasool-allah-hero-section-bg.jpg') }}" />
@@ -83,7 +139,7 @@
     </div>
 
     {{-- Hero Content --}}
-    <div class="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <div class="hero-fade-out relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 text-center">
         {{-- Title --}}
         <h1 class="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-white drop-shadow-2xl fade-slide-up mb-6"
             style="animation-delay: 0.1s;">
@@ -207,40 +263,46 @@
         {{-- Carousel --}}
         <div class="relative"
              x-data="{
-               scrollContainer: null,
-               canScrollLeft: false,
-               canScrollRight: true,
+               c: null,
+               canPrev: false,
+               canNext: false,
+               rtl: document.documentElement.dir === 'rtl',
+               reduce: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
                init() {
-                 this.scrollContainer = this.$refs.scrollContainer;
-                 this.checkScroll();
-                 this.scrollContainer.addEventListener('scroll', () => this.checkScroll());
-                 window.addEventListener('resize', () => this.checkScroll());
+                 this.c = this.$refs.scrollContainer;
+                 this.$nextTick(() => this.update());
+                 window.addEventListener('resize', () => this.update());
                },
-               checkScroll() {
-                 if (!this.scrollContainer) return;
-                 this.canScrollLeft  = this.scrollContainer.scrollLeft > 20;
-                 this.canScrollRight = this.scrollContainer.scrollLeft < (this.scrollContainer.scrollWidth - this.scrollContainer.clientWidth - 20);
+               update() {
+                 if (!this.c) return;
+                 // RTL-safe: modern browsers report negative scrollLeft in RTL, so
+                 // normalise to a positive distance-from-start before comparing.
+                 const max = this.c.scrollWidth - this.c.clientWidth;
+                 const pos = Math.abs(this.c.scrollLeft);
+                 this.canPrev = pos > 4;
+                 this.canNext = pos < max - 4;
                },
-               scrollBack() {
-                 const c = this.scrollContainer;
-                 const card = c.querySelector('.sahaba-card');
-                 if (!card) return;
-                 c.scrollBy({ left: -(card.offsetWidth + 24) * 2, behavior: 'smooth' });
+               amount() {
+                 const card = this.c.querySelector('.sahaba-card');
+                 const cardW = card ? card.offsetWidth + 24 : 300;
+                 // Advance roughly one viewport but at least one card; snap aligns the rest.
+                 return Math.max(cardW, Math.round(this.c.clientWidth * 0.85));
                },
-               scrollForward() {
-                 const c = this.scrollContainer;
-                 const card = c.querySelector('.sahaba-card');
-                 if (!card) return;
-                 c.scrollBy({ left: (card.offsetWidth + 24) * 2, behavior: 'smooth' });
+               go(forward) {
+                 // In RTL the scroll axis is mirrored, so flip the sign of the step.
+                 const sign = this.rtl ? -1 : 1;
+                 this.c.scrollBy({ left: (forward ? sign : -sign) * this.amount(), behavior: this.reduce ? 'auto' : 'smooth' });
                }
              }">
 
             {{-- Scroll container --}}
             <div class="relative overflow-hidden rounded-2xl">
-                <div class="flex overflow-x-auto gap-6 pb-4 scroll-smooth"
-                     style="scrollbar-width: none; -ms-overflow-style: none;"
-                     x-ref="scrollContainer">
-                    <style>.home-sahaba-row::-webkit-scrollbar{display:none}</style>
+                <div class="home-sahaba-row scrollbar-hide flex overflow-x-auto gap-6 pb-4 scroll-smooth"
+                     x-ref="scrollContainer"
+                     @scroll.passive="update()"
+                     tabindex="0"
+                     role="region"
+                     aria-label="{{ __('site.companions_of_prophet') }}">
 
                     @forelse ($featuredSahaba as $index => $sahabi)
                         @php
@@ -274,24 +336,24 @@
                 </div>
             </div>
 
-            {{-- Left arrow (visually right in RTL) --}}
-            <button x-show="canScrollLeft"
-                    @click="scrollBack()"
-                    x-transition
-                    class="absolute end-0 top-1/2 -translate-y-1/2 z-10 w-14 h-14 rounded-full glass backdrop-blur-lg flex items-center justify-center text-[#6f42c1] hover:scale-110 transition-all shadow-2xl group"
+            {{-- Previous — scrolls toward the start (sits at the start edge: left in LTR, right in RTL) --}}
+            <button x-show="canPrev" x-cloak
+                    @click="go(false)"
+                    x-transition.opacity
+                    class="absolute start-1 sm:start-2 top-1/2 -translate-y-1/2 z-10 w-12 h-12 sm:w-14 sm:h-14 rounded-full glass backdrop-blur-lg flex items-center justify-center text-[#6f42c1] hover:scale-110 active:scale-95 transition-transform shadow-2xl focus-visible:ring-2 focus-visible:ring-[#6f42c1] focus:outline-none"
                     :class="$store.theme.dark ? 'border border-white/20 hover:bg-white/20' : 'border border-gray-300 hover:bg-gray-100'"
                     aria-label="{{ __('site.scroll_previous') }}">
-                <i data-lucide="chevron-{{ $isRtl ? 'right' : 'left' }}" class="w-7 h-7 group-hover:translate-x-0.5 transition-transform"></i>
+                <i data-lucide="chevron-{{ $isRtl ? 'right' : 'left' }}" class="w-6 h-6 sm:w-7 sm:h-7"></i>
             </button>
 
-            {{-- Right arrow (visually left in RTL) --}}
-            <button x-show="canScrollRight"
-                    @click="scrollForward()"
-                    x-transition
-                    class="absolute start-0 top-1/2 -translate-y-1/2 z-10 w-14 h-14 rounded-full glass backdrop-blur-lg flex items-center justify-center text-[#6f42c1] hover:scale-110 transition-all shadow-2xl group"
+            {{-- Next — scrolls toward the end (sits at the end edge: right in LTR, left in RTL) --}}
+            <button x-show="canNext" x-cloak
+                    @click="go(true)"
+                    x-transition.opacity
+                    class="absolute end-1 sm:end-2 top-1/2 -translate-y-1/2 z-10 w-12 h-12 sm:w-14 sm:h-14 rounded-full glass backdrop-blur-lg flex items-center justify-center text-[#6f42c1] hover:scale-110 active:scale-95 transition-transform shadow-2xl focus-visible:ring-2 focus-visible:ring-[#6f42c1] focus:outline-none"
                     :class="$store.theme.dark ? 'border border-white/20 hover:bg-white/20' : 'border border-gray-300 hover:bg-gray-100'"
                     aria-label="{{ __('site.scroll_next') }}">
-                <i data-lucide="chevron-{{ $isRtl ? 'left' : 'right' }}" class="w-7 h-7 group-hover:-translate-x-0.5 transition-transform"></i>
+                <i data-lucide="chevron-{{ $isRtl ? 'left' : 'right' }}" class="w-6 h-6 sm:w-7 sm:h-7"></i>
             </button>
         </div>
 
@@ -834,9 +896,12 @@
 </section>
 
 {{-- ===================================================================
-     SECTION 7 — CALL TO ACTION
-     Verbatim port of index-enhanced.html lines ~1666-1688
+     SECTION 7 — CALL TO ACTION (guests only)
+     Hidden for authenticated users: it duplicates the header's persistent
+     "Create Account" signup, so it only earns its place as a conversion
+     prompt for logged-out visitors.
      =================================================================== --}}
+@guest
 <section class="py-24 relative overflow-hidden">
     <div class="absolute inset-0 bg-gradient-to-r from-[#0056b3] to-[#218838]"></div>
     <div class="absolute inset-0 opacity-10">
@@ -861,6 +926,7 @@
         </div>
     </div>
 </section>
+@endguest
 
 @endsection
 

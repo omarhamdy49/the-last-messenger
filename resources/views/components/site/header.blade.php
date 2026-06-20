@@ -56,17 +56,12 @@
     <!-- Header with Glassmorphism -->
     <header class="glass shadow-lg sticky top-0 z-50 border-b"
             :class="$store.theme.dark ? 'border-white/20' : 'border-gray-200'">
-        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8 relative">
             <div class="flex items-center justify-between h-20">
 
                 <!-- Logo -->
                 <div class="flex items-center space-s-4 2xl:space-s-10">
-                    <a href="{{ route('public.home') }}" class="flex items-center space-s-3">
-                        <div class="w-12 h-12 bg-gradient-to-br from-[#0056b3] to-[#218838] rounded-xl flex items-center justify-center">
-                            <i class="w-8 h-8 text-white" data-lucide="book-open"></i>
-                        </div>
-                        <span class="text-2xl font-bold gradient-text hidden sm:block">{{ $siteName }}</span>
-                    </a>
+                    <x-site.logo />
 
                     <!-- Desktop Navigation -->
                     {{-- 8 items + actions don't fit between lg and xl — the hamburger covers that range --}}
@@ -81,7 +76,7 @@
                 </div>
 
                 <!-- Right side actions -->
-                <div class="flex items-center space-s-3">
+                <div class="flex items-center space-s-1 sm:space-s-2 lg:space-s-3">
 
                     <!-- Search Icon -->
                     <button @click="searchOpen = true"
@@ -90,8 +85,8 @@
                         <i class="w-5 h-5" data-lucide="search"></i>
                     </button>
 
-                    <!-- Language Switcher -->
-                    <div class="relative" x-data="{ langOpen: false }">
+                    <!-- Language Switcher (action bar from sm up; in the burger menu on phones) -->
+                    <div class="relative hidden sm:block" x-data="{ langOpen: false }">
                         <button @click="langOpen = !langOpen"
                                 class="flex items-center space-s-2 px-3 py-2 rounded-lg hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50"
                                 aria-label="Language">
@@ -119,10 +114,10 @@
                         </div>
                     </div>
 
-                    <!-- Dark Mode Toggle -->
+                    <!-- Dark Mode Toggle (action bar from sm up; in the burger menu on phones) -->
                     <button @click="$store.theme.toggle()"
-                            class="p-2.5 rounded-full hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50"
-                            aria-label="Toggle dark mode">
+                            class="hidden sm:inline-flex p-2.5 rounded-full hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50"
+                            aria-label="{{ __('site.toggle_theme') }}">
                         <i x-show="!$store.theme.dark" class="w-5 h-5" data-lucide="moon"></i>
                         <i x-show="$store.theme.dark" class="w-5 h-5" data-lucide="sun" x-cloak></i>
                     </button>
@@ -186,21 +181,19 @@
                             </div>
                         </div>
                     @else
+                        {{-- Single auth CTA: gradient Login (opens the login modal). Register removed.
+                             Compact gradient icon button on small/medium screens (prevents the label
+                             from wrapping or crowding the action bar); expands to a labelled pill at lg+. --}}
                         <a href="{{ route('public.login') }}"
-                           @click.prevent="$dispatch('open-login')"
-                           class="hidden sm:inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50">
-                            {{ __('site.login') }}
-                        </a>
-                        <a href="{{ route('public.register') }}"
-                           class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold text-white bg-gradient-to-br from-[#0056b3] to-[#218838] hover:opacity-90"
-                           aria-label="{{ __('site.register') }}">
-                            <i class="w-5 h-5 sm:hidden" data-lucide="user"></i>
-                            <span class="hidden sm:inline">{{ __('site.register') }}</span>
+                           class="inline-flex items-center justify-center gap-2 rounded-full p-2.5 lg:rounded-lg lg:px-4 lg:py-2 text-sm font-semibold text-white bg-gradient-to-br from-[#0056b3] to-[#218838] hover:opacity-90 transition-all"
+                           aria-label="{{ __('site.login') }}" title="{{ __('site.login') }}">
+                            <i class="w-5 h-5 lg:hidden" data-lucide="log-in"></i>
+                            <span class="hidden lg:inline">{{ __('site.login') }}</span>
                         </a>
                     @endauth
 
                     <!-- Mobile menu button -->
-                    <button @click="mobileMenuOpen = !mobileMenuOpen"
+                    <button @click.stop="mobileMenuOpen = !mobileMenuOpen"
                             class="xl:hidden p-2.5 rounded-lg hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50"
                             aria-label="Menu">
                         <i class="w-6 h-6" data-lucide="menu"></i>
@@ -208,11 +201,17 @@
                 </div>
             </div>
 
-            <!-- Mobile Menu -->
+            <!-- Mobile Menu — absolutely positioned so it overlays the page as a dropdown
+                 instead of growing the sticky header and pushing content down. Anchored to
+                 the bottom of the nav bar (top-full), full container width (inset-x-0), with
+                 its own glass surface + shadow. Capped to the viewport so a long menu scrolls
+                 internally. @click.away closes it when tapping the page behind. -->
             <div x-show="mobileMenuOpen"
+                 @click.away="mobileMenuOpen = false"
                  x-transition
                  x-cloak
-                 class="xl:hidden pb-4 space-y-2">
+                 class="xl:hidden absolute inset-x-0 top-full z-40 glass border-t shadow-2xl rounded-b-2xl px-4 sm:px-6 lg:px-8 pt-3 pb-4 space-y-2 max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain"
+                 :class="$store.theme.dark ? 'border-white/15' : 'border-gray-200'">
                 @foreach ($headerMenu as $item)
                     <a href="{{ $menuItemUrl($item) }}"
                        class="block px-4 py-3 rounded-lg hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 font-semibold {{ $menuItemIsActive($item) ? 'bg-[#E9ECEF]/50 dark:bg-[#0f3460]/50' : '' }}">
@@ -228,6 +227,37 @@
                    class="sm:hidden flex items-center space-s-3 px-4 py-3 rounded-lg hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 font-semibold">
                     <x-icons.kaaba class="w-5 h-5" /><span>{{ __('site.makkah_live') }}</span>
                 </a>
+
+                {{-- Appearance + language — surfaced here on phones (they sit in the action bar from sm up) --}}
+                <div class="sm:hidden pt-2 mt-2 space-y-2 border-t" :class="$store.theme.dark ? 'border-white/15' : 'border-[#DEE2E6]'">
+                    {{-- Dark mode toggle --}}
+                    <button @click="$store.theme.toggle()"
+                            class="w-full flex items-center space-s-3 px-4 py-3 rounded-lg hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 font-semibold">
+                        <i x-show="!$store.theme.dark" class="w-5 h-5" data-lucide="moon"></i>
+                        <i x-show="$store.theme.dark" class="w-5 h-5" data-lucide="sun" x-cloak></i>
+                        <span>{{ __('site.toggle_theme') }}</span>
+                    </button>
+
+                    {{-- Language options --}}
+                    <div class="px-4 pt-1">
+                        <p class="mb-1.5 flex items-center space-s-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                            <i class="w-4 h-4" data-lucide="globe"></i><span>{{ __('site.language') }}</span>
+                        </p>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            @foreach ($languages as $code => $lang)
+                                <form method="POST" action="{{ route('language.switch') }}">
+                                    @csrf
+                                    <input type="hidden" name="language" value="{{ $code }}">
+                                    <button type="submit"
+                                            class="w-full flex items-center space-s-2 text-start px-3 py-2.5 rounded-lg hover:bg-[#E9ECEF] dark:hover:bg-[#0f3460] {{ $locale === $code ? 'bg-[#E9ECEF] dark:bg-[#0f3460] font-bold' : '' }}">
+                                        <span class="text-lg">{{ $lang['flag'] }}</span>
+                                        <span class="text-sm font-medium">{{ $lang['name'] }}</span>
+                                    </button>
+                                </form>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
             </div>
         </nav>
     </header>

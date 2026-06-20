@@ -7,6 +7,7 @@ namespace App\Domain\Sahaba\Repositories;
 use App\Domain\Sahaba\Enums\CompanionStatus;
 use App\Domain\Sahaba\Models\Sahabi;
 use App\Domain\Shared\Helpers\FullTextSearchHelper;
+use App\Domain\Shared\Models\Language;
 use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -22,11 +23,33 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
     private const CACHE_TTL = 1800;
 
     /**
+     * Translation columns the cards/listings actually render. Deliberately
+     * excludes the heavy longtext fields (biography, virtues, famous_narrations,
+     * martyrdom) so list queries never haul body text the cards don't use. The
+     * FK + locale are required for the relation to hydrate and resolve locales.
+     */
+    private const LIST_TRANSLATION_COLUMNS = ['id', 'sahabi_id', 'locale', 'name', 'full_name', 'kunya', 'laqab'];
+
+    /**
      * Get model instance
      */
     protected function getModel(): Model
     {
         return new Sahabi;
+    }
+
+    /**
+     * Eager-load set for companion listings and cards: lightweight translations
+     * (names only, no body text) plus the related article.
+     *
+     * @return array<int|string, mixed>
+     */
+    private function listingRelations(): array
+    {
+        return [
+            'translations' => fn ($query) => $query->select(self::LIST_TRANSLATION_COLUMNS),
+            'article',
+        ];
     }
 
     /**
@@ -37,7 +60,7 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
         return $this->model
             ->byStatus($status)
             ->byImportance()
-            ->with(['translations', 'article'])
+            ->with($this->listingRelations())
             ->paginate($perPage);
     }
 
@@ -49,7 +72,7 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
         return $this->model
             ->byTribe($tribe)
             ->byImportance()
-            ->with(['translations', 'article'])
+            ->with($this->listingRelations())
             ->paginate($perPage);
     }
 
@@ -70,7 +93,7 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
             ->join('sahabi_battles', 'sahaba.id', '=', 'sahabi_battles.sahabi_id')
             ->where('sahabi_battles.battle_name', $battle)
             ->byImportance()
-            ->with(['translations', 'article'])
+            ->with($this->listingRelations())
             ->paginate($perPage);
     }
 
@@ -85,7 +108,7 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
             fn () => $this->model
                 ->featured()
                 ->byImportance()
-                ->with(['translations', 'article'])
+                ->with($this->listingRelations())
                 ->limit($limit)
                 ->get()
         );
@@ -101,7 +124,7 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
             self::CACHE_TTL,
             fn () => $this->model
                 ->earlyMuslims($limit)
-                ->with(['translations', 'article'])
+                ->with($this->listingRelations())
                 ->get()
         );
     }
@@ -116,7 +139,7 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
             self::CACHE_TTL,
             fn () => $this->model
                 ->topNarrators($limit)
-                ->with(['translations', 'article'])
+                ->with($this->listingRelations())
                 ->get()
         );
     }
@@ -136,7 +159,36 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
                     ->orWhere('tribe', 'LIKE', "%{$query}%");
             })
             ->byImportance()
-            ->with(['translations', 'article'])
+            ->with($this->listingRelations())
+            ->paginate($perPage);
+    }
+
+    /**
+     * Paginate all companions for the public listing — importance-ordered, with
+     * lightweight translations (no body text) and the related article eager
+     * loaded. Replaces the generic paginate() path that triggered a per-row
+     * translations query (N+1) and pulled full body text on every card.
+     */
+    public function getAllPaginated(int $perPage = 15): LengthAwarePaginator
+    {
+        $locale = app()->getLocale();
+        $fallback = Language::getDefaultCode();
+
+        // Name lives in sahabi_translations, so join the active-locale row (with
+        // the default language as fallback) and sort alphabetically by the name
+        // that is actually displayed. COALESCE keeps it standard SQL so the
+        // non-MySQL test driver runs it too.
+        return $this->model
+            ->newQuery()
+            ->leftJoin('sahabi_translations as name_loc', function ($join) use ($locale) {
+                $join->on('name_loc.sahabi_id', '=', 'sahaba.id')->where('name_loc.locale', $locale);
+            })
+            ->leftJoin('sahabi_translations as name_fb', function ($join) use ($fallback) {
+                $join->on('name_fb.sahabi_id', '=', 'sahaba.id')->where('name_fb.locale', $fallback);
+            })
+            ->orderByRaw('COALESCE(name_loc.name, name_fb.name) ASC')
+            ->select('sahaba.*')
+            ->with($this->listingRelations())
             ->paginate($perPage);
     }
 

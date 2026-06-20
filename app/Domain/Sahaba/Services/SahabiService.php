@@ -28,7 +28,7 @@ class SahabiService extends BaseService
      */
     public function getAllCompanions(int $perPage = 15): LengthAwarePaginator
     {
-        return $this->repository->paginate($perPage, ['*'], ['article']);
+        return $this->repository->getAllPaginated($perPage);
     }
 
     /**

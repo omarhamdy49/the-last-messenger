@@ -21,7 +21,7 @@ return [
     // Search & filters
     'search_placeholder' => 'Search for a companion by name...',
     'filter_all' => 'All',
-    'filter_featured' => 'Featured',
+    'filter_featured' => 'The Nearest',
     'filter_ansar' => 'Ansar',
     'filter_muhajir' => 'Muhajirun',
     'companions_unit' => 'companions',

@@ -21,7 +21,7 @@ return [
     // Search & filters
     'search_placeholder' => 'Rechercher un compagnon par son nom...',
     'filter_all' => 'Tous',
-    'filter_featured' => 'En vedette',
+    'filter_featured' => 'Les plus proches',
     'filter_ansar' => 'Ansar',
     'filter_muhajir' => 'Mouhajiroun',
     'companions_unit' => 'compagnons',

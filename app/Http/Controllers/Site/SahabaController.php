@@ -27,8 +27,8 @@ final class SahabaController extends Controller
     {
         $locale = app()->getLocale();
 
-        $perPage = (int) $request->query('per_page', 12);
-        $perPage = in_array($perPage, [12, 24, 48], true) ? $perPage : 12;
+        $perPage = (int) $request->query('per_page', 20);
+        $perPage = in_array($perPage, [20, 40, 60], true) ? $perPage : 20;
         $page = max(1, (int) $request->query('page', 1));
 
         $search = trim((string) $request->query('q', ''));

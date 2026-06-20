@@ -21,7 +21,7 @@ return [
     // Search & filters
     'search_placeholder' => 'ابحث عن صحابي بالاسم...',
     'filter_all' => 'الكل',
-    'filter_featured' => 'المميزون',
+    'filter_featured' => 'الأقربون',
     'filter_ansar' => 'الأنصار',
     'filter_muhajir' => 'المهاجرون',
     'companions_unit' => 'صحابي',
