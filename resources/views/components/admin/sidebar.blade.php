@@ -72,8 +72,8 @@
     <div class="flex items-center justify-between px-6 py-6 border-b"
          :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
         <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 group">
-            <div class="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow group-hover:scale-110 transition-transform">
-                <i data-lucide="moon-star" class="w-7 h-7 text-white"></i>
+            <div class="w-12 h-12 shrink-0 group-hover:scale-110 transition-transform">
+                <x-site.brand-icon size="w-12 h-12" :eager="true" />
             </div>
             <div class="flex flex-col">
                 <span class="text-lg font-bold gradient-text">{{ config('app.name') }}</span>

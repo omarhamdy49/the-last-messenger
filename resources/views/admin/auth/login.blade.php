@@ -208,8 +208,8 @@
             <div class="text-center mb-8 animate-fadeInUp">
                 <!-- Logo -->
                 <div class="inline-block mb-6">
-                    <div class="w-24 h-24 mx-auto rounded-2xl gradient-bg shadow-2xl flex items-center justify-center animate-float">
-                        <i data-lucide="book-open" class="w-12 h-12 text-white"></i>
+                    <div class="w-24 h-24 mx-auto animate-float">
+                        <x-site.brand-icon size="w-24 h-24" :eager="true" class="drop-shadow-2xl" />
                     </div>
                 </div>
 
