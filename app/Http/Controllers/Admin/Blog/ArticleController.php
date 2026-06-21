@@ -16,10 +16,12 @@ use App\Http\Resources\ArticleResource;
 use App\Models\Article;
 use App\Models\ArticleLocale;
 use App\Repositories\ArticleRepository;
+use App\Services\MediaService;
 use App\Utils\DateUtil;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -34,6 +36,7 @@ class ArticleController extends AdminController
         protected VersionService $versionService,
         private readonly CreateArticleAction $createAction,
         private readonly UpdateArticleAction $updateAction,
+        private readonly MediaService $mediaService,
     ) {
         parent::__construct();
 
@@ -115,9 +118,11 @@ class ArticleController extends AdminController
     {
         $this->authorizeAdmin('create articles');
 
+        $libraryThumb = $this->resolveLibraryThumb($request);
+
         try {
             $article = $this->createAction->execute(
-                CreateArticleData::fromRequest($request),
+                CreateArticleData::fromRequest($request, $libraryThumb),
                 $this->locales
             );
 
@@ -147,6 +152,8 @@ class ArticleController extends AdminController
             }
 
             return back()->withInput()->withErrors(['error' => __('admin.article_create_failed')]);
+        } finally {
+            $this->cleanupTemporaryThumb($libraryThumb);
         }
     }
 
@@ -202,10 +209,12 @@ class ArticleController extends AdminController
     {
         $this->authorizeAdmin('edit articles');
 
+        $libraryThumb = $this->resolveLibraryThumb($request);
+
         try {
             $this->updateAction->execute(
                 $article,
-                UpdateArticleData::fromRequest($request, $article),
+                UpdateArticleData::fromRequest($request, $article, $libraryThumb),
                 $this->locales
             );
 
@@ -236,6 +245,37 @@ class ArticleController extends AdminController
             }
 
             return back()->withInput()->withErrors(['error' => __('admin.article_update_failed')]);
+        } finally {
+            $this->cleanupTemporaryThumb($libraryThumb);
+        }
+    }
+
+    /**
+     * When a thumbnail was chosen from the media library (thumb_id) rather than
+     * uploaded directly, materialize a plaintext copy of the original as an
+     * UploadedFile the create/update pipeline can store like any uploaded
+     * thumbnail. A directly uploaded `thumb` file always wins. The caller owns
+     * the returned file's temp path and must clean it up after the action runs.
+     */
+    private function resolveLibraryThumb(StoreArticleRequest|UpdateArticleRequest $request): ?UploadedFile
+    {
+        if ($request->hasFile('thumb') || ! $request->filled('thumb_id')) {
+            return null;
+        }
+
+        $copy = $this->mediaService->temporaryOriginalCopyById((int) $request->input('thumb_id'));
+        if ($copy === null) {
+            return null;
+        }
+
+        return new UploadedFile($copy->path, $copy->filename, null, null, true);
+    }
+
+    private function cleanupTemporaryThumb(?UploadedFile $thumb): void
+    {
+        $path = $thumb?->getPathname();
+        if ($path !== null && is_file($path)) {
+            @unlink($path);
         }
     }
 

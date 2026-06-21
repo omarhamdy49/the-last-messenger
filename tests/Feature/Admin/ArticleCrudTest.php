@@ -168,6 +168,39 @@ class ArticleCrudTest extends TestCase
         $this->assertSoftDeleted('articles', ['id' => $article->id]);
     }
 
+    public function test_admin_can_set_article_thumbnail_from_media_library(): void
+    {
+        Storage::fake('public');
+
+        $admin = $this->createAdminUser();
+        $writer = $this->createWriterUser();
+        $this->actingAs($admin);
+
+        [$primaryCategory] = $this->createCategories();
+        [$libraryMedia] = $this->createMediaFixtures($admin);
+
+        // The library media must have a readable original on disk for the
+        // controller to copy it into the public thumbnail location.
+        Storage::disk('public')->put($libraryMedia->path, 'fake-image-bytes');
+
+        $this->post(route('admin.articles.store'), [
+            'title' => $this->localizedField('عنوان المقال', 'Article Title'),
+            'content' => $this->localizedField(
+                '<p>محتوى عربي كافٍ لتجاوز الحد الأدنى لعدد الأحرف المطلوبة هنا.</p>',
+                '<p>Sufficient English content to clear the minimum length requirement here.</p>'
+            ),
+            'writer_id' => $writer->id,
+            'category_id' => $primaryCategory->id,
+            // No `thumb` file upload — the thumbnail is selected from the library.
+            'thumb_id' => $libraryMedia->id,
+        ])->assertRedirect(route('admin.articles.index'));
+
+        $article = Article::query()->latest('id')->firstOrFail();
+
+        $this->assertNotNull($article->thumb, 'Selected library media was not saved as the article thumbnail.');
+        Storage::disk('public')->assertExists($article->thumb);
+    }
+
     /**
      * @return array{0: Category, 1: Category}
      */

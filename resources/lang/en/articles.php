@@ -3,8 +3,35 @@
 declare(strict_types=1);
 
 return [
+    // Inline module embeds inside article body (Quran / Hadith / Companion / Seerah)
+    'embed' => [
+        'quran' => 'Quranic Verse',
+        'hadith' => 'Hadith',
+        'companion' => 'Companion',
+        'seerah' => 'Seerah Event',
+        'view_in_quran' => 'View in the Quran',
+        'view_hadith' => 'View hadith',
+        'view_companion' => 'View companion',
+        'view_profile' => 'View Profile',
+        'view_event' => 'View event',
+        'verse_one' => 'Verse :n',
+        'verse_range' => 'Verses :from–:to',
+        'hijri' => 'AH',
+    ],
+
     // Public site (frontend) strings
     'public' => [
+        'sources' => 'Sources & References',
+        'quick_stats' => 'Quick Stats',
+        'share_article' => 'Share Article',
+        'font_size' => 'Font Size',
+        'print' => 'Print',
+        'like' => 'Like',
+        'comments' => 'Comments',
+        'comments_coming_soon' => 'Comments are coming soon',
+        'follow' => 'Follow',
+        'close' => 'Close',
+        'download' => 'Download',
         'page_title' => 'Articles Library',
         'page_description' => 'Discover a comprehensive collection of articles and studies on the Prophetic biography and Islamic history',
         'hero_title' => 'Articles Library',
@@ -28,6 +55,10 @@ return [
         'view_list' => 'List view',
         'featured' => 'Featured',
         'read_more' => 'Read more',
+        'read_less' => 'Show less',
+        'previous_article' => 'Previous article',
+        'next_article' => 'Next article',
+        'gallery' => 'Image gallery',
         'min_read' => 'min read',
         'views' => 'views',
         'by_author' => 'By',
@@ -418,11 +449,6 @@ return [
         'hadith_short' => 'Hadith',
         'sahabi_short' => 'Sahabi',
         'seerah_short' => 'Seerah',
-    ],
-
-    'embed' => [
-        'view_profile' => 'View Profile',
-        'view_event' => 'View Event',
     ],
 
     // SEO

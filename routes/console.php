@@ -73,6 +73,18 @@ Schedule::command('media:publish-scheduled')
     });
 
 /**
+ * Publish articles whose scheduled publish time has passed (status scheduled → published).
+ * Runs every minute so scheduled articles go live close to their chosen time.
+ */
+Schedule::command('articles:publish-scheduled')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->onFailure(function () {
+        \Illuminate\Support\Facades\Log::error('Failed to publish scheduled articles');
+    });
+
+/**
  * Prune old Ask Quran AI inquiries + stale quota rows so saved questions don't
  * grow disk/queries unbounded. Runs daily off-peak; deletes are batched.
  */

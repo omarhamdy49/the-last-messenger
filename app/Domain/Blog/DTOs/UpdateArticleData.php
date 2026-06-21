@@ -63,13 +63,13 @@ final class UpdateArticleData
      * Construct an UpdateArticleData instance from the validated update request
      * and the current article state (for fallback values).
      */
-    public static function fromRequest(UpdateArticleRequest $request, Article $article): self
+    public static function fromRequest(UpdateArticleRequest $request, Article $article, ?UploadedFile $thumbOverride = null): self
     {
         $validated = $request->validated();
         $resolvedStatus = $validated['status'] ?? $article->status ?? 'draft';
 
         return new self(
-            thumb: $request->hasFile('thumb') ? $request->file('thumb') : null,
+            thumb: $request->hasFile('thumb') ? $request->file('thumb') : $thumbOverride,
             writerId: (int) ($validated['writer_id'] ?? $article->writer_id),
             readTime: (int) ($validated['read_time'] ?? $article->read_time),
             isFeatured: $request->boolean('is_featured'),

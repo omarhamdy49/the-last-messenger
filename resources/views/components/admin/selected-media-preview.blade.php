@@ -54,11 +54,11 @@
                                class="w-3 h-3"></i>
                             <span x-text="(media.type === 'image' || media.mime_type.startsWith('image/'))
                                 ? @js(__('media.preview.image'))
-                                : ((media.type === 'audio' || media.mime_type.startsWith('audio/'))
+                                : (media.type === 'audio' || media.mime_type.startsWith('audio/'))
                                     ? @js(__('media.preview.audio'))
-                                    : ((media.type === 'document' || media.mime_type.startsWith('application/'))
-                                        ? @js(__('media.preview.document'))
-                                        : @js(__('media.preview.video')))"></span>
+                                : (media.type === 'document' || media.mime_type.startsWith('application/'))
+                                    ? @js(__('media.preview.document'))
+                                : @js(__('media.preview.video'))"></span>
                         </span>
 
                         <!-- File Size -->
@@ -85,6 +85,30 @@
                                 'hover:bg-red-50 text-gray-600 hover:text-red-600'">
                         <i data-lucide="x" class="w-4 h-4"></i>
                     </button>
+                </div>
+            </div>
+
+            <!-- Quality / Size selector (images with generated variants only) -->
+            <div x-show="sizeOptionsFor(media).length > 1"
+                 class="px-3 pb-3">
+                <p class="text-xs font-medium mb-1.5"
+                   :class="$root.darkMode ? 'text-gray-400' : 'text-gray-600'">
+                    {{ __('media.picker.quality') }}
+                </p>
+                <div class="flex flex-wrap gap-1.5">
+                    <template x-for="opt in sizeOptionsFor(media)" :key="opt.key">
+                        <button type="button"
+                                @click="selectVariant(media, opt.key)"
+                                class="px-2 py-1 rounded-md text-xs font-medium transition-all hover:scale-105"
+                                :class="variantKeyFor(media) === opt.key ?
+                                    'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow' :
+                                    ($root.darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')">
+                            <span x-text="opt.label"></span>
+                            <span x-show="opt.width && opt.height"
+                                  class="opacity-70"
+                                  x-text="' · ' + opt.width + '×' + opt.height"></span>
+                        </button>
+                    </template>
                 </div>
             </div>
 

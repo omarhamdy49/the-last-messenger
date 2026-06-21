@@ -103,6 +103,7 @@ class CreateArticleAction
             'hijri_date' => $data->hijriDate,
             'status' => $data->status,
             'scheduled_at' => $data->scheduledAt,
+            'published_at' => $data->status === 'published' ? now() : null,
             'statistics' => $data->statistics,
             'references' => $data->references,
         ]);

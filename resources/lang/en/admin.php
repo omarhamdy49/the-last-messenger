@@ -838,6 +838,9 @@ return [
     'gregorian_year_to' => 'Gregorian year (to)',
     'gregorian' => 'Gregorian',
     'hijri_year_hint' => 'Use a negative number for years before Hijra (e.g. -53 for 53 BH).',
+    'hijri_pick' => 'Pick Hijri date',
+    'hijri_today' => 'Today',
+    'hijri_clear' => 'Clear',
     'order' => 'Order',
 
 ];

@@ -88,6 +88,10 @@ class UpdateArticleAction
             'hijri_date' => $data->hijriDate,
             'status' => $data->status,
             'scheduled_at' => $data->scheduledAt,
+            // Stamp published_at on first publish; preserve the original date afterwards.
+            'published_at' => $data->status === 'published'
+                ? ($article->published_at ?? now())
+                : ($data->status === 'scheduled' ? null : $article->published_at),
             'statistics' => $data->statistics,
             'references' => $data->references,
         ]);

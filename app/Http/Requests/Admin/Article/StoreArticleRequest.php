@@ -73,12 +73,13 @@ class StoreArticleRequest extends FormRequest
         // Without a status rule, validated() drops the field and articles are always
         // created as drafts regardless of the form's status select.
         $rules['status'] = ['nullable', \Illuminate\Validation\Rule::in(\App\Domain\Blog\Enums\ArticleStatus::values())];
-        $rules['scheduled_at'] = 'nullable|date';
+        $rules['scheduled_at'] = ['nullable', 'date', 'required_if:status,scheduled'];
         $rules['is_featured'] = 'nullable|boolean';
         $rules['is_pinned'] = 'nullable|boolean';
 
         // Media
         $rules['thumb'] = 'nullable|image|mimes:jpeg,jpg,png,webp|max:5120';
+        $rules['thumb_id'] = 'nullable|integer|exists:media,id';
         $rules['gallery'] = 'nullable|array';
         $rules['gallery.*'] = 'exists:media,id';
         $rules['media_items'] = 'nullable|array';

@@ -5,6 +5,13 @@ declare(strict_types=1);
 return [
     'picker' => [
         'browse' => 'لائبریری دیکھیں',
+        'upload_failed' => 'اپ لوڈ ناکام',
+        'upload_network_error' => 'سرور سے رابطہ نہیں ہو سکا۔ اپنا کنکشن چیک کر کے دوبارہ کوشش کریں۔',
+        'quality' => 'معیار',
+        'size_original' => 'اصل',
+        'size_thumbnail' => 'تھمب نیل',
+        'size_medium' => 'درمیانہ',
+        'size_large' => 'بڑا',
     ],
     // Public "coming soon" programs page
     'public' => [

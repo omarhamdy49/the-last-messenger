@@ -3,8 +3,35 @@
 declare(strict_types=1);
 
 return [
+    // Inline module embeds inside article body (Quran / Hadith / Companion / Seerah)
+    'embed' => [
+        'quran' => 'قرآنی آیت',
+        'hadith' => 'حدیث شریف',
+        'companion' => 'صحابی',
+        'seerah' => 'سیرت کا واقعہ',
+        'view_in_quran' => 'قرآن میں دیکھیں',
+        'view_hadith' => 'حدیث دیکھیں',
+        'view_companion' => 'صحابی دیکھیں',
+        'view_profile' => 'سوانح دیکھیں',
+        'view_event' => 'واقعہ دیکھیں',
+        'verse_one' => 'آیت :n',
+        'verse_range' => 'آیات :from-:to',
+        'hijri' => 'ھ',
+    ],
+
     // Public site (frontend) strings
     'public' => [
+        'sources' => 'ذرائع و حوالہ جات',
+        'quick_stats' => 'فوری اعداد و شمار',
+        'share_article' => 'مضمون شیئر کریں',
+        'font_size' => 'فونٹ سائز',
+        'print' => 'پرنٹ کریں',
+        'like' => 'پسند',
+        'comments' => 'تبصرے',
+        'comments_coming_soon' => 'تبصروں کی سہولت جلد آ رہی ہے',
+        'follow' => 'فالو کریں',
+        'close' => 'بند کریں',
+        'download' => 'ڈاؤن لوڈ',
         'page_title' => 'مضامین کی لائبریری',
         'page_description' => 'سیرتِ نبوی اور اسلامی تاریخ پر مضامین اور مطالعات کا جامع مجموعہ دریافت کریں',
         'hero_title' => 'مضامین کی لائبریری',
@@ -28,6 +55,10 @@ return [
         'view_list' => 'فہرست منظر',
         'featured' => 'نمایاں',
         'read_more' => 'مزید پڑھیں',
+        'read_less' => 'کم دکھائیں',
+        'previous_article' => 'پچھلا مضمون',
+        'next_article' => 'اگلا مضمون',
+        'gallery' => 'تصویری گیلری',
         'min_read' => 'منٹ مطالعہ',
         'views' => 'مشاہدات',
         'by_author' => 'بقلم',
@@ -53,5 +84,15 @@ return [
         'back_to_articles' => 'مضامین کی طرف واپس',
         'published_on' => 'شائع شدہ',
         'hijri' => 'ھ',
+    ],
+
+    'status' => [
+        'all' => 'تمام حالتیں',
+        'draft' => 'مسودہ',
+        'published' => 'شائع شدہ',
+        'scheduled' => 'شیڈولڈ',
+        'pending' => 'زیر جائزہ',
+        'archived' => 'محفوظ شدہ',
+        'trashed' => 'ردی میں',
     ],
 ];

@@ -11,6 +11,8 @@ namespace App\Domain\Blog\Enums;
 enum ArticleStatus: string
 {
     case DRAFT = 'draft';
+    case PENDING = 'pending';
+    case SCHEDULED = 'scheduled';
     case PUBLISHED = 'published';
     case ARCHIVED = 'archived';
 
@@ -31,6 +33,8 @@ enum ArticleStatus: string
     {
         return match ($this) {
             self::DRAFT => 'Draft',
+            self::PENDING => 'Pending review',
+            self::SCHEDULED => 'Scheduled',
             self::PUBLISHED => 'Published',
             self::ARCHIVED => 'Archived',
         };
@@ -42,5 +46,13 @@ enum ArticleStatus: string
     public function isPublished(): bool
     {
         return $this === self::PUBLISHED;
+    }
+
+    /**
+     * Whether the article is scheduled for future publishing.
+     */
+    public function isScheduled(): bool
+    {
+        return $this === self::SCHEDULED;
     }
 }

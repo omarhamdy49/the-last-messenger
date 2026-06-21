@@ -34,7 +34,7 @@ final class ArticleController extends Controller
 
         $payload = Cache::remember(
             "public_articles_index_{$locale}",
-            1800,
+            3600,
             function () use ($locale): array {
                 try {
                     // One column-scoped read of all ready articles (client paginates).
@@ -91,7 +91,7 @@ final class ArticleController extends Controller
 
         $payload = Cache::remember(
             "public_article_show_{$slug}_{$locale}",
-            1800,
+            3600,
             function () use ($slug, $locale): ?array {
                 try {
                     $article = $this->articles->findBySlug($slug, $locale);
@@ -117,9 +117,13 @@ final class ArticleController extends Controller
                         ->values()
                         ->all();
 
+                    $adjacent = $this->articles->getAdjacentForPublic($article->id, $article->created_at);
+
                     return [
                         'article' => $this->mapDetail($article, $articleLocale, $locale),
                         'related' => $related,
+                        'prev' => $adjacent['prev'] ? $this->mapCard($adjacent['prev'], $locale) : null,
+                        'next' => $adjacent['next'] ? $this->mapCard($adjacent['next'], $locale) : null,
                     ];
                 } catch (Throwable $e) {
                     report($e);
@@ -133,23 +137,39 @@ final class ArticleController extends Controller
             abort(404);
         }
 
-        // View counting is a write — kept out of the cached closure, fire-and-forget.
-        // Session-guarded so refreshes within a session don't inflate the counter.
-        $viewedSessionKey = 'article_viewed_'.$payload['article']['id'];
-
-        if (! session()->has($viewedSessionKey)) {
-            try {
-                $this->articles->incrementViews($payload['article']['id']);
-                session()->put($viewedSessionKey, true);
-            } catch (Throwable) {
-                // Non-critical; ignore counter failures.
-            }
-        }
+        // View counting is handled by an async client call (registerView) so it
+        // keeps working while the page payload above is cached for an hour.
 
         return view('public.articles.show', [
             'article' => $payload['article'],
             'related' => $payload['related'],
+            'prev' => $payload['prev'] ?? null,
+            'next' => $payload['next'] ?? null,
         ]);
+    }
+
+    /**
+     * Register a view for an article (called async from the reader on load).
+     * Session-guarded so refreshes within a session don't inflate the counter;
+     * returns the fresh count for the client to render.
+     */
+    public function registerView(int $id): \Illuminate\Http\JsonResponse
+    {
+        $sessionKey = 'article_viewed_'.$id;
+
+        // Already counted this session — nothing to do; client keeps its count.
+        if (session()->has($sessionKey)) {
+            return response()->json(['ok' => true]);
+        }
+
+        try {
+            $views = $this->articles->incrementViews($id);
+            session()->put($sessionKey, true);
+        } catch (Throwable) {
+            return response()->json(['ok' => false], 200);
+        }
+
+        return response()->json(['ok' => true, 'views' => $views]);
     }
 
     /**
@@ -207,8 +227,75 @@ final class ArticleController extends Controller
             'views' => (int) $article->views,
             'dateLabel' => optional($article->created_at)->translatedFormat('d F Y'),
             'hijriDate' => $article->hijri_date,
+            'references' => $this->normalizeReferences($article->references),
+            'statistics' => $this->normalizeStatistics($article->statistics),
+            'gallery' => $this->normalizeGallery($article, $locale),
             'url' => route('public.articles.show', $articleLocale->slug),
         ];
+    }
+
+    /**
+     * Map the article's gallery rows into render-ready {url, caption} items.
+     *
+     * @return array<int, array{url: string, caption: ?string}>
+     */
+    private function normalizeGallery(Article $article, string $locale): array
+    {
+        if (! $article->relationLoaded('gallery')) {
+            return [];
+        }
+
+        return $article->gallery
+            ->map(fn ($item) => [
+                'url' => asset('storage/'.ltrim((string) $item->image, '/')),
+                'caption' => $item->getCaption($locale) ?: $item->getCaption('ar'),
+            ])
+            ->filter(fn ($item) => $item['url'] !== asset('storage/'))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Normalize the stored references JSON into render-ready rows.
+     *
+     * @return array<int, array{name: string, url: ?string, type: ?string}>
+     */
+    private function normalizeReferences(mixed $references): array
+    {
+        if (! is_array($references)) {
+            return [];
+        }
+
+        return collect($references)
+            ->filter(fn ($row) => is_array($row) && ! empty($row['name']))
+            ->map(fn ($row) => [
+                'name' => (string) $row['name'],
+                'url' => isset($row['url']) && $row['url'] !== '' ? (string) $row['url'] : null,
+                'type' => isset($row['type']) && $row['type'] !== '' ? (string) $row['type'] : null,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Normalize the stored statistics JSON into render-ready name/value rows.
+     *
+     * @return array<int, array{name: string, value: string}>
+     */
+    private function normalizeStatistics(mixed $statistics): array
+    {
+        if (! is_array($statistics)) {
+            return [];
+        }
+
+        return collect($statistics)
+            ->filter(fn ($row) => is_array($row) && ! empty($row['name']) && isset($row['value']) && $row['value'] !== '')
+            ->map(fn ($row) => [
+                'name' => (string) $row['name'],
+                'value' => (string) $row['value'],
+            ])
+            ->values()
+            ->all();
     }
 
     /**
@@ -307,6 +394,49 @@ final class ArticleController extends Controller
      */
     private function buildToc(ArticleLocale $articleLocale, string &$body): array
     {
+        // Always derive anchors from the rendered body so every TOC entry has a
+        // real scroll target (an existing heading id is reused, otherwise a
+        // sequential one is injected). The editor-curated TOC (getToc) is only a
+        // display fallback for bodies that carry no headings.
+        if ($body !== '' && Str::contains($body, ['<h2', '<h3'])) {
+            $toc = [];
+            $index = 0;
+
+            $body = preg_replace_callback(
+                '/<(h2|h3)([^>]*)>(.*?)<\/\1>/is',
+                function (array $match) use (&$toc, &$index): string {
+                    $tag = strtolower($match[1]);
+                    $attrs = $match[2];
+                    $label = trim(strip_tags($match[3]));
+
+                    if ($label === '') {
+                        return $match[0];
+                    }
+
+                    if (preg_match('/\bid=["\']([^"\']+)["\']/i', $attrs, $idMatch)) {
+                        $id = $idMatch[1];
+                    } else {
+                        $id = 'section-'.$index;
+                        $attrs .= ' id="'.$id.'"';
+                    }
+                    $index++;
+
+                    $toc[] = [
+                        'id' => $id,
+                        'label' => $label,
+                        'level' => $tag === 'h3' ? 3 : 2,
+                    ];
+
+                    return "<{$tag}{$attrs}>{$match[3]}</{$tag}>";
+                },
+                $body,
+            ) ?? $body;
+
+            if ($toc !== []) {
+                return $toc;
+            }
+        }
+
         $stored = $articleLocale->getToc();
 
         if (is_array($stored) && $stored !== []) {
@@ -321,37 +451,6 @@ final class ArticleController extends Controller
                 ->all();
         }
 
-        if ($body === '' || ! Str::contains($body, ['<h2', '<h3'])) {
-            return [];
-        }
-
-        $toc = [];
-        $index = 0;
-
-        $body = preg_replace_callback(
-            '/<(h2|h3)([^>]*)>(.*?)<\/\1>/is',
-            function (array $match) use (&$toc, &$index): string {
-                $tag = strtolower($match[1]);
-                $label = trim(strip_tags($match[3]));
-
-                if ($label === '') {
-                    return $match[0];
-                }
-
-                $id = 'section-'.$index;
-                $index++;
-
-                $toc[] = [
-                    'id' => $id,
-                    'label' => $label,
-                    'level' => $tag === 'h3' ? 3 : 2,
-                ];
-
-                return "<{$tag}{$match[2]} id=\"{$id}\">{$match[3]}</{$tag}>";
-            },
-            $body,
-        ) ?? $body;
-
-        return $toc;
+        return [];
     }
 }

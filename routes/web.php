@@ -64,6 +64,8 @@ Route::get('/quran/{surahNumber}', [QuranController::class, 'surah'])
 
 // Articles / Blog
 Route::get('/articles', [ArticleController::class, 'index'])->name('public.articles');
+Route::post('/articles/{id}/view', [ArticleController::class, 'registerView'])
+    ->whereNumber('id')->middleware('throttle:30,1')->name('public.articles.view');
 Route::get('/articles/{slug}', [ArticleController::class, 'show'])->name('public.articles.show');
 
 // Hadith

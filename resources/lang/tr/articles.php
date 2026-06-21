@@ -3,8 +3,35 @@
 declare(strict_types=1);
 
 return [
+    // Inline module embeds inside article body (Quran / Hadith / Companion / Seerah)
+    'embed' => [
+        'quran' => 'Kur\'an Ayeti',
+        'hadith' => 'Hadis',
+        'companion' => 'Sahabe',
+        'seerah' => 'Siyer Olayı',
+        'view_in_quran' => 'Kur\'an\'da görüntüle',
+        'view_hadith' => 'Hadisi görüntüle',
+        'view_companion' => 'Sahabeyi görüntüle',
+        'view_profile' => 'Profili görüntüle',
+        'view_event' => 'Olayı görüntüle',
+        'verse_one' => ':n. Ayet',
+        'verse_range' => 'Ayetler :from–:to',
+        'hijri' => 'H',
+    ],
+
     // Public site (frontend) strings
     'public' => [
+        'sources' => 'Kaynaklar ve Referanslar',
+        'quick_stats' => 'Hızlı İstatistikler',
+        'share_article' => 'Makaleyi Paylaş',
+        'font_size' => 'Yazı Boyutu',
+        'print' => 'Yazdır',
+        'like' => 'Beğen',
+        'comments' => 'Yorumlar',
+        'comments_coming_soon' => 'Yorumlar yakında geliyor',
+        'follow' => 'Takip Et',
+        'close' => 'Kapat',
+        'download' => 'İndir',
         'page_title' => 'Makale Kütüphanesi',
         'page_description' => 'Peygamber siyeri ve İslam tarihi üzerine kapsamlı bir makale ve araştırma koleksiyonunu keşfedin',
         'hero_title' => 'Makale Kütüphanesi',
@@ -28,6 +55,10 @@ return [
         'view_list' => 'Liste görünümü',
         'featured' => 'Öne çıkan',
         'read_more' => 'Devamını oku',
+        'read_less' => 'Daha az göster',
+        'previous_article' => 'Önceki makale',
+        'next_article' => 'Sonraki makale',
+        'gallery' => 'Resim galerisi',
         'min_read' => 'dk okuma',
         'views' => 'görüntülenme',
         'by_author' => 'Yazan',
@@ -53,5 +84,15 @@ return [
         'back_to_articles' => 'Makalelere dön',
         'published_on' => 'Yayınlanma tarihi',
         'hijri' => 'H',
+    ],
+
+    'status' => [
+        'all' => 'Tüm durumlar',
+        'draft' => 'Taslak',
+        'published' => 'Yayınlandı',
+        'scheduled' => 'Zamanlanmış',
+        'pending' => 'İncelemede',
+        'archived' => 'Arşivlendi',
+        'trashed' => 'Çöp kutusunda',
     ],
 ];

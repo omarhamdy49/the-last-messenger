@@ -7,12 +7,18 @@
     <x-admin.media-picker-modal />
 
     JavaScript API:
-    window.MediaPicker.open({ mode: 'single|multiple', type: 'image|video|all', onSelect: callback })
+    window.MediaPicker.open({ mode: 'single|multiple', type: 'image|video|all', collection: 'seerah', onSelect: callback })
     window.MediaPicker.close()
     window.MediaPicker.getSelected()
+
+    The upload "Collection" field defaults to the current admin module (derived from the
+    URL, e.g. seerah / articles / media). Pass a `collection` prop to override, or a
+    `collection` option to open() for a per-open override.
 --}}
 
-<div x-data="mediaPickerModal()"
+@props(['collection' => null])
+
+<div x-data="mediaPickerModal(@js($collection))"
      x-show="isOpen"
      x-cloak
      @open-media-library.window="handleOpen($event.detail)"
@@ -407,8 +413,14 @@
                                                :class="$root.darkMode ? 'text-gray-400' : 'text-gray-600'"
                                                x-text="formatFileSize(file.size)"></p>
 
+                                            <!-- Error Reason -->
+                                            <p x-show="file.status === 'error' && file.error"
+                                               class="mt-1 text-xs text-red-500"
+                                               x-text="file.error"></p>
+
                                             <!-- Progress Bar -->
-                                            <div class="mt-2 h-1.5 rounded-full overflow-hidden"
+                                            <div x-show="file.status !== 'error'"
+                                                 class="mt-2 h-1.5 rounded-full overflow-hidden"
                                                  :class="$root.darkMode ? 'bg-gray-700' : 'bg-gray-200'">
                                                 <div class="h-full bg-gradient-to-r from-[#0056b3] to-[#218838] transition-all duration-300"
                                                      :style="`width: ${file.progress}%`">
@@ -574,8 +586,11 @@
 
 @push('scripts')
 <script>
-function mediaPickerModal() {
+function mediaPickerModal(defaultCollection = null) {
     return {
+        // Collection the upload tab pre-fills: explicit prop wins, otherwise the
+        // current admin module derived from the URL (set in init()).
+        moduleCollection: defaultCollection || '',
         translations: {
             singleHelp: @json(__('media.picker.single_help')),
             multipleHelp: @json(__('media.picker.multiple_help')),
@@ -584,6 +599,12 @@ function mediaPickerModal() {
                 video: @json(__('media.types.video')),
                 audio: @json(__('media.types.audio')),
                 document: @json(__('media.types.document')),
+            },
+            sizeLabels: {
+                original: @json(__('media.picker.size_original')),
+                thumbnail: @json(__('media.picker.size_thumbnail')),
+                medium: @json(__('media.picker.size_medium')),
+                large: @json(__('media.picker.size_large')),
             },
         },
         isOpen: false,
@@ -598,6 +619,8 @@ function mediaPickerModal() {
         hasMorePages: false,
         onSelectCallback: null,
         currentTarget: null, // 'thumbnail', 'gallery', etc.
+        // Per-image chosen size/quality variant, keyed by media id (defaults to 'original').
+        selectedVariants: {},
         collectionName: '',
         tagsText: '',
         generateSizes: true,
@@ -613,6 +636,13 @@ function mediaPickerModal() {
         uploadQueue: [],
 
         init() {
+            // Resolve the default upload collection from the current admin module
+            // unless an explicit collection prop was provided.
+            if (!this.moduleCollection) {
+                this.moduleCollection = this.deriveCollectionFromUrl();
+            }
+            this.collectionName = this.moduleCollection;
+
             // Set up global MediaPicker API
             window.MediaPicker = {
                 open: (options = {}) => {
@@ -625,6 +655,37 @@ function mediaPickerModal() {
                     return this.selectedItems;
                 }
             };
+        },
+
+        // Derive a clean module name from the admin URL so uploads land in a
+        // per-module collection (e.g. seerah / articles / media) instead of "general".
+        deriveCollectionFromUrl() {
+            const match = window.location.pathname.match(/\/admin\/([a-z0-9-]+)/i);
+            if (!match) {
+                return '';
+            }
+
+            const segment = match[1].toLowerCase();
+
+            // Already inside the media library itself — don't force a collection.
+            if (segment === 'media-library') {
+                return '';
+            }
+
+            // Group related admin sections under one clean module collection.
+            const groups = {
+                seerah: ['seerah-events', 'seerah-event-types', 'seerah-milestones'],
+                media: ['media-programs', 'media-episodes', 'media-categories', 'live-channels', 'series'],
+                quran: ['quran', 'surahs', 'verses', 'tafseer', 'tafsir-resources', 'reciters', 'revelation-contexts'],
+            };
+
+            for (const [module, segments] of Object.entries(groups)) {
+                if (segments.includes(segment)) {
+                    return module;
+                }
+            }
+
+            return segment;
         },
 
         handleOpen(options = {}) {
@@ -640,7 +701,10 @@ function mediaPickerModal() {
 
             this.filterType = options.type || 'all';
             this.onSelectCallback = options.onSelect || null;
+            // Per-open override wins; otherwise fall back to the module default.
+            this.collectionName = options.collection || this.moduleCollection;
             this.selectedItems = [];
+            this.selectedVariants = {};
             this.activeTab = 'browse';
             this.searchQuery = '';
             this.currentPage = 1;
@@ -660,9 +724,10 @@ function mediaPickerModal() {
         close() {
             this.isOpen = false;
             this.selectedItems = [];
+            this.selectedVariants = {};
             this.mediaItems = [];
             this.uploadQueue = [];
-            this.collectionName = '';
+            this.collectionName = this.moduleCollection;
             this.tagsText = '';
             this.generateSizes = true;
             this.optimizeOriginals = true;
@@ -842,14 +907,79 @@ function mediaPickerModal() {
 
         clearSelection() {
             this.selectedItems = [];
+            this.selectedVariants = {};
+        },
+
+        // --- Image quality / size selection -------------------------------
+
+        sizeLabel(key) {
+            return this.translations.sizeLabels[key] || key;
+        },
+
+        // Selectable sizes for an image: the original plus every generated
+        // variant (thumbnail / medium / large). Non-images have no choices.
+        sizeOptionsFor(media) {
+            if (!media || !(media.is_image || (media.mime_type || '').startsWith('image/'))) {
+                return [];
+            }
+
+            const options = [{
+                key: 'original',
+                label: this.sizeLabel('original'),
+                url: media.src || media.url,
+                width: media.width,
+                height: media.height,
+            }];
+
+            Object.entries(media.variants || {}).forEach(([key, variant]) => {
+                options.push({
+                    key,
+                    label: this.sizeLabel(key),
+                    url: variant.url,
+                    width: variant.width || null,
+                    height: variant.height || null,
+                });
+            });
+
+            return options;
+        },
+
+        variantKeyFor(media) {
+            return this.selectedVariants[media.id] || 'original';
+        },
+
+        selectVariant(media, key) {
+            // Reassign so Alpine tracks the change.
+            this.selectedVariants = { ...this.selectedVariants, [media.id]: key };
+        },
+
+        // Return a copy of the media with url/src/dimensions pointed at the
+        // chosen size, plus explicit selected_variant fields for consumers.
+        applySelectedVariant(media) {
+            const key = this.variantKeyFor(media);
+            const variant = key !== 'original' ? (media.variants || {})[key] : null;
+
+            if (!variant) {
+                return { ...media, selected_variant: 'original', selected_variant_url: media.src || media.url };
+            }
+
+            return {
+                ...media,
+                url: variant.url,
+                src: variant.url,
+                width: variant.width ?? media.width,
+                height: variant.height ?? media.height,
+                size: variant.size ?? media.size,
+                selected_variant: key,
+                selected_variant_url: variant.url,
+            };
         },
 
         confirmSelection() {
             if (this.selectedItems.length === 0) return;
 
-            const result = this.selectionMode === 'single'
-                ? this.selectedItems[0]
-                : this.selectedItems;
+            const resolved = this.selectedItems.map(media => this.applySelectedVariant(media));
+            const result = this.selectionMode === 'single' ? resolved[0] : resolved;
 
             if (this.onSelectCallback) {
                 this.onSelectCallback(result);
@@ -903,13 +1033,18 @@ function mediaPickerModal() {
 
         async uploadFiles(files) {
             for (const file of files) {
-                const queueItem = {
+                // Push a plain object, then grab the reactive proxy Alpine wraps it in.
+                // Mutating that proxy (not the original literal) is what re-renders the
+                // progress bar / status in the DOM.
+                const length = this.uploadQueue.push({
                     name: file.name,
                     size: file.size,
                     progress: 0,
                     status: 'uploading',
-                    preview: null
-                };
+                    preview: null,
+                    error: null
+                });
+                const queueItem = this.uploadQueue[length - 1];
 
                 // Generate preview for images
                 if (file.type.startsWith('image/')) {
@@ -920,7 +1055,6 @@ function mediaPickerModal() {
                     reader.readAsDataURL(file);
                 }
 
-                this.uploadQueue.push(queueItem);
                 await this.uploadFile(file, queueItem);
             }
         },
@@ -949,32 +1083,21 @@ function mediaPickerModal() {
 
                         const response = JSON.parse(xhr.responseText);
 
-                        // Add to media grid
-                        this.mediaItems.unshift(response.data);
-
-                        // Auto-select if single mode
+                        // Auto-select the freshly uploaded item.
                         if (this.selectionMode === 'single') {
                             this.selectedItems = [response.data];
+                        } else if (! this.selectedItems.some(item => item.id === response.data.id)) {
+                            this.selectedItems.push(response.data);
                         }
 
-                        // Remove from queue after 2 seconds
-                        setTimeout(() => {
-                            const index = this.uploadQueue.indexOf(queueItem);
-                            if (index > -1) {
-                                this.uploadQueue.splice(index, 1);
-                            }
-                        }, 2000);
-
-                        this.$nextTick(() => {
-                            lucide.createIcons();
-                        });
+                        this.onUploadComplete(queueItem);
                     } else {
-                        queueItem.status = 'error';
+                        this.failUpload(queueItem, this.extractUploadError(xhr));
                     }
                 });
 
                 xhr.addEventListener('error', () => {
-                    queueItem.status = 'error';
+                    this.failUpload(queueItem, @js(__('media.picker.upload_network_error')));
                 });
 
                 xhr.open('POST', @json(route('admin.media-library.store')));
@@ -983,8 +1106,54 @@ function mediaPickerModal() {
                 xhr.send(formData);
             } catch (error) {
                 console.error('Upload failed:', error);
-                queueItem.status = 'error';
+                this.failUpload(queueItem, @js(__('media.picker.upload_network_error')));
             }
+        },
+
+        // Pull the most useful human-readable reason out of a failed upload
+        // response: Laravel sends { message, errors: { file: [...] } } on 422.
+        extractUploadError(xhr) {
+            const fallback = @js(__('media.picker.upload_failed'));
+
+            try {
+                const payload = JSON.parse(xhr.responseText);
+                const fieldError = payload?.errors && Object.values(payload.errors)?.[0]?.[0];
+
+                return fieldError || payload?.message || fallback;
+            } catch (error) {
+                return fallback;
+            }
+        },
+
+        failUpload(queueItem, message) {
+            queueItem.status = 'error';
+            queueItem.error = message;
+
+            if (typeof window.showToast === 'function') {
+                window.showToast(message, 'error');
+            }
+        },
+
+        // A file finished uploading: briefly show 100%, drop it from the queue,
+        // and once every queued upload has settled jump to the library tab and
+        // reload so the new image(s) are visible (and stay selected).
+        onUploadComplete(queueItem) {
+            setTimeout(() => {
+                const index = this.uploadQueue.indexOf(queueItem);
+                if (index > -1) {
+                    this.uploadQueue.splice(index, 1);
+                }
+
+                const allSettled = this.uploadQueue.every(item => item.status !== 'uploading');
+                const hasErrors = this.uploadQueue.some(item => item.status === 'error');
+
+                // Keep the user on the upload tab if something still needs their
+                // attention (an upload in flight, or a failure to read).
+                if (allSettled && ! hasErrors) {
+                    this.activeTab = 'browse';
+                    this.loadMedia(1);
+                }
+            }, 600);
         }
     };
 }

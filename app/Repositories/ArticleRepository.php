@@ -50,6 +50,7 @@ class ArticleRepository
     public function searchArticles(string $query, string $locale = 'ar', int $perPage = 15): LengthAwarePaginator
     {
         return Article::query()
+            ->where('status', 'published')
             ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,slug,type,status', 'category.translations:id,category_id,locale,name'])
             ->whereHas('locales', function ($q) use ($query, $locale) {
                 $q->where('locale', $locale)
@@ -196,6 +197,7 @@ class ArticleRepository
                 'tags:tags.id,tags.slug',
                 'tags.translations:id,tag_id,locale,name',
             ])
+            ->where('status', 'published')
             ->whereHas('locales', function ($q) use ($locale) {
                 $q->where('locale', $locale)->where('is_ready', true);
             })
@@ -241,6 +243,7 @@ class ArticleRepository
                 'category.translations:id,category_id,locale,name',
             ])
             ->whereKeyNot($articleId)
+            ->where('status', 'published')
             ->where(function (Builder $q) use ($categoryIds, $tagIds) {
                 if ($categoryIds !== []) {
                     $q->whereIn('category_id', $categoryIds)
@@ -275,6 +278,44 @@ class ArticleRepository
     }
 
     /**
+     * Resolve the previous (older) and next (newer) ready+published articles
+     * relative to the given one, ordered by created_at. Used for the in-article
+     * prev/next reader navigation.
+     *
+     * @return array{prev: ?Article, next: ?Article}
+     */
+    public function getAdjacentForPublic(int $articleId, ?\Carbon\CarbonInterface $createdAt): array
+    {
+        if ($createdAt === null) {
+            return ['prev' => null, 'next' => null];
+        }
+
+        $base = fn () => Article::query()
+            ->select(['id', 'slug', 'thumb', 'writer_id', 'category_id', 'read_time', 'views', 'is_featured', 'hijri_date', 'created_at'])
+            ->with([
+                'locales:id,article_id,locale,title,slug,excerpt,description,is_ready',
+                'writer:id,name',
+                'category:id,slug,type,status',
+                'category.translations:id,category_id,locale,name',
+            ])
+            ->whereKeyNot($articleId)
+            ->where('status', 'published')
+            ->whereHas('locales', fn ($q) => $q->where('is_ready', true));
+
+        $prev = $base()
+            ->where('created_at', '<', $createdAt)
+            ->orderByDesc('created_at')
+            ->first();
+
+        $next = $base()
+            ->where('created_at', '>', $createdAt)
+            ->orderBy('created_at')
+            ->first();
+
+        return ['prev' => $prev, 'next' => $next];
+    }
+
+    /**
      * Get categories that have at least one published article, with the real
      * published-article count (primary category — matches the public index
      * filter, which filters cards by their primary categoryId).
@@ -284,7 +325,8 @@ class ArticleRepository
     public function getPublishedCategoryFacets(): Collection
     {
         $published = function ($q): void {
-            $q->whereHas('locales', fn ($l) => $l->where('is_ready', true));
+            $q->where('articles.status', 'published')
+                ->whereHas('locales', fn ($l) => $l->where('is_ready', true));
         };
 
         return Category::query()
@@ -305,7 +347,8 @@ class ArticleRepository
     public function getPublishedTagFacets(int $limit = 20): Collection
     {
         $published = function ($q): void {
-            $q->whereHas('locales', fn ($l) => $l->where('is_ready', true));
+            $q->where('articles.status', 'published')
+                ->whereHas('locales', fn ($l) => $l->where('is_ready', true));
         };
 
         return Tag::query()
@@ -321,12 +364,67 @@ class ArticleRepository
     /**
      * Increment article views
      */
-    public function incrementViews(int $articleId): void
+    public function incrementViews(int $articleId): int
     {
         Article::where('id', $articleId)->increment('views');
 
         // Clear statistics cache
         Cache::forget('article_statistics');
+
+        return (int) (Article::where('id', $articleId)->value('views') ?? 0);
+    }
+
+    /**
+     * Publish every scheduled article whose scheduled_at has passed: flip it to
+     * published, stamp published_at, and clear scheduled_at. Busts the public
+     * caches so the article appears on the next request. Returns the count.
+     */
+    public function publishDueScheduled(): int
+    {
+        $due = Article::query()
+            ->where('status', 'scheduled')
+            ->whereNotNull('scheduled_at')
+            ->where('scheduled_at', '<=', now())
+            ->with('locales:id,article_id,locale,slug')
+            ->get(['id']);
+
+        if ($due->isEmpty()) {
+            return 0;
+        }
+
+        Article::whereKey($due->pluck('id'))->update([
+            'status' => 'published',
+            'published_at' => now(),
+            'scheduled_at' => null,
+        ]);
+
+        $this->forgetPublicCaches($due);
+
+        return $due->count();
+    }
+
+    /**
+     * Forget the cached public index + show payloads affected by a status change
+     * so newly published articles surface immediately (the show cache may hold a
+     * null/404 entry from when the article was still scheduled).
+     *
+     * @param  \Illuminate\Support\Collection<int, Article>  $articles
+     */
+    private function forgetPublicCaches($articles): void
+    {
+        $locales = array_keys((array) config('app.supported_locales', ['ar' => []]));
+
+        foreach ($locales as $locale) {
+            Cache::forget("public_articles_index_{$locale}");
+        }
+
+        foreach ($articles as $article) {
+            foreach ($article->locales as $localeRow) {
+                foreach ($locales as $locale) {
+                    Cache::forget("public_article_show_{$localeRow->slug}_{$locale}");
+                }
+            }
+        }
     }
 
     /**
@@ -419,6 +517,7 @@ class ArticleRepository
             ->with(['locales' => function ($q) {
                 $q->where('is_ready', true);
             }, 'writer:id,name', 'category:id,slug,type,status', 'category.translations:id,category_id,locale,name'])
+            ->where('status', 'published')
             ->whereHas('locales', function ($q) {
                 $q->where('is_ready', true);
             })
@@ -434,6 +533,7 @@ class ArticleRepository
     {
         return Article::query()
             ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,slug,type,status', 'category.translations:id,category_id,locale,name'])
+            ->where('status', 'published')
             ->whereHas('tags', function ($q) use ($tagId) {
                 $q->where('tags.id', $tagId);
             })
@@ -470,17 +570,20 @@ class ArticleRepository
             return null;
         }
 
-        return Article::with([
-            'locales:id,article_id,locale,title,slug,description,excerpt,content,seo_metadata,is_ready',
-            'writer:id,name',
-            'category:id,slug,type,status',
-            'category.translations:id,category_id,locale,name',
-            'categories:id,slug,type,status',
-            'categories.translations:id,category_id,locale,name',
-            'tags:id,slug',
-            'tags.translations:id,tag_id,locale,name',
-            'mediaItems',
-        ])->find($articleLocale->article_id);
+        return Article::query()
+            ->where('status', 'published')
+            ->with([
+                'locales:id,article_id,locale,title,slug,description,excerpt,content,seo_metadata,is_ready',
+                'writer:id,name',
+                'category:id,slug,type,status',
+                'category.translations:id,category_id,locale,name',
+                'categories:id,slug,type,status',
+                'categories.translations:id,category_id,locale,name',
+                'tags:id,slug',
+                'tags.translations:id,tag_id,locale,name',
+                'mediaItems',
+                'gallery:id,article_id,image,caption,order',
+            ])->find($articleLocale->article_id);
     }
 
     /**
@@ -691,9 +794,10 @@ class ArticleRepository
                     });
                     break;
                 case 'published':
-                    $query->whereHas('locales', function ($q) {
-                        $q->where('is_ready', true);
-                    });
+                    $query->where('status', 'published')
+                        ->whereHas('locales', function ($q) {
+                            $q->where('is_ready', true);
+                        });
                     break;
             }
         }

@@ -316,15 +316,12 @@
                            :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'">
                 </div>
 
-                {{-- Hijri Date --}}
+                {{-- Hijri Date (calendar picker) --}}
                 <div>
-                    <label class="block text-xs font-medium mb-1" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">
-                        {{ __('articles.fields.hijri_date') }}
-                    </label>
-                    <input type="text" name="hijri_date" x-model="formData.hijri_date"
-                           placeholder="{{ __('articles.help.hijri_date') }}"
-                           class="w-full px-3 py-2 rounded-lg border text-sm"
-                           :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                    <x-admin.hijri-date-picker
+                        name="hijri_date"
+                        :label="__('articles.fields.hijri_date')"
+                        :value="$formArticle['hijri_date'] ?? ($currentHijriDate ?? '')" />
                 </div>
 
                 {{-- Read Time --}}

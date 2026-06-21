@@ -3,8 +3,35 @@
 declare(strict_types=1);
 
 return [
+    // Inline module embeds inside article body (Quran / Hadith / Companion / Seerah)
+    'embed' => [
+        'quran' => 'Verset coranique',
+        'hadith' => 'Hadith',
+        'companion' => 'Compagnon',
+        'seerah' => 'Événement de la Sîra',
+        'view_in_quran' => 'Voir dans le Coran',
+        'view_hadith' => 'Voir le hadith',
+        'view_companion' => 'Voir le compagnon',
+        'view_profile' => 'Voir la biographie',
+        'view_event' => 'Voir l\'événement',
+        'verse_one' => 'Verset :n',
+        'verse_range' => 'Versets :from–:to',
+        'hijri' => 'AH',
+    ],
+
     // Public site (frontend) strings
     'public' => [
+        'sources' => 'Sources et références',
+        'quick_stats' => 'Statistiques rapides',
+        'share_article' => 'Partager l\'article',
+        'font_size' => 'Taille du texte',
+        'print' => 'Imprimer',
+        'like' => 'J\'aime',
+        'comments' => 'Commentaires',
+        'comments_coming_soon' => 'Les commentaires arrivent bientôt',
+        'follow' => 'Suivre',
+        'close' => 'Fermer',
+        'download' => 'Télécharger',
         'page_title' => 'Bibliothèque d\'articles',
         'page_description' => 'Découvrez une collection complète d\'articles et d\'études sur la biographie prophétique et l\'histoire islamique',
         'hero_title' => 'Bibliothèque d\'articles',
@@ -28,6 +55,10 @@ return [
         'view_list' => 'Vue liste',
         'featured' => 'À la une',
         'read_more' => 'Lire la suite',
+        'read_less' => 'Afficher moins',
+        'previous_article' => 'Article précédent',
+        'next_article' => 'Article suivant',
+        'gallery' => 'Galerie d\'images',
         'min_read' => 'min de lecture',
         'views' => 'vues',
         'by_author' => 'Par',
@@ -53,5 +84,15 @@ return [
         'back_to_articles' => 'Retour aux articles',
         'published_on' => 'Publié le',
         'hijri' => 'AH',
+    ],
+
+    'status' => [
+        'all' => 'Tous les statuts',
+        'draft' => 'Brouillon',
+        'published' => 'Publié',
+        'scheduled' => 'Planifié',
+        'pending' => 'En attente de révision',
+        'archived' => 'Archivé',
+        'trashed' => 'Supprimé',
     ],
 ];

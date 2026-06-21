@@ -5,6 +5,13 @@ declare(strict_types=1);
 return [
     'picker' => [
         'browse' => 'Parcourir la bibliothèque',
+        'upload_failed' => 'Échec du téléversement',
+        'upload_network_error' => 'Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.',
+        'quality' => 'Qualité',
+        'size_original' => 'Original',
+        'size_thumbnail' => 'Miniature',
+        'size_medium' => 'Moyenne',
+        'size_large' => 'Grande',
     ],
     // Public "coming soon" programs page
     'public' => [

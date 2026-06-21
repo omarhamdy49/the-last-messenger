@@ -577,6 +577,13 @@ return [
         'selected_items' => 'محددة',
         'no_items_selected' => 'لا توجد عناصر محددة',
         'confirm_selection' => 'تأكيد الاختيار',
+        'upload_failed' => 'فشل رفع الملف',
+        'upload_network_error' => 'تعذّر الاتصال بالخادم. تحقّق من الشبكة وحاول مجددًا.',
+        'quality' => 'الجودة',
+        'size_original' => 'الأصل',
+        'size_thumbnail' => 'مصغّرة',
+        'size_medium' => 'متوسطة',
+        'size_large' => 'كبيرة',
     ],
 
     'upload_modal' => [

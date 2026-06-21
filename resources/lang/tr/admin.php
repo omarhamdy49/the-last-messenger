@@ -835,6 +835,9 @@ return [
     'gregorian_year_to' => 'Miladi yıl (bitiş)',
     'gregorian' => 'Miladi',
     'hijri_year_hint' => 'Hicret öncesi yıllar için negatif sayı kullanın (örn. 53 ÖH için -53).',
+    'hijri_pick' => 'Hicri tarih seç',
+    'hijri_today' => 'Bugün',
+    'hijri_clear' => 'Temizle',
     'order' => 'Sıra',
 
 ];

@@ -312,6 +312,13 @@ return [
         'selected_items' => 'selected',
         'no_items_selected' => 'No items selected',
         'confirm_selection' => 'Confirm Selection',
+        'upload_failed' => 'Upload failed',
+        'upload_network_error' => 'Could not reach the server. Check your connection and try again.',
+        'quality' => 'Quality',
+        'size_original' => 'Original',
+        'size_thumbnail' => 'Thumbnail',
+        'size_medium' => 'Medium',
+        'size_large' => 'Large',
     ],
 
     'upload_modal' => [

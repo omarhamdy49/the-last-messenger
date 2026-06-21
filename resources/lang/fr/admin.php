@@ -835,6 +835,9 @@ return [
     'gregorian_year_to' => 'Année grégorienne (à)',
     'gregorian' => 'Grégorien',
     'hijri_year_hint' => 'Utilisez un nombre négatif pour les années avant l\'Hégire (ex. -53 pour 53 av. H.).',
+    'hijri_pick' => 'Choisir la date hégirienne',
+    'hijri_today' => 'Aujourd\'hui',
+    'hijri_clear' => 'Effacer',
     'order' => 'Ordre',
 
 ];

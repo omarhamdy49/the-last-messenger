@@ -63,12 +63,12 @@ final class CreateArticleData
     /**
      * Construct a CreateArticleData instance from the validated store request.
      */
-    public static function fromRequest(StoreArticleRequest $request): self
+    public static function fromRequest(StoreArticleRequest $request, ?UploadedFile $thumbOverride = null): self
     {
         $validated = $request->validated();
 
         return new self(
-            thumb: $request->hasFile('thumb') ? $request->file('thumb') : null,
+            thumb: $request->hasFile('thumb') ? $request->file('thumb') : $thumbOverride,
             writerId: (int) ($validated['writer_id'] ?? auth()->id()),
             readTime: isset($validated['read_time']) ? (int) $validated['read_time'] : null,
             isFeatured: $request->boolean('is_featured'),

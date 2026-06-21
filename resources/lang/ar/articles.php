@@ -3,8 +3,35 @@
 declare(strict_types=1);
 
 return [
+    // Inline module embeds inside article body (Quran / Hadith / Companion / Seerah)
+    'embed' => [
+        'quran' => 'آية قرآنية',
+        'hadith' => 'حديث شريف',
+        'companion' => 'صحابي',
+        'seerah' => 'حدث من السيرة',
+        'view_in_quran' => 'عرض في المصحف',
+        'view_hadith' => 'عرض الحديث',
+        'view_companion' => 'عرض الصحابي',
+        'view_profile' => 'عرض السيرة الذاتية',
+        'view_event' => 'عرض الحدث',
+        'verse_one' => 'آية :n',
+        'verse_range' => 'الآيات :from-:to',
+        'hijri' => 'هـ',
+    ],
+
     // Public site (frontend) strings
     'public' => [
+        'sources' => 'المصادر والمراجع',
+        'quick_stats' => 'إحصائيات سريعة',
+        'share_article' => 'مشاركة المقال',
+        'font_size' => 'حجم الخط',
+        'print' => 'طباعة',
+        'like' => 'إعجاب',
+        'comments' => 'التعليقات',
+        'comments_coming_soon' => 'ميزة التعليقات قادمة قريباً',
+        'follow' => 'متابعة',
+        'close' => 'إغلاق',
+        'download' => 'تحميل',
         'page_title' => 'مكتبة المقالات',
         'page_description' => 'اكتشف مجموعة شاملة من المقالات والدراسات في السيرة النبوية والتاريخ الإسلامي',
         'hero_title' => 'مكتبة المقالات',
@@ -28,6 +55,10 @@ return [
         'view_list' => 'عرض قائمة',
         'featured' => 'مميّز',
         'read_more' => 'اقرأ المزيد',
+        'read_less' => 'عرض أقل',
+        'previous_article' => 'المقال السابق',
+        'next_article' => 'المقال التالي',
+        'gallery' => 'معرض الصور',
         'min_read' => 'دقيقة قراءة',
         'views' => 'مشاهدة',
         'by_author' => 'بقلم',
@@ -485,11 +516,6 @@ return [
         'hadith_short' => 'حديث',
         'sahabi_short' => 'صحابي',
         'seerah_short' => 'سيرة',
-    ],
-
-    'embed' => [
-        'view_profile' => 'عرض السيرة الذاتية',
-        'view_event' => 'عرض الحدث',
     ],
 
     // Empty states (additional)

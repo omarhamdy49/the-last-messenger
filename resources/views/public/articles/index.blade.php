@@ -136,6 +136,12 @@
                         </template>
                     </div>
                 </div>
+
+                {{-- Results count --}}
+                <div class="card-premium p-6 text-center">
+                    <div class="text-4xl font-bold text-gradient" x-text="filtered.length"></div>
+                    <div class="text-sm mt-1 text-gray-500 dark:text-gray-400">{{ __('articles.public.article_unit') }}</div>
+                </div>
             </aside>
 
             {{-- ============================================================ --}}
@@ -245,6 +251,8 @@
                             {{-- Image --}}
                             <div class="relative aspect-[16/10] overflow-hidden bg-gray-100 dark:bg-[#0f3460]">
                                 <img :src="article.image" :alt="article.title" loading="lazy"
+                                     onerror="this.style.display='none';this.parentElement.classList.add('img-gradient-fallback')"
+                                     onload="this.style.display='';this.parentElement.classList.remove('img-gradient-fallback')"
                                      class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
                                 <template x-if="article.isFeatured">
                                     <span class="absolute top-3 start-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-l from-primary to-secondary text-white shadow">
@@ -270,10 +278,7 @@
 
                                 {{-- Meta --}}
                                 <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-100 dark:border-[#0f3460]">
-                                    <span class="inline-flex items-center gap-1.5 min-w-0">
-                                        <i data-lucide="user" class="w-3.5 h-3.5 shrink-0"></i>
-                                        <span class="truncate" x-text="article.author || '{{ __('articles.public.unknown_author') }}'"></span>
-                                    </span>
+                                    <span class="text-gray-400 dark:text-gray-500" x-text="article.dateLabel"></span>
                                     <span class="inline-flex items-center gap-3 shrink-0">
                                         <span class="inline-flex items-center gap-1">
                                             <i data-lucide="clock" class="w-3.5 h-3.5"></i>
@@ -285,7 +290,6 @@
                                         </span>
                                     </span>
                                 </div>
-                                <div class="mt-2 text-xs text-gray-400 dark:text-gray-500" x-text="article.dateLabel"></div>
                             </div>
                         </a>
                     </template>
@@ -300,6 +304,8 @@
                            class="group card-premium overflow-hidden flex flex-col sm:flex-row hover-lift">
                             <div class="relative sm:w-56 shrink-0 aspect-[16/10] sm:aspect-auto overflow-hidden bg-gray-100 dark:bg-[#0f3460]">
                                 <img :src="article.image" :alt="article.title" loading="lazy"
+                                     onerror="this.style.display='none';this.parentElement.classList.add('img-gradient-fallback')"
+                                     onload="this.style.display='';this.parentElement.classList.remove('img-gradient-fallback')"
                                      class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
                                 <template x-if="article.isFeatured">
                                     <span class="absolute top-3 start-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-l from-primary to-secondary text-white shadow">
@@ -319,10 +325,6 @@
                                     x-text="article.title"></h3>
                                 <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-4 flex-1" x-text="article.excerpt"></p>
                                 <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
-                                    <span class="inline-flex items-center gap-1.5">
-                                        <i data-lucide="user" class="w-3.5 h-3.5"></i>
-                                        <span x-text="article.author || '{{ __('articles.public.unknown_author') }}'"></span>
-                                    </span>
                                     <span class="inline-flex items-center gap-1">
                                         <i data-lucide="clock" class="w-3.5 h-3.5"></i>
                                         <span x-text="article.readTime"></span>{{ __('articles.public.min_read') }}

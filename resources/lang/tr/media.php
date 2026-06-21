@@ -5,6 +5,13 @@ declare(strict_types=1);
 return [
     'picker' => [
         'browse' => 'Kitaplığa Göz At',
+        'upload_failed' => 'Yükleme başarısız',
+        'upload_network_error' => 'Sunucuya ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.',
+        'quality' => 'Kalite',
+        'size_original' => 'Orijinal',
+        'size_thumbnail' => 'Küçük resim',
+        'size_medium' => 'Orta',
+        'size_large' => 'Büyük',
     ],
     // Public "coming soon" programs page
     'public' => [
