@@ -33,6 +33,7 @@ return [
         'close' => 'Close',
         'download' => 'Download',
         'page_title' => 'Articles Library',
+        'meta_title' => 'Articles & Studies on the Prophetic Biography & Islamic History',
         'page_description' => 'Discover a comprehensive collection of articles and studies on the Prophetic biography and Islamic history',
         'hero_title' => 'Articles Library',
         'hero_subtitle' => 'Discover a comprehensive collection of articles and studies on the Prophetic biography and Islamic history',

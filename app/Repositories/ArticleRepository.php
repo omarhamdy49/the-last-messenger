@@ -207,6 +207,26 @@ class ArticleRepository
     }
 
     /**
+     * Published articles for the XML sitemap: id + updated_at (lastmod) and the
+     * slug of every READY locale (for hreflang alternates in the sitemap).
+     *
+     * @return Collection<int, Article>
+     */
+    public function getPublishedForSitemap(): Collection
+    {
+        return Article::query()
+            ->select(['id', 'updated_at'])
+            ->where('status', 'published')
+            ->whereHas('locales', fn ($q) => $q->where('is_ready', true))
+            ->with(['locales' => fn ($q) => $q
+                ->where('is_ready', true)
+                ->select(['id', 'article_id', 'locale', 'slug']),
+            ])
+            ->orderByDesc('updated_at')
+            ->get();
+    }
+
+    /**
      * Get related published articles for the public single-article page.
      *
      * Same-category matches (primary or pivot) rank first, then shared-tag

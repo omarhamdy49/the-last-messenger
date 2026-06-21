@@ -3,8 +3,9 @@
 @php $isRtl = in_array(app()->getLocale(), ['ar', 'ur'], true); @endphp
 
 <nav aria-label="Breadcrumb" {{ $attributes->merge(['class' => 'flex items-center flex-wrap gap-1.5 text-sm text-gray-500 dark:text-gray-400']) }}>
-    <a href="{{ route('public.home') }}" class="hover:text-primary transition-colors flex items-center">
-        <i data-lucide="home" class="w-4 h-4"></i>
+    <a href="{{ route('public.home') }}" aria-label="{{ __('site.home') }}" class="hover:text-primary transition-colors flex items-center">
+        <i data-lucide="home" class="w-4 h-4" aria-hidden="true"></i>
+        <span class="sr-only">{{ __('site.home') }}</span>
     </a>
     @foreach ($items as $item)
         <i data-lucide="chevron-{{ $isRtl ? 'left' : 'right' }}" class="w-4 h-4 shrink-0 opacity-60"></i>

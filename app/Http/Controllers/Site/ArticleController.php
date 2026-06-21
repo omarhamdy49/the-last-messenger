@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Site;
 
 use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Models\Tag;
+use App\Domain\Shared\Models\Language;
 use App\Http\Controllers\Controller;
 use App\Models\Article;
 use App\Models\ArticleLocale;
@@ -74,11 +75,21 @@ final class ArticleController extends Controller
             },
         );
 
+        // The index exists in every active UI language → emit hreflang for each.
+        // Fall back to the full supported set when no languages are configured.
+        $activeCodes = Language::getActiveCodes() ?: ['ar', 'en', 'fr', 'tr', 'ur'];
+        $indexUrl = route('public.articles');
+        $hreflangAlternates = [];
+        foreach ($activeCodes as $code) {
+            $hreflangAlternates[$code] = $code === 'ar' ? $indexUrl : $indexUrl.'?lang='.$code;
+        }
+
         return view('public.articles.index', [
             'articles' => $payload['articles'],
             'categories' => $payload['categories'],
             'tags' => $payload['tags'],
             'totalCount' => count($payload['articles']),
+            'hreflangAlternates' => count($hreflangAlternates) > 1 ? $hreflangAlternates : [],
         ]);
     }
 
@@ -145,6 +156,7 @@ final class ArticleController extends Controller
             'related' => $payload['related'],
             'prev' => $payload['prev'] ?? null,
             'next' => $payload['next'] ?? null,
+            'hreflangAlternates' => $payload['article']['alternates'] ?? [],
         ]);
     }
 
@@ -226,11 +238,17 @@ final class ArticleController extends Controller
             'readTime' => (int) $article->read_time,
             'views' => (int) $article->views,
             'dateLabel' => optional($article->created_at)->translatedFormat('d F Y'),
+            // ISO 8601 timestamps for schema.org (display label is not valid there).
+            'datePublishedIso' => optional($article->published_at ?? $article->created_at)?->toAtomString(),
+            'dateModifiedIso' => optional($article->updated_at)?->toAtomString(),
+            'seoDescription' => Str::limit(strip_tags((string) ($articleLocale->excerpt ?: $articleLocale->description)), 155),
             'hijriDate' => $article->hijri_date,
             'references' => $this->normalizeReferences($article->references),
             'statistics' => $this->normalizeStatistics($article->statistics),
             'gallery' => $this->normalizeGallery($article, $locale),
-            'url' => route('public.articles.show', $articleLocale->slug),
+            'url' => $this->localeUrl($articleLocale->slug, $articleLocale->locale),
+            'canonical' => $this->localeUrl($articleLocale->slug, $articleLocale->locale),
+            'alternates' => $this->buildArticleAlternates($article),
         ];
     }
 
@@ -295,6 +313,40 @@ final class ArticleController extends Controller
                 'value' => (string) $row['value'],
             ])
             ->values()
+            ->all();
+    }
+
+    /**
+     * Build a public article URL for a given locale. The Arabic default lives at
+     * the bare slug URL; other locales carry an explicit ?lang= so a crawler that
+     * follows the hreflang/canonical link is served that language's content.
+     */
+    private function localeUrl(string $slug, string $locale): string
+    {
+        $url = route('public.articles.show', $slug);
+
+        return $locale === 'ar' ? $url : $url.'?lang='.$locale;
+    }
+
+    /**
+     * hreflang alternates for an article, built from its READY locales only (each
+     * with that locale's own slug). Returns [] for single-language articles so we
+     * never emit a pointless self-only hreflang set.
+     *
+     * @return array<string, string>
+     */
+    private function buildArticleAlternates(Article $article): array
+    {
+        $ready = ($article->relationLoaded('locales') ? $article->locales : $article->locales()->get())
+            ->filter(fn (ArticleLocale $row) => (bool) $row->is_ready && $row->slug);
+
+        if ($ready->count() < 2) {
+            return [];
+        }
+
+        return $ready
+            ->sortBy(fn (ArticleLocale $row) => $row->locale === 'ar' ? 0 : 1)
+            ->mapWithKeys(fn (ArticleLocale $row) => [$row->locale => $this->localeUrl($row->slug, $row->locale)])
             ->all();
     }
 

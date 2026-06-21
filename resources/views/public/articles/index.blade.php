@@ -1,6 +1,6 @@
 @extends('layouts.public')
 
-@section('title', __('articles.public.page_title'))
+@section('title', __('articles.public.meta_title'))
 @section('meta_description', __('articles.public.page_description'))
 
 @push('structured_data')
@@ -242,57 +242,63 @@
                 </div>
 
                 {{-- ============================================================ --}}
-                {{-- GRID VIEW --}}
+                {{-- GRID VIEW — server-rendered so every article is a real,    --}}
+                {{-- crawlable <a href> in the initial HTML (no JS required).    --}}
+                {{-- Alpine progressively enhances: per-card x-show drives the   --}}
+                {{-- active filter/page, CSS `order` applies the active sort.    --}}
                 {{-- ============================================================ --}}
                 <div x-show="view === 'grid'" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                    <template x-for="article in paginated" :key="article.id">
-                        <a :href="article.url"
+                    @foreach ($articles as $article)
+                        <a href="{{ $article['url'] }}"
+                           x-show="onPage({{ $article['id'] }})"
+                           :style="{ order: orderRank({{ $article['id'] }}) }"
                            class="group card-premium overflow-hidden flex flex-col hover-lift">
                             {{-- Image --}}
                             <div class="relative aspect-[16/10] overflow-hidden bg-gray-100 dark:bg-[#0f3460]">
-                                <img :src="article.image" :alt="article.title" loading="lazy"
+                                <img src="{{ $article['image'] }}" alt="{{ $article['title'] }}" loading="lazy"
                                      onerror="this.style.display='none';this.parentElement.classList.add('img-gradient-fallback')"
                                      onload="this.style.display='';this.parentElement.classList.remove('img-gradient-fallback')"
                                      class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
-                                <template x-if="article.isFeatured">
+                                @if ($article['isFeatured'])
                                     <span class="absolute top-3 start-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-l from-primary to-secondary text-white shadow">
                                         <i data-lucide="star" class="w-3 h-3"></i>
                                         {{ __('articles.public.featured') }}
                                     </span>
-                                </template>
-                                <template x-if="article.category">
-                                    <span class="absolute bottom-3 start-3 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/90 dark:bg-[#16213e]/90 text-primary backdrop-blur" x-text="article.category"></span>
-                                </template>
+                                @endif
+                                @if (! empty($article['category']))
+                                    <span class="absolute bottom-3 start-3 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/90 dark:bg-[#16213e]/90 text-primary backdrop-blur">{{ $article['category'] }}</span>
+                                @endif
                             </div>
 
                             {{-- Body --}}
                             <div class="p-5 flex flex-col flex-1">
-                                <div class="flex flex-wrap gap-1.5 mb-2" x-show="article.tags.length">
-                                    <template x-for="tag in article.tags.slice(0, 3)" :key="tag">
-                                        <span class="px-2 py-0.5 rounded text-[11px] font-medium bg-gray-100 dark:bg-[#0f3460] text-gray-600 dark:text-gray-300" x-text="tag"></span>
-                                    </template>
-                                </div>
-                                <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-primary transition-colors"
-                                    x-text="article.title"></h3>
-                                <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 mb-4 flex-1" x-text="article.excerpt"></p>
+                                @if (! empty($article['tags']))
+                                    <div class="flex flex-wrap gap-1.5 mb-2">
+                                        @foreach (array_slice($article['tags'], 0, 3) as $tag)
+                                            <span class="px-2 py-0.5 rounded text-[11px] font-medium bg-gray-100 dark:bg-[#0f3460] text-gray-600 dark:text-gray-300">{{ $tag }}</span>
+                                        @endforeach
+                                    </div>
+                                @endif
+                                <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-primary transition-colors">{{ $article['title'] }}</h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 mb-4 flex-1">{{ $article['excerpt'] }}</p>
 
                                 {{-- Meta --}}
                                 <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-100 dark:border-[#0f3460]">
-                                    <span class="text-gray-400 dark:text-gray-500" x-text="article.dateLabel"></span>
+                                    <span class="text-gray-400 dark:text-gray-500">{{ $article['dateLabel'] }}</span>
                                     <span class="inline-flex items-center gap-3 shrink-0">
                                         <span class="inline-flex items-center gap-1">
                                             <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-                                            <span x-text="article.readTime"></span>{{ __('articles.public.min_read') }}
+                                            {{ $article['readTime'] }}{{ __('articles.public.min_read') }}
                                         </span>
                                         <span class="inline-flex items-center gap-1">
                                             <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-                                            <span x-text="article.views"></span>
+                                            {{ $article['views'] }}
                                         </span>
                                     </span>
                                 </div>
                             </div>
                         </a>
-                    </template>
+                    @endforeach
                 </div>
 
                 {{-- ============================================================ --}}
@@ -457,6 +463,28 @@
                 const start = (this.page - 1) * this.perPage;
                 return this.filtered.slice(start, start + this.perPage);
             },
+
+            // --- Server-rendered grid enhancement -------------------------------
+            // The grid <a> cards are printed by Blade; Alpine only toggles which
+            // ones show (current filtered page) and their visual order (sort).
+            get pageIds() {
+                return new Set(this.paginated.map(a => a.id));
+            },
+
+            get orderMap() {
+                const map = {};
+                this.filtered.forEach((a, i) => { map[a.id] = i; });
+                return map;
+            },
+
+            onPage(id) {
+                return this.pageIds.has(id);
+            },
+
+            orderRank(id) {
+                return this.orderMap[id] ?? 0;
+            },
+            // --------------------------------------------------------------------
 
             get pageNumbers() {
                 const total = this.totalPages;

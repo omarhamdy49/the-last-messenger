@@ -28,12 +28,18 @@
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
     <meta name="theme-color" content="#0056b3">
 
-    {{-- SEO: canonical + locale alternates (ar default, en) --}}
+    {{-- SEO: canonical + locale alternates.
+         hreflang is emitted ONLY when a page supplies $hreflangAlternates
+         (locale => absolute URL) built from versions that actually exist — never
+         identical URLs for different languages, which Google treats as an error. --}}
     @php $canonicalUrl = url()->current(); @endphp
     <link rel="canonical" href="@yield('canonical', $canonicalUrl)">
-    <link rel="alternate" hreflang="ar" href="{{ $canonicalUrl }}">
-    <link rel="alternate" hreflang="en" href="{{ $canonicalUrl }}">
-    <link rel="alternate" hreflang="x-default" href="{{ $canonicalUrl }}">
+    @if (! empty($hreflangAlternates ?? []))
+        @foreach ($hreflangAlternates as $hl => $hlUrl)
+            <link rel="alternate" hreflang="{{ $hl }}" href="{{ $hlUrl }}">
+        @endforeach
+        <link rel="alternate" hreflang="x-default" href="{{ $hreflangAlternates['ar'] ?? reset($hreflangAlternates) }}">
+    @endif
     <meta name="robots" content="@yield('robots', 'index, follow')">
 
     {{-- Open Graph / Twitter --}}
@@ -41,12 +47,13 @@
     <meta property="og:title" content="@yield('title', $seoDefaultTitle)">
     <meta property="og:description" content="@yield('meta_description', $seoDefaultDescription)">
     <meta property="og:type" content="@yield('og_type', 'website')">
-    <meta property="og:url" content="{{ $canonicalUrl }}">
+    <meta property="og:url" content="@yield('canonical', $canonicalUrl)">
     <meta property="og:image" content="@yield('og_image', asset('images/site/rasool-allah-hero-section-bg.jpg'))">
     <meta property="og:locale" content="{{ ['ar' => 'ar_AR', 'en' => 'en_US', 'fr' => 'fr_FR', 'tr' => 'tr_TR', 'ur' => 'ur_PK'][$locale] ?? 'ar_AR' }}">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="@yield('title', $seoDefaultTitle)">
     <meta name="twitter:description" content="@yield('meta_description', $seoDefaultDescription)">
+    <meta name="twitter:image" content="@yield('og_image', asset('images/site/rasool-allah-hero-section-bg.jpg'))">
 
     {{-- Structured data: WebSite + SearchAction --}}
     <script type="application/ld+json">

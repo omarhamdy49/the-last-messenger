@@ -1,7 +1,8 @@
 @extends('layouts.public')
 
 @section('title', $article['title'])
-@section('meta_description', \Illuminate\Support\Str::limit(strip_tags($article['excerpt'] ?? ''), 155))
+@section('meta_description', $article['seoDescription'] ?? \Illuminate\Support\Str::limit(strip_tags($article['excerpt'] ?? ''), 155))
+@section('canonical', $article['canonical'])
 @section('og_type', 'article')
 @section('og_image', $article['image'])
 
@@ -10,17 +11,54 @@
     $tocJson = json_encode(array_column($article['toc'], 'id'), JSON_UNESCAPED_UNICODE);
 @endphp
 
+@push('head')
+    @if (! empty($article['datePublishedIso']))
+        <meta property="article:published_time" content="{{ $article['datePublishedIso'] }}">
+    @endif
+    @if (! empty($article['dateModifiedIso']))
+        <meta property="article:modified_time" content="{{ $article['dateModifiedIso'] }}">
+    @endif
+    @if (! empty($article['author']))
+        <meta property="article:author" content="{{ $article['author'] }}">
+    @endif
+    @if (! empty($article['category']))
+        <meta property="article:section" content="{{ $article['category'] }}">
+    @endif
+@endpush
+
 @push('structured_data')
 <script type="application/ld+json">
 {
     "@@context": "https://schema.org",
     "@@type": "Article",
-    "headline": @json($article['title']),
+    "headline": @json(\Illuminate\Support\Str::limit($article['title'], 110, '')),
+    "description": @json($article['seoDescription'] ?? ''),
     "image": @json($article['image']),
     "author": { "@@type": "Person", "name": @json($article['author']) },
-    "datePublished": @json($article['dateLabel']),
+    "publisher": {
+        "@@type": "Organization",
+        "name": @json(__('site.site_name')),
+        "logo": { "@@type": "ImageObject", "url": @json(asset('images/site/rasool-allah-seal.webp')) }
+    },
+@if (! empty($article['datePublishedIso']))
+    "datePublished": @json($article['datePublishedIso']),
+@endif
+@if (! empty($article['dateModifiedIso']))
+    "dateModified": @json($article['dateModifiedIso']),
+@endif
     "inLanguage": "{{ app()->getLocale() }}",
-    "mainEntityOfPage": @json($article['url'])
+    "mainEntityOfPage": { "@@type": "WebPage", "@@id": @json($article['canonical']) }
+}
+</script>
+<script type="application/ld+json">
+{
+    "@@context": "https://schema.org",
+    "@@type": "BreadcrumbList",
+    "itemListElement": [
+        { "@@type": "ListItem", "position": 1, "name": @json(__('site.home')), "item": @json(url('/')) },
+        { "@@type": "ListItem", "position": 2, "name": @json(__('articles.public.breadcrumb')), "item": @json(route('public.articles')) },
+        { "@@type": "ListItem", "position": 3, "name": @json($article['title']) }
+    ]
 }
 </script>
 @endpush
@@ -229,7 +267,7 @@
                                     <button type="button" :data-thumb="i" @click="select(i)"
                                             class="relative w-20 h-14 rounded-lg overflow-hidden shrink-0 bg-gray-100 dark:bg-[#0f3460] transition-all"
                                             :class="gi === i ? 'ring-2 ring-primary' : 'opacity-60 hover:opacity-100'">
-                                        <img :src="img.url" :alt="img.caption || ''"
+                                        <img :src="img.url" :alt="img.caption || title"
                                              onerror="this.style.display='none';this.parentElement.classList.add('img-gradient-fallback')"
                                              class="w-full h-full object-cover">
                                     </button>
@@ -274,7 +312,7 @@
                                         <button type="button" :data-thumb="i" @click="select(i)"
                                                 class="relative w-20 h-14 rounded-lg overflow-hidden shrink-0 transition-all"
                                                 :class="gi === i ? 'ring-2 ring-white' : 'opacity-50 hover:opacity-100'">
-                                            <img :src="img.url" :alt="img.caption || ''"
+                                            <img :src="img.url" :alt="img.caption || title"
                                                  onerror="this.style.display='none';this.parentElement.classList.add('img-gradient-fallback')"
                                                  class="w-full h-full object-cover">
                                         </button>

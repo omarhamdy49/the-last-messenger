@@ -33,6 +33,7 @@ return [
         'close' => 'Fermer',
         'download' => 'Télécharger',
         'page_title' => 'Bibliothèque d\'articles',
+        'meta_title' => 'Articles et études sur la biographie prophétique et l\'histoire islamique',
         'page_description' => 'Découvrez une collection complète d\'articles et d\'études sur la biographie prophétique et l\'histoire islamique',
         'hero_title' => 'Bibliothèque d\'articles',
         'hero_subtitle' => 'Découvrez une collection complète d\'articles et d\'études sur la biographie prophétique et l\'histoire islamique',

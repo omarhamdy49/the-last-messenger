@@ -65,6 +65,16 @@ class SetLocale
      */
     private function determineLocale(Request $request): string
     {
+        // 0. Explicit ?lang override — powers the per-language hreflang/canonical
+        //    URLs (so a crawler hitting ?lang=en actually gets English) and
+        //    shareable language links. Persists to the session for the visit.
+        $queryLocale = $request->query('lang');
+        if (is_string($queryLocale) && $this->isValidLocale($queryLocale)) {
+            Session::put('locale', $queryLocale);
+
+            return $queryLocale;
+        }
+
         // 1. Check authenticated user preference
         if (Auth::check() && Auth::user()->language) {
             $userLocale = Auth::user()->language;

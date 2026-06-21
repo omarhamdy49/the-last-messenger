@@ -33,6 +33,7 @@ return [
         'close' => 'Kapat',
         'download' => 'İndir',
         'page_title' => 'Makale Kütüphanesi',
+        'meta_title' => 'Siyer ve İslam Tarihi Üzerine Makaleler ve Çalışmalar',
         'page_description' => 'Peygamber siyeri ve İslam tarihi üzerine kapsamlı bir makale ve araştırma koleksiyonunu keşfedin',
         'hero_title' => 'Makale Kütüphanesi',
         'hero_subtitle' => 'Peygamber siyeri ve İslam tarihi üzerine kapsamlı bir makale ve araştırma koleksiyonunu keşfedin',

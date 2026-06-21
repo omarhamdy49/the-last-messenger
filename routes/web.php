@@ -62,6 +62,16 @@ Route::get('/quran/page/{page}', [QuranController::class, 'page'])
 Route::get('/quran/{surahNumber}', [QuranController::class, 'surah'])
     ->whereNumber('surahNumber')->name('public.quran.surah.short');
 
+// XML sitemap (articles surface)
+Route::get('/sitemap.xml', [\App\Http\Controllers\Site\SitemapController::class, 'articles'])->name('sitemap.articles');
+
+// robots.txt served dynamically so the Sitemap directive uses the real request host.
+Route::get('/robots.txt', function () {
+    $body = "User-agent: *\nDisallow:\n\nSitemap: ".url('/sitemap.xml')."\n";
+
+    return response($body, 200, ['Content-Type' => 'text/plain']);
+})->name('robots');
+
 // Articles / Blog
 Route::get('/articles', [ArticleController::class, 'index'])->name('public.articles');
 Route::post('/articles/{id}/view', [ArticleController::class, 'registerView'])
