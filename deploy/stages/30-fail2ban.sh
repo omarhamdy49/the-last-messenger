@@ -12,9 +12,11 @@ backend  = systemd
 # Never ban localhost.
 ignoreip = 127.0.0.1/8 ::1
 
+# Default mode bans on real auth failures only. NOT "aggressive": that also bans
+# on "Connection closed [preauth]", which ssh-keyscan and health probes trigger —
+# it would ban CI/CD runners and monitoring.
 [sshd]
 enabled = true
-mode    = aggressive
 
 [nginx-http-auth]
 enabled = true

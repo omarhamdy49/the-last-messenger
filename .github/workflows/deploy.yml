@@ -64,11 +64,10 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: 🔒 Known hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SSH_SERVER_IP }} >> ~/.ssh/known_hosts
-
+      # NOTE: no ssh-keyscan here on purpose — scp/ssh below use
+      # StrictHostKeyChecking=no, and keyscan's probe of multiple key types
+      # produces "Connection closed [preauth]" log lines that can trip fail2ban
+      # and ban the runner.
       - name: 📡 Upload artifact
         run: |
           scp -o StrictHostKeyChecking=no /tmp/tlm-release.zip \
