@@ -8,8 +8,11 @@ ufw --force reset >/dev/null
 ufw default deny incoming
 ufw default allow outgoing
 
-# Rate-limit SSH (UFW throttles repeated connections from one IP).
-ufw limit OpenSSH
+# Allow SSH (NOT `limit`): `ufw limit` drops an IP after 6 connections/30s,
+# which breaks CI/CD over SSH — a single deploy does ssh-keyscan (multiple key
+# types) + scp + ssh in seconds and trips it. Brute-force protection is handled
+# by fail2ban + key-only auth instead.
+ufw allow OpenSSH
 ufw allow 80/tcp   comment 'HTTP'
 ufw allow 443/tcp  comment 'HTTPS'
 
