@@ -1,0 +1,2 @@
+# Never commit real provisioning config (contains/derives secrets).
+config.env

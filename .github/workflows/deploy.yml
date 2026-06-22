@@ -1,0 +1,82 @@
+name: Deploy (Production)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: 🚀 Build & Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      # --- Build front-end assets on the runner (Vite). ---
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: 📦 Install JS deps
+        run: npm ci
+
+      - name: 🏗️ Build assets
+        run: npm run build
+
+      # --- Validate PHP can install (fast fail before touching the server). ---
+      - name: 🐘 Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, xml, curl, zip, gd, bcmath, intl, redis, mysql
+          coverage: none
+
+      - name: ✅ Composer validate + install (no-dev dry check)
+        run: |
+          composer validate --no-check-publish
+          composer install --no-dev --prefer-dist --no-progress --no-interaction --ignore-platform-reqs
+
+      # --- Package release artifact (exclude dev/local-only paths). ---
+      - name: 📦 Zip release
+        run: |
+          zip -rq /tmp/tlm-release.zip . \
+            -x "node_modules/*" \
+            -x ".git/*" \
+            -x "storage/*" \
+            -x "tests/*" \
+            -x "deploy/config.env" \
+            -x ".env" \
+            -x ".github/*"
+
+      # --- Ship to the server and run the zero-downtime deploy script. ---
+      - name: 🔑 Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: 🔒 Known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SSH_SERVER_IP }} >> ~/.ssh/known_hosts
+
+      - name: 📡 Upload artifact
+        run: |
+          scp -o StrictHostKeyChecking=no /tmp/tlm-release.zip \
+            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_SERVER_IP }}:/tmp/tlm-release.zip
+
+      - name: 🚀 Deploy
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_SERVER_IP }} \
+            "${{ secrets.DEPLOY_PATH || '/var/www/rasoolallah' }}/bin/deploy.sh /tmp/tlm-release.zip ${{ github.sha }}"
+
+      - name: 🧹 Cleanup local artifact
+        if: always()
+        run: rm -f /tmp/tlm-release.zip
