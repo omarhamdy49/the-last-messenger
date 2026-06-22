@@ -41,7 +41,10 @@ jobs:
       - name: ✅ Composer validate + install (no-dev dry check)
         run: |
           composer validate --no-check-publish
-          composer install --no-dev --prefer-dist --no-progress --no-interaction --ignore-platform-reqs
+          # --no-scripts: the runner has no app .env, so don't boot the app
+          # (artisan package:discover). Dependency resolution/install is what we
+          # validate here; the server deploy runs the post-install scripts.
+          composer install --no-dev --prefer-dist --no-progress --no-interaction --no-scripts --ignore-platform-reqs
 
       # --- Package release artifact (exclude dev/local-only paths). ---
       - name: 📦 Zip release
