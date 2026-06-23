@@ -40,6 +40,13 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\SetLocale::class,
         ]);
 
+        // Prepended so its response phase runs OUTERMOST (after StartSession adds
+        // the session cookie) — lets it edge-cache the guest homepage and strip
+        // per-user cookies, while forcing authenticated/admin responses to no-store.
+        $middleware->web(prepend: [
+            \App\Http\Middleware\CacheGuestPages::class,
+        ]);
+
         // Unauthenticated visitors: send admin-area requests to the admin login, but
         // public-site requests (e.g. /profile, /favorites) to the public login — not the
         // admin portal. JSON requests fall through to a 401 (return null).
