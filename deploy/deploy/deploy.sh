@@ -68,11 +68,9 @@ ln -nfs "${SHARED_DIR}/storage" "${RELEASE}/storage"
 cd "${RELEASE}"
 
 log "composer install (production)..."
-# --ignore-platform-reqs: the distro ships PHP 8.5 but composer.lock pins some
-# deps (nette/schema, phpoffice/phpspreadsheet) that declare an <=8.4 cap. They
-# run fine on 8.5; bypass the platform gate rather than churn the lock at deploy.
-# Proper fix is `composer update` to 8.5-aware versions, committed from dev.
-composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-progress --ignore-platform-reqs
+# composer.lock is resolved for PHP 8.5 (config.platform.php=8.5.4), so the
+# platform gate passes natively — no --ignore-platform-reqs needed.
+composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-progress
 
 log "Running migrations..."
 ${PHP_BIN} artisan migrate --force --no-interaction

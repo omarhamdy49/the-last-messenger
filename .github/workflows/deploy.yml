@@ -44,7 +44,7 @@ jobs:
           # --no-scripts: the runner has no app .env, so don't boot the app
           # (artisan package:discover). Dependency resolution/install is what we
           # validate here; the server deploy runs the post-install scripts.
-          composer install --no-dev --prefer-dist --no-progress --no-interaction --no-scripts --ignore-platform-reqs
+          composer install --no-dev --prefer-dist --no-progress --no-interaction --no-scripts
 
       # --- Package release artifact (exclude dev/local-only paths). ---
       - name: 📦 Zip release
