@@ -28,15 +28,20 @@ TS="$(date +%Y%m%d%H%M%S)"
 RELEASE="${RELEASES_DIR}/${TS}"
 
 log() { echo "[$(date '+%H:%M:%S')] $*"; }
-PREVIOUS="$(readlink -f "${CURRENT}" 2>/dev/null || true)"
+# Direct symlink target (NOT readlink -f): on a first deploy `current` doesn't
+# exist yet, and readlink -f would resolve to the path itself, making rollback
+# create a self-referential `current -> current` symlink.
+if [[ -L "${CURRENT}" ]]; then PREVIOUS="$(readlink "${CURRENT}")"; else PREVIOUS=""; fi
 
 rollback() {
   echo "::error:: Deploy failed — rolling back."
-  if [[ -n "${PREVIOUS}" && -d "${PREVIOUS}" ]]; then
+  if [[ -n "${PREVIOUS}" && "${PREVIOUS}" != "${CURRENT}" && -d "${PREVIOUS}" && -e "${PREVIOUS}/artisan" ]]; then
     ln -nfs "${PREVIOUS}" "${CURRENT}"
     sudo systemctl reload "php${PHP_VERSION}-fpm" || true
     sudo supervisorctl restart all || true
     echo "Rolled back to ${PREVIOUS}."
+  else
+    echo "No valid previous release to roll back to (first deploy or none)."
   fi
   rm -rf "${RELEASE}"
   exit 1
