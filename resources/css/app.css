@@ -544,21 +544,19 @@
 /* Subtle Fade Slide Up */
 @keyframes fadeSlideUp {
   from {
-    opacity: 0;
-    transform: translateY(40px);
+    transform: translateY(24px);
   }
   to {
-    opacity: 1;
     transform: translateY(0);
   }
 }
 
 .fade-slide-up {
-  /* Shorter entrance so above-the-fold content reaches visual completion fast
-     (Speed Index): a 1s fade + staggered delays kept the hero "painting" past
-     ~2s. 0.5s with smaller per-element delays preserves the effect. */
+  /* Transform-ONLY entrance (no opacity:0 start). Starting at opacity:0 made
+     the largest hero text non-contentful until the fade ran, adding ~2s of LCP
+     "render delay" and inflating Speed Index. A pure translate keeps the motion
+     while the content paints immediately. */
   animation: fadeSlideUp 0.5s ease-out forwards;
-  opacity: 0;
 }
 
 /* Gentle Float */
