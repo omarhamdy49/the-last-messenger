@@ -5,20 +5,14 @@ declare(strict_types=1);
 return [
     /*
      * The locales used by the application.
-     * These are dynamically loaded from cache for better performance.
-     * Fallback to static array if cache service is not available.
+     *
+     * Must be a plain (serializable) array so `config:cache` works in
+     * production — a Closure here throws "non-serializable" during caching.
+     * Active locales are loaded dynamically from the database at runtime by
+     * TranslationServiceProvider::boot(), which overrides this value; this array
+     * is the startup fallback before that runs (and if the DB is unavailable).
      */
-    'locales' => function () {
-        try {
-            // Try to get active language codes from cache service
-            $cacheService = app(\App\Domain\Shared\Services\LanguageCacheService::class);
-
-            return $cacheService->getActiveLanguageCodes();
-        } catch (\Throwable $e) {
-            // Fallback to default languages if cache service fails
-            return ['ar', 'en', 'fr', 'tr', 'ur'];
-        }
-    },
+    'locales' => ['ar', 'en', 'fr', 'tr', 'ur'],
 
     /*
      * If a translation is not found for a given locale, fallback locale will be used.
