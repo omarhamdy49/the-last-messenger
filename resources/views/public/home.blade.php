@@ -3,6 +3,12 @@
 @section('title', __('site.site_name'))
 @section('meta_description', __('site.hero_subtitle'))
 
+{{-- Preload the hero image (LCP) at high priority so it starts fetching before
+     CSS/JS parse — paired with fetchpriority="high" on the <img>. --}}
+@push('head')
+    <link rel="preload" as="image" href="{{ asset('images/site/rasool-allah-hero-section-bg.webp') }}" fetchpriority="high">
+@endpush
+
 @php
     $locale = app()->getLocale();
     $isRtl  = in_array($locale, ['ar', 'ur'], true);
@@ -134,7 +140,8 @@
     <div class="hero-parallax absolute">
         <img class="w-full h-full object-cover ken-burns-subtle"
              alt="{{ __('site.hero_image_alt') }}"
-             src="{{ asset('images/site/rasool-allah-hero-section-bg.jpg') }}" />
+             width="1600" height="685" fetchpriority="high" decoding="async"
+             src="{{ asset('images/site/rasool-allah-hero-section-bg.webp') }}" />
         <div class="absolute inset-0 bg-black/50"></div>
     </div>
 
@@ -202,7 +209,8 @@
                    class="md:col-span-2 lg:col-span-2 relative rounded-2xl overflow-hidden shadow-2xl group min-h-[280px] flex items-end p-8 text-white hover-scale">
                     <img class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-in-out"
                          alt="{{ __('site.seerah') }}"
-                         src="{{ asset('images/site/seerah-thumb.png') }}" />
+                         width="1000" height="546" loading="lazy" decoding="async"
+                         src="{{ asset('images/site/seerah-thumb.webp') }}" />
                     <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
                     <div class="relative z-10">
                         <div class="inline-flex items-center space-s-2 backdrop-blur-sm px-4 py-2 rounded-full mb-4 bg-gray-900/60 border border-gray-700 dark:bg-white/20 dark:border-white/30">
@@ -843,8 +851,9 @@
         <div class="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {{-- Article 1 — Seerah --}}
             <article class="bg-white dark:bg-[#16213e] rounded-2xl shadow-xl overflow-hidden hover-lift">
-                <img src="{{ asset('images/site/article-1.png') }}"
+                <img src="{{ asset('images/site/article-1.webp') }}"
                      alt="{{ __('site.article_1_title') }}"
+                     width="800" height="560" loading="lazy" decoding="async"
                      class="w-full h-56 object-cover" />
                 <div class="p-6">
                     <span class="inline-block bg-[#0056b3]/10 text-[#0056b3] dark:bg-[#0056b3]/20 dark:text-[#4a9eff] text-xs font-bold px-3 py-1 rounded-full mb-3">{{ __('site.seerah') }}</span>
@@ -860,8 +869,9 @@
 
             {{-- Article 2 — Hadith --}}
             <article class="bg-white dark:bg-[#16213e] rounded-2xl shadow-xl overflow-hidden hover-lift">
-                <img src="{{ asset('images/site/article-2.png') }}"
+                <img src="{{ asset('images/site/article-2.webp') }}"
                      alt="{{ __('site.article_2_title') }}"
+                     width="800" height="560" loading="lazy" decoding="async"
                      class="w-full h-56 object-cover" />
                 <div class="p-6">
                     <span class="inline-block bg-[#218838]/10 text-[#218838] dark:bg-[#218838]/20 dark:text-[#5cb85c] text-xs font-bold px-3 py-1 rounded-full mb-3">{{ __('site.hadith') }}</span>
@@ -877,8 +887,9 @@
 
             {{-- Article 3 — Media --}}
             <article class="bg-white dark:bg-[#16213e] rounded-2xl shadow-xl overflow-hidden hover-lift">
-                <img src="{{ asset('images/site/article-3.png') }}"
+                <img src="{{ asset('images/site/article-3.webp') }}"
                      alt="{{ __('site.article_3_title') }}"
+                     width="800" height="560" loading="lazy" decoding="async"
                      class="w-full h-56 object-cover" />
                 <div class="p-6">
                     <span class="inline-block bg-[#FF7F50]/10 text-[#FF7F50] text-xs font-bold px-3 py-1 rounded-full mb-3">{{ __('site.media') }}</span>

@@ -80,9 +80,12 @@
         }
     </script>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    {{-- Self-hosted fonts (no render-blocking 3rd-party request). @font-face +
+         unicode-range live in app.css; preload the two most-used faces for the
+         current script so the first paint swaps fast. --}}
+    @php $fontSubset = $isRtl ? 'arabic' : 'latin'; @endphp
+    <link rel="preload" as="font" type="font/woff2" href="{{ asset('fonts/cairo-'.$fontSubset.'-400.woff2') }}" crossorigin>
+    <link rel="preload" as="font" type="font/woff2" href="{{ asset('fonts/cairo-'.$fontSubset.'-700.woff2') }}" crossorigin>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('head')

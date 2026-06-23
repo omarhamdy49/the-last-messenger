@@ -371,7 +371,7 @@ final class ArticleController extends Controller
             return asset('storage/'.ltrim($article->thumb, '/'));
         }
 
-        $fallbacks = ['article-1.png', 'article-2.png', 'article-3.png'];
+        $fallbacks = ['site/article-1.webp', 'site/article-2.webp', 'site/article-3.webp'];
 
         return asset('images/'.$fallbacks[$article->id % count($fallbacks)]);
     }

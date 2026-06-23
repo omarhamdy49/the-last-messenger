@@ -1,6 +1,9 @@
 import Alpine from 'alpinejs';
 import collapse from '@alpinejs/collapse';
-import { createIcons, icons } from 'lucide';
+import { createIcons } from 'lucide';
+// Curated icon subset (only icons actually used on public pages) — importing the
+// full `icons` map pulled in all ~1500 icons (~579KB). See resources/js/icons.js.
+import { icons } from './icons';
 
 /*
 |--------------------------------------------------------------------------
