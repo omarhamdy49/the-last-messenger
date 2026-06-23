@@ -26,9 +26,10 @@ real-world gotchas and how each was resolved.
 10. [Phase 7 — SSH hardening (last)](#10-phase-7--ssh-hardening-last)
 11. [Phase 8 — Post-deploy app config](#11-phase-8--post-deploy-app-config)
 12. [Phase 9 — Cloudflare Full (strict)](#12-phase-9--cloudflare-full-strict)
-13. [Operations runbook](#13-operations-runbook)
-14. [Troubleshooting — issues we actually hit](#14-troubleshooting--issues-we-actually-hit)
-15. [Architecture decisions](#15-architecture-decisions)
+13. [Phase 10 — Performance & edge-cache configuration](#13-phase-10--performance--edge-cache-configuration)
+14. [Operations runbook](#14-operations-runbook)
+15. [Troubleshooting — issues we actually hit](#15-troubleshooting--issues-we-actually-hit)
+16. [Architecture decisions](#16-architecture-decisions)
 
 ---
 
@@ -386,7 +387,76 @@ curl -sI https://rasoolallah.com/ | head -1     # HTTP/2 200  (525/526 ⇒ stric
 
 ---
 
-## 13. Operations runbook
+## 13. Phase 10 — Performance & edge-cache configuration
+
+Applied after the baseline deploy to take mobile PageSpeed from "very bad" to
+**97** (all Core Web Vitals green). Full applied state + the exact API calls live
+in [`../TODO_cloudflare-perf.md`](../TODO_cloudflare-perf.md).
+
+### Build / front-end (in the repo — CI builds it)
+- **Vite minifier = terser** (`vite.config.js` `build.minify: 'terser'`) — needs
+  the `terser` devDependency (do not remove it; CI's `npm run build` requires it).
+- **Homepage inlines critical CSS** + defers the full sheet
+  (`resources/views/layouts/public.blade.php`, only for `routeIs('public.home')`
+  when not running the Vite dev server). Critical set =
+  `resources/css/critical-home.css`. **Regenerate after CSS changes:**
+  `npm i -D penthouse puppeteer && node gen-critical.cjs public/build/assets/app-*.css`
+  (penthouse/puppeteer are NOT kept as deps so CI doesn't download Chromium).
+- **Self-hosted fonts** in `public/fonts/*.woff2` (`@font-face` + `unicode-range`
+  in `app.css`, `font-display:swap`), preloaded by locale in the layout — no
+  third-party Google Fonts.
+- **Curated Lucide icon subset** `resources/js/icons.js` (union of view literals +
+  admin icon-picker choices + seeded icons). Regenerate when new `data-lucide`
+  icons are introduced, or they won't render. The full set is ~579KB; the subset
+  is ~100KB raw.
+- **Images:** WebP, resized to display size, `width`/`height` + `loading="lazy"`
+  on below-the-fold, hero preloaded with `fetchpriority="high"` + `srcset`.
+
+### Origin cache headers (in the repo)
+`App\Http\Middleware\CacheGuestPages` (PREPENDED to the web group so its response
+phase runs outermost, after `StartSession`):
+- Anonymous `GET` of `public.home` → `Cache-Control: public, s-maxage=1800,
+  stale-while-revalidate=600` **(30-min edge TTL — change here, not in Cloudflare)**
+  and **strips all `Set-Cookie`** so the edge never caches a session.
+- Authenticated requests (incl. admin) → `Cache-Control: private, no-store`.
+- To make another page cacheable, add its route name to `CACHEABLE_ROUTES`.
+
+### Cloudflare (set via API; recreate with the token if re-provisioning)
+Two cache rules in the `http_request_cache_settings` phase
+(`PUT /zones/{id}/rulesets/phases/http_request_cache_settings/entrypoint`):
+1. **Bypass (first):** admin (`/su/portal/`), API (`/api/`), auth/account routes,
+   **and any request carrying `the-last-messenger-session`** → `cache: false`.
+   This guarantees the admin portal and logged-in pages are NEVER edge-cached.
+2. **Homepage (second):** `path eq "/" and not cookie contains session` →
+   `cache: true`, `edge_ttl` + `browser_ttl` = **`respect_origin`** (so the
+   30-min TTL above drives it — Cloudflare imposes no TTL of its own).
+
+Dashboard toggles (need a token with *Zone Settings: Edit*, or do them in the UI):
+**Brotli**, **Early Hints**, **Tiered Cache**. (Polish is Pro-plan only.)
+
+**Verify (must all hold):**
+```bash
+curl -s -D - -o /dev/null https://rasoolallah.com/                | grep -i cf-cache-status  # HIT + s-maxage=1800
+curl -s -D - -o /dev/null https://rasoolallah.com/su/portal/v1/admin| grep -i cf-cache-status # DYNAMIC (never HIT)
+curl -s -D - -o /dev/null https://rasoolallah.com/api/v1/hadith    | grep -i cf-cache-status  # DYNAMIC
+curl -s -D - -o /dev/null https://rasoolallah.com/ -H "Cookie: the-last-messenger-session=x" | grep -i cf-cache-status  # DYNAMIC
+```
+
+### ⚠️ Cache-purge gotcha (operational)
+Vite build assets are content-hashed → updating them auto-busts cache. But
+**static files keep their names** (`public/images/*`, `public/fonts/*`) and carry
+a 30-day `immutable` cache, so after changing one you MUST **purge Cloudflare**
+(`POST /zones/{id}/purge_cache` with `{"files":[...]}` or purge-everything).
+After a **purge-everything**, re-warm the sub-resources (fonts/CSS/JS/images)
+before testing — a cold edge tanks the first PageSpeed run.
+
+> **FCP floor:** even with the HTML edge-cached (HIT), FCP sits at ~1.8s on PSI's
+> emulated slow-4G — that's the connection-setup floor (DNS+TCP+TLS round-trips),
+> not a server/code limit. Real-network users are much faster.
+
+---
+
+## 14. Operations runbook
 
 **Deploy:** push to `main` (or re-run the workflow). Manual:
 
@@ -432,7 +502,7 @@ as root. `deployer` over SSH only has the scoped sudo verbs above.
 
 ---
 
-## 14. Troubleshooting — issues we actually hit
+## 15. Troubleshooting — issues we actually hit
 
 | Symptom | Cause | Fix (applied) |
 |---------|-------|---------------|
@@ -450,7 +520,7 @@ as root. `deployer` over SSH only has the scoped sudo verbs above.
 
 ---
 
-## 15. Architecture decisions
+## 16. Architecture decisions
 
 - **PHP 8.5 (not 8.4):** Ubuntu 26.04 "resolute" ships 8.5 natively and ondrej
   has no build for it. 8.5 satisfies Laravel 12's `^8.2` and gets distro
