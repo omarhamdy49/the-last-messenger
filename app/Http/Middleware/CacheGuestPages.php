@@ -36,9 +36,11 @@ final class CacheGuestPages
             && $response->getStatusCode() === 200;
 
         if ($isGuestCacheable) {
-            // Short edge TTL + serve-stale-while-revalidating. Strip ALL Set-Cookie
-            // so the edge never stores a session/CSRF token tied to one visitor.
-            $response->headers->set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+            // 30-min edge TTL (s-maxage) + serve-stale-while-revalidating. The CF
+            // cache rule is "respect origin", so this value drives the edge TTL.
+            // Strip ALL Set-Cookie so the edge never stores a session/CSRF token
+            // tied to one visitor.
+            $response->headers->set('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=600');
             $response->headers->remove('Set-Cookie');
         } elseif (auth()->check()) {
             // Authenticated (incl. admin): never shared-cache. Belt-and-suspenders
