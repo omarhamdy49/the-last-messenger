@@ -48,6 +48,7 @@ deploy/
 | `40-php` | PHP 8.4 + extensions + tuned FPM pool + OPcache/JIT |
 | `45-composer` | Composer (checksum-verified) |
 | `50-node` | Node.js 20 (asset-build fallback) |
+| `52-media-tools` | ffmpeg/ffprobe + yt-dlp (media conversions + YouTube ingestion) |
 | `55-mysql` | MySQL 8: secure, app DB + least-privilege user, InnoDB tuning |
 | `60-redis` | Redis: localhost, password, 256 MB LRU, no persistence |
 | `65-nginx` | Global tuning + rate-limit zones + HTTP server block |
