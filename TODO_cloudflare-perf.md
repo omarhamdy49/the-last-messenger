@@ -28,24 +28,47 @@ but Cloudflare is serving the old cached copies (filenames aren't hashed +
 ## 3. Edge-cache the HTML for guests (the actual FCP lever) — needs care
 This is what removes the France round-trip from FCP. **Do not do this blind** —
 caching a session-aware Laravel page wrong = shared sessions/CSRF (security bug).
-Safe recipe:
+The hard rule: **NEVER cache the admin portal, the API, or any auth/account
+page.** Safe recipe with three layers of protection:
 
-**App side (I implement):**
-- Add a middleware that, for **guest GET** requests to cacheable routes
-  (start with `/`), sends `Cache-Control: public, s-maxage=300,
-  stale-while-revalidate=600` and **strips the `Set-Cookie`/session** so no
-  per-user data is ever cached. Authenticated requests (cookie present) bypass.
-- Confirm the homepage needs no per-session CSRF for guests (search is GET; login
-  is a separate, uncached route) — it doesn't today.
+**3a. Cloudflare — a BYPASS rule FIRST (highest priority).** This guarantees
+admin/API/auth are never cached, even if a later rule is broadened.
+- **Caching → Cache Rules → Create** (put it ABOVE the cache rule in 3c):
+  - When (any of these → bypass):
+    ```
+    starts_with(http.request.uri.path, "/su/portal/")   (admin portal)
+    or starts_with(http.request.uri.path, "/api/")        (API)
+    or http.request.uri.path in {"/login" "/register" "/profile" "/favorites"
+        "/forgot-password" "/quran/ask"}
+    or starts_with(http.request.uri.path, "/reset-password")
+    or starts_with(http.request.uri.path, "/quran/ask")
+    or any(http.request.headers["cookie"][*] contains "the-last-messenger-session")
+    ```
+  - Then: **Bypass cache.**
 
-**Cloudflare side (Cache Rule):**
+**3b. App side (I implement).** Middleware scoped to the **public web route group
+ONLY — never the admin or api groups**. For a **guest GET** to a cacheable public
+route (start with just `/`), it sends `Cache-Control: public, s-maxage=300,
+stale-while-revalidate=600` and **strips `Set-Cookie`/session** so nothing
+per-user is cached. Any authenticated request (admin included) keeps
+`Cache-Control: private, no-store` — so even if a CF rule slipped, the origin
+itself forbids caching admin/authed responses. Belt and suspenders.
+
+**3c. Cloudflare — the cache rule (lower priority than 3a).**
 - **Caching → Cache Rules → Create:**
   - When: `URI Path equals /` **AND** `Cookie` does not contain
-    `the-last-messenger-session` (so logged-in users are never served a cached page).
-  - Then: **Eligible for cache**, **Edge TTL: Respect origin** (uses the
-    `s-maxage` above), **Browser TTL: Respect origin**.
-- Verify: `curl -sI https://rasoolallah.com/ | grep cf-cache-status` → `HIT` for
-  anonymous, and confirm a logged-in session still gets fresh, per-user HTML.
+    `the-last-messenger-session` (logged-in users never get a cached page).
+  - Then: **Eligible for cache**, **Edge TTL: Respect origin**, **Browser TTL:
+    Respect origin**.
+
+**Verify (must check ALL):**
+```
+curl -sI https://rasoolallah.com/                         | grep cf-cache-status   # HIT (guest home)
+curl -sI https://rasoolallah.com/su/portal/v1/admin       | grep cf-cache-status   # BYPASS/DYNAMIC — never HIT
+curl -sI https://rasoolallah.com/login                    | grep cf-cache-status   # BYPASS/DYNAMIC
+curl -sI https://rasoolallah.com/api/v1/hadith            | grep cf-cache-status   # BYPASS/DYNAMIC
+# logged in (send the session cookie) → home must be fresh, not a cached guest page
+```
 
 Expected: FCP/LCP drop a few hundred ms (TTFB at the PSI location goes from
 "France round-trip" to edge), pushing FCP into the green and the score toward 98–99.
