@@ -91,9 +91,11 @@
     .hero-parallax { inset: -12% 0; }
 
     @media (prefers-reduced-motion: no-preference) {
-        /* Premium expo-out entrance (no bounce), scoped to the hero only. */
+        /* Premium expo-out entrance (no bounce), scoped to the hero only.
+           Kept short so above-the-fold content reaches visual completion fast
+           (Speed Index) — a longer entrance kept the hero "painting" past ~2s. */
         .hero-section .fade-slide-up {
-            animation-duration: 0.9s;
+            animation-duration: 0.45s;
             animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
         }
     }
@@ -141,7 +143,7 @@
 <section class="hero-section relative py-20 md:py-32 pb-32 md:pb-40 overflow-hidden">
     {{-- Background Image with Ken Burns + scroll parallax (.hero-parallax) --}}
     <div class="hero-parallax absolute">
-        <img class="w-full h-full object-cover ken-burns-subtle"
+        <img class="w-full h-full object-cover"
              alt="{{ __('site.hero_image_alt') }}"
              width="1600" height="685" fetchpriority="high" decoding="async"
              sizes="100vw"
