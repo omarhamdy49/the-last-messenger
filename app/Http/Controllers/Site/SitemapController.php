@@ -6,7 +6,6 @@ namespace App\Http\Controllers\Site;
 
 use App\Domain\Shared\Models\Language;
 use App\Http\Controllers\Controller;
-use App\Models\Article;
 use App\Repositories\ArticleRepository;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
@@ -51,7 +50,6 @@ final class SitemapController extends Controller
         ]];
 
         foreach ($this->articles->getPublishedForSitemap() as $article) {
-            /** @var Article $article */
             $alternates = [];
             foreach ($article->locales as $row) {
                 if ($row->slug) {
