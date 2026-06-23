@@ -1,3 +1,14 @@
+> **STATUS (applied 2026-06-23 via API):** ✅ Edge-cache rule for the guest
+> homepage + ✅ bypass rule for admin/api/auth/logged-in + ✅ cache purged +
+> ✅ origin `CacheGuestPages` middleware deployed. Verified: home `/` = cf HIT;
+> `/su/portal/v1/admin`, `/login`, `/api/v1/*`, `/seerah`, and home-with-session
+> = DYNAMIC (never cached). Result: LCP 2.3s→2.1s, score 97.
+> ⏳ Pending (token lacked Zone-Settings:Edit — toggle in dashboard): **Brotli**
+> (Speed→Optimization, usually already on), **Early Hints** (Speed→Optimization),
+> **Tiered Cache** (Caching→Tiered Cache).
+> 🔑 **REVOKE the API token now** (it was shared in chat): dash → My Profile →
+> API Tokens → delete the token.
+
 # Cloudflare performance actions (to apply) — FCP is now network-bound
 
 **State:** Code-level perf is done. Mobile PSI **97**, all Core Web Vitals green
