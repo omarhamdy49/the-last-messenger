@@ -87,7 +87,19 @@
     <link rel="preload" as="font" type="font/woff2" href="{{ asset('fonts/cairo-'.$fontSubset.'-400.woff2') }}" crossorigin>
     <link rel="preload" as="font" type="font/woff2" href="{{ asset('fonts/cairo-'.$fontSubset.'-700.woff2') }}" crossorigin>
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    {{-- Landing page (homepage = primary entry + PageSpeed target): inline the
+         full stylesheet so the first paint needs no render-blocking CSS round-trip
+         (PSI flagged ~440ms of render-blocking). All CSS is present, so there is
+         no flash-of-unstyled-content — unlike deferring, which would flash the
+         dark-default theme. Other pages keep the cached external sheet. Skipped
+         under the Vite dev server (HMR needs the @vite link). --}}
+    @php $inlineCss = request()->routeIs('public.home') && ! app(\Illuminate\Foundation\Vite::class)->isRunningHot(); @endphp
+    @if ($inlineCss)
+        <style>{!! app(\Illuminate\Foundation\Vite::class)->content('resources/css/app.css') !!}</style>
+        @vite('resources/js/app.js')
+    @else
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @endif
     @stack('head')
 </head>
 <body class="antialiased bg-[#F8F9FA] text-[#212529] min-h-screen flex flex-col">
