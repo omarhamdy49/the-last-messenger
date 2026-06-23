@@ -6,7 +6,10 @@
 {{-- Preload the hero image (LCP) at high priority so it starts fetching before
      CSS/JS parse — paired with fetchpriority="high" on the <img>. --}}
 @push('head')
-    <link rel="preload" as="image" href="{{ asset('images/site/rasool-allah-hero-section-bg.webp') }}" fetchpriority="high">
+    <link rel="preload" as="image" fetchpriority="high"
+          href="{{ asset('images/site/rasool-allah-hero-section-bg.webp') }}"
+          imagesrcset="{{ asset('images/site/rasool-allah-hero-section-bg-960.webp') }} 960w, {{ asset('images/site/rasool-allah-hero-section-bg.webp') }} 1600w"
+          imagesizes="100vw">
 @endpush
 
 @php
@@ -141,6 +144,8 @@
         <img class="w-full h-full object-cover ken-burns-subtle"
              alt="{{ __('site.hero_image_alt') }}"
              width="1600" height="685" fetchpriority="high" decoding="async"
+             sizes="100vw"
+             srcset="{{ asset('images/site/rasool-allah-hero-section-bg-960.webp') }} 960w, {{ asset('images/site/rasool-allah-hero-section-bg.webp') }} 1600w"
              src="{{ asset('images/site/rasool-allah-hero-section-bg.webp') }}" />
         <div class="absolute inset-0 bg-black/50"></div>
     </div>
@@ -149,18 +154,18 @@
     <div class="hero-fade-out relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 text-center">
         {{-- Title --}}
         <h1 class="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-white drop-shadow-2xl fade-slide-up mb-6"
-            style="animation-delay: 0.1s;">
+            style="animation-delay: 0.05s;">
             {{ __('site.hero_title') }}
         </h1>
 
         {{-- Subtitle --}}
         <p class="mt-6 max-w-3xl mx-auto text-lg md:text-xl text-gray-100 drop-shadow-lg fade-slide-up"
-           style="animation-delay: 0.3s;">
+           style="animation-delay: 0.12s;">
             {{ __('site.hero_subtitle') }}
         </p>
 
         {{-- Premium Search Bar --}}
-        <div class="mt-10 max-w-2xl mx-auto fade-slide-up" style="animation-delay: 0.5s;">
+        <div class="mt-10 max-w-2xl mx-auto fade-slide-up" style="animation-delay: 0.18s;">
             {{-- Tailwind dark: variants, not Alpine :class — the hero has no x-data
                  ancestor, so these bindings never evaluated and the search bar
                  rendered with no glass background (plain white input). --}}
@@ -202,7 +207,7 @@
         </div>
 
         {{-- Hero Module Grid Cards --}}
-        <div class="mt-16 max-w-6xl mx-auto fade-slide-up" style="animation-delay: 0.7s;">
+        <div class="mt-16 max-w-6xl mx-auto fade-slide-up" style="animation-delay: 0.24s;">
             <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6 md:gap-8">
                 {{-- Large Seerah Card --}}
                 <a href="{{ $seerahUrl }}"

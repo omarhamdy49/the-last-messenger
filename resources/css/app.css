@@ -554,7 +554,10 @@
 }
 
 .fade-slide-up {
-  animation: fadeSlideUp 1s ease-out forwards;
+  /* Shorter entrance so above-the-fold content reaches visual completion fast
+     (Speed Index): a 1s fade + staggered delays kept the hero "painting" past
+     ~2s. 0.5s with smaller per-element delays preserves the effect. */
+  animation: fadeSlideUp 0.5s ease-out forwards;
   opacity: 0;
 }
 
