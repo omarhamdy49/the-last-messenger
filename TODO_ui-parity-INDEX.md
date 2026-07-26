@@ -7,8 +7,9 @@ pages, components, features, schema, and quality per module.
 prototype HTML in full and tracing route → controller → service/handler → repository → model → migration →
 Blade view → components. Findings were then spot-verified against the code by the orchestrating agent.
 **Runtime verification:** the five cluster passes were static (MySQL was down while they ran). The P0s were
-subsequently re-checked against the live MySQL database and through real in-process HTTP requests — results in
-[Runtime verification](#runtime-verification-2026-07-26) below. The PERF findings remain unmeasured.
+subsequently re-checked against the live MySQL database and through real in-process HTTP requests, and the PERF
+findings were measured with `EXPLAIN` and timings — see [Runtime verification](#runtime-verification-2026-07-26)
+and [PERF verification](#perf-verification-with-explain-2026-07-26) below.
 
 ## Cluster reports
 
@@ -114,6 +115,45 @@ While checking SSG-002 I suspected the public `/sahaba` list rendered nameless c
 no `ar` translation row). It does not. `resources/views/components/site/sahaba-card.blade.php:31` falls back
 via `getTranslation($locale) ?: getTranslation('ar')`, no row lacks a name in *all* locales, and 0 of the first
 50 cards render empty. Not a defect.
+
+## PERF verification with EXPLAIN (2026-07-26)
+
+The 18 PERF findings were measured against the live database. **Result: the static passes found
+plausible-but-immaterial issues and missed the two that actually cost time.** This is exactly what CLAUDE.md
+§9 "measure before tuning" is for — filesort cost is invisible to static reading.
+
+### The two real hot spots — neither was filed
+
+- [ ] **PERF-001** [P1] Replace the `LENGTH(hadith_number)` natural sort with an indexed numeric column
+      - **Module:** Hadith (all public list paths)  ·  **Type:** PERF
+      - **Evidence:** measured — `WHERE grading_status='sahih' ORDER BY LENGTH(hadith_number), hadith_number LIMIT 20` = **35.6 ms**; the same query with a plain indexed `ORDER BY hadith_number` = **1.5 ms** (~24× faster). `EXPLAIN` on the current form: `type=ALL, key=NULL, rows=49938, Using where; Using filesort` — a full table scan, sorting all **33,009** matching rows to return 20. `grading_status` *is* indexed (`hadith_hadiths_grading_status_index`); the index is unusable because `LENGTH()` on a column can never be. The pattern is in **8 call sites**: `HadithRepository.php:66,136,169,309,401`, `BookRepository.php:91,106`, `ChapterRepository.php:55`.
+      - **What to do:** add a generated/stored `hadith_number_int UNSIGNED` column (or zero-padded `hadith_number_sort`) with an index, backfill it, and replace all 8 `orderByRaw('LENGTH(hadith_number)')->orderBy('hadith_number')` pairs with `orderBy('hadith_number_int')`. Composite `(grading_status, hadith_number_int)` and `(book_id, hadith_number_int)` indexes then serve the filtered lists directly. Keep `hadith_number` as the display value.
+      - **Why it matters / trade-offs:** this is the single most expensive query shape in the app and it sits on every public hadith list, book page, chapter page, and search result. Cost grows linearly with the corpus (50,713 today). 35 ms is not an emergency, but a 24× win for one generated column and eight one-line edits is the best ratio in this whole review. Note the irony: `paginateWithFilters()` carries a careful comment about keeping the FULLTEXT path SARGable, and the `ORDER BY` immediately below it defeats indexing on every call.
+
+- [ ] **PERF-002** [P2] Stop ordering the public Sahaba list by a LEFT JOINed translation column
+      - **Module:** Sahaba  ·  **Type:** PERF
+      - **Evidence:** measured — a 12-row page takes **20.9 ms**. `EXPLAIN`: `type=index, rows=10290, Using index; Using temporary; Using filesort`, i.e. all 10,290 rows are materialized and sorted per page. Cause is `SahabiRepository::applyLocaleNameOrder()` (`app/Domain/Sahaba/Repositories/SahabiRepository.php:216-229`): `ORDER BY COALESCE(name_loc.name, name_fb.name)` over two LEFT JOINs cannot use an index.
+      - **What to do:** denormalize a per-row `sort_name` on `sahaba` (populated from the locale-preferred translation on write, or one indexed column per active locale) and order by it; or accept the cost and cache the ordered ID list. Do not add an index to the join columns — ordering on a `COALESCE` of two joined nullable columns is unindexable by construction.
+      - **Why it matters / trade-offs:** 7,835 public rows today. Denormalizing adds a write-path invariant to maintain, which is why this is P2 and not P1 — the current cost is tolerable.
+
+### Filed PERF findings that measurement does not support
+
+| ID | Claim | Measured | Verdict |
+|---|---|---|---|
+| QUR-016 | Missing composite indexes on Juz/Hizb/page order paths | juz filter: `ref`, **126 rows** + filesort; page filter: **9 rows** | **P3** — the filesort is real but trivial at Quran scale. Adding indexes here is speculative tuning, which CLAUDE.md §4.5 forbids. |
+| QUR-018 | Non-SARGable leading-wildcard `LIKE` on integer `revelation_order` | `type=index, Using index`, **114 rows** — a covering scan of a 114-row table | **P3 / won't-fix** — textbook-correct, materially irrelevant. |
+| HAD-013 | Unbounded chapter/theme Hadith lists | largest chapter = **510** hadiths; the lookup itself is `ref` + `Using index` | **Still valid, but reclassify** — this is a *payload/pagination* problem (510 hadiths × all translations serialized), not an index problem. |
+| CORE-022 | Articles catalogue capped at 500 rows | **18** articles exist | **P3 latent** — revisit when the catalogue approaches the cap. |
+| CORE-021 | Unbounded `get()` per topic content tab | max **25** items per topic per type | **P3 latent** — bounded in practice by curation. |
+| SSG-020 | Seerah public list projections | `type=ALL` on **88** rows — but `status` *is* indexed (`seerah_events_status_index`); the optimizer correctly prefers a scan at this size | **P3** — not a missing index. |
+
+### One more thing EXPLAIN surfaced
+
+`seerah_events` carries **~20 indexes on 88 rows**, several redundant — `slug` is indexed twice
+(`seerah_events_slug_unique` *and* `seerah_events_slug_index`), and `hijri_year` has both a standalone index
+and the leading position of `idx_seerah_chronological`. Redundant indexes cost write throughput and buy no
+reads. CLAUDE.md §4.5 forbids speculative and duplicate indexes; this table is the counterexample. **P3,
+cleanup** — drop the duplicate `slug` index and the standalone `hijri_year` index.
 
 ### Corrections to the cluster reports
 
@@ -223,8 +263,10 @@ Revised after runtime verification — the two items proven broken in production
 5. **CORE-016** social role parity — a few lines, silently breaks role-gated features today.
 6. **Publication-aware cache versioning** — closes SSG-001 and retires the recurring eviction pitfall.
 7. Fix the two stale red tests so the suite means something again.
-8. Then triage the P1 shells (theme 4) by user visibility, and the PERF findings — now that MySQL is up,
-   `EXPLAIN` can finally validate them.
+8. **PERF-001** — a generated column plus eight one-line edits for a measured 24× on every hadith list path.
+   Best effort-to-payoff ratio in the review; do it before any other PERF item.
+9. Then triage the P1 shells (theme 4) by user visibility. The remaining filed PERF findings are measured as
+   immaterial — see the table above; do not spend time on them.
 
 ## Gate status (2026-07-26, MySQL up)
 
@@ -238,9 +280,11 @@ than it looks.
 
 ## Caveats
 
-- Static only. The 18 PERF findings assert query shapes from reading code; none were measured. CLAUDE.md §4.5
-  requires `EXPLAIN` validation against realistic volumes before claiming an optimization — do that before
-  acting on any of them.
+- The PERF findings have now been measured (see above) — six of the filed ones are immaterial at current data
+  volumes, and the two costly query shapes were found only by measuring. Treat any *unmeasured* perf claim in
+  the cluster reports the same way: `EXPLAIN` it before acting.
+- Correctness and parity findings outside the P0 set remain **static**. They were traced through code but not
+  exercised at runtime.
 - OAuth, mail delivery, queue behavior, and signed verification links cannot be proven statically; wiring is
   present.
 - Findings were produced by five independent passes, so a small number of cross-cluster duplicates are
