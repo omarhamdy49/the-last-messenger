@@ -11,6 +11,44 @@ subsequently re-checked against the live MySQL database and through real in-proc
 findings were measured with `EXPLAIN` and timings — see [Runtime verification](#runtime-verification-2026-07-26)
 and [PERF verification](#perf-verification-with-explain-2026-07-26) below.
 
+## Remediation status (2026-07-26)
+
+A six-task queue was run through the Codex CLI with per-task review, gates, and mutation testing of every new
+test. Suite went 780 → **802 passing** over the run.
+
+| Finding | Status | Commit |
+|---|---|---|
+| **INFRA-001** — suite on MySQL, not sqlite | ✅ landed | `dd373c8` |
+| **HAD-001** — `/api/v1/hadith/search` 500 | ✅ landed | `15d2373` |
+| **HAD-002** — `/api/v1/hadith/by-theme` 500 | ✅ landed | `15d2373` |
+| **CORE-016** — social signups roleless | ✅ landed | `6eee23f` |
+| **SSG-001** — draft survives in public cache | ✅ landed | `21fdd8d` |
+| **CORE-001** — draft articles in unified search | ✅ done, **uncommitted** | blocked, see below |
+| **CORE-002** — draft articles via topic hubs | ✅ done, **uncommitted** | blocked |
+| **MED-002** — unpublished episodes via API | ✅ done, **uncommitted** | blocked |
+| **SSG-002** — unready sahaba publicly listed | ✅ done, **uncommitted** | blocked |
+| **HAD-003** — merged duplicate hadiths | ✅ done, **uncommitted** | blocked |
+| **PERF-001** — `LENGTH(hadith_number)` sort | ⏸ deferred | blocked |
+
+**Why five are done but uncommitted, and PERF-001 deferred.** They live in files that the in-flight
+genealogy→sahaba consolidation also modifies (`SahabiRepository` 14 hunks, `HadithRepository` 20 hunks, same
+methods), and that work depends on an uncommitted migration which drops `people`/`person_translations`
+one-way. Splitting hunk-by-hunk was not safely possible, and committing the consolidation was not the
+orchestrator's call. **Unblock by committing the consolidation; the gating work is intact in the working tree
+and PERF-001 can then run.** PERF-001 touches 5 of its 8 call sites in `HadithRepository`, so running it before
+that commit would deepen the same entanglement.
+
+Also fixed in passing, beyond the filed findings: two further registration paths had duplicated role logic
+(`Api/AuthController` was a third copy); `HadithResource`/`HadithDTO` read the same nonexistent columns as the
+two broken endpoints, so hadith detail carried the same latent 1054s; and `by-theme` needed database-level
+pagination — unbounded it measured 25.65MB of JSON at 163MB peak for the largest theme (4,604 hadiths), which
+dies at PHP's default 128M limit.
+
+Still open and worth noting: `deptrac.baseline.yaml` now has **three** stale unmatched entries (violations
+remain 0). Two came from the consolidation, one because routing Eloquent out of `AuthController` genuinely
+removed that violation. Regenerate the baseline once the consolidation lands. The two red
+`ArticlePublicPagesTest` view-count assertions (TEST-001) remain untouched by design.
+
 ## Cluster reports
 
 | Report | Prototypes | Findings | P0 |
