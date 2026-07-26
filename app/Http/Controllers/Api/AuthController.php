@@ -7,13 +7,13 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Repositories\UserRepository;
 use App\Support\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
-use Spatie\Permission\Models\Role;
 
 /**
  * Authentication API Controller
@@ -22,6 +22,8 @@ use Spatie\Permission\Models\Role;
 class AuthController extends Controller
 {
     use ApiResponse;
+
+    public function __construct(private readonly UserRepository $users) {}
 
     /**
      * Register a new user
@@ -37,16 +39,12 @@ class AuthController extends Controller
             'language' => ['nullable', 'string', 'in:ar,en,fr,tr,ur'],
         ]);
 
-        $user = User::create([
+        $user = $this->users->createPublicAccount([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'language' => $request->language ?? 'ar',
         ]);
-
-        // Assign default role
-        Role::findOrCreate('user', 'web');
-        $user->assignRole('user');
 
         // Create API token
         $token = $user->createToken('api-token')->plainTextToken;

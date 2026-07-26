@@ -78,6 +78,8 @@ final class SocialAuthTest extends TestCase
         $this->assertSame('Social Visitor', $user->name);
         $this->assertNotNull($user->email_verified_at);
         $this->assertNotEmpty($user->password);
+        $this->assertTrue($user->hasRole('user'));
+        $this->assertFalse($user->hasAnyRole(['super_admin', 'admin', 'editor']));
     }
 
     public function test_callback_links_provider_to_existing_user_by_email(): void

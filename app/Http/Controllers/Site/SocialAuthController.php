@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Repositories\UserRepository;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,6 +35,8 @@ use Laravel\Socialite\Facades\Socialite;
  */
 final class SocialAuthController extends Controller
 {
+    public function __construct(private readonly UserRepository $users) {}
+
     public function redirect(Request $request, string $provider): RedirectResponse
     {
         if (! $this->isConfigured($provider)) {
@@ -150,7 +153,7 @@ final class SocialAuthController extends Controller
             ?: $providerUser->getNickname()
             ?: Str::before($email, '@')));
 
-        $user = User::create([
+        $user = $this->users->createPublicAccount([
             'name' => Str::limit($name, 250, ''),
             'email' => $email,
             // NOT NULL column; never disclosed — provider is the only way in.

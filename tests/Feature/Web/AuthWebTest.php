@@ -38,6 +38,8 @@ final class AuthWebTest extends TestCase
         $user = User::where('email', 'visitor@example.com')->first();
         $this->assertNotNull($user);
         $this->assertTrue(Hash::check('Secret123', $user->password));
+        $this->assertTrue($user->hasRole('user'));
+        $this->assertFalse($user->hasAnyRole(['super_admin', 'admin', 'editor']));
     }
 
     public function test_registration_requires_strong_confirmed_password(): void
