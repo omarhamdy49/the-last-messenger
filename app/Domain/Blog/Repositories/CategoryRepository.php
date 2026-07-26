@@ -191,20 +191,18 @@ class CategoryRepository extends BaseRepository implements CategoryRepositoryInt
     public function listRoots(): Collection
     {
         $columns = [
-            'id', 'slug', 'type', 'status', 'name', 'description',
-            'parent_id', 'depth',
-            'icon', 'color', 'display_order',
-            'created_at', 'updated_at',
+            'id', 'slug', 'type', 'status', 'parent_id', 'depth',
+            'icon', 'color', 'display_order', 'created_at', 'updated_at',
         ];
-
-        $childColumns = implode(',', array_map(
-            fn (string $col) => "children:{$col}",
-            $columns
-        ));
+        $relationColumns = implode(',', $columns);
 
         return $this->model->query()
             ->select($columns)
-            ->with([$childColumns])
+            ->with([
+                'translations:id,category_id,locale,name,description',
+                "children:{$relationColumns}",
+                'children.translations:id,category_id,locale,name,description',
+            ])
             ->whereNull('parent_id')
             ->orderBy('display_order')
             ->get();
@@ -216,25 +214,20 @@ class CategoryRepository extends BaseRepository implements CategoryRepositoryInt
     public function findBySlug(string $slug): ?Category
     {
         $columns = [
-            'id', 'slug', 'type', 'status', 'name', 'description',
-            'parent_id', 'depth',
-            'icon', 'color', 'display_order',
-            'created_at', 'updated_at',
+            'id', 'slug', 'type', 'status', 'parent_id', 'depth',
+            'icon', 'color', 'display_order', 'created_at', 'updated_at',
         ];
-
-        $childColumns = implode(',', array_map(
-            fn (string $col) => "children:{$col}",
-            $columns
-        ));
-
-        $parentColumns = implode(',', array_map(
-            fn (string $col) => "parent:{$col}",
-            $columns
-        ));
+        $relationColumns = implode(',', $columns);
 
         return $this->model->query()
             ->select($columns)
-            ->with([$childColumns, $parentColumns])
+            ->with([
+                'translations:id,category_id,locale,name,description',
+                "children:{$relationColumns}",
+                'children.translations:id,category_id,locale,name,description',
+                "parent:{$relationColumns}",
+                'parent.translations:id,category_id,locale,name,description',
+            ])
             ->where('slug', $slug)
             ->first();
     }

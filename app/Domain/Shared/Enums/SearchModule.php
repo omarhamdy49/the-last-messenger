@@ -53,7 +53,7 @@ enum SearchModule: string
             self::SEERAH => ['translations.title', 'translations.description', 'location'],
             self::SAHABA => ['translations.name', 'translations.full_name', 'translations.kunya'],
             self::QURAN => ['translations.text', 'translations.text_notashkeel'],
-            self::GENEALOGY => ['full_name', 'translations.name', 'translations.biography'],
+            self::GENEALOGY => ['translations.full_name', 'translations.name', 'translations.biography'],
             self::ALL => [],
         };
     }

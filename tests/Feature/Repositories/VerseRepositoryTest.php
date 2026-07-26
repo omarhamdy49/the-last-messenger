@@ -8,7 +8,7 @@ use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Models\VerseTranslation;
 use App\Domain\Quran\Repositories\VerseRepositoryInterface;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -28,7 +28,20 @@ use Tests\TestCase;
  */
 class VerseRepositoryTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTruncation;
+
+    protected array $tablesToTruncate = [
+        'quran_verse_translations',
+        'quran_verses',
+        'quran_surahs',
+    ];
+
+    protected function tearDown(): void
+    {
+        $this->truncateTablesForAllConnections();
+
+        parent::tearDown();
+    }
 
     // ---------------------------------------------------------------------------
     // Helpers
@@ -192,15 +205,14 @@ class VerseRepositoryTest extends TestCase
         $repo = app(VerseRepositoryInterface::class);
         $repo->searchArabic('بسم الله');
 
-        // Single-JOIN paginator issues: 1 data query + 1 count query = 2.
-        // With the surah eager load that is 3 at most.
-        // The old two-step approach would have been: 1 translations query + 1 IN()
-        // query + 1 count + 1 surah = 4+.
+        // Single-JOIN paginator issues: 1 data query + 1 count query, plus
+        // the surah and translation eager loads = 4.
+        // The old two-step approach adds another translations query.
         $this->assertLessThanOrEqual(
-            3,
+            4,
             $queryCount,
-            "searchArabic() issued {$queryCount} queries — expected max 3 (JOIN approach). ".
-            'The old pluck+whereIn approach would cause more queries.'
+            "searchArabic() issued {$queryCount} queries — expected max 4 (JOIN approach). ".
+            'The old pluck+whereIn approach would issue at least 5.'
         );
     }
 
