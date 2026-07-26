@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Site;
 use App\Domain\Seerah\Enums\EventPhase;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Models\SeerahMilestone;
+use App\Domain\Seerah\Services\SeerahCacheKeys;
 use App\Domain\Seerah\Services\SeerahEventService;
 use App\Domain\Seerah\Services\SeerahEventTypeService;
 use App\Domain\Seerah\Services\SeerahMilestoneService;
@@ -34,7 +35,7 @@ final class SeerahController extends Controller
         $locale = app()->getLocale();
 
         $payload = Cache::remember(
-            "public_seerah_journey_{$locale}",
+            SeerahCacheKeys::journey($locale),
             1800,
             function () use ($locale): array {
                 try {
@@ -145,13 +146,7 @@ final class SeerahController extends Controller
             ? $category
             : 'all';
 
-        $cacheKey = sprintf(
-            'public_seerah_events_%s_%s_%s_%d',
-            $locale,
-            md5($search),
-            $validCategory,
-            $page,
-        );
+        $cacheKey = SeerahCacheKeys::events($locale, $search, $validCategory, $page);
 
         $payload = Cache::remember($cacheKey, 900, function () use ($search, $validCategory, $perPage, $locale): array {
             try {
@@ -217,7 +212,7 @@ final class SeerahController extends Controller
         $viewStyle = $request->query('view') === 'timeline' ? 'timeline' : 'article';
 
         $payload = Cache::remember(
-            "public_seerah_event_{$slug}_{$locale}",
+            SeerahCacheKeys::event($slug, $locale),
             1800,
             function () use ($slug, $locale): ?array {
                 try {
@@ -238,7 +233,7 @@ final class SeerahController extends Controller
 
         // Related events from the same phase (or featured fallback), excluding the current one.
         $related = Cache::remember(
-            "public_seerah_related_{$slug}_{$locale}",
+            SeerahCacheKeys::related($slug, $locale),
             1800,
             function () use ($payload, $locale): array {
                 try {

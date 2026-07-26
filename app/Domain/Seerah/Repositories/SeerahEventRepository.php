@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Seerah\Repositories;
 
 use App\Domain\Seerah\Models\SeerahEvent;
+use App\Domain\Seerah\Services\SeerahCacheKeys;
 use App\Domain\Shared\Helpers\FullTextSearchHelper;
 use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Collection;
@@ -73,7 +74,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     public function getFeatured(int $limit = 10): Collection
     {
         return Cache::remember(
-            "seerah_featured_{$limit}",
+            SeerahCacheKeys::featured($limit),
             self::CACHE_TTL,
             fn () => $this->model
                 ->with($this->listRelations())
@@ -91,7 +92,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     public function getEventsWithLocation(): Collection
     {
         return Cache::remember(
-            'seerah_events_with_location',
+            SeerahCacheKeys::eventsWithLocation(),
             self::CACHE_TTL,
             fn () => $this->model
                 ->with([
@@ -202,7 +203,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
         $relations = empty($relations) ? $this->detailRelations() : $relations;
 
         return Cache::remember(
-            "seerah_event_slug_{$slug}",
+            SeerahCacheKeys::eventBySlug($slug),
             self::CACHE_TTL,
             fn () => $this->model
                 ->with($relations)
@@ -268,19 +269,6 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     private function defaultRelations(): array
     {
         return $this->detailRelations();
-    }
-
-    /**
-     * Clear cache for event
-     */
-    public function clearCacheForModel(int $id): void
-    {
-        $event = $this->find($id);
-        if ($event) {
-            Cache::forget("seerah_event_slug_{$event->slug}");
-            Cache::forget('seerah_featured_10');
-            Cache::forget('seerah_events_with_location');
-        }
     }
 
     /**

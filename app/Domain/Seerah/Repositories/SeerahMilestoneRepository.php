@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Seerah\Repositories;
 
 use App\Domain\Seerah\Models\SeerahMilestone;
+use App\Domain\Seerah\Services\SeerahCacheKeys;
 use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -40,7 +41,7 @@ class SeerahMilestoneRepository extends BaseRepository implements SeerahMileston
     public function getActiveWithPublishedEvents(): Collection
     {
         return Cache::remember(
-            $this->getCacheKey('journey'),
+            SeerahCacheKeys::journeySource(),
             $this->cacheTTL,
             fn () => $this->model->newQuery()
                 ->with([

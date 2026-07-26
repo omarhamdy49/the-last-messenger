@@ -6,10 +6,14 @@ namespace Tests\Feature\Web;
 
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Models\SeerahEventTimelineItem;
+use App\Domain\Seerah\Models\SeerahEventType;
 use App\Domain\Seerah\Models\SeerahParticipant;
+use App\Domain\Seerah\Repositories\SeerahEventRepositoryInterface;
 use Database\Factories\SeerahEventFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -25,14 +29,14 @@ final class SeerahPublicPagesTest extends TestCase
      * Create a Seerah event with translations via the factory.
      * featured_image is set to avoid Spatie media fallback queries on SQLite.
      */
-    private function makeEvent(string $slug): SeerahEvent
+    private function makeEvent(string $slug, array $attributes = []): SeerahEvent
     {
-        return SeerahEventFactory::new()->create([
+        return SeerahEventFactory::new()->create(array_merge([
             'slug' => $slug,
             'featured_image' => 'https://example.com/image.jpg',
             // The factory may pick a random article id; no articles exist here.
             'related_article_id' => null,
-        ]);
+        ], $attributes));
     }
 
     /**
@@ -177,5 +181,140 @@ final class SeerahPublicPagesTest extends TestCase
             ->assertSee('From the Year of the Elephant to the Rashidun Caliphate')
             ->assertDontSee('من عام الفيل حتى العهد الراشدي')
             ->assertDontSee('الأحداث التاريخية');
+    }
+
+    #[DataProvider('unpublishMutations')]
+    public function test_ssg_001_unpublishing_invalidates_cached_event_detail(string $mutation): void
+    {
+        $event = $this->makeEvent("ssg-001-detail-{$mutation}");
+        $title = "SSG-001 detail {$mutation}";
+        $event->translations()->where('locale', 'en')->update(['title' => $title]);
+
+        $url = route('public.seerah.event', $event->slug);
+
+        $this->withSession(['locale' => 'en'])->get($url)
+            ->assertOk()
+            ->assertSee($title);
+
+        $this->unpublish($event, $mutation);
+
+        $this->withSession(['locale' => 'en'])->get($url)->assertNotFound();
+    }
+
+    #[DataProvider('unpublishMutations')]
+    public function test_ssg_001_unpublishing_invalidates_cached_filtered_paginated_listing(string $mutation): void
+    {
+        $type = $this->makeEventType("ssg-001-{$mutation}");
+
+        foreach (range(1, 12) as $year) {
+            $this->makeEvent("ssg-001-filler-{$mutation}-{$year}", [
+                'seerah_event_type_id' => $type->id,
+                'hijri_year' => $year,
+            ]);
+        }
+
+        $event = $this->makeEvent("ssg-001-listing-{$mutation}", [
+            'seerah_event_type_id' => $type->id,
+            'hijri_year' => 999,
+        ]);
+        $title = "SSG-001 listing {$mutation}";
+        $event->translations()->where('locale', 'en')->update(['title' => $title]);
+
+        $url = route('public.seerah.events', ['category' => $type->slug, 'page' => 2]);
+
+        $this->withSession(['locale' => 'en'])->get($url)
+            ->assertOk()
+            ->assertSee($title);
+
+        $this->unpublish($event, $mutation);
+
+        $this->withSession(['locale' => 'en'])->get($url)
+            ->assertOk()
+            ->assertDontSee($title);
+    }
+
+    public function test_ssg_001_publishing_refreshes_public_pages_without_flushing_unrelated_cache(): void
+    {
+        $type = $this->makeEventType('ssg-001-publish');
+        $event = $this->makeEvent('ssg-001-publish', [
+            'seerah_event_type_id' => $type->id,
+            'status' => 'draft',
+        ]);
+        $title = 'SSG-001 newly published';
+        $event->translations()->where('locale', 'en')->update(['title' => $title]);
+        $listingUrl = route('public.seerah.events', ['category' => $type->slug]);
+
+        Cache::put('public_hadith_show_unrelated', 'still-cached', 1800);
+
+        $this->withSession(['locale' => 'en'])->get($listingUrl)
+            ->assertOk()
+            ->assertDontSee($title);
+
+        app(SeerahEventRepositoryInterface::class)->update($event->id, ['status' => 'published']);
+
+        $this->withSession(['locale' => 'en'])->get($listingUrl)
+            ->assertOk()
+            ->assertSee($title);
+        $this->withSession(['locale' => 'en'])
+            ->get(route('public.seerah.event', $event->slug))
+            ->assertOk()
+            ->assertSee($title);
+        $this->assertSame('still-cached', Cache::get('public_hadith_show_unrelated'));
+    }
+
+    public function test_ssg_001_second_event_request_is_served_from_cache(): void
+    {
+        $event = $this->makeEvent('ssg-001-cache-hit');
+        $url = route('public.seerah.event', $event->slug);
+        $seerahQueries = 0;
+
+        DB::listen(static function ($query) use (&$seerahQueries): void {
+            if (str_contains($query->sql, 'seerah_')) {
+                $seerahQueries++;
+            }
+        });
+
+        $this->withSession(['locale' => 'en'])->get($url)->assertOk();
+        $queriesAfterFirstRequest = $seerahQueries;
+
+        $this->withSession(['locale' => 'en'])->get($url)->assertOk();
+
+        $this->assertGreaterThan(0, $queriesAfterFirstRequest);
+        $this->assertSame($queriesAfterFirstRequest, $seerahQueries);
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function unpublishMutations(): array
+    {
+        return [
+            'single update' => ['single'],
+            'bulk status update' => ['bulk'],
+        ];
+    }
+
+    private function makeEventType(string $slug): SeerahEventType
+    {
+        $type = SeerahEventType::query()->create([
+            'slug' => $slug,
+            'is_active' => true,
+        ]);
+        $type->syncTranslations(['name' => ['ar' => $slug, 'en' => $slug]]);
+
+        return $type;
+    }
+
+    private function unpublish(SeerahEvent $event, string $mutation): void
+    {
+        $repository = app(SeerahEventRepositoryInterface::class);
+
+        if ($mutation === 'bulk') {
+            $repository->bulkUpdateStatus([$event->id], 'draft');
+
+            return;
+        }
+
+        $repository->update($event->id, ['status' => 'draft']);
     }
 }

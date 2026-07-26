@@ -163,8 +163,6 @@ class SeerahEventService extends BaseService
             throw new ResourceNotFoundException("Timeline event not found: {$id}");
         }
 
-        $this->repository->clearCacheForModel($id);
-
         return $this->repository->find($id);
     }
 
@@ -180,8 +178,6 @@ class SeerahEventService extends BaseService
         if (! $deleted) {
             throw new ResourceNotFoundException("Timeline event not found: {$id}");
         }
-
-        $this->repository->clearCacheForModel($id);
 
         return true;
     }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Shared\Repositories;
 
 use App\Domain\Shared\Contracts\RepositoryInterface;
+use App\Domain\Shared\Helpers\VersionedCacheKey;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -228,9 +229,7 @@ abstract class BaseRepository implements RepositoryInterface
      */
     public function clearCache(): void
     {
-        $versionKey = $this->cachePrefix.':version';
-        $current = (int) Cache::get($versionKey, 0);
-        Cache::forever($versionKey, $current + 1);
+        VersionedCacheKey::bump($this->cachePrefix);
     }
 
     /**
@@ -244,14 +243,7 @@ abstract class BaseRepository implements RepositoryInterface
      */
     protected function getCacheKey(string $method, array $parameters = []): string
     {
-        $version = (int) Cache::get($this->cachePrefix.':version', 0);
-        $key = $this->cachePrefix.':v'.$version.':'.$method;
-
-        if (! empty($parameters)) {
-            $key .= ':'.md5(serialize($parameters));
-        }
-
-        return $key;
+        return VersionedCacheKey::make($this->cachePrefix, $method, $parameters);
     }
 
     /**
