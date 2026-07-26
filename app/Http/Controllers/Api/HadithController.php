@@ -6,11 +6,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithChapter;
-use App\Domain\Hadith\Models\HadithTheme;
 use App\Domain\Hadith\Repositories\BookRepository;
 use App\Domain\Hadith\Repositories\CollectionRepository;
 use App\Domain\Hadith\Repositories\HadithRepository;
 use App\Domain\Hadith\Repositories\NarratorRepository;
+use App\Domain\Hadith\Repositories\ThemeRepositoryInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\HadithBookResource;
 use App\Http\Resources\HadithCollectionResource;
@@ -29,6 +29,7 @@ class HadithController extends Controller
         private readonly CollectionRepository $collectionRepository,
         private readonly BookRepository $bookRepository,
         private readonly NarratorRepository $narratorRepository,
+        private readonly ThemeRepositoryInterface $themeRepository,
     ) {}
 
     /**
@@ -353,25 +354,19 @@ class HadithController extends Controller
     }
 
     /**
-     * Hadiths filtered by theme slug.
+     * Hadiths filtered by theme ID or human-readable name.
      */
-    public function byTheme(string $theme): JsonResponse
+    public function byTheme(string $theme, Request $request): JsonResponse
     {
-        $themeModel = HadithTheme::query()
-            ->where('slug_ar', $theme)
-            ->orWhere('slug_en', $theme)
-            ->select(['id', 'name_ar', 'name_en', 'slug_ar', 'slug_en'])
-            ->first();
+        $perPage = $request->integer('per_page', 20);
+        $perPage = max(1, min(100, $perPage));
 
-        if ($themeModel === null) {
+        $paginator = $this->themeRepository->paginateHadithsByIdentifier($theme, $perPage);
+
+        if ($paginator === null) {
             return $this->notFoundResponse('Theme not found');
         }
 
-        $hadiths = $this->hadithRepository->getByTheme($themeModel->id);
-
-        return $this->successResponse(
-            HadithResource::collection($hadiths),
-            'Hadiths by theme retrieved successfully'
-        );
+        return $this->paginatedResponse($paginator, 'Hadiths by theme retrieved successfully');
     }
 }

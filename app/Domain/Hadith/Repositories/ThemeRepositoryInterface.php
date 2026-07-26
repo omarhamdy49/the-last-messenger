@@ -32,6 +32,11 @@ interface ThemeRepositoryInterface extends RepositoryInterface
     public function getWithHadiths(int $id): ?HadithTheme;
 
     /**
+     * Paginate hadiths for a theme resolved by numeric ID or human-readable name.
+     */
+    public function paginateHadithsByIdentifier(string $identifier, int $perPage = 20): ?LengthAwarePaginator;
+
+    /**
      * Search themes
      */
     public function search(string $query, int $perPage = 15): LengthAwarePaginator;

@@ -15,7 +15,7 @@ use JsonSerializable;
 final readonly class HadithDTO implements JsonSerializable
 {
     /**
-     * @param  array<string, string>  $translations
+     * @param  array<string, array{text: string}>  $translations
      * @param  array<string>  $themes
      */
     public function __construct(
@@ -41,11 +41,14 @@ final readonly class HadithDTO implements JsonSerializable
         foreach ($hadith->translations as $translation) {
             $translations[$translation->language_code] = [
                 'text' => $translation->text,
-                'translation' => $translation->translation,
             ];
         }
 
-        $themes = $hadith->themes->pluck('name_'.$locale)->toArray();
+        $themes = $hadith->themes
+            ->map(fn ($theme) => $locale === 'ar' ? $theme->theme_ar : ($theme->theme_en ?? $theme->theme_ar))
+            ->filter()
+            ->values()
+            ->toArray();
 
         return new self(
             id: $hadith->id,

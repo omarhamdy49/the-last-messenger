@@ -255,10 +255,11 @@ class HadithRepositoryTest extends TestCase
         $hadith = $this->createHadithWithTranslation(
             '1',
             Hadith::GRADING_SAHIH,
-            'إِنَّمَا الْأَعْمَالُ بِالنِّيَّاتِ وَإِنَّمَا لِكُلِّ امْرِئٍ مَا نَوَى'
+            'إنما الأعمال بالنيات وإنما لكل امرئ ما نوى'
         );
 
         $repo = app(HadithRepositoryInterface::class);
+        DB::commit(); // InnoDB FULLTEXT indexes expose committed rows only.
         $results = $repo->search('الأعمال');
 
         $this->assertGreaterThan(0, $results->total());

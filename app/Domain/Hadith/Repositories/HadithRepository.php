@@ -138,11 +138,8 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
     {
         $q = $this->model->query();
 
-        // Search in translations — FULLTEXT index covers the 'text' column only.
-        // 'translation' has no FULLTEXT index so it keeps LIKE.
         $q->whereHas('translations', function ($subQuery) use ($query) {
-            FullTextSearchHelper::apply($subQuery, ['text'], $query)
-                ->orWhere('translation', 'LIKE', "%{$query}%");
+            FullTextSearchHelper::apply($subQuery, ['text'], $query);
         });
 
         // Apply filters
@@ -159,7 +156,11 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
         }
 
         return $q->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
-            ->with(['translations', 'book:id,collection_id,title_ar,title_en', 'book.collection:id,name_ar,name_en,abbreviation'])
+            ->with([
+                'translations:id,hadith_id,language_code,text',
+                'book:id,collection_id,title_ar,title_en',
+                'book.collection:id,name_ar,name_en,abbreviation',
+            ])
             ->orderByRaw('LENGTH(hadith_number)')->orderBy('hadith_number')
             ->paginate($perPage);
     }

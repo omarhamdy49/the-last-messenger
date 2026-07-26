@@ -51,13 +51,12 @@ class HadithResource extends JsonResource
                 return $this->translations->map(fn ($t) => [
                     'language' => $t->language_code,
                     'text' => $t->text,
-                    'translation' => $t->translation,
                 ]);
             }),
             'themes' => $this->whenLoaded('themes', function () use ($locale) {
                 return $this->themes->map(fn ($t) => [
                     'id' => $t->id,
-                    'name' => $locale === 'ar' ? $t->name_ar : $t->name_en,
+                    'name' => $locale === 'ar' ? $t->theme_ar : ($t->theme_en ?? $t->theme_ar),
                 ]);
             }),
             'gradings' => $this->whenLoaded('gradings', function () use ($locale) {

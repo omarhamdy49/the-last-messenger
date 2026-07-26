@@ -4,12 +4,50 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
+use App\Domain\Hadith\Models\Hadith;
+use App\Domain\Hadith\Models\HadithBook;
+use App\Domain\Hadith\Models\HadithCollection;
+use App\Domain\Hadith\Models\HadithTheme;
+use App\Domain\Hadith\Models\HadithTranslation;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class HadithApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    private function createHadith(string $text = 'Actions are judged by intentions'): Hadith
+    {
+        $collection = HadithCollection::create([
+            'name_ar' => 'صحيح البخاري',
+            'name_en' => 'Sahih Bukhari',
+            'slug_ar' => 'صحيح-البخاري',
+            'slug_en' => 'sahih-bukhari',
+            'abbreviation' => 'BUK',
+        ]);
+
+        $book = HadithBook::create([
+            'collection_id' => $collection->id,
+            'title_ar' => 'كتاب الوحي',
+            'title_en' => 'Book of Revelation',
+        ]);
+
+        $hadith = Hadith::create([
+            'book_id' => $book->id,
+            'hadith_number' => '1',
+            'grading_status' => Hadith::GRADING_SAHIH,
+        ]);
+
+        HadithTranslation::create([
+            'hadith_id' => $hadith->id,
+            'language_code' => 'en',
+            'text' => $text,
+        ]);
+
+        return $hadith;
+    }
 
     public function test_hadith_index_returns_success_envelope(): void
     {
@@ -158,6 +196,26 @@ class HadithApiTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_hadith_search_returns_matching_seeded_hadith_without_authentication(): void
+    {
+        $hadith = $this->createHadith();
+        DB::commit(); // InnoDB FULLTEXT indexes expose committed rows only.
+
+        $response = $this->getJson('/api/v1/hadith/search?q=intentions');
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.0.id', $hadith->id)
+            ->assertJsonPath('data.0.translations.0.language_code', 'en')
+            ->assertJsonPath('data.0.translations.0.text', 'Actions are judged by intentions')
+            ->assertJsonStructure([
+                'data' => [
+                    '*' => ['id', 'hadith_number', 'grading_status', 'translations'],
+                ],
+                'meta' => ['current_page', 'last_page', 'per_page', 'total'],
+            ]);
+    }
+
     public function test_hadith_sahih_returns_success(): void
     {
         $response = $this->getJson('/api/v1/hadith/sahih');
@@ -218,6 +276,88 @@ class HadithApiTest extends TestCase
 
         $response->assertNotFound()
             ->assertJson(['success' => false]);
+    }
+
+    public function test_hadith_by_theme_returns_seeded_hadiths_by_human_readable_name_without_authentication(): void
+    {
+        $hadith = $this->createHadith();
+        $theme = HadithTheme::create([
+            'theme_ar' => 'الصبر',
+            'theme_en' => 'Patience',
+        ]);
+        $hadith->themes()->attach($theme->id);
+
+        $response = $this->getJson('/api/v1/hadith/by-theme/Patience', ['Accept-Language' => 'ar']);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.0.id', $hadith->id)
+            ->assertJsonPath('data.0.themes.0.id', $theme->id)
+            ->assertJsonPath('data.0.themes.0.theme_ar', 'الصبر')
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonStructure([
+                'data' => [
+                    '*' => ['id', 'hadith_number', 'grading_status', 'translations', 'themes'],
+                ],
+                'meta' => ['current_page', 'last_page', 'per_page', 'total'],
+            ]);
+    }
+
+    public function test_hadith_by_theme_accepts_numeric_id(): void
+    {
+        $hadith = $this->createHadith();
+        $theme = HadithTheme::create([
+            'theme_ar' => 'النية',
+            'theme_en' => 'Intention',
+        ]);
+        $hadith->themes()->attach($theme->id);
+
+        $this->getJson("/api/v1/hadith/by-theme/{$theme->id}")
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $hadith->id);
+    }
+
+    public function test_hadith_by_theme_paginates_in_sql_and_caps_per_page_at_100(): void
+    {
+        $firstHadith = $this->createHadith('Hadith text 1');
+        $theme = HadithTheme::create(['theme_ar' => 'موضوع كبير', 'theme_en' => 'Large Theme']);
+        $hadithIds = [$firstHadith->id];
+
+        for ($number = 2; $number <= 101; $number++) {
+            $hadith = Hadith::create([
+                'book_id' => $firstHadith->book_id,
+                'hadith_number' => (string) $number,
+                'grading_status' => Hadith::GRADING_SAHIH,
+            ]);
+            $hadith->translations()->create([
+                'language_code' => 'en',
+                'text' => "Hadith text {$number}",
+            ]);
+            $hadithIds[] = $hadith->id;
+        }
+
+        $theme->hadiths()->attach($hadithIds);
+        $queries = [];
+        DB::listen(static function (QueryExecuted $query) use (&$queries): void {
+            $queries[] = $query->sql;
+        });
+
+        $response = $this->getJson("/api/v1/hadith/by-theme/{$theme->id}?per_page=500");
+
+        $response->assertOk()
+            ->assertJsonCount(100, 'data')
+            ->assertJsonPath('meta.total', 101)
+            ->assertJsonPath('meta.per_page', 100)
+            ->assertJsonPath('meta.current_page', 1)
+            ->assertJsonPath('meta.last_page', 2);
+        $this->assertTrue(
+            collect($queries)->contains(
+                fn (string $sql) => str_contains($sql, 'from `hadith_hadiths`')
+                    && str_contains($sql, 'limit 100')
+                    && ! str_contains($sql, '`hadith_hadiths`.*')
+            ),
+            'The hadith page must be explicitly selected and limited by SQL.'
+        );
     }
 
     public function test_hadith_chapter_show_returns_404_for_nonexistent_chapter(): void

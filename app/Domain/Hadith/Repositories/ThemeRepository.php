@@ -76,6 +76,38 @@ class ThemeRepository extends BaseRepository implements ThemeRepositoryInterface
 
     /**
      * {@inheritdoc}
+     */
+    public function paginateHadithsByIdentifier(string $identifier, int $perPage = 20): ?LengthAwarePaginator
+    {
+        $theme = $this->model
+            ->newQuery()
+            ->select(['id'])
+            ->when(
+                ctype_digit($identifier),
+                fn ($query) => $query->whereKey((int) $identifier),
+                fn ($query) => $query->where(function ($query) use ($identifier) {
+                    $query->where('theme_ar', $identifier)
+                        ->orWhere('theme_en', $identifier)
+                        ->orWhereHas('translations', fn ($translation) => $translation->where('name', $identifier));
+                })
+            )
+            ->first();
+
+        return $theme?->hadiths()
+            ->with([
+                'translations:id,hadith_id,language_code,text',
+                'themes:id,theme_ar,theme_en',
+            ])
+            ->orderByRaw('LENGTH(hadith_number)')
+            ->orderBy('hadith_number')
+            ->paginate(
+                $perPage,
+                ['hadith_hadiths.id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id']
+            );
+    }
+
+    /**
+     * {@inheritdoc}
      *
      * FULLTEXT index on hadith_themes covers (theme_ar, theme_en).
      * Note: the real DB columns are theme_ar / theme_en (not name_ar / name_en).
