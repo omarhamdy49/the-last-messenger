@@ -8,6 +8,8 @@ use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Services\SeerahCacheKeys;
 use App\Domain\Shared\Helpers\FullTextSearchHelper;
 use App\Domain\Shared\Repositories\BaseRepository;
+use App\Domain\Shared\Services\PublicVisibilityRegistry;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -16,10 +18,18 @@ use Illuminate\Support\Facades\DB;
 
 class SeerahEventRepository extends BaseRepository implements SeerahEventRepositoryInterface
 {
+    private const CHRONOLOGY_COLUMNS = ['hijri_year', 'hijri_month', 'hijri_day', 'display_order'];
+
     /**
      * Cache TTL in seconds (30 minutes)
      */
     private const CACHE_TTL = 1800;
+
+    public function __construct(
+        private readonly PublicVisibilityRegistry $publicVisibility,
+    ) {
+        parent::__construct();
+    }
 
     /**
      * {@inheritdoc}
@@ -27,6 +37,38 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     protected function getModel(): Model
     {
         return new SeerahEvent;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getPublicPage(string $slug, string $locale, int $relatedLimit = 3): ?array
+    {
+        $query = $this->model->newQuery()
+            ->select([
+                'id', 'slug', 'hijri_date', 'hijri_year', 'hijri_month', 'hijri_day',
+                'gregorian_year', 'seerah_event_type_id', 'phase', 'era', 'location',
+                'latitude', 'longitude', 'featured_image', 'gallery', 'related_article_id',
+                'is_pivotal', 'is_featured', 'views_count', 'statistics', 'display_order',
+            ])
+            ->with($this->publicDetailRelations($locale))
+            ->where('slug', $slug);
+
+        /** @var SeerahEvent|null $event */
+        $event = $this->publicVisibility->apply($query, $locale)->first();
+
+        if ($event === null) {
+            return null;
+        }
+
+        $adjacent = $this->getAdjacentForPublic($event, $locale);
+
+        return [
+            'event' => $event,
+            'prev' => $adjacent['prev'],
+            'next' => $adjacent['next'],
+            'related' => $this->getRelatedForPublic($event, $locale, $relatedLimit),
+        ];
     }
 
     /**
@@ -227,6 +269,152 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
             'type:id,slug,icon,color,gradient',
             'type.translations:id,seerah_event_type_id,locale,name',
         ];
+    }
+
+    /**
+     * @return array<int|string, string|\Closure>
+     */
+    private function publicDetailRelations(string $locale): array
+    {
+        return [
+            'translations' => fn ($relation) => $relation
+                ->select(['id', 'seerah_event_id', 'locale', 'title', 'description', 'content', 'is_ready'])
+                ->where('locale', $locale)
+                ->where('is_ready', true),
+            'type:id,slug,icon,color,gradient',
+            'type.translations' => fn ($relation) => $relation
+                ->select(['id', 'seerah_event_type_id', 'locale', 'name'])
+                ->where('locale', $locale),
+            'participants:id,event_id,participant_type,participant_id,role',
+            'participants.translations' => fn ($relation) => $relation
+                ->select(['id', 'seerah_participant_id', 'locale', 'name', 'description'])
+                ->where('locale', $locale),
+            'timelineItems' => fn ($relation) => $relation
+                ->select(['id', 'seerah_event_id', 'display_order'])
+                ->orderBy('display_order'),
+            'timelineItems.translations' => fn ($relation) => $relation
+                ->select(['id', 'seerah_event_timeline_item_id', 'locale', 'title', 'description'])
+                ->where('locale', $locale),
+            'article' => function ($relation) use ($locale): void {
+                $query = $relation->getQuery()->select(['articles.id', 'articles.status']);
+                $this->publicVisibility->apply($query, $locale);
+            },
+            'article.locales' => fn ($relation) => $relation
+                ->select(['id', 'article_id', 'locale', 'title', 'slug', 'is_ready'])
+                ->where('locale', $locale)
+                ->where('is_ready', true),
+        ];
+    }
+
+    /**
+     * @return array{prev: ?SeerahEvent, next: ?SeerahEvent}
+     */
+    private function getAdjacentForPublic(SeerahEvent $event, string $locale): array
+    {
+        $base = function () use ($event, $locale): Builder {
+            $query = $this->model->newQuery()
+                ->select(['id', 'slug', 'hijri_year', 'hijri_month', 'hijri_day', 'display_order'])
+                ->with(['translations' => fn ($relation) => $relation
+                    ->select(['id', 'seerah_event_id', 'locale', 'title', 'is_ready'])
+                    ->where('locale', $locale)
+                    ->where('is_ready', true),
+                ])
+                ->whereKeyNot($event->id);
+
+            return $this->publicVisibility->apply($query, $locale);
+        };
+
+        $prevQuery = $base();
+        $this->applyChronologyBoundary($prevQuery, $event, '<');
+
+        $nextQuery = $base();
+        $this->applyChronologyBoundary($nextQuery, $event, '>');
+
+        return [
+            'prev' => $prevQuery->chronological('desc')->first(),
+            'next' => $nextQuery->chronological()->first(),
+        ];
+    }
+
+    private function getRelatedForPublic(SeerahEvent $event, string $locale, int $limit): Collection
+    {
+        $query = $this->model->newQuery()
+            ->select([
+                'id', 'slug', 'seerah_event_type_id', 'phase', 'hijri_date',
+                'hijri_year', 'hijri_month', 'hijri_day', 'gregorian_year',
+                'location', 'is_pivotal', 'is_featured', 'display_order',
+            ])
+            ->with([
+                'translations' => fn ($relation) => $relation
+                    ->select(['id', 'seerah_event_id', 'locale', 'title', 'description', 'is_ready'])
+                    ->where('locale', $locale)
+                    ->where('is_ready', true),
+                'type:id,slug,icon,color,gradient',
+                'type.translations' => fn ($relation) => $relation
+                    ->select(['id', 'seerah_event_type_id', 'locale', 'name'])
+                    ->where('locale', $locale),
+            ])
+            ->whereKeyNot($event->id);
+
+        $this->publicVisibility->apply($query, $locale);
+
+        if ($event->phase === null) {
+            $query->featured();
+        } else {
+            $phase = $event->phase->value;
+            $query
+                ->where(fn (Builder $candidate) => $candidate
+                    ->where('phase', $phase)
+                    ->orWhere('is_featured', true))
+                ->orderByRaw('CASE WHEN phase = ? THEN 0 ELSE 1 END', [$phase]);
+        }
+
+        return $query->chronological()->limit($limit)->get();
+    }
+
+    private function applyChronologyBoundary(Builder $query, SeerahEvent $event, string $operator): void
+    {
+        $branches = 0;
+
+        $query->where(function (Builder $boundaries) use ($event, $operator, &$branches): void {
+            foreach (self::CHRONOLOGY_COLUMNS as $index => $column) {
+                $value = $event->getAttribute($column);
+
+                if ($operator === '<' && $value === null) {
+                    continue;
+                }
+
+                $branches++;
+                $boundaries->orWhere(function (Builder $branch) use ($event, $operator, $index, $column, $value): void {
+                    foreach (array_slice(self::CHRONOLOGY_COLUMNS, 0, $index) as $equalColumn) {
+                        $equalValue = $event->getAttribute($equalColumn);
+                        $equalValue === null
+                            ? $branch->whereNull($equalColumn)
+                            : $branch->where($equalColumn, $equalValue);
+                    }
+
+                    if ($operator === '>' && $value === null) {
+                        $branch->whereNotNull($column);
+
+                        return;
+                    }
+
+                    if ($operator === '<') {
+                        $branch->where(fn (Builder $comparison) => $comparison
+                            ->whereNull($column)
+                            ->orWhere($column, '<', $value));
+
+                        return;
+                    }
+
+                    $branch->where($column, '>', $value);
+                });
+            }
+        });
+
+        if ($branches === 0) {
+            $query->whereRaw('0 = 1');
+        }
     }
 
     /**

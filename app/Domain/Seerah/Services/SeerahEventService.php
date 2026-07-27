@@ -54,6 +54,24 @@ class SeerahEventService extends BaseService
     }
 
     /**
+     * @return array{event: SeerahEvent, prev: ?SeerahEvent, next: ?SeerahEvent, related: Collection<int, SeerahEvent>}
+     *
+     * @throws ResourceNotFoundException
+     */
+    public function getPublicEventPage(string $slug, string $locale): array
+    {
+        $page = $this->repository->getPublicPage($slug, $locale);
+
+        if ($page === null) {
+            throw new ResourceNotFoundException("Timeline event not found: {$slug}");
+        }
+
+        $page['event']->incrementViews();
+
+        return $page;
+    }
+
+    /**
      * Get events by type (type id or slug)
      */
     public function getEventsByType(int|string $type, int $perPage = 15): LengthAwarePaginator

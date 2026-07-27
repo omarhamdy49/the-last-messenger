@@ -248,8 +248,11 @@
     <main class="pb-12">
         <!-- Parallax Hero -->
         <section id="event-hero" class="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
-            <img src="{{ asset('assets/event/event-img.png') }}"
+            <img src="{{ $event['featuredImage'] ?? asset('assets/event/event-img.png') }}"
                  alt="{{ $event['title'] }}"
+                 width="1920"
+                 height="1080"
+                 loading="lazy"
                  class="tl-parallax-img absolute inset-0 w-full h-[120%] object-cover"
                  :style="`transform: translateY(${parallaxOffset}px)`" />
             <div class="absolute inset-0 tl-hero-gradient"></div>
@@ -438,6 +441,107 @@
                     </div>
                 </div>
             </section>
+        @endif
+
+        @if (! empty($event['gallery']))
+            <section class="py-16 sm:py-20" :class="darkMode ? 'bg-gray-900/40' : 'bg-white'">
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl">
+                    <h2 class="text-3xl md:text-5xl font-bold text-center mb-12 flex items-center justify-center gap-3" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                        <i data-lucide="images" class="w-9 h-9 text-[#0056b3]"></i>
+                        {{ __('seerah.public.event_gallery') }}
+                    </h2>
+                    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        @foreach ($event['gallery'] as $image)
+                            <img src="{{ $image }}"
+                                 alt="{{ $event['title'] }}"
+                                 width="800"
+                                 height="600"
+                                 loading="lazy"
+                                 class="w-full aspect-[4/3] object-cover rounded-3xl shadow-xl" />
+                        @endforeach
+                    </div>
+                </div>
+            </section>
+        @endif
+
+        @if ($event['mapUrl'] || $event['relatedArticle'] || ! empty($related))
+            <section class="py-16 sm:py-20">
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl grid lg:grid-cols-2 gap-6">
+                    @if ($event['mapUrl'])
+                        <div class="rounded-3xl overflow-hidden shadow-xl" :class="darkMode ? 'bg-gray-900' : 'bg-white'">
+                            <div class="p-6">
+                                <h2 class="text-2xl font-bold flex items-center gap-3" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                    <i data-lucide="map-pin" class="w-6 h-6 text-[#0056b3]"></i>
+                                    {{ __('seerah.public.event_location') }}
+                                </h2>
+                            </div>
+                            <iframe src="{{ $event['mapUrl'] }}"
+                                    title="{{ __('seerah.public.event_location_map') }}"
+                                    width="600"
+                                    height="320"
+                                    loading="lazy"
+                                    class="w-full h-80 border-0"></iframe>
+                        </div>
+                    @endif
+
+                    <div class="space-y-6">
+                        @if ($event['relatedArticle'])
+                            <a href="{{ $event['relatedArticle']['url'] }}"
+                               class="tl-card-hover block rounded-3xl p-6 shadow-xl"
+                               :class="darkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'">
+                                <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('seerah.public.related_article') }}</span>
+                                <span class="mt-2 flex items-center gap-3 text-xl font-bold line-clamp-2">
+                                    <i data-lucide="newspaper" class="w-6 h-6 shrink-0 text-[#0056b3]"></i>
+                                    {{ $event['relatedArticle']['title'] }}
+                                </span>
+                            </a>
+                        @endif
+
+                        @if (! empty($related))
+                            <div class="rounded-3xl p-6 shadow-xl" :class="darkMode ? 'bg-gray-900' : 'bg-white'">
+                                <h2 class="text-2xl font-bold mb-4" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ __('seerah.public.related_events') }}</h2>
+                                <ul class="space-y-2">
+                                    @foreach ($related as $rel)
+                                        <li>
+                                            <a href="{{ $rel['url'] }}" class="block px-4 py-3 rounded-xl line-clamp-2" :class="darkMode ? 'hover:bg-gray-800 text-gray-300' : 'hover:bg-gray-50 text-gray-700'">{{ $rel['title'] }}</a>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </section>
+        @endif
+
+        @if (! empty($prev) || ! empty($next))
+            <nav class="container mx-auto px-4 sm:px-6 lg:px-8 mt-10 grid grid-cols-1 md:grid-cols-2 gap-4" aria-label="{{ __('seerah.public.event_navigation') }}">
+                @if (! empty($prev))
+                    <a href="{{ $prev['url'] }}" class="group card-premium p-5 flex items-center gap-4 hover-lift">
+                        <span class="w-11 h-11 rounded-full bg-gradient-to-l from-primary to-secondary text-white flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                            <i data-lucide="chevron-{{ $isRtl ? 'right' : 'left' }}" class="w-5 h-5"></i>
+                        </span>
+                        <span class="min-w-0">
+                            <span class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('seerah.public.previous_event') }}</span>
+                            <span class="block font-bold text-gray-900 dark:text-white line-clamp-1 group-hover:text-primary transition-colors">{{ $prev['title'] }}</span>
+                        </span>
+                    </a>
+                @else
+                    <span class="hidden md:block"></span>
+                @endif
+
+                @if (! empty($next))
+                    <a href="{{ $next['url'] }}" class="group card-premium p-5 flex items-center gap-4 hover-lift text-end">
+                        <span class="flex-1 min-w-0">
+                            <span class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('seerah.public.next_event') }}</span>
+                            <span class="block font-bold text-gray-900 dark:text-white line-clamp-1 group-hover:text-primary transition-colors">{{ $next['title'] }}</span>
+                        </span>
+                        <span class="w-11 h-11 rounded-full bg-gradient-to-l from-primary to-secondary text-white flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                            <i data-lucide="chevron-{{ $isRtl ? 'left' : 'right' }}" class="w-5 h-5"></i>
+                        </span>
+                    </a>
+                @endif
+            </nav>
         @endif
     </main>
 

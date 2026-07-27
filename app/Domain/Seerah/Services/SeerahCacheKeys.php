@@ -57,6 +57,11 @@ final class SeerahCacheKeys
         return self::eventKey('publicRelated', compact('slug', 'locale'));
     }
 
+    public static function invalidateEvents(): void
+    {
+        VersionedCacheKey::bump(self::EVENT_PREFIX);
+    }
+
     /**
      * @param  array<string, mixed>  $parameters
      */

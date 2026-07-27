@@ -15,6 +15,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Throwable;
 
 final class SeerahController extends Controller
@@ -216,9 +218,17 @@ final class SeerahController extends Controller
             1800,
             function () use ($slug, $locale): ?array {
                 try {
-                    $event = $this->seerahEventService->getEventBySlug($slug);
+                    $page = $this->seerahEventService->getPublicEventPage($slug, $locale);
 
-                    return $this->mapEventDetail($event, $locale);
+                    return [
+                        'event' => $this->mapEventDetail($page['event'], $locale),
+                        'prev' => $page['prev'] ? $this->mapEventNavigation($page['prev'], $locale) : null,
+                        'next' => $page['next'] ? $this->mapEventNavigation($page['next'], $locale) : null,
+                        'related' => $page['related']
+                            ->map(fn (SeerahEvent $event) => $this->mapTimelineEvent($event, $locale))
+                            ->values()
+                            ->all(),
+                    ];
                 } catch (Throwable $e) {
                     report($e);
 
@@ -231,31 +241,19 @@ final class SeerahController extends Controller
             abort(404);
         }
 
-        // Related events from the same phase (or featured fallback), excluding the current one.
         $related = Cache::remember(
             SeerahCacheKeys::related($slug, $locale),
             1800,
-            function () use ($payload, $locale): array {
-                try {
-                    $featured = $this->seerahEventService->getFeaturedEvents(8);
-
-                    return $featured
-                        ->reject(fn (SeerahEvent $event) => $event->slug === $payload['slug'])
-                        ->take(3)
-                        ->map(fn (SeerahEvent $event) => $this->mapTimelineEvent($event, $locale))
-                        ->values()
-                        ->all();
-                } catch (Throwable) {
-                    return [];
-                }
-            },
+            fn (): array => $payload['related'],
         );
 
         $template = $viewStyle === 'timeline' ? 'public.seerah.event-timeline' : 'public.seerah.event';
 
         return view($template, [
-            'event' => $payload,
+            'event' => $payload['event'],
             'related' => $related,
+            'prev' => $payload['prev'],
+            'next' => $payload['next'],
         ]);
     }
 
@@ -321,6 +319,19 @@ final class SeerahController extends Controller
             ->values()
             ->all();
 
+        $articleLocale = $event->article?->locales->firstWhere('locale', $locale);
+        $latitude = $event->latitude !== null ? (float) $event->latitude : null;
+        $longitude = $event->longitude !== null ? (float) $event->longitude : null;
+        $mapUrl = null;
+
+        if ($latitude !== null && $longitude !== null) {
+            $mapUrl = 'https://www.openstreetmap.org/export/embed.html?'.http_build_query([
+                'bbox' => implode(',', [$longitude - 0.04, $latitude - 0.04, $longitude + 0.04, $latitude + 0.04]),
+                'layer' => 'mapnik',
+                'marker' => "{$latitude},{$longitude}",
+            ], '', '&', PHP_QUERY_RFC3986);
+        }
+
         return [
             'slug' => $event->slug,
             'title' => $event->getTranslation('title', $locale) ?? __('seerah.public.untitled_event'),
@@ -338,8 +349,20 @@ final class SeerahController extends Controller
             'hijriYear' => $event->hijri_year,
             'gregorianYear' => $event->gregorian_year,
             'location' => $event->location,
-            'latitude' => $event->latitude !== null ? (float) $event->latitude : null,
-            'longitude' => $event->longitude !== null ? (float) $event->longitude : null,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'mapUrl' => $mapUrl,
+            'featuredImage' => $this->publicImageUrl($event->featured_image),
+            'gallery' => collect($event->gallery ?? [])
+                ->filter(fn ($image): bool => is_string($image) && trim($image) !== '')
+                ->map(fn (string $image): string => $this->publicImageUrl($image))
+                ->filter()
+                ->values()
+                ->all(),
+            'relatedArticle' => $articleLocale ? [
+                'title' => $articleLocale->title,
+                'url' => route('public.articles.show', $articleLocale->slug),
+            ] : null,
             'isPivotal' => (bool) $event->is_pivotal,
             'viewsCount' => (int) $event->views_count,
             'statistics' => is_array($event->statistics) ? $event->statistics : [],
@@ -347,6 +370,28 @@ final class SeerahController extends Controller
             'timeline' => $timeline,
             'url' => route('public.seerah.event', $event->slug),
         ];
+    }
+
+    /**
+     * @return array{title: string, url: string}
+     */
+    private function mapEventNavigation(SeerahEvent $event, string $locale): array
+    {
+        return [
+            'title' => $event->getTranslation('title', $locale) ?? __('seerah.public.untitled_event'),
+            'url' => route('public.seerah.event', $event->slug),
+        ];
+    }
+
+    private function publicImageUrl(?string $path): ?string
+    {
+        if ($path === null || trim($path) === '') {
+            return null;
+        }
+
+        return Str::startsWith($path, ['http://', 'https://'])
+            ? $path
+            : Storage::disk('public')->url($path);
     }
 
     /**

@@ -4,12 +4,18 @@ declare(strict_types=1);
 
 namespace App\Domain\Seerah\Repositories;
 
+use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Shared\Contracts\RepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 interface SeerahEventRepositoryInterface extends RepositoryInterface
 {
+    /**
+     * @return array{event: SeerahEvent, prev: ?SeerahEvent, next: ?SeerahEvent, related: Collection<int, SeerahEvent>}|null
+     */
+    public function getPublicPage(string $slug, string $locale, int $relatedLimit = 3): ?array;
+
     /**
      * Get events by type (type id or slug)
      */
