@@ -11,6 +11,7 @@ use App\Domain\Quran\Services\QuranQueryService;
 use App\Domain\Sahaba\Services\SahabiService;
 use App\Domain\Seerah\Services\SeerahEventService;
 use App\Http\Controllers\Controller;
+use App\Repositories\ArticleRepository;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Cache;
 use Throwable;
@@ -29,6 +30,7 @@ final class HomeController extends Controller
         private readonly HomeContentService $homeContentService,
         private readonly SeerahEventService $seerahEventService,
         private readonly HadithDashboardStatsProvider $hadithStatsProvider,
+        private readonly ArticleRepository $articleRepository,
     ) {}
 
     public function index(): View
@@ -40,6 +42,12 @@ final class HomeController extends Controller
             "home_featured_sahaba_{$locale}_8",
             1800,
             fn () => $this->sahabiService->getFeaturedCompanions(8),
+        );
+
+        $featuredArticles = Cache::remember(
+            "home_featured_articles_{$locale}_3",
+            1800,
+            fn () => $this->articleRepository->getHomeFeaturedArticles($locale, 3),
         );
 
         // Daily verse — random, cached per day per locale
@@ -95,6 +103,7 @@ final class HomeController extends Controller
 
         return view('public.home', compact(
             'featuredSahaba',
+            'featuredArticles',
             'dailyVerse',
             'dailyHadith',
             'stats',

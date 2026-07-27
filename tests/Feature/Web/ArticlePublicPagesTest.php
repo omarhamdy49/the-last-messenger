@@ -9,6 +9,7 @@ use App\Domain\Blog\Models\Tag;
 use App\Models\Article;
 use App\Models\ArticleLocale;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -224,5 +225,57 @@ final class ArticlePublicPagesTest extends TestCase
     public function test_show_returns_404_for_unknown_slug(): void
     {
         $this->get(route('public.articles.show', 'no-such-article'))->assertNotFound();
+    }
+
+    public function test_home_featured_section_renders_a_real_published_article(): void
+    {
+        $article = $this->makeArticle('real-home-feature-ar', 'ميزة حقيقية', [
+            'is_featured' => true,
+            'thumb' => 'articles/thumbs/real-home-feature.webp',
+        ]);
+        ArticleLocale::query()->create([
+            'article_id' => $article->id,
+            'locale' => 'en',
+            'title' => 'Real Home Feature',
+            'slug' => 'real-home-feature',
+            'excerpt' => 'A real database excerpt.',
+            'is_ready' => true,
+        ]);
+        Cache::forget('home_featured_articles_en_3');
+
+        $response = $this->withSession(['locale' => 'en'])->get(route('public.home'));
+
+        $response->assertOk()
+            ->assertSee('Real Home Feature')
+            ->assertSee('A real database excerpt.')
+            ->assertSee(route('public.articles.show', 'real-home-feature'), false)
+            ->assertSee(asset('storage/articles/thumbs/real-home-feature.webp'), false);
+    }
+
+    public function test_home_featured_section_is_hidden_without_a_publishable_article(): void
+    {
+        $draft = Article::factory()->draft()->create(['slug' => 'ready-draft']);
+        ArticleLocale::query()->create([
+            'article_id' => $draft->id,
+            'locale' => 'ar',
+            'title' => 'Ready Draft',
+            'slug' => 'ready-draft',
+            'is_ready' => true,
+        ]);
+
+        $published = Article::factory()->published()->create(['slug' => 'unready-published']);
+        ArticleLocale::query()->create([
+            'article_id' => $published->id,
+            'locale' => 'ar',
+            'title' => 'Unready Published',
+            'slug' => 'unready-published',
+            'is_ready' => false,
+        ]);
+        Cache::forget('home_featured_articles_ar_3');
+
+        $this->withSession(['locale' => 'ar'])
+            ->get(route('public.home'))
+            ->assertOk()
+            ->assertDontSee(__('site.featured_content'));
     }
 }

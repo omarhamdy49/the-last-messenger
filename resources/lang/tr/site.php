@@ -172,12 +172,6 @@ return [
     // Featured
     'featured_content' => 'Öne Çıkan İçerik',
     'handpicked_content' => 'Özenle seçilmiş makaleler ve programlar',
-    'article_1_title' => 'Medine\'ye Hicret: Bir Dönüm Noktası',
-    'article_1_excerpt' => 'Nebevî hicretin olaylarının ve ilk İslam devletinin kuruluşundaki derin etkisinin analizi.',
-    'article_2_title' => '"Ameller niyetlere göredir" Hadis Şerhi',
-    'article_2_excerpt' => 'İslam\'da niyetin önemi üzerine bir araştırma.',
-    'article_3_title' => '"Sevgilinin İzinde" Programı',
-    'article_3_excerpt' => 'Nebevî biyografinin izini süren görsel serinin ilk bölümü.',
     'watch_now' => 'Şimdi İzle',
 
     // CTA

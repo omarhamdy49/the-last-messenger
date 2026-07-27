@@ -172,12 +172,6 @@ return [
     // Featured
     'featured_content' => 'Contenu en Vedette',
     'handpicked_content' => 'Articles et programmes soigneusement sélectionnés',
-    'article_1_title' => 'L\'Hégire à Médine : Un Tournant',
-    'article_1_excerpt' => 'Une analyse des événements de la migration prophétique et son impact profond.',
-    'article_2_title' => 'Commentaire : "Les actes selon les intentions"',
-    'article_2_excerpt' => 'Une exploration de l\'importance de l\'intention en Islam.',
-    'article_3_title' => 'Programme "Sur les Traces du Bien-Aimé"',
-    'article_3_excerpt' => 'Premier épisode de la série visuelle qui suit la biographie prophétique.',
     'watch_now' => 'Regarder Maintenant',
 
     // CTA

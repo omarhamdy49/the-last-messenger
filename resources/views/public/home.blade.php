@@ -839,8 +839,8 @@
 
 {{-- ===================================================================
      SECTION 6 — FEATURED CONTENT
-     Verbatim port of index-enhanced.html lines ~1609-1664
      =================================================================== --}}
+@if($featuredArticles->isNotEmpty())
 <section class="py-20 bg-[#E9ECEF] dark:bg-[#0f3460]">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center mb-12">
@@ -856,62 +856,43 @@
         </div>
 
         <div class="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {{-- Article 1 — Seerah --}}
-            <article class="bg-white dark:bg-[#16213e] rounded-2xl shadow-xl overflow-hidden hover-lift">
-                <img src="{{ asset('images/site/article-1.webp') }}"
-                     alt="{{ __('site.article_1_title') }}"
-                     width="800" height="560" loading="lazy" decoding="async"
-                     class="w-full h-56 object-cover" />
-                <div class="p-6">
-                    <span class="inline-block bg-[#0056b3]/10 text-[#0056b3] dark:bg-[#0056b3]/20 dark:text-[#4a9eff] text-xs font-bold px-3 py-1 rounded-full mb-3">{{ __('site.seerah') }}</span>
-                    <h3 class="text-xl font-bold mb-2">{{ __('site.article_1_title') }}</h3>
-                    <p class="text-gray-600 dark:text-gray-300 mb-4">{{ __('site.article_1_excerpt') }}</p>
-                    <a href="{{ $seerahUrl }}"
-                       class="inline-flex items-center space-s-2 text-[#0056b3] dark:text-[#4a9eff] font-semibold hover:underline">
-                        <span>{{ __('site.read_more') }}</span>
-                        <i class="w-4 h-4" data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}"></i>
+            @foreach($featuredArticles as $article)
+                @php
+                    $articleLocale = $article->locales->first();
+                    $image = $article->featured_image ?: $article->thumb;
+                    $imageUrl = $image
+                        ? (filter_var($image, FILTER_VALIDATE_URL) ? $image : asset('storage/'.ltrim($image, '/')))
+                        : asset('images/placeholder.png');
+                @endphp
+                <article class="bg-white dark:bg-[#16213e] rounded-2xl shadow-xl overflow-hidden hover-lift">
+                    <a href="{{ route('public.articles.show', $articleLocale->slug) }}">
+                        <img src="{{ $imageUrl }}"
+                             alt="{{ $articleLocale->title }}"
+                             width="800" height="560" loading="lazy" decoding="async"
+                             class="w-full h-56 object-cover" />
                     </a>
-                </div>
-            </article>
-
-            {{-- Article 2 — Hadith --}}
-            <article class="bg-white dark:bg-[#16213e] rounded-2xl shadow-xl overflow-hidden hover-lift">
-                <img src="{{ asset('images/site/article-2.webp') }}"
-                     alt="{{ __('site.article_2_title') }}"
-                     width="800" height="560" loading="lazy" decoding="async"
-                     class="w-full h-56 object-cover" />
-                <div class="p-6">
-                    <span class="inline-block bg-[#218838]/10 text-[#218838] dark:bg-[#218838]/20 dark:text-[#5cb85c] text-xs font-bold px-3 py-1 rounded-full mb-3">{{ __('site.hadith') }}</span>
-                    <h3 class="text-xl font-bold mb-2">{{ __('site.article_2_title') }}</h3>
-                    <p class="text-gray-600 dark:text-gray-300 mb-4">{{ __('site.article_2_excerpt') }}</p>
-                    <a href="{{ $hadithUrl }}"
-                       class="inline-flex items-center space-s-2 text-[#218838] dark:text-[#5cb85c] font-semibold hover:underline">
-                        <span>{{ __('site.read_more') }}</span>
-                        <i class="w-4 h-4" data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}"></i>
-                    </a>
-                </div>
-            </article>
-
-            {{-- Article 3 — Media --}}
-            <article class="bg-white dark:bg-[#16213e] rounded-2xl shadow-xl overflow-hidden hover-lift">
-                <img src="{{ asset('images/site/article-3.webp') }}"
-                     alt="{{ __('site.article_3_title') }}"
-                     width="800" height="560" loading="lazy" decoding="async"
-                     class="w-full h-56 object-cover" />
-                <div class="p-6">
-                    <span class="inline-block bg-[#FF7F50]/10 text-[#FF7F50] text-xs font-bold px-3 py-1 rounded-full mb-3">{{ __('site.media') }}</span>
-                    <h3 class="text-xl font-bold mb-2">{{ __('site.article_3_title') }}</h3>
-                    <p class="text-gray-600 dark:text-gray-300 mb-4">{{ __('site.article_3_excerpt') }}</p>
-                    <a href="{{ $mediaUrl }}"
-                       class="inline-flex items-center space-s-2 text-[#FF7F50] font-semibold hover:underline">
-                        <span>{{ __('site.watch_now') }}</span>
-                        <i class="w-4 h-4" data-lucide="play"></i>
-                    </a>
-                </div>
-            </article>
+                    <div class="p-6">
+                        <h3 class="text-xl font-bold mb-2 line-clamp-2">
+                            <a href="{{ route('public.articles.show', $articleLocale->slug) }}"
+                               class="hover:text-[#0056b3] dark:hover:text-[#4a9eff] transition-colors">
+                                {{ $articleLocale->title }}
+                            </a>
+                        </h3>
+                        <p class="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3">
+                            {{ $articleLocale->excerpt ?: $articleLocale->description }}
+                        </p>
+                        <a href="{{ route('public.articles.show', $articleLocale->slug) }}"
+                           class="inline-flex items-center space-s-2 text-[#0056b3] dark:text-[#4a9eff] font-semibold hover:underline">
+                            <span>{{ __('site.read_more') }}</span>
+                            <i class="w-4 h-4" data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}"></i>
+                        </a>
+                    </div>
+                </article>
+            @endforeach
         </div>
     </div>
 </section>
+@endif
 
 {{-- ===================================================================
      SECTION 7 — CALL TO ACTION (guests only)

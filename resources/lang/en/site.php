@@ -172,12 +172,6 @@ return [
     // Home — featured articles
     'featured_content' => 'Featured Content',
     'handpicked_content' => 'Carefully selected articles and programs',
-    'article_1_title' => 'The Hijra to Madinah: A Turning Point',
-    'article_1_excerpt' => 'An analysis of the events of the Prophetic migration and its profound impact on establishing the first Islamic state.',
-    'article_2_title' => 'Commentary on "Actions are Judged by Intentions"',
-    'article_2_excerpt' => 'An exploration of the importance of intention in Islam through one of the comprehensive Prophetic sayings.',
-    'article_3_title' => 'Program "In the Footsteps of the Beloved"',
-    'article_3_excerpt' => 'The first episode of the visual series that follows the traces of the Prophetic biography.',
     'watch_now' => 'Watch Now',
 
     // Home — CTA

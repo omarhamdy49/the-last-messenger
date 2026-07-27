@@ -6,6 +6,7 @@ namespace App\Repositories;
 
 use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Models\Tag;
+use App\Domain\Shared\Services\PublicVisibilityRegistry;
 use App\Models\Article;
 use App\Models\ArticleLocale;
 use App\Models\User;
@@ -17,6 +18,10 @@ use Illuminate\Support\Facades\DB;
 
 class ArticleRepository
 {
+    public function __construct(
+        private readonly PublicVisibilityRegistry $publicVisibility,
+    ) {}
+
     /**
      * Get all articles with filters
      */
@@ -141,6 +146,28 @@ class ArticleRepository
                 ->limit($limit)
                 ->get();
         });
+    }
+
+    /**
+     * Get featured articles for the public home page, filling any remaining
+     * slots with the newest articles visible in the active locale.
+     */
+    public function getHomeFeaturedArticles(string $locale, int $limit): Collection
+    {
+        $query = Article::query()
+            ->select(['id', 'thumb', 'featured_image', 'is_featured', 'created_at'])
+            ->with(['locales' => fn ($localeQuery) => $localeQuery
+                ->select(['id', 'article_id', 'locale', 'title', 'slug', 'excerpt', 'description'])
+                ->where('locale', $locale)
+                ->where('is_ready', true),
+            ]);
+
+        return $this->publicVisibility
+            ->apply($query, $locale)
+            ->orderByDesc('is_featured')
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get();
     }
 
     /**
