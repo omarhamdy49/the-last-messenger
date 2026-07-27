@@ -10,10 +10,13 @@ use App\Http\Controllers\Admin\Hadith\ScholarController;
 use App\Http\Controllers\Admin\Hadith\ThemeController;
 use Illuminate\Support\Facades\Route;
 
-// DISABLED: Hadith Routes (module removed - use API endpoints instead)
+// Hadith Routes
 Route::prefix('hadith')->group(function (): void {
     Route::get('/search', [HadithController::class, 'search'])->name('admin.hadith.search');
     Route::post('/bulk-delete', [HadithController::class, 'bulkDelete'])->name('admin.hadith.bulk-delete');
+    Route::post('/{hadith}/isnad', [HadithController::class, 'storeIsnad'])->name('admin.hadith.isnad.store');
+    Route::post('/{hadith}/isnad/{isnad}/move', [HadithController::class, 'moveIsnad'])->name('admin.hadith.isnad.move');
+    Route::delete('/{hadith}/isnad/{isnad}', [HadithController::class, 'destroyIsnad'])->name('admin.hadith.isnad.destroy');
 });
 Route::resource('hadith', HadithController::class)->names([
     'index' => 'admin.hadith.index',

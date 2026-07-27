@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\Hadith\Services\HadithPublicVisibility;
+use App\Domain\Shared\Contracts\PublicVisibilityProviderInterface;
 use Illuminate\Support\ServiceProvider;
 
 class HadithServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(HadithPublicVisibility::class);
+        $this->app->tag(HadithPublicVisibility::class, PublicVisibilityProviderInterface::class);
+
         $this->app->bind(
             \App\Domain\Hadith\Repositories\HadithRepositoryInterface::class,
             \App\Domain\Hadith\Repositories\HadithRepository::class

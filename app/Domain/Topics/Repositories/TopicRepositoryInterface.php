@@ -14,7 +14,7 @@ interface TopicRepositoryInterface
      *
      * @return Collection<int, Topic>
      */
-    public function allOrderedWithCounts(): Collection;
+    public function allOrderedWithCounts(string $locale): Collection;
 
     /**
      * A single topic by slug with its translations loaded, or null.
@@ -28,14 +28,14 @@ interface TopicRepositoryInterface
      *
      * @return Collection<int, \App\Domain\Topics\Models\TopicItem>
      */
-    public function itemsForTopic(int $topicId, string $itemableType): Collection;
+    public function itemsForTopic(int $topicId, string $itemableType, string $locale): Collection;
 
     /**
      * Per-type item counts for a single topic, keyed by morph alias.
      *
      * @return array<string, int>
      */
-    public function itemCounts(int $topicId): array;
+    public function itemCounts(int $topicId, string $locale): array;
 
     /**
      * Replace a topic's items for a given morph type with the supplied ids,

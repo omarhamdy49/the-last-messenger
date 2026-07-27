@@ -35,6 +35,7 @@ return [
         'users' => 'Utilisateurs',
         'settings' => 'Paramètres',
         'hadith' => 'Hadith',
+        'sahaba' => 'Compagnons et Généalogie',
     ],
 
     // Dashboard
@@ -839,5 +840,50 @@ return [
     'hijri_today' => 'Aujourd\'hui',
     'hijri_clear' => 'Effacer',
     'order' => 'Ordre',
+
+    // Sahaba (Companions) Admin Data Table
+    'gender' => 'Genre',
+    'male' => 'Homme',
+    'female' => 'Femme',
+    'photo' => 'Photo',
+    'featured' => 'En vedette',
+    'columns' => 'Colonnes',
+    'column_visibility' => 'Visibilité des colonnes',
+    'add_sahabi' => 'Ajouter un compagnon',
+    'manage_sahaba' => 'Gestion des Compagnons',
+    'sahaba_page_subtitle' => 'Gérer les fiches des nobles Compagnons (qu\'Allah les agrée)',
+    'no_sahaba_found' => 'Aucun compagnon trouvé',
+    'search_sahaba_placeholder' => 'Rechercher par nom, kunya ou laqab...',
+    'unpublish' => 'Dépublier',
+    'unpublished' => 'Non publié',
+    'mark_featured' => 'Marquer en vedette',
+    'unmark_featured' => 'Retirer la mise en vedette',
+    'sahaba_bulk_featured_updated' => 'Statut vedette mis à jour pour :count compagnon(s)',
+    'sahaba_bulk_publish_updated' => 'Statut de publication mis à jour pour :count compagnon(s)',
+
+    // Genealogy Admin Data Table
+    'father' => 'Père',
+    'mother' => 'Mère',
+    'genealogy_page_subtitle' => 'Gérer l\'arbre généalogique et les registres de lignée',
+    'add_person' => 'Ajouter une personne',
+    'no_genealogy_found' => 'Aucun enregistrement généalogique trouvé',
+    'search_genealogy_placeholder' => 'Rechercher par nom, kunya ou laqab...',
+    'genealogy_self_parent_error' => 'Une personne ne peut pas être son propre père ou sa propre mère.',
+    'genealogy_cycle_error' => 'Cette affectation créerait un cycle dans l\'arbre généalogique (la personne sélectionnée est déjà un descendant de cet enregistrement).',
+    'genealogy_self_spouse_error' => 'Une personne ne peut pas être son propre conjoint.',
+    'genealogy_duplicate_spouse_error' => 'Une relation conjugale existe déjà entre ces deux personnes.',
+
+    // Hadith Isnad Chain
+    'isnad_chain' => 'Chaîne de transmission (Isnad)',
+    'isnad_chain_hint' => 'Gérez la chaîne des rapporteurs de ce hadith, du plus proche du compilateur jusqu\'au compagnon qui a entendu le Prophète ﷺ.',
+    'no_narrators_in_chain' => 'Aucun rapporteur dans la chaîne pour le moment.',
+    'move_up' => 'Monter',
+    'move_down' => 'Descendre',
+    'remove_from_chain' => 'Retirer de la chaîne',
+    'add_narrator_to_chain' => 'Ajouter à la chaîne',
+    'transmission_method' => 'Formule de transmission',
+    'narrator_added_to_chain' => 'Rapporteur ajouté à la chaîne d\'isnad',
+    'narrator_removed_from_chain' => 'Rapporteur retiré de la chaîne d\'isnad',
+    'isnad_chain_available_after_save' => 'Vous pourrez gérer la chaîne d\'isnad (rapporteurs) après avoir enregistré ce hadith.',
 
 ];

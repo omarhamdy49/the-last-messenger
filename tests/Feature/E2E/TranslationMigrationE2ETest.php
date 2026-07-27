@@ -253,9 +253,9 @@ class TranslationMigrationE2ETest extends TestCase
         // Verify translation table exists
         $this->assertTrue(\Schema::hasTable('sahabi_translations'));
 
-        // Verify translatable fields count (includes martyrdom added in later migration)
+        // Sahaba and genealogy now share the same localized identity fields.
         $translatable = $sahabi->getTranslatableFields();
-        $this->assertCount(8, $translatable);
+        $this->assertCount(14, $translatable);
         $this->assertContains('name', $translatable);
         $this->assertContains('biography', $translatable);
 
@@ -263,23 +263,23 @@ class TranslationMigrationE2ETest extends TestCase
     }
 
     /**
-     * Test 13: Genealogy Module - Person with Translations
-     * Verify Person model migrated correctly
+     * Test 13: Genealogy uses the canonical Sahaba identity and translations.
      */
     public function test_person_translations(): void
     {
         $person = Person::create([
             'slug' => 'abdulmutallib',
-            'person_type' => 'historical_figure',
+            'person_type' => 'historical',
+            'is_sahabi' => false,
             'gender' => 'male',
         ]);
 
-        // Verify translation table exists
-        $this->assertTrue(\Schema::hasTable('person_translations'));
+        $this->assertFalse(\Schema::hasTable('people'));
+        $this->assertFalse(\Schema::hasTable('person_translations'));
+        $this->assertSame('sahaba', $person->getTable());
+        $this->assertTrue(\Schema::hasTable('sahabi_translations'));
 
-        // Verify translatable fields
         $translatable = $person->getTranslatableFields();
-        $this->assertCount(8, $translatable);
         $this->assertContains('name', $translatable);
         $this->assertContains('biography', $translatable);
         $this->assertContains('birth_place', $translatable);
@@ -385,7 +385,6 @@ class TranslationMigrationE2ETest extends TestCase
             'hadith_source_translations',
             'hadith_theme_translations',
             'hadith_chapter_translations',
-            'person_translations',
             'reciter_translations',
             'seerah_event_translations',
             'seerah_participant_translations',
@@ -440,7 +439,6 @@ class TranslationMigrationE2ETest extends TestCase
             'hadith_source_translations',
             'hadith_theme_translations',
             'hadith_chapter_translations',
-            'person_translations',
             'reciter_translations',
             'seerah_event_translations',
             'seerah_participant_translations',
@@ -481,10 +479,11 @@ class TranslationMigrationE2ETest extends TestCase
     public function test_no_json_columns_on_parent_tables(): void
     {
         // Check that translatable columns were dropped from parent tables
-        // Example: people table should not have 'name', 'biography' JSON columns
+        $this->assertFalse(\Schema::hasTable('people'));
+        $this->assertFalse(\Schema::hasTable('person_translations'));
 
-        // These are checked by the migration and column existence check
-        $this->assertTrue(true);
+        $this->assertFalse(\Schema::hasColumn('sahaba', 'name'));
+        $this->assertFalse(\Schema::hasColumn('sahaba', 'biography'));
     }
 
     /**

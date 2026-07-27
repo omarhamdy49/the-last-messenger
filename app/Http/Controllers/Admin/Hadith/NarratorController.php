@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin\Hadith;
 
 use App\Domain\Hadith\Enums\HadithGrade;
 use App\Domain\Hadith\Exceptions\HadithOperationException;
+use App\Domain\Hadith\Models\HadithNarrator;
 use App\Domain\Hadith\Repositories\NarratorRepositoryInterface;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Requests\Admin\Hadith\StoreNarratorRequest;
@@ -84,7 +85,7 @@ class NarratorController extends AdminController
             $validated = $request->validated();
 
             // Create narrator
-            $narrator = $this->repository->create([
+            $narrator = HadithNarrator::resolveOrCreate([
                 'name_ar' => $validated['name_ar'],
                 'name_en' => $validated['name_en'] ?? null,
                 'full_name_ar' => $validated['full_name_ar'] ?? null,
@@ -176,7 +177,7 @@ class NarratorController extends AdminController
             $validated = $request->validated();
 
             // Update narrator
-            $narrator->update([
+            $narrator->updateIdentityAndRole([
                 'name_ar' => $validated['name_ar'],
                 'name_en' => $validated['name_en'] ?? $narrator->name_en,
                 'full_name_ar' => $validated['full_name_ar'] ?? $narrator->full_name_ar,

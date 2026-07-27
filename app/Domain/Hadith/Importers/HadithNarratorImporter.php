@@ -62,7 +62,9 @@ class HadithNarratorImporter extends BaseImporter
      */
     protected function isDuplicate(array $row): bool
     {
-        return HadithNarrator::whereRaw('LOWER(name_ar) = ?', [strtolower($row['name_ar'] ?? '')])
+        return HadithNarrator::query()
+            ->whereRaw('LOWER(name_ar) = ?', [strtolower($row['name_ar'] ?? '')])
+            ->orWhereHas('sahabi.translations', fn ($query) => $query->where('name', $row['name_ar'] ?? ''))
             ->exists();
     }
 
@@ -82,7 +84,7 @@ class HadithNarratorImporter extends BaseImporter
             }
         }
 
-        return HadithNarrator::create($this->buildNarratorData($row));
+        return HadithNarrator::resolveOrCreate($this->buildNarratorData($row));
     }
 
     /**
@@ -101,13 +103,7 @@ class HadithNarratorImporter extends BaseImporter
         $biographyAr = trim((string) ($row['biography_ar'] ?? ''));
         $biographyEn = trim((string) ($row['biography_en'] ?? ''));
 
-        $biography = null;
-        if ($biographyAr !== '' || $biographyEn !== '') {
-            $biography = array_filter([
-                'ar' => $biographyAr ?: null,
-                'en' => $biographyEn ?: null,
-            ]);
-        }
+        $biography = $biographyAr !== '' ? $biographyAr : ($biographyEn !== '' ? $biographyEn : null);
 
         $data = [
             'name_ar' => trim((string) $row['name_ar']),

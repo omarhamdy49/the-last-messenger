@@ -5,13 +5,17 @@ declare(strict_types=1);
 namespace App\Domain\Hadith\Repositories;
 
 use App\Domain\Hadith\Models\Hadith;
+use App\Domain\Hadith\Models\HadithIsnad;
 use App\Domain\Hadith\Models\HadithTranslation;
 use App\Domain\Shared\Helpers\FullTextSearchHelper;
 use App\Domain\Shared\Repositories\BaseRepository;
+use App\Domain\Shared\Services\PublicVisibilityRegistry;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Hadith Repository Implementation
@@ -24,6 +28,12 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
      * Cache TTL in seconds (30 minutes)
      */
     private const CACHE_TTL = 1800;
+
+    public function __construct(
+        private readonly PublicVisibilityRegistry $publicVisibility,
+    ) {
+        parent::__construct();
+    }
 
     /**
      * Get model instance
@@ -41,7 +51,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
         return Cache::remember(
             "hadith_book_{$bookId}_number_{$hadithNumber}",
             self::CACHE_TTL,
-            fn () => $this->model
+            fn () => $this->publicHadiths($this->model->newQuery())
                 ->where('book_id', $bookId)
                 ->where('hadith_number', $hadithNumber)
                 ->with(['translations', 'book.collection'])
@@ -57,7 +67,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
         return Cache::remember(
             "hadiths_by_book_{$bookId}",
             self::CACHE_TTL,
-            fn () => $this->model
+            fn () => $this->publicHadiths($this->model->newQuery())
                 ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
                 ->byBook($bookId)
                 ->with('translations')
@@ -71,7 +81,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
      */
     public function getByGrading(string $gradingStatus): Collection
     {
-        return $this->model
+        return $this->publicHadiths($this->model->newQuery())
             ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
             ->byGrading($gradingStatus)
             ->with('translations')
@@ -86,7 +96,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
         return Cache::remember(
             'hadiths_authentic',
             self::CACHE_TTL,
-            fn () => $this->model
+            fn () => $this->publicHadiths($this->model->newQuery())
                 ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
                 ->authentic()
                 ->with('translations')
@@ -99,7 +109,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
      */
     public function getWithAgreement(): Collection
     {
-        return $this->model
+        return $this->publicHadiths($this->model->newQuery())
             ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
             ->withAgreement()
             ->with('translations')
@@ -111,7 +121,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
      */
     public function getByTheme(int $themeId): Collection
     {
-        return $this->model
+        return $this->publicHadiths($this->model->newQuery())
             ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
             ->whereHas('themes', fn ($q) => $q->where('hadith_theme_id', $themeId))
             ->with(['translations', 'themes'])
@@ -123,10 +133,14 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
      */
     public function getByNarrator(int $companionId): Collection
     {
-        return $this->model
+        return $this->publicHadiths($this->model->newQuery())
             ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
             ->where('companion_id', $companionId)
-            ->with(['translations', 'companion:id,name_ar,name_en'])
+            ->with([
+                'translations',
+                'companion:id,sahaba_id,name_ar,name_en',
+                'companion.sahabi.translations',
+            ])
             ->orderByRaw('LENGTH(hadith_number)')->orderBy('hadith_number')
             ->get();
     }
@@ -136,7 +150,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
      */
     public function search(string $query, int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
-        $q = $this->model->query();
+        $q = $this->publicHadiths($this->model->newQuery());
 
         $q->whereHas('translations', function ($subQuery) use ($query) {
             FullTextSearchHelper::apply($subQuery, ['text'], $query);
@@ -174,7 +188,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
         string $sortBy = 'hadith_number',
         array $filters = []
     ): LengthAwarePaginator {
-        $query = $this->model->query();
+        $query = $this->publicHadiths($this->model->newQuery());
 
         // Apply search. The hadith text lives in hadith_translations.text (FULLTEXT
         // indexed). Combining the numeric hadith_number LIKE with the text EXISTS via OR
@@ -235,7 +249,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
      */
     public function getRandom(?string $gradingStatus = null): ?Hadith
     {
-        $query = $this->model->query();
+        $query = $this->publicHadiths($this->model->newQuery());
 
         if ($gradingStatus !== null) {
             $query->where('grading_status', $gradingStatus);
@@ -365,7 +379,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
         string $search = '',
         string $locale = 'ar'
     ): LengthAwarePaginator {
-        $query = $this->model->query()
+        $query = $this->publicHadiths($this->model->newQuery())
             ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement'])
             ->where('book_id', $bookId)
             ->with([
@@ -402,7 +416,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
      */
     public function getWithPublicDetail(int $id): ?Hadith
     {
-        return $this->model->query()
+        return $this->publicHadiths($this->model->newQuery())
             ->select([
                 'id', 'book_id', 'companion_id', 'hadith_number', 'grading_status',
                 'grading_agreement', 'significance_ar', 'significance_en',
@@ -417,7 +431,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
      */
     public function getByTextHash(string $textHash, int $excludeHadithId): Collection
     {
-        return $this->model->query()
+        return $this->publicHadiths($this->model->newQuery())
             ->select([
                 'id', 'book_id', 'hadith_number', 'grading_status',
                 'grading_agreement', 'text_hash',
@@ -435,7 +449,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
      */
     public function countByTextHash(string $textHash, int $excludeHadithId): int
     {
-        return $this->model->query()
+        return $this->publicHadiths($this->model->newQuery())
             ->where('text_hash', $textHash)
             ->whereKeyNot($excludeHadithId)
             ->count();
@@ -456,11 +470,14 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             'translations' => fn ($q) => $q
                 ->select(['id', 'hadith_id', 'language_code', 'text'])
                 ->orderBy('language_code'),
+            'companion:id,sahaba_id,name_ar,name_en',
+            'companion.sahabi.translations',
             'isnads' => fn ($q) => $q
                 ->select(['id', 'hadith_id', 'narrator_id', 'position_in_chain', 'transmission_method'])
                 ->orderBy('position_in_chain')
                 ->limit(30),
-            'isnads.narrator:id,name_ar,name_en,kunya,death_year_hijri,reliability_grade,biography',
+            'isnads.narrator:id,sahaba_id,name_ar,name_en,kunya,death_year_hijri,reliability_grade,biography',
+            'isnads.narrator.sahabi.translations',
             'commentaries' => fn ($q) => $q
                 ->select(['id', 'hadith_id', 'scholar_id', 'language_code', 'author', 'commentary_text', 'verified'])
                 ->orderBy('id')
@@ -492,6 +509,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
 
         return HadithTranslation::query()
             ->whereIn('hadith_id', $hadithIds)
+            ->whereHas('hadith', fn (Builder $query) => $this->publicHadiths($query))
             ->where('language_code', $languageCode)
             ->whereNotNull('text')
             ->where('text', '!=', '')
@@ -517,11 +535,102 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
         return HadithTranslation::query()
             ->select(['hadith_id', 'text'])
             ->whereIn('hadith_id', $hadithIds)
+            ->whereHas('hadith', fn (Builder $query) => $this->publicHadiths($query))
             ->where('language_code', $languageCode)
             ->whereNotNull('text')
             ->where('text', '!=', '')
             ->get()
             ->mapWithKeys(static fn ($t) => [(int) $t->hadith_id => (string) $t->text])
             ->all();
+    }
+
+    private function publicHadiths(Builder $query): Builder
+    {
+        return $this->publicVisibility->apply($query, app()->getLocale());
+    }
+
+    /**
+     * Append a narrator to a hadith's isnad chain at the next position.
+     * position_in_chain 1 = closest to the compiler; a new link is appended
+     * at the far end (closer to the companion) unless the chain is empty.
+     */
+    public function addNarratorToChain(int $hadithId, int $narratorId, ?string $transmissionMethod): HadithIsnad
+    {
+        $link = DB::transaction(function () use ($hadithId, $narratorId, $transmissionMethod) {
+            $nextPosition = 1 + (int) (HadithIsnad::where('hadith_id', $hadithId)->max('position_in_chain') ?? 0);
+
+            return HadithIsnad::create([
+                'hadith_id' => $hadithId,
+                'narrator_id' => $narratorId,
+                'position_in_chain' => $nextPosition,
+                'transmission_method' => $transmissionMethod,
+            ]);
+        });
+
+        $this->clearCache();
+
+        return $link;
+    }
+
+    /**
+     * Swap an isnad link with its immediate neighbor in the chain.
+     *
+     * @return bool false if there is no neighbor in that direction (already
+     *              at the end of the chain) — nothing to swap.
+     */
+    public function moveIsnadLink(int $hadithId, int $isnadId, string $direction): bool
+    {
+        $moved = DB::transaction(function () use ($hadithId, $isnadId, $direction) {
+            $link = HadithIsnad::where('hadith_id', $hadithId)->findOrFail($isnadId);
+
+            $neighbor = $direction === 'up'
+                ? $link->getPreviousNarrator()
+                : $link->getNextNarrator();
+
+            if ($neighbor === null) {
+                return false;
+            }
+
+            [$linkPosition, $neighborPosition] = [$link->position_in_chain, $neighbor->position_in_chain];
+
+            // Avoid the (hadith_id, narrator_id, position_in_chain) unique
+            // constraint colliding mid-swap by parking one link on a
+            // temporary out-of-range position first.
+            $link->update(['position_in_chain' => -1]);
+            $neighbor->update(['position_in_chain' => $linkPosition]);
+            $link->update(['position_in_chain' => $neighborPosition]);
+
+            return true;
+        });
+
+        if ($moved) {
+            $this->clearCache();
+        }
+
+        return $moved;
+    }
+
+    /**
+     * Remove a narrator from a hadith's isnad chain and renumber the
+     * remaining links so positions stay contiguous (1..N).
+     */
+    public function removeNarratorFromChain(int $hadithId, int $isnadId): void
+    {
+        DB::transaction(function () use ($hadithId, $isnadId) {
+            HadithIsnad::where('hadith_id', $hadithId)->where('id', $isnadId)->delete();
+
+            HadithIsnad::where('hadith_id', $hadithId)
+                ->orderBy('position_in_chain')
+                ->get()
+                ->values()
+                ->each(function (HadithIsnad $link, int $index) {
+                    $newPosition = $index + 1;
+                    if ($link->position_in_chain !== $newPosition) {
+                        $link->update(['position_in_chain' => $newPosition]);
+                    }
+                });
+        });
+
+        $this->clearCache();
     }
 }

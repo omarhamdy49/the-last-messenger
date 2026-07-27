@@ -193,6 +193,14 @@
                         @error('mother_id') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
                     </div>
                     <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">ترتيب الظهور في الشجرة العامة</label>
+                        <input type="number" name="tree_display_order" value="{{ old('tree_display_order', $person->tree_display_order) }}" min="0"
+                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                        <p class="mt-1 text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">الأصغر يظهر أولاً بين إخوته في الشجرة؛ اتركه فارغاً للترتيب الافتراضي</p>
+                        @error('tree_display_order') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
                         <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">تاريخ الولادة (هجري)</label>
                         <input type="date" name="birth_date_hijri" value="{{ old('birth_date_hijri', $person->birth_date_hijri?->format('Y-m-d')) }}"
                                class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
@@ -270,6 +278,15 @@
                                class="w-5 h-5 rounded text-amber-500 border-gray-300 focus:ring-amber-500">
                         <span :class="darkMode ? 'text-gray-300' : 'text-gray-700'">مميز</span>
                     </label>
+
+                    <label class="flex items-center gap-3 cursor-pointer p-3 rounded-xl transition-all"
+                           :class="darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'">
+                        <input type="hidden" name="hide_from_tree" value="0">
+                        <input type="checkbox" name="hide_from_tree" value="1"
+                               {{ old('hide_from_tree', $person->hide_from_tree) ? 'checked' : '' }}
+                               class="w-5 h-5 rounded text-red-500 border-gray-300 focus:ring-red-500">
+                        <span :class="darkMode ? 'text-gray-300' : 'text-gray-700'">إخفاء من الشجرة العامة</span>
+                    </label>
                 </div>
             </div>
 
@@ -319,6 +336,10 @@
         </div>
     </div>
 </form>
+
+<div class="mt-6">
+    @include('admin.genealogy._spouses_panel')
+</div>
 @endsection
 
 @push('scripts')

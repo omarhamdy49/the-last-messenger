@@ -119,6 +119,57 @@
                         @enderror
                     </div>
 
+                    <!-- Laqab (honorific) -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            اللقب ({{ strtoupper($lang) }})
+                        </label>
+                        <input type="text"
+                               name="laqab[{{ $lang }}]"
+                               value="{{ old("laqab.{$lang}", $sahabi->getTranslation('laqab', $lang)) }}"
+                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                               dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
+                               placeholder="مثال: الصديق">
+                        @error("laqab.{$lang}")
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Title -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            اللقب الرسمي ({{ strtoupper($lang) }})
+                        </label>
+                        <input type="text"
+                               name="title[{{ $lang }}]"
+                               value="{{ old("title.{$lang}", $sahabi->getTranslation('title', $lang)) }}"
+                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                               dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
+                               placeholder="مثال: الخليفة الأول">
+                        @error("title.{$lang}")
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Occupation -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            المهنة / الدور ({{ strtoupper($lang) }})
+                        </label>
+                        <input type="text"
+                               name="occupation[{{ $lang }}]"
+                               value="{{ old("occupation.{$lang}", $sahabi->getTranslation('occupation', $lang)) }}"
+                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                               dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
+                               placeholder="مثال: تاجر">
+                        @error("occupation.{$lang}")
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <!-- Biography -->
                     <div>
                         <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -131,6 +182,69 @@
                             height="240px"
                             placeholder="أدخل السيرة الذاتية..." />
                         @error("biography.{$lang}")
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Virtues -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            الفضائل والمناقب ({{ strtoupper($lang) }})
+                        </label>
+                        <x-admin.form.wysiwyg
+                            name="virtues[{{ $lang }}]"
+                            :value="old('virtues.'.$lang, $sahabi->getTranslation('virtues', $lang))"
+                            dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
+                            height="180px"
+                            placeholder="أدخل الفضائل والمناقب..." />
+                        @error("virtues.{$lang}")
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Famous Narrations -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            الأحاديث المشهورة ({{ strtoupper($lang) }})
+                        </label>
+                        <x-admin.form.wysiwyg
+                            name="famous_narrations[{{ $lang }}]"
+                            :value="old('famous_narrations.'.$lang, $sahabi->getTranslation('famous_narrations', $lang))"
+                            dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
+                            height="180px"
+                            placeholder="أدخل الأحاديث المشهورة..." />
+                        @error("famous_narrations.{$lang}")
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Martyrdom -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            الاستشهاد / سبب الوفاة ({{ strtoupper($lang) }})
+                        </label>
+                        <x-admin.form.wysiwyg
+                            name="martyrdom[{{ $lang }}]"
+                            :value="old('martyrdom.'.$lang, $sahabi->getTranslation('martyrdom', $lang))"
+                            dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
+                            height="150px"
+                            placeholder="أدخل تفاصيل الاستشهاد إن وجدت..." />
+                        @error("martyrdom.{$lang}")
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Notes -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            ملاحظات ({{ strtoupper($lang) }})
+                        </label>
+                        <textarea name="notes[{{ $lang }}]" rows="3"
+                                  class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                                  :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                                  dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
+                                  placeholder="أدخل ملاحظات إضافية...">{{ old("notes.{$lang}", $sahabi->getTranslation('notes', $lang)) }}</textarea>
+                        @error("notes.{$lang}")
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
@@ -167,19 +281,20 @@
                         </select>
                         @error('gender') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">المرتبة / الحالة</label>
-                        <select name="status"
-                                class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                            <option value="">اختر المرتبة</option>
-                            @foreach(\App\Domain\Sahaba\Enums\CompanionStatus::cases() as $status)
-                                <option value="{{ $status->value }}" {{ old('status', $sahabi->status?->value) == $status->value ? 'selected' : '' }}>
-                                    {{ $status->labelArabic() }}
-                                </option>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">المراتب التاريخية</label>
+                        @php $currentCategoryKeys = old('categories', $sahabi->categories->pluck('key')->all()); @endphp
+                        <div class="flex flex-wrap gap-3">
+                            @foreach(\App\Domain\Sahaba\Enums\CompanionStatus::cases() as $category)
+                                <label class="flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer"
+                                       :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                                    <input type="checkbox" name="categories[]" value="{{ $category->value }}"
+                                           {{ in_array($category->value, $currentCategoryKeys) ? 'checked' : '' }}>
+                                    {{ $category->labelArabic() }}
+                                </label>
                             @endforeach
-                        </select>
-                        @error('status') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+                        </div>
+                        @error('categories') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">القبيلة</label>
@@ -188,6 +303,14 @@
                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
                                placeholder="مثال: قريش">
                         @error('tribe') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">البطن / الفخذ</label>
+                        <input type="text" name="clan" value="{{ old('clan', $sahabi->clan) }}"
+                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                               placeholder="مثال: بنو هاشم">
+                        @error('clan') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">تاريخ الولادة (هجري)</label>
@@ -218,11 +341,19 @@
                         @error('death_place') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">عدد الأحاديث المروية</label>
-                        <input type="number" name="hadith_count" value="{{ old('hadith_count', $sahabi->hadith_count) }}" min="0"
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">مكان الدفن</label>
+                        <input type="text" name="burial_place" value="{{ old('burial_place', $sahabi->burial_place) }}"
+                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                               placeholder="مثال: البقيع">
+                        @error('burial_place') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">عدد الأحاديث المروية (كما ورد في المصدر)</label>
+                        <input type="number" name="reported_hadith_count" value="{{ old('reported_hadith_count', $sahabi->reported_hadith_count) }}" min="0"
                                class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                        @error('hadith_count') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+                        @error('reported_hadith_count') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">ترتيب الأهمية</label>
@@ -230,6 +361,57 @@
                                class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
                         @error('importance_rank') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">تاريخ الولادة (ميلادي)</label>
+                        <input type="date" name="birth_date_gregorian" value="{{ old('birth_date_gregorian', optional($sahabi->birth_date_gregorian)->format('Y-m-d')) }}"
+                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                        @error('birth_date_gregorian') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">تاريخ الوفاة (ميلادي)</label>
+                        <input type="date" name="death_date_gregorian" value="{{ old('death_date_gregorian', optional($sahabi->death_date_gregorian)->format('Y-m-d')) }}"
+                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                        @error('death_date_gregorian') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">العمر عند الوفاة</label>
+                        <input type="number" name="age_at_death" value="{{ old('age_at_death', $sahabi->age_at_death) }}" min="0"
+                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                        @error('age_at_death') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">تاريخ الإسلام (هجري)</label>
+                        <input type="text" name="conversion_date_hijri" value="{{ old('conversion_date_hijri', $sahabi->conversion_date_hijri) }}"
+                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                               placeholder="مثال: 1 هـ">
+                        @error('conversion_date_hijri') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">ترتيب الإسلام (من السابقين الأولين)</label>
+                        <input type="number" name="conversion_order" value="{{ old('conversion_order', $sahabi->conversion_order) }}" min="1"
+                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                               placeholder="مثال: 3">
+                        @error('conversion_order') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الأدوار (مفصولة بفواصل)</label>
+                        <input type="text" name="roles" value="{{ old('roles', is_array($sahabi->roles) ? implode('، ', $sahabi->roles) : '') }}"
+                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                               placeholder="مثال: خليفة، قائد عسكري، راوي">
+                        @error('roles') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
                     </div>
                 </div>
             </div>
@@ -273,6 +455,22 @@
                                class="w-5 h-5 rounded text-amber-500 border-gray-300 focus:ring-amber-500">
                         <span :class="darkMode ? 'text-gray-300' : 'text-gray-700'">صحابي مميز</span>
                     </label>
+
+                    <label class="flex items-center gap-3 cursor-pointer p-3 rounded-xl transition-all"
+                           :class="darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'">
+                        <input type="checkbox" name="is_verified" value="1"
+                               {{ old('is_verified', $sahabi->is_verified) ? 'checked' : '' }}
+                               class="w-5 h-5 rounded text-green-500 border-gray-300 focus:ring-green-500">
+                        <span :class="darkMode ? 'text-gray-300' : 'text-gray-700'">بيانات موثقة</span>
+                    </label>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الجيل (بالنسبة للنبي ﷺ)</label>
+                        <input type="number" name="generation" value="{{ old('generation', $sahabi->generation) }}" min="0"
+                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                        @error('generation') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+                    </div>
                 </div>
             </div>
 

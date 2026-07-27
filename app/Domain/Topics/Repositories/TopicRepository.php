@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace App\Domain\Topics\Repositories;
 
+use App\Domain\Shared\Services\PublicVisibilityRegistry;
 use App\Domain\Topics\Enums\TopicItemType;
 use App\Domain\Topics\Models\Topic;
 use App\Domain\Topics\Models\TopicItem;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\DB;
+use LogicException;
 
 /**
  * Eloquent implementation of the Topic repository.
@@ -19,6 +23,10 @@ use Illuminate\Support\Facades\DB;
  */
 class TopicRepository implements TopicRepositoryInterface
 {
+    public function __construct(
+        private readonly PublicVisibilityRegistry $publicVisibility,
+    ) {}
+
     /**
      * Per-morph-type eager-load relations + column selects for itemable content.
      * Keyed by morph alias. Relation strings are resolved by Eloquent against the
@@ -46,14 +54,26 @@ class TopicRepository implements TopicRepositoryInterface
         ];
     }
 
-    public function allOrderedWithCounts(): Collection
+    public function allOrderedWithCounts(string $locale): Collection
     {
         return Topic::query()
             ->with('translations:id,topic_id,locale,title,description')
             ->withCount([
-                'items as verses_count' => fn ($q) => $q->where('itemable_type', TopicItemType::VERSE->value),
-                'items as hadiths_count' => fn ($q) => $q->where('itemable_type', TopicItemType::HADITH->value),
-                'items as articles_count' => fn ($q) => $q->where('itemable_type', TopicItemType::ARTICLE->value),
+                'items as verses_count' => fn (Builder $query) => $this->visibleItems(
+                    $query->where('itemable_type', TopicItemType::VERSE->value),
+                    [TopicItemType::VERSE->value],
+                    $locale,
+                ),
+                'items as hadiths_count' => fn (Builder $query) => $this->visibleItems(
+                    $query->where('itemable_type', TopicItemType::HADITH->value),
+                    [TopicItemType::HADITH->value],
+                    $locale,
+                ),
+                'items as articles_count' => fn (Builder $query) => $this->visibleItems(
+                    $query->where('itemable_type', TopicItemType::ARTICLE->value),
+                    [TopicItemType::ARTICLE->value],
+                    $locale,
+                ),
             ])
             ->ordered()
             ->get(['id', 'slug', 'icon', 'color', 'is_featured', 'display_order']);
@@ -67,17 +87,21 @@ class TopicRepository implements TopicRepositoryInterface
             ->first(['id', 'slug', 'icon', 'color', 'is_featured', 'display_order']);
     }
 
-    public function itemsForTopic(int $topicId, string $itemableType): Collection
+    public function itemsForTopic(int $topicId, string $itemableType, string $locale): Collection
     {
         $relations = $this->itemableRelations()[$itemableType] ?? [];
 
         // Resolve the concrete class for this single morph type from the morph map
         // (registered at boot in TopicsServiceProvider) — no compile-time import.
-        $morphClass = \Illuminate\Database\Eloquent\Relations\Relation::getMorphedModel($itemableType);
+        $morphClass = Relation::getMorphedModel($itemableType);
 
-        return TopicItem::query()
+        $query = TopicItem::query()
             ->where('topic_id', $topicId)
-            ->where('itemable_type', $itemableType)
+            ->where('itemable_type', $itemableType);
+
+        $this->visibleItems($query, [$itemableType], $locale);
+
+        return $query
             ->with(['itemable' => function ($morphTo) use ($morphClass, $relations) {
                 if ($morphClass !== null && $relations !== []) {
                     $morphTo->morphWith([$morphClass => $relations]);
@@ -88,10 +112,12 @@ class TopicRepository implements TopicRepositoryInterface
             ->get(['id', 'topic_id', 'itemable_type', 'itemable_id', 'sort_order']);
     }
 
-    public function itemCounts(int $topicId): array
+    public function itemCounts(int $topicId, string $locale): array
     {
-        $rows = TopicItem::query()
-            ->where('topic_id', $topicId)
+        $query = TopicItem::query()->where('topic_id', $topicId);
+        $this->visibleItems($query, TopicItemType::values(), $locale);
+
+        $rows = $query
             ->select('itemable_type', DB::raw('COUNT(*) as aggregate'))
             ->groupBy('itemable_type')
             ->pluck('aggregate', 'itemable_type');
@@ -102,6 +128,24 @@ class TopicRepository implements TopicRepositoryInterface
         }
 
         return $counts;
+    }
+
+    /**
+     * @param  list<string>  $itemableTypes
+     */
+    private function visibleItems(Builder $query, array $itemableTypes, string $locale): Builder
+    {
+        $morphClasses = array_map(
+            fn (string $type): string => Relation::getMorphedModel($type)
+                ?? throw new LogicException("No topic morph model registered for [{$type}]."),
+            $itemableTypes,
+        );
+
+        return $query->whereHasMorph(
+            'itemable',
+            $morphClasses,
+            fn (Builder $itemableQuery) => $this->publicVisibility->apply($itemableQuery, $locale),
+        );
     }
 
     public function syncItems(int $topicId, string $itemableType, array $itemableIds): void

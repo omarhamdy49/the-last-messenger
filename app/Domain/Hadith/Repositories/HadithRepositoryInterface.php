@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Hadith\Repositories;
 
 use App\Domain\Hadith\Models\Hadith;
+use App\Domain\Hadith\Models\HadithIsnad;
 use App\Domain\Shared\Contracts\RepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -170,4 +171,21 @@ interface HadithRepositoryInterface extends RepositoryInterface
      * @return array<int, string>
      */
     public function translationsForHadiths(array $hadithIds, string $languageCode): array;
+
+    /**
+     * Append a narrator to a hadith's isnad chain at the next position.
+     */
+    public function addNarratorToChain(int $hadithId, int $narratorId, ?string $transmissionMethod): HadithIsnad;
+
+    /**
+     * Swap an isnad link with its immediate neighbor ('up' or 'down').
+     * Returns false if already at that end of the chain.
+     */
+    public function moveIsnadLink(int $hadithId, int $isnadId, string $direction): bool;
+
+    /**
+     * Remove a narrator from a hadith's isnad chain and renumber the
+     * remaining links so positions stay contiguous.
+     */
+    public function removeNarratorFromChain(int $hadithId, int $isnadId): void;
 }

@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('genealogy')->group(function (): void {
     Route::get('/search', [GenealogyController::class, 'search'])->name('admin.genealogy.search');
     Route::post('/bulk-delete', [GenealogyController::class, 'bulkDelete'])->name('admin.genealogy.bulk-delete');
+    Route::post('/{person}/relationships', [GenealogyController::class, 'storeRelationship'])->name('admin.genealogy.relationships.store');
+    Route::put('/relationships/{relationship}', [GenealogyController::class, 'updateRelationship'])->name('admin.genealogy.relationships.update');
+    Route::delete('/relationships/{relationship}', [GenealogyController::class, 'destroyRelationship'])->name('admin.genealogy.relationships.destroy');
 });
 Route::resource('genealogy', GenealogyController::class)->names([
     'index' => 'admin.genealogy.index',

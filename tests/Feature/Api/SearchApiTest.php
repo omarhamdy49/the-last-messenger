@@ -89,6 +89,8 @@ final class SearchApiTest extends TestCase
         $response = $this->postJson('/api/v1/search', [
             'query' => self::SEARCH_TERM,
             'modules' => ['seerah', 'media'],
+        ], [
+            'Accept-Language' => 'ar',
         ]);
 
         $response->assertOk()
@@ -105,6 +107,8 @@ final class SearchApiTest extends TestCase
         $response = $this->postJson('/api/v1/search', [
             'query' => self::SEARCH_TERM,
             'modules' => ['seerah', 'media'],
+        ], [
+            'Accept-Language' => 'ar',
         ]);
 
         $response->assertOk()

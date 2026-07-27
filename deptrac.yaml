@@ -28,7 +28,8 @@ deptrac:
           value: app/Http/Middleware/
 
     # -------------------------------------------------------------------------
-    # Domain Modules — isolated from each other; communicate only via Shared
+    # Domain Modules — isolated by default. Genealogy is part of Sahaba because
+    # both use the same canonical identity and family graph.
     # -------------------------------------------------------------------------
     - name: DomainBlog
       collectors:
@@ -54,16 +55,13 @@ deptrac:
       collectors:
         - type: directory
           value: app/Domain/Sahaba/
+        - type: directory
+          value: app/Domain/Genealogy/
 
     - name: DomainSeerah
       collectors:
         - type: directory
           value: app/Domain/Seerah/
-
-    - name: DomainGenealogy
-      collectors:
-        - type: directory
-          value: app/Domain/Genealogy/
 
     - name: DomainMedia
       collectors:
@@ -143,7 +141,6 @@ deptrac:
       - DomainQuran
       - DomainSahaba
       - DomainSeerah
-      - DomainGenealogy
       - DomainMedia
       - DomainTopics
       - Infrastructure
@@ -159,6 +156,7 @@ deptrac:
 
     DomainHadith:
       - Shared
+      - DomainSahaba
 
     DomainQuran:
       - Shared
@@ -167,9 +165,6 @@ deptrac:
       - Shared
 
     DomainSeerah:
-      - Shared
-
-    DomainGenealogy:
       - Shared
 
     DomainMedia:
@@ -195,7 +190,6 @@ deptrac:
       - DomainQuran
       - DomainSahaba
       - DomainSeerah
-      - DomainGenealogy
       - DomainMedia
       - DomainTopics
       - Infrastructure

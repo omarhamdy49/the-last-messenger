@@ -50,8 +50,27 @@
                         </p>
                     </div>
                     <div>
-                        <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ __('admin.narrator') }}</p>
-                        <p class="text-lg font-semibold mt-1" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $hadith->narrator?->name ?? '—' }}</p>
+                        <p class="text-sm mb-2" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ __('admin.isnad_chain') }}</p>
+                        @if($hadith->isnads->isEmpty())
+                            <p class="text-sm" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ __('admin.no_narrators_in_chain') }}</p>
+                        @else
+                            <ol class="flex flex-wrap items-center gap-2">
+                                @foreach($hadith->isnads as $isnad)
+                                    @php
+                                        $narrator = $isnad->narrator;
+                                        $narratorName = $narrator?->kunya ?: ($narrator?->name_ar ?? $narrator?->name_en ?? '—');
+                                    @endphp
+                                    <li class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium"
+                                        :class="darkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-800'">
+                                        <span class="font-bold text-xs opacity-70">{{ $isnad->position_in_chain }}</span>
+                                        {{ $narratorName }}
+                                    </li>
+                                    @if(! $loop->last)
+                                        <i data-lucide="chevron-left" class="w-4 h-4" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
+                                    @endif
+                                @endforeach
+                            </ol>
+                        @endif
                     </div>
                     <div>
                         <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ __('admin.grading') }}</p>

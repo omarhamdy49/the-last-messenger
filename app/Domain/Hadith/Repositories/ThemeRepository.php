@@ -7,6 +7,8 @@ namespace App\Domain\Hadith\Repositories;
 use App\Domain\Hadith\Models\HadithTheme;
 use App\Domain\Shared\Helpers\FullTextSearchHelper;
 use App\Domain\Shared\Repositories\BaseRepository;
+use App\Domain\Shared\Services\PublicVisibilityRegistry;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -23,6 +25,12 @@ class ThemeRepository extends BaseRepository implements ThemeRepositoryInterface
      * Cache TTL in seconds (1 hour)
      */
     private const CACHE_TTL = 3600;
+
+    public function __construct(
+        private readonly PublicVisibilityRegistry $publicVisibility,
+    ) {
+        parent::__construct();
+    }
 
     /**
      * Get model instance
@@ -70,7 +78,9 @@ class ThemeRepository extends BaseRepository implements ThemeRepositoryInterface
     public function getWithHadiths(int $id): ?HadithTheme
     {
         return $this->model
-            ->with(['hadiths' => fn ($q) => $q->with('translations')])
+            ->with(['hadiths' => fn (Builder $query) => $this->publicVisibility
+                ->apply($query, app()->getLocale())
+                ->with('translations')])
             ->find($id);
     }
 
@@ -93,7 +103,14 @@ class ThemeRepository extends BaseRepository implements ThemeRepositoryInterface
             )
             ->first();
 
-        return $theme?->hadiths()
+        $query = $theme?->hadiths();
+        if ($query === null) {
+            return null;
+        }
+
+        $this->publicVisibility->apply($query->getQuery(), app()->getLocale());
+
+        return $query
             ->with([
                 'translations:id,hadith_id,language_code,text',
                 'themes:id,theme_ar,theme_en',

@@ -151,6 +151,22 @@ class SiteSettingsSeeder extends Seeder
                     'ur' => 'تمام حقوق محفوظ ہیں',
                 ],
             ],
+            // How many children/spouses the public family-tree page shows
+            // per level before curation (admins pick which ones make the
+            // cut via each person's/relationship's display order + hide
+            // flag — see Genealogy\PersonRepository).
+            [
+                'key' => 'genealogy_tree_max_children_per_level',
+                'group' => 'genealogy_tree',
+                'type' => SiteSettingType::TEXT->value,
+                'value' => '10',
+            ],
+            [
+                'key' => 'genealogy_tree_max_spouses_shown',
+                'group' => 'genealogy_tree',
+                'type' => SiteSettingType::TEXT->value,
+                'value' => '12',
+            ],
         ];
     }
 }

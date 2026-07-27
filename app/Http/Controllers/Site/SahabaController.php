@@ -84,7 +84,7 @@ final class SahabaController extends Controller
             'translations',
             'battles',
             'timelineItems.translations',
-            'article.translations',
+            'categories',
         ]);
 
         $profile = $this->mapProfile($sahabi, $locale);
@@ -122,7 +122,7 @@ final class SahabaController extends Controller
             }
 
             if (in_array($filter, [CompanionStatus::ANSAR->value, CompanionStatus::MUHAJIR->value], true)) {
-                return $this->sahabiService->getCompanionsByStatus($filter, $perPage);
+                return $this->sahabiService->getCompanionsByCategory($filter, $perPage);
             }
 
             return $this->sahabiService->getAllCompanions($perPage);
@@ -205,15 +205,15 @@ final class SahabaController extends Controller
     private function resolveStats(): array
     {
         try {
-            $base = $this->sahabiService->getIndexStats();
+            $base = $this->sahabiService->getPublicIndexStats();
 
             return [
                 'total' => $base['total'] ?? 0,
                 'male' => $base['male'] ?? 0,
                 'female' => $base['female'] ?? 0,
                 'featured' => $this->sahabiService->getFeaturedCompanions(48)->count(),
-                'ansar' => $this->sahabiService->getCompanionsByStatus(CompanionStatus::ANSAR, 1)->total(),
-                'muhajir' => $this->sahabiService->getCompanionsByStatus(CompanionStatus::MUHAJIR, 1)->total(),
+                'ansar' => $this->sahabiService->getCompanionsByCategory(CompanionStatus::ANSAR, 1)->total(),
+                'muhajir' => $this->sahabiService->getCompanionsByCategory(CompanionStatus::MUHAJIR, 1)->total(),
             ];
         } catch (Throwable $e) {
             report($e);
@@ -256,7 +256,17 @@ final class SahabaController extends Controller
         $tr = fn (string $field): ?string => $sahabi->getTranslation($field, $locale)
             ?: $sahabi->getTranslation($field, 'ar');
 
-        $status = $sahabi->status;
+        // A Sahabi can hold several historical-rank categories at once (e.g. a
+        // Muhajir who also fought at Badr) — join every label rather than
+        // picking just one, since the old single-value `status` column could
+        // only ever show one even when several applied.
+        $categoryLabels = $sahabi->categories
+            ->sortByDesc('rank')
+            ->map(fn ($category) => CompanionStatus::tryFrom($category->key))
+            ->filter()
+            ->map(fn (CompanionStatus $category) => $locale === 'ar' ? $category->labelArabic() : $category->label())
+            ->values()
+            ->all();
 
         $battles = $sahabi->battles->pluck('battle_name')->filter()->values()->all();
 
@@ -270,14 +280,6 @@ final class SahabaController extends Controller
             ])
             ->all();
 
-        $article = null;
-        if ($sahabi->article) {
-            $article = [
-                'slug' => $sahabi->article->slug,
-                'title' => $sahabi->article->getTranslation('title', $locale) ?: $sahabi->article->getTranslation('title', 'ar'),
-            ];
-        }
-
         return [
             'name' => $tr('name'),
             'fullName' => $tr('full_name'),
@@ -288,9 +290,8 @@ final class SahabaController extends Controller
             'famousNarrations' => $tr('famous_narrations'),
             'martyrdom' => $tr('martyrdom'),
             'isFemale' => $sahabi->gender === 'female',
-            'statusLabel' => $status instanceof CompanionStatus
-                ? ($locale === 'ar' ? $status->labelArabic() : $status->label())
-                : null,
+            'statusLabel' => $categoryLabels !== [] ? implode('، ', $categoryLabels) : null,
+            'categories' => $categoryLabels,
             'tribe' => $sahabi->tribe,
             'clan' => $sahabi->clan,
             'birthPlace' => $sahabi->birth_place,
@@ -301,12 +302,12 @@ final class SahabaController extends Controller
             'conversionDateHijri' => $sahabi->conversion_date_hijri,
             'conversionOrder' => $sahabi->conversion_order,
             'ageAtDeath' => $sahabi->age_at_death,
-            'hadithCount' => $sahabi->hadith_count,
+            'hadithCount' => $sahabi->reported_hadith_count,
             'roles' => is_array($sahabi->roles) ? $sahabi->roles : [],
             'battles' => $battles,
             'battlesCount' => count($battles),
             'timeline' => $timeline,
-            'article' => $article,
+            'article' => null,
         ];
     }
 }

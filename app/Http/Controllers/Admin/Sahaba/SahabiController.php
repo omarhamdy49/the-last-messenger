@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin\Sahaba;
 
+use App\Domain\Sahaba\DTOs\SahabiListFilters;
 use App\Domain\Sahaba\Services\SahabiService;
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\FilterSahabaRequest;
 use App\Http\Requests\Admin\StoreSahabiRequest;
 use App\Http\Requests\Admin\UpdateSahabiRequest;
 use Illuminate\Http\JsonResponse;
@@ -33,11 +35,12 @@ class SahabiController extends Controller
      *
      * GET /su/portal/v1/admin/sahaba
      */
-    public function index(Request $request): View|JsonResponse
+    public function index(FilterSahabaRequest $request): View|JsonResponse
     {
-        $perPage = $request->integer('per_page', 15);
-        $sahaba = $this->sahabiService->paginate($perPage, ['*'], ['translations']);
+        $perPage = min(max($request->integer('per_page', 15), 10), 100);
+        $filters = SahabiListFilters::fromValidated($request->validated());
 
+        $sahaba = $this->sahabiService->getAdminCompanionList($filters, $perPage);
         $stats = $this->sahabiService->getIndexStats();
 
         // Return JSON for AJAX requests
@@ -55,7 +58,7 @@ class SahabiController extends Controller
             ]);
         }
 
-        return view('admin.sahaba.index', compact('sahaba', 'stats'));
+        return view('admin.sahaba.index', compact('sahaba', 'stats', 'filters'));
     }
 
     /**
@@ -81,7 +84,7 @@ class SahabiController extends Controller
             abort(404, 'Sahabi not found');
         }
 
-        $sahabi->loadMissing('translations');
+        $sahabi->loadMissing('translations', 'categories');
 
         return view('admin.sahaba.edit', compact('sahabi'));
     }
@@ -98,10 +101,17 @@ class SahabiController extends Controller
         // Separate translatable data from model data
         $translatableData = $this->extractTranslatableData($data);
 
-        // Handle is_featured checkbox (unchecked checkboxes are not sent)
+        // Handle checkboxes (unchecked checkboxes are not sent)
         $data['is_featured'] = $request->boolean('is_featured');
+        $data['is_verified'] = $request->boolean('is_verified');
+        $data['is_sahabi'] = true;
+        $data['person_type'] = 'sahabi';
+        $data['roles'] = $this->parseRoles($data['roles'] ?? null);
+        $categoryKeys = $data['categories'] ?? [];
+        unset($data['categories']);
 
         $sahabi = $this->sahabiService->create($data);
+        $this->sahabiService->syncCategories($sahabi, $categoryKeys);
 
         // Sync translations
         $sahabi->syncTranslations($translatableData);
@@ -156,7 +166,7 @@ class SahabiController extends Controller
             abort(404, 'Sahabi not found');
         }
 
-        $sahabi->loadMissing('translations');
+        $sahabi->loadMissing('translations', 'categories');
 
         return view('admin.sahaba.show', compact('sahabi'));
     }
@@ -182,13 +192,20 @@ class SahabiController extends Controller
         // Separate translatable data from model data
         $translatableData = $this->extractTranslatableData($data);
 
-        // Handle is_featured checkbox (unchecked checkboxes are not sent)
+        // Handle checkboxes (unchecked checkboxes are not sent)
         $data['is_featured'] = $request->boolean('is_featured');
+        $data['is_verified'] = $request->boolean('is_verified');
+        $data['is_sahabi'] = true;
+        $data['person_type'] = 'sahabi';
+        $data['roles'] = $this->parseRoles($data['roles'] ?? null);
+        $categoryKeys = $data['categories'] ?? [];
+        unset($data['categories']);
 
         // Perform update
         $this->sahabiService->update($id, $data);
 
         $sahabi = $this->sahabiService->find($id);
+        $this->sahabiService->syncCategories($sahabi, $categoryKeys);
 
         // Sync translations
         $sahabi->syncTranslations($translatableData);
@@ -297,6 +314,60 @@ class SahabiController extends Controller
     }
 
     /**
+     * Bulk mark/unmark Sahaba as featured
+     *
+     * POST /su/portal/v1/admin/sahaba/bulk-featured
+     */
+    public function bulkSetFeatured(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:sahaba,id'],
+            'is_featured' => ['required', 'boolean'],
+        ]);
+
+        $updated = $this->sahabiService->bulkSetFeatured($validated['ids'], (bool) $validated['is_featured']);
+
+        $this->logger->logBulkAction(
+            $validated['is_featured'] ? 'bulk_featured_on' : 'bulk_featured_off',
+            \App\Domain\Sahaba\Models\Sahabi::class,
+            $validated['ids'],
+            $request->user()
+        );
+
+        return redirect()->route('admin.sahaba.index')
+            ->with('success', __('admin.sahaba_bulk_featured_updated', ['count' => $updated]));
+    }
+
+    /**
+     * Bulk publish/unpublish Sahaba — updates `is_ready` across every locale
+     * translation for the selected companions.
+     *
+     * POST /su/portal/v1/admin/sahaba/bulk-status
+     */
+    public function bulkUpdateReadyStatus(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:sahaba,id'],
+            'status' => ['required', 'string', 'in:published,unpublished'],
+        ]);
+
+        $isReady = $validated['status'] === 'published';
+        $updated = $this->sahabiService->bulkSetReadyStatus($validated['ids'], $isReady);
+
+        $this->logger->logBulkAction(
+            'bulk_status_'.$validated['status'],
+            \App\Domain\Sahaba\Models\Sahabi::class,
+            $validated['ids'],
+            $request->user()
+        );
+
+        return redirect()->route('admin.sahaba.index')
+            ->with('success', __('admin.sahaba_bulk_publish_updated', ['count' => $updated]));
+    }
+
+    /**
      * Search Sahaba
      *
      * GET /su/portal/v1/admin/sahaba/search
@@ -334,7 +405,7 @@ class SahabiController extends Controller
      */
     private function extractTranslatableData(array &$data): array
     {
-        $translatableFields = ['name', 'full_name', 'kunya', 'laqab', 'biography', 'virtues', 'famous_narrations'];
+        $translatableFields = ['name', 'full_name', 'kunya', 'laqab', 'title', 'occupation', 'biography', 'virtues', 'famous_narrations', 'martyrdom', 'notes'];
         $translatableData = [];
 
         foreach ($translatableFields as $field) {
@@ -345,5 +416,22 @@ class SahabiController extends Controller
         }
 
         return $translatableData;
+    }
+
+    /**
+     * Parse the comma-separated "roles" form field into the array the model
+     * casts and stores as JSON. Blank segments are dropped.
+     *
+     * @return array<int, string>|null
+     */
+    private function parseRoles(?string $roles): ?array
+    {
+        if ($roles === null || trim($roles) === '') {
+            return null;
+        }
+
+        $values = array_map('trim', preg_split('/[,\x{060C}]/u', $roles));
+
+        return array_values(array_filter($values, fn (string $value) => $value !== ''));
     }
 }

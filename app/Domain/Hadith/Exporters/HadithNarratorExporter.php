@@ -27,6 +27,7 @@ class HadithNarratorExporter extends BaseExporter
     public function collection(): Collection
     {
         $query = HadithNarrator::query()
+            ->with('sahabi.translations')
             ->withCount('isnads');
 
         if (isset($this->filters['reliability_grade'])) {
@@ -46,7 +47,11 @@ class HadithNarratorExporter extends BaseExporter
             $query->where(function ($q) use ($search) {
                 $q->where('name_ar', 'LIKE', "%{$search}%")
                     ->orWhere('name_en', 'LIKE', "%{$search}%")
-                    ->orWhere('full_name_ar', 'LIKE', "%{$search}%");
+                    ->orWhere('full_name_ar', 'LIKE', "%{$search}%")
+                    ->orWhereHas('sahabi.translations', function ($translation) use ($search): void {
+                        $translation->where('name', 'LIKE', "%{$search}%")
+                            ->orWhere('full_name', 'LIKE', "%{$search}%");
+                    });
             });
         }
 

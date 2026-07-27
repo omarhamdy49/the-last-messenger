@@ -302,7 +302,7 @@ class Hadith extends Model
         return $query->with([
             'book.collection',
             'translations',
-            'isnads',
+            'isnads.narrator',
             'gradings',
             'themes',
         ]);

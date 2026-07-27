@@ -5,13 +5,18 @@ declare(strict_types=1);
 namespace App\Domain\Genealogy\Services;
 
 use App\Domain\Genealogy\DTOs\CreatePersonData;
+use App\Domain\Genealogy\DTOs\PersonListFilters;
 use App\Domain\Genealogy\Enums\PersonType;
 use App\Domain\Genealogy\Models\Person;
+use App\Domain\Genealogy\Models\Relationship;
 use App\Domain\Genealogy\Repositories\PersonRepositoryInterface;
 use App\Domain\Shared\Services\BaseService;
 use App\Exceptions\Domain\ResourceNotFoundException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 /**
  * Genealogy Service
@@ -33,7 +38,15 @@ class GenealogyService extends BaseService
      */
     public function getAllPeople(int $perPage = 15): LengthAwarePaginator
     {
-        return $this->repository->getAllPaginated($perPage, ['father', 'mother', 'sahabi']);
+        return $this->repository->getAllPaginated($perPage, ['father', 'mother', 'translations']);
+    }
+
+    /**
+     * Get genealogy records for the admin data table with search + filters.
+     */
+    public function getAdminPersonList(PersonListFilters $filters, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->getFilteredPaginated($filters, $perPage);
     }
 
     /**
@@ -41,7 +54,7 @@ class GenealogyService extends BaseService
      */
     public function getPeopleByType(PersonType $type, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->repository->getByType($type, $perPage, ['father', 'mother', 'sahabi']);
+        return $this->repository->getByType($type, $perPage, ['father', 'mother', 'translations']);
     }
 
     /**
@@ -51,7 +64,7 @@ class GenealogyService extends BaseService
      *
      * @throws ResourceNotFoundException
      */
-    public function getFamilyTree(int $personId, int $generations = 3): array
+    public function getFamilyTree(int $personId, int $generations = 3, ?int $maxChildrenPerLevel = null): array
     {
         $person = $this->repository->find($personId);
 
@@ -59,7 +72,7 @@ class GenealogyService extends BaseService
             throw new ResourceNotFoundException('Person', $personId);
         }
 
-        return $this->repository->getFamilyTree($personId, $generations);
+        return $this->repository->getFamilyTree($personId, $generations, $maxChildrenPerLevel);
     }
 
     /**
@@ -95,11 +108,129 @@ class GenealogyService extends BaseService
     }
 
     /**
+     * Get grandparents of a person
+     *
+     * @throws ResourceNotFoundException
+     */
+    public function getGrandparents(int $personId): Collection
+    {
+        if (! $this->repository->find($personId)) {
+            throw new ResourceNotFoundException('Person', $personId);
+        }
+
+        return $this->repository->getGrandparents($personId, ['father', 'mother']);
+    }
+
+    /**
+     * Get grandchildren of a person
+     *
+     * @throws ResourceNotFoundException
+     */
+    public function getGrandchildren(int $personId): Collection
+    {
+        if (! $this->repository->find($personId)) {
+            throw new ResourceNotFoundException('Person', $personId);
+        }
+
+        return $this->repository->getGrandchildren($personId, ['father', 'mother']);
+    }
+
+    /**
+     * Get nephews and nieces of a person
+     *
+     * @throws ResourceNotFoundException
+     */
+    public function getNephewsAndNieces(int $personId): Collection
+    {
+        if (! $this->repository->find($personId)) {
+            throw new ResourceNotFoundException('Person', $personId);
+        }
+
+        return $this->repository->getNephewsAndNieces($personId, ['father', 'mother']);
+    }
+
+    /**
+     * Get spouses of a person
+     *
+     * @throws ResourceNotFoundException
+     */
+    public function getSpouses(int $personId, ?int $maxCount = null): Collection
+    {
+        if (! $this->repository->find($personId)) {
+            throw new ResourceNotFoundException('Person', $personId);
+        }
+
+        return $this->repository->getSpouses($personId, ['translations'], $maxCount);
+    }
+
+    /**
+     * All spouse relationships involving this person, for the admin
+     * curation screen (add/remove/reorder/hide).
+     *
+     * @throws ResourceNotFoundException
+     */
+    public function getSpouseRelationships(int $personId): Collection
+    {
+        if (! $this->repository->find($personId)) {
+            throw new ResourceNotFoundException('Person', $personId);
+        }
+
+        return $this->repository->getSpouseRelationshipsForAdmin($personId);
+    }
+
+    /**
+     * Add a spouse relationship between two people.
+     *
+     * @throws ResourceNotFoundException
+     * @throws InvalidArgumentException
+     */
+    public function addSpouse(int $personId, int $spouseId): Relationship
+    {
+        if ($personId === $spouseId) {
+            throw new InvalidArgumentException('A person cannot be their own spouse.');
+        }
+
+        if (! $this->repository->find($personId) || ! $this->repository->find($spouseId)) {
+            throw new ResourceNotFoundException('Person', $spouseId);
+        }
+
+        if ($this->repository->spouseRelationshipExists($personId, $spouseId)) {
+            throw new InvalidArgumentException('This spouse relationship already exists.');
+        }
+
+        return $this->repository->addSpouseRelationship($personId, $spouseId);
+    }
+
+    /**
+     * Get a relationship or fail.
+     */
+    public function getRelationship(int $relationshipId): Relationship
+    {
+        return $this->repository->findRelationshipOrFail($relationshipId);
+    }
+
+    /**
+     * Update a relationship's tree display order and visibility.
+     */
+    public function updateRelationshipDisplay(int $relationshipId, ?int $displayOrder, bool $hideFromTree): Relationship
+    {
+        return $this->repository->updateRelationshipDisplay($relationshipId, $displayOrder, $hideFromTree);
+    }
+
+    /**
+     * Remove a relationship.
+     */
+    public function removeRelationship(int $relationshipId): void
+    {
+        $this->repository->deleteRelationship($relationshipId);
+    }
+
+    /**
      * Search people
      */
     public function searchPeople(string $query, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->repository->search($query, $perPage, ['father', 'mother', 'sahabi']);
+        return $this->repository->search($query, $perPage, ['father', 'mother', 'translations']);
     }
 
     /**
@@ -107,7 +238,7 @@ class GenealogyService extends BaseService
      */
     public function getPeopleByTribe(string $tribe, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->repository->getByTribe($tribe, $perPage, ['father', 'mother', 'sahabi']);
+        return $this->repository->getByTribe($tribe, $perPage, ['father', 'mother', 'translations']);
     }
 
     /**
@@ -115,7 +246,7 @@ class GenealogyService extends BaseService
      */
     public function getVerifiedPeople(int $perPage = 15): LengthAwarePaginator
     {
-        return $this->repository->getVerified($perPage, ['father', 'mother', 'sahabi']);
+        return $this->repository->getVerified($perPage, ['father', 'mother', 'translations']);
     }
 
     /**
@@ -123,27 +254,45 @@ class GenealogyService extends BaseService
      */
     public function createPerson(CreatePersonData $data): Person
     {
-        return $this->repository->create([
-            'name' => $data->name,
-            'title' => $data->title,
-            'person_type' => $data->personType,
-            'gender' => $data->gender,
-            'father_id' => $data->fatherId,
-            'mother_id' => $data->motherId,
-            'sahaba_id' => $data->sahabaId,
-            'birth_date_hijri' => $data->birthDateHijri,
-            'birth_date_gregorian' => $data->birthDateGregorian,
-            'birth_place' => $data->birthPlace,
-            'death_date_hijri' => $data->deathDateHijri,
-            'death_date_gregorian' => $data->deathDateGregorian,
-            'death_place' => $data->deathPlace,
-            'burial_place' => $data->burialPlace,
-            'tribe' => $data->tribe,
-            'occupation' => $data->occupation,
-            'biography' => $data->biography,
-            'notes' => $data->notes,
-            'is_verified' => $data->isVerified,
-        ]);
+        return DB::transaction(function () use ($data): Person {
+            $baseSlug = Str::slug($data->name['en'] ?? $data->name['ar'] ?? '') ?: 'genealogy-person';
+            $slug = $baseSlug;
+            $suffix = 2;
+            while (Person::where('slug', $slug)->exists()) {
+                $slug = $baseSlug.'-'.$suffix++;
+            }
+
+            /** @var Person $person */
+            $person = $this->repository->create([
+                'slug' => $slug,
+                'person_type' => $data->personType,
+                'is_sahabi' => $data->personType === 'sahabi',
+                'gender' => $data->gender,
+                'father_id' => $data->fatherId,
+                'mother_id' => $data->motherId,
+                'tree_display_order' => $data->treeDisplayOrder,
+                'hide_from_tree' => $data->hideFromTree,
+                'birth_date_hijri' => $data->birthDateHijri,
+                'birth_date_gregorian' => $data->birthDateGregorian,
+                'death_date_hijri' => $data->deathDateHijri,
+                'death_date_gregorian' => $data->deathDateGregorian,
+                'tribe' => $data->tribe,
+                'is_verified' => $data->isVerified,
+            ]);
+
+            $person->syncTranslations([
+                'name' => $data->name,
+                'title' => $data->title,
+                'birth_place' => $data->birthPlace,
+                'death_place' => $data->deathPlace,
+                'burial_place' => $data->burialPlace,
+                'occupation' => $data->occupation,
+                'biography' => $data->biography,
+                'notes' => $data->notes,
+            ]);
+
+            return $person->fresh(['translations', 'father', 'mother']);
+        });
     }
 
     /**
@@ -153,7 +302,22 @@ class GenealogyService extends BaseService
      */
     public function updatePerson(int $id, array $data): bool
     {
-        return $this->repository->update($id, $data);
+        return DB::transaction(function () use ($id, $data): bool {
+            $person = $this->getPerson($id);
+            $translationData = array_intersect_key($data, array_flip($person->getTranslatableFields()));
+            $coreData = array_diff_key($data, $translationData, ['sahaba_id' => true]);
+
+            if (isset($coreData['person_type'])) {
+                $coreData['is_sahabi'] = $coreData['person_type'] === 'sahabi';
+            }
+
+            $updated = empty($coreData) || $this->repository->update($id, $coreData);
+            if ($translationData !== []) {
+                $person->syncTranslations($translationData);
+            }
+
+            return $updated;
+        });
     }
 
     /**
@@ -171,7 +335,7 @@ class GenealogyService extends BaseService
      */
     public function getPerson(int $id): Person
     {
-        $person = $this->repository->find($id, ['*'], ['father', 'mother', 'sahabi', 'childrenAsFather', 'childrenAsMother']);
+        $person = $this->repository->find($id, ['*'], ['father', 'mother', 'translations', 'childrenAsFather', 'childrenAsMother']);
 
         if (! $person) {
             throw new ResourceNotFoundException('Person', $id);

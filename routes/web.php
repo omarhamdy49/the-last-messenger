@@ -101,6 +101,8 @@ Route::get('/sahaba/{slug}', [SahabaController::class, 'show'])->name('public.sa
 
 // Genealogy
 Route::get('/genealogy', [GenealogyController::class, 'index'])->name('public.genealogy');
+Route::get('/genealogy/people', [GenealogyController::class, 'people'])
+    ->middleware('throttle:search')->name('public.genealogy.people');
 
 // Media / Programs
 Route::get('/media', [MediaController::class, 'index'])->name('public.media');

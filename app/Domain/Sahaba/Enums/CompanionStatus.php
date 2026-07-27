@@ -5,15 +5,16 @@ declare(strict_types=1);
 namespace App\Domain\Sahaba\Enums;
 
 /**
- * Companion Status Enum
- * Represents the status/rank of a Sahabi (Companion)
+ * Historical-rank category a Sahabi can hold (badr, ansar, muhajir, ...).
+ * A Sahabi may hold several at once via the `sahabi_category` pivot —
+ * this enum is the closed set of valid category keys, not a single-value
+ * status. Short, lowercase values match `sahabi_categories.key`.
  */
 enum CompanionStatus: string
 {
-    case PROPHET_COMPANION = 'prophet_companion';
-    case TEN_PROMISED_PARADISE = 'ten_promised_paradise';
-    case BADR_PARTICIPANT = 'badr_participant';
-    case UHUD_PARTICIPANT = 'uhud_participant';
+    case TEN_PROMISED = 'ten_promised';
+    case BADR = 'badr';
+    case UHUD = 'uhud';
     case EARLY_MUSLIM = 'early_muslim';
     case MUHAJIR = 'muhajir';
     case ANSAR = 'ansar';
@@ -35,10 +36,9 @@ enum CompanionStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::PROPHET_COMPANION => 'Companion of the Prophet',
-            self::TEN_PROMISED_PARADISE => 'Ten Promised Paradise',
-            self::BADR_PARTICIPANT => 'Participant of Badr',
-            self::UHUD_PARTICIPANT => 'Participant of Uhud',
+            self::TEN_PROMISED => 'Ten Promised Paradise',
+            self::BADR => 'Participant of Badr',
+            self::UHUD => 'Participant of Uhud',
             self::EARLY_MUSLIM => 'Early Muslim',
             self::MUHAJIR => 'Muhajir (Emigrant)',
             self::ANSAR => 'Ansar (Helper)',
@@ -52,10 +52,9 @@ enum CompanionStatus: string
     public function labelArabic(): string
     {
         return match ($this) {
-            self::PROPHET_COMPANION => 'صحابي',
-            self::TEN_PROMISED_PARADISE => 'العشرة المبشرون بالجنة',
-            self::BADR_PARTICIPANT => 'من أهل بدر',
-            self::UHUD_PARTICIPANT => 'من أهل أحد',
+            self::TEN_PROMISED => 'العشرة المبشرون بالجنة',
+            self::BADR => 'من أهل بدر',
+            self::UHUD => 'من أهل أحد',
             self::EARLY_MUSLIM => 'السابقون الأولون',
             self::MUHAJIR => 'مهاجر',
             self::ANSAR => 'أنصاري',
@@ -69,13 +68,12 @@ enum CompanionStatus: string
     public function rank(): int
     {
         return match ($this) {
-            self::TEN_PROMISED_PARADISE => 10,
-            self::BADR_PARTICIPANT => 9,
+            self::TEN_PROMISED => 10,
+            self::BADR => 9,
             self::EARLY_MUSLIM => 8,
             self::MUHAJIR => 7,
-            self::UHUD_PARTICIPANT => 6,
+            self::UHUD => 6,
             self::ANSAR => 5,
-            self::PROPHET_COMPANION => 4,
             self::TABI => 3,
         };
     }

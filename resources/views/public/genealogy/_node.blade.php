@@ -27,7 +27,8 @@
     {{-- Person node card --}}
     <button type="button"
             @click="openPerson({{ (int) $node['id'] }})"
-            class="group relative node-card rounded-2xl border border-transparent
+            style="--enter-delay: {{ min($depth * 90 + (($index ?? 0) * 40), 600) }}ms"
+            class="group relative node-card card-enter rounded-2xl border border-transparent
                    bg-white dark:bg-[#16213e] shadow-lg hover:shadow-2xl
                    {{ $isRoot ? 'p-6 sm:p-8' : 'p-4 sm:p-5' }} transition-all">
         <div class="flex flex-col items-center gap-3">

@@ -25,6 +25,8 @@
         'seerah-events'   => 'seerah',
         'seerah-event-types' => 'seerah',
         'seerah-milestones' => 'seerah',
+        'sahaba'          => 'sahaba-genealogy',
+        'genealogy'       => 'sahaba-genealogy',
         'quran'           => 'quran',
         'surahs'          => 'quran',
         'verses'          => 'quran',
@@ -371,16 +373,46 @@
                 </div>
             </div>
 
-            <!-- Sahaba (Companions) -->
-            <a href="{{ route('admin.sahaba.index') }}"
-               @click="activeMenu = 'sahaba'; openSubmenu = null"
-               :class="isActive('sahaba') ?
-                   'bg-gradient-primary text-white shadow-lg' :
-                   (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
-                <i data-lucide="heart-handshake" class="w-5 h-5"></i>
-                <span class="font-semibold">{{ __('admin.sahaba') }}</span>
-            </a>
+            <!-- Sahaba & Genealogy (Companions, Family Tree) -->
+            <div>
+                <button @click="toggleSubmenu('sahaba-genealogy')"
+                        :class="openSubmenu === 'sahaba-genealogy' ||
+                                ['sahaba','genealogy'].includes(activeMenu) ?
+                            'bg-gradient-primary text-white shadow-lg' :
+                            (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+                        class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="heart-handshake" class="w-5 h-5"></i>
+                        <span class="font-semibold">{{ __('admin.nav.sahaba') }}</span>
+                    </div>
+                    <i data-lucide="chevron-down"
+                       class="w-4 h-4 transition-transform duration-200"
+                       :class="openSubmenu === 'sahaba-genealogy' ? 'rotate-180' : ''"></i>
+                </button>
+
+                <div x-show="openSubmenu === 'sahaba-genealogy'"
+                     x-collapse
+                     class="mt-2 ms-6 space-y-1">
+                    <a href="{{ route('admin.sahaba.index') }}"
+                       @click="activeMenu = 'sahaba'"
+                       :class="isActive('sahaba') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="heart-handshake" class="w-4 h-4"></i>
+                        <span>{{ __('admin.sahaba') }}</span>
+                    </a>
+                    <a href="{{ route('admin.genealogy.index') }}"
+                       @click="activeMenu = 'genealogy'"
+                       :class="isActive('genealogy') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="git-branch" class="w-4 h-4"></i>
+                        <span>{{ __('admin.genealogy') }}</span>
+                    </a>
+                </div>
+            </div>
 
             <!-- Quran Management -->
             <div>
@@ -467,17 +499,6 @@
                     </a>
                 </div>
             </div>
-
-            <!-- Genealogy -->
-            <a href="{{ route('admin.genealogy.index') }}"
-               @click="activeMenu = 'genealogy'; openSubmenu = null"
-               :class="isActive('genealogy') ?
-                   'bg-gradient-primary text-white shadow-lg' :
-                   (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
-                <i data-lucide="git-branch" class="w-5 h-5"></i>
-                <span class="font-semibold">{{ __('admin.genealogy') }}</span>
-            </a>
 
             <!-- Site Content (Settings, Menus, Home Sections, Pages, FAQs, Inbox, Imports) -->
             <div>

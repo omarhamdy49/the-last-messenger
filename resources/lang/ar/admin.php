@@ -47,6 +47,7 @@ return [
         'users' => 'المستخدمون',
         'settings' => 'الإعدادات',
         'hadith' => 'الحديث الشريف',
+        'sahaba' => 'الصحابة والأنساب',
     ],
 
     // Dashboard
@@ -854,5 +855,50 @@ return [
     'hijri_today' => 'اليوم',
     'hijri_clear' => 'مسح',
     'order' => 'الترتيب',
+
+    // Sahaba (Companions) Admin Data Table
+    'gender' => 'الجنس',
+    'male' => 'ذكر',
+    'female' => 'أنثى',
+    'photo' => 'الصورة',
+    'featured' => 'مميز',
+    'columns' => 'الأعمدة',
+    'column_visibility' => 'إظهار / إخفاء الأعمدة',
+    'add_sahabi' => 'إضافة صحابي',
+    'manage_sahaba' => 'إدارة الصحابة الكرام',
+    'sahaba_page_subtitle' => 'إدارة سجلات الصحابة رضوان الله عليهم',
+    'no_sahaba_found' => 'لا يوجد صحابة حالياً',
+    'search_sahaba_placeholder' => 'ابحث بالاسم أو الكنية أو اللقب...',
+    'unpublish' => 'إلغاء النشر',
+    'unpublished' => 'غير منشور',
+    'mark_featured' => 'تمييز',
+    'unmark_featured' => 'إلغاء التمييز',
+    'sahaba_bulk_featured_updated' => 'تم تحديث حالة التمييز لعدد :count صحابي',
+    'sahaba_bulk_publish_updated' => 'تم تحديث حالة النشر لعدد :count صحابي',
+
+    // Genealogy Admin Data Table
+    'father' => 'الأب',
+    'mother' => 'الأم',
+    'genealogy_page_subtitle' => 'إدارة شجرة العائلة وسجلات الأنساب',
+    'add_person' => 'إضافة شخص',
+    'no_genealogy_found' => 'لا يوجد أشخاص في شجرة النسب حالياً',
+    'search_genealogy_placeholder' => 'ابحث بالاسم أو الكنية أو اللقب...',
+    'genealogy_self_parent_error' => 'لا يمكن أن يكون الشخص أباً أو أماً لنفسه.',
+    'genealogy_cycle_error' => 'سيؤدي هذا التعيين إلى إنشاء حلقة مفرغة في شجرة العائلة (الشخص المحدد هو بالفعل أحد ذرية هذا السجل).',
+    'genealogy_self_spouse_error' => 'لا يمكن أن يكون الشخص زوجاً لنفسه.',
+    'genealogy_duplicate_spouse_error' => 'توجد بالفعل علاقة زواج بين هذين الشخصين.',
+
+    // Hadith Isnad Chain
+    'isnad_chain' => 'سلسلة الإسناد',
+    'isnad_chain_hint' => 'إدارة سلسلة الرواة لهذا الحديث، من الأقرب إلى المُصنِّف وحتى الصحابي الذي سمع من النبي ﷺ.',
+    'no_narrators_in_chain' => 'لا يوجد رواة في السلسلة بعد.',
+    'move_up' => 'تحريك لأعلى',
+    'move_down' => 'تحريك لأسفل',
+    'remove_from_chain' => 'إزالة من السلسلة',
+    'add_narrator_to_chain' => 'إضافة إلى السلسلة',
+    'transmission_method' => 'صيغة الأداء',
+    'narrator_added_to_chain' => 'تمت إضافة الراوي إلى سلسلة الإسناد',
+    'narrator_removed_from_chain' => 'تمت إزالة الراوي من سلسلة الإسناد',
+    'isnad_chain_available_after_save' => 'يمكنك إدارة سلسلة الإسناد (الرواة) بعد حفظ هذا الحديث.',
 
 ];

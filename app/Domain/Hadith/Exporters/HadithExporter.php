@@ -30,7 +30,8 @@ class HadithExporter extends BaseExporter
             ->with([
                 'book:id,title',
                 'translations',
-                'companion:id,name_ar,name_en',
+                'companion:id,sahaba_id,name_ar,name_en',
+                'companion.sahabi.translations',
             ]);
 
         if (isset($this->filters['book_id'])) {

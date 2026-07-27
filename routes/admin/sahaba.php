@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('sahaba')->group(function (): void {
     Route::get('/search', [SahabiController::class, 'search'])->name('admin.sahaba.search');
     Route::post('/bulk-delete', [SahabiController::class, 'bulkDelete'])->name('admin.sahaba.bulk-delete');
+    Route::post('/bulk-featured', [SahabiController::class, 'bulkSetFeatured'])->name('admin.sahaba.bulk-featured');
+    Route::post('/bulk-status', [SahabiController::class, 'bulkUpdateReadyStatus'])->name('admin.sahaba.bulk-status');
 });
 Route::resource('sahaba', SahabiController::class)->names([
     'index' => 'admin.sahaba.index',

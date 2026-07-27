@@ -58,7 +58,6 @@ return new class extends Migration
     public function down(): void
     {
         // Rows using the new types cannot survive the narrowing — remove them.
-        // (Re-running the GenealogySeeder after a re-migrate restores them.)
         DB::table('relationships')->whereIn('relationship_type', ['grandson', 'granddaughter'])->delete();
 
         if (DB::getDriverName() === 'mysql') {

@@ -11,12 +11,14 @@ use App\Domain\Hadith\Repositories\CollectionRepository;
 use App\Domain\Hadith\Repositories\HadithRepository;
 use App\Domain\Hadith\Repositories\NarratorRepository;
 use App\Domain\Hadith\Repositories\ThemeRepositoryInterface;
+use App\Domain\Shared\Services\PublicVisibilityRegistry;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\HadithBookResource;
 use App\Http\Resources\HadithCollectionResource;
 use App\Http\Resources\HadithNarratorResource;
 use App\Http\Resources\HadithResource;
 use App\Support\Traits\ApiResponse;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -30,6 +32,7 @@ class HadithController extends Controller
         private readonly BookRepository $bookRepository,
         private readonly NarratorRepository $narratorRepository,
         private readonly ThemeRepositoryInterface $themeRepository,
+        private readonly PublicVisibilityRegistry $publicVisibility,
     ) {}
 
     /**
@@ -79,7 +82,7 @@ class HadithController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $hadith = $this->hadithRepository->getWithFullRelations($id);
+        $hadith = $this->hadithRepository->getWithPublicDetail($id);
 
         if ($hadith === null) {
             return $this->notFoundResponse('Hadith not found');
@@ -154,14 +157,17 @@ class HadithController extends Controller
         $perPage = $request->integer('per_page', 20);
         $perPage = max(1, min(100, $perPage));
 
-        $query = Hadith::query()
+        $query = Hadith::query();
+        $this->publicVisibility->apply($query, app()->getLocale());
+
+        $paginator = $query
             ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
             ->whereIn('grading_status', [Hadith::GRADING_SAHIH, Hadith::GRADING_HASAN])
             ->with(['translations', 'book:id,collection_id,title_ar,title_en'])
             ->orderBy('hadith_number')
             ->paginate($perPage);
 
-        return $this->paginatedResponse($query, 'Reliable hadiths retrieved successfully');
+        return $this->paginatedResponse($paginator, 'Reliable hadiths retrieved successfully');
     }
 
     /**
@@ -276,7 +282,8 @@ class HadithController extends Controller
         $chapter = HadithChapter::query()
             ->select(['id', 'book_id', 'chapter_number', 'name', 'description', 'display_order'])
             ->with([
-                'hadiths' => fn ($q) => $q
+                'hadiths' => fn (Builder $query) => $this->publicVisibility
+                    ->apply($query, app()->getLocale())
                     ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
                     ->with('translations')
                     ->orderBy('hadith_number'),
@@ -299,7 +306,8 @@ class HadithController extends Controller
         $perPage = max(1, min(100, $perPage));
 
         $paginator = \App\Domain\Hadith\Models\HadithNarrator::query()
-            ->select(['id', 'name_ar', 'name_en', 'kunya', 'death_year_hijri', 'reliability_grade'])
+            ->select(['id', 'sahaba_id', 'name_ar', 'name_en', 'kunya', 'death_year_hijri', 'reliability_grade'])
+            ->with('sahabi.translations')
             ->withCount('isnads')
             ->orderBy('name_ar')
             ->paginate($perPage);
@@ -313,7 +321,8 @@ class HadithController extends Controller
     public function narratorShow(int $id): JsonResponse
     {
         $narrator = \App\Domain\Hadith\Models\HadithNarrator::query()
-            ->select(['id', 'name_ar', 'name_en', 'full_name_ar', 'full_name_en', 'kunya', 'biography', 'birth_year_hijri', 'death_year_hijri', 'reliability_grade', 'school', 'region'])
+            ->select(['id', 'sahaba_id', 'name_ar', 'name_en', 'full_name_ar', 'full_name_en', 'kunya', 'biography', 'birth_year_hijri', 'death_year_hijri', 'reliability_grade', 'school', 'region'])
+            ->with('sahabi.translations')
             ->withCount('isnads')
             ->find($id);
 
@@ -343,7 +352,10 @@ class HadithController extends Controller
             return $this->notFoundResponse('Narrator not found');
         }
 
-        $paginator = Hadith::query()
+        $query = Hadith::query();
+        $this->publicVisibility->apply($query, app()->getLocale());
+
+        $paginator = $query
             ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
             ->whereHas('isnads', fn ($q) => $q->where('narrator_id', $id))
             ->with(['translations', 'book:id,collection_id,title_ar,title_en'])

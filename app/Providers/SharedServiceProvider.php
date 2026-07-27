@@ -4,12 +4,21 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\Shared\Contracts\PublicVisibilityProviderInterface;
+use App\Domain\Shared\Services\PublicVisibilityRegistry;
 use Illuminate\Support\ServiceProvider;
 
 class SharedServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(
+            PublicVisibilityRegistry::class,
+            fn ($app) => new PublicVisibilityRegistry(
+                $app->tagged(PublicVisibilityProviderInterface::class)
+            )
+        );
+
         $this->app->bind(
             \App\Domain\Shared\Repositories\AdminLogRepositoryInterface::class,
             \App\Domain\Shared\Repositories\AdminLogRepository::class

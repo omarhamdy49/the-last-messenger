@@ -32,10 +32,10 @@ class SahabiExporter extends BaseExporter
     public function collection(): Collection
     {
         if (! empty($this->filters)) {
-            $query = $this->sahabiRepository->getModel()::query();
+            $query = $this->sahabiRepository->getModel()::query()->with('categories');
 
             if (isset($this->filters['status'])) {
-                $query->where('status', $this->filters['status']);
+                $query->whereHas('categories', fn ($q) => $q->where('key', $this->filters['status']));
             }
 
             if (isset($this->filters['gender'])) {
@@ -74,8 +74,8 @@ class SahabiExporter extends BaseExporter
                 'birth_date' => $sahabi->birth_date ?? '',
                 'death_date' => $sahabi->death_date ?? '',
                 'death_place' => $this->formatMultiLanguageField($sahabi->death_place),
-                'status' => ucfirst($sahabi->status ?? ''),
-                'hadith_count' => $sahabi->hadith_count ?? 0,
+                'status' => implode(', ', $sahabi->categories->pluck('key')->all()),
+                'hadith_count' => $sahabi->reported_hadith_count ?? 0,
                 'known_for' => $this->formatMultiLanguageField($sahabi->known_for),
                 'battles_participated' => $this->formatArray(
                     $sahabi->relationLoaded('battles')

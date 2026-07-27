@@ -8,6 +8,8 @@ use App\Domain\Media\Models\EpisodeWatchProgress;
 use App\Domain\Media\Models\MediaEpisode;
 use App\Domain\Media\Support\MediaCacheKeys;
 use App\Domain\Shared\Repositories\BaseRepository;
+use App\Domain\Shared\Services\PublicVisibilityRegistry;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -18,6 +20,12 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
 {
     private const CACHE_TTL = 1800;
 
+    public function __construct(
+        private readonly PublicVisibilityRegistry $publicVisibility,
+    ) {
+        parent::__construct();
+    }
+
     protected function getModel(): Model
     {
         return new MediaEpisode;
@@ -25,7 +33,10 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
 
     public function paginateByProgram(int $programId, int $perPage = 20): LengthAwarePaginator
     {
-        return MediaEpisode::query()
+        $query = MediaEpisode::query();
+        $this->publicEpisodes($query);
+
+        return $query
             ->select(['id', 'program_id', 'season_number', 'episode_number', 'slug', 'video_url', 'duration_seconds', 'views_count', 'is_featured', 'created_at'])
             ->with(['translations:id,media_episode_id,locale,title,description,is_ready'])
             ->where('program_id', $programId)
@@ -113,15 +124,35 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
         return Cache::remember(
             MediaCacheKeys::episodesByProgram($programId),
             self::CACHE_TTL,
-            fn () => MediaEpisode::query()
-                ->select(['id', 'program_id', 'season_number', 'episode_number', 'slug', 'video_url', 'duration_seconds', 'views_count', 'is_featured', 'created_at'])
-                ->with(['translations:id,media_episode_id,locale,title,is_ready', 'media'])
-                ->where('program_id', $programId)
-                ->published()
-                ->orderBy('season_number')
-                ->orderBy('episode_number')
-                ->get()
+            function () use ($programId) {
+                $query = MediaEpisode::query();
+                $this->publicEpisodes($query);
+
+                return $query
+                    ->select(['id', 'program_id', 'season_number', 'episode_number', 'slug', 'video_url', 'duration_seconds', 'views_count', 'is_featured', 'created_at'])
+                    ->with(['translations:id,media_episode_id,locale,title,is_ready', 'media'])
+                    ->where('program_id', $programId)
+                    ->orderBy('season_number')
+                    ->orderBy('episode_number')
+                    ->get();
+            }
         );
+    }
+
+    public function getByProgramForSync(int $programId): Collection
+    {
+        return MediaEpisode::query()
+            ->select([
+                'id',
+                'program_id',
+                'season_number',
+                'episode_number',
+                'video_url',
+            ])
+            ->where('program_id', $programId)
+            ->orderBy('season_number')
+            ->orderBy('episode_number')
+            ->get();
     }
 
     public function findByNumber(int $programId, int $season, int $episodeNumber): ?MediaEpisode
@@ -129,25 +160,31 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
         return Cache::remember(
             MediaCacheKeys::episodeByProgramAndNumber($programId, $season, $episodeNumber),
             self::CACHE_TTL,
-            fn () => MediaEpisode::query()
-                ->select(['id', 'program_id', 'season_number', 'episode_number', 'slug', 'video_url', 'duration_seconds', 'views_count', 'is_featured', 'created_at', 'updated_at'])
-                ->with(['translations', 'program:id,slug,category', 'media'])
-                ->where('program_id', $programId)
-                ->where('season_number', $season)
-                ->where('episode_number', $episodeNumber)
-                ->published()
-                ->first()
+            function () use ($programId, $season, $episodeNumber) {
+                $query = MediaEpisode::query();
+                $this->publicEpisodes($query);
+
+                return $query
+                    ->select(['id', 'program_id', 'season_number', 'episode_number', 'slug', 'video_url', 'duration_seconds', 'views_count', 'is_featured', 'created_at', 'updated_at'])
+                    ->with(['translations', 'program:id,slug,category', 'media'])
+                    ->where('program_id', $programId)
+                    ->where('season_number', $season)
+                    ->where('episode_number', $episodeNumber)
+                    ->first();
+            }
         );
     }
 
     public function findNext(MediaEpisode $episode): ?MediaEpisode
     {
         // Try same season first, then move to the next season
-        return MediaEpisode::query()
+        $query = MediaEpisode::query();
+        $this->publicEpisodes($query);
+
+        return $query
             ->select(['id', 'program_id', 'season_number', 'episode_number', 'slug', 'video_url', 'duration_seconds', 'is_featured'])
             ->with(['translations:id,media_episode_id,locale,title,is_ready', 'media'])
             ->where('program_id', $episode->program_id)
-            ->published()
             ->where(function ($q) use ($episode) {
                 $q->where(function ($inner) use ($episode) {
                     $inner->where('season_number', $episode->season_number)
@@ -304,9 +341,14 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
             ])
             ->where('user_id', $userId)
             ->where('completed', false)
-            ->whereHas('episode', fn ($q) => $q->published())
+            ->whereHas('episode', fn (Builder $query) => $this->publicEpisodes($query))
             ->orderByDesc('updated_at')
             ->limit($limit)
             ->get();
+    }
+
+    private function publicEpisodes(Builder $query): Builder
+    {
+        return $this->publicVisibility->apply($query, app()->getLocale());
     }
 }

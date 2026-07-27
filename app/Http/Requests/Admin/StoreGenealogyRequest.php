@@ -33,14 +33,15 @@ class StoreGenealogyRequest extends FormRequest
             'title.tr' => ['nullable', 'string', 'max:255'],
             'title.ur' => ['nullable', 'string', 'max:255'],
 
-            'person_type' => ['required', 'string', 'in:prophet,companion_male,companion_female,family,tribe_leader,historical_figure'],
+            'person_type' => ['required', 'string', 'in:prophet,sahabi,family,tribe,historical'],
             'gender' => ['required', 'string', 'in:male,female'],
 
-            'father_id' => ['nullable', 'integer', 'exists:people,id'],
-            'mother_id' => ['nullable', 'integer', 'exists:people,id'],
-            'sahaba_id' => ['nullable', 'integer', 'exists:sahabis,id'],
+            'father_id' => ['nullable', 'integer', 'exists:sahaba,id'],
+            'mother_id' => ['nullable', 'integer', 'exists:sahaba,id'],
+            'tree_display_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'hide_from_tree' => ['nullable', 'boolean'],
 
-            'birth_date_hijri' => ['nullable', 'date'],
+            'birth_date_hijri' => ['nullable', 'string', 'max:255'],
             'birth_date_gregorian' => ['nullable', 'date'],
             'birth_place' => ['nullable', 'array'],
             'birth_place.ar' => ['nullable', 'string'],
@@ -49,7 +50,7 @@ class StoreGenealogyRequest extends FormRequest
             'birth_place.tr' => ['nullable', 'string'],
             'birth_place.ur' => ['nullable', 'string'],
 
-            'death_date_hijri' => ['nullable', 'date'],
+            'death_date_hijri' => ['nullable', 'string', 'max:255'],
             'death_date_gregorian' => ['nullable', 'date'],
             'death_place' => ['nullable', 'array'],
             'death_place.ar' => ['nullable', 'string'],

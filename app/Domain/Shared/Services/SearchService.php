@@ -39,6 +39,7 @@ class SearchService
     public function __construct(
         protected SavedFilterRepositoryInterface $savedFilterRepository,
         protected SearchQueryBuilder $queryBuilder,
+        protected PublicVisibilityRegistry $publicVisibility,
     ) {}
 
     /**
@@ -399,6 +400,9 @@ class SearchService
         }
 
         $eloquentQuery = $modelClass::query();
+        if ($module !== SearchModule::GENEALOGY) {
+            $this->publicVisibility->apply($eloquentQuery, app()->getLocale());
+        }
 
         // Delegate full-text / LIKE search to the query builder
         $this->queryBuilder->applySearch(

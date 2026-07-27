@@ -6,16 +6,17 @@ namespace App\Domain\Genealogy\Enums;
 
 /**
  * Person Type Enum
- * Types of people in the genealogical tree
+ * Types of people in the genealogical tree. Gender is deliberately not
+ * encoded here — `sahaba.gender` already exists as its own column, so
+ * "companion_male"/"companion_female" would be pure duplication.
  */
 enum PersonType: string
 {
     case PROPHET = 'prophet';
-    case COMPANION_MALE = 'companion_male';
-    case COMPANION_FEMALE = 'companion_female';
+    case SAHABI = 'sahabi';
     case FAMILY = 'family';
-    case TRIBE_LEADER = 'tribe_leader';
-    case HISTORICAL_FIGURE = 'historical_figure';
+    case TRIBE = 'tribe';
+    case HISTORICAL = 'historical';
 
     /**
      * Get human-readable label
@@ -32,19 +33,12 @@ enum PersonType: string
                 'tr' => 'Peygamber',
                 'ur' => 'نبی',
             ],
-            self::COMPANION_MALE => [
+            self::SAHABI => [
                 'ar' => 'صحابي',
-                'en' => 'Companion (Male)',
+                'en' => 'Companion',
                 'fr' => 'Compagnon',
-                'tr' => 'Sahabe (Erkek)',
+                'tr' => 'Sahabe',
                 'ur' => 'صحابی',
-            ],
-            self::COMPANION_FEMALE => [
-                'ar' => 'صحابية',
-                'en' => 'Companion (Female)',
-                'fr' => 'Compagnonne',
-                'tr' => 'Sahabe (Kadın)',
-                'ur' => 'صحابیہ',
             ],
             self::FAMILY => [
                 'ar' => 'عائلة النبي',
@@ -53,14 +47,14 @@ enum PersonType: string
                 'tr' => 'Peygamber\'in Ailesi',
                 'ur' => 'نبی کا خاندان',
             ],
-            self::TRIBE_LEADER => [
+            self::TRIBE => [
                 'ar' => 'زعيم قبيلة',
                 'en' => 'Tribe Leader',
                 'fr' => 'Chef de Tribu',
                 'tr' => 'Kabile Lideri',
                 'ur' => 'قبیلے کا سردار',
             ],
-            self::HISTORICAL_FIGURE => [
+            self::HISTORICAL => [
                 'ar' => 'شخصية تاريخية',
                 'en' => 'Historical Figure',
                 'fr' => 'Figure Historique',

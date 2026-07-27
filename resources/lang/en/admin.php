@@ -35,6 +35,7 @@ return [
         'users' => 'Users',
         'settings' => 'Settings',
         'hadith' => 'Hadith',
+        'sahaba' => 'Companions & Genealogy',
     ],
 
     // Dashboard
@@ -842,5 +843,50 @@ return [
     'hijri_today' => 'Today',
     'hijri_clear' => 'Clear',
     'order' => 'Order',
+
+    // Sahaba (Companions) Admin Data Table
+    'gender' => 'Gender',
+    'male' => 'Male',
+    'female' => 'Female',
+    'photo' => 'Photo',
+    'featured' => 'Featured',
+    'columns' => 'Columns',
+    'column_visibility' => 'Column Visibility',
+    'add_sahabi' => 'Add Companion',
+    'manage_sahaba' => 'Companions Management',
+    'sahaba_page_subtitle' => 'Manage the records of the honoured Companions (may Allah be pleased with them)',
+    'no_sahaba_found' => 'No companions found',
+    'search_sahaba_placeholder' => 'Search by name, kunya, or laqab...',
+    'unpublish' => 'Unpublish',
+    'unpublished' => 'Unpublished',
+    'mark_featured' => 'Mark as Featured',
+    'unmark_featured' => 'Remove Featured',
+    'sahaba_bulk_featured_updated' => 'Featured status updated for :count companion(s)',
+    'sahaba_bulk_publish_updated' => 'Publish status updated for :count companion(s)',
+
+    // Genealogy Admin Data Table
+    'father' => 'Father',
+    'mother' => 'Mother',
+    'genealogy_page_subtitle' => 'Manage the family tree and lineage records',
+    'add_person' => 'Add Person',
+    'no_genealogy_found' => 'No genealogy records found',
+    'search_genealogy_placeholder' => 'Search by name, kunya, or laqab...',
+    'genealogy_self_parent_error' => 'A person cannot be their own father or mother.',
+    'genealogy_cycle_error' => 'This assignment would create a cycle in the family tree (the selected person is already a descendant of this record).',
+    'genealogy_self_spouse_error' => 'A person cannot be their own spouse.',
+    'genealogy_duplicate_spouse_error' => 'A spouse relationship already exists between these two people.',
+
+    // Hadith Isnad Chain
+    'isnad_chain' => 'Isnad Chain',
+    'isnad_chain_hint' => 'Manage the chain of narrators for this hadith, from closest to the compiler to the companion who heard the Prophet ﷺ.',
+    'no_narrators_in_chain' => 'No narrators in the chain yet.',
+    'move_up' => 'Move up',
+    'move_down' => 'Move down',
+    'remove_from_chain' => 'Remove from chain',
+    'add_narrator_to_chain' => 'Add to Chain',
+    'transmission_method' => 'Transmission method',
+    'narrator_added_to_chain' => 'Narrator added to the isnad chain',
+    'narrator_removed_from_chain' => 'Narrator removed from the isnad chain',
+    'isnad_chain_available_after_save' => 'You\'ll be able to manage the isnad (narrator chain) after saving this hadith.',
 
 ];

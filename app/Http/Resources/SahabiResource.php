@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Domain\Sahaba\Enums\CompanionStatus;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -31,10 +32,19 @@ class SahabiResource extends JsonResource
                 fn () => $this->getDisplayName($request->input('lang', 'ar'))
             ),
             'gender' => $this->gender,
-            'status' => $this->status->value,
-            'status_label' => $this->status->label(),
-            'status_label_ar' => $this->status->labelArabic(),
-            'status_rank' => $this->status->rank(),
+            'categories' => $this->when(
+                $this->relationLoaded('categories'),
+                fn () => $this->categories
+                    ->map(fn ($category) => CompanionStatus::tryFrom($category->key))
+                    ->filter()
+                    ->map(fn (CompanionStatus $category) => [
+                        'key' => $category->value,
+                        'label' => $category->label(),
+                        'label_ar' => $category->labelArabic(),
+                        'rank' => $category->rank(),
+                    ])
+                    ->values()
+            ),
             'biography' => $this->when($request->route('slug'), $this->biography),
             'virtues' => $this->when($request->route('slug'), $this->virtues),
             'famous_narrations' => $this->when($request->route('slug'), $this->famous_narrations),
@@ -51,17 +61,17 @@ class SahabiResource extends JsonResource
             'conversion_date_hijri' => $this->conversion_date_hijri,
             'conversion_order' => $this->conversion_order,
             'roles' => $this->roles,
-            'hadith_count' => $this->hadith_count,
+            'reported_hadith_count' => $this->reported_hadith_count,
             'battles' => $this->when(
                 $this->relationLoaded('battles'),
                 fn () => $this->battles->pluck('battle_name')->values()
             ),
-            'profile_image' => $this->profile_image,
-            'gallery' => $this->when($request->route('slug'), $this->gallery),
+            'profile_image' => $this->profile_image_url,
+            'avatar' => $this->avatar_url,
+            'gallery' => $this->when($request->route('slug'), $this->gallery_images),
             'views_count' => $this->views_count,
             'is_featured' => $this->is_featured,
             'importance_rank' => $this->importance_rank,
-            'article' => new ArticleResource($this->whenLoaded('article')),
             'father' => $this->when(
                 $this->relationLoaded('father') && $this->father,
                 fn () => [

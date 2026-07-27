@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\Quran\Services\QuranPublicVisibility;
+use App\Domain\Shared\Contracts\PublicVisibilityProviderInterface;
 use Illuminate\Support\ServiceProvider;
 
 class QuranServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(QuranPublicVisibility::class);
+        $this->app->tag(QuranPublicVisibility::class, PublicVisibilityProviderInterface::class);
+
         $this->app->bind(
             \App\Domain\Quran\Repositories\SurahRepositoryInterface::class,
             \App\Domain\Quran\Repositories\SurahRepository::class

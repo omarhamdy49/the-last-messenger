@@ -82,9 +82,19 @@
                             <p class="text-lg" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
                                 {{ $sahabi->getTranslation('name', 'en') }}
                             </p>
-                            @if($sahabi->getTranslation('kunya', 'ar'))
+                            @if($sahabi->getTranslation('full_name', 'ar'))
+                            <p class="text-sm mt-1" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                                {{ $sahabi->getTranslation('full_name', 'ar') }}
+                            </p>
+                            @endif
+                            @if($sahabi->getTranslation('kunya', 'ar') || $sahabi->getTranslation('laqab', 'ar'))
                             <p class="text-sm mt-1" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
-                                {{ $sahabi->getTranslation('kunya', 'ar') }}
+                                {{ collect([$sahabi->getTranslation('kunya', 'ar'), $sahabi->getTranslation('laqab', 'ar')])->filter()->implode(' - ') }}
+                            </p>
+                            @endif
+                            @if($sahabi->getTranslation('title', 'ar'))
+                            <p class="text-sm mt-1" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
+                                {{ $sahabi->getTranslation('title', 'ar') }}
                             </p>
                             @endif
                         </div>
@@ -104,17 +114,17 @@
                             {{ $sahabi->tribe }}
                         </span>
                         @endif
-                        @if($sahabi->status)
+                        @foreach($sahabi->categories as $category)
                         <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl"
                               :class="darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-800'">
-                            {{ $sahabi->status->labelArabic() }}
+                            {{ \App\Domain\Sahaba\Enums\CompanionStatus::tryFrom($category->key)?->labelArabic() }}
                         </span>
-                        @endif
-                        @if($sahabi->hadith_count > 0)
+                        @endforeach
+                        @if($sahabi->reported_hadith_count > 0)
                         <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl"
                               :class="darkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-800'">
                             <i data-lucide="book-open" class="w-4 h-4"></i>
-                            {{ $sahabi->hadith_count }} حديث
+                            {{ $sahabi->reported_hadith_count }} حديث (كما ورد في المصدر)
                         </span>
                         @endif
                     </div>
@@ -161,6 +171,62 @@
                     @endif
                 @endforeach
             </div>
+        </div>
+        @endif
+
+        <!-- Virtues -->
+        @if($sahabi->getTranslation('virtues', 'ar') || $sahabi->getTranslation('virtues', 'en'))
+        <div class="rounded-2xl border p-6"
+             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                <i data-lucide="sparkles" class="w-5 h-5 text-accent"></i>
+                الفضائل والمناقب
+            </h2>
+            <p class="leading-relaxed" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                {{ $sahabi->getTranslation('virtues', 'ar') ?: $sahabi->getTranslation('virtues', 'en') }}
+            </p>
+        </div>
+        @endif
+
+        <!-- Famous Narrations -->
+        @if($sahabi->getTranslation('famous_narrations', 'ar') || $sahabi->getTranslation('famous_narrations', 'en'))
+        <div class="rounded-2xl border p-6"
+             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                <i data-lucide="book-open" class="w-5 h-5 text-accent"></i>
+                الأحاديث المشهورة
+            </h2>
+            <p class="leading-relaxed" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                {{ $sahabi->getTranslation('famous_narrations', 'ar') ?: $sahabi->getTranslation('famous_narrations', 'en') }}
+            </p>
+        </div>
+        @endif
+
+        <!-- Martyrdom -->
+        @if($sahabi->getTranslation('martyrdom', 'ar') || $sahabi->getTranslation('martyrdom', 'en'))
+        <div class="rounded-2xl border p-6"
+             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                <i data-lucide="feather" class="w-5 h-5 text-accent"></i>
+                الاستشهاد
+            </h2>
+            <p class="leading-relaxed" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                {{ $sahabi->getTranslation('martyrdom', 'ar') ?: $sahabi->getTranslation('martyrdom', 'en') }}
+            </p>
+        </div>
+        @endif
+
+        <!-- Notes -->
+        @if($sahabi->getTranslation('notes', 'ar') || $sahabi->getTranslation('notes', 'en'))
+        <div class="rounded-2xl border p-6"
+             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                <i data-lucide="sticky-note" class="w-5 h-5 text-accent"></i>
+                ملاحظات
+            </h2>
+            <p class="leading-relaxed" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                {{ $sahabi->getTranslation('notes', 'ar') ?: $sahabi->getTranslation('notes', 'en') }}
+            </p>
         </div>
         @endif
 
@@ -215,18 +281,94 @@
                     <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $sahabi->tribe }}</span>
                 </div>
                 @endif
+                @if($sahabi->clan)
+                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">البطن / الفخذ</span>
+                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $sahabi->clan }}</span>
+                </div>
+                @endif
+                @if($sahabi->getTranslation('occupation', 'ar') || $sahabi->getTranslation('occupation', 'en'))
+                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">المهنة / الدور</span>
+                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $sahabi->getTranslation('occupation', 'ar') ?: $sahabi->getTranslation('occupation', 'en') }}</span>
+                </div>
+                @endif
+                @if($sahabi->birth_place)
+                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">مكان الولادة</span>
+                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $sahabi->birth_place }}</span>
+                </div>
+                @endif
+                @if($sahabi->death_place)
+                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">مكان الوفاة</span>
+                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $sahabi->death_place }}</span>
+                </div>
+                @endif
+                @if($sahabi->burial_place)
+                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">مكان الدفن</span>
+                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $sahabi->burial_place }}</span>
+                </div>
+                @endif
                 @if($sahabi->birth_date_hijri)
                 <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">تاريخ الولادة</span>
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">تاريخ الولادة (هجري)</span>
                     <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $sahabi->birth_date_hijri }}</span>
+                </div>
+                @endif
+                @if($sahabi->birth_date_gregorian)
+                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">تاريخ الولادة (ميلادي)</span>
+                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $sahabi->birth_date_gregorian->format('Y-m-d') }}</span>
                 </div>
                 @endif
                 @if($sahabi->death_date_hijri)
                 <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">تاريخ الوفاة</span>
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">تاريخ الوفاة (هجري)</span>
                     <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $sahabi->death_date_hijri }}</span>
                 </div>
                 @endif
+                @if($sahabi->death_date_gregorian)
+                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">تاريخ الوفاة (ميلادي)</span>
+                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $sahabi->death_date_gregorian->format('Y-m-d') }}</span>
+                </div>
+                @endif
+                @if($sahabi->age_at_death)
+                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">العمر عند الوفاة</span>
+                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $sahabi->age_at_death }}</span>
+                </div>
+                @endif
+                @if($sahabi->conversion_date_hijri)
+                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">تاريخ الإسلام</span>
+                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $sahabi->conversion_date_hijri }}</span>
+                </div>
+                @endif
+                @if($sahabi->conversion_order)
+                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">ترتيب الإسلام</span>
+                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $sahabi->conversion_order }}</span>
+                </div>
+                @endif
+                @if(!empty($sahabi->roles))
+                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">الأدوار</span>
+                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ implode('، ', $sahabi->roles) }}</span>
+                </div>
+                @endif
+                @if($sahabi->generation !== null)
+                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">الجيل</span>
+                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $sahabi->generation }}</span>
+                </div>
+                @endif
+                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">بيانات موثقة</span>
+                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $sahabi->is_verified ? 'نعم' : 'لا' }}</span>
+                </div>
                 <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
                     <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">المشاهدات</span>
                     <span class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ number_format($sahabi->views_count) }}</span>

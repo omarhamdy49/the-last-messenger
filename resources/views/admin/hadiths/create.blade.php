@@ -50,22 +50,6 @@
                     @enderror
                 </div>
 
-                <!-- Narrator -->
-                <div>
-                    <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.narrator') }}</label>
-                    <select name="narrator_id" class="w-full px-4 py-2 rounded-lg border" :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                        <option value="">{{ __('admin.select_narrator') }}</option>
-                        @foreach($narrators as $narrator)
-                            <option value="{{ $narrator->id }}" @selected(old('narrator_id') == $narrator->id)>
-                                {{ $narrator->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('narrator_id')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
-
                 <!-- Grading Status -->
                 <div>
                     <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.grading') }}</label>
@@ -92,6 +76,10 @@
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
                 </div>
+
+                <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                    {{ __('admin.isnad_chain_available_after_save') }}
+                </p>
             </div>
         </div>
 

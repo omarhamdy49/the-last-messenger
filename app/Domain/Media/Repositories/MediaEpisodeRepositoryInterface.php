@@ -50,6 +50,11 @@ interface MediaEpisodeRepositoryInterface extends RepositoryInterface
     public function getByProgram(int $programId): Collection;
 
     /**
+     * All episodes for an administrative playlist sync, including drafts.
+     */
+    public function getByProgramForSync(int $programId): Collection;
+
+    /**
      * Whether an episode already uses the given slug.
      */
     public function slugExists(string $slug): bool;

@@ -497,8 +497,7 @@ class HadithImportPersister
                     ? ['source_system' => $sourceSystem, 'source_narrator_id' => (string) $sourceNarratorId]
                     : ['name_ar' => $nameAr !== '' ? $nameAr : $nameEn];
 
-                $narrator = HadithNarrator::updateOrCreate(
-                    $uniqueKey,
+                $narrator = HadithNarrator::resolveOrCreate(
                     [
                         'name_ar' => $nameAr !== '' ? $nameAr : $nameEn,
                         'name_en' => $nameEn !== '' ? $nameEn : null,
@@ -510,7 +509,8 @@ class HadithImportPersister
                         'biography' => $narratorData['biography_ar'] ?? $narratorData['biography_en'] ?? null,
                         'source_system' => $sourceSystem,
                         'source_narrator_id' => $sourceNarratorId,
-                    ]
+                    ],
+                    $uniqueKey,
                 );
 
                 HadithIsnad::updateOrCreate(

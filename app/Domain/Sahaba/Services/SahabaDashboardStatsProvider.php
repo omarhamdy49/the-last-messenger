@@ -21,7 +21,7 @@ class SahabaDashboardStatsProvider implements DashboardStatsProviderInterface
     {
         try {
             return [
-                'total' => Sahabi::count(),
+                'total' => Sahabi::onlySahaba()->count(),
             ];
         } catch (\Throwable) {
             return ['total' => 0];

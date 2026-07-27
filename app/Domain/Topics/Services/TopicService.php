@@ -31,7 +31,7 @@ final class TopicService
      */
     public function listTopics(string $locale): array
     {
-        return $this->repository->allOrderedWithCounts()
+        return $this->repository->allOrderedWithCounts($locale)
             ->map(fn (Topic $topic): array => [
                 'slug' => $topic->slug,
                 'icon' => $topic->icon,
@@ -63,19 +63,19 @@ final class TopicService
             return null;
         }
 
-        $verses = $this->repository->itemsForTopic($topic->id, TopicItemType::VERSE->value)
+        $verses = $this->repository->itemsForTopic($topic->id, TopicItemType::VERSE->value, $locale)
             ->map(fn (TopicItem $item): ?array => $this->mapVerse($item->itemable, $locale))
             ->filter()
             ->values()
             ->all();
 
-        $hadiths = $this->repository->itemsForTopic($topic->id, TopicItemType::HADITH->value)
+        $hadiths = $this->repository->itemsForTopic($topic->id, TopicItemType::HADITH->value, $locale)
             ->map(fn (TopicItem $item): ?array => $this->mapHadith($item->itemable, $locale))
             ->filter()
             ->values()
             ->all();
 
-        $articles = $this->repository->itemsForTopic($topic->id, TopicItemType::ARTICLE->value)
+        $articles = $this->repository->itemsForTopic($topic->id, TopicItemType::ARTICLE->value, $locale)
             ->map(fn (TopicItem $item): ?array => $this->mapArticle($item->itemable, $locale))
             ->filter()
             ->values()

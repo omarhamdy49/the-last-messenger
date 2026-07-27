@@ -52,12 +52,12 @@ class SahabiController extends Controller
     }
 
     /**
-     * Get companions by status
+     * Get companions by historical-rank category (badr, ansar, muhajir, ...)
      */
     public function byStatus(Request $request, string $status): JsonResponse
     {
         $perPage = $request->integer('per_page', 15);
-        $companions = $this->sahabiService->getCompanionsByStatus($status, $perPage);
+        $companions = $this->sahabiService->getCompanionsByCategory($status, $perPage);
 
         return $this->success(
             SahabiResource::collection($companions)->response()->getData(true)

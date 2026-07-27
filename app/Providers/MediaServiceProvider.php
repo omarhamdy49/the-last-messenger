@@ -10,13 +10,18 @@ use App\Domain\Media\Repositories\MediaEpisodeRepository;
 use App\Domain\Media\Repositories\MediaEpisodeRepositoryInterface;
 use App\Domain\Media\Repositories\MediaProgramRepository;
 use App\Domain\Media\Repositories\MediaProgramRepositoryInterface;
+use App\Domain\Media\Services\MediaPublicVisibility;
 use App\Domain\Media\Support\YouTubeClient;
+use App\Domain\Shared\Contracts\PublicVisibilityProviderInterface;
 use Illuminate\Support\ServiceProvider;
 
 class MediaServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(MediaPublicVisibility::class);
+        $this->app->tag(MediaPublicVisibility::class, PublicVisibilityProviderInterface::class);
+
         $this->app->bind(
             MediaProgramRepositoryInterface::class,
             MediaProgramRepository::class

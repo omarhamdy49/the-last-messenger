@@ -35,6 +35,7 @@ return [
         'users' => 'Kullanıcılar',
         'settings' => 'Ayarlar',
         'hadith' => 'Hadis',
+        'sahaba' => 'Sahabe ve Soy Ağacı',
     ],
 
     // Dashboard
@@ -839,5 +840,50 @@ return [
     'hijri_today' => 'Bugün',
     'hijri_clear' => 'Temizle',
     'order' => 'Sıra',
+
+    // Sahaba (Companions) Admin Data Table
+    'gender' => 'Cinsiyet',
+    'male' => 'Erkek',
+    'female' => 'Kadın',
+    'photo' => 'Fotoğraf',
+    'featured' => 'Öne Çıkan',
+    'columns' => 'Sütunlar',
+    'column_visibility' => 'Sütun Görünürlüğü',
+    'add_sahabi' => 'Sahabi Ekle',
+    'manage_sahaba' => 'Sahabe Yönetimi',
+    'sahaba_page_subtitle' => 'Şerefli Sahabelerin (Allah onlardan razı olsun) kayıtlarını yönetin',
+    'no_sahaba_found' => 'Sahabi bulunamadı',
+    'search_sahaba_placeholder' => 'İsim, künye veya lakaba göre ara...',
+    'unpublish' => 'Yayından Kaldır',
+    'unpublished' => 'Yayınlanmadı',
+    'mark_featured' => 'Öne Çıkan Yap',
+    'unmark_featured' => 'Öne Çıkanı Kaldır',
+    'sahaba_bulk_featured_updated' => ':count sahabi için öne çıkan durumu güncellendi',
+    'sahaba_bulk_publish_updated' => ':count sahabi için yayın durumu güncellendi',
+
+    // Genealogy Admin Data Table
+    'father' => 'Baba',
+    'mother' => 'Anne',
+    'genealogy_page_subtitle' => 'Soy ağacı ve nesep kayıtlarını yönetin',
+    'add_person' => 'Kişi Ekle',
+    'no_genealogy_found' => 'Nesep kaydı bulunamadı',
+    'search_genealogy_placeholder' => 'İsim, künye veya lakaba göre ara...',
+    'genealogy_self_parent_error' => 'Bir kişi kendi babası veya annesi olamaz.',
+    'genealogy_cycle_error' => 'Bu atama soy ağacında bir döngü oluşturur (seçilen kişi zaten bu kaydın bir soyundan gelmektedir).',
+    'genealogy_self_spouse_error' => 'Bir kişi kendi eşi olamaz.',
+    'genealogy_duplicate_spouse_error' => 'Bu iki kişi arasında zaten bir eşlik ilişkisi var.',
+
+    // Hadith Isnad Chain
+    'isnad_chain' => 'İsnad Zinciri',
+    'isnad_chain_hint' => 'Bu hadisin ravi zincirini, derleyiciye en yakından Peygamber ﷺ\'i işiten sahabeye kadar yönetin.',
+    'no_narrators_in_chain' => 'Zincirde henüz ravi yok.',
+    'move_up' => 'Yukarı taşı',
+    'move_down' => 'Aşağı taşı',
+    'remove_from_chain' => 'Zincirden kaldır',
+    'add_narrator_to_chain' => 'Zincire Ekle',
+    'transmission_method' => 'Rivayet ifadesi',
+    'narrator_added_to_chain' => 'Ravi isnad zincirine eklendi',
+    'narrator_removed_from_chain' => 'Ravi isnad zincirinden kaldırıldı',
+    'isnad_chain_available_after_save' => 'Bu hadisi kaydettikten sonra isnad (ravi) zincirini yönetebileceksiniz.',
 
 ];

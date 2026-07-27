@@ -110,7 +110,7 @@ class YouTubeSyncService
             // Index existing episodes by video id for idempotent re-sync.
             $byVideoId = [];
             $maxNumber = 0;
-            foreach ($this->episodeRepo->getByProgram($program->id) as $existing) {
+            foreach ($this->episodeRepo->getByProgramForSync($program->id) as $existing) {
                 $maxNumber = max($maxNumber, (int) $existing->episode_number);
                 $vid = YouTubeUrl::videoId($existing->video_url);
                 if ($vid !== null) {
@@ -223,7 +223,7 @@ class YouTubeSyncService
 
         $core = [
             'youtube_playlist_id' => $playlist->id,
-            'total_episodes' => $this->episodeRepo->getByProgram($program->id)->count(),
+            'total_episodes' => $this->episodeRepo->getByProgramForSync($program->id)->count(),
             'total_seasons' => 1,
         ];
         if (empty($program->year) && $firstVideo?->year() !== null) {

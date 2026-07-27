@@ -133,7 +133,6 @@ class SahabiFactory extends Factory
         return [
             'slug' => $slug,
             'gender' => 'male',
-            'status' => $this->faker->randomElement(CompanionStatus::cases()),
             'birth_date_hijri' => $this->faker->optional(0.5)->numberBetween(-50, -10).' قبل الهجرة',
             'death_date_hijri' => $this->faker->optional(0.7)->numberBetween(10, 60).' هـ',
             'birth_date_gregorian' => $this->faker->optional(0.5)->dateTimeBetween('-1500 years', '-1400 years'),
@@ -156,14 +155,8 @@ class SahabiFactory extends Factory
                 'والي',
                 'كاتب وحي',
             ], $this->faker->numberBetween(1, 4)),
-            'hadith_count' => $this->faker->numberBetween(0, 7000),
+            'reported_hadith_count' => $this->faker->numberBetween(0, 7000),
             'battles' => $this->faker->randomElements($this->famousBattles, $this->faker->numberBetween(0, 5)),
-            'profile_image' => $this->faker->optional(0.3)->imageUrl(400, 400, 'people', true),
-            'gallery' => $this->faker->optional(0.2)->passthrough([
-                $this->faker->imageUrl(800, 600, 'islamic', true),
-                $this->faker->imageUrl(800, 600, 'islamic', true),
-            ]),
-            'related_article_id' => $this->faker->optional(0.3)->numberBetween(1, 100),
             'views_count' => $this->faker->numberBetween(0, 50000),
             'is_featured' => $this->faker->boolean(20), // 20% chance
             'importance_rank' => $this->faker->numberBetween(1, 100),
@@ -208,16 +201,28 @@ class SahabiFactory extends Factory
     }
 
     /**
+     * Attach a category (badr, ansar, muhajir, ...) to a created Sahabi.
+     */
+    private function withCategory(Sahabi $sahabi, CompanionStatus $category): void
+    {
+        $categoryId = \App\Domain\Sahaba\Models\SahabiCategory::firstOrCreate(
+            ['key' => $category->value],
+            ['rank' => $category->rank()],
+        )->id;
+
+        $sahabi->categories()->syncWithoutDetaching([$categoryId]);
+    }
+
+    /**
      * Create one of the ten promised paradise.
      */
     public function tenPromisedParadise(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => CompanionStatus::TEN_PROMISED_PARADISE,
             'importance_rank' => $this->faker->numberBetween(1, 10),
             'is_featured' => true,
-            'hadith_count' => $this->faker->numberBetween(100, 5000),
-        ]);
+            'reported_hadith_count' => $this->faker->numberBetween(100, 5000),
+        ])->afterCreating(fn (Sahabi $sahabi) => $this->withCategory($sahabi, CompanionStatus::TEN_PROMISED));
     }
 
     /**
@@ -226,10 +231,9 @@ class SahabiFactory extends Factory
     public function badrParticipant(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => CompanionStatus::BADR_PARTICIPANT,
             'battles' => array_merge(['بدر'], $this->faker->randomElements($this->famousBattles, 3)),
             'importance_rank' => $this->faker->numberBetween(1, 30),
-        ]);
+        ])->afterCreating(fn (Sahabi $sahabi) => $this->withCategory($sahabi, CompanionStatus::BADR));
     }
 
     /**
@@ -240,7 +244,7 @@ class SahabiFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'is_featured' => true,
             'views_count' => $this->faker->numberBetween(10000, 100000),
-            'hadith_count' => $this->faker->numberBetween(500, 7000),
+            'reported_hadith_count' => $this->faker->numberBetween(500, 7000),
         ]);
     }
 
@@ -250,7 +254,7 @@ class SahabiFactory extends Factory
     public function topNarrator(): static
     {
         return $this->state(fn (array $attributes) => [
-            'hadith_count' => $this->faker->numberBetween(3000, 7000),
+            'reported_hadith_count' => $this->faker->numberBetween(3000, 7000),
             'roles' => ['صحابي', 'محدث', 'فقيه'],
         ]);
     }

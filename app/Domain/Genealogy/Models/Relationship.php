@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Genealogy\Models;
 
 use App\Domain\Genealogy\Enums\RelationshipType;
+use App\Domain\Sahaba\Models\Sahabi;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -19,10 +20,14 @@ class Relationship extends Model
         'related_person_id',
         'relationship_type',
         'notes',
+        'display_order',
+        'hide_from_tree',
     ];
 
     protected $casts = [
         'relationship_type' => RelationshipType::class,
+        'display_order' => 'integer',
+        'hide_from_tree' => 'boolean',
     ];
 
     public $timestamps = true;
@@ -32,7 +37,7 @@ class Relationship extends Model
      */
     public function person(): BelongsTo
     {
-        return $this->belongsTo(Person::class, 'person_id');
+        return $this->belongsTo(Sahabi::class, 'person_id');
     }
 
     /**
@@ -40,7 +45,7 @@ class Relationship extends Model
      */
     public function relatedPerson(): BelongsTo
     {
-        return $this->belongsTo(Person::class, 'related_person_id');
+        return $this->belongsTo(Sahabi::class, 'related_person_id');
     }
 
     /**
@@ -49,23 +54,11 @@ class Relationship extends Model
     public function getInverseRelationshipType(): ?RelationshipType
     {
         return match ($this->relationship_type) {
-            RelationshipType::FATHER => RelationshipType::SON,
-            RelationshipType::MOTHER => RelationshipType::DAUGHTER,
-            RelationshipType::SON => RelationshipType::FATHER,
-            RelationshipType::DAUGHTER => RelationshipType::MOTHER,
-            RelationshipType::BROTHER => RelationshipType::BROTHER,
-            RelationshipType::SISTER => RelationshipType::SISTER,
-            RelationshipType::HUSBAND => RelationshipType::WIFE,
-            RelationshipType::WIFE => RelationshipType::HUSBAND,
-            RelationshipType::GRANDFATHER => RelationshipType::GRANDSON,
-            RelationshipType::GRANDMOTHER => RelationshipType::GRANDDAUGHTER,
-            RelationshipType::GRANDSON => RelationshipType::GRANDFATHER,
-            RelationshipType::GRANDDAUGHTER => RelationshipType::GRANDMOTHER,
-            RelationshipType::UNCLE => RelationshipType::NEPHEW,
-            RelationshipType::AUNT => RelationshipType::NIECE,
-            RelationshipType::NEPHEW => RelationshipType::UNCLE,
-            RelationshipType::NIECE => RelationshipType::AUNT,
+            RelationshipType::SPOUSE => RelationshipType::SPOUSE,
+            RelationshipType::SIBLING => RelationshipType::SIBLING,
             RelationshipType::COUSIN => RelationshipType::COUSIN,
+            RelationshipType::UNCLE,
+            RelationshipType::AUNT => null,
             default => null,
         };
     }

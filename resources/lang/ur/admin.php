@@ -35,6 +35,7 @@ return [
         'users' => 'صارفین',
         'settings' => 'ترتیبات',
         'hadith' => 'حدیث',
+        'sahaba' => 'صحابہ اور نسب نامہ',
     ],
 
     // Dashboard
@@ -839,5 +840,50 @@ return [
     'hijri_today' => 'آج',
     'hijri_clear' => 'صاف کریں',
     'order' => 'ترتیب',
+
+    // Sahaba (Companions) Admin Data Table
+    'gender' => 'جنس',
+    'male' => 'مرد',
+    'female' => 'عورت',
+    'photo' => 'تصویر',
+    'featured' => 'نمایاں',
+    'columns' => 'کالمز',
+    'column_visibility' => 'کالم کی نمائش',
+    'add_sahabi' => 'صحابی شامل کریں',
+    'manage_sahaba' => 'صحابہ کرام کا انتظام',
+    'sahaba_page_subtitle' => 'صحابہ کرام رضی اللہ عنہم کے ریکارڈز کا نظم کریں',
+    'no_sahaba_found' => 'کوئی صحابی نہیں ملا',
+    'search_sahaba_placeholder' => 'نام، کنیت یا لقب سے تلاش کریں...',
+    'unpublish' => 'غیر شائع کریں',
+    'unpublished' => 'غیر شائع شدہ',
+    'mark_featured' => 'نمایاں کریں',
+    'unmark_featured' => 'نمایاں ہٹائیں',
+    'sahaba_bulk_featured_updated' => ':count صحابی کے لیے نمایاں حیثیت اپ ڈیٹ ہو گئی',
+    'sahaba_bulk_publish_updated' => ':count صحابی کے لیے اشاعت کی حیثیت اپ ڈیٹ ہو گئی',
+
+    // Genealogy Admin Data Table
+    'father' => 'والد',
+    'mother' => 'والدہ',
+    'genealogy_page_subtitle' => 'خاندانی شجرہ اور نسب کے ریکارڈز کا نظم کریں',
+    'add_person' => 'شخص شامل کریں',
+    'no_genealogy_found' => 'کوئی نسب ریکارڈ نہیں ملا',
+    'search_genealogy_placeholder' => 'نام، کنیت یا لقب سے تلاش کریں...',
+    'genealogy_self_parent_error' => 'کوئی شخص اپنا والد یا والدہ نہیں ہو سکتا۔',
+    'genealogy_cycle_error' => 'یہ تفویض خاندانی شجرے میں ایک چکر بنا دے گی (منتخب شخص پہلے ہی اس ریکارڈ کی اولاد میں سے ہے)۔',
+    'genealogy_self_spouse_error' => 'کوئی شخص اپنا شریک حیات نہیں ہو سکتا۔',
+    'genealogy_duplicate_spouse_error' => 'ان دونوں افراد کے درمیان پہلے سے ازدواجی رشتہ موجود ہے۔',
+
+    // Hadith Isnad Chain
+    'isnad_chain' => 'سلسلہ اسناد',
+    'isnad_chain_hint' => 'اس حدیث کے راویوں کا سلسلہ، مُصنِّف سے قریب ترین سے لے کر نبی ﷺ سے سننے والے صحابی تک، منظم کریں۔',
+    'no_narrators_in_chain' => 'سلسلے میں ابھی تک کوئی راوی نہیں ہے۔',
+    'move_up' => 'اوپر لے جائیں',
+    'move_down' => 'نیچے لے جائیں',
+    'remove_from_chain' => 'سلسلے سے ہٹائیں',
+    'add_narrator_to_chain' => 'سلسلے میں شامل کریں',
+    'transmission_method' => 'روایت کا صیغہ',
+    'narrator_added_to_chain' => 'راوی سلسلہ اسناد میں شامل کر دیا گیا',
+    'narrator_removed_from_chain' => 'راوی سلسلہ اسناد سے ہٹا دیا گیا',
+    'isnad_chain_available_after_save' => 'اس حدیث کو محفوظ کرنے کے بعد آپ سلسلہ اسناد (راویوں) کا انتظام کر سکیں گے۔',
 
 ];

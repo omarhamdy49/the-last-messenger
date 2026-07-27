@@ -42,6 +42,9 @@ deptrac:
     App\Domain\Sahaba\Models\Sahabi:
       - App\Models\Article
       - App\Models\User
+    App\Domain\Genealogy\Models\Person:
+      - App\Models\Article
+      - App\Models\User
     App\Domain\Seerah\Models\SeerahEvent:
       - App\Models\Article
       - App\Models\User

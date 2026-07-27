@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Sahaba\Services;
 
+use App\Domain\Sahaba\DTOs\SahabiListFilters;
 use App\Domain\Sahaba\Enums\CompanionStatus;
 use App\Domain\Sahaba\Models\Sahabi;
 use App\Domain\Sahaba\Repositories\SahabiRepositoryInterface;
@@ -32,6 +33,30 @@ class SahabiService extends BaseService
     }
 
     /**
+     * Get companions for the admin data table with search + advanced filters.
+     */
+    public function getAdminCompanionList(SahabiListFilters $filters, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->getFilteredPaginated($filters, $perPage);
+    }
+
+    /**
+     * @param  array<int, int>  $ids
+     */
+    public function bulkSetFeatured(array $ids, bool $featured): int
+    {
+        return $this->repository->bulkSetFeatured($ids, $featured);
+    }
+
+    /**
+     * @param  array<int, int>  $ids
+     */
+    public function bulkSetReadyStatus(array $ids, bool $isReady): int
+    {
+        return $this->repository->bulkSetReadyStatus($ids, $isReady);
+    }
+
+    /**
      * Get companion by slug
      *
      * @throws ResourceNotFoundException
@@ -51,11 +76,21 @@ class SahabiService extends BaseService
     }
 
     /**
-     * Get companions by status
+     * Get companions by historical-rank category (badr, ansar, muhajir, ...)
      */
-    public function getCompanionsByStatus(CompanionStatus|string $status, int $perPage = 15): LengthAwarePaginator
+    public function getCompanionsByCategory(CompanionStatus|string $category, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->repository->getByStatus($status, $perPage);
+        return $this->repository->getByCategory($category, $perPage);
+    }
+
+    /**
+     * Replace a Sahabi's category memberships (badr, ansar, muhajir, ...).
+     *
+     * @param  array<int, string>  $categoryKeys
+     */
+    public function syncCategories(Sahabi $sahabi, array $categoryKeys): void
+    {
+        $this->repository->syncCategories($sahabi, $categoryKeys);
     }
 
     /**
@@ -111,7 +146,7 @@ class SahabiService extends BaseService
      */
     public function countByGender(string $gender): int
     {
-        return $this->repository->count(['gender' => $gender]);
+        return $this->repository->count(['gender' => $gender, 'is_sahabi' => true]);
     }
 
     /**
@@ -122,5 +157,13 @@ class SahabiService extends BaseService
     public function getIndexStats(): array
     {
         return $this->repository->getIndexStats();
+    }
+
+    /**
+     * @return array{total: int, male: int, female: int}
+     */
+    public function getPublicIndexStats(): array
+    {
+        return $this->repository->getPublicIndexStats();
     }
 }

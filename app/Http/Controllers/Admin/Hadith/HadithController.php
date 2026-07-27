@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Hadith;
 
 use App\Domain\Hadith\Models\Hadith;
+use App\Domain\Hadith\Models\HadithIsnad;
 use App\Domain\Hadith\Repositories\BookRepositoryInterface;
 use App\Domain\Hadith\Repositories\CollectionRepositoryInterface;
 use App\Domain\Hadith\Repositories\GradingLevelRepositoryInterface;
@@ -13,6 +14,7 @@ use App\Domain\Hadith\Repositories\NarratorRepositoryInterface;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class HadithController
 {
@@ -60,10 +62,9 @@ class HadithController
     public function create(): View
     {
         $books = $this->bookRepository->getAllForDropdown();
-        $narrators = $this->narratorRepository->all(['id', 'name_ar']);
         $gradingLevels = $this->gradingLevelRepository->getAllByRank();
 
-        return view('admin.hadiths.create', compact('books', 'narrators', 'gradingLevels'));
+        return view('admin.hadiths.create', compact('books', 'gradingLevels'));
     }
 
     /**
@@ -90,6 +91,7 @@ class HadithController
     public function show(Hadith $hadith): View
     {
         $hadith = $this->hadithRepository->getWithFullRelations($hadith->id);
+        $hadith->setRelation('isnads', $hadith->isnads->sortBy('position_in_chain')->values());
 
         return view('admin.hadiths.show', compact('hadith'));
     }
@@ -102,11 +104,14 @@ class HadithController
         $hadith = $this->hadithRepository->find(
             $hadith->id,
             ['*'],
-            ['book'],
+            ['book', 'isnads', 'isnads.narrator'],
         );
+        // find() caches by serializing $relations, so the ordering constraint
+        // can't be a closure — sort the already-loaded chain here instead.
+        $hadith->setRelation('isnads', $hadith->isnads->sortBy('position_in_chain')->values());
 
         $books = $this->bookRepository->getAllForDropdown();
-        $narrators = $this->narratorRepository->all(['id', 'name_ar']);
+        $narrators = $this->narratorRepository->all(['id', 'name_ar', 'name_en', 'kunya']);
         $gradingLevels = $this->gradingLevelRepository->getAllByRank();
 
         return view('admin.hadiths.edit', compact('hadith', 'books', 'narrators', 'gradingLevels'));
@@ -187,5 +192,71 @@ class HadithController
 
         return redirect()->route('admin.hadith.index')
             ->with('success', __('admin.hadiths_deleted_successfully'));
+    }
+
+    /**
+     * Append a narrator to a hadith's isnad chain.
+     */
+    public function storeIsnad(Request $request, Hadith $hadith): RedirectResponse
+    {
+        $validated = $request->validate([
+            'narrator_id' => ['required', 'integer', 'exists:hadith_narrators,id'],
+            'transmission_method' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $this->hadithRepository->addNarratorToChain(
+            $hadith->id,
+            (int) $validated['narrator_id'],
+            $validated['transmission_method'] ?? null,
+        );
+
+        $this->forgetPublicShowCache($hadith->id);
+
+        return redirect()->route('admin.hadith.edit', $hadith)
+            ->with('success', __('admin.narrator_added_to_chain'));
+    }
+
+    /**
+     * Swap an isnad link with its neighbor to change the chain order.
+     */
+    public function moveIsnad(Request $request, Hadith $hadith, HadithIsnad $isnad): RedirectResponse
+    {
+        $validated = $request->validate([
+            'direction' => ['required', 'string', 'in:up,down'],
+        ]);
+
+        $this->hadithRepository->moveIsnadLink($hadith->id, $isnad->id, $validated['direction']);
+        $this->forgetPublicShowCache($hadith->id);
+
+        return redirect()->route('admin.hadith.edit', $hadith);
+    }
+
+    /**
+     * Remove a narrator from a hadith's isnad chain.
+     */
+    public function destroyIsnad(Hadith $hadith, HadithIsnad $isnad): RedirectResponse
+    {
+        $this->hadithRepository->removeNarratorFromChain($hadith->id, $isnad->id);
+        $this->forgetPublicShowCache($hadith->id);
+
+        return redirect()->route('admin.hadith.edit', $hadith)
+            ->with('success', __('admin.narrator_removed_from_chain'));
+    }
+
+    /**
+     * The public single-hadith page caches its full payload per locale for
+     * an hour (see Site\HadithController::show()) under a key independent
+     * of the repository's own version-based cache — bust it for every
+     * supported locale so isnad edits show up immediately instead of after
+     * the TTL expires. Uses the static locale list (not
+     * Language::getActiveCodes(), which reads the `languages` table) so
+     * cache invalidation never silently no-ops if that table is empty,
+     * unseeded, or its own 5-minute cache is stale.
+     */
+    private function forgetPublicShowCache(int $hadithId): void
+    {
+        foreach (config('translatable.locales') as $locale) {
+            Cache::forget("public_hadith_show_{$hadithId}_{$locale}");
+        }
     }
 }

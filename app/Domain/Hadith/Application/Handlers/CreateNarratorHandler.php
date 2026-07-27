@@ -25,17 +25,15 @@ final class CreateNarratorHandler implements CommandHandler
     public function handle(Command $command): NarratorDTO
     {
         /** @var CreateNarratorCommand $command */
-        $narrator = HadithNarrator::create([
+        $narrator = HadithNarrator::resolveOrCreate([
             'name_ar' => $command->nameAr,
             'name_en' => $command->nameEn,
-            'kuniya' => $command->kuniya,
-            'nasab' => $command->nasab,
-            'laqab' => $command->laqab,
-            'birth_year' => $command->birthYear,
-            'death_year' => $command->deathYear,
-            'biography_ar' => $command->biographyAr,
-            'biography_en' => $command->biographyEn,
-            'reliability' => $command->reliability,
+            'kunya' => $command->kuniya,
+            'full_name_ar' => $command->nasab,
+            'birth_year_hijri' => $command->birthYear,
+            'death_year_hijri' => $command->deathYear,
+            'biography' => $command->biographyAr ?: $command->biographyEn,
+            'reliability_grade' => $command->reliability,
         ]);
 
         return NarratorDTO::fromModel($narrator);

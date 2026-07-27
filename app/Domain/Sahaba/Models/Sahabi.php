@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Domain\Sahaba\Models;
 
+use App\Domain\Genealogy\Enums\PersonType;
+use App\Domain\Genealogy\Models\Relationship;
 use App\Domain\Sahaba\Enums\CompanionStatus;
 use App\Domain\Shared\Traits\HasInteractions;
 use App\Domain\Shared\Traits\HasLocalizedContent;
-use App\Models\Article;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -23,7 +24,6 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property int $id
  * @property string $slug
  * @property string $gender
- * @property CompanionStatus $status
  * @property string|null $birth_date_hijri
  * @property string|null $death_date_hijri
  * @property \Carbon\Carbon|null $birth_date_gregorian
@@ -39,10 +39,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property string|null $conversion_date_hijri
  * @property int|null $conversion_order
  * @property array|null $roles
- * @property int $hadith_count
- * @property string|null $profile_image
- * @property array|null $gallery
- * @property int|null $related_article_id
+ * @property int $reported_hadith_count
  * @property int $views_count
  * @property bool $is_featured
  * @property int $importance_rank
@@ -58,18 +55,10 @@ class Sahabi extends Model implements HasMedia
 
     /**
      * The custom `media` table uses mediable_* columns, so Spatie queries throw
-     * (KI-17). Serve the profile_image column first and never surface the SQL error.
+     * (KI-17). Never surface the SQL error to a caller.
      */
     public function getFirstMediaUrl(string $collectionName = 'default', string $conversionName = ''): string
     {
-        if ($collectionName === 'profile_image' && ! empty($this->profile_image)) {
-            if (str_starts_with($this->profile_image, 'http://') || str_starts_with($this->profile_image, 'https://')) {
-                return $this->profile_image;
-            }
-
-            return \Illuminate\Support\Facades\Storage::disk('public')->url($this->profile_image);
-        }
-
         try {
             return $this->spatieGetFirstMediaUrl($collectionName, $conversionName);
         } catch (\Throwable) {
@@ -90,9 +79,13 @@ class Sahabi extends Model implements HasMedia
      * @var array<string>
      */
     protected $fillable = [
+        'external_id',
         'slug',
         'gender',
-        'status',
+        'person_type',
+        'is_sahabi',
+        'generation',
+        'is_verified',
         'birth_date_hijri',
         'death_date_hijri',
         'birth_date_gregorian',
@@ -103,15 +96,14 @@ class Sahabi extends Model implements HasMedia
         'burial_place',
         'father_id',
         'mother_id',
+        'tree_display_order',
+        'hide_from_tree',
         'tribe',
         'clan',
         'conversion_date_hijri',
         'conversion_order',
         'roles',
-        'hadith_count',
-        'profile_image',
-        'gallery',
-        'related_article_id',
+        'reported_hadith_count',
         'views_count',
         'is_featured',
         'importance_rank',
@@ -128,9 +120,13 @@ class Sahabi extends Model implements HasMedia
         'age_at_death' => 'integer',
         'conversion_order' => 'integer',
         'roles' => 'array',
-        'hadith_count' => 'integer',
-        'gallery' => 'array',
-        'status' => CompanionStatus::class,
+        'reported_hadith_count' => 'integer',
+        'person_type' => PersonType::class,
+        'is_sahabi' => 'boolean',
+        'generation' => 'integer',
+        'is_verified' => 'boolean',
+        'tree_display_order' => 'integer',
+        'hide_from_tree' => 'boolean',
         'views_count' => 'integer',
         'is_featured' => 'boolean',
         'importance_rank' => 'integer',
@@ -149,7 +145,22 @@ class Sahabi extends Model implements HasMedia
      */
     public function getTranslatableFields(): array
     {
-        return ['name', 'full_name', 'kunya', 'laqab', 'biography', 'virtues', 'famous_narrations', 'martyrdom'];
+        return [
+            'name',
+            'full_name',
+            'kunya',
+            'laqab',
+            'title',
+            'biography',
+            'birth_place',
+            'death_place',
+            'burial_place',
+            'occupation',
+            'notes',
+            'virtues',
+            'famous_narrations',
+            'martyrdom',
+        ];
     }
 
     /**
@@ -161,27 +172,19 @@ class Sahabi extends Model implements HasMedia
     }
 
     /**
-     * Get the related article
-     */
-    public function article(): BelongsTo
-    {
-        return $this->belongsTo(Article::class, 'related_article_id');
-    }
-
-    /**
-     * Get father (from people table)
+     * Get the canonical father record.
      */
     public function father(): BelongsTo
     {
-        return $this->belongsTo('App\Domain\Genealogy\Models\Person', 'father_id');
+        return $this->belongsTo(self::class, 'father_id');
     }
 
     /**
-     * Get mother (from people table)
+     * Get the canonical mother record.
      */
     public function mother(): BelongsTo
     {
-        return $this->belongsTo('App\Domain\Genealogy\Models\Person', 'mother_id');
+        return $this->belongsTo(self::class, 'mother_id');
     }
 
     /**
@@ -201,11 +204,75 @@ class Sahabi extends Model implements HasMedia
     }
 
     /**
-     * Get people related to this companion
+     * Get children where this record is the father.
      */
-    public function people(): HasMany
+    public function childrenAsFather(): HasMany
     {
-        return $this->hasMany('App\Domain\Genealogy\Models\Person', 'sahaba_id');
+        return $this->hasMany(self::class, 'father_id');
+    }
+
+    /**
+     * Get children where this record is the mother.
+     */
+    public function childrenAsMother(): HasMany
+    {
+        return $this->hasMany(self::class, 'mother_id');
+    }
+
+    public function relationships(): HasMany
+    {
+        return $this->hasMany(Relationship::class, 'person_id');
+    }
+
+    public function relatedRelationships(): HasMany
+    {
+        return $this->hasMany(Relationship::class, 'related_person_id');
+    }
+
+    /**
+     * Historical-rank categories held by this Sahabi (badr, ansar, muhajir, ...).
+     * A Sahabi can hold several at once — e.g. a Muhajir who fought at Badr —
+     * which a single-value `status` column could never represent.
+     */
+    public function categories(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(SahabiCategory::class, 'sahabi_category', 'sahabi_id', 'category_id')
+            ->withTimestamps();
+    }
+
+    public function isProphet(): bool
+    {
+        return $this->person_type === PersonType::PROPHET;
+    }
+
+    public function isCompanion(): bool
+    {
+        return $this->is_sahabi;
+    }
+
+    public function getFullName(string $locale = 'ar'): string
+    {
+        return $this->getTranslation('full_name', $locale)
+            ?: $this->getTranslation('name', $locale)
+            ?: '';
+    }
+
+    public function getAgeAtDeath(): ?int
+    {
+        if ($this->age_at_death !== null) {
+            return (int) $this->age_at_death;
+        }
+
+        if ($this->birth_date_gregorian && $this->death_date_gregorian) {
+            return $this->birth_date_gregorian->diffInYears($this->death_date_gregorian);
+        }
+
+        return null;
+    }
+
+    public function scopeOnlySahaba($query)
+    {
+        return $query->where('is_sahabi', true);
     }
 
     /**
@@ -251,16 +318,18 @@ class Sahabi extends Model implements HasMedia
     }
 
     /**
-     * Scope: Filter by status
+     * Scope: Filter by historical-rank category (badr, ansar, muhajir, ...).
+     * Replaces the old single-value `status` filter — a Sahabi can match
+     * more than one category, so this is an existence check, not equality.
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function scopeByStatus($query, CompanionStatus|string $status)
+    public function scopeInCategory($query, CompanionStatus|string $category)
     {
-        $statusValue = $status instanceof CompanionStatus ? $status->value : $status;
+        $key = $category instanceof CompanionStatus ? $category->value : $category;
 
-        return $query->where('status', $statusValue);
+        return $query->whereHas('categories', fn ($q) => $q->where('key', $key));
     }
 
     /**
@@ -339,16 +408,39 @@ class Sahabi extends Model implements HasMedia
     }
 
     /**
-     * Scope: Most hadith narrators
+     * Scope: Top narrators by the source's reported hadith count.
+     * This is an import-time claim (see `reported_hadith_count` docs), not a
+     * live count from this database's own hadith graph — use
+     * `scopeWithNarratorLinkCount` for that.
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeTopNarrators($query, int $limit = 10)
     {
-        return $query->where('hadith_count', '>', 0)
-            ->orderByDesc('hadith_count')
+        return $query->where('reported_hadith_count', '>', 0)
+            ->orderByDesc('reported_hadith_count')
             ->limit($limit);
+    }
+
+    /**
+     * Adds `narrator_link_count`: the number of hadith_isnad chain entries
+     * actually reachable through hadith_narrators.sahaba_id for this Sahabi —
+     * the real, live count, as opposed to the imported `reported_hadith_count`.
+     * Queries the table by name (no cross-module model import) to keep the
+     * Sahaba domain from depending on the Hadith domain.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeWithNarratorLinkCount($query)
+    {
+        return $query->addSelect([
+            'narrator_link_count' => \Illuminate\Support\Facades\DB::table('hadith_isnad')
+                ->join('hadith_narrators', 'hadith_narrators.id', '=', 'hadith_isnad.narrator_id')
+                ->selectRaw('count(*)')
+                ->whereColumn('hadith_narrators.sahaba_id', 'sahaba.id'),
+        ]);
     }
 
     /**
@@ -399,11 +491,11 @@ class Sahabi extends Model implements HasMedia
     }
 
     /**
-     * Get profile image URL (accessor with backward compatibility)
+     * Get profile image URL
      */
     public function getProfileImageUrlAttribute(): ?string
     {
-        return $this->getFirstMediaUrl('profile_image') ?: $this->profile_image;
+        return $this->getFirstMediaUrl('profile_image') ?: null;
     }
 
     /**
