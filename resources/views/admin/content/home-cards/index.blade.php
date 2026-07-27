@@ -32,6 +32,20 @@
 
     @include('admin.content._flash')
 
+    <div class="flex flex-wrap gap-2 mb-6">
+        @foreach ([
+            'all' => __('admin.content_placement_all'),
+            'hero' => __('admin.content_placement_hero'),
+            'explore' => __('admin.content_placement_explore'),
+        ] as $placement => $label)
+            <a href="{{ route('admin.content.home-cards.index', $placement === 'all' ? [] : ['placement' => $placement]) }}"
+               class="px-4 py-2 rounded-lg font-semibold transition-all {{ $activePlacement === $placement ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg' : '' }}"
+               @if ($activePlacement !== $placement) :class="darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" @endif>
+                {{ $label }}
+            </a>
+        @endforeach
+    </div>
+
     <div class="rounded-2xl overflow-hidden shadow-xl border"
          :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
         @if ($cards->isEmpty())
@@ -51,6 +65,7 @@
                         <tr class="border-b" :class="darkMode ? 'border-gray-800 text-gray-300' : 'border-gray-200 text-gray-600'">
                             <th class="px-4 py-3 text-start font-semibold">{{ __('admin.title') }}</th>
                             <th class="px-4 py-3 text-start font-semibold">{{ __('admin.content_key') }}</th>
+                            <th class="px-4 py-3 text-start font-semibold">{{ __('admin.content_placement') }}</th>
                             <th class="px-4 py-3 text-start font-semibold">{{ __('admin.content_target') }}</th>
                             <th class="px-4 py-3 text-start font-semibold">{{ __('admin.content_featured') }}</th>
                             <th class="px-4 py-3 text-start font-semibold">{{ __('admin.status') }}</th>
@@ -75,6 +90,12 @@
                                     </div>
                                 </td>
                                 <td class="px-4 py-3 font-mono text-xs" dir="ltr" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">{{ $card->key }}</td>
+                                <td class="px-4 py-3">
+                                    <span class="px-2 py-1 rounded-full text-xs font-semibold"
+                                          :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
+                                        {{ __("admin.content_placement_{$card->placement->value}") }}
+                                    </span>
+                                </td>
                                 <td class="px-4 py-3 font-mono text-xs" dir="ltr">
                                     <span class="truncate inline-block max-w-[14rem]" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">{{ $card->target_url ?? '—' }}</span>
                                 </td>

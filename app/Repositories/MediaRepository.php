@@ -157,6 +157,33 @@ class MediaRepository
         return Media::query()->findOrFail($id);
     }
 
+    public function findActiveHomeCardImage(int $id): ?Media
+    {
+        $isUsed = DB::table('home_module_cards')
+            ->where('image', (string) $id)
+            ->where('is_active', true)
+            ->exists();
+
+        if (! $isUsed) {
+            return null;
+        }
+
+        return Media::query()
+            ->select([
+                'id',
+                'public_key',
+                'filename',
+                'original_filename',
+                'path',
+                'mime_type',
+                'disk',
+                'metadata',
+                'type',
+            ])
+            ->images()
+            ->find($id);
+    }
+
     public function create(array $data): Media
     {
         return Media::query()->create($data);

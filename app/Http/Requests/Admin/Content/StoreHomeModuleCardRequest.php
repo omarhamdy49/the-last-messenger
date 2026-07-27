@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin\Content;
 
+use App\Domain\Content\Enums\HomeModuleCardPlacement;
 use Illuminate\Validation\Rule;
 
 /**
@@ -26,6 +27,7 @@ class StoreHomeModuleCardRequest extends ContentFormRequest
                 'regex:/^[a-z0-9_-]+$/',
                 Rule::unique('home_module_cards', 'key')->ignore($this->route('home_card')),
             ],
+            'placement' => ['required', Rule::enum(HomeModuleCardPlacement::class)],
             'icon' => ['nullable', 'string', 'max:50'],
             'image' => ['nullable', 'string', 'max:500'],
             'target_url' => ['nullable', 'string', 'max:500'],

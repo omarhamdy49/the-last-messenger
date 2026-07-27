@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin\Content;
 
+use App\Domain\Content\Enums\HomeModuleCardPlacement;
 use App\Domain\Content\Services\HomeContentService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Content\StoreHomeModuleCardRequest;
@@ -24,10 +25,13 @@ class HomeModuleCardController extends Controller
     /**
      * List every card.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
+        $placement = HomeModuleCardPlacement::tryFrom($request->string('placement')->toString());
+
         return view('admin.content.home-cards.index', [
-            'cards' => $this->service->cardsForAdmin(),
+            'cards' => $this->service->cardsForAdmin($placement),
+            'activePlacement' => $placement?->value ?? 'all',
         ]);
     }
 
@@ -131,6 +135,7 @@ class HomeModuleCardController extends Controller
     {
         return [
             'key' => $validated['key'],
+            'placement' => $validated['placement'],
             'icon' => $validated['icon'] ?? null,
             'image' => $validated['image'] ?? null,
             'target_url' => $validated['target_url'] ?? null,

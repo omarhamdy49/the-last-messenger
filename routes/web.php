@@ -9,6 +9,7 @@ use App\Http\Controllers\Site\FavoriteController;
 use App\Http\Controllers\Site\GenealogyController;
 use App\Http\Controllers\Site\HadithController;
 use App\Http\Controllers\Site\HomeController;
+use App\Http\Controllers\Site\HomeModuleCardImageController;
 use App\Http\Controllers\Site\MediaController;
 use App\Http\Controllers\Site\PageController;
 use App\Http\Controllers\Site\PasswordResetController;
@@ -22,6 +23,9 @@ use App\Http\Controllers\Site\TopicController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('public.home');
+Route::get('/home-card-images/{media}', HomeModuleCardImageController::class)
+    ->whereNumber('media')
+    ->name('public.home-card-image');
 
 // Quran public pages
 Route::get('/quran', [QuranController::class, 'index'])->name('public.quran');

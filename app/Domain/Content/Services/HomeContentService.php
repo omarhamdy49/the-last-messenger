@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Content\Services;
 
+use App\Domain\Content\Enums\HomeModuleCardPlacement;
 use App\Domain\Content\Models\HomeModuleCard;
 use App\Domain\Content\Models\QuickFilterChip;
 use App\Domain\Content\Repositories\HomeContentRepositoryInterface;
@@ -25,14 +26,14 @@ final class HomeContentService
     /**
      * Active module cards in display order, resolved for one locale.
      *
-     * @return array<int, array{key: string, icon: string|null, image: string|null, target_url: string|null, accent_color: string|null, is_featured: bool, title: string|null, description: string|null}>
+     * @return array<int, array{key: string, icon: string|null, image: string|null, target_url: string|null, accent_color: string|null, is_featured: bool, badge: string|null, title: string|null, description: string|null}>
      */
-    public function activeCards(?string $locale = null): array
+    public function activeCards(HomeModuleCardPlacement $placement, ?string $locale = null): array
     {
         $locale = $locale ?? app()->getLocale();
 
-        return Cache::rememberForever(ContentCacheKeys::homeCards($locale), function () use ($locale): array {
-            return $this->repository->getActiveCards()
+        return Cache::rememberForever(ContentCacheKeys::homeCards($placement, $locale), function () use ($placement, $locale): array {
+            return $this->repository->getActiveCards($placement)
                 ->map(static fn (HomeModuleCard $card): array => [
                     'key' => $card->key,
                     'icon' => $card->icon,
@@ -40,6 +41,7 @@ final class HomeContentService
                     'target_url' => $card->target_url,
                     'accent_color' => $card->accent_color,
                     'is_featured' => $card->is_featured,
+                    'badge' => $card->is_featured ? trans('site.featured', [], $locale) : null,
                     'title' => $card->getTranslation('title', $locale),
                     'description' => $card->getTranslation('description', $locale),
                 ])
@@ -85,9 +87,9 @@ final class HomeContentService
      *
      * @return \Illuminate\Database\Eloquent\Collection<int, HomeModuleCard>
      */
-    public function cardsForAdmin(): \Illuminate\Database\Eloquent\Collection
+    public function cardsForAdmin(?HomeModuleCardPlacement $placement = null): \Illuminate\Database\Eloquent\Collection
     {
-        return $this->repository->allCardsWithTranslations();
+        return $this->repository->allCardsWithTranslations($placement);
     }
 
     /**

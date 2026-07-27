@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Content\Repositories;
 
+use App\Domain\Content\Enums\HomeModuleCardPlacement;
 use App\Domain\Content\Models\HomeModuleCard;
 use App\Domain\Content\Models\QuickFilterChip;
 use Illuminate\Database\Eloquent\Collection;
@@ -18,7 +19,7 @@ class HomeContentRepository implements HomeContentRepositoryInterface
     /**
      * @var array<int, string>
      */
-    private const CARD_COLUMNS = ['id', 'key', 'icon', 'image', 'target_url', 'accent_color', 'is_featured', 'is_active', 'sort_order'];
+    private const CARD_COLUMNS = ['id', 'key', 'placement', 'icon', 'image', 'target_url', 'accent_color', 'is_featured', 'is_active', 'sort_order'];
 
     private const CARD_TRANSLATIONS = 'translations:id,home_module_card_id,locale,title,description';
 
@@ -29,11 +30,12 @@ class HomeContentRepository implements HomeContentRepositoryInterface
 
     private const CHIP_TRANSLATIONS = 'translations:id,quick_filter_chip_id,locale,label';
 
-    public function getActiveCards(): Collection
+    public function getActiveCards(HomeModuleCardPlacement $placement): Collection
     {
         return HomeModuleCard::query()
             ->select(self::CARD_COLUMNS)
             ->with([self::CARD_TRANSLATIONS])
+            ->where('placement', $placement->value)
             ->active()
             ->ordered()
             ->get();
@@ -49,11 +51,12 @@ class HomeContentRepository implements HomeContentRepositoryInterface
             ->get();
     }
 
-    public function allCardsWithTranslations(): Collection
+    public function allCardsWithTranslations(?HomeModuleCardPlacement $placement = null): Collection
     {
         return HomeModuleCard::query()
             ->select(self::CARD_COLUMNS)
             ->with([self::CARD_TRANSLATIONS])
+            ->when($placement !== null, fn ($query) => $query->where('placement', $placement->value))
             ->ordered()
             ->orderBy('id')
             ->get();
@@ -71,7 +74,9 @@ class HomeContentRepository implements HomeContentRepositoryInterface
     {
         return DB::transaction(function () use ($attributes, $translations): HomeModuleCard {
             if (! array_key_exists('sort_order', $attributes) || $attributes['sort_order'] === null) {
-                $max = HomeModuleCard::query()->max('sort_order');
+                $max = HomeModuleCard::query()
+                    ->where('placement', $attributes['placement'])
+                    ->max('sort_order');
                 $attributes['sort_order'] = $max === null ? 0 : ((int) $max) + 1;
             }
 

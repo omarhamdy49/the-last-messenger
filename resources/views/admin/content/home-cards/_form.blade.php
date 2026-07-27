@@ -5,6 +5,18 @@
     $inputClasses = 'w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 font-cairo text-base sm:text-sm focus:ring-2 focus:ring-accent/50';
     $titles = $isEdit ? $card->getTranslations('title') : [];
     $descriptions = $isEdit ? $card->getTranslations('description') : [];
+    $imageValue = (string) old('image', $isEdit ? ($card->image ?? '') : '');
+    $imagePreview = ctype_digit($imageValue)
+        ? route('public.home-card-image', ['media' => $imageValue])
+        : ((str_starts_with($imageValue, 'http') || str_starts_with($imageValue, '/')) ? $imageValue : ($imageValue ? asset($imageValue) : ''));
+    $imageInitial = $imageValue ? [
+        'id' => $imageValue,
+        'title' => basename((string) (parse_url($imageValue, PHP_URL_PATH) ?: $imageValue)),
+        'original_filename' => basename((string) (parse_url($imageValue, PHP_URL_PATH) ?: $imageValue)),
+        'src' => $imagePreview,
+        'thumbnail_url' => $imagePreview,
+        'is_image' => true,
+    ] : [];
 @endphp
 
 <form method="POST"
@@ -33,6 +45,23 @@
                        class="{{ $inputClasses }} font-mono"
                        :class="darkMode ? 'bg-gray-950 border-gray-700 text-white focus:border-accent' : 'bg-white border-gray-300 text-gray-900 focus:border-accent'">
                 @error('key')<p class="mt-2 text-sm text-red-500">{{ $message }}</p>@enderror
+            </div>
+            <div>
+                <label class="block mb-2 font-semibold" :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
+                    {{ __('admin.content_placement') }} <span class="text-red-500">*</span>
+                </label>
+                <select name="placement"
+                        required
+                        class="{{ $inputClasses }}"
+                        :class="darkMode ? 'bg-gray-950 border-gray-700 text-white focus:border-accent' : 'bg-white border-gray-300 text-gray-900 focus:border-accent'">
+                    @foreach (\App\Domain\Content\Enums\HomeModuleCardPlacement::cases() as $placement)
+                        <option value="{{ $placement->value }}"
+                                @selected(old('placement', $isEdit ? $card->placement->value : \App\Domain\Content\Enums\HomeModuleCardPlacement::EXPLORE->value) === $placement->value)>
+                            {{ __("admin.content_placement_{$placement->value}") }}
+                        </option>
+                    @endforeach
+                </select>
+                @error('placement')<p class="mt-2 text-sm text-red-500">{{ $message }}</p>@enderror
             </div>
             <div>
                 <label class="block mb-2 font-semibold" :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
@@ -71,17 +100,12 @@
                 </div>
                 @error('accent_color')<p class="mt-2 text-sm text-red-500">{{ $message }}</p>@enderror
             </div>
-            <div>
-                <label class="block mb-2 font-semibold" :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
-                    {{ __('admin.content_image_url') }}
-                </label>
-                <input type="text"
-                       name="image"
-                       value="{{ old('image', $isEdit ? $card->image : '') }}"
-                       dir="ltr"
-                       placeholder="https://"
-                       class="{{ $inputClasses }} font-mono"
-                       :class="darkMode ? 'bg-gray-950 border-gray-700 text-white focus:border-accent' : 'bg-white border-gray-300 text-gray-900 focus:border-accent'">
+            <div class="sm:col-span-2">
+                <x-admin.media-library-input
+                    name="image"
+                    :label="__('admin.content_image')"
+                    type="image"
+                    :initial="$imageInitial" />
                 @error('image')<p class="mt-2 text-sm text-red-500">{{ $message }}</p>@enderror
             </div>
             <div>
@@ -169,3 +193,7 @@
         </button>
     </div>
 </form>
+
+@once('admin-media-picker-modal')
+    <x-admin.media-picker-modal />
+@endonce

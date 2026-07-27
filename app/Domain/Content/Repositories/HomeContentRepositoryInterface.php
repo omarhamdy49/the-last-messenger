@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Content\Repositories;
 
+use App\Domain\Content\Enums\HomeModuleCardPlacement;
 use App\Domain\Content\Models\HomeModuleCard;
 use App\Domain\Content\Models\QuickFilterChip;
 use Illuminate\Database\Eloquent\Collection;
@@ -15,7 +16,7 @@ interface HomeContentRepositoryInterface
      *
      * @return Collection<int, HomeModuleCard>
      */
-    public function getActiveCards(): Collection;
+    public function getActiveCards(HomeModuleCardPlacement $placement): Collection;
 
     /**
      * Active quick-filter chips in display order with translations.
@@ -29,7 +30,7 @@ interface HomeContentRepositoryInterface
      *
      * @return Collection<int, HomeModuleCard>
      */
-    public function allCardsWithTranslations(): Collection;
+    public function allCardsWithTranslations(?HomeModuleCardPlacement $placement = null): Collection;
 
     /**
      * Find one module card with translations (admin forms).

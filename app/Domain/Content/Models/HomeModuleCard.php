@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Content\Models;
 
+use App\Domain\Content\Enums\HomeModuleCardPlacement;
 use App\Domain\Shared\Traits\HasLocalizedContent;
 use Illuminate\Database\Eloquent\Model;
 
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\Model;
  *
  * @property int $id
  * @property string $key
+ * @property HomeModuleCardPlacement $placement
  * @property string|null $icon
  * @property string|null $image
  * @property string|null $target_url Route name or absolute url
@@ -43,6 +45,7 @@ class HomeModuleCard extends Model
      */
     protected $fillable = [
         'key',
+        'placement',
         'icon',
         'image',
         'target_url',
@@ -58,6 +61,7 @@ class HomeModuleCard extends Model
      * @var array<string, string>
      */
     protected $casts = [
+        'placement' => HomeModuleCardPlacement::class,
         'is_featured' => 'boolean',
         'is_active' => 'boolean',
         'sort_order' => 'integer',

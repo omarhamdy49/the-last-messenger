@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Site;
 
+use App\Domain\Content\Enums\HomeModuleCardPlacement;
 use App\Domain\Content\Services\HomeContentService;
 use App\Domain\Hadith\Services\HadithDashboardStatsProvider;
 use App\Domain\Hadith\Services\HadithQueryService;
@@ -98,7 +99,8 @@ final class HomeController extends Controller
 
         // Module cards + hero quick-filter chips — DB-managed Content domain
         // data (forever-cached per locale inside the service).
-        $moduleCards = $this->homeContentService->activeCards($locale);
+        $heroCards = $this->homeContentService->activeCards(HomeModuleCardPlacement::HERO, $locale);
+        $moduleCards = $this->homeContentService->activeCards(HomeModuleCardPlacement::EXPLORE, $locale);
         $quickFilters = $this->homeContentService->activeChips($locale);
 
         return view('public.home', compact(
@@ -107,6 +109,7 @@ final class HomeController extends Controller
             'dailyVerse',
             'dailyHadith',
             'stats',
+            'heroCards',
             'moduleCards',
             'quickFilters',
         ));

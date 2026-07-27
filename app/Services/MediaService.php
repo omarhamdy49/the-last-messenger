@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\Media;
 use App\Models\MediaSizePreset;
+use App\Repositories\MediaRepository;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -26,8 +27,9 @@ class MediaService
 
     protected ImageManager $imageManager;
 
-    public function __construct()
-    {
+    public function __construct(
+        private readonly MediaRepository $repository,
+    ) {
         $this->imageManager = new ImageManager(new Driver);
     }
 
@@ -275,6 +277,15 @@ class MediaService
         }
 
         return $response;
+    }
+
+    public function streamActiveHomeCardImage(int $mediaId): BinaryFileResponse
+    {
+        $media = $this->repository->findActiveHomeCardImage($mediaId);
+
+        abort_if($media === null, 404);
+
+        return $this->stream($media);
     }
 
     public function download(Media $media): BinaryFileResponse

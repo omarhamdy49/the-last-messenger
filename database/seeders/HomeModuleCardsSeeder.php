@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Domain\Content\Enums\HomeModuleCardPlacement;
 use App\Domain\Content\Models\HomeModuleCard;
 use App\Domain\Content\Services\HomeContentService;
 use Illuminate\Database\Seeder;
@@ -11,33 +12,22 @@ use Illuminate\Database\Seeder;
 /**
  * HomeModuleCardsSeeder
  *
- * Seeds the six homepage module cards with the CURRENT hardcoded values
- * from public/home.blade.php $modules (icons, accent colours, targets) and
+ * Seeds the homepage module cards with the current public-home values
+ * (icons, images, accent colours, targets) and
  * resources/lang/{ar,en,fr,tr,ur}/site.php (titles + descriptions), so the
- * view-wiring task swaps cleanly. Idempotent: cards are upserted by key.
+ * database-managed cards preserve the existing localized output.
  */
 class HomeModuleCardsSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach ($this->cards() as $index => $card) {
-            /** @var HomeModuleCard $model */
-            $model = HomeModuleCard::query()->updateOrCreate(
-                ['key' => $card['key']],
-                [
-                    'icon' => $card['icon'],
-                    'target_url' => $card['target_url'],
-                    'accent_color' => $card['accent_color'],
-                    'is_featured' => $card['is_featured'],
-                    'is_active' => true,
-                    'sort_order' => ($index + 1) * 10,
-                ]
-            );
-
-            $model->syncTranslations([
-                'title' => $card['title'],
-                'description' => $card['description'],
-            ]);
+        foreach ([
+            HomeModuleCardPlacement::HERO->value => $this->heroCards(),
+            HomeModuleCardPlacement::EXPLORE->value => $this->exploreCards(),
+        ] as $placement => $cards) {
+            foreach ($cards as $index => $card) {
+                $this->upsert($card, $placement, ($index + 1) * 10);
+            }
         }
 
         app(HomeContentService::class)->flush();
@@ -46,9 +36,108 @@ class HomeModuleCardsSeeder extends Seeder
     }
 
     /**
+     * @param  array<string, mixed>  $card
+     */
+    private function upsert(array $card, string $placement, int $sortOrder): void
+    {
+        /** @var HomeModuleCard $model */
+        $model = HomeModuleCard::query()->updateOrCreate(
+            ['key' => $card['key']],
+            [
+                'placement' => $placement,
+                'icon' => $card['icon'],
+                'image' => $card['image'] ?? null,
+                'target_url' => $card['target_url'],
+                'accent_color' => $card['accent_color'],
+                'is_featured' => $card['is_featured'],
+                'is_active' => true,
+                'sort_order' => $sortOrder,
+            ]
+        );
+
+        $model->syncTranslations([
+            'title' => $card['title'],
+            'description' => $card['description'],
+        ]);
+    }
+
+    /**
      * @return array<int, array<string, mixed>>
      */
-    private function cards(): array
+    private function heroCards(): array
+    {
+        return [
+            [
+                'key' => 'hero-seerah',
+                'icon' => 'book-open',
+                'image' => 'images/site/seerah-thumb.webp',
+                'target_url' => 'public.seerah',
+                'accent_color' => '#0056b3',
+                'is_featured' => true,
+                'title' => [
+                    'ar' => 'السيرة النبوية',
+                    'en' => 'Biography',
+                    'fr' => 'Biographie',
+                    'tr' => 'Siyer',
+                    'ur' => 'سیرت',
+                ],
+                'description' => [
+                    'ar' => 'استعرض الخط الزمني لحياة النبي ﷺ، من المولد حتى الوفاة، بتفاصيل دقيقة ومصادر موثوقة.',
+                    'en' => 'Explore the timeline of the Prophet\'s life ﷺ, from birth to death, with detailed and verified sources.',
+                    'fr' => 'Explorez la chronologie de la vie du Prophète ﷺ, de la naissance à la mort.',
+                    'tr' => 'Hz. Peygamberin doğumdan ölümüne kadar hayatının zaman çizelgesini keşfedin.',
+                    'ur' => 'نبی ﷺ کی زندگی کی ٹائم لائن کو ولادت سے وفات تک دریافت کریں۔',
+                ],
+            ],
+            [
+                'key' => 'hero-hadith',
+                'icon' => 'scroll-text',
+                'target_url' => 'public.hadith',
+                'accent_color' => '#218838',
+                'is_featured' => false,
+                'title' => [
+                    'ar' => 'الحديث الشريف',
+                    'en' => 'Hadith',
+                    'fr' => 'Hadith',
+                    'tr' => 'Hadis',
+                    'ur' => 'حدیث',
+                ],
+                'description' => [
+                    'ar' => 'ابحث في آلاف الأحاديث',
+                    'en' => 'Search thousands of hadiths',
+                    'fr' => 'Rechercher des milliers de hadiths',
+                    'tr' => 'Binlerce hadis arayın',
+                    'ur' => 'ہزاروں احادیث تلاش کریں',
+                ],
+            ],
+            [
+                'key' => 'hero-media',
+                'icon' => 'play-circle',
+                'target_url' => 'public.media',
+                'accent_color' => '#FF7F50',
+                'is_featured' => false,
+                'title' => [
+                    'ar' => 'البرامج الإعلامية',
+                    'en' => 'Media',
+                    'fr' => 'Médias',
+                    'tr' => 'Medya',
+                    'ur' => 'میڈیا',
+                ],
+                'description' => [
+                    'ar' => 'برامج ووثائقيات',
+                    'en' => 'Programs & documentaries',
+                    'fr' => 'Programmes et documentaires',
+                    'tr' => 'Programlar ve belgeseller',
+                    'ur' => 'پروگرام اور دستاویزی فلمیں',
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function exploreCards(): array
     {
         return [
             [

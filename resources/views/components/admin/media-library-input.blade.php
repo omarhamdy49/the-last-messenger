@@ -20,7 +20,7 @@
         fieldName: @js($name),
     })"
      class="space-y-4">
-    @once
+    @once('admin-media-picker-modal')
         <x-admin.media-picker-modal />
     @endonce
 

@@ -29,8 +29,8 @@ Codex cannot drive a browser and its relay sandbox has no network, so the work s
 |---|---|---|---|---|
 | T1 | API smoke coverage over every `/api/v1/*` route | Codex | **committed** | `232ab2d` |
 | T1b | Fix the two 500s T1 found, plus their latent twins | Claude | **committed** | `328e665` |
-| T4a | Replace §844's fabricated articles with real published ones | Codex | at-implementer | — |
-| T4b | Hero cards → DB via `placement` on `home_module_cards` | Codex | brief ready | — |
+| T4a | Replace §844's fabricated articles with real published ones | Codex | **committed** | `3361da5` |
+| T4b | Hero cards → DB via `placement` + real media picker | Codex | at-implementer | — |
 | T4c | `home_sections` framework: visibility + order + headings, all 8 | Codex | brief ready | — |
 | T2 | Fix what T1 surfaces | Codex | queued | — |
 | T3 | Static/mock sweep across the remaining public pages | Codex | queued | — |

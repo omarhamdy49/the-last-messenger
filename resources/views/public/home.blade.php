@@ -28,6 +28,7 @@
     // The maps below are purely presentational: Tailwind can't compile classes
     // from runtime values, so each known accent hex maps to its prototype
     // class set (gradients, hover borders) with a brand-gradient fallback.
+    $heroCards = $heroCards ?? [];
     $moduleCards = $moduleCards ?? [];
     $quickFilters = $quickFilters ?? [];
     $stats = $stats ?? [];
@@ -61,6 +62,36 @@
         }
 
         return '#';
+    };
+
+    $contentImageUrl = function (?string $image): ?string {
+        if (blank($image)) {
+            return null;
+        }
+
+        if (ctype_digit($image)) {
+            return route('public.home-card-image', ['media' => $image]);
+        }
+
+        if (str_starts_with($image, 'http') || str_starts_with($image, '/')) {
+            return $image;
+        }
+
+        return asset($image);
+    };
+
+    $heroGradient = function (?string $accent): array {
+        $start = is_string($accent) && preg_match('/^#[0-9a-fA-F]{6}$/', $accent) === 1
+            ? $accent
+            : '#0056b3';
+
+        $end = match (strtolower($start)) {
+            '#218838' => '#1a6b2a',
+            '#ff7f50' => '#ff6347',
+            default => '#218838',
+        };
+
+        return [$start, $end];
     };
 
     // Sahaba carousel accent colours — matched to the prototype order
@@ -209,54 +240,63 @@
         </div>
 
         {{-- Hero Module Grid Cards --}}
-        <div class="mt-16 max-w-6xl mx-auto fade-slide-up" style="animation-delay: 0.24s;">
-            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6 md:gap-8">
-                {{-- Large Seerah Card --}}
-                <a href="{{ $seerahUrl }}"
-                   class="md:col-span-2 lg:col-span-2 relative rounded-2xl overflow-hidden shadow-2xl group min-h-[280px] flex items-end p-8 text-white hover-scale">
-                    <img class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-in-out"
-                         alt="{{ __('site.seerah') }}"
-                         width="1000" height="546" loading="lazy" decoding="async"
-                         src="{{ asset('images/site/seerah-thumb.webp') }}" />
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
-                    <div class="relative z-10">
-                        <div class="inline-flex items-center space-s-2 backdrop-blur-sm px-4 py-2 rounded-full mb-4 bg-gray-900/60 border border-gray-700 dark:bg-white/20 dark:border-white/30">
-                            <i class="w-4 h-4" data-lucide="book-open"></i>
-                            <span class="text-sm font-semibold">{{ __('site.featured') }}</span>
+        @if (count($heroCards) > 0)
+            @php
+                $featuredHeroCard = $heroCards[0];
+                [$featuredAccent] = $heroGradient($featuredHeroCard['accent_color']);
+                $featuredImage = $contentImageUrl($featuredHeroCard['image']);
+            @endphp
+            <div class="mt-16 max-w-6xl mx-auto fade-slide-up" style="animation-delay: 0.24s;">
+                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6 md:gap-8">
+                    <a href="{{ $contentUrl($featuredHeroCard['target_url']) }}"
+                       style="background-color: {{ $featuredAccent }};"
+                       class="md:col-span-2 lg:col-span-2 relative rounded-2xl overflow-hidden shadow-2xl group min-h-[280px] flex items-end p-8 text-white hover-scale">
+                        @if ($featuredImage)
+                            <img class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-in-out"
+                                 alt="{{ $featuredHeroCard['title'] }}"
+                                 width="1000" height="546" loading="lazy" decoding="async"
+                                 src="{{ $featuredImage }}" />
+                        @endif
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+                        <div class="relative z-10">
+                            @if ($featuredHeroCard['badge'])
+                                <div class="inline-flex items-center space-s-2 backdrop-blur-sm px-4 py-2 rounded-full mb-4 bg-gray-900/60 border border-gray-700 dark:bg-white/20 dark:border-white/30">
+                                    @if ($featuredHeroCard['icon'])
+                                        <i class="w-4 h-4" data-lucide="{{ $featuredHeroCard['icon'] }}"></i>
+                                    @endif
+                                    <span class="text-sm font-semibold">{{ $featuredHeroCard['badge'] }}</span>
+                                </div>
+                            @endif
+                            <h2 class="text-3xl md:text-4xl font-bold mb-3 line-clamp-2">{{ $featuredHeroCard['title'] }}</h2>
+                            <p class="max-w-md text-white/90 leading-relaxed line-clamp-3">{{ $featuredHeroCard['description'] }}</p>
+                            <div class="mt-4 font-semibold flex items-center {{ $isRtl ? 'group-hover:-translate-x-2' : 'group-hover:translate-x-2' }} transition-transform">
+                                {{ __('site.discover_seerah') }}
+                                <i class="w-5 h-5 ms-2" data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}"></i>
+                            </div>
                         </div>
-                        <h2 class="text-3xl md:text-4xl font-bold mb-3">{{ __('site.seerah') }}</h2>
-                        <p class="max-w-md text-white/90 leading-relaxed">{{ __('site.seerah_hero_desc') }}</p>
-                        <div class="mt-4 font-semibold flex items-center {{ $isRtl ? 'group-hover:-translate-x-2' : 'group-hover:translate-x-2' }} transition-transform">
-                            {{ __('site.discover_seerah') }}
-                            <i class="w-5 h-5 ms-2" data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}"></i>
-                        </div>
+                    </a>
+
+                    <div class="grid grid-cols-1 gap-6 md:gap-8">
+                        @foreach (array_slice($heroCards, 1) as $card)
+                            @php
+                                [$accent, $gradientEnd] = $heroGradient($card['accent_color']);
+                            @endphp
+                            <a href="{{ $contentUrl($card['target_url']) }}"
+                               class="backdrop-blur-lg rounded-2xl shadow-2xl p-6 flex flex-col items-center justify-center text-center group hover-scale transition-all bg-gray-900/70 border border-gray-700 hover:border-gray-600 dark:bg-white/10 dark:border-white/20 dark:hover:border-white/40">
+                                <div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg"
+                                     style="background-image: linear-gradient(to bottom right, {{ $accent }}, {{ $gradientEnd }});">
+                                    @if ($card['icon'])
+                                        <i class="w-8 h-8 text-white" data-lucide="{{ $card['icon'] }}"></i>
+                                    @endif
+                                </div>
+                                <h3 class="text-xl font-bold text-white mb-2 line-clamp-2">{{ $card['title'] }}</h3>
+                                <p class="text-sm text-white/80 line-clamp-2">{{ $card['description'] }}</p>
+                            </a>
+                        @endforeach
                     </div>
-                </a>
-
-                {{-- Small Cards --}}
-                <div class="grid grid-cols-1 gap-6 md:gap-8">
-                    {{-- Hadith Card --}}
-                    <a href="{{ $hadithUrl }}"
-                       class="backdrop-blur-lg rounded-2xl shadow-2xl p-6 flex flex-col items-center justify-center text-center group hover-scale transition-all bg-gray-900/70 border border-gray-700 hover:border-gray-600 dark:bg-white/10 dark:border-white/20 dark:hover:border-white/40">
-                        <div class="w-16 h-16 bg-gradient-to-br from-[#218838] to-[#1a6b2a] rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg">
-                            <i class="w-8 h-8 text-white" data-lucide="scroll-text"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-white mb-2">{{ __('site.hadith') }}</h3>
-                        <p class="text-sm text-white/80">{{ __('site.hadith_hero_sub') }}</p>
-                    </a>
-
-                    {{-- Media Card --}}
-                    <a href="{{ $mediaUrl }}"
-                       class="backdrop-blur-lg rounded-2xl shadow-2xl p-6 flex flex-col items-center justify-center text-center group hover-scale transition-all bg-gray-900/70 border border-gray-700 hover:border-gray-600 dark:bg-white/10 dark:border-white/20 dark:hover:border-white/40">
-                        <div class="w-16 h-16 bg-gradient-to-br from-[#FF7F50] to-[#ff6347] rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg">
-                            <i class="w-8 h-8 text-white" data-lucide="play-circle"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-white mb-2">{{ __('site.media') }}</h3>
-                        <p class="text-sm text-white/80">{{ __('site.media_hero_sub') }}</p>
-                    </a>
                 </div>
             </div>
-        </div>
+        @endif
     </div>
 </section>
 

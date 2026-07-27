@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Content\Services;
 
+use App\Domain\Content\Enums\HomeModuleCardPlacement;
 use App\Domain\Content\Enums\MenuLocation;
 use App\Domain\Shared\Models\Language;
 
@@ -66,9 +67,9 @@ final class ContentCacheKeys
     // Home content (HomeContentService)
     // -----------------------------------------------------------------------
 
-    public static function homeCards(string $locale): string
+    public static function homeCards(HomeModuleCardPlacement $placement, string $locale): string
     {
-        return "content:home:cards:{$locale}";
+        return "content:home:cards:{$placement->value}:{$locale}";
     }
 
     public static function homeChips(string $locale): string
@@ -81,7 +82,14 @@ final class ContentCacheKeys
      */
     public static function allHomeCardKeys(): array
     {
-        return array_map(static fn (string $locale): string => self::homeCards($locale), self::flushableLocales());
+        $keys = [];
+        foreach (HomeModuleCardPlacement::cases() as $placement) {
+            foreach (self::flushableLocales() as $locale) {
+                $keys[] = self::homeCards($placement, $locale);
+            }
+        }
+
+        return $keys;
     }
 
     /**

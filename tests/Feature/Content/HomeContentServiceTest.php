@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Content;
 
+use App\Domain\Content\Enums\HomeModuleCardPlacement;
 use App\Domain\Content\Models\HomeModuleCard;
 use App\Domain\Content\Models\QuickFilterChip;
 use App\Domain\Content\Services\HomeContentService;
@@ -41,7 +42,7 @@ class HomeContentServiceTest extends TestCase
             'key' => 'hidden', 'is_featured' => false, 'is_active' => false, 'sort_order' => 5,
         ]);
 
-        $cards = $this->service->activeCards('en');
+        $cards = $this->service->activeCards(HomeModuleCardPlacement::EXPLORE, 'en');
 
         $this->assertCount(2, $cards);
         $this->assertSame('seerah', $cards[0]['key']);
@@ -76,18 +77,38 @@ class HomeContentServiceTest extends TestCase
 
     public function test_flush_invalidates_cached_cards_and_chips(): void
     {
-        $this->assertCount(0, $this->service->activeCards('ar'));
+        $this->assertCount(0, $this->service->activeCards(HomeModuleCardPlacement::EXPLORE, 'ar'));
         $this->assertCount(0, $this->service->activeChips('ar'));
 
         HomeModuleCard::query()->create(['key' => 'quran', 'is_featured' => false, 'is_active' => true, 'sort_order' => 10]);
         QuickFilterChip::query()->create(['key' => 'seerah', 'is_active' => true, 'sort_order' => 10]);
 
         // Still cached until flushed.
-        $this->assertCount(0, $this->service->activeCards('ar'));
+        $this->assertCount(0, $this->service->activeCards(HomeModuleCardPlacement::EXPLORE, 'ar'));
 
         $this->service->flush();
 
-        $this->assertCount(1, $this->service->activeCards('ar'));
+        $this->assertCount(1, $this->service->activeCards(HomeModuleCardPlacement::EXPLORE, 'ar'));
         $this->assertCount(1, $this->service->activeChips('ar'));
+    }
+
+    public function test_card_placements_have_distinct_cache_entries(): void
+    {
+        HomeModuleCard::query()->create([
+            'key' => 'hero-card',
+            'placement' => HomeModuleCardPlacement::HERO,
+            'is_active' => true,
+        ]);
+        HomeModuleCard::query()->create([
+            'key' => 'explore-card',
+            'placement' => HomeModuleCardPlacement::EXPLORE,
+            'is_active' => true,
+        ]);
+
+        $heroCards = $this->service->activeCards(HomeModuleCardPlacement::HERO, 'en');
+        $exploreCards = $this->service->activeCards(HomeModuleCardPlacement::EXPLORE, 'en');
+
+        $this->assertSame(['hero-card'], array_column($heroCards, 'key'));
+        $this->assertSame(['explore-card'], array_column($exploreCards, 'key'));
     }
 }

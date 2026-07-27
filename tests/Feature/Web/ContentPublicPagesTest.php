@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Web;
 
+use App\Domain\Content\Models\HomeModuleCard;
 use App\Domain\Content\Models\StaticPage;
+use App\Domain\Content\Services\HomeContentService;
 use App\Domain\Content\Services\StaticPageService;
 use Database\Seeders\FaqSeeder;
 use Database\Seeders\HomeModuleCardsSeeder;
@@ -149,6 +151,56 @@ final class ContentPublicPagesTest extends TestCase
         $response->assertSee('المعارك');
         // Fabricated metric must be gone
         $response->assertDontSee('3,542');
+    }
+
+    public function test_home_keeps_hero_and_explore_cards_in_their_placements(): void
+    {
+        $this->seed(HomeModuleCardsSeeder::class);
+
+        $response = $this->withSession(['locale' => 'en'])->get('/');
+
+        $response->assertOk();
+        $this->assertSame(
+            ['hero-seerah', 'hero-hadith', 'hero-media'],
+            array_column($response->viewData('heroCards'), 'key'),
+        );
+        $this->assertSame(
+            ['seerah', 'hadith', 'media', 'genealogy', 'quran', 'maps'],
+            array_column($response->viewData('moduleCards'), 'key'),
+        );
+    }
+
+    public function test_home_hides_an_inactive_hero_card(): void
+    {
+        $this->seed(HomeModuleCardsSeeder::class);
+        HomeModuleCard::query()->where('key', 'hero-hadith')->update(['is_active' => false]);
+        app(HomeContentService::class)->flush();
+
+        $response = $this->withSession(['locale' => 'en'])->get('/');
+
+        $response->assertOk();
+        $response->assertDontSeeText('Search thousands of hadiths');
+        $this->assertSame(
+            ['hero-seerah', 'hero-media'],
+            array_column($response->viewData('heroCards'), 'key'),
+        );
+    }
+
+    public function test_seeded_hero_preserves_arabic_and_english_visible_copy(): void
+    {
+        $this->seed(HomeModuleCardsSeeder::class);
+
+        $this->withSession(['locale' => 'ar'])->get('/')
+            ->assertOk()
+            ->assertSeeText('استعرض الخط الزمني لحياة النبي ﷺ، من المولد حتى الوفاة، بتفاصيل دقيقة ومصادر موثوقة.')
+            ->assertSeeText('ابحث في آلاف الأحاديث')
+            ->assertSeeText('برامج ووثائقيات');
+
+        $this->withSession(['locale' => 'en'])->get('/')
+            ->assertOk()
+            ->assertSeeText('Explore the timeline of the Prophet\'s life ﷺ, from birth to death, with detailed and verified sources.')
+            ->assertSeeText('Search thousands of hadiths')
+            ->assertSeeText('Programs & documentaries');
     }
 
     public function test_home_renders_db_managed_header_and_footer_chrome(): void

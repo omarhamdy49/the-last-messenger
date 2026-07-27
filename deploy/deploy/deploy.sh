@@ -75,6 +75,13 @@ composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist -
 log "Running migrations..."
 ${PHP_BIN} artisan migrate --force --no-interaction
 
+# Site chrome that the public pages read from the database rather than from
+# Blade — home hero/explore cards, quick-filter chips, menus. A migration adds
+# the columns but not the rows, so without this a deploy renders those blocks
+# empty. Every seeder listed here must stay idempotent: this runs on each deploy.
+log "Seeding database-backed site chrome..."
+${PHP_BIN} artisan db:seed --class=HomeModuleCardsSeeder --force --no-interaction
+
 log "Optimizing caches (config/route/view/event)..."
 ${PHP_BIN} artisan optimize:clear
 ${PHP_BIN} artisan config:cache
