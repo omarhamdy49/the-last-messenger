@@ -11,6 +11,7 @@ use App\Domain\Shared\Services\PublicVisibilityRegistry;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 
@@ -78,8 +79,10 @@ class ThemeRepository extends BaseRepository implements ThemeRepositoryInterface
     public function getWithHadiths(int $id): ?HadithTheme
     {
         return $this->model
-            ->with(['hadiths' => fn (Builder $query) => $this->publicVisibility
-                ->apply($query, app()->getLocale())
+            // with() hands the closure the Relation, not a Builder — the visibility
+            // gate needs the underlying query to constrain the eager load.
+            ->with(['hadiths' => fn (Relation $relation) => $this->publicVisibility
+                ->apply($relation->getQuery(), app()->getLocale())
                 ->with('translations')])
             ->find($id);
     }

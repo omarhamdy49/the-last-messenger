@@ -200,7 +200,8 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
         return Cache::remember(
             QuranCacheKeys::surahAverageVerses(),
             self::CACHE_TTL,
-            fn () => round($this->model->avg('verses_count'), 2)
+            // MySQL returns AVG() as a string, which round() rejects under strict_types.
+            fn () => round((float) ($this->model->avg('verses_count') ?? 0), 2)
         );
     }
 }

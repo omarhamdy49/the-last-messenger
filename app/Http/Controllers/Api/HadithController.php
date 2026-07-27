@@ -19,6 +19,7 @@ use App\Http\Resources\HadithNarratorResource;
 use App\Http\Resources\HadithResource;
 use App\Support\Traits\ApiResponse;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -282,8 +283,10 @@ class HadithController extends Controller
         $chapter = HadithChapter::query()
             ->select(['id', 'book_id', 'chapter_number', 'name', 'description', 'display_order'])
             ->with([
-                'hadiths' => fn (Builder $query) => $this->publicVisibility
-                    ->apply($query, app()->getLocale())
+                // with() hands the closure the Relation, not a Builder — the visibility
+                // gate needs the underlying query to constrain the eager load.
+                'hadiths' => fn (Relation $relation) => $this->publicVisibility
+                    ->apply($relation->getQuery(), app()->getLocale())
                     ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
                     ->with('translations')
                     ->orderBy('hadith_number'),

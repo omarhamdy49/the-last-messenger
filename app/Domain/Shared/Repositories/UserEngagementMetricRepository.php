@@ -245,9 +245,10 @@ class UserEngagementMetricRepository extends BaseRepository implements UserEngag
                 'active_users_7d' => $this->model->where('last_activity_at', '>=', now()->subDays(7))->count(),
                 'active_users_30d' => $this->model->where('last_activity_at', '>=', now()->subDays(30))->count(),
                 'users_with_streaks' => $this->model->where('streak_days', '>', 0)->count(),
-                'avg_engagement_score' => round($this->model->avg('engagement_score') ?? 0),
+                // MySQL returns AVG() as a string, which round() rejects under strict_types.
+                'avg_engagement_score' => round((float) ($this->model->avg('engagement_score') ?? 0)),
                 'max_engagement_score' => $this->model->max('engagement_score') ?? 0,
-                'avg_streak_days' => round($this->model->where('streak_days', '>', 0)->avg('streak_days') ?? 0),
+                'avg_streak_days' => round((float) ($this->model->where('streak_days', '>', 0)->avg('streak_days') ?? 0)),
                 'max_streak_days' => $this->model->max('streak_days') ?? 0,
                 'total_views' => $this->model->sum('total_views'),
                 'total_likes' => $this->model->sum('total_likes'),
