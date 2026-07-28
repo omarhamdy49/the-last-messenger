@@ -4,9 +4,28 @@ From `scripts/audit_sunnah_api_parity.php` (hadith text) and
 `scripts/audit_sunnah_books_chapters.php` (structure) — both read-only, run live
 against the Sunnah.com API.
 
-**Books are clean.** Across all six collections the API serves, every book is present,
-correctly numbered, and correctly titled in Arabic and English. Zero discrepancies.
-Malik is excluded throughout: the API serves no data for it (`{"data":[],"total":0}`).
+**Books are clean** for the six large collections: every book present, correctly numbered,
+correctly titled in Arabic and English. Zero discrepancies.
+
+## 0. Coverage — all 17 local collections accounted for
+
+| Collection | Auditable | Result |
+|---|---|---|
+| bukhari, muslim, abudawud, tirmidhi, nasai, ibnmajah | yes | books clean; chapters in §1 |
+| ahmed (`ahmad`) | yes | **7 books missing locally, 1 extra** |
+| aladab_almufrad (`adab`) | yes | 7 extra books; 1 chapter missing, 10 extra, 1 ar + 1 en name, 1 count |
+| bulugh_almaram (`bulugh`) | yes | **11 extra books, 19 chapters missing** |
+| mishkat_almasabih (`mishkat`) | partial | **410 chapters missing, 267 number differences** — run incomplete |
+| riyad_assalihin (`riyadussalihin`) | yes | 1 book Arabic title differs, 2 chapters missing |
+| shamail_muhammadiyah (`shamail`) | yes | 1 book missing locally |
+| malik, nawawi40 | **no** | served, but their `/books` index is empty upstream (`total: 0`) |
+| darimi | **no** | listed by the API but serves 0 hadiths |
+| qudsi40, shahwaliullah40 | **no** | absent from `/collections` entirely |
+
+The audit script previously defaulted an unmapped collection to our own local key, so nine
+of these queried a URL that does not exist and reported `api_returned_nothing` — which reads
+identically to a clean audit. Slugs are now mapped explicitly; the five genuinely
+un-auditable collections are documented in the script so the gap stays visible.
 
 ## 1. Chapters
 
@@ -18,7 +37,11 @@ Malik is excluded throughout: the API serves no data for it (`{"data":[],"total"
 | tirmidhi | 27 | 3 | 30 | — |
 | nasai | 12 | 43 | 6 | — |
 | ibnmajah | 22 | 0 | 2 | 3 |
-| **total** | **607** | **57** | **168** | **3** |
+| **subtotal (six large)** | **607** | **57** | **168** | **3** |
+| bulugh | 19 | 0 | — | — |
+| adab | 1 | 0 | 2 | 1 |
+| riyadussalihin | 2 | 0 | — | — |
+| mishkat *(run incomplete)* | 410 | 267 | — | 1 |
 
 ### Number differences are largely a notation split, not wrong data
 
