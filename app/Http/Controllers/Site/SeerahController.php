@@ -50,14 +50,16 @@ final class SeerahController extends Controller
                         ->values()
                         ->all();
 
-                    $totalEvents = array_sum(array_column($journey, 'eventCount'));
-
                     return [
                         'journey' => $journey,
                         'articles' => $articles,
                         'stats' => [
                             'milestones' => count($journey),
-                            'events' => $totalEvents,
+                            // Every published event, not just those grouped under an
+                            // era. Summing the journey's per-era counts undercounted
+                            // whenever events were unassigned — the hero advertised 44
+                            // above a page that listed 97.
+                            'events' => count($articles),
                             'articles' => count($articles),
                             'span' => $this->journeySpan($journey, $locale),
                         ],

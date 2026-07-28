@@ -89,7 +89,11 @@
         </div>
     </section>
 
-    @if(empty($journey))
+    {{-- The journey groups events under eras. When no eras are configured the
+         journey is empty, but the events themselves still exist and must stay
+         reachable — the articles grid below lists every published event. Only
+         a genuinely empty corpus gets the empty state. --}}
+    @if(empty($journey) && empty($articles))
         <div class="max-w-2xl mx-auto px-4 py-20 text-center">
             <i data-lucide="milestone" class="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600"></i>
             <p class="text-lg text-gray-500 dark:text-gray-400">{{ __('seerah.public.empty_journey') }}</p>
@@ -279,7 +283,9 @@
 <script>
     function seerahQuest(total) {
         return {
-            mode: (localStorage.getItem('seerahMode') === 'articles') ? 'articles' : 'journey',
+            // With no eras there is nothing for journey mode to draw, so start
+            // in articles mode rather than opening on a blank tab.
+            mode: (total === 0 || localStorage.getItem('seerahMode') === 'articles') ? 'articles' : 'journey',
             total: total,
             currentIndex: 0,
             currentTitle: @json($journey[0]['title'] ?? ''),
