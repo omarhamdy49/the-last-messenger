@@ -22,9 +22,10 @@ class SahabaDashboardStatsProvider implements DashboardStatsProviderInterface
         try {
             return [
                 'total' => Sahabi::onlySahaba()->count(),
+                'views' => (int) Sahabi::onlySahaba()->sum('views_count'),
             ];
         } catch (\Throwable) {
-            return ['total' => 0];
+            return ['total' => 0, 'views' => 0];
         }
     }
 }

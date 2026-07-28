@@ -48,6 +48,10 @@ class DashboardController extends Controller
             'seerah_events' => $statistics['seerah_events']['total'] ?? 0,
             'sahaba_profiles' => $statistics['sahaba']['total'] ?? 0,
             'media_items' => $statistics['media']['total'] ?? 0,
+            // Summed across whichever modules report a view counter, rather than
+            // hardcoding a module list here — a module that gains views later
+            // starts contributing as soon as its provider reports them.
+            'total_views' => $this->sumModuleViews($statistics),
         ];
 
         return view('admin.dashboard', compact('stats'));
@@ -200,5 +204,24 @@ class DashboardController extends Controller
         $this->analyticsService->clearCache();
 
         return $this->successResponse(null, 'Dashboard cache cleared successfully');
+    }
+
+    /**
+     * Total content views across every module whose stats provider reports a
+     * `views` figure. Modules without a view counter simply contribute nothing.
+     *
+     * @param  array<string, mixed>  $statistics
+     */
+    private function sumModuleViews(array $statistics): int
+    {
+        $total = 0;
+
+        foreach ($statistics as $moduleStats) {
+            if (is_array($moduleStats) && isset($moduleStats['views'])) {
+                $total += (int) $moduleStats['views'];
+            }
+        }
+
+        return $total;
     }
 }

@@ -22,9 +22,10 @@ class SeerahDashboardStatsProvider implements DashboardStatsProviderInterface
         try {
             return [
                 'total' => SeerahEvent::count(),
+                'views' => (int) SeerahEvent::sum('views_count'),
             ];
         } catch (\Throwable) {
-            return ['total' => 0];
+            return ['total' => 0, 'views' => 0];
         }
     }
 }

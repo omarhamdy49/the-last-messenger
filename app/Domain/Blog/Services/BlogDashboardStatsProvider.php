@@ -22,12 +22,13 @@ class BlogDashboardStatsProvider implements DashboardStatsProviderInterface
         try {
             return [
                 'total' => Article::count(),
+                'views' => (int) Article::sum('views'),
                 'published' => Article::where('status', 'published')->count(),
                 'draft' => Article::where('status', 'draft')->count(),
                 'archived' => Article::where('status', 'archived')->count(),
             ];
         } catch (\Throwable) {
-            return ['total' => 0, 'published' => 0, 'draft' => 0, 'archived' => 0];
+            return ['total' => 0, 'published' => 0, 'draft' => 0, 'archived' => 0, 'views' => 0];
         }
     }
 }
