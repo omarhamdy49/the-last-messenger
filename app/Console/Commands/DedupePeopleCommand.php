@@ -456,8 +456,19 @@ class DedupePeopleCommand extends Command
 
                 continue;
             }
-            if (max($this->identifyingTokens($arabic), $this->identifyingTokens($english)) < 2) {
+            // A one-word name identifies nobody on its own, so it may not join
+            // a cluster by lineage — but two rows carrying the SAME one word
+            // ("Aisha" and "A'isha") came from the same reading and are the
+            // same person, so exact agreement still merges them.
+            $lone = max($this->identifyingTokens($arabic), $this->identifyingTokens($english)) < 2;
+            if ($lone && ! isset($seen['ar'][$arabic]) && ! isset($seen['en'][$english])) {
                 $skipped['single_token']++;
+                if ($arabic !== '') {
+                    $seen['ar'][$arabic] = (int) $row->id;
+                }
+                if ($english !== '') {
+                    $seen['en'][$english] = (int) $row->id;
+                }
 
                 continue;
             }
