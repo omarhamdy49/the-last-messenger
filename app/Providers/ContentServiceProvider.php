@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Domain\Content\Enums\MenuLocation;
 use App\Domain\Content\Services\HomeContentService;
+use App\Domain\Content\Services\HomeSectionService;
 use App\Domain\Content\Services\MenuService;
 use App\Domain\Content\Services\SiteSettingsService;
 use Illuminate\Contracts\View\View;
@@ -32,6 +33,11 @@ class ContentServiceProvider extends ServiceProvider
         );
 
         $this->app->bind(
+            \App\Domain\Content\Repositories\HomeSectionRepositoryInterface::class,
+            \App\Domain\Content\Repositories\HomeSectionRepository::class
+        );
+
+        $this->app->bind(
             \App\Domain\Content\Repositories\StaticPageRepositoryInterface::class,
             \App\Domain\Content\Repositories\StaticPageRepository::class
         );
@@ -55,13 +61,17 @@ class ContentServiceProvider extends ServiceProvider
     }
 
     /**
-     * Inject DB-managed site chrome (menus, settings, search chips) into the
+     * Inject DB-managed site chrome (menus, settings, home sections, search chips) into the
      * public header/footer/layout views. All reads hit the Content domain's
      * forever-cached maps, so this adds no per-request query cost.
      * Empty datasets yield empty arrays/nulls — the views render nothing.
      */
     public function boot(): void
     {
+        ViewFacade::composer('public.home', function (View $view): void {
+            $view->with('homeSections', $this->app->make(HomeSectionService::class)->active());
+        });
+
         ViewFacade::composer('components.site.header', function (View $view): void {
             $view->with([
                 'headerMenu' => $this->app->make(MenuService::class)->tree(MenuLocation::HEADER),

@@ -590,6 +590,7 @@ return [
     'content_target' => 'ہدف',
     'content_key' => 'کلید',
     'content_home_sections' => 'صفحۂ اول کے حصے',
+    'content_sections_empty' => 'صفحۂ اول کا کوئی حصہ نہیں ملا۔',
     'content_home_cards' => 'صفحۂ اول کے ماڈیول کارڈز',
     'content_home_cards_hint' => 'صفحۂ اول پر ماڈیول دریافت کارڈز کا انتظام کریں۔',
     'content_placement' => 'جگہ',

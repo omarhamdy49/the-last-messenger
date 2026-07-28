@@ -590,6 +590,7 @@ return [
     'content_target' => 'Hedef',
     'content_key' => 'Anahtar',
     'content_home_sections' => 'Ana Sayfa Bölümleri',
+    'content_sections_empty' => 'Ana sayfa bölümü bulunamadı.',
     'content_home_cards' => 'Ana Sayfa Modül Kartları',
     'content_home_cards_hint' => 'Ana sayfadaki modül keşif kartlarını yönetin.',
     'content_placement' => 'Yerleşim',

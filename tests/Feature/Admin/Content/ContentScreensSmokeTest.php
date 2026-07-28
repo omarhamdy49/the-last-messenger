@@ -24,6 +24,7 @@ class ContentScreensSmokeTest extends TestCase
             route('admin.content.settings.index'),
             route('admin.content.menus.index'),
             route('admin.content.menus.create'),
+            route('admin.content.home-sections.index'),
             route('admin.content.home-cards.index'),
             route('admin.content.quick-filters.index'),
             route('admin.content.static-pages.index'),

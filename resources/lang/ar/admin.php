@@ -605,6 +605,7 @@ return [
     'content_target' => 'الوجهة',
     'content_key' => 'المعرف',
     'content_home_sections' => 'أقسام الرئيسية',
+    'content_sections_empty' => 'لا توجد أقسام للصفحة الرئيسية.',
     'content_home_cards' => 'بطاقات أقسام الرئيسية',
     'content_home_cards_hint' => 'إدارة بطاقات استكشاف الأقسام في الصفحة الرئيسية.',
     'content_placement' => 'موضع العرض',

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Admin\Content\ContactMessageController;
 use App\Http\Controllers\Admin\Content\FaqController;
 use App\Http\Controllers\Admin\Content\HomeModuleCardController;
+use App\Http\Controllers\Admin\Content\HomeSectionController;
 use App\Http\Controllers\Admin\Content\ImportStatusController;
 use App\Http\Controllers\Admin\Content\MenuItemController;
 use App\Http\Controllers\Admin\Content\QuickFilterChipController;
@@ -35,6 +36,15 @@ Route::prefix('menus')->name('admin.content.menus.')->group(function (): void {
     Route::put('/{menu}', [MenuItemController::class, 'update'])->whereNumber('menu')->name('update');
     Route::delete('/{menu}', [MenuItemController::class, 'destroy'])->whereNumber('menu')->name('destroy');
     Route::post('/{menu}/move', [MenuItemController::class, 'move'])->whereNumber('menu')->name('move');
+});
+
+// Home page sections
+Route::prefix('home-sections')->name('admin.content.home-sections.')->group(function (): void {
+    Route::get('/', [HomeSectionController::class, 'index'])->name('index');
+    Route::post('/reorder', [HomeSectionController::class, 'reorder'])->name('reorder');
+    Route::get('/{home_section}/edit', [HomeSectionController::class, 'edit'])->whereNumber('home_section')->name('edit');
+    Route::put('/{home_section}', [HomeSectionController::class, 'update'])->whereNumber('home_section')->name('update');
+    Route::patch('/{home_section}/active', [HomeSectionController::class, 'toggle'])->whereNumber('home_section')->name('toggle');
 });
 
 // Home sections — module cards

@@ -590,6 +590,7 @@ return [
     'content_target' => 'Cible',
     'content_key' => 'Clé',
     'content_home_sections' => 'Sections d\'accueil',
+    'content_sections_empty' => 'Aucune section d\'accueil trouvée.',
     'content_home_cards' => 'Cartes de modules',
     'content_home_cards_hint' => 'Gérer les cartes de découverte des modules sur la page d\'accueil.',
     'content_placement' => 'Emplacement',

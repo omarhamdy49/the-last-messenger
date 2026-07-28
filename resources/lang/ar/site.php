@@ -89,8 +89,6 @@ return [
     'maps_desc' => 'تتبع الأحداث التاريخية الإسلامية على الخرائط الجغرافية التفاعلية.',
 
     // Home page — hero
-    'hero_title' => 'الموسوعة الشاملة لخاتَمُ المُرْسَلِين ﷺ',
-    'hero_subtitle' => 'مصدرك الموثوق لاستكشاف السيرة النبوية، الحديث الشريف، والمحتوى الإسلامي المرئي بأسلوب عصري وتفاعلي.',
     'hero_image_alt' => 'خلفية إسلامية',
     'seerah_hero_desc' => 'استعرض الخط الزمني لحياة النبي ﷺ، من المولد حتى الوفاة، بتفاصيل دقيقة ومصادر موثوقة.',
     'hadith_hero_sub' => 'ابحث في آلاف الأحاديث',
@@ -99,8 +97,6 @@ return [
 
     // Home — sahaba carousel
     'noble_companions' => 'الصحابة الكرام',
-    'companions_of_prophet' => 'صحابة رسول الله ﷺ',
-    'companions_subtitle' => 'تعرّف على سير وقصص أصحاب النبي الكريم رضوان الله عليهم',
     'view_all_companions' => 'عرض جميع الصحابة',
     'read_biography' => 'اقرأ السيرة',
     'radi_allah_anhu' => 'رضي الله عنه',
@@ -111,8 +107,6 @@ return [
 
     // Home — prophet ID card
     'seal_of_prophets' => 'خاتَمُ المُرْسَلِين ﷺ',
-    'prophet_name_ar' => 'محمد رسول الله ﷺ',
-    'prophet_name_en' => 'Muhammad, Messenger of Allah',
     'full_name' => 'الاسم الكامل',
     'prophet_full_name' => 'محمد بن عبد الله بن عبد المطلب',
     'prophet_tribe' => 'من بني هاشم، من قريش',
@@ -142,7 +136,6 @@ return [
 
     // Home — daily quran/hadith
     'quran_of_day' => 'قرآن اليوم',
-    'verse_of_day' => 'آية اليوم',
     'surah_label' => 'سورة قرآنية',
     'surah_number' => 'رقم السورة',
     'verse' => 'الآية',
@@ -157,8 +150,6 @@ return [
 
     // Home — module grid
     'discover_content' => 'اكتشف المحتوى',
-    'explore_encyclopedia' => 'استكشف الموسوعة',
-    'modules_subtitle' => 'اختر من بين مجموعة متنوعة من المصادر الإسلامية الموثوقة',
     'popular' => 'شائع',
     'new_badge' => 'جديد',
     'events_count' => 'حدث',
@@ -170,13 +161,9 @@ return [
     'maps' => 'الخرائط التفاعلية',
 
     // Home — featured articles
-    'featured_content' => 'محتوى مميز',
-    'handpicked_content' => 'مقالات وبرامج مختارة بعناية',
     'watch_now' => 'شاهد الآن',
 
     // Home — CTA
-    'join_community' => 'انضم إلى مجتمعنا',
-    'join_description' => 'احصل على تحديثات حول المحتوى الجديد، وشارك في النقاشات، واحفظ المحتوى المفضل لديك',
     'learn_more' => 'اعرف المزيد',
 
     // Prototype-exact keys (header nav, hero chips, notifications)

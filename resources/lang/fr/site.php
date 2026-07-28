@@ -89,8 +89,6 @@ return [
     'maps_desc' => 'Suivez les événements historiques islamiques sur des cartes géographiques interactives.',
 
     // Hero
-    'hero_title' => 'Encyclopédie Complète du Dernier Messager ﷺ',
-    'hero_subtitle' => 'Votre source fiable pour explorer la biographie prophétique, les Hadiths et le contenu islamique de manière moderne et interactive.',
     'hero_image_alt' => 'Fond islamique',
     'seerah_hero_desc' => 'Explorez la chronologie de la vie du Prophète ﷺ, de la naissance à la mort.',
     'hadith_hero_sub' => 'Rechercher des milliers de hadiths',
@@ -99,8 +97,6 @@ return [
 
     // Sahaba
     'noble_companions' => 'Les Nobles Compagnons',
-    'companions_of_prophet' => 'Compagnons du Messager ﷺ',
-    'companions_subtitle' => 'Découvrez les vies et histoires des nobles Compagnons du Prophète',
     'view_all_companions' => 'Voir Tous les Compagnons',
     'read_biography' => 'Lire la Biographie',
     'radi_allah_anhu' => 'Que Allah soit satisfait de lui',
@@ -111,8 +107,6 @@ return [
 
     // Prophet card
     'seal_of_prophets' => 'Sceau des Prophètes ﷺ',
-    'prophet_name_ar' => 'Muhammad, Messager d\'Allah ﷺ',
-    'prophet_name_en' => 'Muhammad, Messenger of Allah',
     'full_name' => 'Nom complet',
     'prophet_full_name' => 'Muhammad ibn Abdallah ibn Abd al-Muttalib',
     'prophet_tribe' => 'Des Banu Hashim, de Quraysh',
@@ -142,7 +136,6 @@ return [
 
     // Daily
     'quran_of_day' => 'Coran du Jour',
-    'verse_of_day' => 'Verset du Jour',
     'surah_label' => 'Sourate coranique',
     'surah_number' => 'Numéro de la sourate',
     'verse' => 'Verset',
@@ -157,8 +150,6 @@ return [
 
     // Modules
     'discover_content' => 'Découvrir le Contenu',
-    'explore_encyclopedia' => 'Explorer l\'Encyclopédie',
-    'modules_subtitle' => 'Choisissez parmi diverses sources islamiques fiables',
     'popular' => 'Populaire',
     'new_badge' => 'Nouveau',
     'events_count' => 'événements',
@@ -170,13 +161,9 @@ return [
     'maps' => 'Cartes Interactives',
 
     // Featured
-    'featured_content' => 'Contenu en Vedette',
-    'handpicked_content' => 'Articles et programmes soigneusement sélectionnés',
     'watch_now' => 'Regarder Maintenant',
 
     // CTA
-    'join_community' => 'Rejoignez Notre Communauté',
-    'join_description' => 'Recevez des mises à jour sur le nouveau contenu, participez aux discussions et sauvegardez vos favoris',
     'learn_more' => 'En Savoir Plus',
 
     // Prototype-exact keys (header nav, hero chips, notifications)

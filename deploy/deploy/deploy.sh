@@ -81,6 +81,7 @@ ${PHP_BIN} artisan migrate --force --no-interaction
 # empty. Every seeder listed here must stay idempotent: this runs on each deploy.
 log "Seeding database-backed site chrome..."
 ${PHP_BIN} artisan db:seed --class=HomeModuleCardsSeeder --force --no-interaction
+${PHP_BIN} artisan db:seed --class=HomeSectionsSeeder --force --no-interaction
 
 log "Optimizing caches (config/route/view/event)..."
 ${PHP_BIN} artisan optimize:clear

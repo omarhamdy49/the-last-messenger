@@ -89,8 +89,6 @@ return [
     'maps_desc' => 'İslami tarihsel olayları etkileşimli coğrafi haritalarda takip edin.',
 
     // Hero
-    'hero_title' => 'Son Peygamber\'in Kapsamlı Ansiklopedisi ﷺ',
-    'hero_subtitle' => 'Peygamber biyografisini, Hadisleri ve İslami içeriği modern ve etkileşimli bir şekilde keşfetmek için güvenilir kaynağınız.',
     'hero_image_alt' => 'İslami arka plan',
     'seerah_hero_desc' => 'Hz. Peygamberin doğumdan ölümüne kadar hayatının zaman çizelgesini keşfedin.',
     'hadith_hero_sub' => 'Binlerce hadis arayın',
@@ -99,8 +97,6 @@ return [
 
     // Sahaba
     'noble_companions' => 'Asil Sahabeler',
-    'companions_of_prophet' => 'Resûlullah\'ın Sahabeleri ﷺ',
-    'companions_subtitle' => 'Peygamberin asil Sahabelerinin hayatlarını ve hikayelerini öğrenin',
     'view_all_companions' => 'Tüm Sahabeleri Gör',
     'read_biography' => 'Biyografiyi Oku',
     'radi_allah_anhu' => 'Allah ondan razı olsun',
@@ -111,8 +107,6 @@ return [
 
     // Prophet card
     'seal_of_prophets' => 'Peygamberlerin Mührü ﷺ',
-    'prophet_name_ar' => 'Muhammed, Allah\'ın Elçisi ﷺ',
-    'prophet_name_en' => 'Muhammad, Messenger of Allah',
     'full_name' => 'Tam Ad',
     'prophet_full_name' => 'Muhammed ibn Abdullah ibn Abd el-Muttalib',
     'prophet_tribe' => 'Hâşimoğulları\'ndan, Kureyş\'ten',
@@ -142,7 +136,6 @@ return [
 
     // Daily
     'quran_of_day' => 'Günün Kuran\'ı',
-    'verse_of_day' => 'Günün Ayeti',
     'surah_label' => 'Kuranî Sure',
     'surah_number' => 'Sure Numarası',
     'verse' => 'Ayet',
@@ -157,8 +150,6 @@ return [
 
     // Modules
     'discover_content' => 'İçeriği Keşfet',
-    'explore_encyclopedia' => 'Ansiklopediyi Keşfet',
-    'modules_subtitle' => 'Güvenilir İslami kaynaklardan seçim yapın',
     'popular' => 'Popüler',
     'new_badge' => 'Yeni',
     'events_count' => 'olay',
@@ -170,13 +161,9 @@ return [
     'maps' => 'Etkileşimli Haritalar',
 
     // Featured
-    'featured_content' => 'Öne Çıkan İçerik',
-    'handpicked_content' => 'Özenle seçilmiş makaleler ve programlar',
     'watch_now' => 'Şimdi İzle',
 
     // CTA
-    'join_community' => 'Topluluğumuza Katıl',
-    'join_description' => 'Yeni içerik güncellemeleri alın, tartışmalara katılın ve favori içeriğinizi kaydedin',
     'learn_more' => 'Daha Fazla Bilgi',
 
     // Prototype-exact keys (header nav, hero chips, notifications)

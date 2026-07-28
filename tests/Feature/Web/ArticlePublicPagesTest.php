@@ -8,6 +8,7 @@ use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Models\Tag;
 use App\Models\Article;
 use App\Models\ArticleLocale;
+use Database\Seeders\HomeSectionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -229,6 +230,8 @@ final class ArticlePublicPagesTest extends TestCase
 
     public function test_home_featured_section_renders_a_real_published_article(): void
     {
+        $this->seed(HomeSectionsSeeder::class);
+
         $article = $this->makeArticle('real-home-feature-ar', 'ميزة حقيقية', [
             'is_featured' => true,
             'thumb' => 'articles/thumbs/real-home-feature.webp',
@@ -254,6 +257,8 @@ final class ArticlePublicPagesTest extends TestCase
 
     public function test_home_featured_section_is_hidden_without_a_publishable_article(): void
     {
+        $this->seed(HomeSectionsSeeder::class);
+
         $draft = Article::factory()->draft()->create(['slug' => 'ready-draft']);
         ArticleLocale::query()->create([
             'article_id' => $draft->id,
@@ -276,6 +281,6 @@ final class ArticlePublicPagesTest extends TestCase
         $this->withSession(['locale' => 'ar'])
             ->get(route('public.home'))
             ->assertOk()
-            ->assertDontSee(__('site.featured_content'));
+            ->assertDontSee('محتوى مميز');
     }
 }

@@ -10,6 +10,7 @@ use App\Domain\Content\Services\HomeContentService;
 use App\Domain\Content\Services\StaticPageService;
 use Database\Seeders\FaqSeeder;
 use Database\Seeders\HomeModuleCardsSeeder;
+use Database\Seeders\HomeSectionsSeeder;
 use Database\Seeders\MenuSeeder;
 use Database\Seeders\QuickFilterChipsSeeder;
 use Database\Seeders\SiteSettingsSeeder;
@@ -135,6 +136,7 @@ final class ContentPublicPagesTest extends TestCase
     {
         $this->seed([
             HomeModuleCardsSeeder::class,
+            HomeSectionsSeeder::class,
             QuickFilterChipsSeeder::class,
             MenuSeeder::class,
             SiteSettingsSeeder::class,
@@ -155,7 +157,7 @@ final class ContentPublicPagesTest extends TestCase
 
     public function test_home_keeps_hero_and_explore_cards_in_their_placements(): void
     {
-        $this->seed(HomeModuleCardsSeeder::class);
+        $this->seed([HomeModuleCardsSeeder::class, HomeSectionsSeeder::class]);
 
         $response = $this->withSession(['locale' => 'en'])->get('/');
 
@@ -172,7 +174,7 @@ final class ContentPublicPagesTest extends TestCase
 
     public function test_home_hides_an_inactive_hero_card(): void
     {
-        $this->seed(HomeModuleCardsSeeder::class);
+        $this->seed([HomeModuleCardsSeeder::class, HomeSectionsSeeder::class]);
         HomeModuleCard::query()->where('key', 'hero-hadith')->update(['is_active' => false]);
         app(HomeContentService::class)->flush();
 
@@ -188,7 +190,7 @@ final class ContentPublicPagesTest extends TestCase
 
     public function test_seeded_hero_preserves_arabic_and_english_visible_copy(): void
     {
-        $this->seed(HomeModuleCardsSeeder::class);
+        $this->seed([HomeModuleCardsSeeder::class, HomeSectionsSeeder::class]);
 
         $this->withSession(['locale' => 'ar'])->get('/')
             ->assertOk()
@@ -207,6 +209,7 @@ final class ContentPublicPagesTest extends TestCase
     {
         $this->seed([
             HomeModuleCardsSeeder::class,
+            HomeSectionsSeeder::class,
             QuickFilterChipsSeeder::class,
             MenuSeeder::class,
             SiteSettingsSeeder::class,

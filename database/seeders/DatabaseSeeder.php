@@ -31,6 +31,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             SiteSettingsSeeder::class,
             MenuSeeder::class,
+            HomeSectionsSeeder::class,
             HomeModuleCardsSeeder::class,
             QuickFilterChipsSeeder::class,
             StaticPagesSeeder::class,

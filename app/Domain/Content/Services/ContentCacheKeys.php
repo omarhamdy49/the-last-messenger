@@ -77,6 +77,11 @@ final class ContentCacheKeys
         return "content:home:chips:{$locale}";
     }
 
+    public static function homeSections(string $locale): string
+    {
+        return "content:home:sections:{$locale}";
+    }
+
     /**
      * @return array<int, string>
      */
@@ -98,6 +103,14 @@ final class ContentCacheKeys
     public static function allHomeChipKeys(): array
     {
         return array_map(static fn (string $locale): string => self::homeChips($locale), self::flushableLocales());
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function allHomeSectionKeys(): array
+    {
+        return array_map(static fn (string $locale): string => self::homeSections($locale), self::flushableLocales());
     }
 
     // -----------------------------------------------------------------------

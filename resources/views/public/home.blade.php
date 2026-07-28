@@ -1,7 +1,7 @@
 @extends('layouts.public')
 
 @section('title', __('site.site_name'))
-@section('meta_description', __('site.hero_subtitle'))
+@section('meta_description', collect($homeSections ?? [])->firstWhere('key', 'hero')?->subheading ?? '')
 
 {{-- Preload the hero image (LCP) at high priority so it starts fetching before
      CSS/JS parse — paired with fetchpriority="high" on the <img>. --}}
@@ -32,6 +32,9 @@
     $moduleCards = $moduleCards ?? [];
     $quickFilters = $quickFilters ?? [];
     $stats = $stats ?? [];
+    $homeSections = $homeSections ?? [];
+    $homeSectionsByKey = collect($homeSections)->keyBy('key');
+    $homeSectionMarkup = [];
 
     $cardStyles = [
         '#0056b3' => ['badgeBg' => 'bg-[#0056b3]', 'iconGrad' => 'from-[#0056b3] to-[#004c9e]', 'hoverBorder' => 'hover:border-[#0056b3]/50', 'hoverGrad' => 'from-[#0056b3]/10', 'cornerGrad' => 'from-[#0056b3]/20'],
@@ -171,7 +174,7 @@
      SECTION 1 — PREMIUM HERO
      Verbatim port of index-enhanced.html lines ~544-650
      =================================================================== --}}
-<section class="hero-section relative py-20 md:py-32 pb-32 md:pb-40 overflow-hidden">
+@php ob_start(); @endphp
     {{-- Background Image with Ken Burns + scroll parallax (.hero-parallax) --}}
     <div class="hero-parallax absolute">
         <img class="w-full h-full object-cover"
@@ -182,19 +185,20 @@
              src="{{ asset('images/site/rasool-allah-hero-section-bg.webp') }}" />
         <div class="absolute inset-0 bg-black/50"></div>
     </div>
+@php $heroBackgroundMarkup = ob_get_clean(); ob_start(); @endphp
 
     {{-- Hero Content --}}
     <div class="hero-fade-out relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 text-center">
         {{-- Title --}}
         <h1 class="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-white drop-shadow-2xl fade-slide-up mb-6"
             style="animation-delay: 0.05s;">
-            {{ __('site.hero_title') }}
+            {{ $homeSectionsByKey->get('hero')?->heading }}
         </h1>
 
         {{-- Subtitle --}}
         <p class="mt-6 max-w-3xl mx-auto text-lg md:text-xl text-gray-100 drop-shadow-lg fade-slide-up"
            style="animation-delay: 0.12s;">
-            {{ __('site.hero_subtitle') }}
+            {{ $homeSectionsByKey->get('hero')?->subheading }}
         </p>
 
         {{-- Premium Search Bar --}}
@@ -239,7 +243,19 @@
             @endif
         </div>
 
+@php $heroIntroMarkup = ob_get_clean(); ob_start(); @endphp
         {{-- Hero Module Grid Cards --}}
+        @if ($homeSectionsByKey->get('hero_cards')?->heading || $homeSectionsByKey->get('hero_cards')?->subheading)
+            <div class="mt-16 text-center text-white">
+                @if ($homeSectionsByKey->get('hero_cards')?->heading)
+                    <h2 class="text-3xl md:text-4xl font-black">{{ $homeSectionsByKey->get('hero_cards')?->heading }}</h2>
+                @endif
+                @if ($homeSectionsByKey->get('hero_cards')?->subheading)
+                    <p class="mt-4 text-lg text-gray-100">{{ $homeSectionsByKey->get('hero_cards')?->subheading }}</p>
+                @endif
+            </div>
+        @endif
+
         @if (count($heroCards) > 0)
             @php
                 $featuredHeroCard = $heroCards[0];
@@ -297,22 +313,22 @@
                 </div>
             </div>
         @endif
-    </div>
-</section>
+@php $heroCardsMarkup = ob_get_clean(); @endphp
 
 {{-- ===================================================================
      SECTION 2 — PREMIUM SAHABA CAROUSEL
      Verbatim port of index-enhanced.html lines ~652-960
      =================================================================== --}}
-<section class="py-16 sm:py-20 bg-gradient-to-br from-gray-50 to-white dark:from-[#1a1a2e] dark:to-[#16213e]">
+@php ob_start(); @endphp
+<section data-home-section="sahaba_carousel" class="py-16 sm:py-20 bg-gradient-to-br from-gray-50 to-white dark:from-[#1a1a2e] dark:to-[#16213e]">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
         {{-- Section Header --}}
         <div class="text-center mb-12 fade-slide-up">
             <div class="inline-block mb-4">
                 <span class="bg-gradient-to-r from-[#6f42c1] to-[#8b5cf6] text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg">{{ __('site.noble_companions') }}</span>
             </div>
-            <h2 class="text-3xl md:text-4xl font-black mb-4 bg-gradient-to-r from-[#6f42c1] to-[#8b5cf6] bg-clip-text text-transparent">{{ __('site.companions_of_prophet') }}</h2>
-            <p class="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">{{ __('site.companions_subtitle') }}</p>
+            <h2 class="text-3xl md:text-4xl font-black mb-4 bg-gradient-to-r from-[#6f42c1] to-[#8b5cf6] bg-clip-text text-transparent">{{ $homeSectionsByKey->get('sahaba_carousel')?->heading }}</h2>
+            <p class="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">{{ $homeSectionsByKey->get('sahaba_carousel')?->subheading }}</p>
         </div>
 
         {{-- Carousel --}}
@@ -357,7 +373,7 @@
                      @scroll.passive="update()"
                      tabindex="0"
                      role="region"
-                     aria-label="{{ __('site.companions_of_prophet') }}">
+                     aria-label="{{ $homeSectionsByKey->get('sahaba_carousel')?->heading }}">
 
                     @forelse ($featuredSahaba as $index => $sahabi)
                         @php
@@ -422,12 +438,13 @@
         </div>
     </div>
 </section>
+@php $homeSectionMarkup['sahaba_carousel'] = ob_get_clean(); ob_start(); @endphp
 
 {{-- ===================================================================
      SECTION 3 — PROPHET MUHAMMAD ID CARD
      Verbatim port of index-enhanced.html lines ~962-1145
      =================================================================== --}}
-<section class="py-12 sm:py-16 bg-gradient-to-br from-[#0f3460] via-[#16213e] to-[#0a2647] dark:from-[#0a1929] dark:via-[#16213e] dark:to-[#0f1922] relative overflow-hidden">
+<section data-home-section="seal_band" class="py-12 sm:py-16 bg-gradient-to-br from-[#0f3460] via-[#16213e] to-[#0a2647] dark:from-[#0a1929] dark:via-[#16213e] dark:to-[#0f1922] relative overflow-hidden">
 
     {{-- Decorative background circles --}}
     <div class="absolute inset-0 opacity-5">
@@ -458,9 +475,9 @@
                             </span>
                         </div>
                         <h3 class="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-yellow-200 to-white mb-2 drop-shadow-2xl leading-tight">
-                            {{ __('site.prophet_name_ar') }}
+                            {{ $homeSectionsByKey->get('seal_band')?->heading }}
                         </h3>
-                        <p class="text-gray-200 text-base font-semibold drop-shadow">{{ __('site.prophet_name_en') }}</p>
+                        <p class="text-gray-200 text-base font-semibold drop-shadow">{{ $homeSectionsByKey->get('seal_band')?->subheading }}</p>
                     </div>
                 </div>
 
@@ -602,12 +619,13 @@
         </div>
     </div>
 </section>
+@php $homeSectionMarkup['seal_band'] = ob_get_clean(); ob_start(); @endphp
 
 {{-- ===================================================================
      SECTION 4 — DAILY QURAN & HADITH
      Verbatim port of index-enhanced.html lines ~1147-1294
      =================================================================== --}}
-<section class="py-16 sm:py-20 bg-[#F8F9FA] dark:bg-[#1a1a2e]">
+<section data-home-section="daily" class="py-16 sm:py-20 bg-[#F8F9FA] dark:bg-[#1a1a2e]">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
@@ -617,7 +635,7 @@
                     <div class="flex items-center justify-between mb-6">
                         <div>
                             <span class="bg-white/20 text-white px-4 py-2 rounded-full text-sm font-bold backdrop-blur-sm">{{ __('site.quran_of_day') }}</span>
-                            <h3 class="text-3xl font-black text-white mt-3">{{ __('site.verse_of_day') }}</h3>
+                            <h3 class="text-3xl font-black text-white mt-3">{{ $homeSectionsByKey->get('daily')?->heading }}</h3>
                         </div>
                         <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
                             <i class="w-10 h-10 text-white" data-lucide="book-open"></i>
@@ -694,7 +712,7 @@
                     <div class="flex items-center justify-between mb-6">
                         <div>
                             <span class="bg-white/20 text-white px-4 py-2 rounded-full text-sm font-bold backdrop-blur-sm">{{ __('site.hadith_of_day') }}</span>
-                            <h3 class="text-3xl font-black text-white mt-3">{{ __('site.hadith') }}</h3>
+                            <h3 class="text-3xl font-black text-white mt-3">{{ $homeSectionsByKey->get('daily')?->subheading }}</h3>
                         </div>
                         <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
                             <i class="w-10 h-10 text-white" data-lucide="message-square-quote"></i>
@@ -788,22 +806,23 @@
         </div>
     </div>
 </section>
+@php $homeSectionMarkup['daily'] = ob_get_clean(); ob_start(); @endphp
 
 {{-- ===================================================================
      SECTION 5 — MAIN MODULE DISCOVERY GRID
      Verbatim port of index-enhanced.html lines ~1296-1607
      =================================================================== --}}
-<section id="explore" class="py-20 sm:py-28 bg-gradient-to-b from-white to-[#F8F9FA] dark:from-[#1a1a2e] dark:to-[#0f3460]">
+<section id="explore" data-home-section="explore" class="py-20 sm:py-28 bg-gradient-to-b from-white to-[#F8F9FA] dark:from-[#1a1a2e] dark:to-[#0f3460]">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16">
             <div class="inline-block mb-4">
                 <span class="bg-gradient-to-r from-[#0056b3] to-[#218838] text-white px-6 py-2 rounded-full text-sm font-bold">{{ __('site.discover_content') }}</span>
             </div>
             <h2 class="text-4xl md:text-5xl font-black mb-6 bg-gradient-to-r from-[#0056b3] to-[#218838] bg-clip-text text-transparent">
-                {{ __('site.explore_encyclopedia') }}
+                {{ $homeSectionsByKey->get('explore')?->heading }}
             </h2>
             <p class="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-                {{ __('site.modules_subtitle') }}
+                {{ $homeSectionsByKey->get('explore')?->subheading }}
             </p>
         </div>
 
@@ -876,17 +895,18 @@
         @endif
     </div>
 </section>
+@php $homeSectionMarkup['explore'] = ob_get_clean(); ob_start(); @endphp
 
 {{-- ===================================================================
      SECTION 6 — FEATURED CONTENT
      =================================================================== --}}
 @if($featuredArticles->isNotEmpty())
-<section class="py-20 bg-[#E9ECEF] dark:bg-[#0f3460]">
+<section data-home-section="featured_content" class="py-20 bg-[#E9ECEF] dark:bg-[#0f3460]">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center mb-12">
             <div>
-                <h2 class="text-3xl md:text-4xl font-black mb-2">{{ __('site.featured_content') }}</h2>
-                <p class="text-gray-600 dark:text-gray-300">{{ __('site.handpicked_content') }}</p>
+                <h2 class="text-3xl md:text-4xl font-black mb-2">{{ $homeSectionsByKey->get('featured_content')?->heading }}</h2>
+                <p class="text-gray-600 dark:text-gray-300">{{ $homeSectionsByKey->get('featured_content')?->subheading }}</p>
             </div>
             <a href="{{ Route::has('public.articles') ? route('public.articles') : '#' }}"
                class="hidden md:flex items-center space-s-2 font-semibold text-[#0056b3] dark:text-[#4a9eff] hover:underline">
@@ -933,6 +953,7 @@
     </div>
 </section>
 @endif
+@php $homeSectionMarkup['featured_content'] = ob_get_clean(); ob_start(); @endphp
 
 {{-- ===================================================================
      SECTION 7 — CALL TO ACTION (guests only)
@@ -941,7 +962,7 @@
      prompt for logged-out visitors.
      =================================================================== --}}
 @guest
-<section class="py-24 relative overflow-hidden">
+<section data-home-section="cta" class="py-24 relative overflow-hidden">
     <div class="absolute inset-0 bg-gradient-to-r from-[#0056b3] to-[#218838]"></div>
     <div class="absolute inset-0 opacity-10">
         <div class="absolute top-0 start-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
@@ -949,8 +970,8 @@
     </div>
 
     <div class="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 text-center text-white">
-        <h2 class="text-4xl md:text-5xl font-black mb-6">{{ __('site.join_community') }}</h2>
-        <p class="text-xl md:text-2xl opacity-90 mb-10 max-w-3xl mx-auto">{{ __('site.join_description') }}</p>
+        <h2 class="text-4xl md:text-5xl font-black mb-6">{{ $homeSectionsByKey->get('cta')?->heading }}</h2>
+        <p class="text-xl md:text-2xl opacity-90 mb-10 max-w-3xl mx-auto">{{ $homeSectionsByKey->get('cta')?->subheading }}</p>
         <div class="flex flex-wrap justify-center gap-4">
             <a href="{{ $registerUrl }}"
                class="inline-flex items-center space-s-2 bg-white text-[#0056b3] font-bold px-8 py-4 rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition">
@@ -966,6 +987,36 @@
     </div>
 </section>
 @endguest
+@php $homeSectionMarkup['cta'] = ob_get_clean(); @endphp
+
+@foreach ($homeSections as $position => $homeSection)
+    @php
+        $previousKey = $homeSections[$position - 1]->key ?? null;
+        $nextKey = $homeSections[$position + 1]->key ?? null;
+    @endphp
+
+    @if ($homeSection->key === 'hero')
+        <section data-home-section="hero" class="hero-section relative py-20 md:py-32 pb-32 md:pb-40 overflow-hidden">
+            {!! $heroBackgroundMarkup !!}
+            {!! $heroIntroMarkup !!}
+            @if ($nextKey === 'hero_cards')
+                <div data-home-section="hero_cards">
+                    {!! $heroCardsMarkup !!}
+                </div>
+            @endif
+            </div>
+        </section>
+    @elseif ($homeSection->key === 'hero_cards' && $previousKey !== 'hero')
+        <section data-home-section="hero_cards" class="hero-section relative py-16 overflow-hidden">
+            {!! $heroBackgroundMarkup !!}
+            <div class="hero-fade-out relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                {!! $heroCardsMarkup !!}
+            </div>
+        </section>
+    @elseif ($homeSection->key !== 'hero_cards')
+        {!! $homeSectionMarkup[$homeSection->key] ?? '' !!}
+    @endif
+@endforeach
 
 @endsection
 

@@ -89,8 +89,6 @@ return [
     'maps_desc' => 'Track Islamic historical events on interactive geographical maps.',
 
     // Home page — hero
-    'hero_title' => 'Comprehensive Encyclopedia of The Last Messenger ﷺ',
-    'hero_subtitle' => 'Your trusted source to explore the Prophetic biography, Hadith, and Islamic content in a modern and interactive way.',
     'hero_image_alt' => 'Islamic background',
     'seerah_hero_desc' => 'Explore the timeline of the Prophet\'s life ﷺ, from birth to death, with detailed and verified sources.',
     'hadith_hero_sub' => 'Search thousands of hadiths',
@@ -99,8 +97,6 @@ return [
 
     // Home — sahaba carousel
     'noble_companions' => 'Noble Companions',
-    'companions_of_prophet' => 'Companions of the Messenger ﷺ',
-    'companions_subtitle' => 'Learn about the lives and stories of the Prophet\'s noble Companions, may Allah be pleased with them',
     'view_all_companions' => 'View All Companions',
     'read_biography' => 'Read Biography',
     'radi_allah_anhu' => 'May Allah be pleased with him',
@@ -111,8 +107,6 @@ return [
 
     // Home — prophet ID card
     'seal_of_prophets' => 'Seal of the Prophets ﷺ',
-    'prophet_name_ar' => 'Muhammad, Messenger of Allah ﷺ',
-    'prophet_name_en' => 'Muhammad, Messenger of Allah',
     'full_name' => 'Full Name',
     'prophet_full_name' => 'Muhammad ibn Abdullah ibn Abd al-Muttalib',
     'prophet_tribe' => 'From Banu Hashim, of Quraysh',
@@ -142,7 +136,6 @@ return [
 
     // Home — daily quran/hadith
     'quran_of_day' => 'Quran of the Day',
-    'verse_of_day' => 'Verse of the Day',
     'surah_label' => 'Quranic Surah',
     'surah_number' => 'Surah Number',
     'verse' => 'Verse',
@@ -157,8 +150,6 @@ return [
 
     // Home — module grid
     'discover_content' => 'Discover Content',
-    'explore_encyclopedia' => 'Explore the Encyclopedia',
-    'modules_subtitle' => 'Choose from a variety of trusted Islamic sources',
     'popular' => 'Popular',
     'new_badge' => 'New',
     'events_count' => 'events',
@@ -170,13 +161,9 @@ return [
     'maps' => 'Interactive Maps',
 
     // Home — featured articles
-    'featured_content' => 'Featured Content',
-    'handpicked_content' => 'Carefully selected articles and programs',
     'watch_now' => 'Watch Now',
 
     // Home — CTA
-    'join_community' => 'Join Our Community',
-    'join_description' => 'Get updates on new content, participate in discussions, and save your favorite content',
     'learn_more' => 'Learn More',
 
     // Prototype-exact keys (header nav, hero chips, notifications)

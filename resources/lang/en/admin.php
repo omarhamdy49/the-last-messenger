@@ -593,6 +593,7 @@ return [
     'content_target' => 'Target',
     'content_key' => 'Key',
     'content_home_sections' => 'Home Sections',
+    'content_sections_empty' => 'No home sections found.',
     'content_home_cards' => 'Home Module Cards',
     'content_home_cards_hint' => 'Manage the module discovery cards on the home page.',
     'content_placement' => 'Placement',

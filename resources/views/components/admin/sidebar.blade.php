@@ -504,7 +504,7 @@
             <div>
                 <button @click="toggleSubmenu('site-content')"
                         :class="openSubmenu === 'site-content' ||
-                                ['site-settings','menus','home-cards','quick-filters','static-pages','faqs','contact-messages','imports'].includes(activeMenu) ?
+                                ['site-settings','menus','home-sections','home-cards','quick-filters','static-pages','faqs','contact-messages','imports'].includes(activeMenu) ?
                             'bg-gradient-primary text-white shadow-lg' :
                             (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
                         class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
@@ -544,6 +544,16 @@
                         <span>{{ __('admin.content_menus') }}</span>
                     </a>
 
+                    <a href="{{ route('admin.content.home-sections.index') }}"
+                       @click="activeMenu = 'home-sections'"
+                       :class="isActive('home-sections') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="panels-top-left" class="w-4 h-4"></i>
+                        <span>{{ __('admin.content_home_sections') }}</span>
+                    </a>
+
                     <a href="{{ route('admin.content.home-cards.index') }}"
                        @click="activeMenu = 'home-cards'"
                        :class="isActive('home-cards') || isActive('quick-filters') ?
@@ -551,7 +561,7 @@
                            (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
                        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
                         <i data-lucide="layout-grid" class="w-4 h-4"></i>
-                        <span>{{ __('admin.content_home_sections') }}</span>
+                        <span>{{ __('admin.content_home_cards') }}</span>
                     </a>
 
                     <a href="{{ route('admin.content.static-pages.index') }}"

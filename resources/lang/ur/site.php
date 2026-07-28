@@ -89,8 +89,6 @@ return [
     'maps_desc' => 'انٹرایکٹو جغرافیائی نقشوں پر اسلامی تاریخی واقعات کو ٹریک کریں۔',
 
     // Hero
-    'hero_title' => 'خاتم المرسلین ﷺ کا جامع انسائیکلوپیڈیا',
-    'hero_subtitle' => 'سیرتِ نبوی، حدیث اور اسلامی مواد کو جدید انداز میں دریافت کرنے کا آپ کا قابلِ اعتماد ذریعہ۔',
     'hero_image_alt' => 'اسلامی پس منظر',
     'seerah_hero_desc' => 'نبی ﷺ کی زندگی کی ٹائم لائن کو ولادت سے وفات تک دریافت کریں۔',
     'hadith_hero_sub' => 'ہزاروں احادیث تلاش کریں',
@@ -99,8 +97,6 @@ return [
 
     // Sahaba
     'noble_companions' => 'صحابہ کرام',
-    'companions_of_prophet' => 'رسول اللہ ﷺ کے صحابہ',
-    'companions_subtitle' => 'نبی کریم ﷺ کے اصحاب کی زندگیاں اور کہانیاں جانیں',
     'view_all_companions' => 'تمام صحابہ دیکھیں',
     'read_biography' => 'سوانح پڑھیں',
     'radi_allah_anhu' => 'رضی اللہ عنہ',
@@ -111,8 +107,6 @@ return [
 
     // Prophet card
     'seal_of_prophets' => 'خاتم المرسلین ﷺ',
-    'prophet_name_ar' => 'محمد رسول اللہ ﷺ',
-    'prophet_name_en' => 'Muhammad, Messenger of Allah',
     'full_name' => 'مکمل نام',
     'prophet_full_name' => 'محمد بن عبداللہ بن عبدالمطلب',
     'prophet_tribe' => 'بنو ہاشم سے، قریش میں سے',
@@ -142,7 +136,6 @@ return [
 
     // Daily
     'quran_of_day' => 'آج کا قرآن',
-    'verse_of_day' => 'آج کی آیت',
     'surah_label' => 'قرآنی سورہ',
     'surah_number' => 'سورہ نمبر',
     'verse' => 'آیت',
@@ -157,8 +150,6 @@ return [
 
     // Modules
     'discover_content' => 'مواد دریافت کریں',
-    'explore_encyclopedia' => 'انسائیکلوپیڈیا دریافت کریں',
-    'modules_subtitle' => 'قابلِ اعتماد اسلامی ذرائع سے انتخاب کریں',
     'popular' => 'مقبول',
     'new_badge' => 'نیا',
     'events_count' => 'واقعات',
@@ -170,13 +161,9 @@ return [
     'maps' => 'انٹرایکٹو نقشے',
 
     // Featured
-    'featured_content' => 'نمایاں مواد',
-    'handpicked_content' => 'احتیاط سے منتخب مضامین اور پروگرام',
     'watch_now' => 'ابھی دیکھیں',
 
     // CTA
-    'join_community' => 'ہماری برادری سے جڑیں',
-    'join_description' => 'نئے مواد کی اپ ڈیٹ حاصل کریں، مباحثوں میں حصہ لیں اور پسندیدہ مواد محفوظ کریں',
     'learn_more' => 'مزید جانیں',
 
     // Prototype-exact keys (header nav, hero chips, notifications)
