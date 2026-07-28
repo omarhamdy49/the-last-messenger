@@ -98,10 +98,23 @@ class LanguageSeeder extends Seeder
         ];
 
         foreach ($languages as $language) {
-            Language::updateOrCreate(
+            // `name` is per-locale and lives in language_translations; the
+            // languages table itself carries only native_name. Splitting them
+            // here keeps this seeder aligned with the translations schema.
+            $translations = $language['name'];
+            unset($language['name']);
+
+            $record = Language::updateOrCreate(
                 ['code' => $language['code']],
                 $language
             );
+
+            foreach ($translations as $locale => $name) {
+                $record->translations()->updateOrCreate(
+                    ['locale' => $locale],
+                    ['name' => $name, 'is_ready' => true]
+                );
+            }
         }
 
         $this->command->info('✅ Seeded 5 languages successfully.');

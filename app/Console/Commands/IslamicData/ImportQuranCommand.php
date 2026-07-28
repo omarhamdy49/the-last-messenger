@@ -18,7 +18,8 @@ class ImportQuranCommand extends Command
                             {--fresh : Truncate Quran tables before importing (asks for confirmation)}
                             {--dry-run : Validate the source and report counts without writing}
                             {--skip-translations : Skip Tanzil translation datasets}
-                            {--skip-tafsir : Skip the Muyassar tafsir dataset}';
+                            {--skip-tafsir : Skip the Muyassar tafsir dataset}
+                            {--skip-arabic-sync : Skip reconciling Arabic text against the Quran.com Uthmani API (offline imports)}';
 
     protected $description = 'Import the full Quran (surahs, verses, translations, tafsir) — idempotent, safe to re-run';
 
@@ -62,6 +63,18 @@ class ImportQuranCommand extends Command
             return self::FAILURE;
         }
 
+        if (! $this->option('skip-arabic-sync')) {
+            // The bundled JSON renders Uthmani script slightly differently from
+            // Quran.com — tatweel and some diacritic marks differ — so importing
+            // it alone leaves every verse failing `quran:verify-arabic`. This
+            // reconciliation is what makes the text authoritative, and it has to
+            // run as part of the import rather than be remembered separately.
+            $this->line('Step 2b/4: reconcile Arabic text against the Quran.com Uthmani API');
+            if ($this->call('quran:sync-arabic') !== self::SUCCESS) {
+                return self::FAILURE;
+            }
+        }
+
         if (! $this->option('skip-translations')) {
             $this->line('Step 3/4: translations (en, fr, tr, ur, transliteration)');
             if ($this->call('quran:import-translations') !== self::SUCCESS) {
@@ -70,9 +83,27 @@ class ImportQuranCommand extends Command
         }
 
         if (! $this->option('skip-tafsir')) {
-            $this->line('Step 4/4: tafsir (Muyassar, ar)');
-            if ($this->call('quran:import-tafsir') !== self::SUCCESS) {
-                return self::FAILURE;
+            // quran:import-tafsir requires the Quran.com resource id as an
+            // argument. Calling it bare made this step fail every run, and
+            // because the failure returns early it also stopped the hadith
+            // import in islamic-data:import-all from ever starting.
+            $tafsir = $this->defaultTafsirEdition();
+
+            if ($tafsir === null) {
+                $this->warn('No default tafsir edition in config/quran-editions.php — skipping step 4/4.');
+            } else {
+                $this->line("Step 4/4: tafsir ({$tafsir['slug']}, {$tafsir['lang']})");
+
+                if ($this->call('quran:import-tafsir', [
+                    'tafsirId' => $tafsir['quran_com_id'],
+                    '--slug' => $tafsir['slug'],
+                    '--lang' => $tafsir['lang'],
+                    '--name-ar' => $tafsir['name']['ar'] ?? null,
+                    '--name-en' => $tafsir['name']['en'] ?? null,
+                    '--author' => $tafsir['author'] ?? null,
+                ]) !== self::SUCCESS) {
+                    return self::FAILURE;
+                }
             }
         }
 
@@ -154,5 +185,21 @@ class ImportQuranCommand extends Command
         $this->info('Final counts');
         $this->table(['Metric', 'In DB', 'Expected'], $rows);
         $this->line('Run `php artisan islamic-data:verify` for the full integrity report.');
+    }
+
+    /**
+     * The catalog entry flagged as the default tafsir, or null when none is.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function defaultTafsirEdition(): ?array
+    {
+        foreach ((array) config('quran-editions.tafsirs', []) as $edition) {
+            if (($edition['default'] ?? false) === true) {
+                return $edition;
+            }
+        }
+
+        return null;
     }
 }

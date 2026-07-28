@@ -27,7 +27,9 @@ return [
      */
     'hadith_collection_map' => [
         'abudawud' => 'abudawud',
-        'ahmed' => 'ahmed',
+        // The production directory is 'ahmed'; the collection this importer
+        // creates carries the fuller canonical slug, so the two differ here.
+        'ahmed' => 'musnad-ahmad-ibn-hanbal',
         'aladab_almufrad' => 'adab',
         'bukhari' => 'bukhari',
         'bulugh_almaram' => 'bulugh',
