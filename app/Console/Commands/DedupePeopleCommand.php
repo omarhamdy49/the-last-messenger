@@ -29,7 +29,7 @@ class DedupePeopleCommand extends Command
 {
     protected $signature = 'data:dedupe
         {--apply : perform the merges (default is a dry run)}
-        {--only= : limit to "sahaba" or "companions"}
+        {--only= : limit to "sahaba" or "narrations"}
         {--drop-nameless : also detach and delete companion rows that carry no name at all}
         {--show=12 : how many merge groups to print}';
 
@@ -43,6 +43,12 @@ class DedupePeopleCommand extends Command
 
     /** Identifying words a name without a patronymic needs before it may absorb lineage variants. */
     private const MIN_LINEAGE_TOKENS = 3;
+
+    /** Where each narration-source table's rows are actually used. */
+    private const NARRATION_USAGE = [
+        'hadith_companions' => ['hadith_hadiths', 'companion_id'],
+        'hadith_narrators' => ['hadith_isnad', 'narrator_id'],
+    ];
 
     /** Every column that points at `sahaba.id`. */
     private const SAHABA_REFERENCES = [
@@ -67,8 +73,9 @@ class DedupePeopleCommand extends Command
             $this->mergeSahaba($apply);
         }
 
-        if ($only === null || $only === 'companions') {
-            $this->mergeCompanions($apply);
+        if ($only === null || $only === 'narrations') {
+            $this->mergeNarrationSources('hadith_companions', $apply);
+            $this->mergeNarrationSources('hadith_narrators', $apply);
             $this->handleNamelessCompanions($apply);
         }
 
@@ -400,14 +407,23 @@ class DedupePeopleCommand extends Command
         }
     }
 
-    // ------------------------------------------------------------ companions
+    // --------------------------------------------------- companions/narrators
 
-    private function mergeCompanions(bool $apply): void
+    /**
+     * Both narration-source tables have the same defect and the same shape: one
+     * row per spelling a collection happened to use. Companions vary by
+     * transliteration ("Abu Hurayrah"/"Abu Huraira"); narrators additionally
+     * vary by Arabic grammatical case, since the name is lifted straight out of
+     * the isnad — أبو / أبي / أبا هريرة are one man in three declensions.
+     */
+    private function mergeNarrationSources(string $table, bool $apply): void
     {
-        $rows = DB::table('hadith_companions as c')
-            ->leftJoin('hadith_hadiths as h', 'h.companion_id', '=', 'c.id')
-            ->selectRaw('c.id, c.name_ar, c.name_en, c.sahaba_id, count(h.id) hadiths')
-            ->groupBy('c.id', 'c.name_ar', 'c.name_en', 'c.sahaba_id')
+        [$childTable, $childColumn] = self::NARRATION_USAGE[$table];
+
+        $rows = DB::table($table.' as p')
+            ->leftJoin($childTable.' as u', "u.{$childColumn}", '=', 'p.id')
+            ->selectRaw('p.id, p.name_ar, p.name_en, p.sahaba_id, count(u.id) uses')
+            ->groupBy('p.id', 'p.name_ar', 'p.name_en', 'p.sahaba_id')
             ->get()
             ->keyBy('id');
 
@@ -469,35 +485,36 @@ class DedupePeopleCommand extends Command
         $merges = array_values(array_filter($clusters, fn ($g) => count($g) > 1));
 
         $affected = array_sum(array_map(
-            fn ($g) => array_sum(array_map(fn ($id) => (int) $rows[$id]->hadiths, $g)),
+            fn ($g) => array_sum(array_map(fn ($id) => (int) $rows[$id]->uses, $g)),
             $merges,
         ));
 
         $this->newLine();
         $this->info(sprintf(
-            'hadith_companions: %d duplicate groups, %d rows → %d canonical (%d removed), covering %s hadiths.',
-            count($merges), array_sum(array_map('count', $merges)), count($merges),
+            '%s: %d duplicate groups, %d rows → %d canonical (%d removed), covering %s %s.',
+            $table, count($merges), array_sum(array_map('count', $merges)), count($merges),
             array_sum(array_map('count', $merges)) - count($merges), number_format($affected),
+            $table === 'hadith_companions' ? 'hadiths' : 'isnad links',
         ));
         $this->line('  left alone: '.json_encode($skipped));
 
         $this->printGroups($merges, fn (int $id) => sprintf(
-            '#%-5s %-22s %-24s hadiths=%-5s sahaba=%s',
-            $id, mb_substr((string) $rows[$id]->name_ar, 0, 20), mb_substr((string) $rows[$id]->name_en, 0, 22),
-            $rows[$id]->hadiths, $rows[$id]->sahaba_id ?? '—',
+            '#%-5s %-30s %-26s uses=%-5s sahaba=%s',
+            $id, mb_substr((string) $rows[$id]->name_ar, 0, 28), mb_substr((string) $rows[$id]->name_en, 0, 24),
+            $rows[$id]->uses, $rows[$id]->sahaba_id ?? '—',
         ));
 
         if (! $apply || $merges === []) {
             return;
         }
 
-        DB::transaction(function () use ($merges, $rows) {
+        DB::transaction(function () use ($merges, $rows, $table) {
             foreach ($merges as $group) {
-                usort($group, fn ($a, $b) => (int) $rows[$b]->hadiths <=> (int) $rows[$a]->hadiths ?: $a <=> $b);
+                usort($group, fn ($a, $b) => (int) $rows[$b]->uses <=> (int) $rows[$a]->uses ?: $a <=> $b);
                 $canonical = $group[0];
 
                 foreach (array_slice($group, 1) as $duplicate) {
-                    $this->absorbCompanion($canonical, $duplicate);
+                    $this->absorbNarrationSource($table, $canonical, $duplicate);
                 }
             }
         });
@@ -505,10 +522,12 @@ class DedupePeopleCommand extends Command
         $this->info('  merged.');
     }
 
-    private function absorbCompanion(int $canonical, int $duplicate): void
+    private function absorbNarrationSource(string $table, int $canonical, int $duplicate): void
     {
-        $keep = DB::table('hadith_companions')->where('id', $canonical)->first();
-        $drop = DB::table('hadith_companions')->where('id', $duplicate)->first();
+        [$childTable, $childColumn] = self::NARRATION_USAGE[$table];
+
+        $keep = DB::table($table)->where('id', $canonical)->first();
+        $drop = DB::table($table)->where('id', $duplicate)->first();
         if ($keep === null || $drop === null) {
             return;
         }
@@ -529,13 +548,13 @@ class DedupePeopleCommand extends Command
             }
         }
 
-        DB::table('hadith_companions')->where('id', $duplicate)->update(['sahaba_id' => null]);
+        DB::table($table)->where('id', $duplicate)->update(['sahaba_id' => null]);
         if ($fill !== []) {
-            DB::table('hadith_companions')->where('id', $canonical)->update($fill);
+            DB::table($table)->where('id', $canonical)->update($fill);
         }
 
-        DB::table('hadith_hadiths')->where('companion_id', $duplicate)->update(['companion_id' => $canonical]);
-        DB::table('hadith_companions')->where('id', $duplicate)->delete();
+        DB::table($childTable)->where($childColumn, $duplicate)->update([$childColumn => $canonical]);
+        DB::table($table)->where('id', $duplicate)->delete();
     }
 
     /**

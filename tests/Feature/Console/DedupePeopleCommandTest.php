@@ -25,7 +25,7 @@ final class DedupePeopleCommandTest extends TestCase
         $kept = $this->hadithFor($canonical);
         $moved = $this->hadithFor($variant);
 
-        $this->artisan('data:dedupe', ['--apply' => true, '--only' => 'companions', '--show' => 0])
+        $this->artisan('data:dedupe', ['--apply' => true, '--only' => 'narrations', '--show' => 0])
             ->assertExitCode(0);
 
         $this->assertDatabaseMissing('hadith_companions', ['id' => $variant]);
@@ -40,7 +40,7 @@ final class DedupePeopleCommandTest extends TestCase
         $this->hadithFor($bakra);
         $this->hadithFor($bakr);
 
-        $this->artisan('data:dedupe', ['--apply' => true, '--only' => 'companions', '--show' => 0])
+        $this->artisan('data:dedupe', ['--apply' => true, '--only' => 'narrations', '--show' => 0])
             ->assertExitCode(0);
 
         $this->assertDatabaseHas('hadith_companions', ['id' => $bakra]);
@@ -54,7 +54,7 @@ final class DedupePeopleCommandTest extends TestCase
         $this->hadithFor($unknown);
         $this->hadithFor($other);
 
-        $this->artisan('data:dedupe', ['--apply' => true, '--only' => 'companions', '--show' => 0])
+        $this->artisan('data:dedupe', ['--apply' => true, '--only' => 'narrations', '--show' => 0])
             ->assertExitCode(0);
 
         $this->assertDatabaseHas('hadith_companions', ['id' => $unknown]);
@@ -103,6 +103,44 @@ final class DedupePeopleCommandTest extends TestCase
         );
     }
 
+    public function test_it_merges_arabic_case_variants_of_a_narrator(): void
+    {
+        // The isnad quotes the name in whatever case the sentence needs, so one
+        // narrator arrives as three rows: أبو / أبي / أبا هريرة.
+        $nominative = $this->narrator('أَبُو هُرَيْرَةَ');
+        $genitive = $this->narrator('أَبِي هُرَيْرَةَ');
+        $accusative = $this->narrator('أَبَا هُرَيْرَةَ');
+
+        $links = array_map(fn (int $id) => $this->isnadFor($id), [$nominative, $genitive, $accusative]);
+
+        $this->artisan('data:dedupe', ['--apply' => true, '--only' => 'narrations', '--show' => 0])
+            ->assertExitCode(0);
+
+        $survivors = DB::table('hadith_narrators')
+            ->whereIn('id', [$nominative, $genitive, $accusative])->pluck('id');
+        $this->assertCount(1, $survivors);
+
+        // Every chain keeps a narrator, and they all now point at the same one.
+        $pointed = DB::table('hadith_isnad')->whereIn('id', $links)->pluck('narrator_id')->unique();
+        $this->assertCount(1, $pointed);
+        $this->assertSame($survivors->first(), $pointed->first());
+    }
+
+    private function narrator(string $arabic): int
+    {
+        return DB::table('hadith_narrators')->insertGetId([
+            'name_ar' => $arabic, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+    }
+
+    private function isnadFor(int $narratorId): int
+    {
+        return DB::table('hadith_isnad')->insertGetId([
+            'hadith_id' => $this->hadithFor(null), 'narrator_id' => $narratorId,
+            'position_in_chain' => 1, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+    }
+
     private function sahabi(string $slug, string $gender, string $english, ?string $arabic): int
     {
         $id = DB::table('sahaba')->insertGetId([
@@ -133,7 +171,7 @@ final class DedupePeopleCommandTest extends TestCase
         ]);
     }
 
-    private function hadithFor(int $companionId): int
+    private function hadithFor(?int $companionId): int
     {
         $collection = DB::table('hadith_collections')->insertGetId([
             'name_ar' => 'مجموعة', 'name_en' => 'Collection',

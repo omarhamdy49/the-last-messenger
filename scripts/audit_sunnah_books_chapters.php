@@ -94,11 +94,24 @@ function sourceSlugForApiCode(string $collection): string
     return (string) ($map[$collection] ?? $collection);
 }
 
+/**
+ * Our collection keys to the names sunnah.com's API actually uses. Anything
+ * unmapped is passed through, which is right for bukhari/muslim/nasai/etc.
+ *
+ * Not listed because sunnah.com has no counterpart: qudsi40 and
+ * shahwaliullah40 (absent from /collections entirely) and darimi (present but
+ * serving zero hadiths). malik and nawawi40 ARE served, but their /books index
+ * is empty upstream, so book and chapter parity cannot be checked for them.
+ */
 function sunnahApiCollectionSlug(string $collection): string
 {
     return match ($collection) {
         'ahmed' => 'ahmad',
         'aladab_almufrad' => 'adab',
+        'bulugh_almaram' => 'bulugh',
+        'mishkat_almasabih' => 'mishkat',
+        'riyad_assalihin' => 'riyadussalihin',
+        'shamail_muhammadiyah' => 'shamail',
         default => $collection,
     };
 }
