@@ -49,7 +49,7 @@
 
                 <div class="flex flex-wrap gap-3 mt-6">
                     <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl" :class="darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-800'">
-                        <i data-lucide="file-text" class="w-4 h-4"></i> {{ $theme->articles_count ?? 0 }} مقال مرتبط
+                        <i data-lucide="file-text" class="w-4 h-4"></i> {{ $theme->hadiths_count ?? 0 }} حديث مرتبط
                     </span>
                     <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl" :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
                         <i data-lucide="link" class="w-4 h-4 text-accent"></i> {{ $theme->slug }}

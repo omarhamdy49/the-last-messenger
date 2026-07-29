@@ -14,7 +14,6 @@ declare(strict_types=1);
  *   php scripts/normalize_hadith_sunnah_metadata.php
  *   php scripts/normalize_hadith_sunnah_metadata.php --apply
  */
-
 $apply = in_array('--apply', array_slice($argv, 1), true);
 $sourceRoot = dirname(__DIR__, 2).'/prophet-data-generator/hadith/production';
 
@@ -52,18 +51,21 @@ foreach (glob(rtrim($sourceRoot, '/').'/*', GLOB_ONLYDIR) ?: [] as $collectionDi
         $json = json_decode((string) file_get_contents($file), true);
         if (! is_array($json)) {
             $invalid[] = $file;
+
             continue;
         }
 
         $collection = $json['collections'][0] ?? null;
         if (! is_array($collection)) {
             $missingSourceUrl[] = $file;
+
             continue;
         }
 
         $sourceUrl = trim((string) ($collection['source_url'] ?? ''));
         if ($sourceUrl === '') {
             $missingSourceUrl[] = $file;
+
             continue;
         }
 

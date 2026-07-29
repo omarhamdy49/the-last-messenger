@@ -67,4 +67,4 @@ DB::transaction(static function () use ($bookIds): void {
     DB::table('hadith_books')->whereIn('id', $bookIds)->delete();
 });
 
-echo "deleted_empty_books=".count($bookIds)."\n";
+echo 'deleted_empty_books='.count($bookIds)."\n";

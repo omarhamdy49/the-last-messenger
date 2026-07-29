@@ -28,22 +28,22 @@ class HadithExporter extends BaseExporter
     {
         $query = Hadith::query()
             ->with([
-                'book:id,title',
+                'chapter.book',
+                'gradings',
                 'translations',
-                'companion:id,sahaba_id,name_ar,name_en',
-                'companion.sahabi.translations',
+                'primaryNarrator.sahabi.translations',
             ]);
 
         if (isset($this->filters['book_id'])) {
-            $query->where('book_id', $this->filters['book_id']);
+            $query->byBook((int) $this->filters['book_id']);
         }
 
         if (isset($this->filters['grading_status'])) {
-            $query->where('grading_status', $this->filters['grading_status']);
+            $query->byGrading((string) $this->filters['grading_status']);
         }
 
         if (isset($this->filters['grading_agreement'])) {
-            $query->where('grading_agreement', (bool) $this->filters['grading_agreement']);
+            $query->withAgreement();
         }
 
         if (isset($this->filters['search'])) {
@@ -53,14 +53,14 @@ class HadithExporter extends BaseExporter
             });
         }
 
-        return $query->orderBy('book_id')->orderBy('hadith_number')->get();
+        return $query->orderBy('chapter_id')->orderBy('hadith_number')->get();
     }
 
     public function map($hadith): array
     {
         $translation = $hadith->translations
-            ->firstWhere('language_code', $this->language)
-            ?? $hadith->translations->firstWhere('language_code', 'ar');
+            ->firstWhere('locale', $this->language)
+            ?? $hadith->translations->firstWhere('locale', 'ar');
 
         $row = [];
 
@@ -71,10 +71,10 @@ class HadithExporter extends BaseExporter
                 'book' => $hadith->book?->title[$this->language] ?? $hadith->book?->title['ar'] ?? '',
                 'grading_status' => $hadith->grading_status ?? '',
                 'grading_agreement' => $this->formatBoolean($hadith->grading_agreement),
-                'narrator' => $hadith->companion
+                'narrator' => $hadith->primaryNarrator
                     ? ($this->language === 'ar'
-                        ? ($hadith->companion->name_ar ?? '')
-                        : ($hadith->companion->name_en ?? $hadith->companion->name_ar ?? ''))
+                        ? ($hadith->primaryNarrator->name_ar ?? '')
+                        : ($hadith->primaryNarrator->name_en ?? $hadith->primaryNarrator->name_ar ?? ''))
                     : '',
                 'text' => $this->truncate($translation?->text ?? '', 500),
                 'created_at' => $this->formatDate($hadith->created_at),

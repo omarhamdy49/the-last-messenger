@@ -26,20 +26,14 @@ final readonly class ThemeDTO implements JsonSerializable
     /**
      * Create from HadithTheme model.
      */
-    public static function fromModel(HadithTheme $theme, string $locale = 'ar', bool $withChildren = false): self
+    public static function fromModel(HadithTheme $theme, string $locale = 'ar'): self
     {
-        $legacyName = $theme->getRawOriginal('name');
-        $legacyDescription = $theme->getRawOriginal('description');
-
         return new self(
             id: $theme->id,
             themeAr: $theme->theme_ar,
             themeEn: $theme->theme_en,
-            name: $theme->getTranslation('name', $locale)
-                ?? ($locale === 'ar' ? $theme->theme_ar : ($theme->theme_en ?? $theme->theme_ar))
-                ?? (is_string($legacyName) ? $legacyName : null),
-            description: $theme->getTranslation('description', $locale)
-                ?? (is_string($legacyDescription) ? $legacyDescription : null),
+            name: $theme->getNameInLocale($locale),
+            description: null,
             reviewStatus: $theme->review_status,
             sourceReference: $theme->source_reference,
             hadithsCount: $theme->hadiths_count ?? $theme->hadiths()->count(),

@@ -11,8 +11,6 @@ use App\Domain\Hadith\Application\Commands\CreateHadithCommand;
 use App\Domain\Hadith\Application\Commands\CreateNarratorCommand;
 use App\Domain\Hadith\Application\Commands\CreateThemeCommand;
 use App\Domain\Hadith\Application\Commands\DeleteHadithCommand;
-use App\Domain\Hadith\Application\Commands\ImportHadithsCommand;
-use App\Domain\Hadith\Application\Commands\SyncHadithsCommand;
 use App\Domain\Hadith\Application\Commands\UpdateCollectionCommand;
 use App\Domain\Hadith\Application\Commands\UpdateGradingCommand;
 use App\Domain\Hadith\Application\Commands\UpdateHadithCommand;
@@ -30,8 +28,6 @@ use App\Domain\Hadith\Application\Handlers\CreateNarratorHandler;
 use App\Domain\Hadith\Application\Handlers\CreateThemeHandler;
 use App\Domain\Hadith\Application\Handlers\DeleteHadithHandler;
 use App\Domain\Hadith\Application\Handlers\GetHadithByIdHandler;
-use App\Domain\Hadith\Application\Handlers\ImportHadithsHandler;
-use App\Domain\Hadith\Application\Handlers\SyncHadithsHandler;
 use App\Domain\Hadith\Application\Handlers\UpdateCollectionHandler;
 use App\Domain\Hadith\Application\Handlers\UpdateGradingHandler;
 use App\Domain\Hadith\Application\Handlers\UpdateHadithHandler;
@@ -55,8 +51,6 @@ final class HadithCommandService
         private readonly CreateHadithHandler $createHadithHandler,
         private readonly UpdateHadithHandler $updateHadithHandler,
         private readonly DeleteHadithHandler $deleteHadithHandler,
-        private readonly SyncHadithsHandler $syncHadithsHandler,
-        private readonly ImportHadithsHandler $importHadithsHandler,
         private readonly UpdateGradingHandler $updateGradingHandler,
         private readonly CreateCollectionHandler $createCollectionHandler,
         private readonly UpdateCollectionHandler $updateCollectionHandler,
@@ -176,7 +170,6 @@ final class HadithCommandService
         int $hadithId,
         string $gradingStatus,
         ?int $scholarId = null,
-        ?int $gradingLevelId = null,
         ?string $notes = null,
     ): HadithDTO {
         $currentHadith = $this->getHadithByIdHandler->handle(
@@ -187,7 +180,6 @@ final class HadithCommandService
             hadithId: $hadithId,
             gradingStatus: $gradingStatus,
             scholarId: $scholarId,
-            gradingLevelId: $gradingLevelId,
             notes: $notes,
         );
 
@@ -198,50 +190,9 @@ final class HadithCommandService
             previousGrading: $currentHadith->gradingStatus,
             newGrading: $gradingStatus,
             scholarId: $scholarId,
-            gradingLevelId: $gradingLevelId,
         ));
 
         return $result;
-    }
-
-    /**
-     * Sync hadiths from external API
-     */
-    public function syncHadiths(
-        int $bookId,
-        string $collectionName,
-        string $bookNumber,
-        bool $dryRun = false,
-        ?int $syncLogId = null,
-    ): Result {
-        $command = new SyncHadithsCommand(
-            bookId: $bookId,
-            collectionName: $collectionName,
-            bookNumber: $bookNumber,
-            dryRun: $dryRun,
-            syncLogId: $syncLogId,
-        );
-
-        return $this->syncHadithsHandler->handle($command);
-    }
-
-    /**
-     * Import hadiths from JSON file
-     */
-    public function importHadiths(
-        string $filePath,
-        int $collectionId,
-        bool $validateOnly = false,
-        bool $skipExisting = true,
-    ): Result {
-        $command = new ImportHadithsCommand(
-            filePath: $filePath,
-            collectionId: $collectionId,
-            validateOnly: $validateOnly,
-            skipExisting: $skipExisting,
-        );
-
-        return $this->importHadithsHandler->handle($command);
     }
 
     // ========================================

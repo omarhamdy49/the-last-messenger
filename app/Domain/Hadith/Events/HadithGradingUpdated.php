@@ -16,7 +16,6 @@ final class HadithGradingUpdated extends DomainEvent
         public readonly string $previousGrading,
         public readonly string $newGrading,
         public readonly ?int $scholarId = null,
-        public readonly ?int $gradingLevelId = null,
     ) {
         parent::__construct();
     }
@@ -41,7 +40,6 @@ final class HadithGradingUpdated extends DomainEvent
             'previous_grading' => $this->previousGrading,
             'new_grading' => $this->newGrading,
             'scholar_id' => $this->scholarId,
-            'grading_level_id' => $this->gradingLevelId,
             'occurred_at' => $this->occurredAt->toIso8601String(),
         ];
     }

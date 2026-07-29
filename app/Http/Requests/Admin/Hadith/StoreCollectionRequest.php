@@ -18,7 +18,7 @@ class StoreCollectionRequest extends FormRequest
         return [
             'name_ar' => ['required', 'string', 'max:255'],
             'name_en' => ['nullable', 'string', 'max:255'],
-            'slug_ar' => ['required', 'string', 'max:255', 'unique:hadith_collections,slug_ar'],
+            'slug_ar' => ['required', 'string', 'max:255', 'unique:hadith_collections,slug'],
             'slug_en' => ['nullable', 'string', 'max:255'],
             'description_ar' => ['nullable', 'string'],
             'description_en' => ['nullable', 'string'],

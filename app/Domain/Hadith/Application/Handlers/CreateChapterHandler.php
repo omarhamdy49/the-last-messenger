@@ -57,11 +57,10 @@ final class CreateChapterHandler implements CommandHandler
 
         $chapter = HadithChapter::create([
             'book_id' => $command->bookId,
-            'title_ar' => $command->title['ar'] ?? '',
-            'title_en' => $command->title['en'] ?? null,
+            'name' => $command->title,
             'chapter_number' => $command->chapterNumber,
-            'intro_ar' => $command->intro['ar'] ?? null,
-            'intro_en' => $command->intro['en'] ?? null,
+            'description' => $command->intro,
+            'display_order' => $command->chapterNumber,
         ]);
 
         return ChapterDTO::fromModel($chapter);

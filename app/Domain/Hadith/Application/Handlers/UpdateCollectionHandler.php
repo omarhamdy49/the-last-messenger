@@ -63,12 +63,7 @@ final class UpdateCollectionHandler implements CommandHandler
 
         // Update fields
         if ($command->name !== null) {
-            if (isset($command->name['ar'])) {
-                $collection->name_ar = $command->name['ar'];
-            }
-            if (isset($command->name['en'])) {
-                $collection->name_en = $command->name['en'];
-            }
+            $collection->name = $command->name;
         }
 
         if ($command->slug !== null) {
@@ -76,24 +71,11 @@ final class UpdateCollectionHandler implements CommandHandler
         }
 
         if ($command->description !== null) {
-            if (isset($command->description['ar'])) {
-                $collection->description_ar = $command->description['ar'];
-            }
-            if (isset($command->description['en'])) {
-                $collection->description_en = $command->description['en'];
-            }
-        }
-
-        if ($command->scholarId !== null) {
-            $collection->author_id = $command->scholarId;
-        }
-
-        if ($command->hadithCount !== null) {
-            $collection->hadith_count = $command->hadithCount;
+            $collection->description = $command->description;
         }
 
         if ($command->isActive !== null) {
-            $collection->is_active = $command->isActive;
+            $collection->active = $command->isActive;
         }
 
         $collection->save();

@@ -126,7 +126,7 @@ class ImportHadithCommand extends Command
         }
 
         return HadithSyncLog::create([
-            'collection_name' => $collection,
+            'source_collection_code' => $collection,
             'type' => 'json_import',
             'status' => HadithSyncLog::STATUS_IN_PROGRESS,
             'started_at' => now(),

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Domain\Blog\Importers\ArticleImporter;
-use App\Domain\Hadith\Importers\HadithImporter;
 use App\Domain\Hadith\Importers\HadithNarratorImporter;
 use App\Domain\Quran\Importers\QuranSurahImporter;
 use App\Domain\Quran\Importers\QuranVerseImporter;
@@ -393,7 +392,6 @@ class ImportController extends Controller
     {
         return match ($import->module) {
             'articles' => new ArticleImporter($import),
-            'hadith' => new HadithImporter($import),
             'seerah_events' => new SeerahEventImporter($import),
             'sahaba' => new SahabiImporter($import),
             'quran_surahs' => new QuranSurahImporter($import),
@@ -412,7 +410,6 @@ class ImportController extends Controller
     {
         return in_array($module, [
             'articles',
-            'hadith',
             'seerah_events',
             'sahaba',
             'quran_surahs',
@@ -434,10 +431,6 @@ class ImportController extends Controller
             'articles' => [
                 'required' => ['title_ar', 'title_en', 'content_ar', 'content_en', 'author_email'],
                 'optional' => ['title_fr', 'title_tr', 'title_ur', 'content_fr', 'content_tr', 'content_ur', 'excerpt_ar', 'excerpt_en', 'excerpt_fr', 'excerpt_tr', 'excerpt_ur', 'category_name', 'tags', 'status', 'published_at'],
-            ],
-            'hadith' => [
-                'required' => ['arabic_text', 'english_text', 'book_name', 'chapter_name', 'hadith_number'],
-                'optional' => ['narrators', 'grade', 'reference'],
             ],
             'seerah_events' => [
                 'required' => ['title_ar', 'title_en', 'description_ar', 'description_en', 'event_date'],

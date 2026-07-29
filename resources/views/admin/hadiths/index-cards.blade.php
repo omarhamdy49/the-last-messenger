@@ -151,8 +151,8 @@ use Illuminate\Support\Str;
                             <a href="{{ route('admin.hadith.show', $hadith) }}" class="group/text block">
                                 <p class="text-base sm:text-lg font-serif leading-relaxed line-clamp-3 transition-colors duration-200"
                                    :class="darkMode ? 'text-gray-100 group-hover/text:text-[#64CCC5]' : 'text-gray-900 group-hover/text:text-[#0056b3]'"
-                                   title="{{ $hadith->translations->where('language_code', 'ar')->first()?->text ?? '' }}">
-                                    {{ Str::limit($hadith->translations->where('language_code', 'ar')->first()?->text ?? '—', 250) }}
+                                   title="{{ $hadith->translations->where('locale', 'ar')->first()?->text ?? '' }}">
+                                    {{ Str::limit($hadith->translations->where('locale', 'ar')->first()?->text ?? '—', 250) }}
                                 </p>
                             </a>
 

@@ -17,6 +17,6 @@ final class HadithPublicVisibility implements PublicVisibilityProviderInterface
 
     public function apply(Builder $query, string $locale): Builder
     {
-        return $query->whereNull($query->getModel()->qualifyColumn('merged_into_id'));
+        return $query;
     }
 }

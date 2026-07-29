@@ -124,8 +124,6 @@ class HadithImportMapper
             'grading' => $record['grading'] ?? [],
             'scholarly_comments' => $record['scholarly_comments'] ?? [],
             'related_verses' => $record['related_verses'] ?? [],
-            'applications' => $record['applications'] ?? [],
-            'fiqh_rulings' => $record['fiqh_rulings'] ?? [],
             'sources' => $record['sources'] ?? [],
             'source_file' => $record['source_file'] ?? null,
         ];

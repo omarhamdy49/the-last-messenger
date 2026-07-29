@@ -63,13 +63,13 @@ class CollectionCrudTest extends TestCase
         $response->assertSessionHasNoErrors();
 
         $this->assertDatabaseHas('hadith_collections', [
-            'name_ar' => 'صحيح البخاري',
-            'name_en' => 'Sahih al-Bukhari',
-            'slug_ar' => 'sahih-bukhari',
-            'slug_en' => 'sahih-al-bukhari',
+            'slug' => 'sahih-al-bukhari',
             'featured' => true,
             'display_order' => 3,
         ]);
+        $collection = HadithCollection::query()->where('slug', 'sahih-al-bukhari')->firstOrFail();
+        $this->assertSame('صحيح البخاري', $collection->name['ar']);
+        $this->assertSame('Sahih al-Bukhari', $collection->name['en']);
     }
 
     public function test_create_collection_fails_validation_without_name_ar(): void
@@ -82,7 +82,7 @@ class CollectionCrudTest extends TestCase
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['name_ar']);
 
-        $this->assertDatabaseMissing('hadith_collections', ['slug_ar' => 'sahih-bukhari']);
+        $this->assertDatabaseMissing('hadith_collections', ['slug' => 'sahih-bukhari']);
     }
 
     public function test_create_collection_fails_validation_without_slug_ar(): void
@@ -128,13 +128,11 @@ class CollectionCrudTest extends TestCase
         $response->assertRedirect(route('admin.hadith.collections.index'));
         $response->assertSessionHasNoErrors();
 
-        $this->assertDatabaseHas('hadith_collections', [
-            'id' => $collection->id,
-            'name_ar' => 'اسم محدّث',
-            'name_en' => 'Updated name',
-            'featured' => true,
-            'display_order' => 9,
-        ]);
+        $collection->refresh();
+        $this->assertSame('اسم محدّث', $collection->name['ar']);
+        $this->assertSame('Updated name', $collection->name['en']);
+        $this->assertTrue($collection->featured);
+        $this->assertSame(9, $collection->display_order);
     }
 
     public function test_update_collection_fails_validation_without_name_ar(): void
@@ -151,22 +149,17 @@ class CollectionCrudTest extends TestCase
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['name_ar']);
 
-        $this->assertDatabaseHas('hadith_collections', [
-            'id' => $collection->id,
-            'name_ar' => $collection->name_ar, // unchanged
-        ]);
+        $this->assertSame('سنن أبي داود', $collection->fresh()->name['ar']);
     }
 
     private function seedCollection(): HadithCollection
     {
         return HadithCollection::create([
-            'name_ar' => 'سنن أبي داود',
-            'name_en' => 'Sunan Abi Dawud',
-            'slug_ar' => 'sunan-abi-dawud-ar',
-            'slug_en' => 'sunan-abi-dawud',
-            'description_ar' => 'من السنن الأربعة.',
+            'code' => 'sunan-abi-dawud',
+            'name' => ['ar' => 'سنن أبي داود', 'en' => 'Sunan Abi Dawud'],
+            'slug' => 'sunan-abi-dawud',
+            'description' => ['ar' => 'من السنن الأربعة.'],
             'abbreviation' => 'د',
-            'total_hadiths' => 5274,
             'featured' => false,
             'active' => true,
             'display_order' => 0,

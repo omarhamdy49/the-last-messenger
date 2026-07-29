@@ -44,18 +44,10 @@ class HadithNarratorExporter extends BaseExporter
 
         if (isset($this->filters['search'])) {
             $search = $this->filters['search'];
-            $query->where(function ($q) use ($search) {
-                $q->where('name_ar', 'LIKE', "%{$search}%")
-                    ->orWhere('name_en', 'LIKE', "%{$search}%")
-                    ->orWhere('full_name_ar', 'LIKE', "%{$search}%")
-                    ->orWhereHas('sahabi.translations', function ($translation) use ($search): void {
-                        $translation->where('name', 'LIKE', "%{$search}%")
-                            ->orWhere('full_name', 'LIKE', "%{$search}%");
-                    });
-            });
+            $query->search($search);
         }
 
-        return $query->orderBy('name_ar')->get();
+        return $query->orderBy('id')->get();
     }
 
     public function map($narrator): array
@@ -75,14 +67,17 @@ class HadithNarratorExporter extends BaseExporter
                 'id' => $narrator->id,
                 'name' => $name,
                 'full_name' => $fullName,
-                'kunya' => $narrator->kunya ?? '',
+                'kunya' => $narrator->kunya[$this->language] ?? $narrator->kunya['ar'] ?? '',
                 'birth_year_hijri' => $narrator->birth_year_hijri ?? '',
                 'death_year_hijri' => $narrator->death_year_hijri ?? '',
                 'reliability_grade' => $narrator->reliability_grade ?? '',
                 'school' => $narrator->school ?? '',
                 'region' => $narrator->region ?? '',
                 'hadith_count' => $narrator->isnads_count ?? 0,
-                'biography' => $this->truncate($narrator->biography ?? '', 300),
+                'biography' => $this->truncate(
+                    $narrator->biography[$this->language] ?? $narrator->biography['ar'] ?? '',
+                    300,
+                ),
                 'created_at' => $this->formatDate($narrator->created_at),
                 default => '',
             };

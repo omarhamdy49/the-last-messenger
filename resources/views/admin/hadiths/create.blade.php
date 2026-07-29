@@ -26,16 +26,24 @@
                 <!-- Book -->
                 <div>
                     <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.book') }} *</label>
-                    <select name="book_id" required class="w-full px-4 py-2 rounded-lg border" :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                    <select name="chapter_id" required class="w-full px-4 py-2 rounded-lg border" :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'">
                         <option value="">{{ __('admin.select_book') }}</option>
-                        @foreach($books as $book)
-                            <option value="{{ $book->id }}" @selected(old('book_id') == $book->id)>
-                                {{ $book->title_ar }}
+                        @foreach($chapters as $chapter)
+                            <option value="{{ $chapter->id }}" @selected(old('chapter_id') == $chapter->id)>
+                                {{ $chapter->book?->title_ar }} — {{ $chapter->getNameInLocale('ar') }}
                             </option>
                         @endforeach
                     </select>
-                    @error('book_id')
+                    @error('chapter_id')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">النص العربي</label>
+                    <textarea name="text_ar" required rows="8" class="w-full px-4 py-2 rounded-lg border" :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'">{{ old('text_ar') }}</textarea>
+                    @error('text_ar')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -68,11 +76,11 @@
 
                 <!-- Companion ID -->
                 <div>
-                    <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.companion_id') }}</label>
-                    <input type="number" name="companion_id" value="{{ old('companion_id') }}" min="0"
-                        placeholder="{{ __('admin.enter_companion_id') }}"
+                    <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.narrator') }}</label>
+                    <input type="number" name="primary_narrator_id" value="{{ old('primary_narrator_id') }}" min="0"
+                        placeholder="{{ __('admin.narrator') }}"
                         class="w-full px-4 py-2 rounded-lg border" :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                    @error('companion_id')
+                    @error('primary_narrator_id')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
                 </div>

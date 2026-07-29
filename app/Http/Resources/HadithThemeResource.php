@@ -27,11 +27,10 @@ class HadithThemeResource extends JsonResource
 
         return [
             'id' => $this->id,
-            'name' => $locale === 'ar' ? $this->name_ar : $this->name_en,
-            'name_ar' => $this->name_ar,
-            'name_en' => $this->name_en,
-            'slug' => $locale === 'ar' ? $this->slug_ar : $this->slug_en,
-            'description' => $locale === 'ar' ? $this->description_ar : $this->description_en,
+            'name' => $this->getNameInLocale($locale),
+            'name_ar' => $this->name['ar'] ?? null,
+            'name_en' => $this->name['en'] ?? null,
+            'slug' => $this->slug,
             'hadiths_count' => $this->whenCounted('hadiths'),
             'hadiths' => HadithResource::collection($this->whenLoaded('hadiths')),
             'created_at' => $this->created_at?->toIso8601String(),

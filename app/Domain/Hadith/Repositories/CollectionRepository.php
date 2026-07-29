@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Hadith\Repositories;
 
+use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithCollection;
 use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Collection;
@@ -11,167 +12,90 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 
-/**
- * Hadith Collection Repository Implementation
- *
- * Data access layer for Hadith Collection entities.
- */
 class CollectionRepository extends BaseRepository implements CollectionRepositoryInterface
 {
-    /**
-     * Cache TTL in seconds (1 hour - collections rarely change)
-     */
     private const CACHE_TTL = 3600;
 
-    /**
-     * Get model instance
-     */
     protected function getModel(): Model
     {
         return new HadithCollection;
     }
 
-    /**
-     * Get all collections (cached)
-     */
     public function all(array $columns = ['*'], array $relations = []): Collection
     {
-        return Cache::remember(
-            'hadith_collections_all',
-            self::CACHE_TTL,
-            fn () => $this->model
-                ->with($relations)
-                ->orderBy('id')
-                ->get($columns)
-        );
+        return Cache::remember('hadith_collections_all', self::CACHE_TTL, fn () => $this->model
+            ->with($relations)
+            ->orderBy('id')
+            ->get($columns));
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getBySlug(string $slug, string $locale = 'ar'): ?HadithCollection
     {
-        // Slugs are unique per column; matching either column keeps shared URLs
-        // working regardless of the visitor's locale (EN slug under AR locale and vice versa).
-        return Cache::remember(
-            "hadith_collection_slug_{$locale}_{$slug}",
-            self::CACHE_TTL,
-            fn () => $this->model
-                ->where('slug_en', $slug)
-                ->orWhere('slug_ar', $slug)
-                ->first()
-        );
+        return Cache::remember("hadith_collection_slug_{$slug}", self::CACHE_TTL, fn () => $this->model
+            ->where('slug', $slug)
+            ->first());
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getByAbbreviation(string $abbreviation): ?HadithCollection
     {
-        return Cache::remember(
-            "hadith_collection_abbr_{$abbreviation}",
-            self::CACHE_TTL,
-            fn () => $this->model
-                ->where('abbreviation', $abbreviation)
-                ->first()
-        );
+        return $this->model->where('abbreviation', $abbreviation)->first();
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getAllWithBooksCount(): Collection
     {
-        return Cache::remember(
-            'hadith_collections_with_books_count',
-            self::CACHE_TTL,
-            fn () => $this->model
-                ->select([
-                    'id', 'name_ar', 'name_en', 'slug_ar', 'slug_en',
-                    'abbreviation', 'description_ar', 'description_en', 'total_hadiths',
-                ])
-                ->withCount('books')
-                ->orderBy('id')
-                ->get()
-        );
+        return $this->model
+            ->select(['id', 'code', 'slug', 'name', 'description', 'abbreviation'])
+            ->withCount('books')
+            ->orderBy('id')
+            ->get();
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getWithBooks(int $id): ?HadithCollection
     {
-        return Cache::remember(
-            "hadith_collection_{$id}_with_books",
-            self::CACHE_TTL,
-            fn () => $this->model
-                ->with(['books' => fn ($q) => $q->select(['id', 'collection_id', 'title_ar', 'title_en', 'book_number'])->orderBy('id')])
-                ->find($id)
-        );
+        return $this->model
+            ->with(['books' => fn ($books) => $books
+                ->select(['id', 'collection_id', 'title', 'book_number'])
+                ->orderBy('id')])
+            ->find($id);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function search(string $query, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model
-            ->where('name_ar', 'LIKE', "%{$query}%")
-            ->orWhere('name_en', 'LIKE', "%{$query}%")
-            ->orWhere('abbreviation', 'LIKE', "%{$query}%")
+            ->where(fn ($builder) => $builder
+                ->where('name->ar', 'like', "%{$query}%")
+                ->orWhere('name->en', 'like', "%{$query}%")
+                ->orWhere('abbreviation', 'like', "%{$query}%"))
             ->paginate($perPage);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getWithStatistics(): Collection
     {
-        return Cache::remember(
-            'hadith_collections_statistics',
-            self::CACHE_TTL,
-            fn () => $this->model
-                ->select(['id', 'name_ar', 'name_en', 'abbreviation'])
-                ->withCount(['books'])
-                ->withCount(['books as hadiths_count' => function ($query) {
-                    $query->selectRaw('(SELECT COUNT(*) FROM hadith_hadiths WHERE hadith_hadiths.book_id = hadith_books.id)');
-                }])
-                ->get()
-        );
+        return $this->model->withCount('books')
+            ->addSelect([
+                'hadiths_count' => Hadith::query()
+                    ->selectRaw('COUNT(*)')
+                    ->join('hadith_chapters', 'hadith_chapters.id', '=', 'hadith_hadiths.chapter_id')
+                    ->join('hadith_books', 'hadith_books.id', '=', 'hadith_chapters.book_id')
+                    ->whereColumn('hadith_books.collection_id', 'hadith_collections.id'),
+            ])
+            ->get();
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getAllForDropdown(): Collection
     {
-        return Cache::remember(
-            'hadith_collections_dropdown',
-            self::CACHE_TTL,
-            fn () => $this->model
-                ->select(['id', 'name_ar', 'name_en'])
-                ->orderBy('name_ar')
-                ->get()
-        );
+        return $this->model->select(['id', 'name'])->orderBy('id')->get();
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function reorder(array $items): void
     {
         foreach ($items as $item) {
-            $this->model->newQuery()
-                ->where('id', $item['id'])
-                ->update(['display_order' => $item['order']]);
+            $this->model->whereKey($item['id'])->update(['display_order' => $item['order']]);
         }
 
         $this->clearCache();
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function toggleField(int $id, string $field): HadithCollection
     {
         /** @var HadithCollection $collection */
@@ -182,48 +106,31 @@ class CollectionRepository extends BaseRepository implements CollectionRepositor
         return $collection->fresh();
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function paginateWithFilters(
         int $perPage = 15,
         string $search = '',
-        string $sortBy = 'name_ar',
+        string $sortBy = 'name',
         array $filters = []
     ): LengthAwarePaginator {
         $query = $this->model->newQuery();
 
-        // Apply search
-        if (! empty($search)) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name_ar', 'LIKE', "%{$search}%")
-                    ->orWhere('name_en', 'LIKE', "%{$search}%")
-                    ->orWhere('abbreviation', 'LIKE', "%{$search}%");
-            });
+        if ($search !== '') {
+            $query->where(fn ($builder) => $builder
+                ->where('name->ar', 'like', "%{$search}%")
+                ->orWhere('name->en', 'like', "%{$search}%")
+                ->orWhere('abbreviation', 'like', "%{$search}%"));
         }
 
-        // Status filters — applied only when the caller passes an explicit value so the
-        // public listing (which omits them) keeps seeing every collection.
-        if (array_key_exists('active', $filters) && $filters['active'] !== '' && $filters['active'] !== null) {
-            $query->where('active', (bool) $filters['active']);
-        } elseif (! empty($filters['only_active'])) {
-            $query->where('active', true);
+        foreach (['active', 'featured'] as $field) {
+            if (array_key_exists($field, $filters) && $filters[$field] !== '' && $filters[$field] !== null) {
+                $query->where($field, (bool) $filters[$field]);
+            }
         }
 
-        if (array_key_exists('featured', $filters) && $filters['featured'] !== '' && $filters['featured'] !== null) {
-            $query->where('featured', (bool) $filters['featured']);
-        }
-
-        // Curated collections surface first, then the admin-defined order, then the
-        // requested sort column as the stable tie-breaker.
-        $direction = $filters['sort_direction'] ?? 'asc';
-        $query->orderByDesc('featured')
+        return $query->withCount('books')
+            ->orderByDesc('featured')
             ->orderBy('display_order')
-            ->orderBy($sortBy, $direction);
-
-        // Include counts
-        $query->withCount('books');
-
-        return $query->paginate($perPage);
+            ->orderBy(in_array($sortBy, ['id', 'code', 'slug', 'created_at'], true) ? $sortBy : 'id', $filters['sort_direction'] ?? 'asc')
+            ->paginate($perPage);
     }
 }

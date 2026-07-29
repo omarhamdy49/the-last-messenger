@@ -182,8 +182,8 @@ class NarratorController extends AdminController
                 'name_en' => $validated['name_en'] ?? $narrator->name_en,
                 'full_name_ar' => $validated['full_name_ar'] ?? $narrator->full_name_ar,
                 'full_name_en' => $validated['full_name_en'] ?? $narrator->full_name_en,
-                'kunya' => $validated['kunya'] ?? $narrator->kunya,
-                'biography' => $validated['biography'] ?? $narrator->biography,
+                'kunya' => $validated['kunya'] ?? $narrator->kunya_ar,
+                'biography' => $validated['biography'] ?? $narrator->biography_ar,
                 'reliability_grade' => $validated['reliability_grade'] ?? $narrator->reliability_grade,
                 'birth_year_hijri' => $validated['birth_year_hijri'] ?? $narrator->birth_year_hijri,
                 'death_year_hijri' => $validated['death_year_hijri'] ?? $narrator->death_year_hijri,
@@ -262,45 +262,6 @@ class NarratorController extends AdminController
             \Log::error('admin.narrator.delete_failed', [
                 'user_id' => auth()->id(),
                 'narrator_id' => $narrator->id,
-                'error' => $e->getMessage(),
-            ]);
-
-            if ($this->expectsJson(request())) {
-                return $this->serverErrorResponse(__('admin.operation_failed'));
-            }
-
-            return back()
-                ->withErrors(['error' => __('admin.operation_failed')]);
-        }
-    }
-
-    /**
-     * Restore a soft-deleted narrator
-     */
-    public function restore(int $id): RedirectResponse|JsonResponse
-    {
-        $this->authorizeAdmin('edit narrators');
-
-        try {
-            $narrator = $this->repository->restoreById($id);
-
-            $this->logActivity('restored', 'HadithNarrator', $narrator->id);
-
-            if ($this->expectsJson(request())) {
-                return $this->successResponse(
-                    $narrator,
-                    __('admin.narrator_restored')
-                );
-            }
-
-            return redirect()
-                ->route('admin.hadith.narrators.index')
-                ->with('success', __('admin.narrator_restored'));
-
-        } catch (\Throwable $e) {
-            \Log::error('admin.narrator.restore_failed', [
-                'user_id' => auth()->id(),
-                'narrator_id' => $id,
                 'error' => $e->getMessage(),
             ]);
 

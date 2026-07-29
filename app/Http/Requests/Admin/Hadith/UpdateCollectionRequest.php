@@ -19,7 +19,7 @@ class UpdateCollectionRequest extends FormRequest
         return [
             'name_ar' => ['required', 'string', 'max:255'],
             'name_en' => ['nullable', 'string', 'max:255'],
-            'slug_ar' => ['required', 'string', 'max:255', Rule::unique('hadith_collections', 'slug_ar')->ignore($this->route('collection'))],
+            'slug_ar' => ['required', 'string', 'max:255', Rule::unique('hadith_collections', 'slug')->ignore($this->route('collection'))],
             'slug_en' => ['nullable', 'string', 'max:255'],
             'description_ar' => ['nullable', 'string'],
             'description_en' => ['nullable', 'string'],

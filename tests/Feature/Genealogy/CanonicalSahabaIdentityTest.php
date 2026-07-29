@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Genealogy;
 
 use App\Domain\Genealogy\Models\Person;
-use App\Domain\Hadith\Models\Companion;
 use App\Domain\Hadith\Models\HadithNarrator;
 use App\Domain\Sahaba\Models\Sahabi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -60,30 +59,21 @@ class CanonicalSahabaIdentityTest extends TestCase
             ],
         ]);
 
-        $companion = Companion::findOrCreateByName([
-            'name_ar' => 'عُمَر بْن الْخَطَّاب',
-            'name_en' => 'Umar ibn al-Khattab',
-            'bio_en' => 'This source copy must not become canonical.',
-        ]);
-
         $narrator = HadithNarrator::resolveOrCreate([
             'name_ar' => 'عمر بن الخطاب',
             'name_en' => 'Umar ibn al-Khattab',
             'biography' => 'This source copy must not become canonical.',
-            'reliability_grade' => 'Companion',
+            'reliability_grade' => 'companion',
         ]);
 
-        $this->assertSame($sahabi->id, $companion->sahaba_id);
         $this->assertSame($sahabi->id, $narrator->sahaba_id);
-        $this->assertNull($companion->getRawOriginal('name_ar'));
         $this->assertNull($narrator->getRawOriginal('name_ar'));
-        $this->assertSame('عمر بن الخطاب', $companion->name_ar);
         $this->assertSame('Umar ibn al-Khattab', $narrator->name_en);
-        $this->assertSame('Companion', $narrator->reliability_grade);
+        $this->assertSame('companion', $narrator->reliability_grade);
 
         $sameNarrator = HadithNarrator::resolveOrCreate([
             'name_en' => 'Umar ibn al-Khattab',
-            'reliability_grade' => 'Companion',
+            'reliability_grade' => 'companion',
         ]);
 
         $this->assertSame($narrator->id, $sameNarrator->id);

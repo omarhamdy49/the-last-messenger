@@ -85,7 +85,6 @@ class HadithJsonTransformer
                 'keywords_count' => count($jsonData['keywords'] ?? []),
                 'scholarly_comments_count' => count($jsonData['scholarly_comments'] ?? []),
                 'related_verses_count' => count($jsonData['related_verses'] ?? []),
-                'applications_count' => count($jsonData['applications'] ?? []),
                 'has_companion' => ! empty($jsonData['companion']),
                 'has_grading' => ! empty($jsonData['grading']),
             ],
@@ -97,7 +96,6 @@ class HadithJsonTransformer
                 'keywords_count' => count($jsonData['keywords'] ?? []),
                 'scholarly_comments_count' => count($jsonData['scholarly_comments'] ?? []),
                 'related_verses_count' => count($jsonData['related_verses'] ?? []),
-                'applications_count' => count($jsonData['practical_applications'] ?? []),
                 'has_companion' => ! empty($jsonData['companion']),
                 'has_grading' => ! empty($jsonData['grading']),
             ],
@@ -272,8 +270,6 @@ class HadithJsonTransformer
             'grading' => $this->extractGradingFromFlat($jsonData),
             'scholarly_comments' => $this->extractScholarlyCommentsFromFlat($jsonData),
             'related_verses' => $this->extractRelatedVersesFromFlat($jsonData),
-            'applications' => $this->extractApplicationsFromFlat($jsonData),
-            'fiqh_rulings' => $this->extractFiqhRulingsFromFlat($jsonData),
             'historical_context' => $this->extractHistoricalContextFromFlat($jsonData),
             'sources' => $this->extractSources($jsonData),
         ];
@@ -441,8 +437,6 @@ class HadithJsonTransformer
             'grading' => $gradingList,
             'scholarly_comments' => [],
             'related_verses' => [],
-            'applications' => [],
-            'fiqh_rulings' => [],
             'historical_context' => null,
             'sources' => $this->extractSources($jsonData),
         ];
@@ -507,8 +501,6 @@ class HadithJsonTransformer
             'grading' => $this->extractGrading($jsonData),
             'scholarly_comments' => $this->extractScholarlyComments($jsonData),
             'related_verses' => $this->extractRelatedVerses($jsonData),
-            'applications' => $this->extractApplications($jsonData),
-            'fiqh_rulings' => $this->extractFiqhRulings($jsonData),
             'historical_context' => $this->extractHistoricalContext($jsonData),
             'sources' => $this->extractSources($jsonData),
         ];
@@ -523,11 +515,16 @@ class HadithJsonTransformer
     {
         $translations = [];
 
-        if (! empty($matn['arabic']['full_text'])) {
-            $translations[] = ['language_code' => 'ar', 'text' => $this->sanitizeText($matn['arabic']['full_text']), 'notes' => null];
-        }
-        if (! empty($matn['arabic']['simplified'])) {
-            $translations[] = ['language_code' => 'ar_notashkeel', 'text' => $this->sanitizeText($matn['arabic']['simplified']), 'notes' => 'Arabic text without diacritical marks'];
+        $arabicText = $matn['arabic']['full_text'] ?? $matn['arabic']['simplified'] ?? null;
+        if (! empty($arabicText)) {
+            $translations[] = [
+                'language_code' => 'ar',
+                'text' => $this->sanitizeText($arabicText),
+                'search_text' => ! empty($matn['arabic']['simplified'])
+                    ? $this->sanitizeText($matn['arabic']['simplified'])
+                    : null,
+                'notes' => null,
+            ];
         }
         if (! empty($matn['english']['translation'])) {
             $translations[] = ['language_code' => 'en', 'text' => $this->sanitizeText($matn['english']['translation']), 'notes' => null];

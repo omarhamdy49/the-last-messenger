@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Domain\Blog\Importers\ArticleImporter;
-use App\Domain\Hadith\Importers\HadithImporter;
 use App\Domain\Hadith\Importers\HadithNarratorImporter;
 use App\Domain\Quran\Importers\QuranSurahImporter;
 use App\Domain\Quran\Importers\QuranVerseImporter;
@@ -127,7 +126,6 @@ class ProcessImport implements ShouldQueue
     {
         return match ($this->import->module) {
             'articles' => new ArticleImporter($this->import),
-            'hadith' => new HadithImporter($this->import),
             'seerah_events' => new SeerahEventImporter($this->import),
             'sahaba' => new SahabiImporter($this->import),
             'quran_surahs' => new QuranSurahImporter($this->import),

@@ -17,16 +17,8 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Hadith Repository Implementation
- *
- * Data access layer for Hadith entities with caching.
- */
 class HadithRepository extends BaseRepository implements HadithRepositoryInterface
 {
-    /**
-     * Cache TTL in seconds (30 minutes)
-     */
     private const CACHE_TTL = 1800;
 
     public function __construct(
@@ -35,342 +27,188 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
         parent::__construct();
     }
 
-    /**
-     * Get model instance
-     */
     protected function getModel(): Model
     {
         return new Hadith;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getByBookAndNumber(int $bookId, string $hadithNumber): ?Hadith
     {
         return Cache::remember(
             "hadith_book_{$bookId}_number_{$hadithNumber}",
             self::CACHE_TTL,
             fn () => $this->publicHadiths($this->model->newQuery())
-                ->where('book_id', $bookId)
-                ->where('hadith_number', $hadithNumber)
-                ->with(['translations', 'book.collection'])
+                ->byBook($bookId)
+                ->byNumber($hadithNumber)
+                ->with(['translations', 'gradings', 'chapter.book.collection'])
                 ->first()
         );
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getByBook(int $bookId): Collection
     {
         return Cache::remember(
             "hadiths_by_book_{$bookId}",
             self::CACHE_TTL,
-            fn () => $this->publicHadiths($this->model->newQuery())
-                ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
-                ->byBook($bookId)
-                ->with('translations')
-                ->orderByRaw('LENGTH(hadith_number)')->orderBy('hadith_number')
-                ->get()
+            fn () => $this->baseListQuery()->byBook($bookId)->get()
         );
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getByGrading(string $gradingStatus): Collection
     {
-        return $this->publicHadiths($this->model->newQuery())
-            ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
-            ->byGrading($gradingStatus)
-            ->with('translations')
-            ->get();
+        return $this->baseListQuery()->byGrading($gradingStatus)->get();
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getAuthentic(): Collection
     {
         return Cache::remember(
             'hadiths_authentic',
             self::CACHE_TTL,
-            fn () => $this->publicHadiths($this->model->newQuery())
-                ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
-                ->authentic()
-                ->with('translations')
-                ->get()
+            fn () => $this->baseListQuery()->authentic()->get()
         );
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getWithAgreement(): Collection
     {
-        return $this->publicHadiths($this->model->newQuery())
-            ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
-            ->withAgreement()
-            ->with('translations')
-            ->get();
+        return $this->baseListQuery()->withAgreement()->get();
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getByTheme(int $themeId): Collection
     {
-        return $this->publicHadiths($this->model->newQuery())
-            ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
-            ->whereHas('themes', fn ($q) => $q->where('hadith_theme_id', $themeId))
-            ->with(['translations', 'themes'])
+        return $this->baseListQuery()
+            ->whereHas('themes', fn (Builder $theme) => $theme->whereKey($themeId))
+            ->with('themes')
             ->get();
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getByNarrator(int $companionId): Collection
+    public function getByNarrator(int $narratorId): Collection
     {
-        return $this->publicHadiths($this->model->newQuery())
-            ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
-            ->where('companion_id', $companionId)
-            ->with([
-                'translations',
-                'companion:id,sahaba_id,name_ar,name_en',
-                'companion.sahabi.translations',
-            ])
-            ->orderByRaw('LENGTH(hadith_number)')->orderBy('hadith_number')
+        return $this->baseListQuery()
+            ->where(function (Builder $query) use ($narratorId): void {
+                $query->where('primary_narrator_id', $narratorId)
+                    ->orWhereHas('isnads', fn (Builder $isnad) => $isnad->where('narrator_id', $narratorId));
+            })
+            ->with(['primaryNarrator', 'isnads.narrator'])
             ->get();
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function search(string $query, int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
-        $q = $this->publicHadiths($this->model->newQuery());
+        $builder = $this->baseListQuery();
 
-        $q->whereHas('translations', function ($subQuery) use ($query) {
-            FullTextSearchHelper::apply($subQuery, ['text'], $query);
+        $builder->whereHas('translations', function (Builder $translation) use ($query): void {
+            $translation->where(function (Builder $textQuery) use ($query): void {
+                FullTextSearchHelper::apply($textQuery, ['text'], $query);
+                $textQuery->orWhere('search_text', 'like', "%{$query}%");
+            });
         });
 
-        // Apply filters
-        if (! empty($filters['book_id'])) {
-            $q->where('book_id', $filters['book_id']);
-        }
-
-        if (! empty($filters['grading_status'])) {
-            $q->where('grading_status', $filters['grading_status']);
-        }
-
-        if (! empty($filters['collection_id'])) {
-            $q->whereHas('book', fn ($b) => $b->where('collection_id', $filters['collection_id']));
-        }
-
-        return $q->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
-            ->with([
-                'translations:id,hadith_id,language_code,text',
-                'book:id,collection_id,title_ar,title_en',
-                'book.collection:id,name_ar,name_en,abbreviation',
-            ])
-            ->orderByRaw('LENGTH(hadith_number)')->orderBy('hadith_number')
-            ->paginate($perPage);
+        return $this->applyFilters($builder, $filters)->paginate($perPage);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function paginateWithFilters(
         int $perPage = 15,
         string $search = '',
         string $sortBy = 'hadith_number',
         array $filters = []
     ): LengthAwarePaginator {
-        $query = $this->publicHadiths($this->model->newQuery());
-
-        // Apply search. The hadith text lives in hadith_translations.text (FULLTEXT
-        // indexed). Combining the numeric hadith_number LIKE with the text EXISTS via OR
-        // defeats the FULLTEXT index (MySQL runs MATCH per row → full scan). Hadith
-        // numbers are numeric, so we branch: numeric terms match hadith_number, textual
-        // terms use the FULLTEXT path alone — keeping each query SARGable and fast.
-        if (! empty($search)) {
-            if (is_numeric($search)) {
-                $query->where('hadith_number', 'LIKE', "%{$search}%");
-            } else {
-                $query->whereHas('translations', function ($t) use ($search) {
-                    FullTextSearchHelper::apply($t, ['text'], $search);
-                });
-            }
-        }
-
-        // Apply filters
-        if (! empty($filters['book_id'])) {
-            $query->where('book_id', $filters['book_id']);
-        }
-
-        if (! empty($filters['grading_status'])) {
-            $query->where('grading_status', $filters['grading_status']);
-        }
-
-        if (! empty($filters['grading_agreement'])) {
-            $query->where('grading_agreement', true);
-        }
-
-        if (! empty($filters['collection_id'])) {
-            $query->whereHas('book', fn ($q) => $q->where('collection_id', $filters['collection_id']));
-        }
-
-        // Apply sorting
-        $allowedSorts = ['hadith_number', 'grading_status', 'created_at', 'book_id'];
-        $sortBy = in_array($sortBy, $allowedSorts, true) ? $sortBy : 'hadith_number';
-        $query->orderBy($sortBy);
-
-        return $query->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
-            ->with(['translations', 'book:id,collection_id,title_ar,title_en'])
-            ->paginate($perPage);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function countByGrading(string $gradingStatus): int
-    {
-        return Cache::remember(
-            "hadiths_count_grading_{$gradingStatus}",
-            self::CACHE_TTL,
-            fn () => $this->model->where('grading_status', $gradingStatus)->count()
-        );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getRandom(?string $gradingStatus = null): ?Hadith
-    {
-        $query = $this->publicHadiths($this->model->newQuery());
-
-        if ($gradingStatus !== null) {
-            $query->where('grading_status', $gradingStatus);
-        }
-
-        return $query->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
-            ->with('translations')
-            ->inRandomOrder()
-            ->first();
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getWithFullRelations(int $id): ?Hadith
-    {
-        return $this->model
-            ->withFullRelations()
-            ->find($id);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function listForAdmin(
-        int $perPage = 20,
-        string $search = '',
-        array $filters = []
-    ): \Illuminate\Pagination\LengthAwarePaginator {
-        $query = $this->model->query()
-            ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'companion_id'])
-            ->with([
-                'book:id,title_ar,title_en,collection_id',
-                'book.collection:id,name_ar,name_en',
-                'translations' => fn ($q) => $q
-                    ->select(['id', 'hadith_id', 'language_code', 'text'])
-                    ->where('language_code', 'ar'),
-            ]);
-
-        if ($filters['collection_id'] ?? null) {
-            $query->whereHas('book', fn ($q) => $q->where('collection_id', $filters['collection_id']));
-        }
-
-        if ($filters['book_id'] ?? null) {
-            $query->where('book_id', $filters['book_id']);
-        }
-
-        if ($filters['grading_status'] ?? null) {
-            $query->where('grading_status', $filters['grading_status']);
-        }
+        $query = $this->baseListQuery();
 
         if ($search !== '') {
-            $query->where(function ($q) use ($search) {
-                $q->where('hadith_number', 'LIKE', "%{$search}%")
-                    ->orWhereHas('book', fn ($bq) => $bq->where('title_ar', 'LIKE', "%{$search}%"))
-                    ->orWhereHas('translations', fn ($tq) => $tq
-                        ->where('language_code', 'ar')
-                        ->where('text', 'LIKE', "%{$search}%"));
+            $query->where(function (Builder $query) use ($search): void {
+                $query->where('hadith_number', 'like', "%{$search}%")
+                    ->orWhereHas('translations', fn (Builder $translation) => $translation
+                        ->where('text', 'like', "%{$search}%")
+                        ->orWhere('search_text', 'like', "%{$search}%"));
             });
         }
 
-        // hadith_number is a string ("1", "10", "100", occasionally "1a") — a plain
-        // string sort orders 1, 10, 100. Length-then-value gives numeric order on
-        // both MySQL and the SQLite test driver without non-portable CASTs.
-        return $query
-            ->orderByRaw('LENGTH(hadith_number)')
-            ->orderBy('hadith_number')
-            ->paginate($perPage);
-    }
+        $query = $this->applyFilters($query, $filters);
+        $query->reorder();
 
-    /**
-     * {@inheritdoc}
-     */
-    public function searchForAdmin(
-        string $search = '',
-        array $filters = [],
-        int $perPage = 15,
-        string $locale = 'ar'
-    ): \Illuminate\Pagination\LengthAwarePaginator {
-        $query = $this->model->query()
-            ->select(['id', 'book_id', 'hadith_number', 'grading_status'])
-            ->with([
-                'book:id,collection_id,title_ar,title_en',
-                'book.collection:id,name_ar,name_en,abbreviation',
-                'translations' => fn ($q) => $q
-                    ->select(['id', 'hadith_id', 'language_code', 'text'])
-                    ->whereIn('language_code', array_unique([$locale, 'ar']))
-                    ->orderByRaw("FIELD(language_code, ?, 'ar')", [$locale]),
-            ]);
-
-        if ($filters['collection_id'] ?? null) {
-            $query->whereHas('book', fn ($q) => $q->where('collection_id', $filters['collection_id']));
-        }
-
-        if ($search !== '') {
-            $query->where(function ($q) use ($search) {
-                $q->where('hadith_number', 'LIKE', "%{$search}%")
-                    ->orWhereHas('translations', fn ($tq) => $tq->where('text', 'LIKE', "%{$search}%"))
-                    ->orWhereHas('book', fn ($bq) => $bq
-                        ->where('title_ar', 'LIKE', "%{$search}%")
-                        ->orWhere('title_en', 'LIKE', "%{$search}%"));
-            });
+        if ($sortBy === 'created_at') {
+            $query->orderBy('created_at');
+        } else {
+            $query->orderByRaw('LENGTH(hadith_number)')->orderBy('hadith_number');
         }
 
         return $query->paginate($perPage);
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    public function countByGrading(string $gradingStatus): int
+    {
+        return Cache::remember(
+            "hadiths_count_grading_{$gradingStatus}",
+            self::CACHE_TTL,
+            fn () => $this->model->newQuery()->byGrading($gradingStatus)->count()
+        );
+    }
+
+    public function getRandom(?string $gradingStatus = null): ?Hadith
+    {
+        $query = $this->baseListQuery()->reorder();
+
+        if ($gradingStatus !== null) {
+            $query->byGrading($gradingStatus);
+        }
+
+        return $query->inRandomOrder()->first();
+    }
+
+    public function getWithFullRelations(int $id): ?Hadith
+    {
+        return $this->model->newQuery()->withFullRelations()->find($id);
+    }
+
+    public function listForAdmin(
+        int $perPage = 20,
+        string $search = '',
+        array $filters = []
+    ): LengthAwarePaginator {
+        return $this->paginateWithFilters($perPage, $search, 'hadith_number', $filters);
+    }
+
+    public function searchForAdmin(
+        string $search = '',
+        array $filters = [],
+        int $perPage = 15,
+        string $locale = 'ar'
+    ): LengthAwarePaginator {
+        $query = $this->model->newQuery()
+            ->with([
+                'chapter.book.collection',
+                'gradings',
+                'translations' => fn ($translation) => $translation
+                    ->whereIn('locale', array_unique([$locale, 'ar']))
+                    ->orderBy('locale'),
+            ]);
+
+        if ($search !== '') {
+            $query->where(function (Builder $query) use ($search): void {
+                $query->where('hadith_number', 'like', "%{$search}%")
+                    ->orWhereHas('translations', fn (Builder $translation) => $translation
+                        ->where('text', 'like', "%{$search}%")
+                        ->orWhere('search_text', 'like', "%{$search}%"))
+                    ->orWhereHas('chapter.book', fn (Builder $book) => $book
+                        ->where('title->ar', 'like', "%{$search}%")
+                        ->orWhere('title->en', 'like', "%{$search}%"));
+            });
+        }
+
+        return $this->applyFilters($query, $filters)
+            ->orderByRaw('LENGTH(hadith_number)')
+            ->orderBy('hadith_number')
+            ->paginate($perPage);
+    }
+
     public function bulkDelete(array $ids): int
     {
-        $count = $this->model->whereIn('id', $ids)->delete();
+        $count = $this->model->newQuery()->whereIn('id', $ids)->delete();
         $this->clearCache();
 
         return (int) $count;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function paginatePublicByBook(
         int $bookId,
         int $perPage = 15,
@@ -380,62 +218,40 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
         string $locale = 'ar'
     ): LengthAwarePaginator {
         $query = $this->publicHadiths($this->model->newQuery())
-            ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement'])
-            ->where('book_id', $bookId)
+            ->byBook($bookId)
             ->with([
-                'book:id,collection_id,title_ar,title_en',
-                'book.collection:id,name_ar,name_en',
-                // Only the active locale + the Arabic matn are loaded up front; the
-                // (potentially huge) opposite-language translation is fetched lazily
-                // by the chapter reader when the visitor opens the translation toggle.
-                'translations' => fn ($q) => $q
-                    ->select(['id', 'hadith_id', 'language_code', 'text'])
-                    ->whereIn('language_code', array_unique([$locale, 'ar'])),
-                // HadithDTO::fromModel reads themes unconditionally — eager load
-                // so DTO mapping never lazy-loads per row.
-                'themes:id,theme_ar,theme_en',
+                'chapter.book.collection',
+                'gradings',
+                'themes',
+                'translations' => fn ($translation) => $translation
+                    ->whereIn('locale', array_unique([$locale, 'ar'])),
             ]);
 
         if ($gradingStatus !== null && $gradingStatus !== '') {
-            $query->where('grading_status', $gradingStatus);
+            $query->byGrading($gradingStatus);
         }
 
         if ($search !== '') {
-            // Parameterized LIKE — the query builder binds the term; only the
-            // wildcards are concatenated. Scoped to this book via book_id above.
-            $query->whereHas('translations', fn ($t) => $t->where('text', 'LIKE', '%'.$search.'%'));
+            $query->whereHas('translations', fn (Builder $translation) => $translation
+                ->where('text', 'like', '%'.$search.'%')
+                ->orWhere('search_text', 'like', '%'.$search.'%'));
         }
 
-        return $query
-            ->orderByRaw('LENGTH(hadith_number)')->orderBy('hadith_number')
+        return $query->orderByRaw('LENGTH(hadith_number)')
+            ->orderBy('hadith_number')
             ->paginate(perPage: $perPage, page: $page);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getWithPublicDetail(int $id): ?Hadith
     {
         return $this->publicHadiths($this->model->newQuery())
-            ->select([
-                'id', 'book_id', 'companion_id', 'hadith_number', 'grading_status',
-                'grading_agreement', 'significance_ar', 'significance_en',
-                'historical_context_ar', 'historical_context_en', 'text_hash',
-            ])
             ->with($this->publicDetailRelations())
             ->find($id);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getByTextHash(string $textHash, int $excludeHadithId): Collection
     {
         return $this->publicHadiths($this->model->newQuery())
-            ->select([
-                'id', 'book_id', 'hadith_number', 'grading_status',
-                'grading_agreement', 'text_hash',
-            ])
             ->where('text_hash', $textHash)
             ->whereKeyNot($excludeHadithId)
             ->with($this->publicDetailRelations())
@@ -444,9 +260,6 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             ->get();
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function countByTextHash(string $textHash, int $excludeHadithId): int
     {
         return $this->publicHadiths($this->model->newQuery())
@@ -455,52 +268,6 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             ->count();
     }
 
-    /**
-     * Eager loads (explicit columns) shared by the public detail and
-     * parallel-narration fetches. Child collections are ordered and capped so
-     * a hadith with pathological relation counts cannot blow up the page.
-     *
-     * @return array<string, mixed>
-     */
-    private function publicDetailRelations(): array
-    {
-        return [
-            'book:id,collection_id,book_number,title_ar,title_en',
-            'book.collection:id,name_ar,name_en,slug_ar,slug_en',
-            'translations' => fn ($q) => $q
-                ->select(['id', 'hadith_id', 'language_code', 'text'])
-                ->orderBy('language_code'),
-            'companion:id,sahaba_id,name_ar,name_en',
-            'companion.sahabi.translations',
-            'isnads' => fn ($q) => $q
-                ->select(['id', 'hadith_id', 'narrator_id', 'position_in_chain', 'transmission_method'])
-                ->orderBy('position_in_chain')
-                ->limit(30),
-            'isnads.narrator:id,sahaba_id,name_ar,name_en,kunya,death_year_hijri,reliability_grade,biography',
-            'isnads.narrator.sahabi.translations',
-            'commentaries' => fn ($q) => $q
-                ->select(['id', 'hadith_id', 'scholar_id', 'language_code', 'author', 'commentary_text', 'verified'])
-                ->orderBy('id')
-                ->limit(20),
-            'commentaries.scholar:id,name_ar,name_en',
-            'gradings' => fn ($q) => $q
-                ->select(['id', 'hadith_id', 'scholar_id', 'grading_level_id', 'grading_notes'])
-                ->orderBy('id')
-                ->limit(20),
-            'gradings.scholar:id,name_ar,name_en',
-            'gradings.gradingLevel:id,grade_ar,grade_en,rank',
-            'themes:id,theme_ar,theme_en',
-        ];
-    }
-
-    /**
-     * Hadith ids (within the given set) that have a non-empty translation in the
-     * given language — used to decide whether to surface the translation toggle
-     * without loading the (potentially large) translation text.
-     *
-     * @param  array<int, int>  $hadithIds
-     * @return array<int, int>
-     */
     public function hadithIdsWithTranslation(array $hadithIds, string $languageCode): array
     {
         if ($hadithIds === []) {
@@ -510,22 +277,15 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
         return HadithTranslation::query()
             ->whereIn('hadith_id', $hadithIds)
             ->whereHas('hadith', fn (Builder $query) => $this->publicHadiths($query))
-            ->where('language_code', $languageCode)
+            ->where('locale', $languageCode)
             ->whereNotNull('text')
             ->where('text', '!=', '')
             ->distinct()
             ->pluck('hadith_id')
-            ->map(static fn ($id) => (int) $id)
+            ->map(static fn ($id): int => (int) $id)
             ->all();
     }
 
-    /**
-     * Translation text keyed by hadith id, for the given language — the lazy
-     * payload behind the chapter reader's translation toggle.
-     *
-     * @param  array<int, int>  $hadithIds
-     * @return array<int, string>
-     */
     public function translationsForHadiths(array $hadithIds, string $languageCode): array
     {
         if ($hadithIds === []) {
@@ -536,30 +296,27 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             ->select(['hadith_id', 'text'])
             ->whereIn('hadith_id', $hadithIds)
             ->whereHas('hadith', fn (Builder $query) => $this->publicHadiths($query))
-            ->where('language_code', $languageCode)
+            ->where('locale', $languageCode)
             ->whereNotNull('text')
             ->where('text', '!=', '')
             ->get()
-            ->mapWithKeys(static fn ($t) => [(int) $t->hadith_id => (string) $t->text])
+            ->mapWithKeys(static fn (HadithTranslation $translation): array => [
+                (int) $translation->hadith_id => (string) $translation->text,
+            ])
             ->all();
     }
 
-    private function publicHadiths(Builder $query): Builder
-    {
-        return $this->publicVisibility->apply($query, app()->getLocale());
-    }
+    public function addNarratorToChain(
+        int $hadithId,
+        int $narratorId,
+        ?string $transmissionMethod
+    ): HadithIsnad {
+        $link = DB::transaction(function () use ($hadithId, $narratorId, $transmissionMethod): HadithIsnad {
+            $nextPosition = 1 + (int) (HadithIsnad::query()
+                ->where('hadith_id', $hadithId)
+                ->max('position_in_chain') ?? 0);
 
-    /**
-     * Append a narrator to a hadith's isnad chain at the next position.
-     * position_in_chain 1 = closest to the compiler; a new link is appended
-     * at the far end (closer to the companion) unless the chain is empty.
-     */
-    public function addNarratorToChain(int $hadithId, int $narratorId, ?string $transmissionMethod): HadithIsnad
-    {
-        $link = DB::transaction(function () use ($hadithId, $narratorId, $transmissionMethod) {
-            $nextPosition = 1 + (int) (HadithIsnad::where('hadith_id', $hadithId)->max('position_in_chain') ?? 0);
-
-            return HadithIsnad::create([
+            return HadithIsnad::query()->create([
                 'hadith_id' => $hadithId,
                 'narrator_id' => $narratorId,
                 'position_in_chain' => $nextPosition,
@@ -572,17 +329,10 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
         return $link;
     }
 
-    /**
-     * Swap an isnad link with its immediate neighbor in the chain.
-     *
-     * @return bool false if there is no neighbor in that direction (already
-     *              at the end of the chain) — nothing to swap.
-     */
     public function moveIsnadLink(int $hadithId, int $isnadId, string $direction): bool
     {
-        $moved = DB::transaction(function () use ($hadithId, $isnadId, $direction) {
-            $link = HadithIsnad::where('hadith_id', $hadithId)->findOrFail($isnadId);
-
+        $moved = DB::transaction(function () use ($hadithId, $isnadId, $direction): bool {
+            $link = HadithIsnad::query()->where('hadith_id', $hadithId)->findOrFail($isnadId);
             $neighbor = $direction === 'up'
                 ? $link->getPreviousNarrator()
                 : $link->getNextNarrator();
@@ -591,12 +341,13 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
                 return false;
             }
 
-            [$linkPosition, $neighborPosition] = [$link->position_in_chain, $neighbor->position_in_chain];
+            $linkPosition = $link->position_in_chain;
+            $neighborPosition = $neighbor->position_in_chain;
+            $temporaryPosition = 1 + (int) HadithIsnad::query()
+                ->where('hadith_id', $hadithId)
+                ->max('position_in_chain');
 
-            // Avoid the (hadith_id, narrator_id, position_in_chain) unique
-            // constraint colliding mid-swap by parking one link on a
-            // temporary out-of-range position first.
-            $link->update(['position_in_chain' => -1]);
+            $link->update(['position_in_chain' => $temporaryPosition]);
             $neighbor->update(['position_in_chain' => $linkPosition]);
             $link->update(['position_in_chain' => $neighborPosition]);
 
@@ -610,27 +361,91 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
         return $moved;
     }
 
-    /**
-     * Remove a narrator from a hadith's isnad chain and renumber the
-     * remaining links so positions stay contiguous (1..N).
-     */
     public function removeNarratorFromChain(int $hadithId, int $isnadId): void
     {
-        DB::transaction(function () use ($hadithId, $isnadId) {
-            HadithIsnad::where('hadith_id', $hadithId)->where('id', $isnadId)->delete();
+        DB::transaction(function () use ($hadithId, $isnadId): void {
+            HadithIsnad::query()->where('hadith_id', $hadithId)->whereKey($isnadId)->delete();
 
-            HadithIsnad::where('hadith_id', $hadithId)
+            HadithIsnad::query()
+                ->where('hadith_id', $hadithId)
                 ->orderBy('position_in_chain')
                 ->get()
-                ->values()
-                ->each(function (HadithIsnad $link, int $index) {
-                    $newPosition = $index + 1;
-                    if ($link->position_in_chain !== $newPosition) {
-                        $link->update(['position_in_chain' => $newPosition]);
+                ->each(function (HadithIsnad $link, int $index): void {
+                    $position = $index + 1;
+                    if ($link->position_in_chain !== $position) {
+                        $link->update(['position_in_chain' => $position]);
                     }
                 });
         });
 
         $this->clearCache();
+    }
+
+    private function baseListQuery(): Builder
+    {
+        return $this->publicHadiths($this->model->newQuery())
+            ->with(['chapter.book.collection', 'translations', 'gradings'])
+            ->orderByRaw('LENGTH(hadith_number)')
+            ->orderBy('hadith_number');
+    }
+
+    private function applyFilters(Builder $query, array $filters): Builder
+    {
+        if (! empty($filters['book_id'])) {
+            $query->byBook((int) $filters['book_id']);
+        }
+
+        if (! empty($filters['collection_id'])) {
+            $query->whereHas('chapter.book', fn (Builder $book) => $book
+                ->where('collection_id', $filters['collection_id']));
+        }
+
+        if (! empty($filters['grading_status'])) {
+            $query->byGrading((string) $filters['grading_status']);
+        }
+
+        if (! empty($filters['grading_agreement'])) {
+            $query->withAgreement();
+        }
+
+        if (! empty($filters['theme_ids'])) {
+            $query->whereHas('themes', fn (Builder $theme) => $theme
+                ->whereIn('hadith_themes.id', $filters['theme_ids']));
+        }
+
+        if (! empty($filters['narrator_id'])) {
+            $narratorId = (int) $filters['narrator_id'];
+            $query->where(function (Builder $query) use ($narratorId): void {
+                $query->where('primary_narrator_id', $narratorId)
+                    ->orWhereHas('isnads', fn (Builder $isnad) => $isnad
+                        ->where('narrator_id', $narratorId));
+            });
+        }
+
+        return $query;
+    }
+
+    private function publicDetailRelations(): array
+    {
+        return [
+            'chapter.book.collection',
+            'translations' => fn ($translation) => $translation->orderBy('locale'),
+            'primaryNarrator.sahabi.translations',
+            'isnads' => fn ($isnad) => $isnad->orderBy('position_in_chain')->limit(30),
+            'isnads.narrator.sahabi.translations',
+            'commentaries' => fn ($commentary) => $commentary->orderBy('id')->limit(20),
+            'commentaries.scholar',
+            'gradings' => fn ($grading) => $grading->orderBy('id')->limit(20),
+            'gradings.scholar',
+            'themes',
+            'sources',
+            'keywords',
+            'relatedVerses',
+        ];
+    }
+
+    private function publicHadiths(Builder $query): Builder
+    {
+        return $this->publicVisibility->apply($query, app()->getLocale());
     }
 }

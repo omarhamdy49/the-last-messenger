@@ -115,7 +115,7 @@ class SearchQueryBuilder
     {
         return match ($module) {
             SearchModule::ARTICLE => ['locales', 'writer', 'category'],
-            SearchModule::HADITH => ['book', 'translations'],
+            SearchModule::HADITH => ['chapter.book.collection', 'translations'],
             // `category` is an enum column on media_programs (not a relation);
             // searchable text lives in the translations table.
             SearchModule::MEDIA => ['translations'],

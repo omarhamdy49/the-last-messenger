@@ -22,7 +22,7 @@ return [
     'quran_datasets_path' => env('ISLAMIC_DATA_QURAN_DATASETS', 'database/data/quran'),
 
     /*
-     * Production directory name => hadith_collections.source_slug.
+     * Production directory name => hadith_collections.slug.
      * Used by islamic-data:verify to compare source file counts with DB rows.
      */
     'hadith_collection_map' => [

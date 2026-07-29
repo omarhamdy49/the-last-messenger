@@ -9,7 +9,6 @@ use App\Domain\Blog\Models\Series;
 use App\Domain\Blog\Models\Tag;
 use App\Domain\Genealogy\Models\Person;
 use App\Domain\Hadith\Models\Hadith;
-use App\Domain\Hadith\Models\HadithChapter;
 use App\Domain\Hadith\Models\HadithTheme;
 use App\Domain\Quran\Models\Reciter;
 use App\Domain\Sahaba\Models\Sahabi;
@@ -138,48 +137,33 @@ class TranslationMigrationE2ETest extends TestCase
         $this->assertTrue(true);
     }
 
-    /**
-     * Test 6: Hadith Module - HadithSource with Translations
-     * Verify HadithSource model migrated correctly
-     */
-    public function test_hadith_source_translations(): void
+    public function test_hadith_sources_own_record_provenance(): void
     {
-        // Note: hadith_sources table might not have JSON columns, but translation table should exist
-        $this->assertTrue(\Schema::hasTable('hadith_source_translations'));
+        $this->assertFalse(\Schema::hasTable('hadith_source_translations'));
+        $this->assertTrue(\Schema::hasColumns('hadith_sources', [
+            'source_system',
+            'source_type',
+            'external_id',
+            'source_file',
+            'title',
+            'author',
+            'reference',
+            'url',
+        ]));
     }
 
-    /**
-     * Test 7: Hadith Module - HadithTheme with Translations
-     * Verify HadithTheme model migrated correctly
-     */
-    public function test_hadith_theme_translations(): void
+    public function test_hadith_themes_store_localized_names_as_json(): void
     {
-        $theme = HadithTheme::create([]);
+        $theme = HadithTheme::create(['name' => ['ar' => 'الإيمان', 'en' => 'Faith']]);
 
-        // Verify translation table exists
-        $this->assertTrue(\Schema::hasTable('hadith_theme_translations'));
-
-        // Verify translatable fields
-        $this->assertCount(2, $theme->getTranslatableFields());
-
-        $this->assertTrue(true);
+        $this->assertFalse(\Schema::hasTable('hadith_theme_translations'));
+        $this->assertSame('Faith', $theme->fresh()->name['en']);
     }
 
-    /**
-     * Test 8: Hadith Module - HadithChapter with Translations
-     * Verify HadithChapter model migrated correctly
-     */
-    public function test_hadith_chapter_translations(): void
+    public function test_hadith_chapters_store_localized_metadata_as_json(): void
     {
-        $this->assertTrue(\Schema::hasTable('hadith_chapter_translations'));
-
-        // If chapters exist, verify they have translation records
-        $chapters = HadithChapter::count();
-        $translations = \DB::table('hadith_chapter_translations')->count();
-
-        // 0 chapters = 0 translations (data not in test DB)
-        // But table should exist
-        $this->assertTrue(true);
+        $this->assertFalse(\Schema::hasTable('hadith_chapter_translations'));
+        $this->assertTrue(\Schema::hasColumns('hadith_chapters', ['name', 'description']));
     }
 
     /**
@@ -321,8 +305,6 @@ class TranslationMigrationE2ETest extends TestCase
             Series::class,
             Category::class,
             Tag::class,
-            HadithTheme::class,
-            HadithChapter::class,
             SeerahEvent::class,
             SeerahParticipant::class,
             Reciter::class,
@@ -382,9 +364,7 @@ class TranslationMigrationE2ETest extends TestCase
             'series_translations',
             'categories_translations',
             'tags_translations',
-            'hadith_source_translations',
-            'hadith_theme_translations',
-            'hadith_chapter_translations',
+            'hadith_translations',
             'reciter_translations',
             'seerah_event_translations',
             'seerah_participant_translations',
@@ -436,9 +416,6 @@ class TranslationMigrationE2ETest extends TestCase
             'series_translations',
             'category_translations',    // singular — canonical name
             'tag_translations',          // singular — canonical name
-            'hadith_source_translations',
-            'hadith_theme_translations',
-            'hadith_chapter_translations',
             'reciter_translations',
             'seerah_event_translations',
             'seerah_participant_translations',

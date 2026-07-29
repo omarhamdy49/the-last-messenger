@@ -10,7 +10,6 @@ use App\Domain\Hadith\Exceptions\HadithNotFoundException;
 use App\Domain\Hadith\Exceptions\InvalidGradingException;
 use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithGrading;
-use App\Domain\Hadith\Repositories\GradingLevelRepositoryInterface;
 use App\Domain\Hadith\Repositories\HadithRepositoryInterface;
 use App\Domain\Hadith\Repositories\ScholarRepositoryInterface;
 use App\Domain\Shared\Application\Commands\Command;
@@ -28,7 +27,6 @@ final class UpdateGradingHandler implements CommandHandler
     public function __construct(
         private readonly HadithRepositoryInterface $hadithRepository,
         private readonly ScholarRepositoryInterface $scholarRepository,
-        private readonly GradingLevelRepositoryInterface $gradingLevelRepository,
     ) {}
 
     /**
@@ -63,62 +61,24 @@ final class UpdateGradingHandler implements CommandHandler
             }
         }
 
-        // Validate grading level if provided
-        if ($command->gradingLevelId !== null) {
-            $gradingLevel = $this->gradingLevelRepository->find($command->gradingLevelId);
-            if ($gradingLevel === null) {
-                throw EntityNotFoundException::forEntity('HadithGradingLevel', $command->gradingLevelId);
-            }
-        }
-
         $hadith = DB::transaction(function () use ($command, $hadith) {
-            // Update the overall grading status on hadith
-            $hadith->grading_status = $command->gradingStatus;
-            $hadith->save();
-
-            // Add a grading record if scholar is provided
-            if ($command->scholarId !== null) {
-                HadithGrading::updateOrCreate(
-                    [
-                        'hadith_id' => $hadith->id,
-                        'scholar_id' => $command->scholarId,
-                    ],
-                    [
-                        'grading_level_id' => $command->gradingLevelId,
-                        'notes' => $command->notes,
-                    ]
-                );
-
-                // Recalculate agreement status based on all gradings
-                $this->recalculateAgreement($hadith);
-            }
+            HadithGrading::updateOrCreate(
+                [
+                    'hadith_id' => $hadith->id,
+                    'scholar_id' => $command->scholarId,
+                ],
+                [
+                    'grade_key' => $command->gradingStatus,
+                    'raw_grade' => $command->gradingStatus,
+                    'notes' => $command->notes,
+                ]
+            );
 
             return $hadith;
         });
 
-        // Reload with relations
-        $hadith->load(['translations', 'book', 'gradings']);
+        $hadith->load(['translations', 'chapter.book.collection', 'gradings']);
 
         return HadithDTO::fromModel($hadith);
-    }
-
-    /**
-     * Recalculate grading agreement based on all scholar gradings
-     */
-    private function recalculateAgreement(Hadith $hadith): void
-    {
-        $gradings = $hadith->gradings()->get();
-
-        if ($gradings->count() < 2) {
-            $hadith->grading_agreement = null;
-            $hadith->save();
-
-            return;
-        }
-
-        // Check if all gradings have the same level
-        $levels = $gradings->pluck('grading_level_id')->unique();
-        $hadith->grading_agreement = $levels->count() === 1;
-        $hadith->save();
     }
 }

@@ -1,0 +1,882 @@
+{
+  "source": "live MySQL 8 — the_last_messenger @ 127.0.0.1:3308, dumped 2026-07-29. Row counts are exact COUNT(*), NOT information_schema.TABLE_ROWS estimates.",
+  "module": "app/Domain/Hadith",
+  "conventions": {
+    "hadith_text": "NOT on hadith_hadiths — Arabic + all translations live in hadith_translations (language_code, is_primary)",
+    "translatables": "hadith_chapters uses JSON columns (spatie); hadith_chapters/_themes/_sources ALSO have *_translations side tables (all empty)",
+    "no_timestamps": [
+      "hadith_gradings",
+      "hadith_grading_levels",
+      "hadith_keywords",
+      "hadith_themes",
+      "hadith_scholars",
+      "hadith_source_translations",
+      "hadith_hadith_themes"
+    ],
+    "cross_module": "hadith_companions.sahaba_id + hadith_narrators.sahaba_id -> sahaba.id (real FK); hadith_related_verses.quran_verse_id -> quran verses (indexed, NO FK)"
+  },
+  "tables": {
+    "hadith_collections": {
+      "model": "HadithCollection",
+      "rows": 17,
+      "columns": {
+        "id": "bigint unsigned PK auto",
+        "name_ar": "varchar(255) NOT NULL",
+        "name_en": "varchar(255) NOT NULL",
+        "slug_ar": "varchar(255) NOT NULL UNIQUE",
+        "slug_en": "varchar(255) NOT NULL UNIQUE",
+        "description_ar": "text NULL",
+        "description_en": "text NULL",
+        "abbreviation": "varchar(50) NULL",
+        "canonical_code": "varchar(100) NULL",
+        "source_slug": "varchar(100) NULL",
+        "total_hadiths": "int NOT NULL DEFAULT 0",
+        "featured": "tinyint(1) NOT NULL DEFAULT 0",
+        "active": "tinyint(1) NOT NULL DEFAULT 1",
+        "display_order": "int unsigned NOT NULL DEFAULT 0",
+        "created_at": "timestamp NULL",
+        "updated_at": "timestamp NULL"
+      },
+      "indexes": [
+        "slug_ar UNIQUE",
+        "slug_en UNIQUE",
+        "(featured, display_order)",
+        "abbreviation",
+        "canonical_code",
+        "source_slug",
+        "FULLTEXT(name_ar, name_en)"
+      ],
+      "relations": {
+        "books": {
+          "type": "hasMany",
+          "model": "HadithBook",
+          "fk": "hadith_books.collection_id"
+        }
+      }
+    },
+    "hadith_books": {
+      "model": "HadithBook",
+      "rows": 602,
+      "columns": {
+        "id": "bigint unsigned PK auto",
+        "collection_id": "bigint unsigned NOT NULL FK",
+        "book_number": "varchar(50) NULL",
+        "title_ar": "varchar(255) NULL",
+        "title_en": "varchar(255) NULL",
+        "slug_ar": "varchar(255) NULL",
+        "slug_en": "varchar(255) NULL",
+        "chapter_title_ar": "varchar(255) NULL",
+        "chapter_title_en": "varchar(255) NULL",
+        "created_at": "timestamp NULL",
+        "updated_at": "timestamp NULL"
+      },
+      "indexes": [
+        "(collection_id, book_number)",
+        "(collection_id, title_ar)",
+        "slug_ar",
+        "slug_en",
+        "FULLTEXT(title_ar,title_en,chapter_title_ar,chapter_title_en)"
+      ],
+      "relations": {
+        "collection": {
+          "type": "belongsTo",
+          "model": "HadithCollection",
+          "fk": "collection_id",
+          "onDelete": "CASCADE"
+        },
+        "chapters": {
+          "type": "hasMany",
+          "model": "HadithChapter",
+          "fk": "hadith_chapters.book_id"
+        },
+        "hadiths": {
+          "type": "hasMany",
+          "model": "Hadith",
+          "fk": "hadith_hadiths.book_id"
+        }
+      }
+    },
+    "hadith_chapters": {
+      "model": "HadithChapter",
+      "rows": 14422,
+      "columns": {
+        "id": "bigint unsigned PK auto",
+        "book_id": "bigint unsigned NOT NULL FK",
+        "chapter_number": "varchar(50) NULL",
+        "name": "json NOT NULL (multilingual)",
+        "description": "json NULL (multilingual)",
+        "display_order": "int NULL",
+        "created_at": "timestamp NULL",
+        "updated_at": "timestamp NULL"
+      },
+      "indexes": [
+        "book_id",
+        "chapter_number",
+        "display_order"
+      ],
+      "relations": {
+        "book": {
+          "type": "belongsTo",
+          "model": "HadithBook",
+          "fk": "book_id",
+          "onDelete": "CASCADE"
+        },
+        "hadiths": {
+          "type": "hasMany",
+          "model": "Hadith",
+          "fk": "hadith_hadiths.chapter_id"
+        },
+        "translations": {
+          "type": "hasMany",
+          "model": "HadithChapterTranslation",
+          "fk": "hadith_chapter_translations.hadith_chapter_id",
+          "note": "table exists but 0 rows"
+        }
+      }
+    },
+    "hadith_hadiths": {
+      "model": "Hadith",
+      "rows": 51436,
+      "is_root": true,
+      "columns": {
+        "id": "bigint unsigned PK auto",
+        "book_id": "bigint unsigned NOT NULL FK",
+        "chapter_id": "bigint unsigned NULL FK (backfilled by import)",
+        "companion_id": "bigint unsigned NULL FK",
+        "merged_into_id": "bigint unsigned NULL FK -> self (dedup target)",
+        "hadith_number": "varchar(50) NULL",
+        "text_hash": "varchar(64) NULL (SHA256 of Arabic text, dedup key)",
+        "local_source_id": "varchar(50) NULL",
+        "source_file": "varchar(255) NULL",
+        "source_url": "varchar(500) NULL",
+        "sunnah_urn_ar": "bigint unsigned NULL",
+        "sunnah_urn_en": "bigint unsigned NULL",
+        "grading_status": "varchar(512) NULL (denormalized headline grade)",
+        "grading_agreement": "varchar(255) NULL",
+        "significance_ar": "text NULL",
+        "significance_en": "text NULL",
+        "historical_context_ar": "text NULL",
+        "historical_context_en": "text NULL",
+        "verification_status": "varchar(50) NULL",
+        "source_verified_at": "timestamp NULL",
+        "source_verification_method": "varchar(100) NULL",
+        "uncertainty_notes": "text NULL",
+        "created_at": "timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        "updated_at": "timestamp NULL"
+      },
+      "indexes": [
+        "(book_id, hadith_number) UNIQUE",
+        "chapter_id",
+        "companion_id",
+        "merged_into_id",
+        "text_hash",
+        "grading_status",
+        "verification_status",
+        "sunnah_urn_ar",
+        "sunnah_urn_en",
+        "local_source_id",
+        "source_file"
+      ],
+      "relations": {
+        "book": {
+          "type": "belongsTo",
+          "model": "HadithBook",
+          "fk": "book_id",
+          "onDelete": "CASCADE"
+        },
+        "chapter": {
+          "type": "belongsTo",
+          "model": "HadithChapter",
+          "fk": "chapter_id",
+          "onDelete": "SET NULL"
+        },
+        "companion": {
+          "type": "belongsTo",
+          "model": "Companion",
+          "fk": "companion_id",
+          "onDelete": "SET NULL"
+        },
+        "mergedInto": {
+          "type": "belongsTo",
+          "model": "Hadith",
+          "fk": "merged_into_id",
+          "onDelete": "SET NULL"
+        },
+        "mergedDuplicates": {
+          "type": "hasMany",
+          "model": "Hadith",
+          "fk": "merged_into_id"
+        },
+        "translations": {
+          "type": "hasMany",
+          "model": "HadithTranslation",
+          "fk": "hadith_id"
+        },
+        "isnads": {
+          "type": "hasMany",
+          "model": "HadithIsnad",
+          "fk": "hadith_id"
+        },
+        "gradings": {
+          "type": "hasMany",
+          "model": "HadithGrading",
+          "fk": "hadith_id"
+        },
+        "commentaries": {
+          "type": "hasMany",
+          "model": "HadithCommentary",
+          "fk": "hadith_id"
+        },
+        "themes": {
+          "type": "belongsToMany",
+          "model": "HadithTheme",
+          "pivot": "hadith_hadith_themes",
+          "keys": [
+            "hadith_id",
+            "hadith_theme_id"
+          ]
+        },
+        "_db_children_without_eloquent_relation": {
+          "note": "these tables point at hadith_hadiths but Hadith has NO hasMany defined — add if you need eager loading",
+          "tables": [
+            "hadith_sources",
+            "hadith_keywords",
+            "hadith_related_verses",
+            "hadith_applications",
+            "hadith_fiqh_rulings"
+          ]
+        }
+      }
+    },
+    "hadith_translations": {
+      "model": "HadithTranslation",
+      "rows": 136969,
+      "note": "the actual hadith text lives here — ar, ar_notashkeel, en, tr, fr, ur",
+      "columns": {
+        "id": "bigint unsigned PK auto",
+        "hadith_id": "bigint unsigned NOT NULL FK",
+        "language_code": "varchar(20) NOT NULL",
+        "text": "longtext NOT NULL",
+        "translator_name": "varchar(255) NULL",
+        "source_url": "varchar(500) NULL",
+        "urn": "bigint unsigned NULL",
+        "verified": "tinyint(1) NOT NULL DEFAULT 0",
+        "is_primary": "tinyint(1) NOT NULL DEFAULT 0",
+        "notes": "text NULL",
+        "created_at": "timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        "updated_at": "timestamp NULL"
+      },
+      "indexes": [
+        "(hadith_id, language_code) UNIQUE",
+        "language_code",
+        "is_primary",
+        "verified",
+        "urn",
+        "FULLTEXT(text)"
+      ],
+      "relations": {
+        "hadith": {
+          "type": "belongsTo",
+          "model": "Hadith",
+          "fk": "hadith_id",
+          "onDelete": "CASCADE"
+        }
+      }
+    },
+    "hadith_isnad": {
+      "model": "HadithIsnad",
+      "rows": 158312,
+      "note": "chain of transmission — pivot with payload",
+      "columns": {
+        "id": "bigint unsigned PK auto",
+        "hadith_id": "bigint unsigned NOT NULL FK",
+        "narrator_id": "bigint unsigned NOT NULL FK",
+        "position_in_chain": "int NOT NULL (1 = closest to Prophet)",
+        "transmission_method": "varchar(100) NULL",
+        "created_at": "timestamp NULL",
+        "updated_at": "timestamp NULL"
+      },
+      "indexes": [
+        "(hadith_id, narrator_id, position_in_chain) UNIQUE",
+        "position_in_chain"
+      ],
+      "relations": {
+        "hadith": {
+          "type": "belongsTo",
+          "model": "Hadith",
+          "fk": "hadith_id",
+          "onDelete": "CASCADE"
+        },
+        "narrator": {
+          "type": "belongsTo",
+          "model": "HadithNarrator",
+          "fk": "narrator_id",
+          "onDelete": "CASCADE"
+        }
+      }
+    },
+    "hadith_narrators": {
+      "model": "HadithNarrator",
+      "rows": 13006,
+      "columns": {
+        "id": "bigint unsigned PK auto",
+        "sahaba_id": "bigint unsigned NULL UNIQUE FK -> sahaba.id",
+        "name_ar": "varchar(255) NULL",
+        "name_en": "varchar(255) NULL",
+        "full_name_ar": "varchar(500) NULL",
+        "full_name_en": "varchar(500) NULL",
+        "kunya": "varchar(255) NULL",
+        "birth_year_hijri": "int NULL",
+        "death_year_hijri": "int NULL",
+        "reliability_grade": "varchar(100) NULL (e.g. ثقة)",
+        "biography": "text NULL",
+        "school": "varchar(100) NULL",
+        "region": "varchar(100) NULL",
+        "source_system": "varchar(50) NULL",
+        "source_narrator_id": "varchar(100) NULL",
+        "created_at": "timestamp NULL",
+        "updated_at": "timestamp NULL"
+      },
+      "indexes": [
+        "sahaba_id UNIQUE",
+        "(source_system, source_narrator_id)",
+        "reliability_grade",
+        "death_year_hijri",
+        "FULLTEXT(name_ar,name_en,full_name_ar,full_name_en,kunya)"
+      ],
+      "relations": {
+        "sahabi": {
+          "type": "belongsTo",
+          "model": "Sahaba\\Sahabi",
+          "fk": "sahaba_id",
+          "onDelete": "SET NULL"
+        },
+        "isnads": {
+          "type": "hasMany",
+          "model": "HadithIsnad",
+          "fk": "narrator_id"
+        },
+        "hadiths": {
+          "type": "hasManyThrough/derived",
+          "via": "hadith_isnad"
+        }
+      }
+    },
+    "hadith_companions": {
+      "model": "Companion",
+      "rows": 6742,
+      "columns": {
+        "id": "bigint unsigned PK auto",
+        "sahaba_id": "bigint unsigned NULL UNIQUE FK -> sahaba.id",
+        "name_ar": "varchar(255) NULL",
+        "name_en": "varchar(255) NULL",
+        "full_name_ar": "text NULL",
+        "full_name_en": "text NULL",
+        "title_ar": "varchar(255) NULL",
+        "title_en": "varchar(255) NULL",
+        "birth_year_hijri": "int NULL",
+        "death_year_hijri": "int NULL",
+        "conversion_year": "varchar(255) NULL",
+        "bio_ar": "text NULL",
+        "bio_en": "text NULL",
+        "virtues": "text NULL",
+        "verified": "tinyint(1) NOT NULL DEFAULT 0",
+        "created_at": "timestamp NULL",
+        "updated_at": "timestamp NULL"
+      },
+      "indexes": [
+        "sahaba_id UNIQUE",
+        "verified",
+        "FULLTEXT(name_ar,name_en,title_ar,title_en)"
+      ],
+      "relations": {
+        "sahabi": {
+          "type": "belongsTo",
+          "model": "Sahaba\\Sahabi",
+          "fk": "sahaba_id",
+          "onDelete": "SET NULL"
+        },
+        "hadiths": {
+          "type": "hasMany",
+          "model": "Hadith",
+          "fk": "hadith_hadiths.companion_id"
+        }
+      }
+    },
+    "hadith_scholars": {
+      "model": "HadithScholar",
+      "rows": 204,
+      "columns": {
+        "id": "bigint unsigned PK auto",
+        "name_ar": "varchar(255) NOT NULL",
+        "name_en": "varchar(255) NULL",
+        "kunya": "varchar(255) NULL",
+        "full_name": "varchar(255) NULL",
+        "full_name_ar": "varchar(255) NULL",
+        "full_name_en": "varchar(255) NULL",
+        "school": "varchar(255) NULL",
+        "birth_year_hijri": "int NULL",
+        "death_year_hijri": "int NULL",
+        "region": "varchar(255) NULL",
+        "biography": "text NULL"
+      },
+      "indexes": [
+        "school",
+        "death_year_hijri",
+        "FULLTEXT(name_ar,name_en,full_name)"
+      ],
+      "relations": {
+        "gradings": {
+          "type": "hasMany",
+          "model": "HadithGrading",
+          "fk": "scholar_id"
+        },
+        "commentaries": {
+          "type": "hasMany(db-only)",
+          "model": "HadithCommentary",
+          "fk": "scholar_id"
+        },
+        "fiqhRulings": {
+          "type": "hasMany(db-only)",
+          "model": "HadithFiqhRuling",
+          "fk": "scholar_id"
+        }
+      }
+    },
+    "hadith_grading_levels": {
+      "model": "HadithGradingLevel",
+      "rows": 566,
+      "columns": {
+        "id": "bigint unsigned PK auto",
+        "grade_ar": "varchar(512) NOT NULL",
+        "grade_en": "varchar(512) NOT NULL UNIQUE",
+        "description": "text NULL",
+        "rank": "int NULL (1 = highest authenticity)"
+      },
+      "relations": {
+        "gradings": {
+          "type": "hasMany",
+          "model": "HadithGrading",
+          "fk": "grading_level_id"
+        }
+      }
+    },
+    "hadith_gradings": {
+      "model": "HadithGrading",
+      "rows": 24439,
+      "columns": {
+        "id": "bigint unsigned PK auto",
+        "hadith_id": "bigint unsigned NOT NULL FK",
+        "scholar_id": "bigint unsigned NOT NULL FK",
+        "grading_level_id": "bigint unsigned NOT NULL FK",
+        "grading_notes": "text NULL",
+        "source_reference": "varchar(255) NULL",
+        "source_url": "varchar(500) NULL",
+        "source_name": "varchar(255) NULL",
+        "review_status": "varchar(50) NULL",
+        "date_evaluated": "date NULL"
+      },
+      "indexes": [
+        "(hadith_id, scholar_id) UNIQUE",
+        "grading_level_id",
+        "review_status"
+      ],
+      "relations": {
+        "hadith": {
+          "type": "belongsTo",
+          "model": "Hadith",
+          "fk": "hadith_id",
+          "onDelete": "CASCADE"
+        },
+        "scholar": {
+          "type": "belongsTo",
+          "model": "HadithScholar",
+          "fk": "scholar_id",
+          "onDelete": "CASCADE"
+        },
+        "gradingLevel": {
+          "type": "belongsTo",
+          "model": "HadithGradingLevel",
+          "fk": "grading_level_id",
+          "onDelete": "CASCADE"
+        }
+      }
+    },
+    "hadith_commentaries": {
+      "model": "HadithCommentary",
+      "rows": 6813,
+      "columns": {
+        "id": "bigint unsigned PK auto",
+        "hadith_id": "bigint unsigned NOT NULL FK",
+        "scholar_id": "bigint unsigned NULL FK",
+        "language_code": "varchar(10) NOT NULL",
+        "author": "varchar(255) NULL",
+        "source": "varchar(255) NULL",
+        "source_url": "varchar(500) NULL",
+        "verified": "tinyint(1) NOT NULL DEFAULT 0",
+        "review_status": "varchar(50) NULL",
+        "commentary_text": "longtext NULL",
+        "created_at": "timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        "updated_at": "timestamp NULL"
+      },
+      "indexes": [
+        "hadith_id",
+        "scholar_id",
+        "language_code",
+        "verified",
+        "review_status",
+        "FULLTEXT(commentary_text)"
+      ],
+      "relations": {
+        "hadith": {
+          "type": "belongsTo",
+          "model": "Hadith",
+          "fk": "hadith_id",
+          "onDelete": "CASCADE"
+        },
+        "scholar": {
+          "type": "belongsTo",
+          "model": "HadithScholar",
+          "fk": "scholar_id",
+          "onDelete": "SET NULL"
+        }
+      }
+    },
+    "hadith_themes": {
+      "model": "HadithTheme",
+      "rows": 2444,
+      "columns": {
+        "id": "bigint unsigned PK auto",
+        "theme_ar": "varchar(100) NULL",
+        "theme_en": "varchar(100) NULL",
+        "review_status": "varchar(50) NULL",
+        "source_reference": "varchar(500) NULL"
+      },
+      "indexes": [
+        "theme_ar",
+        "theme_en",
+        "review_status",
+        "FULLTEXT(theme_ar, theme_en)"
+      ],
+      "relations": {
+        "hadiths": {
+          "type": "belongsToMany",
+          "model": "Hadith",
+          "pivot": "hadith_hadith_themes"
+        },
+        "parent": {
+          "type": "belongsTo",
+          "model": "HadithTheme",
+          "fk": "parent_id",
+          "BROKEN": "parent_id column does NOT exist in MySQL — MySQL 1054 if called"
+        },
+        "children": {
+          "type": "hasMany",
+          "model": "HadithTheme",
+          "fk": "parent_id",
+          "BROKEN": "same"
+        },
+        "translations": {
+          "type": "hasMany",
+          "model": "HadithThemeTranslation",
+          "fk": "hadith_theme_id",
+          "note": "0 rows"
+        }
+      }
+    },
+    "hadith_hadith_themes": {
+      "model": "(pivot, no model)",
+      "rows": 26294,
+      "columns": {
+        "id": "bigint unsigned PK auto",
+        "hadith_id": "bigint unsigned NOT NULL FK CASCADE",
+        "hadith_theme_id": "bigint unsigned NOT NULL FK CASCADE"
+      },
+      "indexes": [
+        "(hadith_id, hadith_theme_id) UNIQUE"
+      ]
+    },
+    "hadith_keywords": {
+      "model": "HadithKeyword",
+      "rows": 120521,
+      "columns": {
+        "id": "bigint unsigned PK auto",
+        "hadith_id": "bigint unsigned NOT NULL FK CASCADE",
+        "keyword_ar": "varchar(100) NULL",
+        "keyword_en": "varchar(100) NULL",
+        "review_status": "varchar(50) NULL",
+        "source_reference": "varchar(500) NULL"
+      },
+      "indexes": [
+        "hadith_id",
+        "keyword_ar",
+        "keyword_en",
+        "FULLTEXT(keyword_ar, keyword_en)"
+      ],
+      "relations": {
+        "hadith": {
+          "type": "belongsTo",
+          "model": "Hadith",
+          "fk": "hadith_id"
+        }
+      }
+    },
+    "hadith_sources": {
+      "model": "HadithSource",
+      "rows": 51441,
+      "columns": {
+        "id": "bigint unsigned PK auto",
+        "hadith_id": "bigint unsigned NOT NULL FK CASCADE",
+        "local_source_id": "varchar(50) NULL",
+        "source_file": "varchar(255) NULL",
+        "source_type": "varchar(50) NOT NULL (book|website|manuscript)",
+        "title": "varchar(255) NOT NULL",
+        "author": "varchar(255) NULL",
+        "reference": "varchar(255) NULL",
+        "url": "varchar(500) NULL",
+        "sunnah_urn": "bigint unsigned NULL",
+        "verification_method": "varchar(100) NULL",
+        "verified_at": "timestamp NULL",
+        "created_at": "timestamp NULL",
+        "updated_at": "timestamp NULL"
+      },
+      "indexes": [
+        "(hadith_id, source_file, url) UNIQUE",
+        "source_type",
+        "sunnah_urn",
+        "local_source_id"
+      ],
+      "relations": {
+        "hadith": {
+          "type": "belongsTo",
+          "model": "Hadith",
+          "fk": "hadith_id"
+        },
+        "translations": {
+          "type": "hasMany",
+          "model": "HadithSourceTranslation",
+          "fk": "hadith_source_id",
+          "note": "0 rows"
+        }
+      }
+    },
+    "hadith_related_verses": {
+      "model": "HadithRelatedVerse",
+      "rows": 2137,
+      "columns": {
+        "id": "bigint unsigned PK auto",
+        "hadith_id": "bigint unsigned NOT NULL FK CASCADE",
+        "quran_verse_id": "bigint unsigned NULL (indexed, NO FK — cross-module)",
+        "surah": "int NOT NULL (1-114)",
+        "surah_name_ar": "varchar(255) NULL",
+        "surah_name_en": "varchar(255) NULL",
+        "ayah": "varchar(50) NOT NULL (string — supports ranges)",
+        "text_ar": "text NULL",
+        "text_en": "text NULL",
+        "relevance": "text NULL",
+        "review_status": "varchar(50) NULL",
+        "source_reference": "varchar(500) NULL",
+        "source_url": "varchar(500) NULL",
+        "created_at": "timestamp NULL",
+        "updated_at": "timestamp NULL"
+      },
+      "indexes": [
+        "hadith_id",
+        "quran_verse_id",
+        "(surah, ayah)"
+      ],
+      "relations": {
+        "hadith": {
+          "type": "belongsTo",
+          "model": "Hadith",
+          "fk": "hadith_id"
+        }
+      }
+    },
+    "hadith_applications": {
+      "model": "HadithApplication",
+      "rows": 4788,
+      "columns": {
+        "id": "bigint unsigned PK auto",
+        "hadith_id": "bigint unsigned NOT NULL FK CASCADE",
+        "category_ar": "varchar(255) NULL",
+        "category_en": "varchar(255) NULL",
+        "description_ar": "text NULL",
+        "description_en": "text NULL",
+        "display_order": "int NOT NULL DEFAULT 0",
+        "review_status": "varchar(50) NULL",
+        "source_reference": "varchar(500) NULL",
+        "source_url": "varchar(500) NULL",
+        "created_at": "timestamp NULL",
+        "updated_at": "timestamp NULL"
+      },
+      "relations": {
+        "hadith": {
+          "type": "belongsTo",
+          "model": "Hadith",
+          "fk": "hadith_id"
+        }
+      }
+    },
+    "hadith_fiqh_rulings": {
+      "model": "HadithFiqhRuling",
+      "rows": 88,
+      "columns": {
+        "id": "bigint unsigned PK auto",
+        "hadith_id": "bigint unsigned NOT NULL FK CASCADE",
+        "scholar_id": "bigint unsigned NULL FK SET NULL",
+        "principle": "text NOT NULL",
+        "language_code": "varchar(10) NOT NULL",
+        "display_order": "int NOT NULL DEFAULT 0",
+        "review_status": "varchar(50) NULL",
+        "source_reference": "varchar(500) NULL",
+        "source_url": "varchar(500) NULL",
+        "created_at": "timestamp NULL",
+        "updated_at": "timestamp NULL"
+      },
+      "indexes": [
+        "FULLTEXT(principle)"
+      ],
+      "relations": {
+        "hadith": {
+          "type": "belongsTo",
+          "model": "Hadith",
+          "fk": "hadith_id"
+        },
+        "scholar": {
+          "type": "belongsTo(db-only)",
+          "model": "HadithScholar",
+          "fk": "scholar_id"
+        }
+      }
+    },
+    "hadith_chapter_translations": {
+      "model": "HadithChapterTranslation",
+      "rows": 0,
+      "columns": {
+        "id": "PK",
+        "hadith_chapter_id": "FK CASCADE",
+        "locale": "varchar(5)",
+        "name": "varchar(255) NULL",
+        "description": "longtext NULL",
+        "is_ready": "tinyint(1) DEFAULT 0",
+        "created_at": "timestamp NULL",
+        "updated_at": "timestamp NULL"
+      },
+      "indexes": [
+        "(hadith_chapter_id, locale) UNIQUE",
+        "FULLTEXT(name, description)"
+      ]
+    },
+    "hadith_theme_translations": {
+      "model": "HadithThemeTranslation",
+      "rows": 0,
+      "columns": {
+        "id": "PK",
+        "hadith_theme_id": "FK CASCADE",
+        "locale": "varchar(5)",
+        "name": "varchar(255) NULL",
+        "description": "longtext NULL",
+        "is_ready": "tinyint(1) DEFAULT 0",
+        "created_at": "timestamp NULL",
+        "updated_at": "timestamp NULL"
+      },
+      "indexes": [
+        "(hadith_theme_id, locale) UNIQUE",
+        "FULLTEXT(name, description)"
+      ]
+    },
+    "hadith_source_translations": {
+      "model": "HadithSourceTranslation",
+      "rows": 0,
+      "columns": {
+        "id": "PK",
+        "hadith_source_id": "FK CASCADE",
+        "locale": "varchar(5)",
+        "name": "varchar(255) NULL",
+        "description": "longtext NULL",
+        "is_ready": "tinyint(1) DEFAULT 0"
+      },
+      "indexes": [
+        "(hadith_source_id, locale) UNIQUE",
+        "FULLTEXT(name, description)"
+      ]
+    },
+    "hadith_sync_logs": {
+      "model": "HadithSyncLog",
+      "rows": 17,
+      "standalone": true,
+      "columns": {
+        "id": "bigint unsigned PK auto",
+        "collection_name": "varchar(255) NOT NULL",
+        "type": "varchar(50) NOT NULL DEFAULT 'json_import'",
+        "status": "varchar(50) NOT NULL DEFAULT 'pending'",
+        "metadata": "json NULL",
+        "summary": "json NULL",
+        "error_message": "text NULL",
+        "started_at": "timestamp NULL",
+        "completed_at": "timestamp NULL",
+        "created_at": "timestamp NULL",
+        "updated_at": "timestamp NULL"
+      }
+    }
+  },
+  "graph": {
+    "hadith_collections": [
+      "hadith_books"
+    ],
+    "hadith_books": [
+      "hadith_chapters",
+      "hadith_hadiths"
+    ],
+    "hadith_chapters": [
+      "hadith_hadiths"
+    ],
+    "hadith_hadiths": [
+      "hadith_translations",
+      "hadith_isnad",
+      "hadith_gradings",
+      "hadith_commentaries",
+      "hadith_hadith_themes",
+      "hadith_keywords",
+      "hadith_sources",
+      "hadith_related_verses",
+      "hadith_applications",
+      "hadith_fiqh_rulings",
+      "hadith_hadiths(merged_into_id)"
+    ],
+    "hadith_narrators": [
+      "hadith_isnad"
+    ],
+    "hadith_companions": [
+      "hadith_hadiths"
+    ],
+    "hadith_scholars": [
+      "hadith_gradings",
+      "hadith_commentaries",
+      "hadith_fiqh_rulings"
+    ],
+    "hadith_grading_levels": [
+      "hadith_gradings"
+    ],
+    "hadith_themes": [
+      "hadith_hadith_themes"
+    ],
+    "sahaba": [
+      "hadith_companions",
+      "hadith_narrators"
+    ]
+  },
+  "gotchas": [
+    "HadithTheme::parent()/children() reference parent_id — column absent in MySQL (1054). sqlite tests won't catch it.",
+    "Hadith has no hasMany for sources/keywords/relatedVerses/applications/fiqhRulings — only the inverse belongsTo exists.",
+    "hadith_grading_levels is NOT a lookup table in practice: 566 rows, 444 of them used exactly once. Raw grade strings became levels, e.g. 'sahih_(darussalam)_[bukhari_3615_and_muslim_2009]' (a citation) and 'hasan_(darussalam)]' (unbalanced bracket). Only ~5 are real grades.",
+    "hadith_grading_levels.grade_ar holds ENGLISH text (537/566 rows are pure ASCII: 'Sahih', 'A Hasan hadeeth'). The Arabic grade column was never populated.",
+    "grading coverage: 21,530 of 51,436 hadiths have >=1 row in hadith_gradings (42%); 4,388 hadiths have NULL grading_status.",
+    "hadith_hadiths.grading_status is an unnormalized varchar(512) duplicating hadith_gradings; variants include Sahih / Sahih / صَحِيح / صَحِيحٌ and Da'if vs Da’if (curly apostrophe = distinct value).",
+    "gradings attribute 9,379 rows to 'Imam al-Bukhari' and 8,863 to 'Imam Muslim' — inclusion in a sahih collection is provenance, not a rijal grading. Modeling error.",
+    "All three *_translations side tables are genuinely empty (0 rows) while spatie JSON columns carry the data.",
+    "hadith_hadiths carries no text column — always join hadith_translations (is_primary / language_code).",
+    "103 of 204 hadith_scholars rows have ASCII-only name_ar (English in the Arabic column)."
+  ]
+}

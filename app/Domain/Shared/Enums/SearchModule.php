@@ -74,10 +74,7 @@ enum SearchModule: string
                 'created_at' => FilterType::DATE_RANGE,
             ],
             self::HADITH => [
-                'book_id' => FilterType::SELECT,
                 'chapter_id' => FilterType::SELECT,
-                'authenticity_grade' => FilterType::SELECT,
-                'narrator_id' => FilterType::MULTISELECT,
             ],
             self::MEDIA => [
                 // Real media_programs columns (category is an enum string, not a FK).

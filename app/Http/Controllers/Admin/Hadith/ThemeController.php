@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin\Hadith;
 
-use App\Domain\Blog\Repositories\TagRepositoryInterface;
+use App\Domain\Hadith\Repositories\ThemeRepositoryInterface;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Requests\Admin\Hadith\StoreThemeRequest;
 use App\Http\Requests\Admin\Hadith\UpdateThemeRequest;
@@ -27,7 +27,7 @@ class ThemeController extends AdminController
     protected array $locales;
 
     public function __construct(
-        private readonly TagRepositoryInterface $tagRepository
+        private readonly ThemeRepositoryInterface $themeRepository
     ) {
         parent::__construct();
         $this->locales = array_keys(config('app.supported_locales', ['ar', 'en']));
@@ -43,13 +43,11 @@ class ThemeController extends AdminController
         $search = $this->getSearchQuery($request);
         $pagination = $this->getPaginationParams($request);
 
-        $themes = $this->tagRepository->paginateByType(
-            type: 'hadith',
+        $themes = $this->themeRepository->paginateWithFilters(
             perPage: $pagination['per_page'],
             search: $search,
-            locales: $this->locales,
             sortBy: $pagination['sort'],
-            sortOrder: $pagination['order'],
+            filters: ['sort_direction' => $pagination['order']],
         );
 
         if ($this->expectsJson($request)) {
@@ -82,12 +80,9 @@ class ThemeController extends AdminController
         try {
             $validated = $request->validated();
 
-            $theme = $this->tagRepository->create([
+            $theme = $this->themeRepository->create([
                 'slug' => $validated['slug'] ?? Str::slug($validated['name']['ar']),
                 'name' => $validated['name'],
-                'description' => $validated['description'] ?? null,
-                'type' => 'hadith',
-                'color' => $validated['color'] ?? '#0056b3',
             ]);
 
             DB::commit();
@@ -124,8 +119,8 @@ class ThemeController extends AdminController
     {
         $this->authorizeAdmin('view themes');
 
-        $theme = $this->tagRepository->findOrFail($id);
-        $theme->loadCount('articles');
+        $theme = $this->themeRepository->findOrFail($id);
+        $theme->loadCount('hadiths');
 
         if ($this->expectsJson(request())) {
             return $this->successResponse($theme, __('admin.theme_fetched'));
@@ -141,7 +136,7 @@ class ThemeController extends AdminController
     {
         $this->authorizeAdmin('edit themes');
 
-        $theme = $this->tagRepository->findOrFail($id);
+        $theme = $this->themeRepository->findOrFail($id);
         $locales = $this->locales;
 
         return view('admin.hadith.themes.edit', compact('theme', 'locales'));
@@ -158,17 +153,14 @@ class ThemeController extends AdminController
         try {
             $validated = $request->validated();
 
-            $theme = $this->tagRepository->findOrFail($id);
+            $theme = $this->themeRepository->findOrFail($id);
 
-            $this->tagRepository->update($id, [
+            $this->themeRepository->update($id, [
                 'slug' => $validated['slug'] ?? $theme->slug,
                 'name' => $validated['name'],
-                'description' => $validated['description'] ?? $theme->description,
-                'color' => $validated['color'] ?? $theme->color,
             ]);
 
-            // Reload the updated record for the response
-            $theme = $this->tagRepository->findOrFail($id);
+            $theme = $this->themeRepository->findOrFail($id);
 
             DB::commit();
 
@@ -205,10 +197,9 @@ class ThemeController extends AdminController
         $this->authorizeAdmin('delete themes');
 
         try {
-            $theme = $this->tagRepository->findOrFail($id);
+            $theme = $this->themeRepository->findOrFail($id);
 
-            // Check if theme is used
-            if ($theme->articles()->count() > 0) {
+            if ($theme->hadiths()->count() > 0) {
                 if ($this->expectsJson(request())) {
                     return $this->errorResponse(__('admin.theme_has_content'), 422);
                 }
@@ -216,7 +207,7 @@ class ThemeController extends AdminController
                 return back()->withErrors(['error' => __('admin.theme_has_content')]);
             }
 
-            $this->tagRepository->delete($id);
+            $this->themeRepository->delete($id);
 
             $this->logActivity('deleted', 'Theme', $theme->id, [
                 'name' => $theme->name['ar'] ?? 'N/A',
@@ -249,18 +240,17 @@ class ThemeController extends AdminController
 
         $request->validate([
             'ids' => 'required|array',
-            'ids.*' => 'exists:tags,id',
+            'ids.*' => 'exists:hadith_themes,id',
         ]);
 
         $results = $this->handleBulkOperation($request, 'delete', function ($id) {
-            $theme = $this->tagRepository->findOrFail((int) $id);
+            $theme = $this->themeRepository->findOrFail((int) $id);
 
-            // Check if theme is used
-            if ($theme->articles()->count() > 0) {
+            if ($theme->hadiths()->count() > 0) {
                 throw new \Exception(__('admin.theme_has_content'));
             }
 
-            $this->tagRepository->delete((int) $id);
+            $this->themeRepository->delete((int) $id);
         });
 
         return $this->successResponse(
@@ -278,12 +268,7 @@ class ThemeController extends AdminController
 
         $search = $request->get('q', '');
 
-        $themes = $this->tagRepository->searchByType(
-            type: 'hadith',
-            search: $search,
-            limit: 10,
-            columns: ['id', 'slug', 'name', 'color'],
-        );
+        $themes = $this->themeRepository->search($search, 10);
 
         return $this->successResponse($themes, __('admin.theme_fetched'));
     }

@@ -236,7 +236,7 @@ class SyncHadithFromJsonCommand extends Command
             ?? $this->fileScanner->getFilenameWithoutExtension($filePath);
 
         return HadithSyncLog::create([
-            'collection_name' => $collectionName,
+            'source_collection_code' => $collectionName,
             'type' => 'json_import',
             'status' => HadithSyncLog::STATUS_IN_PROGRESS,
             'started_at' => now(),
@@ -262,7 +262,7 @@ class SyncHadithFromJsonCommand extends Command
         }
 
         return HadithSyncLog::create([
-            'collection_name' => $collectionName,
+            'source_collection_code' => $collectionName,
             'type' => 'json_import',
             'status' => HadithSyncLog::STATUS_IN_PROGRESS,
             'started_at' => now(),

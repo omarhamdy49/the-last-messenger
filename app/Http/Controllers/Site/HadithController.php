@@ -174,9 +174,8 @@ final class HadithController extends Controller
      * with search-within-chapter, grading filter pills, per-page control, and
      * previous/next chapter navigation by book number.
      *
-     * The schema links hadiths to books (hadith_hadiths.book_id); the deeper
-     * hadith_chapters rows carry no hadith linkage, so the public "chapter"
-     * unit is the book, addressed by its number within the collection.
+     * The schema links hadiths to a required chapter, and each chapter belongs
+     * to the book addressed by its number within the collection.
      */
     public function chapter(Request $request, string $slug, int $chapter): View
     {

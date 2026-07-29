@@ -280,6 +280,7 @@ foreach ($files as $file) {
     $json = json_decode((string) file_get_contents($file), true);
     if (! is_array($json)) {
         $invalid[] = basename($file);
+
         continue;
     }
 
@@ -348,6 +349,7 @@ foreach ($sourceByNumber as $hadithNumber => $entry) {
     $api = $apiRowsByNumber[$hadithNumber] ?? null;
     if ($api === null) {
         $missingApi[] = $hadithNumber;
+
         continue;
     }
 

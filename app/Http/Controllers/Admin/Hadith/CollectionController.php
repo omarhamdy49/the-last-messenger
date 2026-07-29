@@ -75,16 +75,21 @@ class CollectionController extends AdminController
         DB::beginTransaction();
         try {
             $validated = $request->validated();
+            $slug = $validated['slug_en'] ?: $validated['slug_ar'];
+            $code = Str::lower(Str::limit(Str::slug($slug), 50, ''));
 
             $collection = $this->collectionRepository->create([
-                'name_ar' => $validated['name_ar'],
-                'name_en' => $validated['name_en'] ?? '',
-                'slug_ar' => $validated['slug_ar'] ?? Str::slug($validated['name_ar']),
-                'slug_en' => $validated['slug_en'] ?? '',
-                'description_ar' => $validated['description_ar'] ?? null,
-                'description_en' => $validated['description_en'] ?? null,
+                'code' => $code,
+                'slug' => $slug,
+                'name' => array_filter([
+                    'ar' => $validated['name_ar'],
+                    'en' => $validated['name_en'] ?? null,
+                ]),
+                'description' => array_filter([
+                    'ar' => $validated['description_ar'] ?? null,
+                    'en' => $validated['description_en'] ?? null,
+                ]),
                 'abbreviation' => $validated['abbreviation'] ?? null,
-                'total_hadiths' => $validated['total_hadiths'] ?? 0,
                 'featured' => $request->boolean('featured'),
                 'active' => $request->has('active') ? $request->boolean('active') : true,
                 'display_order' => $validated['display_order'] ?? 0,
@@ -156,16 +161,20 @@ class CollectionController extends AdminController
         try {
             $validated = $request->validated();
             $collection = $this->collectionRepository->findOrFail($id);
+            $slug = $validated['slug_en'] ?: $validated['slug_ar'];
 
             $this->collectionRepository->update($id, [
-                'name_ar' => $validated['name_ar'],
-                'name_en' => $validated['name_en'] ?? $collection->name_en,
-                'slug_ar' => $validated['slug_ar'] ?? $collection->slug_ar,
-                'slug_en' => $validated['slug_en'] ?? $collection->slug_en,
-                'description_ar' => $validated['description_ar'] ?? $collection->description_ar,
-                'description_en' => $validated['description_en'] ?? $collection->description_en,
+                'code' => Str::lower(Str::limit(Str::slug($slug), 50, '')),
+                'slug' => $slug,
+                'name' => array_filter([
+                    'ar' => $validated['name_ar'],
+                    'en' => $validated['name_en'] ?? null,
+                ]),
+                'description' => array_filter([
+                    'ar' => $validated['description_ar'] ?? null,
+                    'en' => $validated['description_en'] ?? null,
+                ]),
                 'abbreviation' => $validated['abbreviation'] ?? $collection->abbreviation,
-                'total_hadiths' => $validated['total_hadiths'] ?? $collection->total_hadiths,
                 'featured' => $request->boolean('featured'),
                 'active' => $request->boolean('active'),
                 'display_order' => $validated['display_order'] ?? $collection->display_order,

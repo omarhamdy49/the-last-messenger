@@ -168,8 +168,8 @@ use Illuminate\Support\Str;
                         <div class="flex-1 px-6 py-6">
                             <p class="text-sm sm:text-base leading-relaxed font-serif line-clamp-5 transition-colors duration-200 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#0056b3] group-hover:to-[#218838]"
                                :class="darkMode ? 'text-gray-200' : 'text-gray-800'"
-                               title="{{ $hadith->translations->where('language_code', 'ar')->first()?->text ?? '' }}">
-                                {{ Str::limit($hadith->translations->where('language_code', 'ar')->first()?->text ?? '—', 180) }}
+                               title="{{ $hadith->translations->where('locale', 'ar')->first()?->text ?? '' }}">
+                                {{ Str::limit($hadith->translations->where('locale', 'ar')->first()?->text ?? '—', 180) }}
                             </p>
                         </div>
 

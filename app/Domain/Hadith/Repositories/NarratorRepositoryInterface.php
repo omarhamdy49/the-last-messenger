@@ -44,12 +44,7 @@ interface NarratorRepositoryInterface extends RepositoryInterface
     public function paginateWithFilters(
         int $perPage = 15,
         string $search = '',
-        string $sortBy = 'name_ar',
+        string $sortBy = 'id',
         array $filters = []
     ): LengthAwarePaginator;
-
-    /**
-     * Restore a soft-deleted narrator by ID
-     */
-    public function restoreById(int $id): HadithNarrator;
 }

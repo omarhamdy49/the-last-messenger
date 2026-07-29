@@ -15,7 +15,7 @@ use JsonSerializable;
  * number of parallel narrations (other hadiths sharing the same text hash).
  *
  * All relation data is mapped from eager-loaded relations — callers must load
- * isnads.narrator, commentaries.scholar and gradings.scholar/gradingLevel
+ * isnads.narrator, commentaries.scholar and gradings.scholar
  * before constructing this DTO (see HadithRepository::getWithPublicDetail()).
  */
 final readonly class HadithDetailDTO implements JsonSerializable
@@ -60,10 +60,10 @@ final readonly class HadithDetailDTO implements JsonSerializable
                 'position' => $link->position_in_chain,
                 'transmissionMethod' => $link->transmission_method,
                 'name' => self::localizedName($link->narrator?->name_ar, $link->narrator?->name_en, $locale),
-                'kunya' => $link->narrator?->kunya,
+                'kunya' => $link->narrator?->kunya[$locale] ?? $link->narrator?->kunya['ar'] ?? null,
                 'reliability' => $link->narrator?->reliability_grade,
                 'deathYearHijri' => $link->narrator?->death_year_hijri,
-                'biography' => $link->narrator?->biography,
+                'biography' => $link->narrator?->biography[$locale] ?? $link->narrator?->biography['ar'] ?? null,
             ])
             ->all();
     }
@@ -80,10 +80,10 @@ final readonly class HadithDetailDTO implements JsonSerializable
                     $commentary->scholar?->name_ar,
                     $commentary->scholar?->name_en,
                     $locale,
-                ) ?? $commentary->author,
-                'languageCode' => $commentary->language_code,
-                'text' => $commentary->commentary_text,
-                'verified' => (bool) $commentary->verified,
+                ) ?? $commentary->author_name,
+                'languageCode' => $commentary->locale,
+                'text' => $commentary->text,
+                'verified' => $commentary->review_status === 'verified',
             ])
             ->all();
     }
@@ -97,16 +97,11 @@ final readonly class HadithDetailDTO implements JsonSerializable
             ->map(fn ($grading) => [
                 'id' => $grading->id,
                 'scholar' => self::localizedName($grading->scholar?->name_ar, $grading->scholar?->name_en, $locale),
-                'grade' => self::localizedName(
-                    $grading->gradingLevel?->grade_ar,
-                    $grading->gradingLevel?->grade_en,
-                    $locale,
-                ),
-                'gradeEn' => $grading->gradingLevel?->grade_en,
-                'rank' => $grading->gradingLevel?->rank,
-                'notes' => $grading->grading_notes,
+                'grade' => $grading->raw_grade,
+                'gradeEn' => $grading->grade_key,
+                'rank' => null,
+                'notes' => $grading->notes,
             ])
-            ->filter(fn (array $grading) => $grading['grade'] !== null)
             ->values()
             ->all();
     }

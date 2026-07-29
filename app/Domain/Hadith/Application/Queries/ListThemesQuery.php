@@ -15,10 +15,8 @@ final readonly class ListThemesQuery implements Query
         public int $perPage = 50,
         public int $page = 1,
         public ?string $search = null,
-        public bool $onlyRoot = false,
-        public bool $withChildren = false,
         public bool $withHadithsCount = true,
-        public string $sortBy = 'sort_order',
+        public string $sortBy = 'id',
         public string $sortDirection = 'asc',
         public ?string $locale = 'ar'
     ) {}

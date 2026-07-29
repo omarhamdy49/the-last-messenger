@@ -8,6 +8,9 @@ use App\Domain\Hadith\Application\Commands\CreateHadithCommand;
 use App\Domain\Hadith\Application\DTOs\HadithDTO;
 use App\Domain\Hadith\Exceptions\InvalidGradingException;
 use App\Domain\Hadith\Models\Hadith;
+use App\Domain\Hadith\Models\HadithChapter;
+use App\Domain\Hadith\Models\HadithGrading;
+use App\Domain\Hadith\Models\HadithIsnad;
 use App\Domain\Hadith\Models\HadithTranslation;
 use App\Domain\Hadith\Repositories\BookRepositoryInterface;
 use App\Domain\Hadith\Repositories\HadithRepositoryInterface;
@@ -46,6 +49,14 @@ final class CreateHadithHandler implements CommandHandler
             throw EntityNotFoundException::forEntity('HadithBook', $command->bookId);
         }
 
+        $chapter = $command->chapterId === null ? null : HadithChapter::query()->find($command->chapterId);
+        if ($chapter === null || $chapter->book_id !== $command->bookId) {
+            throw EntityNotFoundException::withCriteria('HadithChapter', [
+                'id' => $command->chapterId,
+                'book_id' => $command->bookId,
+            ]);
+        }
+
         // Validate grading status if provided
         if ($command->gradingStatus !== null && ! in_array($command->gradingStatus, Hadith::getGradingStatuses())) {
             throw InvalidGradingException::forStatus($command->gradingStatus);
@@ -59,44 +70,53 @@ final class CreateHadithHandler implements CommandHandler
             );
         }
 
-        $hadith = DB::transaction(function () use ($command) {
+        $primaryText = $command->translations['ar'] ?? reset($command->translations);
+        if (! is_string($primaryText) || trim($primaryText) === '') {
+            throw new \InvalidArgumentException('At least one non-empty hadith translation is required.');
+        }
+
+        $hadith = DB::transaction(function () use ($command, $primaryText) {
             // Create hadith
             $hadith = new Hadith([
-                'book_id' => $command->bookId,
+                'chapter_id' => $command->chapterId,
+                'primary_narrator_id' => $command->narratorIds[0] ?? null,
                 'hadith_number' => $command->hadithNumber,
-                'grading_status' => $command->gradingStatus ?? 'unknown',
+                'text_hash' => hash('sha256', trim($primaryText)),
             ]);
-
-            if ($command->chapterId !== null) {
-                $hadith->chapter_id = $command->chapterId;
-            }
-
             $hadith->save();
 
-            // Create translations
-            foreach ($command->translations as $languageCode => $text) {
+            foreach ($command->translations as $locale => $text) {
                 HadithTranslation::create([
                     'hadith_id' => $hadith->id,
-                    'language_code' => $languageCode,
-                    'matn' => $text,
+                    'locale' => $locale,
+                    'text' => $text,
                 ]);
             }
 
-            // Attach narrators
-            if (! empty($command->narratorIds)) {
-                $hadith->narrators()->attach($command->narratorIds);
+            foreach (array_values(array_unique($command->narratorIds)) as $position => $narratorId) {
+                HadithIsnad::create([
+                    'hadith_id' => $hadith->id,
+                    'narrator_id' => $narratorId,
+                    'position_in_chain' => $position + 1,
+                ]);
             }
 
-            // Attach themes
             if (! empty($command->themeIds)) {
                 $hadith->themes()->attach($command->themeIds);
+            }
+
+            if ($command->gradingStatus !== null) {
+                HadithGrading::create([
+                    'hadith_id' => $hadith->id,
+                    'grade_key' => $command->gradingStatus,
+                    'raw_grade' => $command->gradingStatus,
+                ]);
             }
 
             return $hadith;
         });
 
-        // Load relations and return DTO
-        $hadith->load(['translations', 'book', 'themes']);
+        $hadith->load(['translations', 'gradings', 'chapter.book.collection', 'themes']);
 
         return HadithDTO::fromModel($hadith);
     }

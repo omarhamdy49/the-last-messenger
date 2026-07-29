@@ -183,6 +183,7 @@ foreach ($files as $file) {
     $json = json_decode((string) file_get_contents($file), true);
     if (! is_array($json)) {
         $invalid[] = basename($file);
+
         continue;
     }
 

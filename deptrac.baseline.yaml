@@ -27,18 +27,6 @@ deptrac:
       - App\Models\ArticleLocale
     App\Domain\Hadith\Importers\HadithJsonParser:
       - App\Services\Json\JsonDataTransformer
-    App\Domain\Hadith\Services\BookSyncService:
-      - App\Services\Sunnah\SunnahApiClient
-      - App\Services\Sunnah\SunnahDataTransformer
-    App\Domain\Hadith\Services\ChapterSyncService:
-      - App\Services\Sunnah\SunnahApiClient
-      - App\Services\Sunnah\SunnahDataTransformer
-    App\Domain\Hadith\Services\CollectionSyncService:
-      - App\Services\Sunnah\SunnahApiClient
-      - App\Services\Sunnah\SunnahDataTransformer
-    App\Domain\Hadith\Services\HadithSyncService:
-      - App\Services\Sunnah\SunnahApiClient
-      - App\Services\Sunnah\SunnahDataTransformer
     App\Domain\Sahaba\Models\Sahabi:
       - App\Models\Article
       - App\Models\User
@@ -140,12 +128,3 @@ deptrac:
     App\Repositories\ArticleRepository:
       - App\Domain\Blog\Models\Category
       - App\Domain\Blog\Models\Tag
-    App\Services\Hadith\JsonImportService:
-      - App\Domain\Hadith\Models\Hadith
-      - App\Domain\Hadith\Models\HadithBook
-      - App\Domain\Hadith\Models\HadithChapter
-      - App\Domain\Hadith\Models\HadithCollection
-      - App\Domain\Hadith\Models\HadithSyncLog
-      - App\Domain\Hadith\Models\HadithTranslation
-    App\Services\Sunnah\SunnahDataTransformer:
-      - App\Domain\Hadith\Enums\HadithGrade

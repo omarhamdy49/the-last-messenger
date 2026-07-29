@@ -13,7 +13,7 @@ use Throwable;
  * can be loaded into a fresh production database.
  *
  * Primary keys are preserved verbatim — the whole point of the export is that
- * `hadith_isnad.narrator_id`, `hadith_companions.sahaba_id`, `quran_verse_translations.verse_id`
+ * `hadith_isnad.narrator_id`, `hadith_narrators.sahaba_id`, `quran_verse_translations.verse_id`
  * and every other foreign key still resolve on the other side. Tables are
  * listed parent-before-child so a plain sequential insert satisfies every
  * constraint without deferring checks.
@@ -67,25 +67,19 @@ class ExportPortalDataCommand extends Command
             'hadith_collections',
             'hadith_books',
             'hadith_chapters',
-            'hadith_chapter_translations',
             'hadith_scholars',
-            'hadith_grading_levels',
             'hadith_themes',
-            'hadith_theme_translations',
             'hadith_narrators',
-            'hadith_companions',
             'hadith_hadiths',
             'hadith_translations',
             'hadith_sources',
-            'hadith_source_translations',
             'hadith_gradings',
             'hadith_isnad',
             'hadith_hadith_themes',
             'hadith_keywords',
             'hadith_commentaries',
-            'hadith_applications',
-            'hadith_fiqh_rulings',
             'hadith_related_verses',
+            'hadith_sync_logs',
         ],
     ];
 
@@ -117,23 +111,17 @@ class ExportPortalDataCommand extends Command
         'sahabi_categories' => ['key'],
         'relationships' => ['relationship_type'],
         'sahabi_timeline_item_translations' => ['locale'],
-        'hadith_collections' => ['slug_ar', 'slug_en', 'abbreviation', 'canonical_code', 'source_slug'],
-        'hadith_books' => ['slug_ar', 'slug_en'],
-        'hadith_chapter_translations' => ['locale'],
-        'hadith_theme_translations' => ['locale'],
-        'hadith_themes' => ['review_status'],
-        'hadith_narrators' => ['reliability_grade', 'school', 'region', 'source_system'],
-        'hadith_hadiths' => ['verification_status', 'source_verification_method', 'grading_agreement'],
-        'hadith_translations' => ['language_code'],
-        'hadith_sources' => ['source_type', 'verification_method'],
-        'hadith_source_translations' => ['locale'],
-        'hadith_gradings' => ['review_status'],
+        'hadith_collections' => ['code', 'slug'],
+        'hadith_themes' => ['slug', 'review_status'],
+        'hadith_narrators' => ['reliability_grade', 'school', 'region'],
+        'hadith_translations' => ['locale'],
+        'hadith_sources' => ['source_system', 'source_type', 'verification_method'],
+        'hadith_gradings' => ['grade_key', 'review_status'],
         'hadith_isnad' => ['transmission_method'],
-        'hadith_keywords' => ['review_status'],
-        'hadith_commentaries' => ['language_code', 'review_status'],
-        'hadith_applications' => ['review_status'],
-        'hadith_fiqh_rulings' => ['language_code', 'review_status'],
+        'hadith_keywords' => ['locale', 'review_status'],
+        'hadith_commentaries' => ['locale', 'review_status'],
         'hadith_related_verses' => ['review_status'],
+        'hadith_sync_logs' => ['source_collection_code', 'type', 'status'],
     ];
 
     /**
@@ -145,8 +133,7 @@ class ExportPortalDataCommand extends Command
      * @var array<string, list<string>>
      */
     private const PRESERVED_CASE_COLUMNS = [
-        'hadith_hadiths' => ['grading_status'],
-        'hadith_grading_levels' => ['grade_ar', 'grade_en'],
+        'hadith_gradings' => ['raw_grade'],
     ];
 
     public function handle(): int
@@ -358,12 +345,11 @@ class ExportPortalDataCommand extends Command
         }
 
         return [
-            'hadith_companions_linked_to_sahaba' => DB::table('hadith_companions')->whereNotNull('sahaba_id')->count(),
             'hadith_narrators_linked_to_sahaba' => DB::table('hadith_narrators')->whereNotNull('sahaba_id')->count(),
-            'hadiths_with_companion' => DB::table('hadith_hadiths')->whereNotNull('companion_id')->count(),
-            'hadiths_reaching_sahaba_via_companion' => DB::table('hadith_hadiths as h')
-                ->join('hadith_companions as c', 'c.id', '=', 'h.companion_id')
-                ->whereNotNull('c.sahaba_id')->count(),
+            'hadiths_with_primary_narrator' => DB::table('hadith_hadiths')->whereNotNull('primary_narrator_id')->count(),
+            'hadiths_reaching_sahaba_via_primary_narrator' => DB::table('hadith_hadiths as h')
+                ->join('hadith_narrators as n', 'n.id', '=', 'h.primary_narrator_id')
+                ->whereNotNull('n.sahaba_id')->count(),
             'isnad_links' => DB::table('hadith_isnad')->count(),
             'isnad_links_reaching_sahaba' => DB::table('hadith_isnad as i')
                 ->join('hadith_narrators as n', 'n.id', '=', 'i.narrator_id')

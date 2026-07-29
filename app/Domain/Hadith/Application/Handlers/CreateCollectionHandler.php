@@ -55,14 +55,11 @@ final class CreateCollectionHandler implements CommandHandler
         }
 
         $collection = HadithCollection::create([
-            'name_ar' => $command->name['ar'] ?? '',
-            'name_en' => $command->name['en'] ?? null,
+            'code' => $command->slug,
             'slug' => $command->slug,
-            'description_ar' => $command->description['ar'] ?? null,
-            'description_en' => $command->description['en'] ?? null,
-            'author_id' => $command->scholarId,
-            'hadith_count' => $command->hadithCount,
-            'is_active' => $command->isActive,
+            'name' => $command->name,
+            'description' => $command->description,
+            'active' => $command->isActive,
         ]);
 
         return CollectionDTO::fromModel($collection);

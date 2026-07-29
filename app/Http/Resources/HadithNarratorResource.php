@@ -30,7 +30,7 @@ class HadithNarratorResource extends JsonResource
             'name' => $locale === 'ar' ? $this->name_ar : $this->name_en,
             'name_ar' => $this->name_ar,
             'name_en' => $this->name_en,
-            'biography' => $this->biography,
+            'biography' => $this->biography[$locale] ?? $this->biography['ar'] ?? null,
             'birth_year' => $this->birth_year_hijri,
             'death_year' => $this->death_year_hijri,
             'hadiths_count' => $this->whenCounted('isnads'),

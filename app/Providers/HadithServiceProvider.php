@@ -44,10 +44,6 @@ class HadithServiceProvider extends ServiceProvider
             \App\Domain\Hadith\Repositories\ThemeRepository::class
         );
         $this->app->bind(
-            \App\Domain\Hadith\Repositories\GradingLevelRepositoryInterface::class,
-            \App\Domain\Hadith\Repositories\GradingLevelRepository::class
-        );
-        $this->app->bind(
             \App\Domain\Shared\Events\EventDispatcherInterface::class,
             \App\Domain\Shared\Events\LaravelEventDispatcher::class
         );

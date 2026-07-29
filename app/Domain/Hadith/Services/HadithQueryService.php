@@ -262,7 +262,7 @@ final class HadithQueryService
         int $page = 1,
         ?string $search = null,
         bool $onlyActive = true,
-        string $sortBy = 'name_ar',
+        string $sortBy = 'id',
         string $sortDirection = 'asc',
         ?string $locale = 'ar',
     ): PaginatedResult {
@@ -362,7 +362,6 @@ final class HadithQueryService
         int $perPage = 20,
         int $page = 1,
         ?string $gradingStatus = null,
-        bool $includeSubThemes = false,
         ?string $locale = 'ar',
     ): PaginatedResult {
         $query = new ListHadithsByThemeQuery(
@@ -370,7 +369,6 @@ final class HadithQueryService
             perPage: $perPage,
             page: $page,
             gradingStatus: $gradingStatus,
-            includeSubThemes: $includeSubThemes,
             locale: $locale,
         );
 
@@ -384,9 +382,7 @@ final class HadithQueryService
         int $perPage = 50,
         int $page = 1,
         ?string $search = null,
-        bool $onlyRoot = false,
-        bool $withChildren = false,
-        string $sortBy = 'sort_order',
+        string $sortBy = 'id',
         string $sortDirection = 'asc',
         ?string $locale = 'ar',
     ): PaginatedResult {
@@ -394,8 +390,6 @@ final class HadithQueryService
             perPage: $perPage,
             page: $page,
             search: $search,
-            onlyRoot: $onlyRoot,
-            withChildren: $withChildren,
             sortBy: $sortBy,
             sortDirection: $sortDirection,
             locale: $locale,

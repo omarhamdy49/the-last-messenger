@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Domain\Hadith\Models\Hadith;
-use App\Domain\Hadith\Models\HadithBook;
-use App\Domain\Hadith\Models\HadithCollection;
-use App\Domain\Hadith\Repositories\HadithRepositoryInterface;
 use App\Domain\Media\Models\MediaEpisode;
 use App\Domain\Media\Models\MediaEpisodeTranslation;
 use App\Domain\Media\Models\MediaProgram;
@@ -107,44 +103,6 @@ final class PublicVisibilityGatingTest extends TestCase
         }
 
         $this->assertSame(1, $repository->getPublicIndexStats()['total']);
-    }
-
-    public function test_had_003_public_hadith_list_and_count_exclude_merged_duplicates(): void
-    {
-        $collection = HadithCollection::create([
-            'name_ar' => 'مجموعة الرؤية',
-            'name_en' => 'Visibility Collection',
-            'slug_ar' => 'مجموعة-الرؤية',
-            'slug_en' => 'visibility-collection',
-            'abbreviation' => 'VIS',
-        ]);
-        $book = HadithBook::create([
-            'collection_id' => $collection->id,
-            'title_ar' => 'كتاب الرؤية',
-            'title_en' => 'Visibility Book',
-        ]);
-        $canonical = Hadith::create([
-            'book_id' => $book->id,
-            'hadith_number' => '1',
-            'grading_status' => Hadith::GRADING_SAHIH,
-        ]);
-        $merged = Hadith::create([
-            'book_id' => $book->id,
-            'hadith_number' => '2',
-            'grading_status' => Hadith::GRADING_SAHIH,
-            'merged_into_id' => $canonical->id,
-        ]);
-
-        $response = $this->getJson('/api/v1/hadith');
-
-        $response->assertOk()
-            ->assertJsonPath('meta.total', 1)
-            ->assertJsonFragment(['id' => $canonical->id])
-            ->assertJsonMissing(['id' => $merged->id]);
-
-        $paginator = app(HadithRepositoryInterface::class)->paginatePublicByBook($book->id);
-        $this->assertSame([$canonical->id], $paginator->getCollection()->pluck('id')->all());
-        $this->assertSame(1, $paginator->total());
     }
 
     private function createArticle(string $slug, string $status, string $title): Article

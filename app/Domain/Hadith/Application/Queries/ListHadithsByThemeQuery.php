@@ -17,7 +17,6 @@ final readonly class ListHadithsByThemeQuery implements Query
         public int $page = 1,
         public ?string $gradingStatus = null,
         public bool $withTranslations = true,
-        public bool $includeSubThemes = false,
         public ?string $locale = 'ar'
     ) {}
 }

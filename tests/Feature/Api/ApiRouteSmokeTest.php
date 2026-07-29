@@ -9,6 +9,7 @@ use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithBook;
 use App\Domain\Hadith\Models\HadithChapter;
 use App\Domain\Hadith\Models\HadithCollection;
+use App\Domain\Hadith\Models\HadithGrading;
 use App\Domain\Hadith\Models\HadithNarrator;
 use App\Domain\Hadith\Models\HadithTheme;
 use App\Domain\Hadith\Models\HadithTranslation;
@@ -170,47 +171,42 @@ class ApiRouteSmokeTest extends TestCase
         ]);
 
         $collection = HadithCollection::query()->create([
-            'name_ar' => 'مجموعة اختبار',
-            'name_en' => 'Smoke Collection',
-            'slug_ar' => 'مجموعة-اختبار',
-            'slug_en' => 'smoke-collection',
+            'code' => 'smoke',
+            'name' => ['ar' => 'مجموعة اختبار', 'en' => 'Smoke Collection'],
+            'slug' => 'smoke-collection',
             'abbreviation' => 'SMK',
         ]);
         $book = HadithBook::query()->create([
             'collection_id' => $collection->id,
             'book_number' => '1',
-            'title_ar' => 'كتاب الاختبار',
-            'title_en' => 'Smoke Book',
-            'slug_ar' => 'كتاب-الاختبار',
-            'slug_en' => 'smoke-book',
+            'title' => ['ar' => 'كتاب الاختبار', 'en' => 'Smoke Book'],
         ]);
         $chapter = HadithChapter::query()->create([
             'book_id' => $book->id,
             'chapter_number' => 1,
-            'name' => json_encode(['ar' => 'باب الاختبار', 'en' => 'Smoke Chapter'], JSON_THROW_ON_ERROR),
+            'name' => ['ar' => 'باب الاختبار', 'en' => 'Smoke Chapter'],
             'display_order' => 1,
         ]);
-        $chapter->syncTranslations([
-            'name' => ['ar' => 'باب الاختبار', 'en' => 'Smoke Chapter'],
-        ]);
         $hadith = Hadith::query()->create([
-            'book_id' => $book->id,
             'chapter_id' => $chapter->id,
             'hadith_number' => '1',
-            'grading_status' => Hadith::GRADING_SAHIH,
+            'text_hash' => hash('sha256', 'Smoke test narration'),
         ]);
         HadithTranslation::query()->create([
             'hadith_id' => $hadith->id,
-            'language_code' => 'en',
+            'locale' => 'en',
             'text' => 'Smoke test narration',
         ]);
+        HadithGrading::query()->create([
+            'hadith_id' => $hadith->id,
+            'grade_key' => Hadith::GRADING_SAHIH,
+            'raw_grade' => 'sahih',
+        ]);
         $narrator = HadithNarrator::query()->create([
-            'name_ar' => 'راوي الاختبار',
-            'name_en' => 'Smoke Narrator',
+            'name' => ['ar' => 'راوي الاختبار', 'en' => 'Smoke Narrator'],
         ]);
         $theme = HadithTheme::query()->create([
-            'theme_ar' => 'موضوع الاختبار',
-            'theme_en' => 'Smoke Theme',
+            'name' => ['ar' => 'موضوع الاختبار', 'en' => 'Smoke Theme'],
         ]);
         $hadith->themes()->attach($theme);
 
@@ -328,7 +324,7 @@ class ApiRouteSmokeTest extends TestCase
             'v1.filters.set-default:id' => $filters[3]->id,
             'v1.hadith.by-book-number:bookId' => $book->id,
             'v1.hadith.by-book-number:number' => $hadith->hadith_number,
-            'v1.hadith.books.show:slug' => $book->slug_en,
+            'v1.hadith.books.show:slug' => $book->book_number,
             'v1.hadith.by-theme:theme' => $theme->theme_en,
             'v1.hadith.chapters.show:id' => $chapter->id,
             'v1.hadith.collections.show:id' => $collection->id,

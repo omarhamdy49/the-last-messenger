@@ -69,11 +69,11 @@ final class GetChapterContextHandler implements QueryHandler
             collection: CollectionDTO::fromModel($collection, $locale),
             book: BookDTO::fromModel($book, $locale),
             previousNumber: $previousNumber !== null ? (int) $previousNumber : null,
-            previousTitleAr: $adjacent['previous']?->title_ar,
-            previousTitleEn: $adjacent['previous']?->title_en,
+            previousTitleAr: $adjacent['previous']?->getTitleInLocale('ar'),
+            previousTitleEn: $adjacent['previous']?->getTitleInLocale('en'),
             nextNumber: $nextNumber !== null ? (int) $nextNumber : null,
-            nextTitleAr: $adjacent['next']?->title_ar,
-            nextTitleEn: $adjacent['next']?->title_en,
+            nextTitleAr: $adjacent['next']?->getTitleInLocale('ar'),
+            nextTitleEn: $adjacent['next']?->getTitleInLocale('en'),
         );
     }
 }

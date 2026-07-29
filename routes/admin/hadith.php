@@ -79,7 +79,7 @@ Route::resource('hadith/scholars', ScholarController::class)->names([
 // Hadith Theme Routes
 Route::prefix('hadith/themes')->group(function (): void {
     Route::get('/search', [ThemeController::class, 'search'])->name('admin.hadith.themes.search');
-    Route::post('/bulk-delete', [ThemeController::class, 'bulkDelete'])->name('admin.hadith.themes.bulk-delete');
+    Route::post('/bulk-delete', [ThemeController::class, 'bulkDestroy'])->name('admin.hadith.themes.bulk-delete');
 });
 Route::resource('hadith/themes', ThemeController::class)->names([
     'index' => 'admin.hadith.themes.index',

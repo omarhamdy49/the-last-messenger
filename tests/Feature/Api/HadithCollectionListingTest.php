@@ -27,25 +27,20 @@ class HadithCollectionListingTest extends TestCase
     private function seedCollection(array $overrides = []): HadithCollection
     {
         $collection = HadithCollection::create(array_merge([
-            'name_ar' => 'صحيح البخاري',
-            'name_en' => 'Sahih al-Bukhari',
-            'slug_ar' => 'sahih-bukhari-ar',
-            'slug_en' => 'sahih-bukhari-en',
-            'description_ar' => 'أصح كتاب بعد كتاب الله',
-            'description_en' => 'The most authentic book after the Quran',
+            'code' => 'bukhari',
+            'name' => ['ar' => 'صحيح البخاري', 'en' => 'Sahih al-Bukhari'],
+            'slug' => 'sahih-bukhari',
+            'description' => [
+                'ar' => 'أصح كتاب بعد كتاب الله',
+                'en' => 'The most authentic book after the Quran',
+            ],
             'abbreviation' => 'BUK',
-            'canonical_code' => 'bukhari',
-            'source_slug' => 'bukhari',
-            'total_hadiths' => 7563,
         ], $overrides));
 
         HadithBook::create([
             'collection_id' => $collection->id,
             'book_number' => 1,
-            'title_ar' => 'كتاب بدء الوحي',
-            'title_en' => 'Revelation',
-            'slug_ar' => 'bdء-alwhy',
-            'slug_en' => 'revelation',
+            'title' => ['ar' => 'كتاب بدء الوحي', 'en' => 'Revelation'],
         ]);
 
         return $collection;
@@ -77,9 +72,7 @@ class HadithCollectionListingTest extends TestCase
     public function test_collection_dto_maps_real_schema_columns(): void
     {
         $this->seedCollection([
-            'slug_ar' => 'my-slug-ar',
-            'slug_en' => 'my-slug-en',
-            'total_hadiths' => 4242,
+            'slug' => 'my-slug',
         ]);
 
         /** @var CollectionDTO $dto */
@@ -87,22 +80,21 @@ class HadithCollectionListingTest extends TestCase
             ->listCollections(perPage: 15, onlyActive: true, locale: 'ar')
             ->items[0];
 
-        // slug resolves from slug_ar (locale ar); hadithCount from total_hadiths.
-        $this->assertSame('my-slug-ar', $dto->slug);
-        $this->assertSame(4242, $dto->hadithCount);
+        $this->assertSame('my-slug', $dto->slug);
+        $this->assertSame(0, $dto->hadithCount);
         $this->assertSame(1, $dto->booksCount);
         $this->assertSame('صحيح البخاري', $dto->nameAr);
     }
 
-    public function test_collection_dto_slug_follows_locale(): void
+    public function test_collection_dto_uses_one_canonical_slug_for_every_locale(): void
     {
-        $this->seedCollection(['slug_ar' => 'ar-slug', 'slug_en' => 'en-slug']);
+        $this->seedCollection(['slug' => 'canonical-slug']);
 
         $dto = app(HadithQueryService::class)
             ->listCollections(perPage: 15, onlyActive: false, locale: 'en')
             ->items[0];
 
-        $this->assertSame('en-slug', $dto->slug);
+        $this->assertSame('canonical-slug', $dto->slug);
     }
 
     public function test_collections_api_endpoint_returns_success_envelope(): void
@@ -119,8 +111,6 @@ class HadithCollectionListingTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.0.name_ar', 'صحيح البخاري')
             ->assertJsonPath('data.0.name_en', 'Sahih al-Bukhari')
-            // total_hadiths + books_count are now actually selected/loaded (were null before the fix).
-            ->assertJsonPath('data.0.total_hadiths', 7563)
             ->assertJsonPath('data.0.books_count', 1);
     }
 

@@ -15,10 +15,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * @property int $id
  * @property int $hadith_id
- * @property int $position_in_chain Position in the chain (1 = closest to compiler, higher = closer to Prophet)
+ * @property int $position_in_chain Position in the chain (1 = nearest the Prophet)
  * @property int $narrator_id
- * @property string|null $verb Narration verb (e.g., حدثنا، أخبرنا، سمعت)
- * @property string|null $narrated_from Source of narration
+ * @property string|null $transmission_method Narration verb (e.g., حدثنا، أخبرنا، سمعت)
  * @property-read \App\Domain\Hadith\Models\Hadith $hadith
  * @property-read \App\Domain\Hadith\Models\HadithNarrator $narrator
  *
@@ -43,8 +42,6 @@ class HadithIsnad extends Model
      *
      * @var bool
      */
-    public $timestamps = false;
-
     /**
      * The attributes that are mass assignable.
      *
@@ -86,7 +83,7 @@ class HadithIsnad extends Model
 
     /**
      * Scope to order isnad by chain position.
-     * Order 1 = closest to the compiler, higher numbers = closer to the Prophet ﷺ
+     * Position 1 is nearest the Prophet; higher numbers move toward the compiler.
      */
     public function scopeOrderedByChain(Builder $query, string $direction = 'asc'): Builder
     {
@@ -114,7 +111,7 @@ class HadithIsnad extends Model
      */
     public function scopeByVerb(Builder $query, string $verb): Builder
     {
-        return $query->where('verb', $verb);
+        return $query->where('transmission_method', $verb);
     }
 
     /**
@@ -135,7 +132,7 @@ class HadithIsnad extends Model
 
     /**
      * Get the complete chain of narration for a hadith.
-     * Returns collection ordered from compiler to Prophet ﷺ
+     * Returns the chain ordered from the Prophet toward the compiler.
      *
      * @return \Illuminate\Database\Eloquent\Collection
      */
@@ -170,7 +167,7 @@ class HadithIsnad extends Model
     }
 
     /**
-     * Check if this is the first narrator in the chain (closest to compiler).
+     * Check if this is the first narrator in the chain (nearest the Prophet).
      */
     public function isFirstInChain(): bool
     {

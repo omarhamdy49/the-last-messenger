@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Domain\Hadith\Models;
 
 use App\Domain\Sahaba\Models\Sahabi;
@@ -8,69 +10,36 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
 
-/**
- * Class HadithNarrator
- *
- * Represents a narrator (راوي) in the chain of Hadith narration.
- * Narrators are scholars who transmitted Hadiths through the chain (isnad).
- *
- * @property int $id
- * @property string $name_ar Narrator name in Arabic
- * @property string|null $full_name_ar Full name in Arabic
- * @property string|null $kunya Kunya (e.g., Abu...)
- * @property string|null $title Title/honorific
- * @property int|null $death_year_hijri Death year in Hijri calendar
- * @property string|null $notes Biographical notes
- * @property-read \Illuminate\Database\Eloquent\Collection|\App\Domain\Hadith\Models\HadithIsnad[] $isnads
- * @property-read int|null $isnads_count
- *
- * @method static Builder search(string $term)
- * @method static Builder byDeathYear(int $year)
- * @method static Builder withKunya()
- */
 class HadithNarrator extends Model
 {
     use HasFactory;
 
-    /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
     protected $table = 'hadith_narrators';
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'sahaba_id',
-        'name_ar',
-        'name_en',
-        'full_name_ar',
-        'full_name_en',
+        'name',
+        'full_name',
         'kunya',
+        'biography',
         'birth_year_hijri',
         'death_year_hijri',
         'reliability_grade',
-        'biography',
         'school',
         'region',
-        'source_system',
-        'source_narrator_id',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'sahaba_id' => 'integer',
+        'name' => 'array',
+        'full_name' => 'array',
+        'kunya' => 'array',
+        'biography' => 'array',
+        'birth_year_hijri' => 'integer',
         'death_year_hijri' => 'integer',
     ];
 
@@ -79,250 +48,183 @@ class HadithNarrator extends Model
         return $this->belongsTo(Sahabi::class, 'sahaba_id');
     }
 
-    /**
-     * Create or update a narrator while reusing a canonical Sahabi identity.
-     *
-     * @param  array<string, mixed>  $data
-     * @param  array<string, mixed>  $uniqueKey
-     */
-    public static function resolveOrCreate(array $data, array $uniqueKey = []): self
-    {
-        $sahabi = app(SahabiIdentityMatcher::class)->match([
-            $data['name_ar'] ?? null,
-            $data['name_en'] ?? null,
-            $data['full_name_ar'] ?? null,
-            $data['full_name_en'] ?? null,
-        ]);
-
-        if ($sahabi !== null) {
-            $roleData = Arr::except($data, [
-                'name_ar',
-                'name_en',
-                'full_name_ar',
-                'full_name_en',
-                'kunya',
-                'birth_year_hijri',
-                'death_year_hijri',
-                'biography',
-            ]);
-
-            return static::updateOrCreate(
-                ['sahaba_id' => $sahabi->id],
-                array_merge($roleData, ['sahaba_id' => $sahabi->id]),
-            );
-        }
-
-        $uniqueKey = $uniqueKey ?: [
-            'name_ar' => $data['name_ar'] ?? $data['name_en'] ?? null,
-        ];
-
-        return static::updateOrCreate($uniqueKey, $data);
-    }
-
-    /**
-     * Update role metadata and write linked identity changes to Sahaba only.
-     *
-     * @param  array<string, mixed>  $data
-     */
-    public function updateIdentityAndRole(array $data): bool
-    {
-        if ($this->sahabi === null) {
-            return $this->update($data);
-        }
-
-        $this->sahabi->update(array_filter([
-            'birth_date_hijri' => isset($data['birth_year_hijri']) ? $data['birth_year_hijri'].' AH' : null,
-            'death_date_hijri' => isset($data['death_year_hijri']) ? $data['death_year_hijri'].' AH' : null,
-        ], static fn (mixed $value): bool => $value !== null));
-
-        $this->sahabi->syncTranslations([
-            'name' => [
-                'ar' => $data['name_ar'] ?? null,
-                'en' => $data['name_en'] ?? null,
-            ],
-            'full_name' => [
-                'ar' => $data['full_name_ar'] ?? null,
-                'en' => $data['full_name_en'] ?? null,
-            ],
-            'kunya' => [
-                'ar' => $data['kunya'] ?? null,
-            ],
-            'biography' => [
-                app()->getLocale() => $data['biography'] ?? null,
-            ],
-        ]);
-
-        return $this->update(Arr::only($data, [
-            'reliability_grade',
-            'school',
-            'region',
-            'source_system',
-            'source_narrator_id',
-        ]));
-    }
-
-    /**
-     * Get all isnad (chain of narration) entries for this narrator.
-     */
     public function isnads(): HasMany
     {
         return $this->hasMany(HadithIsnad::class, 'narrator_id');
     }
 
-    /**
-     * Get all hadiths narrated by this narrator through isnad.
-     *
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
-    public function hadiths()
+    public function hadiths(): BelongsToMany
     {
-        return Hadith::whereHas('isnads', function ($query) {
-            $query->where('narrator_id', $this->id);
-        })->get();
+        return $this->belongsToMany(
+            Hadith::class,
+            'hadith_isnad',
+            'narrator_id',
+            'hadith_id',
+        )->withPivot(['position_in_chain', 'transmission_method']);
     }
 
-    /**
-     * Scope to search narrators by name, full name, or notes.
-     * Uses MySQL FULLTEXT search on indexed columns.
-     */
+    public static function resolveOrCreate(array $data, array $uniqueKey = []): self
+    {
+        $localized = self::localizedData($data);
+        $sahabi = app(SahabiIdentityMatcher::class)->match([
+            $localized['name']['ar'] ?? null,
+            $localized['name']['en'] ?? null,
+            $localized['full_name']['ar'] ?? null,
+            $localized['full_name']['en'] ?? null,
+        ]);
+
+        if ($sahabi !== null) {
+            return static::updateOrCreate(
+                ['sahaba_id' => $sahabi->id],
+                $localized + ['sahaba_id' => $sahabi->id],
+            );
+        }
+
+        if ($uniqueKey === []) {
+            $query = static::query();
+            foreach (['ar', 'en'] as $locale) {
+                if (! empty($localized['name'][$locale])) {
+                    $query->orWhere("name->{$locale}", $localized['name'][$locale]);
+                }
+            }
+
+            if ($existing = $query->first()) {
+                $existing->update($localized);
+
+                return $existing;
+            }
+        }
+
+        return static::create($localized);
+    }
+
+    public function updateIdentityAndRole(array $data): bool
+    {
+        $localized = self::localizedData($data);
+
+        if ($this->sahabi === null) {
+            return $this->update($localized);
+        }
+
+        $this->sahabi->syncTranslations([
+            'name' => $localized['name'] ?? [],
+            'full_name' => $localized['full_name'] ?? [],
+            'kunya' => $localized['kunya'] ?? [],
+            'biography' => $localized['biography'] ?? [],
+        ]);
+
+        return $this->update(Arr::only($localized, [
+            'reliability_grade',
+            'school',
+            'region',
+            'birth_year_hijri',
+            'death_year_hijri',
+        ]));
+    }
+
     public function scopeSearch(Builder $query, string $term): Builder
     {
         return $query->where(function (Builder $query) use ($term): void {
-            if ($query->getConnection()->getDriverName() === 'mysql') {
-                $query->whereRaw(
-                    'MATCH(name_ar, name_en, full_name_ar, full_name_en, kunya) AGAINST(? IN NATURAL LANGUAGE MODE)',
-                    [$term]
-                );
-            } else {
-                $query->where('name_ar', 'like', "%{$term}%")
-                    ->orWhere('name_en', 'like', "%{$term}%");
+            foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $locale) {
+                $query->orWhere("name->{$locale}", 'like', "%{$term}%")
+                    ->orWhere("full_name->{$locale}", 'like', "%{$term}%");
             }
 
-            $query->orWhereHas('sahabi.translations', function (Builder $translation) use ($term): void {
-                $translation->where('name', 'like', "%{$term}%")
-                    ->orWhere('full_name', 'like', "%{$term}%")
-                    ->orWhere('kunya', 'like', "%{$term}%");
-            });
+            $query->orWhereHas('sahabi.translations', fn (Builder $translation) => $translation
+                ->where('name', 'like', "%{$term}%")
+                ->orWhere('full_name', 'like', "%{$term}%"));
         });
     }
 
-    /**
-     * Scope to filter narrators by death year.
-     */
     public function scopeByDeathYear(Builder $query, int $year): Builder
     {
-        return $query->where(function (Builder $query) use ($year): void {
-            $query->where('death_year_hijri', $year)
-                ->orWhereHas('sahabi', fn (Builder $sahabi) => $sahabi->where('death_date_hijri', 'like', "%{$year}%"));
-        });
+        return $query->where('death_year_hijri', $year);
     }
 
-    /**
-     * Scope to filter narrators who have a kunya.
-     */
     public function scopeWithKunya(Builder $query): Builder
     {
-        return $query->where(function (Builder $query): void {
-            $query->whereNotNull('kunya')
-                ->orWhereHas('sahabi.translations', fn (Builder $translation) => $translation->whereNotNull('kunya'));
-        });
+        return $query->whereNotNull('kunya');
     }
 
-    /**
-     * Scope to filter narrators by death year range.
-     */
-    public function scopeByDeathYearRange(Builder $query, int $startYear, int $endYear): Builder
+    public function getDisplayName(string $locale = 'ar'): string
     {
-        return $query->whereBetween('death_year_hijri', [$startYear, $endYear]);
+        return $this->localized('kunya', $locale)
+            ?? $this->localized('name', $locale)
+            ?? '';
     }
 
-    /**
-     * Scope to get narrators with their isnad relationships.
-     */
-    public function scopeWithIsnads(Builder $query): Builder
+    public function getFullDisplayName(string $locale = 'ar'): string
     {
-        return $query->with('isnads');
+        return $this->localized('full_name', $locale) ?? $this->getDisplayName($locale);
     }
 
-    /**
-     * Get the narrator's display name.
-     * Returns kunya if available, otherwise name_ar.
-     */
-    public function getDisplayName(): string
-    {
-        return $this->kunya ?? $this->name_ar;
-    }
-
-    /**
-     * Get the narrator's full display name with title.
-     */
-    public function getFullDisplayName(): string
-    {
-        $name = $this->full_name_ar ?? $this->name_ar;
-
-        if ($this->title) {
-            return $this->title.' '.$name;
-        }
-
-        return $name;
-    }
-
-    /**
-     * Get the count of hadiths narrated by this narrator.
-     */
     public function getHadithsCount(): int
     {
         return $this->isnads()->distinct('hadith_id')->count('hadith_id');
     }
 
-    public function getNameArAttribute(?string $value): ?string
+    public function getNameArAttribute(): ?string
     {
-        return $value ?? $this->sahabi?->getTranslation('name', 'ar');
+        return $this->localized('name', 'ar') ?? $this->sahabi?->getTranslation('name', 'ar');
     }
 
-    public function getNameEnAttribute(?string $value): ?string
+    public function getNameEnAttribute(): ?string
     {
-        return $value ?? $this->sahabi?->getTranslation('name', 'en');
+        return $this->localized('name', 'en') ?? $this->sahabi?->getTranslation('name', 'en');
     }
 
-    public function getFullNameArAttribute(?string $value): ?string
+    public function getFullNameArAttribute(): ?string
     {
-        return $value ?? $this->sahabi?->getTranslation('full_name', 'ar');
+        return $this->localized('full_name', 'ar') ?? $this->sahabi?->getTranslation('full_name', 'ar');
     }
 
-    public function getFullNameEnAttribute(?string $value): ?string
+    public function getFullNameEnAttribute(): ?string
     {
-        return $value ?? $this->sahabi?->getTranslation('full_name', 'en');
+        return $this->localized('full_name', 'en') ?? $this->sahabi?->getTranslation('full_name', 'en');
     }
 
-    public function getKunyaAttribute(?string $value): ?string
+    public function getBiographyArAttribute(): ?string
     {
-        return $value
-            ?? $this->sahabi?->getTranslation('kunya', 'ar')
-            ?? $this->sahabi?->getTranslation('kunya', 'en');
+        return $this->localized('biography', 'ar') ?? $this->sahabi?->getTranslation('biography', 'ar');
     }
 
-    public function getBiographyAttribute(?string $value): ?string
+    public function getBiographyEnAttribute(): ?string
     {
-        return $value
-            ?? $this->sahabi?->getTranslation('biography', app()->getLocale())
-            ?? $this->sahabi?->getTranslation('biography', 'ar');
+        return $this->localized('biography', 'en') ?? $this->sahabi?->getTranslation('biography', 'en');
     }
 
-    public function getBirthYearHijriAttribute(mixed $value): ?int
+    public function getKunyaArAttribute(): ?string
     {
-        return $value !== null ? (int) $value : $this->extractHijriYear($this->sahabi?->birth_date_hijri);
+        return $this->localized('kunya', 'ar') ?? $this->sahabi?->getTranslation('kunya', 'ar');
     }
 
-    public function getDeathYearHijriAttribute(mixed $value): ?int
+    private function localized(string $field, string $locale): ?string
     {
-        return $value !== null ? (int) $value : $this->extractHijriYear($this->sahabi?->death_date_hijri);
+        $values = $this->getAttribute($field);
+
+        return is_array($values) ? ($values[$locale] ?? $values['ar'] ?? null) : null;
     }
 
-    private function extractHijriYear(?string $date): ?int
+    private static function localizedData(array $data): array
     {
-        return $date !== null && preg_match('/-?\d+/', $date, $match)
-            ? (int) $match[0]
-            : null;
+        if (isset($data['name']) && is_array($data['name'])) {
+            return Arr::only($data, (new static)->getFillable());
+        }
+
+        return array_filter([
+            'sahaba_id' => $data['sahaba_id'] ?? null,
+            'name' => array_filter(['ar' => $data['name_ar'] ?? null, 'en' => $data['name_en'] ?? null]),
+            'full_name' => array_filter(['ar' => $data['full_name_ar'] ?? null, 'en' => $data['full_name_en'] ?? null]),
+            'kunya' => array_filter(['ar' => $data['kunya'] ?? null]),
+            'biography' => array_filter([
+                'ar' => $data['biography_ar'] ?? $data['biography'] ?? null,
+                'en' => $data['biography_en'] ?? null,
+            ]),
+            'birth_year_hijri' => $data['birth_year_hijri'] ?? null,
+            'death_year_hijri' => $data['death_year_hijri'] ?? null,
+            'reliability_grade' => $data['reliability_grade'] ?? null,
+            'school' => $data['school'] ?? null,
+            'region' => $data['region'] ?? null,
+        ], static fn (mixed $value): bool => $value !== null && $value !== []);
     }
 }

@@ -103,6 +103,7 @@ foreach ($files as $file) {
     $json = json_decode((string) file_get_contents($file), true);
     if (! is_array($json)) {
         $invalid[] = basename($file);
+
         continue;
     }
 
@@ -112,6 +113,7 @@ foreach ($files as $file) {
     $bookNumber = (string) ($collectionRow['book_number'] ?? '');
     if ($hadithNumber === '' || $bookNumber === '') {
         $missingCanonical[] = $sourceFile;
+
         continue;
     }
 
@@ -139,6 +141,7 @@ foreach ($files as $file) {
         ->first();
     if ($book === null) {
         $missingCanonical[] = "{$sourceFile} (book)";
+
         continue;
     }
 

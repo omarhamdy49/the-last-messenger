@@ -13,10 +13,7 @@ use Normalizer;
  *
  *  - `sahaba` — the scraped source produced the same person several times,
  *    visible in the slug suffixes the importer added (`abu-aziz-ibn-umair-2`).
- *  - `hadith_companions` — the same narrator appears once per transliteration
- *    used across collections ("Abu Hurayrah" / "Abu Huraira" / "Abu Hurairah").
- *
- * Sahaba are merged first so companion merges inherit already-canonical ids.
+ *  - `hadith_narrators` — the same narrator appears once per transliteration.
  *
  * Identity is decided on the ENGLISH name, which is populated and consistently
  * transliterated across the dataset. The Arabic name is used only as a veto,
@@ -29,30 +26,12 @@ class DedupePeopleCommand extends Command
 {
     protected $signature = 'data:dedupe
         {--apply : perform the merges (default is a dry run)}
-        {--only= : limit to "sahaba" or "narrations"}
-        {--drop-nameless : also detach and delete companion rows that carry no name at all}
-        {--merge-short-names : fold a one-word name into the single full name that extends it}
         {--show=12 : how many merge groups to print}';
 
-    protected $description = 'Merge duplicate sahaba and hadith companion records, repointing every reference';
-
-    /** Placeholders standing in for "narrator not identified" — never merge these into a person. */
-    private const NON_PERSON = [
-        'companion', 'companions', 'various companions', 'unknown', 'not specified', 'someone',
-        'صحابي', 'صحابية', 'الصحابة', 'غير معروف', 'غير محدد',
-    ];
-
-    /** Share of a stem's narrations one full name must hold before a bare given name folds into it. */
-    private const SHORT_NAME_DOMINANCE = 0.9;
+    protected $description = 'Merge duplicate sahaba records and repoint every reference';
 
     /** Identifying words a name without a patronymic needs before it may absorb lineage variants. */
     private const MIN_LINEAGE_TOKENS = 3;
-
-    /** Where each narration-source table's rows are actually used. */
-    private const NARRATION_USAGE = [
-        'hadith_companions' => ['hadith_hadiths', 'companion_id'],
-        'hadith_narrators' => ['hadith_isnad', 'narrator_id'],
-    ];
 
     /** Every column that points at `sahaba.id`. */
     private const SAHABA_REFERENCES = [
@@ -64,24 +43,13 @@ class DedupePeopleCommand extends Command
         ['relationships', 'related_person_id'],
         ['sahaba', 'father_id'],
         ['sahaba', 'mother_id'],
-        ['hadith_companions', 'sahaba_id'],
         ['hadith_narrators', 'sahaba_id'],
     ];
 
     public function handle(): int
     {
         $apply = (bool) $this->option('apply');
-        $only = $this->option('only');
-
-        if ($only === null || $only === 'sahaba') {
-            $this->mergeSahaba($apply);
-        }
-
-        if ($only === null || $only === 'narrations') {
-            $this->mergeNarrationSources('hadith_companions', $apply);
-            $this->mergeNarrationSources('hadith_narrators', $apply);
-            $this->handleNamelessCompanions($apply);
-        }
+        $this->mergeSahaba($apply);
 
         if (! $apply) {
             $this->newLine();
@@ -319,7 +287,6 @@ class DedupePeopleCommand extends Command
         DB::table('sahaba')->where('id', $canonical)->where('father_id', $canonical)->update(['father_id' => null]);
         DB::table('sahaba')->where('id', $canonical)->where('mother_id', $canonical)->update(['mother_id' => null]);
 
-        $this->repointUniqueSahabaLink('hadith_companions', $canonical, $duplicate);
         $this->repointUniqueSahabaLink('hadith_narrators', $canonical, $duplicate);
 
         DB::table('sahaba')->where('id', $duplicate)->delete();
@@ -396,9 +363,7 @@ class DedupePeopleCommand extends Command
             return;
         }
 
-        [$weightColumn, $weightTable] = $table === 'hadith_companions'
-            ? ['companion_id', 'hadith_hadiths']
-            : ['narrator_id', 'hadith_isnad'];
+        [$weightColumn, $weightTable] = ['narrator_id', 'hadith_isnad'];
 
         $holderWeight = DB::table($weightTable)->where($weightColumn, $holder->id)->count();
         $incumbentWeight = DB::table($weightTable)->where($weightColumn, $incumbent->id)->count();
@@ -409,320 +374,6 @@ class DedupePeopleCommand extends Command
         } else {
             DB::table($table)->where('id', $holder->id)->update(['sahaba_id' => null]);
         }
-    }
-
-    // --------------------------------------------------- companions/narrators
-
-    /**
-     * Both narration-source tables have the same defect and the same shape: one
-     * row per spelling a collection happened to use. Companions vary by
-     * transliteration ("Abu Hurayrah"/"Abu Huraira"); narrators additionally
-     * vary by Arabic grammatical case, since the name is lifted straight out of
-     * the isnad — أبو / أبي / أبا هريرة are one man in three declensions.
-     */
-    private function mergeNarrationSources(string $table, bool $apply): void
-    {
-        [$childTable, $childColumn] = self::NARRATION_USAGE[$table];
-
-        $rows = DB::table($table.' as p')
-            ->leftJoin($childTable.' as u', "u.{$childColumn}", '=', 'p.id')
-            ->selectRaw('p.id, p.name_ar, p.name_en, p.sahaba_id, count(u.id) uses')
-            ->groupBy('p.id', 'p.name_ar', 'p.name_en', 'p.sahaba_id')
-            ->get()
-            ->keyBy('id');
-
-        // Union-find: rows join a cluster if they agree on either name axis.
-        $parent = [];
-        $find = function (int $x) use (&$parent, &$find): int {
-            while (($parent[$x] ?? $x) !== $x) {
-                $x = $parent[$x] = $parent[$parent[$x]] ?? $parent[$x];
-            }
-
-            return $x;
-        };
-
-        $seen = ['ar' => [], 'en' => []];
-        $skipped = ['nameless' => 0, 'placeholder' => 0, 'single_token' => 0];
-
-        foreach ($rows as $row) {
-            $parent[$row->id] ??= (int) $row->id;
-
-            $arabic = $this->foldArabic((string) $row->name_ar);
-            $english = $this->foldEnglish((string) $row->name_en);
-
-            if ($arabic === '' && $english === '') {
-                $skipped['nameless']++;
-
-                continue;
-            }
-            if ($this->isPlaceholder((string) $row->name_ar) || $this->isPlaceholder((string) $row->name_en)) {
-                $skipped['placeholder']++;
-
-                continue;
-            }
-            // A one-word name identifies nobody on its own, so it may not join
-            // a cluster by lineage — but two rows carrying the SAME one word
-            // ("Aisha" and "A'isha") came from the same reading and are the
-            // same person, so exact agreement still merges them.
-            $lone = max($this->identifyingTokens($arabic), $this->identifyingTokens($english)) < 2;
-            if ($lone && ! isset($seen['ar'][$arabic]) && ! isset($seen['en'][$english])) {
-                $skipped['single_token']++;
-                if ($arabic !== '') {
-                    $seen['ar'][$arabic] = (int) $row->id;
-                }
-                if ($english !== '') {
-                    $seen['en'][$english] = (int) $row->id;
-                }
-
-                continue;
-            }
-
-            foreach (['ar' => $arabic, 'en' => $english] as $axis => $key) {
-                if ($key === '') {
-                    continue;
-                }
-                if (isset($seen[$axis][$key])) {
-                    $a = $find($seen[$axis][$key]);
-                    $b = $find((int) $row->id);
-                    if ($a !== $b) {
-                        $parent[$b] = $a;
-                    }
-                } else {
-                    $seen[$axis][$key] = (int) $row->id;
-                }
-            }
-        }
-
-        if ($this->option('merge-short-names')) {
-            $this->foldShortNames($rows, $seen, $find, $parent, $skipped);
-        }
-
-        $clusters = [];
-        foreach ($rows as $row) {
-            $clusters[$find((int) $row->id)][] = (int) $row->id;
-        }
-        $merges = array_values(array_filter($clusters, fn ($g) => count($g) > 1));
-
-        $affected = array_sum(array_map(
-            fn ($g) => array_sum(array_map(fn ($id) => (int) $rows[$id]->uses, $g)),
-            $merges,
-        ));
-
-        $this->newLine();
-        $this->info(sprintf(
-            '%s: %d duplicate groups, %d rows → %d canonical (%d removed), covering %s %s.',
-            $table, count($merges), array_sum(array_map('count', $merges)), count($merges),
-            array_sum(array_map('count', $merges)) - count($merges), number_format($affected),
-            $table === 'hadith_companions' ? 'hadiths' : 'isnad links',
-        ));
-        $this->line('  left alone: '.json_encode($skipped));
-
-        $this->printGroups($merges, fn (int $id) => sprintf(
-            '#%-5s %-30s %-26s uses=%-5s sahaba=%s',
-            $id, mb_substr((string) $rows[$id]->name_ar, 0, 28), mb_substr((string) $rows[$id]->name_en, 0, 24),
-            $rows[$id]->uses, $rows[$id]->sahaba_id ?? '—',
-        ));
-
-        if (! $apply || $merges === []) {
-            return;
-        }
-
-        DB::transaction(function () use ($merges, $rows, $table) {
-            foreach ($merges as $group) {
-                usort($group, fn ($a, $b) => (int) $rows[$b]->uses <=> (int) $rows[$a]->uses ?: $a <=> $b);
-                $canonical = $group[0];
-
-                foreach (array_slice($group, 1) as $duplicate) {
-                    $this->absorbNarrationSource($table, $canonical, $duplicate);
-                }
-            }
-        });
-
-        $this->info('  merged.');
-    }
-
-    /**
-     * Folds a one-word attribution into the full name that extends it: the text
-     * says "Narrated Anas" and only one companion is an "Anas <something>", so
-     * they are the same man.
-     *
-     * What makes this safe rather than a guess is dominance: the leading
-     * candidate must carry at least SHORT_NAME_DOMINANCE of every narration
-     * attributed to any name starting with that word. "Anas ibn Malik" holds
-     * 98% of the "Anas …" narrations and takes the bare "Anas". "Abdullah"
-     * splits 43/20/10 across Ibn Umar, Ibn Abbas and Ibn 'Amr, so it matches
-     * none of them and stays on its own — as does "Jabir", contested between
-     * Ibn Abdullah and Ibn Samurah.
-     *
-     * @param  \Illuminate\Support\Collection<int, object>  $rows
-     * @param  array<string, array<string, int>>  $seen
-     * @param  array<int, int>  $parent
-     * @param  array<string, int>  $skipped
-     */
-    private function foldShortNames($rows, array $seen, callable $find, array &$parent, array &$skipped): void
-    {
-        // Index every multi-word name by its first word, per axis.
-        $byFirstWord = ['ar' => [], 'en' => []];
-        foreach ($rows as $row) {
-            foreach (['ar' => $this->foldArabic((string) $row->name_ar), 'en' => $this->foldEnglish((string) $row->name_en)] as $axis => $key) {
-                if ($key === '' || $this->identifyingTokens($key) < 2) {
-                    continue;
-                }
-                $byFirstWord[$axis][explode(' ', $key)[0]][$find((int) $row->id)] = true;
-            }
-        }
-
-        // Narrations per cluster, so dominance is measured on the merged
-        // person rather than on whichever spelling happens to be biggest.
-        $clusterUses = [];
-        foreach ($rows as $row) {
-            $root = $find((int) $row->id);
-            $clusterUses[$root] = ($clusterUses[$root] ?? 0) + (int) $row->uses;
-        }
-
-        $folded = 0;
-        $refused = [];
-
-        foreach ($rows as $row) {
-            $arabic = $this->foldArabic((string) $row->name_ar);
-            $english = $this->foldEnglish((string) $row->name_en);
-
-            if ($this->isPlaceholder((string) $row->name_ar) || $this->isPlaceholder((string) $row->name_en)) {
-                continue;
-            }
-            if (max($this->identifyingTokens($arabic), $this->identifyingTokens($english)) >= 2) {
-                continue;
-            }
-
-            $target = null;
-            foreach (['en' => $english, 'ar' => $arabic] as $axis => $key) {
-                if ($key === '') {
-                    continue;
-                }
-                $candidates = array_keys($byFirstWord[$axis][$key] ?? []);
-                $candidates = array_values(array_filter($candidates, fn (int $id) => $id !== $find((int) $row->id)));
-                if ($candidates === []) {
-                    continue;
-                }
-
-                $weights = [];
-                foreach ($candidates as $candidate) {
-                    $weights[$candidate] = $clusterUses[$candidate] ?? 0;
-                }
-                arsort($weights);
-                $total = array_sum($weights);
-                $leader = array_key_first($weights);
-
-                if ($total > 0 && $weights[$leader] / $total >= self::SHORT_NAME_DOMINANCE) {
-                    $target = $leader;
-                    break;
-                }
-            }
-
-            if ($target === null) {
-                $label = trim((string) ($row->name_en ?: $row->name_ar));
-                if ($label !== '' && (int) $row->uses > 50) {
-                    $refused[$label] = (int) $row->uses;
-                }
-
-                continue;
-            }
-
-            $a = $find($target);
-            $b = $find((int) $row->id);
-            if ($a !== $b) {
-                $parent[$b] = $a;
-                $folded++;
-                $skipped['single_token'] = max(0, $skipped['single_token'] - 1);
-            }
-        }
-
-        $this->line("  folded {$folded} one-word name(s) into the full name that dominates each.");
-
-        arsort($refused);
-        foreach (array_slice($refused, 0, 8, true) as $label => $uses) {
-            $this->line(sprintf('     left alone: %-24s %s narration(s) — no full name dominant enough', $label, number_format($uses)));
-        }
-    }
-
-    private function absorbNarrationSource(string $table, int $canonical, int $duplicate): void
-    {
-        [$childTable, $childColumn] = self::NARRATION_USAGE[$table];
-
-        $keep = DB::table($table)->where('id', $canonical)->first();
-        $drop = DB::table($table)->where('id', $duplicate)->first();
-        if ($keep === null || $drop === null) {
-            return;
-        }
-
-        $fill = [];
-        foreach ((array) $drop as $column => $value) {
-            if (in_array($column, ['id', 'created_at', 'updated_at'], true) || $value === null || trim((string) $value) === '') {
-                continue;
-            }
-            // sahaba_id is UNIQUE — the duplicate's link may only move across
-            // if the canonical has none.
-            if ($column === 'sahaba_id' && $keep->sahaba_id !== null) {
-                continue;
-            }
-            $current = $keep->$column ?? null;
-            if ($current === null || trim((string) $current) === '') {
-                $fill[$column] = $value;
-            }
-        }
-
-        DB::table($table)->where('id', $duplicate)->update(['sahaba_id' => null]);
-        if ($fill !== []) {
-            DB::table($table)->where('id', $canonical)->update($fill);
-        }
-
-        DB::table($childTable)->where($childColumn, $duplicate)->update([$childColumn => $canonical]);
-        DB::table($table)->where('id', $duplicate)->delete();
-    }
-
-    /**
-     * Rows with no name in any language: the `companion_id` on those hadiths
-     * points at nothing readable, which is a false relation rather than data.
-     */
-    private function handleNamelessCompanions(bool $apply): void
-    {
-        $nameless = DB::table('hadith_companions')
-            ->where(fn ($q) => $q->whereNull('name_ar')->orWhere('name_ar', ''))
-            ->where(fn ($q) => $q->whereNull('name_en')->orWhere('name_en', ''))
-            ->where(fn ($q) => $q->whereNull('full_name_ar')->orWhere('full_name_ar', ''))
-            ->where(fn ($q) => $q->whereNull('full_name_en')->orWhere('full_name_en', ''))
-            ->pluck('id');
-
-        if ($nameless->isEmpty()) {
-            return;
-        }
-
-        $hadiths = DB::table('hadith_hadiths')->whereIn('companion_id', $nameless)->count();
-
-        $this->newLine();
-        $this->line(sprintf(
-            '<comment>hadith_companions</comment>: %s rows carry no name in any language, attached to %s hadiths.',
-            number_format($nameless->count()), number_format($hadiths),
-        ));
-
-        if (! $this->option('drop-nameless')) {
-            $this->line('  left in place — re-run with --drop-nameless to detach and remove them.');
-
-            return;
-        }
-
-        if (! $apply) {
-            $this->line('  would detach those hadiths and delete the rows.');
-
-            return;
-        }
-
-        DB::transaction(function () use ($nameless) {
-            DB::table('hadith_hadiths')->whereIn('companion_id', $nameless)->update(['companion_id' => null]);
-            DB::table('hadith_companions')->whereIn('id', $nameless)->delete();
-        });
-
-        $this->info('  detached and removed.');
     }
 
     // ---------------------------------------------------------------- shared

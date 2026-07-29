@@ -42,15 +42,8 @@ final class ListHadithsByThemeHandler implements QueryHandler
             throw EntityNotFoundException::forEntity('HadithTheme', $query->themeId);
         }
 
-        // Get theme IDs to search (include sub-themes if requested)
-        $themeIds = [$query->themeId];
-        if ($query->includeSubThemes) {
-            $childIds = $this->themeRepository->getChildrenIds($query->themeId);
-            $themeIds = array_merge($themeIds, $childIds);
-        }
-
         $filters = [
-            'theme_ids' => $themeIds,
+            'theme_ids' => [$query->themeId],
         ];
 
         if ($query->gradingStatus !== null) {

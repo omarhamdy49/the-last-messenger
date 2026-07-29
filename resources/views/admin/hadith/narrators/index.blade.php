@@ -180,7 +180,7 @@
                         </td>
                         <td class="px-6 py-4 text-center">
                             <span :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                                {{ $narrator->kunya ?? '-' }}
+                                {{ $narrator->kunya['ar'] ?? $narrator->kunya['en'] ?? '-' }}
                             </span>
                         </td>
                         <td class="px-6 py-4 text-center">

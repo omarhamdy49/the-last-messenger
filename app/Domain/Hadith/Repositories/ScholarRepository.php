@@ -5,92 +5,47 @@ declare(strict_types=1);
 namespace App\Domain\Hadith\Repositories;
 
 use App\Domain\Hadith\Models\HadithScholar;
-use App\Domain\Shared\Helpers\FullTextSearchHelper;
 use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\Cache;
 
-/**
- * Hadith Scholar Repository Implementation
- *
- * Data access layer for Hadith Scholar entities.
- */
 class ScholarRepository extends BaseRepository implements ScholarRepositoryInterface
 {
-    /**
-     * Cache TTL in seconds (1 hour)
-     */
-    private const CACHE_TTL = 3600;
-
-    /**
-     * Get model instance
-     */
     protected function getModel(): Model
     {
         return new HadithScholar;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getByName(string $name, string $locale = 'ar'): ?HadithScholar
     {
-        $nameField = 'name_'.$locale;
-
-        return Cache::remember(
-            "hadith_scholar_name_{$locale}_{$name}",
-            self::CACHE_TTL,
-            fn () => $this->model
-                ->where($nameField, $name)
-                ->first()
-        );
+        return $this->model->where("name->{$locale}", $name)->first();
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getAllByEra(): Collection
     {
-        return Cache::remember(
-            'hadith_scholars_by_era',
-            self::CACHE_TTL,
-            fn () => $this->model
-                ->select(['id', 'name_ar', 'name_en', 'kunya', 'school', 'death_year_hijri', 'region'])
-                ->orderBy('death_year_hijri')
-                ->get()
-        );
+        return $this->model
+            ->select(['id', 'name', 'kunya', 'school', 'death_year_hijri', 'region'])
+            ->orderBy('death_year_hijri')
+            ->get();
     }
 
-    /**
-     * {@inheritdoc}
-     *
-     * FULLTEXT index on hadith_scholars covers (name_ar, name_en, full_name).
-     * MATCH must reference all columns in that composite index.
-     */
     public function search(string $query, int $perPage = 15): LengthAwarePaginator
     {
-        return FullTextSearchHelper::apply(
-            $this->model->newQuery(),
-            ['name_ar', 'name_en', 'full_name'],
-            $query
-        )->paginate($perPage);
+        return $this->model
+            ->where('name->ar', 'like', "%{$query}%")
+            ->orWhere('name->en', 'like', "%{$query}%")
+            ->orWhere('full_name->ar', 'like', "%{$query}%")
+            ->orWhere('full_name->en', 'like', "%{$query}%")
+            ->paginate($perPage);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getWithGradingCount(): Collection
     {
-        return Cache::remember(
-            'hadith_scholars_with_grading_count',
-            self::CACHE_TTL,
-            fn () => $this->model
-                ->select(['id', 'name_ar', 'name_en', 'kunya', 'school', 'death_year_hijri'])
-                ->withCount('gradings')
-                ->orderBy('gradings_count', 'desc')
-                ->get()
-        );
+        return $this->model
+            ->select(['id', 'name', 'kunya', 'school', 'death_year_hijri'])
+            ->withCount('gradings')
+            ->orderByDesc('gradings_count')
+            ->get();
     }
 }

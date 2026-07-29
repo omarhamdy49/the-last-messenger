@@ -11,9 +11,8 @@ namespace App\Domain\Hadith\Application\DTOs;
  * collection + book and the adjacent books (by book_number within the same
  * collection) used for previous/next chapter navigation.
  *
- * Note: hadiths are linked to books (hadith_hadiths.book_id) — the deeper
- * hadith_chapters rows carry no hadith linkage in the schema, so the public
- * "chapter" unit is the book (kitab) inside a collection.
+ * Hadiths belong to real chapters; this context groups those chapters under
+ * their source book for public kitab navigation.
  */
 final readonly class ChapterContextDTO
 {

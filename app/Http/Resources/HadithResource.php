@@ -31,25 +31,28 @@ class HadithResource extends JsonResource
             'grading_status' => $this->grading_status,
             'grading_agreement' => $this->grading_agreement,
             'is_authentic' => $this->isAuthentic(),
-            'book' => $this->whenLoaded('book', fn () => [
-                'id' => $this->book->id,
-                'title' => $this->book->getTitleInLocale($locale),
-                'collection' => $this->when(
-                    $this->book->relationLoaded('collection'),
-                    fn () => [
-                        'id' => $this->book->collection->id,
-                        'name' => $this->book->collection->getNameInLocale($locale),
-                        'abbreviation' => $this->book->collection->abbreviation,
-                    ]
-                ),
-            ]),
-            'companion' => $this->whenLoaded('companion', fn () => [
-                'id' => $this->companion->id,
-                'name' => $locale === 'ar' ? $this->companion->name_ar : $this->companion->name_en,
+            'book' => $this->when(
+                $this->relationLoaded('chapter') && $this->chapter?->relationLoaded('book'),
+                fn () => [
+                    'id' => $this->chapter->book->id,
+                    'title' => $this->chapter->book->getTitleInLocale($locale),
+                    'collection' => $this->when(
+                        $this->chapter->book->relationLoaded('collection'),
+                        fn () => [
+                            'id' => $this->chapter->book->collection->id,
+                            'name' => $this->chapter->book->collection->getNameInLocale($locale),
+                            'abbreviation' => $this->chapter->book->collection->abbreviation,
+                        ]
+                    ),
+                ],
+            ),
+            'primary_narrator' => $this->whenLoaded('primaryNarrator', fn () => [
+                'id' => $this->primaryNarrator->id,
+                'name' => $this->primaryNarrator->getDisplayName($locale),
             ]),
             'translations' => $this->whenLoaded('translations', function () {
                 return $this->translations->map(fn ($t) => [
-                    'language' => $t->language_code,
+                    'language' => $t->locale,
                     'text' => $t->text,
                 ]);
             }),
@@ -61,14 +64,15 @@ class HadithResource extends JsonResource
             }),
             'gradings' => $this->whenLoaded('gradings', function () use ($locale) {
                 return $this->gradings->map(fn ($g) => [
-                    'grade' => $g->grade,
+                    'grade' => $g->raw_grade,
+                    'grade_key' => $g->grade_key,
                     'scholar' => $g->scholar?->{'name_'.$locale},
                 ]);
             }),
-            'significance' => $locale === 'ar' ? $this->significance_ar : $this->significance_en,
-            'historical_context' => $locale === 'ar' ? $this->historical_context_ar : $this->historical_context_en,
             'full_reference' => $this->when(
-                $this->relationLoaded('book') && $this->book?->relationLoaded('collection'),
+                $this->relationLoaded('chapter')
+                    && $this->chapter?->relationLoaded('book')
+                    && $this->chapter->book?->relationLoaded('collection'),
                 fn () => $this->getFullReference()
             ),
             'created_at' => $this->created_at?->toIso8601String(),

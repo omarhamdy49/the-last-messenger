@@ -199,6 +199,7 @@ foreach ($files as $file) {
     $json = json_decode((string) file_get_contents($file), true);
     if (! is_array($json)) {
         $invalid[] = basename($file);
+
         continue;
     }
 
@@ -223,6 +224,7 @@ foreach ($sourceByNumber as $hadithNumber => $file) {
     $web = $webRows[$hadithNumber] ?? null;
     if ($web === null) {
         $missingWeb[] = $hadithNumber;
+
         continue;
     }
 

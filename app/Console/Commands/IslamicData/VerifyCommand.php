@@ -129,10 +129,11 @@ class VerifyCommand extends Command
 
         $dbCounts = HadithCollection::query()
             ->leftJoin('hadith_books', 'hadith_books.collection_id', '=', 'hadith_collections.id')
-            ->leftJoin('hadith_hadiths', 'hadith_hadiths.book_id', '=', 'hadith_books.id')
-            ->selectRaw('hadith_collections.source_slug, COUNT(hadith_hadiths.id) AS hadith_count')
-            ->groupBy('hadith_collections.source_slug')
-            ->pluck('hadith_count', 'source_slug')
+            ->leftJoin('hadith_chapters', 'hadith_chapters.book_id', '=', 'hadith_books.id')
+            ->leftJoin('hadith_hadiths', 'hadith_hadiths.chapter_id', '=', 'hadith_chapters.id')
+            ->selectRaw('hadith_collections.slug, COUNT(hadith_hadiths.id) AS hadith_count')
+            ->groupBy('hadith_collections.slug')
+            ->pluck('hadith_count', 'slug')
             ->all();
 
         $rows = [];
@@ -161,7 +162,7 @@ class VerifyCommand extends Command
         // 125 Malik source files are English-only — a documented source gap, not data loss.
         $knownMissingArabic = (int) config('islamic-data.known_missing_arabic');
         $hadithsMissingArabic = Hadith::query()
-            ->whereDoesntHave('translations', fn ($query) => $query->where('language_code', 'ar'))
+            ->whereDoesntHave('translations', fn ($query) => $query->where('locale', 'ar'))
             ->count();
         $rows[] = $this->check(
             'Hadiths missing Arabic text',
@@ -170,7 +171,7 @@ class VerifyCommand extends Command
             $hadithsMissingArabic <= $knownMissingArabic,
         );
 
-        $orphanHadiths = Hadith::query()->whereNull('book_id')->count();
+        $orphanHadiths = Hadith::query()->whereDoesntHave('chapter.book')->count();
         $rows[] = $this->check('Hadiths without a book', $orphanHadiths, '= 0', $orphanHadiths === 0);
 
         // Chapter linkage floor recorded after the 2026-06 chapter_id backfill.

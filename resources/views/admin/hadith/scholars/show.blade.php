@@ -81,18 +81,18 @@
 
         <!-- Biography -->
         @php
-            $hasBio = ($scholar->biography_json && is_array($scholar->biography_json) && count(array_filter($scholar->biography_json))) || $scholar->biography;
+            $hasBio = is_array($scholar->biography) && count(array_filter($scholar->biography));
         @endphp
         @if($hasBio)
         <div class="rounded-2xl border p-6" :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
             <h2 class="text-xl font-bold mb-6 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
                 <i data-lucide="file-text" class="w-5 h-5 text-accent"></i> السيرة الذاتية
             </h2>
-            @if($scholar->biography_json && is_array($scholar->biography_json))
+            @if($hasBio)
             <div x-data="{ activeTab: 'ar' }" class="space-y-4">
                 <div class="flex flex-wrap gap-2 border-b pb-4" :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
                     @foreach(['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'] as $lang => $label)
-                        @if(!empty($scholar->biography_json[$lang]))
+                        @if(!empty($scholar->biography[$lang]))
                         <button @click="activeTab = '{{ $lang }}'" class="px-4 py-2 rounded-lg font-medium transition-all"
                                 :class="activeTab === '{{ $lang }}' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white' : (darkMode ? 'bg-gray-800 text-gray-400 hover:text-white' : 'bg-gray-100 text-gray-600 hover:text-gray-900')">
                             {{ $label }}
@@ -101,18 +101,14 @@
                     @endforeach
                 </div>
                 @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $lang)
-                    @if(!empty($scholar->biography_json[$lang]))
+                    @if(!empty($scholar->biography[$lang]))
                     <div x-show="activeTab === '{{ $lang }}'" class="p-4 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
                         <p class="leading-relaxed {{ in_array($lang, ['ar', 'ur']) ? 'text-right' : 'text-left' }}" :class="darkMode ? 'text-gray-300' : 'text-gray-700'" dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">
-                            {{ $scholar->biography_json[$lang] }}
+                            {{ $scholar->biography[$lang] }}
                         </p>
                     </div>
                     @endif
                 @endforeach
-            </div>
-            @elseif($scholar->biography)
-            <div class="p-4 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                <p class="leading-relaxed text-right" :class="darkMode ? 'text-gray-300' : 'text-gray-700'" dir="rtl">{{ $scholar->biography }}</p>
             </div>
             @endif
         </div>

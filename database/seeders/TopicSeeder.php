@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\DB;
  *
  *   - Quran verses:  quran_verse_translations.text_notashkeel (diacritic-free
  *                    column, so a plain LIKE matches reliably)
- *   - Hadiths:       hadith_translations.text where language_code = 'ar_notashkeel'
+ *   - Hadiths:       hadith_translations.search_text for the Arabic locale
  *                    (the diacritic-free Arabic matn)
  *   - Articles:      article_locale.title / content (ar) LIKE term
  *
@@ -182,14 +182,23 @@ class TopicSeeder extends Seeder
     {
         $ids = DB::table('hadith_translations as ht')
             ->join('hadith_hadiths as h', 'h.id', '=', 'ht.hadith_id')
-            ->where('ht.language_code', 'ar_notashkeel')
-            ->whereNull('h.merged_into_id')
+            ->where('ht.locale', 'ar')
             ->where(function ($q) use ($terms): void {
                 foreach ($terms as $term) {
-                    $q->orWhere('ht.text', 'LIKE', "%{$term}%");
+                    $q->orWhere('ht.search_text', 'LIKE', "%{$term}%");
                 }
             })
-            ->orderByRaw("CASE WHEN h.grading_status = 'sahih' THEN 0 WHEN h.grading_status = 'hasan' THEN 1 ELSE 2 END")
+            ->orderByRaw("CASE
+                WHEN EXISTS (
+                    SELECT 1 FROM hadith_gradings hg
+                    WHERE hg.hadith_id = h.id AND hg.grade_key = 'sahih'
+                ) THEN 0
+                WHEN EXISTS (
+                    SELECT 1 FROM hadith_gradings hg
+                    WHERE hg.hadith_id = h.id AND hg.grade_key = 'hasan'
+                ) THEN 1
+                ELSE 2
+            END")
             ->orderBy('h.id')
             ->limit(self::HADITH_LIMIT)
             ->pluck('ht.hadith_id');

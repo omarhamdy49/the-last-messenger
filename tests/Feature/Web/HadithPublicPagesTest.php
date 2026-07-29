@@ -6,10 +6,10 @@ namespace Tests\Feature\Web;
 
 use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithBook;
+use App\Domain\Hadith\Models\HadithChapter;
 use App\Domain\Hadith\Models\HadithCollection;
 use App\Domain\Hadith\Models\HadithCommentary;
 use App\Domain\Hadith\Models\HadithGrading;
-use App\Domain\Hadith\Models\HadithGradingLevel;
 use App\Domain\Hadith\Models\HadithIsnad;
 use App\Domain\Hadith\Models\HadithNarrator;
 use App\Domain\Hadith\Models\HadithScholar;
@@ -28,14 +28,10 @@ final class HadithPublicPagesTest extends TestCase
     private function seedCollection(array $overrides = []): HadithCollection
     {
         return HadithCollection::create(array_merge([
-            'name_ar' => 'صحيح الاختبار',
-            'name_en' => 'صحيح الاختبار',
-            'slug_ar' => 'sahih-test',
-            'slug_en' => 'sahih-test-en',
+            'code' => 'test',
+            'name' => ['ar' => 'صحيح الاختبار', 'en' => 'Test Sahih'],
+            'slug' => 'sahih-test',
             'abbreviation' => 'TST',
-            'canonical_code' => 'test',
-            'source_slug' => 'test',
-            'total_hadiths' => 3,
         ], $overrides));
     }
 
@@ -44,26 +40,35 @@ final class HadithPublicPagesTest extends TestCase
         return HadithBook::create(array_merge([
             'collection_id' => $collection->id,
             'book_number' => $number,
-            'title_ar' => "كتاب الإيمان {$number}",
-            'title_en' => "كتاب الإيمان {$number}",
-            'slug_ar' => "kitab-{$collection->id}-{$number}",
-            'slug_en' => "book-{$collection->id}-{$number}",
+            'title' => ['ar' => "كتاب الإيمان {$number}", 'en' => "Book of Faith {$number}"],
         ], $overrides));
     }
 
     private function seedHadith(HadithBook $book, string $number, array $overrides = []): Hadith
     {
+        $gradeKey = $overrides['grading_status'] ?? 'sahih';
+        unset($overrides['grading_status'], $overrides['grading_agreement']);
+
+        $chapter = HadithChapter::firstOrCreate(
+            ['book_id' => $book->id, 'chapter_number' => '1'],
+            ['name' => ['ar' => 'باب الاختبار', 'en' => 'Test chapter']],
+        );
+
         $hadith = Hadith::create(array_merge([
-            'book_id' => $book->id,
+            'chapter_id' => $chapter->id,
             'hadith_number' => $number,
-            'grading_status' => 'sahih',
-            'grading_agreement' => true,
+            'text_hash' => hash('sha256', "hadith-{$book->id}-{$number}"),
         ], $overrides));
 
         HadithTranslation::create([
             'hadith_id' => $hadith->id,
-            'language_code' => 'ar',
+            'locale' => 'ar',
             'text' => 'إنما الأعمال بالنيات وإنما لكل امرئ ما نوى رقم '.$number,
+        ]);
+        HadithGrading::create([
+            'hadith_id' => $hadith->id,
+            'grade_key' => $gradeKey,
+            'raw_grade' => $gradeKey,
         ]);
 
         return $hadith;
@@ -147,13 +152,10 @@ final class HadithPublicPagesTest extends TestCase
 
         $collectionA = $this->seedCollection();
         $collectionB = $this->seedCollection([
-            'name_ar' => 'سنن الاختبار',
-            'name_en' => 'سنن الاختبار',
-            'slug_ar' => 'sunan-test',
-            'slug_en' => 'sunan-test-en',
+            'code' => 'test2',
+            'name' => ['ar' => 'سنن الاختبار', 'en' => 'Test Sunan'],
+            'slug' => 'sunan-test',
             'abbreviation' => 'TS2',
-            'canonical_code' => 'test2',
-            'source_slug' => 'test2',
         ]);
 
         $bookA = $this->seedBook($collectionA, 1);
@@ -196,9 +198,8 @@ final class HadithPublicPagesTest extends TestCase
         $hadith = $this->seedHadith($book, '1');
 
         $narrator = HadithNarrator::create([
-            'name_ar' => 'أبو هريرة',
-            'name_en' => 'أبو هريرة',
-            'reliability_grade' => 'صحابي',
+            'name' => ['ar' => 'أبو هريرة', 'en' => 'Abu Hurayrah'],
+            'reliability_grade' => 'companion',
             'death_year_hijri' => 59,
         ]);
         HadithIsnad::create([
@@ -209,27 +210,22 @@ final class HadithPublicPagesTest extends TestCase
         ]);
 
         $scholar = HadithScholar::create([
-            'name_ar' => 'الإمام النووي',
-            'name_en' => 'الإمام النووي',
+            'name' => ['ar' => 'الإمام النووي', 'en' => 'Imam al-Nawawi'],
         ]);
         HadithCommentary::create([
             'hadith_id' => $hadith->id,
             'scholar_id' => $scholar->id,
-            'language_code' => 'ar',
-            'author' => 'الإمام النووي',
-            'commentary_text' => 'هذا الحديث أصل عظيم من أصول الإسلام.',
-            'verified' => true,
+            'locale' => 'ar',
+            'author_name' => 'الإمام النووي',
+            'text' => 'هذا الحديث أصل عظيم من أصول الإسلام.',
+            'review_status' => 'verified',
         ]);
 
-        $level = HadithGradingLevel::create([
-            'grade_ar' => 'صحيح',
-            'grade_en' => 'Sahih',
-            'rank' => 1,
-        ]);
         HadithGrading::create([
             'hadith_id' => $hadith->id,
             'scholar_id' => $scholar->id,
-            'grading_level_id' => $level->id,
+            'grade_key' => 'sahih',
+            'raw_grade' => 'صحيح',
         ]);
 
         $response = $this->get(route('public.hadith.show', $hadith->id));

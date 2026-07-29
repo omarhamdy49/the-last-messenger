@@ -24,3 +24,6 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Generated/exported data + DB backups (portal:export target)
+/portal-data/

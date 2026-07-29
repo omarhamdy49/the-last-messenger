@@ -35,7 +35,7 @@ final class ListCollectionsHandler implements QueryHandler
             search: $query->search ?? '',
             sortBy: $query->sortBy,
             filters: array_merge($query->filters, [
-                'only_active' => $query->onlyActive,
+                'active' => $query->onlyActive ? true : null,
             ])
         );
 

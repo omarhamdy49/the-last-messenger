@@ -47,13 +47,6 @@ interface ThemeRepositoryInterface extends RepositoryInterface
     public function getTopByHadithCount(int $limit = 10): Collection;
 
     /**
-     * Get all children IDs for a theme (recursive)
-     *
-     * @return array<int>
-     */
-    public function getChildrenIds(int $themeId): array;
-
-    /**
      * Get paginated themes with filters
      *
      * @param  array<string, mixed>  $filters
@@ -61,7 +54,7 @@ interface ThemeRepositoryInterface extends RepositoryInterface
     public function paginateWithFilters(
         int $perPage = 15,
         string $search = '',
-        string $sortBy = 'sort_order',
+        string $sortBy = 'id',
         array $filters = []
     ): LengthAwarePaginator;
 }

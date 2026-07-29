@@ -58,7 +58,7 @@
                                 @foreach($hadith->isnads as $isnad)
                                     @php
                                         $narrator = $isnad->narrator;
-                                        $narratorName = $narrator?->kunya ?: ($narrator?->name_ar ?? $narrator?->name_en ?? '—');
+                                        $narratorName = $narrator?->getDisplayName('ar') ?: '—';
                                     @endphp
                                     <li class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium"
                                         :class="darkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-800'">
@@ -75,9 +75,9 @@
                     <div>
                         <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ __('admin.grading') }}</p>
                         <p class="text-lg font-semibold mt-1">
-                            @if($hadith->gradingLevel)
+                            @if($grading = $hadith->gradings->first())
                                 <span class="inline-block px-3 py-1 rounded-full text-sm" :class="darkMode ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800'">
-                                    {{ $hadith->gradingLevel->grade_ar }}
+                                    {{ $grading->raw_grade }}
                                 </span>
                             @else
                                 <span :class="darkMode ? 'text-gray-400' : 'text-gray-500'">—</span>
@@ -94,7 +94,7 @@
                     <div class="space-y-4">
                         @foreach($hadith->translations as $translation)
                             <div class="border-start-4" :class="darkMode ? 'border-gray-700 ps-4' : 'border-gray-300 ps-4'">
-                                <p class="text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">{{ strtoupper($translation->language_code) }}</p>
+                                <p class="text-sm font-semibold mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">{{ strtoupper($translation->locale) }}</p>
                                 <p :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ $translation->text }}</p>
                             </div>
                         @endforeach

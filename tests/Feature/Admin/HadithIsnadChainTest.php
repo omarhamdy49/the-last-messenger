@@ -6,7 +6,9 @@ namespace Tests\Feature\Admin;
 
 use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithBook;
+use App\Domain\Hadith\Models\HadithChapter;
 use App\Domain\Hadith\Models\HadithCollection;
+use App\Domain\Hadith\Models\HadithGrading;
 use App\Domain\Hadith\Models\HadithIsnad;
 use App\Domain\Hadith\Models\HadithNarrator;
 use App\Domain\Hadith\Models\HadithTranslation;
@@ -29,26 +31,36 @@ class HadithIsnadChainTest extends TestCase
     private function seedHadith(): Hadith
     {
         $collection = HadithCollection::create([
-            'name_ar' => 'صحيح الاختبار', 'name_en' => 'Test Sahih',
-            'slug_ar' => 'sahih-test', 'slug_en' => 'sahih-test-en',
-            'abbreviation' => 'TST', 'canonical_code' => 'test', 'source_slug' => 'test',
-            'total_hadiths' => 1,
+            'code' => 'test',
+            'name' => ['ar' => 'صحيح الاختبار', 'en' => 'Test Sahih'],
+            'slug' => 'sahih-test',
+            'abbreviation' => 'TST',
         ]);
 
         $book = HadithBook::create([
             'collection_id' => $collection->id, 'book_number' => 1,
-            'title_ar' => 'كتاب الإيمان', 'title_en' => 'Book of Faith',
-            'slug_ar' => 'kitab-iman', 'slug_en' => 'book-of-faith',
+            'title' => ['ar' => 'كتاب الإيمان', 'en' => 'Book of Faith'],
+        ]);
+        $chapter = HadithChapter::create([
+            'book_id' => $book->id,
+            'chapter_number' => 1,
+            'name' => ['ar' => 'باب الإيمان', 'en' => 'Faith'],
         ]);
 
         $hadith = Hadith::create([
-            'book_id' => $book->id, 'hadith_number' => '1',
-            'grading_status' => 'sahih', 'grading_agreement' => true,
+            'chapter_id' => $chapter->id,
+            'hadith_number' => '1',
+            'text_hash' => hash('sha256', 'إنما الأعمال بالنيات'),
         ]);
 
         HadithTranslation::create([
-            'hadith_id' => $hadith->id, 'language_code' => 'ar',
+            'hadith_id' => $hadith->id, 'locale' => 'ar',
             'text' => 'إنما الأعمال بالنيات',
+        ]);
+        HadithGrading::create([
+            'hadith_id' => $hadith->id,
+            'grade_key' => 'sahih',
+            'raw_grade' => 'sahih',
         ]);
 
         return $hadith;
@@ -56,7 +68,7 @@ class HadithIsnadChainTest extends TestCase
 
     private function makeNarrator(string $nameAr): HadithNarrator
     {
-        return HadithNarrator::create(['name_ar' => $nameAr, 'name_en' => $nameAr]);
+        return HadithNarrator::create(['name' => ['ar' => $nameAr, 'en' => $nameAr]]);
     }
 
     public function test_admin_can_add_a_narrator_to_the_isnad_chain(): void

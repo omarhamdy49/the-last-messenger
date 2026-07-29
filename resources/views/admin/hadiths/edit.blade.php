@@ -27,16 +27,24 @@
                 <!-- Book -->
                 <div>
                     <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.book') }} *</label>
-                    <select name="book_id" required class="w-full px-4 py-2 rounded-lg border" :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                    <select name="chapter_id" required class="w-full px-4 py-2 rounded-lg border" :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'">
                         <option value="">{{ __('admin.select_book') }}</option>
-                        @foreach($books as $book)
-                            <option value="{{ $book->id }}" @selected($hadith->book_id == $book->id)>
-                                {{ $book->title_ar }}
+                        @foreach($chapters as $chapter)
+                            <option value="{{ $chapter->id }}" @selected($hadith->chapter_id == $chapter->id)>
+                                {{ $chapter->book?->title_ar }} — {{ $chapter->getNameInLocale('ar') }}
                             </option>
                         @endforeach
                     </select>
-                    @error('book_id')
+                    @error('chapter_id')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">النص العربي</label>
+                    <textarea name="text_ar" required rows="8" class="w-full px-4 py-2 rounded-lg border" :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'">{{ old('text_ar', $hadith->translations->firstWhere('locale', 'ar')?->text) }}</textarea>
+                    @error('text_ar')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -56,7 +64,7 @@
                     <select name="grading_status" class="w-full px-4 py-2 rounded-lg border" :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'">
                         <option value="">{{ __('admin.select_grading') }}</option>
                         @foreach($gradingLevels as $level)
-                            <option value="{{ $level->id }}" @selected($hadith->grading_level_id == $level->id)>
+                            <option value="{{ $level->id }}" @selected($hadith->grading_status === $level->id)>
                                 {{ $level->grade_ar }}
                             </option>
                         @endforeach
@@ -68,10 +76,10 @@
 
                 <!-- Companion ID -->
                 <div>
-                    <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.companion_id') }}</label>
-                    <input type="number" name="companion_id" value="{{ $hadith->companion_id }}" min="0"
+                    <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.narrator') }}</label>
+                    <input type="number" name="primary_narrator_id" value="{{ $hadith->primary_narrator_id }}" min="0"
                         class="w-full px-4 py-2 rounded-lg border" :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                    @error('companion_id')
+                    @error('primary_narrator_id')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
                 </div>
@@ -102,7 +110,7 @@
                 @foreach($hadith->isnads as $isnad)
                     @php
                         $narrator = $isnad->narrator;
-                        $narratorName = $narrator?->kunya ?: ($narrator?->name_ar ?? $narrator?->name_en ?? '—');
+                        $narratorName = $narrator?->getDisplayName('ar') ?: '—';
                     @endphp
                     <li class="flex flex-wrap items-center gap-3 p-3 rounded-lg border" :class="darkMode ? 'border-gray-700 bg-gray-900/40' : 'border-gray-200 bg-gray-50'">
                         <span class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white bg-gradient-to-r from-[#0056b3] to-[#218838]">
@@ -163,7 +171,7 @@
             <select name="narrator_id" required class="flex-1 min-w-0 w-full px-4 py-2 rounded-lg border text-base sm:text-sm" :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'">
                 <option value="">{{ __('admin.select_narrator') }}</option>
                 @foreach($narrators as $narrator)
-                    <option value="{{ $narrator->id }}">{{ $narrator->kunya ?: ($narrator->name_ar ?? $narrator->name_en) }}</option>
+                    <option value="{{ $narrator->id }}">{{ $narrator->getDisplayName('ar') }}</option>
                 @endforeach
             </select>
             <input type="text" name="transmission_method" placeholder="{{ __('admin.transmission_method') }}"

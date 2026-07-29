@@ -9,6 +9,8 @@ use App\Domain\Hadith\Application\DTOs\HadithDTO;
 use App\Domain\Hadith\Exceptions\HadithNotFoundException;
 use App\Domain\Hadith\Exceptions\InvalidGradingException;
 use App\Domain\Hadith\Models\Hadith;
+use App\Domain\Hadith\Models\HadithGrading;
+use App\Domain\Hadith\Models\HadithIsnad;
 use App\Domain\Hadith\Models\HadithTranslation;
 use App\Domain\Hadith\Repositories\HadithRepositoryInterface;
 use App\Domain\Shared\Application\Commands\Command;
@@ -48,9 +50,11 @@ final class UpdateHadithHandler implements CommandHandler
         }
 
         $hadith = DB::transaction(function () use ($command, $hadith) {
-            // Update grading status
             if ($command->gradingStatus !== null) {
-                $hadith->grading_status = $command->gradingStatus;
+                HadithGrading::query()->updateOrCreate(
+                    ['hadith_id' => $hadith->id, 'scholar_id' => null],
+                    ['grade_key' => $command->gradingStatus, 'raw_grade' => $command->gradingStatus],
+                );
             }
 
             // Update chapter
@@ -60,27 +64,38 @@ final class UpdateHadithHandler implements CommandHandler
 
             $hadith->save();
 
-            // Update translations
             if ($command->translations !== null) {
-                foreach ($command->translations as $languageCode => $text) {
+                foreach ($command->translations as $locale => $text) {
                     HadithTranslation::updateOrCreate(
                         [
                             'hadith_id' => $hadith->id,
-                            'language_code' => $languageCode,
+                            'locale' => $locale,
                         ],
                         [
-                            'matn' => $text,
+                            'text' => $text,
                         ]
                     );
                 }
+
+                if (isset($command->translations['ar'])) {
+                    $hadith->text_hash = hash('sha256', trim($command->translations['ar']));
+                    $hadith->save();
+                }
             }
 
-            // Sync narrators
             if ($command->narratorIds !== null) {
-                $hadith->narrators()->sync($command->narratorIds);
+                HadithIsnad::query()->where('hadith_id', $hadith->id)->delete();
+                foreach (array_values(array_unique($command->narratorIds)) as $position => $narratorId) {
+                    HadithIsnad::create([
+                        'hadith_id' => $hadith->id,
+                        'narrator_id' => $narratorId,
+                        'position_in_chain' => $position + 1,
+                    ]);
+                }
+                $hadith->primary_narrator_id = $command->narratorIds[0] ?? null;
+                $hadith->save();
             }
 
-            // Sync themes
             if ($command->themeIds !== null) {
                 $hadith->themes()->sync($command->themeIds);
             }
@@ -88,8 +103,7 @@ final class UpdateHadithHandler implements CommandHandler
             return $hadith;
         });
 
-        // Reload with relations
-        $hadith->load(['translations', 'book', 'themes']);
+        $hadith->load(['translations', 'gradings', 'chapter.book.collection', 'themes']);
 
         return HadithDTO::fromModel($hadith);
     }

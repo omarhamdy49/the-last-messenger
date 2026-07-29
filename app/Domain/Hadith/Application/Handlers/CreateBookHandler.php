@@ -57,14 +57,9 @@ final class CreateBookHandler implements CommandHandler
 
         $book = HadithBook::create([
             'collection_id' => $command->collectionId,
-            'title_ar' => $command->title['ar'] ?? '',
-            'title_en' => $command->title['en'] ?? null,
-            'slug_ar' => $command->slug,
-            'slug_en' => $command->slug,
+            'title' => $command->title,
             'book_number' => $command->bookNumber,
-            'chapter_title_ar' => $command->chapterTitle['ar'] ?? null,
-            'chapter_title_en' => $command->chapterTitle['en'] ?? null,
-            'hadith_count' => $command->hadithCount,
+            'description' => $command->chapterTitle,
         ]);
 
         return BookDTO::fromModel($book);

@@ -30,21 +30,16 @@ final class ListThemesHandler implements QueryHandler
     public function handle(Query $query): PaginatedResult
     {
         /** @var ListThemesQuery $query */
-        $filters = [];
-        if ($query->onlyRoot) {
-            $filters['only_root'] = true;
-        }
-
         $paginator = $this->repository->paginateWithFilters(
             perPage: $query->perPage,
             search: $query->search ?? '',
             sortBy: $query->sortBy,
-            filters: $filters
+            filters: []
         );
 
         $locale = $query->locale ?? 'ar';
         $items = $paginator->getCollection()->map(
-            fn ($theme) => ThemeDTO::fromModel($theme, $locale, $query->withChildren)
+            fn ($theme) => ThemeDTO::fromModel($theme, $locale)
         );
 
         return PaginatedResult::fromPaginatorWithItems($paginator, $items->toArray());

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin\Hadith;
 
-use App\Domain\Hadith\Repositories\NarratorRepositoryInterface;
+use App\Domain\Hadith\Repositories\ScholarRepositoryInterface;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Requests\Admin\Hadith\StoreScholarRequest;
 use App\Http\Requests\Admin\Hadith\UpdateScholarRequest;
@@ -22,7 +22,7 @@ use Illuminate\View\View;
 class ScholarController extends AdminController
 {
     public function __construct(
-        private readonly NarratorRepositoryInterface $narratorRepository
+        private readonly ScholarRepositoryInterface $scholarRepository
     ) {
         parent::__construct();
     }
@@ -38,12 +38,7 @@ class ScholarController extends AdminController
         $search = $this->getSearchQuery($request);
         $pagination = $this->getPaginationParams($request);
 
-        $scholars = $this->narratorRepository->paginateWithFilters(
-            perPage: $pagination['per_page'],
-            search: $search,
-            sortBy: $pagination['sort'],
-            filters: array_merge($filters, ['sort_direction' => $pagination['order']]),
-        );
+        $scholars = $this->scholarRepository->search($search, $pagination['per_page']);
 
         if ($this->expectsJson($request)) {
             return $this->paginatedResponse($scholars, __('admin.scholar_fetched'));
@@ -73,14 +68,11 @@ class ScholarController extends AdminController
         try {
             $validated = $request->validated();
 
-            $scholar = $this->narratorRepository->create([
-                'name_ar' => $validated['name_ar'],
-                'name_en' => $validated['name_en'] ?? null,
-                'full_name_ar' => $validated['full_name_ar'] ?? null,
-                'full_name_en' => $validated['full_name_en'] ?? null,
-                'kunya' => $validated['kunya'] ?? null,
-                'biography' => $validated['biography'] ?? null,
-                'reliability_grade' => $validated['reliability_grade'] ?? null,
+            $scholar = $this->scholarRepository->create([
+                'name' => array_filter(['ar' => $validated['name_ar'], 'en' => $validated['name_en'] ?? null]),
+                'full_name' => array_filter(['ar' => $validated['full_name_ar'] ?? null, 'en' => $validated['full_name_en'] ?? null]),
+                'kunya' => array_filter(['ar' => $validated['kunya'] ?? null]),
+                'biography' => array_filter(['ar' => $validated['biography'] ?? null]),
                 'birth_year_hijri' => $validated['birth_year_hijri'] ?? null,
                 'death_year_hijri' => $validated['death_year_hijri'] ?? null,
                 'school' => $validated['school'] ?? null,
@@ -121,7 +113,7 @@ class ScholarController extends AdminController
     {
         $this->authorizeAdmin('view scholars');
 
-        $scholar = $this->narratorRepository->findOrFail($id);
+        $scholar = $this->scholarRepository->findOrFail($id);
 
         if ($this->expectsJson(request())) {
             return $this->successResponse($scholar, __('admin.scholar_fetched'));
@@ -137,7 +129,7 @@ class ScholarController extends AdminController
     {
         $this->authorizeAdmin('edit scholars');
 
-        $scholar = $this->narratorRepository->findOrFail($id);
+        $scholar = $this->scholarRepository->findOrFail($id);
 
         return view('admin.hadith.scholars.edit', compact('scholar'));
     }
@@ -152,23 +144,20 @@ class ScholarController extends AdminController
         DB::beginTransaction();
         try {
             $validated = $request->validated();
-            $scholar = $this->narratorRepository->findOrFail($id);
+            $scholar = $this->scholarRepository->findOrFail($id);
 
-            $this->narratorRepository->update($id, [
-                'name_ar' => $validated['name_ar'],
-                'name_en' => $validated['name_en'] ?? $scholar->name_en,
-                'full_name_ar' => $validated['full_name_ar'] ?? $scholar->full_name_ar,
-                'full_name_en' => $validated['full_name_en'] ?? $scholar->full_name_en,
-                'kunya' => $validated['kunya'] ?? $scholar->kunya,
-                'biography' => $validated['biography'] ?? $scholar->biography,
-                'reliability_grade' => $validated['reliability_grade'] ?? $scholar->reliability_grade,
+            $this->scholarRepository->update($id, [
+                'name' => array_filter(['ar' => $validated['name_ar'], 'en' => $validated['name_en'] ?? null]),
+                'full_name' => array_filter(['ar' => $validated['full_name_ar'] ?? null, 'en' => $validated['full_name_en'] ?? null]),
+                'kunya' => array_filter(['ar' => $validated['kunya'] ?? null]),
+                'biography' => array_filter(['ar' => $validated['biography'] ?? null]),
                 'birth_year_hijri' => $validated['birth_year_hijri'] ?? $scholar->birth_year_hijri,
                 'death_year_hijri' => $validated['death_year_hijri'] ?? $scholar->death_year_hijri,
                 'school' => $validated['school'] ?? $scholar->school,
                 'region' => $validated['region'] ?? $scholar->region,
             ]);
 
-            $scholar = $this->narratorRepository->findOrFail($id);
+            $scholar = $this->scholarRepository->findOrFail($id);
 
             DB::commit();
 
@@ -205,9 +194,9 @@ class ScholarController extends AdminController
         $this->authorizeAdmin('delete scholars');
 
         try {
-            $scholar = $this->narratorRepository->findOrFail($id);
+            $scholar = $this->scholarRepository->findOrFail($id);
 
-            $this->narratorRepository->delete($id);
+            $this->scholarRepository->delete($id);
 
             $this->logActivity('deleted', 'Scholar', $scholar->id, [
                 'name' => $scholar->name_ar ?? 'N/A',
@@ -240,11 +229,11 @@ class ScholarController extends AdminController
 
         $request->validate([
             'ids' => 'required|array',
-            'ids.*' => 'exists:hadith_narrators,id',
+            'ids.*' => 'exists:hadith_scholars,id',
         ]);
 
         $results = $this->handleBulkOperation($request, 'delete', function ($id) {
-            $this->narratorRepository->delete((int) $id);
+            $this->scholarRepository->delete((int) $id);
         });
 
         return $this->successResponse(
@@ -262,10 +251,7 @@ class ScholarController extends AdminController
 
         $search = $request->get('q', '');
 
-        $scholars = $this->narratorRepository->paginateWithFilters(
-            perPage: 10,
-            search: $search,
-        );
+        $scholars = $this->scholarRepository->search($search, 10);
 
         return $this->successResponse($scholars->items(), __('admin.scholar_fetched'));
     }

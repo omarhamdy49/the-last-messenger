@@ -412,7 +412,7 @@
                                                 @foreach ($group['items'] as $commentary)
                                                     <div class="pt-4 first:pt-0 border-t first:border-t-0 border-gray-100 dark:border-white/10">
                                                         <p class="leading-relaxed break-words text-gray-700 dark:text-gray-300"
-                                                           @if (in_array($commentary['languageCode'] ?? '', ['ar', 'ar_notashkeel', 'ur'], true)) dir="rtl" @endif>
+                                                           @if (in_array($commentary['languageCode'] ?? '', ['ar', 'ur'], true)) dir="rtl" @endif>
                                                             {{ $commentary['text'] }}
                                                         </p>
                                                         @if (! empty($commentary['verified']))

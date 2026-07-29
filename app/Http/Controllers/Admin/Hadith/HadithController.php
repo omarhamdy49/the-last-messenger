@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin\Hadith;
 
+use App\Domain\Hadith\Enums\HadithGrade;
 use App\Domain\Hadith\Models\Hadith;
+use App\Domain\Hadith\Models\HadithChapter;
+use App\Domain\Hadith\Models\HadithGrading;
 use App\Domain\Hadith\Models\HadithIsnad;
+use App\Domain\Hadith\Models\HadithTranslation;
 use App\Domain\Hadith\Repositories\BookRepositoryInterface;
 use App\Domain\Hadith\Repositories\CollectionRepositoryInterface;
-use App\Domain\Hadith\Repositories\GradingLevelRepositoryInterface;
 use App\Domain\Hadith\Repositories\HadithRepositoryInterface;
 use App\Domain\Hadith\Repositories\NarratorRepositoryInterface;
 use Illuminate\Contracts\View\View;
@@ -22,7 +25,6 @@ class HadithController
         private readonly HadithRepositoryInterface $hadithRepository,
         private readonly CollectionRepositoryInterface $collectionRepository,
         private readonly BookRepositoryInterface $bookRepository,
-        private readonly GradingLevelRepositoryInterface $gradingLevelRepository,
         private readonly NarratorRepositoryInterface $narratorRepository,
     ) {}
 
@@ -51,7 +53,7 @@ class HadithController
 
         $books = $this->bookRepository->getAllForDropdown($collectionId);
 
-        $gradingLevels = $this->gradingLevelRepository->getAllByRank();
+        $gradingLevels = $this->gradingLevels();
 
         return view('admin.hadiths.index-cards', compact('hadiths', 'collections', 'books', 'gradingLevels'));
     }
@@ -62,9 +64,10 @@ class HadithController
     public function create(): View
     {
         $books = $this->bookRepository->getAllForDropdown();
-        $gradingLevels = $this->gradingLevelRepository->getAllByRank();
+        $chapters = HadithChapter::query()->with('book')->ordered()->get();
+        $gradingLevels = $this->gradingLevels();
 
-        return view('admin.hadiths.create', compact('books', 'gradingLevels'));
+        return view('admin.hadiths.create', compact('books', 'chapters', 'gradingLevels'));
     }
 
     /**
@@ -73,13 +76,31 @@ class HadithController
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'book_id' => 'required|exists:hadith_books,id',
+            'chapter_id' => 'required|exists:hadith_chapters,id',
             'hadith_number' => 'required|string|max:50',
-            'grading_status' => 'nullable|string|max:50',
-            'companion_id' => 'nullable|integer',
+            'grading_status' => 'nullable|string|in:sahih,hasan,daif,mawdu,unknown',
+            'primary_narrator_id' => 'nullable|exists:hadith_narrators,id',
+            'text_ar' => 'required|string',
         ]);
 
-        $this->hadithRepository->create($validated);
+        $grading = $validated['grading_status'] ?? null;
+        $text = $validated['text_ar'];
+        unset($validated['grading_status'], $validated['text_ar']);
+        $validated['text_hash'] = hash('sha256', trim($text));
+        $hadith = $this->hadithRepository->create($validated);
+        HadithTranslation::query()->create([
+            'hadith_id' => $hadith->id,
+            'locale' => 'ar',
+            'text' => $text,
+        ]);
+
+        if ($grading !== null) {
+            HadithGrading::query()->create([
+                'hadith_id' => $hadith->id,
+                'grade_key' => $grading,
+                'raw_grade' => $grading,
+            ]);
+        }
 
         return redirect()->route('admin.hadith.index')
             ->with('success', __('admin.hadith_created_successfully'));
@@ -104,17 +125,18 @@ class HadithController
         $hadith = $this->hadithRepository->find(
             $hadith->id,
             ['*'],
-            ['book', 'isnads', 'isnads.narrator'],
+            ['chapter.book', 'translations', 'isnads', 'isnads.narrator'],
         );
         // find() caches by serializing $relations, so the ordering constraint
         // can't be a closure — sort the already-loaded chain here instead.
         $hadith->setRelation('isnads', $hadith->isnads->sortBy('position_in_chain')->values());
 
         $books = $this->bookRepository->getAllForDropdown();
-        $narrators = $this->narratorRepository->all(['id', 'name_ar', 'name_en', 'kunya']);
-        $gradingLevels = $this->gradingLevelRepository->getAllByRank();
+        $chapters = HadithChapter::query()->with('book')->ordered()->get();
+        $narrators = $this->narratorRepository->all(['id', 'name', 'kunya']);
+        $gradingLevels = $this->gradingLevels();
 
-        return view('admin.hadiths.edit', compact('hadith', 'books', 'narrators', 'gradingLevels'));
+        return view('admin.hadiths.edit', compact('hadith', 'books', 'chapters', 'narrators', 'gradingLevels'));
     }
 
     /**
@@ -123,13 +145,29 @@ class HadithController
     public function update(Request $request, Hadith $hadith): RedirectResponse
     {
         $validated = $request->validate([
-            'book_id' => 'required|exists:hadith_books,id',
+            'chapter_id' => 'required|exists:hadith_chapters,id',
             'hadith_number' => 'required|string|max:50',
-            'grading_status' => 'nullable|string|max:50',
-            'companion_id' => 'nullable|integer',
+            'grading_status' => 'nullable|string|in:sahih,hasan,daif,mawdu,unknown',
+            'primary_narrator_id' => 'nullable|exists:hadith_narrators,id',
+            'text_ar' => 'required|string',
         ]);
 
+        $grading = $validated['grading_status'] ?? null;
+        $text = $validated['text_ar'];
+        unset($validated['grading_status'], $validated['text_ar']);
+        $validated['text_hash'] = hash('sha256', trim($text));
         $this->hadithRepository->update($hadith->id, $validated);
+        HadithTranslation::query()->updateOrCreate(
+            ['hadith_id' => $hadith->id, 'locale' => 'ar'],
+            ['text' => $text],
+        );
+
+        if ($grading !== null) {
+            HadithGrading::query()->updateOrCreate(
+                ['hadith_id' => $hadith->id, 'scholar_id' => null],
+                ['grade_key' => $grading, 'raw_grade' => $grading],
+            );
+        }
 
         return redirect()->route('admin.hadith.show', $hadith)
             ->with('success', __('admin.hadith_updated_successfully'));
@@ -258,5 +296,17 @@ class HadithController
         foreach (config('translatable.locales') as $locale) {
             Cache::forget("public_hadith_show_{$hadithId}_{$locale}");
         }
+    }
+
+    private function gradingLevels(): array
+    {
+        return array_map(
+            static fn (HadithGrade $grade): object => (object) [
+                'id' => $grade->value,
+                'grade_ar' => $grade->labelArabic(),
+                'grade_en' => $grade->label(),
+            ],
+            HadithGrade::cases(),
+        );
     }
 }

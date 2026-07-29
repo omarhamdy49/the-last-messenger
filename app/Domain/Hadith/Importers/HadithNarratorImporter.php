@@ -63,7 +63,7 @@ class HadithNarratorImporter extends BaseImporter
     protected function isDuplicate(array $row): bool
     {
         return HadithNarrator::query()
-            ->whereRaw('LOWER(name_ar) = ?', [strtolower($row['name_ar'] ?? '')])
+            ->where('name->ar', $row['name_ar'] ?? '')
             ->orWhereHas('sahabi.translations', fn ($query) => $query->where('name', $row['name_ar'] ?? ''))
             ->exists();
     }
@@ -74,7 +74,7 @@ class HadithNarratorImporter extends BaseImporter
     protected function importRow(array $row): HadithNarrator
     {
         if ($this->options['update_existing'] ?? false) {
-            $existing = HadithNarrator::whereRaw('LOWER(name_ar) = ?', [strtolower($row['name_ar'])])
+            $existing = HadithNarrator::where('name->ar', $row['name_ar'])
                 ->first();
 
             if ($existing) {

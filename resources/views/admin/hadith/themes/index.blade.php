@@ -34,8 +34,7 @@
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <x-admin.stats-card icon="tag" title="إجمالي الموضوعات" :value="$themes->total() ?? 0" :gradient="true" />
-        <x-admin.stats-card icon="file-text" title="إجمالي المقالات المرتبطة" :value="$themes->sum('articles_count') ?? 0" delay="delay-100" />
-        <x-admin.stats-card icon="palette" title="بألوان مخصصة" :value="$themes->filter(fn($t) => $t->color && $t->color !== '#0056b3')->count() ?? 0" delay="delay-200" />
+        <x-admin.stats-card icon="file-text" title="إجمالي الأحاديث المرتبطة" :value="$themes->sum('hadiths_count') ?? 0" delay="delay-100" />
     </div>
 
     <!-- Filter -->
@@ -76,7 +75,7 @@
                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold"
                           :class="darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-800'">
                         <i data-lucide="file-text" class="w-3 h-3"></i>
-                        {{ $theme->articles_count ?? 0 }}
+                        {{ $theme->hadiths_count ?? 0 }}
                     </span>
                 </div>
 

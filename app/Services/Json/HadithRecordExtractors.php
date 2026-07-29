@@ -153,11 +153,20 @@ trait HadithRecordExtractors
         $urnAr = $this->sunnahUrn($jsonData, 'ar');
         $urnEn = $this->sunnahUrn($jsonData, 'en');
 
-        if (! empty($hadithText['ar'])) {
-            $translations[] = ['language_code' => 'ar', 'text' => $this->sanitizeText($hadithText['ar']), 'notes' => null, 'source_url' => $sourceUrl, 'urn' => $urnAr, 'verified' => $verified, 'is_primary' => true];
-        }
-        if (! empty($hadithText['ar_notashkeel'])) {
-            $translations[] = ['language_code' => 'ar_notashkeel', 'text' => $this->sanitizeText($hadithText['ar_notashkeel']), 'notes' => 'Arabic text without diacritical marks', 'source_url' => $sourceUrl, 'urn' => $urnAr, 'verified' => $verified, 'is_primary' => false];
+        $arabicText = $hadithText['ar'] ?? $hadithText['ar_notashkeel'] ?? null;
+        if (! empty($arabicText)) {
+            $translations[] = [
+                'language_code' => 'ar',
+                'text' => $this->sanitizeText($arabicText),
+                'search_text' => ! empty($hadithText['ar_notashkeel'])
+                    ? $this->sanitizeText($hadithText['ar_notashkeel'])
+                    : null,
+                'notes' => null,
+                'source_url' => $sourceUrl,
+                'urn' => $urnAr,
+                'verified' => $verified,
+                'is_primary' => true,
+            ];
         }
         if (! empty($hadithText['en'])) {
             $translations[] = ['language_code' => 'en', 'text' => $this->sanitizeText($hadithText['en']), 'notes' => null, 'source_url' => $sourceUrl, 'urn' => $urnEn, 'verified' => $verified, 'is_primary' => empty($hadithText['ar'])];
@@ -351,35 +360,6 @@ trait HadithRecordExtractors
         return $result;
     }
 
-    protected function extractApplications(array $jsonData): array
-    {
-        $applications = $jsonData['applications'] ?? [];
-        $result = [];
-
-        foreach ($applications as $app) {
-            // Handle plain string format (e.g., Malik collection)
-            if (is_string($app)) {
-                $result[] = [
-                    'category_ar' => '',
-                    'category_en' => '',
-                    'description_ar' => '',
-                    'description_en' => $this->sanitizeText($app),
-                ];
-
-                continue;
-            }
-
-            $result[] = [
-                'category_ar' => $this->sanitizeText($app['category_ar'] ?? ''),
-                'category_en' => $this->sanitizeText($app['category_en'] ?? ''),
-                'description_ar' => $this->sanitizeText($app['description_ar'] ?? ''),
-                'description_en' => $this->sanitizeText($app['description_en'] ?? ''),
-            ];
-        }
-
-        return $result;
-    }
-
     protected function extractHistoricalContext(array $jsonData): ?array
     {
         $context = $jsonData['historical_context'] ?? null;
@@ -393,23 +373,6 @@ trait HadithRecordExtractors
             'lesson_ar' => $this->sanitizeText($context['lesson_ar'] ?? ''),
             'lesson_en' => $this->sanitizeText($context['lesson_en'] ?? ''),
         ];
-    }
-
-    protected function extractFiqhRulings(array $jsonData): array
-    {
-        $legalRulings = $jsonData['legal_rulings'] ?? [];
-        $principlesAr = $legalRulings['fiqh_principles_ar'] ?? [];
-        $principlesEn = $legalRulings['fiqh_principles_en'] ?? [];
-        $result = [];
-
-        foreach ($principlesAr as $principle) {
-            $result[] = ['principle' => $this->sanitizeText($principle), 'language_code' => 'ar'];
-        }
-        foreach ($principlesEn as $principle) {
-            $result[] = ['principle' => $this->sanitizeText($principle), 'language_code' => 'en'];
-        }
-
-        return $result;
     }
 
     // ============================================================================
@@ -636,63 +599,6 @@ trait HadithRecordExtractors
                 'text_ar' => $this->sanitizeText($verse['text'] ?? ''),
                 'text_en' => $this->sanitizeText($verse['text_en'] ?? ''),
                 'relevance' => $this->sanitizeText($verse['relevance'] ?? ''),
-            ];
-        }
-
-        return $result;
-    }
-
-    protected function extractApplicationsFromFlat(array $jsonData): array
-    {
-        $applications = $jsonData['practical_applications'] ?? [];
-        $result = [];
-
-        foreach ($applications as $app) {
-            if (! is_array($app)) {
-                continue;
-            }
-            $result[] = [
-                'category_ar' => '',
-                'category_en' => '',
-                'description_ar' => $this->sanitizeText($app['ar'] ?? ''),
-                'description_en' => $this->sanitizeText($app['en'] ?? ''),
-            ];
-        }
-
-        return $result;
-    }
-
-    protected function extractFiqhRulingsFromFlat(array $jsonData): array
-    {
-        $rulings = $jsonData['fiqh_rulings'] ?? [];
-        $result = [];
-
-        foreach ($rulings as $ruling) {
-            if (! is_array($ruling)) {
-                continue;
-            }
-            $added = false;
-            if (! empty($ruling['ruling'])) {
-                $result[] = [
-                    'principle' => $this->sanitizeText($ruling['ruling']),
-                    'language_code' => 'ar',
-                ];
-                $added = true;
-            }
-            if (! empty($ruling['ruling_en'])) {
-                $result[] = [
-                    'principle' => $this->sanitizeText($ruling['ruling_en']),
-                    'language_code' => 'en',
-                ];
-                $added = true;
-            }
-            if ($added) {
-                continue;
-            }
-
-            $result[] = [
-                'principle' => $this->sanitizeText($ruling['topic_en'] ?? $ruling['topic'] ?? $ruling['evidence'] ?? ''),
-                'language_code' => ! empty($ruling['topic']) || ! empty($ruling['evidence']) ? 'ar' : 'en',
             ];
         }
 

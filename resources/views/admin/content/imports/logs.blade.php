@@ -90,7 +90,7 @@
                                 :class="darkMode ? 'border-gray-800 hover:bg-gray-800/40' : 'border-gray-100 hover:bg-gray-50'">
                                 <td class="px-4 py-3" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">{{ $log->id }}</td>
                                 <td class="px-4 py-3">
-                                    <span class="font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $log->collection_name }}</span>
+                                    <span class="font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $log->collection?->getNameInLocale(app()->getLocale()) ?? $log->source_collection_code ?? '—' }}</span>
                                     <span class="block text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ $log->type }}</span>
                                 </td>
                                 <td class="px-4 py-3">

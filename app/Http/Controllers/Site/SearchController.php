@@ -170,7 +170,7 @@ final class SearchController extends Controller
      */
     private function mapHadith(object $hadith, string $locale): array
     {
-        $text = $this->translationText($hadith, ['ar', $locale], 'text', 'language_code');
+        $text = $this->translationText($hadith, ['ar', $locale], 'text', 'locale');
 
         return [
             'type' => 'hadith',

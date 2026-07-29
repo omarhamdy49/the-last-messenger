@@ -56,14 +56,14 @@ interface CollectionRepositoryInterface extends RepositoryInterface
     public function paginateWithFilters(
         int $perPage = 15,
         string $search = '',
-        string $sortBy = 'name_ar',
+        string $sortBy = 'id',
         array $filters = []
     ): LengthAwarePaginator;
 
     /**
      * Get a lightweight list of all collections for use in form dropdowns.
      *
-     * Returns id, name_ar, name_en ordered by name_ar.
+     * Returns id and localized name JSON ordered by id.
      */
     public function getAllForDropdown(): Collection;
 

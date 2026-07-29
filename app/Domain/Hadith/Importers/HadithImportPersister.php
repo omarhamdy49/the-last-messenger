@@ -4,16 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domain\Hadith\Importers;
 
-use App\Domain\Hadith\Models\Companion;
 use App\Domain\Hadith\Models\Hadith;
-use App\Domain\Hadith\Models\HadithApplication;
 use App\Domain\Hadith\Models\HadithBook;
 use App\Domain\Hadith\Models\HadithChapter;
 use App\Domain\Hadith\Models\HadithCollection;
 use App\Domain\Hadith\Models\HadithCommentary;
-use App\Domain\Hadith\Models\HadithFiqhRuling;
 use App\Domain\Hadith\Models\HadithGrading;
-use App\Domain\Hadith\Models\HadithGradingLevel;
 use App\Domain\Hadith\Models\HadithIsnad;
 use App\Domain\Hadith\Models\HadithKeyword;
 use App\Domain\Hadith\Models\HadithNarrator;
@@ -35,8 +31,7 @@ use Illuminate\Support\Facades\Log;
  * Accepts the normalised payloads produced by HadithImportMapper and:
  *   - Upserts core entities (collections, books, chapters, hadiths).
  *   - Writes rich metadata (translators, narrators, themes, keywords,
- *     gradings, scholarly commentary, related verses, applications,
- *     fiqh rulings).
+ *     gradings, scholarly commentary, related verses, and sources).
  *   - Counts successes and errors for each category.
  *   - Reports progress to an optional HadithSyncLog.
  *
@@ -84,18 +79,21 @@ class HadithImportPersister
                         }
                     }
 
-                    // 4. Companion (optional)
-                    $companion = null;
+                    // 4. Primary narrator (the former companion role)
+                    $primaryNarrator = null;
                     if (! empty($record['companion']) && ! $dryRun) {
-                        $companion = Companion::findOrCreateByName($record['companion']);
-                        if ($companion) {
-                            $summary['companions']++;
+                        $primaryNarrator = HadithNarrator::resolveOrCreate([
+                            'name_ar' => $record['companion']['name_ar'] ?? $record['companion']['name'] ?? '',
+                            'name_en' => $record['companion']['name_en'] ?? null,
+                        ]);
+                        if ($primaryNarrator) {
+                            $summary['narrators']++;
                         }
                     }
 
                     // 5. Hadith core record
                     $hadithData = $record['hadith'];
-                    $hadithData['companion_id'] = $companion?->id;
+                    $hadithData['primary_narrator_id'] = $primaryNarrator?->id;
 
                     // Link the hadith to its resolved chapter. Only set the key when a
                     // chapter was resolved so re-imports of chapterless variants of the
@@ -103,17 +101,7 @@ class HadithImportPersister
                     if ($chapter !== null) {
                         $hadithData['chapter_id'] = $chapter->id;
                     }
-                    $hadithData['source_file'] = $this->compactSourceFile($record['source_file'] ?? null);
                     $hadithData['text_hash'] ??= $this->textHashFromTranslations($record['translations']);
-
-                    if (($hadithData['verification_status'] ?? null) === 'source_verified' && empty($hadithData['source_verified_at'])) {
-                        $hadithData['source_verified_at'] = now();
-                    }
-
-                    if (! empty($record['historical_context'])) {
-                        $hadithData['historical_context_ar'] = $record['historical_context']['occasion_ar'] ?? '';
-                        $hadithData['historical_context_en'] = $record['historical_context']['occasion_en'] ?? '';
-                    }
 
                     $hadith = $this->upsertHadith(
                         $hadithData,
@@ -138,8 +126,6 @@ class HadithImportPersister
                     $summary['gradings'] += $this->importGrading($record['grading'], $hadith->id);
                     $summary['scholarly_comments'] += $this->importScholarlyComments($record['scholarly_comments'], $hadith->id);
                     $summary['related_verses'] += $this->importRelatedVerses($record['related_verses'], $hadith->id);
-                    $summary['applications'] += $this->importApplications($record['applications'], $hadith->id);
-                    $summary['fiqh_rulings'] += $this->importFiqhRulings($record['fiqh_rulings'], $hadith->id);
                     $summary['sources'] += $this->importSources($record['sources'], $hadith->id, $record['source_file'] ?? null);
 
                     if ($syncLog) {
@@ -153,7 +139,7 @@ class HadithImportPersister
                 ]);
 
                 if ($syncLog) {
-                    $syncLog->incrementFailed();
+                    $syncLog->markFailed($e->getMessage());
                 }
                 // Continue with the next record.
             }
@@ -203,7 +189,6 @@ class HadithImportPersister
 
             foreach ($payload['hadiths'] as $hadithRecord) {
                 $hadithData = $hadithRecord['hadith'];
-                $hadithData['source_file'] = $this->compactSourceFile($hadithRecord['source_file'] ?? null);
                 $hadithData['text_hash'] ??= $this->textHashFromTranslations($hadithRecord['translations']);
 
                 $hadith = $this->upsertHadith(
@@ -230,7 +215,7 @@ class HadithImportPersister
             }
 
             if ($syncLog) {
-                $syncLog->updateProgress($summary['hadiths'], 0, $summary);
+                $syncLog->updateProgress($summary);
             }
         } catch (Exception $e) {
             Log::error('Failed to import collection-based format', [
@@ -259,9 +244,26 @@ class HadithImportPersister
             return null;
         }
 
+        $code = strtolower((string) ($data['code'] ?? $data['canonical_code'] ?? $data['source_slug'] ?? $data['slug_en'] ?? ''));
+        $code = mb_substr($code, 0, 50);
+
         return HadithCollection::updateOrCreate(
-            ['name_en' => $data['name_en']],
-            $data
+            ['code' => $code],
+            [
+                'slug' => $data['slug'] ?? $data['slug_en'] ?? $data['slug_ar'] ?? $code,
+                'name' => array_filter([
+                    'ar' => $data['name_ar'] ?? null,
+                    'en' => $data['name_en'] ?? null,
+                ]),
+                'description' => array_filter([
+                    'ar' => $data['description_ar'] ?? null,
+                    'en' => $data['description_en'] ?? null,
+                ]),
+                'abbreviation' => $data['abbreviation'] ?? null,
+                'featured' => (bool) ($data['featured'] ?? false),
+                'active' => (bool) ($data['active'] ?? true),
+                'display_order' => (int) ($data['display_order'] ?? 0),
+            ],
         );
     }
 
@@ -273,22 +275,21 @@ class HadithImportPersister
             return null;
         }
 
-        $data['collection_id'] = $collectionId;
+        $bookNumber = (string) ($data['book_number'] ?? '1');
 
-        // Use collection_id + title_en as unique key; fall back to title_ar.
-        $uniqueKey = [
-            'collection_id' => $collectionId,
-            'title_en' => $data['title_en'] ?? null,
-        ];
-
-        if (empty($uniqueKey['title_en']) && ! empty($data['title_ar'])) {
-            $uniqueKey = [
-                'collection_id' => $collectionId,
-                'title_ar' => $data['title_ar'],
-            ];
-        }
-
-        return HadithBook::updateOrCreate($uniqueKey, $data);
+        return HadithBook::updateOrCreate(
+            ['collection_id' => $collectionId, 'book_number' => $bookNumber],
+            [
+                'title' => array_filter([
+                    'ar' => $data['title_ar'] ?? null,
+                    'en' => $data['title_en'] ?? null,
+                ]),
+                'description' => array_filter([
+                    'ar' => $data['description_ar'] ?? $data['chapter_title_ar'] ?? null,
+                    'en' => $data['description_en'] ?? $data['chapter_title_en'] ?? null,
+                ]),
+            ],
+        );
     }
 
     protected function upsertChapter(array $data, ?int $bookId, bool $dryRun): ?HadithChapter
@@ -299,14 +300,22 @@ class HadithImportPersister
             return null;
         }
 
-        $data['book_id'] = $bookId;
-
         return HadithChapter::updateOrCreate(
             [
                 'book_id' => $bookId,
                 'chapter_number' => $data['chapter_number'],
             ],
-            $data
+            [
+                'name' => array_filter([
+                    'ar' => $data['name_ar'] ?? $data['title_ar'] ?? null,
+                    'en' => $data['name_en'] ?? $data['title_en'] ?? null,
+                ]),
+                'description' => array_filter([
+                    'ar' => $data['description_ar'] ?? $data['intro_ar'] ?? null,
+                    'en' => $data['description_en'] ?? $data['intro_en'] ?? null,
+                ]),
+                'display_order' => (int) ($data['display_order'] ?? $data['chapter_number']),
+            ],
         );
     }
 
@@ -318,9 +327,24 @@ class HadithImportPersister
             return null;
         }
 
-        $data['book_id'] = $bookId;
-
         $hadithNumber = (string) ($data['hadith_number'] ?? '');
+        $chapterId = isset($data['chapter_id'])
+            ? (int) $data['chapter_id']
+            : (int) HadithChapter::query()
+                ->where('book_id', $bookId)
+                ->orderBy('display_order')
+                ->value('id');
+
+        if ($chapterId === 0) {
+            throw new \InvalidArgumentException("Hadith {$hadithNumber} has no target chapter");
+        }
+
+        $targetData = [
+            'chapter_id' => $chapterId,
+            'primary_narrator_id' => $data['primary_narrator_id'] ?? null,
+            'hadith_number' => $hadithNumber,
+            'text_hash' => $data['text_hash'] ?? null,
+        ];
 
         // text_hash values in this table were written by two historical formulas
         // (trim-only vs inner-whitespace-collapsed). Match against both so a hadith
@@ -328,7 +352,7 @@ class HadithImportPersister
         $candidateHashes = $this->equivalentTextHashes($primaryText, $data['text_hash'] ?? null);
 
         $existing = Hadith::query()
-            ->where('book_id', $bookId)
+            ->where('chapter_id', $chapterId)
             ->where('hadith_number', $hadithNumber)
             ->first();
 
@@ -337,10 +361,10 @@ class HadithImportPersister
         if ($existing === null || $candidateHashes === [] || in_array($existing->text_hash, $candidateHashes, true)) {
             return Hadith::updateOrCreate(
                 [
-                    'book_id' => $bookId,
+                    'chapter_id' => $chapterId,
                     'hadith_number' => $hadithNumber,
                 ],
-                $data
+                $targetData,
             );
         }
 
@@ -350,21 +374,21 @@ class HadithImportPersister
         // under a non-colliding, suffixed number — matching the existing
         // "<number> <letter>" convention already present in this data.
         $sameText = Hadith::query()
-            ->where('book_id', $bookId)
+            ->byBook($bookId)
             ->whereIn('text_hash', $candidateHashes)
             ->first();
 
         if ($sameText !== null) {
             // This exact text is already stored for this book under another number —
             // update it in place rather than creating a duplicate row.
-            $sameText->update($data);
+            $sameText->update($targetData);
 
             return $sameText;
         }
 
-        $data['hadith_number'] = $this->nextAvailableHadithNumber($bookId, $hadithNumber);
+        $targetData['hadith_number'] = $this->nextAvailableHadithNumber($bookId, $hadithNumber);
 
-        return Hadith::create($data);
+        return Hadith::create($targetData);
     }
 
     /**
@@ -378,7 +402,7 @@ class HadithImportPersister
             $candidate = "{$baseNumber} {$suffix}";
 
             $taken = Hadith::query()
-                ->where('book_id', $bookId)
+                ->byBook($bookId)
                 ->where('hadith_number', $candidate)
                 ->exists();
 
@@ -389,7 +413,7 @@ class HadithImportPersister
 
         // Exhausted single letters (extremely unlikely): fall back to a unique
         // numeric suffix derived from the book scope.
-        return $baseNumber.' '.(Hadith::query()->where('book_id', $bookId)->max('id') + 1);
+        return $baseNumber.' '.(Hadith::query()->byBook($bookId)->max('id') + 1);
     }
 
     /**
@@ -453,23 +477,28 @@ class HadithImportPersister
                     continue;
                 }
 
-                $translationData['hadith_id'] = $hadithId;
-                $translationData['verified'] = (bool) ($translationData['verified'] ?? false);
-                $translationData['is_primary'] = (bool) ($translationData['is_primary'] ?? false);
+                $locale = $translationData['locale'] ?? $translationData['language_code'] ?? 'ar';
 
                 HadithTranslation::updateOrCreate(
                     [
                         'hadith_id' => $hadithId,
-                        'language_code' => $translationData['language_code'],
+                        'locale' => $locale,
                     ],
-                    $translationData
+                    [
+                        'text' => $translationData['text'],
+                        'search_text' => $translationData['search_text'] ?? null,
+                        'translator_name' => $translationData['translator_name'] ?? $translationData['translator'] ?? null,
+                        'source_urn' => $translationData['source_urn'] ?? $translationData['urn'] ?? null,
+                        'source_url' => $translationData['source_url'] ?? null,
+                        'notes' => $translationData['notes'] ?? null,
+                    ],
                 );
 
                 $count++;
             } catch (Exception $e) {
                 Log::error('Failed to import translation', [
                     'hadith_id' => $hadithId,
-                    'language' => $translationData['language_code'] ?? 'unknown',
+                    'language' => $translationData['locale'] ?? $translationData['language_code'] ?? 'unknown',
                     'error' => $e->getMessage(),
                 ]);
             }
@@ -486,16 +515,9 @@ class HadithImportPersister
             try {
                 $nameAr = trim((string) ($narratorData['name_ar'] ?? ''));
                 $nameEn = trim((string) ($narratorData['name_en'] ?? ''));
-                $sourceSystem = $narratorData['source_system'] ?? null;
-                $sourceNarratorId = $narratorData['source_narrator_id'] ?? null;
-
-                if ($nameAr === '' && $nameEn === '' && empty($sourceNarratorId)) {
+                if ($nameAr === '' && $nameEn === '') {
                     continue;
                 }
-
-                $uniqueKey = ! empty($sourceSystem) && ! empty($sourceNarratorId)
-                    ? ['source_system' => $sourceSystem, 'source_narrator_id' => (string) $sourceNarratorId]
-                    : ['name_ar' => $nameAr !== '' ? $nameAr : $nameEn];
 
                 $narrator = HadithNarrator::resolveOrCreate(
                     [
@@ -506,20 +528,18 @@ class HadithImportPersister
                         'birth_year_hijri' => $narratorData['birth_year_hijri'] ?? null,
                         'death_year_hijri' => $narratorData['death_year_hijri'] ?? null,
                         'reliability_grade' => $narratorData['reliability_grade'] ?? null,
-                        'biography' => $narratorData['biography_ar'] ?? $narratorData['biography_en'] ?? null,
-                        'source_system' => $sourceSystem,
-                        'source_narrator_id' => $sourceNarratorId,
+                        'biography_ar' => $narratorData['biography_ar'] ?? null,
+                        'biography_en' => $narratorData['biography_en'] ?? null,
                     ],
-                    $uniqueKey,
                 );
 
                 HadithIsnad::updateOrCreate(
                     [
                         'hadith_id' => $hadithId,
                         'narrator_id' => $narrator->id,
-                        'position_in_chain' => (int) ($narratorData['position_in_chain'] ?? 0),
                     ],
                     [
+                        'position_in_chain' => max(1, (int) ($narratorData['position_in_chain'] ?? 1)),
                         'transmission_method' => $narratorData['transmission_method'] ?? null,
                     ]
                 );
@@ -548,9 +568,12 @@ class HadithImportPersister
                 }
 
                 $theme = HadithTheme::updateOrCreate(
-                    ['theme_ar' => $themeData['name_ar']],
+                    ['slug' => $themeData['slug'] ?? null],
                     [
-                        'theme_en' => $themeData['name_en'],
+                        'name' => array_filter([
+                            'ar' => $themeData['name_ar'] ?? null,
+                            'en' => $themeData['name_en'] ?? null,
+                        ]),
                         'review_status' => $this->reviewStatus($themeData),
                         'source_reference' => $themeData['source_reference'] ?? null,
                     ]
@@ -580,32 +603,20 @@ class HadithImportPersister
         foreach ($keywords as $keywordData) {
             try {
                 $keyword = $keywordData['keyword'] ?? null;
-                $language = $keywordData['language_code'] ?? 'ar';
+                $language = $keywordData['locale'] ?? $keywordData['language_code'] ?? 'ar';
 
                 if (empty($keyword)) {
                     continue;
                 }
 
-                $data = ['hadith_id' => $hadithId];
-
-                if ($language === 'ar') {
-                    $data['keyword_ar'] = $keyword;
-                } else {
-                    $data['keyword_en'] = $keyword;
-                }
-
-                $data['review_status'] = $this->reviewStatus($keywordData);
-                $data['source_reference'] = $keywordData['source_reference'] ?? null;
-
-                $column = $language === 'ar' ? 'keyword_ar' : 'keyword_en';
-                $existing = HadithKeyword::where('hadith_id', $hadithId)
-                    ->where($column, $keyword)
-                    ->first();
-
-                if (! $existing) {
-                    HadithKeyword::create($data);
-                    $count++;
-                }
+                HadithKeyword::query()->firstOrCreate(
+                    ['hadith_id' => $hadithId, 'locale' => $language, 'keyword' => $keyword],
+                    [
+                        'review_status' => $this->reviewStatus($keywordData),
+                        'source_reference' => $keywordData['source_reference'] ?? null,
+                    ],
+                );
+                $count++;
             } catch (Exception $e) {
                 Log::error('Failed to import keyword', [
                     'hadith_id' => $hadithId,
@@ -633,26 +644,16 @@ class HadithImportPersister
                     continue;
                 }
 
-                $scholar = HadithScholar::updateOrCreate(
-                    ['name_en' => $scholarName],
-                    ['name_ar' => $gradingData['scholar_name_ar'] ?? $scholarName]
+                $scholar = $this->findOrCreateScholar(
+                    (string) ($gradingData['scholar_name_ar'] ?? $scholarName),
+                    (string) ($gradingData['scholar_name_en'] ?? $scholarName),
                 );
 
                 $gradeEn = $gradingData['grading_level']
                     ?? $gradingData['grade_en']
                     ?? $gradingData['grade']
                     ?? 'unknown';
-                $gradeAr = $gradingData['grade_ar'] ?? null;
-                $gradeCode = strtolower(str_replace([' ', "'", '-'], ['_', '', '_'], $gradeEn));
-
-                $gradingLevel = HadithGradingLevel::firstOrCreate(
-                    ['grade_en' => $gradeCode],
-                    [
-                        'grade_ar' => $gradeAr ?? $gradeEn,
-                        'description' => null,
-                        'rank' => $this->getGradeRank($gradeCode),
-                    ]
-                );
+                $gradeCode = $this->canonicalGradeKey((string) $gradeEn);
 
                 $notes = $gradingData['notes_en']
                     ?? $gradingData['notes_ar']
@@ -665,8 +666,9 @@ class HadithImportPersister
                         'scholar_id' => $scholar->id,
                     ],
                     [
-                        'grading_level_id' => $gradingLevel->id,
-                        'grading_notes' => $notes,
+                        'grade_key' => $gradeCode,
+                        'raw_grade' => (string) ($gradingData['grade_ar'] ?? $gradeEn),
+                        'notes' => $notes,
                         'source_reference' => $gradingData['source_reference'] ?? null,
                         'source_url' => $gradingData['source_url'] ?? null,
                         'source_name' => $gradingData['source_name'] ?? null,
@@ -698,28 +700,23 @@ class HadithImportPersister
                     continue;
                 }
 
-                $scholar = HadithScholar::updateOrCreate(
-                    ['name_en' => $scholarName],
-                    [
-                        'name_ar' => $commentData['scholar_name_ar'] ?? $scholarName,
-                        'full_name_ar' => $commentData['scholar_name_ar'] ?? null,
-                        'full_name_en' => $commentData['scholar_name_en'] ?? null,
-                    ]
+                $scholar = $this->findOrCreateScholar(
+                    (string) ($commentData['scholar_name_ar'] ?? $scholarName),
+                    (string) ($commentData['scholar_name_en'] ?? $scholarName),
                 );
 
                 if (! empty($commentData['commentary_ar'])) {
                     HadithCommentary::updateOrCreate(
                         [
                             'hadith_id' => $hadithId,
-                            'author' => $scholarName,
-                            'language_code' => 'ar',
+                            'author_name' => $scholarName,
+                            'locale' => 'ar',
                         ],
                         [
                             'scholar_id' => $scholar->id,
-                            'commentary_text' => $commentData['commentary_ar'],
-                            'source' => $commentData['source_reference'] ?? null,
+                            'text' => $commentData['commentary_ar'],
+                            'source_reference' => $commentData['source_reference'] ?? null,
                             'source_url' => $commentData['source_url'] ?? null,
-                            'verified' => (bool) ($commentData['verified'] ?? false),
                             'review_status' => $this->reviewStatus($commentData),
                         ]
                     );
@@ -729,15 +726,14 @@ class HadithImportPersister
                     HadithCommentary::updateOrCreate(
                         [
                             'hadith_id' => $hadithId,
-                            'author' => $scholarName,
-                            'language_code' => 'en',
+                            'author_name' => $scholarName,
+                            'locale' => 'en',
                         ],
                         [
                             'scholar_id' => $scholar->id,
-                            'commentary_text' => $commentData['commentary_en'],
-                            'source' => $commentData['source_reference'] ?? null,
+                            'text' => $commentData['commentary_en'],
+                            'source_reference' => $commentData['source_reference'] ?? null,
                             'source_url' => $commentData['source_url'] ?? null,
-                            'verified' => (bool) ($commentData['verified'] ?? false),
                             'review_status' => $this->reviewStatus($commentData),
                         ]
                     );
@@ -761,19 +757,24 @@ class HadithImportPersister
 
         foreach ($verses as $verseData) {
             try {
+                $quranVerseId = $verseData['quran_verse_id'] ?? DB::table('quran_verses')
+                    ->where('surah_id', $verseData['surah'] ?? 0)
+                    ->where('verse_number', $verseData['ayah'] ?? 0)
+                    ->value('id');
+
+                if ($quranVerseId === null) {
+                    continue;
+                }
+
                 HadithRelatedVerse::updateOrCreate(
                     [
                         'hadith_id' => $hadithId,
-                        'surah' => $verseData['surah'],
-                        'ayah' => $verseData['ayah'],
+                        'quran_verse_id' => $quranVerseId,
                     ],
                     [
-                        'surah_name_ar' => $verseData['surah_name_ar'],
-                        'surah_name_en' => $verseData['surah_name_en'],
-                        'text_ar' => $verseData['text_ar'],
-                        'text_en' => $verseData['text_en'],
-                        'relevance' => $verseData['relevance'],
-                        'quran_verse_id' => $verseData['quran_verse_id'] ?? null,
+                        'relevance' => is_array($verseData['relevance'] ?? null)
+                            ? $verseData['relevance']
+                            : array_filter(['ar' => $verseData['relevance'] ?? null]),
                         'review_status' => $this->reviewStatus($verseData),
                         'source_reference' => $verseData['source_reference'] ?? null,
                         'source_url' => $verseData['source_url'] ?? null,
@@ -786,81 +787,6 @@ class HadithImportPersister
                     'hadith_id' => $hadithId,
                     'surah' => $verseData['surah'] ?? 'unknown',
                     'ayah' => $verseData['ayah'] ?? 'unknown',
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
-
-        return $count;
-    }
-
-    protected function importApplications(array $applications, int $hadithId): int
-    {
-        $count = 0;
-        $order = 0;
-
-        foreach ($applications as $appData) {
-            try {
-                $uniqueKey = ['hadith_id' => $hadithId, 'category_en' => $appData['category_en']];
-
-                if (empty($appData['category_en']) && ! empty($appData['category_ar'])) {
-                    $uniqueKey = ['hadith_id' => $hadithId, 'category_ar' => $appData['category_ar']];
-                }
-
-                HadithApplication::updateOrCreate(
-                    $uniqueKey,
-                    [
-                        'category_ar' => $appData['category_ar'],
-                        'category_en' => $appData['category_en'],
-                        'description_ar' => $appData['description_ar'],
-                        'description_en' => $appData['description_en'],
-                        'display_order' => $order++,
-                        'review_status' => $this->reviewStatus($appData),
-                        'source_reference' => $appData['source_reference'] ?? null,
-                        'source_url' => $appData['source_url'] ?? null,
-                    ]
-                );
-
-                $count++;
-            } catch (Exception $e) {
-                Log::error('Failed to import application', [
-                    'hadith_id' => $hadithId,
-                    'category' => $appData['category_en'] ?? $appData['category_ar'] ?? 'unknown',
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
-
-        return $count;
-    }
-
-    protected function importFiqhRulings(array $rulings, int $hadithId): int
-    {
-        $count = 0;
-        $order = 0;
-
-        foreach ($rulings as $rulingData) {
-            try {
-                HadithFiqhRuling::updateOrCreate(
-                    [
-                        'hadith_id' => $hadithId,
-                        'principle' => $rulingData['principle'],
-                        'language_code' => $rulingData['language_code'],
-                    ],
-                    [
-                        'scholar_id' => $rulingData['scholar_id'] ?? null,
-                        'display_order' => $order++,
-                        'review_status' => $this->reviewStatus($rulingData),
-                        'source_reference' => $rulingData['source_reference'] ?? null,
-                        'source_url' => $rulingData['source_url'] ?? null,
-                    ]
-                );
-
-                $count++;
-            } catch (Exception $e) {
-                Log::error('Failed to import fiqh ruling', [
-                    'hadith_id' => $hadithId,
-                    'principle' => mb_substr($rulingData['principle'] ?? '', 0, 50),
                     'error' => $e->getMessage(),
                 ]);
             }
@@ -886,14 +812,11 @@ class HadithImportPersister
             'hadiths' => 0,
             'translations' => 0,
             'narrators' => 0,
-            'companions' => 0,
             'themes' => 0,
             'keywords' => 0,
             'gradings' => 0,
             'scholarly_comments' => 0,
             'related_verses' => 0,
-            'applications' => 0,
-            'fiqh_rulings' => 0,
             'sources' => 0,
         ];
     }
@@ -911,19 +834,28 @@ class HadithImportPersister
                     continue;
                 }
 
-                $sourceData['hadith_id'] = $hadithId;
-                $sourceData['source_file'] = $this->compactSourceFile($sourceFile);
-                $sourceData['source_type'] = $sourceData['source_type'] ?? 'source';
-                $sourceData['title'] = $sourceData['title'] ?? 'Unknown source';
-                $sourceData['verified_at'] = $sourceData['verified_at'] ?? null;
+                $sourceSystem = (string) ($sourceData['source_system'] ?? 'json_import');
+                $externalId = (string) ($sourceData['external_id']
+                    ?? $reference
+                    ?? $url
+                    ?? $this->compactSourceFile($sourceFile).":{$hadithId}");
 
                 HadithSource::updateOrCreate(
                     [
-                        'hadith_id' => $hadithId,
-                        'source_file' => $sourceData['source_file'],
-                        'url' => $url,
+                        'source_system' => $sourceSystem,
+                        'external_id' => mb_substr($externalId, 0, 100),
                     ],
-                    $sourceData
+                    [
+                        'hadith_id' => $hadithId,
+                        'source_type' => $sourceData['source_type'] ?? 'source',
+                        'source_file' => $this->compactSourceFile($sourceFile),
+                        'title' => $sourceData['title'] ?? null,
+                        'author' => $sourceData['author'] ?? null,
+                        'reference' => $reference,
+                        'url' => $url,
+                        'verification_method' => $sourceData['verification_method'] ?? null,
+                        'verified_at' => $sourceData['verified_at'] ?? null,
+                    ],
                 );
 
                 $count++;
@@ -977,29 +909,28 @@ class HadithImportPersister
         return mb_substr($compact, 0, 255);
     }
 
-    /**
-     * Return a numeric rank for a normalised grade code (lower = more authentic).
-     */
-    protected function getGradeRank(string $gradeCode): int
+    private function findOrCreateScholar(string $arabicName, string $englishName): HadithScholar
     {
-        $ranks = [
-            'sahih' => 1,
-            'sahih_lighairihi' => 2,
-            'hasan' => 3,
-            'hasan_lighairihi' => 4,
-            'hasan_sahih' => 3,
-            'daif' => 5,
-            'daif_jiddan' => 6,
-            'very_weak' => 6,
-            'munkar' => 7,
-            'shadh' => 7,
-            'mursal' => 8,
-            'munqati' => 8,
-            'mudallas' => 8,
-            'mawdu' => 9,
-            'fabricated' => 9,
-        ];
+        $scholar = HadithScholar::query()
+            ->where('name->ar', $arabicName)
+            ->orWhere('name->en', $englishName)
+            ->first();
 
-        return $ranks[$gradeCode] ?? 10;
+        return $scholar ?? HadithScholar::query()->create([
+            'name' => array_filter(['ar' => $arabicName, 'en' => $englishName]),
+        ]);
+    }
+
+    private function canonicalGradeKey(string $rawGrade): string
+    {
+        $normalized = strtolower($rawGrade);
+
+        return match (true) {
+            str_contains($normalized, 'mawdu'), str_contains($normalized, 'fabricat') => 'mawdu',
+            str_contains($normalized, 'daif'), str_contains($normalized, 'weak') => 'daif',
+            str_contains($normalized, 'hasan') => 'hasan',
+            str_contains($normalized, 'sahih'), str_contains($normalized, 'authentic') => 'sahih',
+            default => 'unknown',
+        };
     }
 }

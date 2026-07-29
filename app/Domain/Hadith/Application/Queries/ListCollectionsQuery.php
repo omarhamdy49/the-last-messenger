@@ -20,7 +20,7 @@ final readonly class ListCollectionsQuery implements Query
         public ?string $search = null,
         public bool $onlyActive = true,
         public bool $withCounts = true,
-        public string $sortBy = 'name_ar',
+        public string $sortBy = 'id',
         public string $sortDirection = 'asc',
         public array $filters = [],
         public ?string $locale = 'ar'

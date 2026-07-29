@@ -6,7 +6,9 @@ namespace Tests\Feature\Repositories;
 
 use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithBook;
+use App\Domain\Hadith\Models\HadithChapter;
 use App\Domain\Hadith\Models\HadithCollection;
+use App\Domain\Hadith\Models\HadithGrading;
 use App\Domain\Hadith\Models\HadithTranslation;
 use App\Domain\Hadith\Repositories\HadithRepositoryInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -50,29 +52,38 @@ class HadithRepositoryTest extends TestCase
         string $arabicText = 'إِنَّمَا الْأَعْمَالُ بِالنِّيَّاتِ'
     ): Hadith {
         $collection = HadithCollection::create([
-            'name_ar' => 'صحيح البخاري',
-            'name_en' => 'Sahih Bukhari',
-            'slug_ar' => 'صحيح-البخاري',
-            'slug_en' => 'sahih-bukhari',
+            'code' => 'bukhari-'.uniqid(),
+            'name' => ['ar' => 'صحيح البخاري', 'en' => 'Sahih Bukhari'],
+            'slug' => 'sahih-bukhari-'.uniqid(),
             'abbreviation' => 'BUK',
         ]);
 
         $book = HadithBook::create([
             'collection_id' => $collection->id,
-            'title_ar' => 'كتاب الوحي',
-            'title_en' => 'Book of Revelation',
+            'book_number' => '1',
+            'title' => ['ar' => 'كتاب الوحي', 'en' => 'Book of Revelation'],
+        ]);
+        $chapter = HadithChapter::create([
+            'book_id' => $book->id,
+            'chapter_number' => '1',
+            'name' => ['ar' => 'باب الوحي', 'en' => 'Revelation'],
         ]);
 
         $hadith = Hadith::create([
-            'book_id' => $book->id,
+            'chapter_id' => $chapter->id,
             'hadith_number' => $hadithNumber,
-            'grading_status' => $gradingStatus,
+            'text_hash' => hash('sha256', $arabicText),
         ]);
 
         HadithTranslation::create([
             'hadith_id' => $hadith->id,
-            'language_code' => 'ar',
+            'locale' => 'ar',
             'text' => $arabicText,
+        ]);
+        HadithGrading::create([
+            'hadith_id' => $hadith->id,
+            'grade_key' => $gradingStatus,
+            'raw_grade' => $gradingStatus,
         ]);
 
         return $hadith->fresh();
@@ -135,30 +146,38 @@ class HadithRepositoryTest extends TestCase
     {
         // Create 10 hadiths, each with an Arabic translation.
         $collection = HadithCollection::create([
-            'name_ar' => 'صحيح مسلم',
-            'name_en' => 'Sahih Muslim',
-            'slug_ar' => 'صحيح-مسلم',
-            'slug_en' => 'sahih-muslim',
+            'code' => 'muslim',
+            'name' => ['ar' => 'صحيح مسلم', 'en' => 'Sahih Muslim'],
+            'slug' => 'sahih-muslim',
             'abbreviation' => 'MUS',
         ]);
 
         $book = HadithBook::create([
             'collection_id' => $collection->id,
-            'title_ar' => 'كتاب الإيمان',
-            'title_en' => 'Book of Faith',
+            'book_number' => '1',
+            'title' => ['ar' => 'كتاب الإيمان', 'en' => 'Book of Faith'],
+        ]);
+        $chapter = HadithChapter::create([
+            'book_id' => $book->id,
+            'chapter_number' => '1',
+            'name' => ['ar' => 'باب الإيمان', 'en' => 'Faith'],
         ]);
 
         for ($i = 1; $i <= 10; $i++) {
             $hadith = Hadith::create([
-                'book_id' => $book->id,
+                'chapter_id' => $chapter->id,
                 'hadith_number' => (string) $i,
-                'grading_status' => Hadith::GRADING_SAHIH,
+                'text_hash' => hash('sha256', "نص الحديث رقم {$i}"),
             ]);
 
             HadithTranslation::create([
                 'hadith_id' => $hadith->id,
-                'language_code' => 'ar',
+                'locale' => 'ar',
                 'text' => "نص الحديث رقم {$i}",
+            ]);
+            $hadith->gradings()->create([
+                'grade_key' => Hadith::GRADING_SAHIH,
+                'raw_grade' => 'sahih',
             ]);
         }
 
@@ -170,11 +189,11 @@ class HadithRepositoryTest extends TestCase
         $repo = app(HadithRepositoryInterface::class);
         $repo->paginateWithFilters(10);
 
-        // With proper eager loading: 1 count query + 1 data query + 1 translations
-        // batch = 3 queries maximum. The repository also loads book relation, so
-        // allow up to 4 to be safe, but never 10+ (one-per-row).
+        // With proper eager loading: count + data, translations, gradings, then
+        // the chapter -> book -> collection relation chain = 7 fixed queries.
+        // The total must not grow with the number of hadith rows.
         $this->assertLessThanOrEqual(
-            4,
+            7,
             $queryCount,
             "paginateWithFilters() issued {$queryCount} queries for 10 rows — check for N+1."
         );
@@ -187,22 +206,31 @@ class HadithRepositoryTest extends TestCase
     public function test_paginate_with_filters_filters_by_grading_status(): void
     {
         $collection = HadithCollection::create([
-            'name_ar' => 'سنن أبي داود',
-            'name_en' => 'Sunan Abu Dawud',
-            'slug_ar' => 'سنن-ابي-داود',
-            'slug_en' => 'sunan-abu-dawud',
+            'code' => 'abu-dawud',
+            'name' => ['ar' => 'سنن أبي داود', 'en' => 'Sunan Abu Dawud'],
+            'slug' => 'sunan-abu-dawud',
             'abbreviation' => 'ABD',
         ]);
 
         $book = HadithBook::create([
             'collection_id' => $collection->id,
-            'title_ar' => 'كتاب الصلاة',
-            'title_en' => 'Book of Prayer',
+            'book_number' => '1',
+            'title' => ['ar' => 'كتاب الصلاة', 'en' => 'Book of Prayer'],
+        ]);
+        $chapter = HadithChapter::create([
+            'book_id' => $book->id,
+            'chapter_number' => '1',
+            'name' => ['ar' => 'باب الصلاة', 'en' => 'Prayer'],
         ]);
 
-        Hadith::create(['book_id' => $book->id, 'hadith_number' => '1', 'grading_status' => Hadith::GRADING_SAHIH]);
-        Hadith::create(['book_id' => $book->id, 'hadith_number' => '2', 'grading_status' => Hadith::GRADING_DAIF]);
-        Hadith::create(['book_id' => $book->id, 'hadith_number' => '3', 'grading_status' => Hadith::GRADING_DAIF]);
+        foreach (['1' => Hadith::GRADING_SAHIH, '2' => Hadith::GRADING_DAIF, '3' => Hadith::GRADING_DAIF] as $number => $grade) {
+            $hadith = Hadith::create([
+                'chapter_id' => $chapter->id,
+                'hadith_number' => $number,
+                'text_hash' => hash('sha256', (string) $number),
+            ]);
+            $hadith->gradings()->create(['grade_key' => $grade, 'raw_grade' => $grade]);
+        }
 
         $repo = app(HadithRepositoryInterface::class);
         $results = $repo->paginateWithFilters(15, '', 'hadith_number', ['grading_status' => Hadith::GRADING_DAIF]);
@@ -216,21 +244,29 @@ class HadithRepositoryTest extends TestCase
     public function test_paginate_with_filters_returns_all_when_no_filters_applied(): void
     {
         $collection = HadithCollection::create([
-            'name_ar' => 'جامع الترمذي',
-            'name_en' => 'Jami at-Tirmidhi',
-            'slug_ar' => 'جامع-الترمذي',
-            'slug_en' => 'jami-at-tirmidhi',
+            'code' => 'tirmidhi',
+            'name' => ['ar' => 'جامع الترمذي', 'en' => 'Jami at-Tirmidhi'],
+            'slug' => 'jami-at-tirmidhi',
             'abbreviation' => 'TIR',
         ]);
 
         $book = HadithBook::create([
             'collection_id' => $collection->id,
-            'title_ar' => 'كتاب الزهد',
-            'title_en' => 'Book of Zuhd',
+            'book_number' => '1',
+            'title' => ['ar' => 'كتاب الزهد', 'en' => 'Book of Zuhd'],
+        ]);
+        $chapter = HadithChapter::create([
+            'book_id' => $book->id,
+            'chapter_number' => '1',
+            'name' => ['ar' => 'باب الزهد', 'en' => 'Zuhd'],
         ]);
 
         for ($i = 1; $i <= 5; $i++) {
-            Hadith::create(['book_id' => $book->id, 'hadith_number' => (string) $i, 'grading_status' => Hadith::GRADING_HASAN]);
+            Hadith::create([
+                'chapter_id' => $chapter->id,
+                'hadith_number' => (string) $i,
+                'text_hash' => hash('sha256', (string) $i),
+            ]);
         }
 
         $repo = app(HadithRepositoryInterface::class);
@@ -297,8 +333,6 @@ class HadithRepositoryTest extends TestCase
 
         $this->assertNotEmpty($results);
 
-        // The repository selects id, book_id, hadith_number, grading_status,
-        // grading_agreement, companion_id — confirm the critical ones are present.
         $first = $results->first();
         $this->assertNotNull($first->id);
         $this->assertNotNull($first->hadith_number);
@@ -312,22 +346,29 @@ class HadithRepositoryTest extends TestCase
     public function test_bulk_delete_removes_specified_hadiths(): void
     {
         $collection = HadithCollection::create([
-            'name_ar' => 'صحيح ابن حبان',
-            'name_en' => 'Sahih Ibn Hibban',
-            'slug_ar' => 'صحيح-ابن-حبان',
-            'slug_en' => 'sahih-ibn-hibban',
+            'code' => 'ibn-hibban',
+            'name' => ['ar' => 'صحيح ابن حبان', 'en' => 'Sahih Ibn Hibban'],
+            'slug' => 'sahih-ibn-hibban',
             'abbreviation' => 'IBH',
         ]);
 
         $book = HadithBook::create([
             'collection_id' => $collection->id,
-            'title_ar' => 'كتاب الجهاد',
-            'title_en' => 'Book of Jihad',
+            'book_number' => '1',
+            'title' => ['ar' => 'كتاب الجهاد', 'en' => 'Book of Jihad'],
+        ]);
+        $chapter = HadithChapter::create([
+            'book_id' => $book->id,
+            'chapter_number' => '1',
+            'name' => ['ar' => 'باب الجهاد', 'en' => 'Jihad'],
         ]);
 
-        $h1 = Hadith::create(['book_id' => $book->id, 'hadith_number' => '1', 'grading_status' => Hadith::GRADING_SAHIH]);
-        $h2 = Hadith::create(['book_id' => $book->id, 'hadith_number' => '2', 'grading_status' => Hadith::GRADING_SAHIH]);
-        $h3 = Hadith::create(['book_id' => $book->id, 'hadith_number' => '3', 'grading_status' => Hadith::GRADING_SAHIH]);
+        $hadiths = collect(['1', '2', '3'])->map(fn (string $number) => Hadith::create([
+            'chapter_id' => $chapter->id,
+            'hadith_number' => $number,
+            'text_hash' => hash('sha256', $number),
+        ]));
+        [$h1, $h2, $h3] = $hadiths->all();
 
         $repo = app(HadithRepositoryInterface::class);
         $deleted = $repo->bulkDelete([$h1->id, $h2->id]);

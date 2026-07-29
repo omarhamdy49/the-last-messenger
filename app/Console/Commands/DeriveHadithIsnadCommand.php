@@ -48,7 +48,7 @@ class DeriveHadithIsnadCommand extends Command
      * قال introduces speech, not a transmission link — "عن قيس، قال قام أبو
      * بكر" is Qays reporting, not Qays handing on to someone called "Abu Bakr
      * stood". Treated as a chain verb it swallows the matn as narrator names.
-     * The final attribution is captured separately by hadith:derive-companions.
+     * The final attribution is stored separately on hadith_hadiths.primary_narrator_id.
      */
     private const SPEECH_MARKERS = ['قال ', 'قالت ', 'يقول '];
 
@@ -81,7 +81,7 @@ class DeriveHadithIsnadCommand extends Command
         $samples = [];
 
         DB::table('hadith_translations')
-            ->where('language_code', 'ar')
+            ->where('locale', 'ar')
             ->select('hadith_id', 'text')
             ->orderBy('hadith_id')
             ->chunk(5000, function ($rows) use (&$stats, &$chains, &$samples, $alreadyChained) {
@@ -220,8 +220,9 @@ class DeriveHadithIsnadCommand extends Command
         $this->info('Resolving narrators...');
 
         $byKey = [];
-        foreach (DB::table('hadith_narrators')->select('id', 'name_ar')->get() as $row) {
-            $key = $this->foldArabic((string) $row->name_ar);
+        foreach (DB::table('hadith_narrators')->select('id', 'name')->get() as $row) {
+            $names = json_decode((string) $row->name, true);
+            $key = $this->foldArabic((string) ($names['ar'] ?? ''));
             if ($key !== '') {
                 $byKey[$key] ??= (int) $row->id;
             }
@@ -235,13 +236,14 @@ class DeriveHadithIsnadCommand extends Command
                 $rows = [];
 
                 foreach ($batch as $hadithId => $chain) {
+                    $chainLength = count($chain);
                     foreach ($chain as $link) {
                         $key = $this->foldArabic($link['name']);
                         $narratorId = $byKey[$key] ?? null;
 
                         if ($narratorId === null) {
                             $narratorId = (int) DB::table('hadith_narrators')->insertGetId([
-                                'name_ar' => $link['name'],
+                                'name' => json_encode(['ar' => $link['name']], JSON_UNESCAPED_UNICODE),
                                 'created_at' => now(),
                                 'updated_at' => now(),
                             ]);
@@ -252,7 +254,9 @@ class DeriveHadithIsnadCommand extends Command
                         $rows[] = [
                             'hadith_id' => $hadithId,
                             'narrator_id' => $narratorId,
-                            'position_in_chain' => $link['position'],
+                            // Source text names the compiler-side transmitter first.
+                            // Target position 1 is the narrator nearest the Prophet.
+                            'position_in_chain' => $chainLength - $link['position'] + 1,
                             'transmission_method' => $link['method'],
                             'created_at' => now(),
                             'updated_at' => now(),

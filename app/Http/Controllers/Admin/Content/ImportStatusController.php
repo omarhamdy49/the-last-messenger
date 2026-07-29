@@ -47,18 +47,20 @@ class ImportStatusController extends Controller
         ]);
 
         $logs = HadithSyncLog::query()
-            ->select(['id', 'collection_name', 'type', 'status', 'summary', 'error_message', 'started_at', 'completed_at', 'created_at'])
+            ->select(['id', 'collection_id', 'source_collection_code', 'type', 'status', 'summary', 'error_message', 'started_at', 'completed_at', 'created_at'])
+            ->with('collection:id,name')
             ->when($validated['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
-            ->when($validated['collection'] ?? null, fn ($query, $collection) => $query->where('collection_name', $collection))
+            ->when($validated['collection'] ?? null, fn ($query, $collection) => $query->where('source_collection_code', $collection))
             ->orderByDesc('id')
             ->paginate(20)
             ->withQueryString();
 
         $collections = HadithSyncLog::query()
-            ->select('collection_name')
+            ->select('source_collection_code')
+            ->whereNotNull('source_collection_code')
             ->distinct()
-            ->orderBy('collection_name')
-            ->pluck('collection_name');
+            ->orderBy('source_collection_code')
+            ->pluck('source_collection_code');
 
         return view('admin.content.imports.logs', [
             'logs' => $logs,
@@ -120,10 +122,11 @@ class ImportStatusController extends Controller
 
         $dbCounts = HadithCollection::query()
             ->leftJoin('hadith_books', 'hadith_books.collection_id', '=', 'hadith_collections.id')
-            ->leftJoin('hadith_hadiths', 'hadith_hadiths.book_id', '=', 'hadith_books.id')
-            ->selectRaw('hadith_collections.source_slug, COUNT(hadith_hadiths.id) AS hadith_count')
-            ->groupBy('hadith_collections.source_slug')
-            ->pluck('hadith_count', 'source_slug')
+            ->leftJoin('hadith_chapters', 'hadith_chapters.book_id', '=', 'hadith_books.id')
+            ->leftJoin('hadith_hadiths', 'hadith_hadiths.chapter_id', '=', 'hadith_chapters.id')
+            ->selectRaw('hadith_collections.slug, COUNT(hadith_hadiths.id) AS hadith_count')
+            ->groupBy('hadith_collections.slug')
+            ->pluck('hadith_count', 'slug')
             ->all();
 
         $rows = [];
@@ -150,7 +153,7 @@ class ImportStatusController extends Controller
         }
 
         $hadithsMissingArabic = Hadith::query()
-            ->whereDoesntHave('translations', fn ($query) => $query->where('language_code', 'ar'))
+            ->whereDoesntHave('translations', fn ($query) => $query->where('locale', 'ar'))
             ->count();
         $knownMissingArabic = (int) config('islamic-data.known_missing_arabic');
 

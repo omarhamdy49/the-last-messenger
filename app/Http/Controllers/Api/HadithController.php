@@ -45,7 +45,7 @@ class HadithController extends Controller
         $validated = $request->validate([
             'collection_id' => ['sometimes', 'integer', 'min:1'],
             'book_id' => ['sometimes', 'integer', 'min:1'],
-            'grade' => ['sometimes', 'string', 'in:sahih,hasan,daif,mawdu,mutawatir,mursal'],
+            'grade' => ['sometimes', 'string', 'in:sahih,hasan,daif,mawdu,unknown'],
             'narrator_id' => ['sometimes', 'integer', 'min:1'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
@@ -105,7 +105,7 @@ class HadithController extends Controller
             'q' => ['required', 'string', 'min:3', 'max:500'],
             'collection_id' => ['sometimes', 'integer', 'min:1'],
             'book_id' => ['sometimes', 'integer', 'min:1'],
-            'grade' => ['sometimes', 'string', 'in:sahih,hasan,daif,mawdu,mutawatir,mursal'],
+            'grade' => ['sometimes', 'string', 'in:sahih,hasan,daif,mawdu,unknown'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
 
@@ -162,9 +162,9 @@ class HadithController extends Controller
         $this->publicVisibility->apply($query, app()->getLocale());
 
         $paginator = $query
-            ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
-            ->whereIn('grading_status', [Hadith::GRADING_SAHIH, Hadith::GRADING_HASAN])
-            ->with(['translations', 'book:id,collection_id,title_ar,title_en'])
+            ->whereHas('gradings', fn (Builder $grading) => $grading
+                ->whereIn('grade_key', [Hadith::GRADING_SAHIH, Hadith::GRADING_HASAN]))
+            ->with(['translations', 'gradings', 'chapter.book.collection'])
             ->orderBy('hadith_number')
             ->paginate($perPage);
 
@@ -228,25 +228,18 @@ class HadithController extends Controller
     }
 
     /**
-     * Single book by slug.
-     * Looks up slug in both slug_ar and slug_en fields.
+     * Single book by its collection-scoped book number.
      */
     public function bookShow(string $slug): JsonResponse
     {
         $allowedLocales = ['ar', 'en', 'fr', 'tr', 'ur'];
         $requestedLocale = request()->header('Accept-Language', 'ar');
         $locale = in_array($requestedLocale, $allowedLocales, true) ? $requestedLocale : 'ar';
-        $book = $this->bookRepository->getBySlug(0, $slug, $locale);
-
-        // Fallback: try without collection constraint using both locales
-        if ($book === null) {
-            $book = \App\Domain\Hadith\Models\HadithBook::query()
-                ->where('slug_ar', $slug)
-                ->orWhere('slug_en', $slug)
-                ->with(['collection:id,name_ar,name_en,abbreviation'])
-                ->withCount(['hadiths', 'chapters'])
-                ->first();
-        }
+        $book = \App\Domain\Hadith\Models\HadithBook::query()
+            ->where('book_number', $slug)
+            ->with('collection')
+            ->withCount(['hadiths', 'chapters'])
+            ->first();
 
         if ($book === null) {
             return $this->notFoundResponse('Book not found');
@@ -287,8 +280,7 @@ class HadithController extends Controller
                 // gate needs the underlying query to constrain the eager load.
                 'hadiths' => fn (Relation $relation) => $this->publicVisibility
                     ->apply($relation->getQuery(), app()->getLocale())
-                    ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
-                    ->with('translations')
+                    ->with(['translations', 'gradings'])
                     ->orderBy('hadith_number'),
             ])
             ->find($id);
@@ -309,10 +301,10 @@ class HadithController extends Controller
         $perPage = max(1, min(100, $perPage));
 
         $paginator = \App\Domain\Hadith\Models\HadithNarrator::query()
-            ->select(['id', 'sahaba_id', 'name_ar', 'name_en', 'kunya', 'death_year_hijri', 'reliability_grade'])
+            ->select(['id', 'sahaba_id', 'name', 'kunya', 'death_year_hijri', 'reliability_grade'])
             ->with('sahabi.translations')
             ->withCount('isnads')
-            ->orderBy('name_ar')
+            ->orderBy('id')
             ->paginate($perPage);
 
         return $this->paginatedResponse($paginator, 'Narrators retrieved successfully');
@@ -324,7 +316,7 @@ class HadithController extends Controller
     public function narratorShow(int $id): JsonResponse
     {
         $narrator = \App\Domain\Hadith\Models\HadithNarrator::query()
-            ->select(['id', 'sahaba_id', 'name_ar', 'name_en', 'full_name_ar', 'full_name_en', 'kunya', 'biography', 'birth_year_hijri', 'death_year_hijri', 'reliability_grade', 'school', 'region'])
+            ->select(['id', 'sahaba_id', 'name', 'full_name', 'kunya', 'biography', 'birth_year_hijri', 'death_year_hijri', 'reliability_grade', 'school', 'region'])
             ->with('sahabi.translations')
             ->withCount('isnads')
             ->find($id);
@@ -348,7 +340,7 @@ class HadithController extends Controller
         $perPage = max(1, min(100, $perPage));
 
         $narrator = \App\Domain\Hadith\Models\HadithNarrator::query()
-            ->select(['id', 'name_ar', 'name_en'])
+            ->select(['id', 'name'])
             ->find($id);
 
         if ($narrator === null) {
@@ -359,9 +351,8 @@ class HadithController extends Controller
         $this->publicVisibility->apply($query, app()->getLocale());
 
         $paginator = $query
-            ->select(['id', 'book_id', 'hadith_number', 'grading_status', 'grading_agreement', 'companion_id'])
             ->whereHas('isnads', fn ($q) => $q->where('narrator_id', $id))
-            ->with(['translations', 'book:id,collection_id,title_ar,title_en'])
+            ->with(['translations', 'gradings', 'chapter.book.collection'])
             ->orderBy('hadith_number')
             ->paginate($perPage);
 

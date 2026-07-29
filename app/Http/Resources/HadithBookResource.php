@@ -31,7 +31,7 @@ class HadithBookResource extends JsonResource
             'title' => $this->getTitleInLocale($locale),
             'title_ar' => $this->title_ar,
             'title_en' => $this->title_en,
-            'slug' => $locale === 'ar' ? $this->slug_ar : $this->slug_en,
+            'book_number' => $this->book_number,
             'chapter_title' => $this->getChapterTitleInLocale($locale),
             'hadiths_count' => $this->whenCounted('hadiths'),
             'chapters_count' => $this->whenCounted('chapters'),

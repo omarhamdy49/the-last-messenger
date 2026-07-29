@@ -6,7 +6,9 @@ namespace Tests\Feature\Api;
 
 use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithBook;
+use App\Domain\Hadith\Models\HadithChapter;
 use App\Domain\Hadith\Models\HadithCollection;
+use App\Domain\Hadith\Models\HadithGrading;
 use App\Domain\Hadith\Models\HadithTheme;
 use App\Domain\Hadith\Models\HadithTranslation;
 use Illuminate\Database\Events\QueryExecuted;
@@ -21,29 +23,38 @@ class HadithApiTest extends TestCase
     private function createHadith(string $text = 'Actions are judged by intentions'): Hadith
     {
         $collection = HadithCollection::create([
-            'name_ar' => 'صحيح البخاري',
-            'name_en' => 'Sahih Bukhari',
-            'slug_ar' => 'صحيح-البخاري',
-            'slug_en' => 'sahih-bukhari',
+            'code' => 'bukhari',
+            'name' => ['ar' => 'صحيح البخاري', 'en' => 'Sahih Bukhari'],
+            'slug' => 'sahih-bukhari',
             'abbreviation' => 'BUK',
         ]);
 
         $book = HadithBook::create([
             'collection_id' => $collection->id,
-            'title_ar' => 'كتاب الوحي',
-            'title_en' => 'Book of Revelation',
+            'book_number' => '1',
+            'title' => ['ar' => 'كتاب الوحي', 'en' => 'Book of Revelation'],
+        ]);
+        $chapter = HadithChapter::create([
+            'book_id' => $book->id,
+            'chapter_number' => '1',
+            'name' => ['ar' => 'باب الوحي', 'en' => 'Revelation'],
         ]);
 
         $hadith = Hadith::create([
-            'book_id' => $book->id,
+            'chapter_id' => $chapter->id,
             'hadith_number' => '1',
-            'grading_status' => Hadith::GRADING_SAHIH,
+            'text_hash' => hash('sha256', $text),
         ]);
 
         HadithTranslation::create([
             'hadith_id' => $hadith->id,
-            'language_code' => 'en',
+            'locale' => 'en',
             'text' => $text,
+        ]);
+        HadithGrading::create([
+            'hadith_id' => $hadith->id,
+            'grade_key' => Hadith::GRADING_SAHIH,
+            'raw_grade' => 'sahih',
         ]);
 
         return $hadith;
@@ -206,7 +217,7 @@ class HadithApiTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.0.id', $hadith->id)
-            ->assertJsonPath('data.0.translations.0.language_code', 'en')
+            ->assertJsonPath('data.0.translations.0.locale', 'en')
             ->assertJsonPath('data.0.translations.0.text', 'Actions are judged by intentions')
             ->assertJsonStructure([
                 'data' => [
@@ -282,8 +293,7 @@ class HadithApiTest extends TestCase
     {
         $hadith = $this->createHadith();
         $theme = HadithTheme::create([
-            'theme_ar' => 'الصبر',
-            'theme_en' => 'Patience',
+            'name' => ['ar' => 'الصبر', 'en' => 'Patience'],
         ]);
         $hadith->themes()->attach($theme->id);
 
@@ -293,7 +303,7 @@ class HadithApiTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.0.id', $hadith->id)
             ->assertJsonPath('data.0.themes.0.id', $theme->id)
-            ->assertJsonPath('data.0.themes.0.theme_ar', 'الصبر')
+            ->assertJsonPath('data.0.themes.0.name.ar', 'الصبر')
             ->assertJsonPath('meta.total', 1)
             ->assertJsonStructure([
                 'data' => [
@@ -307,8 +317,7 @@ class HadithApiTest extends TestCase
     {
         $hadith = $this->createHadith();
         $theme = HadithTheme::create([
-            'theme_ar' => 'النية',
-            'theme_en' => 'Intention',
+            'name' => ['ar' => 'النية', 'en' => 'Intention'],
         ]);
         $hadith->themes()->attach($theme->id);
 
@@ -320,18 +329,22 @@ class HadithApiTest extends TestCase
     public function test_hadith_by_theme_paginates_in_sql_and_caps_per_page_at_100(): void
     {
         $firstHadith = $this->createHadith('Hadith text 1');
-        $theme = HadithTheme::create(['theme_ar' => 'موضوع كبير', 'theme_en' => 'Large Theme']);
+        $theme = HadithTheme::create(['name' => ['ar' => 'موضوع كبير', 'en' => 'Large Theme']]);
         $hadithIds = [$firstHadith->id];
 
         for ($number = 2; $number <= 101; $number++) {
             $hadith = Hadith::create([
-                'book_id' => $firstHadith->book_id,
+                'chapter_id' => $firstHadith->chapter_id,
                 'hadith_number' => (string) $number,
-                'grading_status' => Hadith::GRADING_SAHIH,
+                'text_hash' => hash('sha256', "Hadith text {$number}"),
             ]);
             $hadith->translations()->create([
-                'language_code' => 'en',
+                'locale' => 'en',
                 'text' => "Hadith text {$number}",
+            ]);
+            $hadith->gradings()->create([
+                'grade_key' => Hadith::GRADING_SAHIH,
+                'raw_grade' => 'sahih',
             ]);
             $hadithIds[] = $hadith->id;
         }
@@ -352,11 +365,11 @@ class HadithApiTest extends TestCase
             ->assertJsonPath('meta.last_page', 2);
         $this->assertTrue(
             collect($queries)->contains(
-                fn (string $sql) => str_contains($sql, 'from `hadith_hadiths`')
+                fn (string $sql) => str_contains(str_replace(['`', '"'], '', $sql), 'from hadith_hadiths')
                     && str_contains($sql, 'limit 100')
-                    && ! str_contains($sql, '`hadith_hadiths`.*')
+                    && ! str_contains(str_replace(['`', '"'], '', $sql), 'hadith_hadiths.*')
             ),
-            'The hadith page must be explicitly selected and limited by SQL.'
+            'The hadith page must be explicitly selected and limited by SQL. Queries: '.implode(' | ', $queries)
         );
     }
 

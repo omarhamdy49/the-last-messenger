@@ -122,8 +122,8 @@ use Illuminate\Support\Str;
                             <span class="text-sm">{{ $hadith->book?->title_ar ?? '—' }}</span>
                         </td>
                         <td class="px-4 py-3 max-w-xs" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            <p class="line-clamp-2 text-sm" title="{{ $hadith->translations->where('language_code', 'ar')->first()?->text ?? '' }}">
-                                {{ Str::limit($hadith->translations->where('language_code', 'ar')->first()?->text ?? '—', 100) }}
+                            <p class="line-clamp-2 text-sm" title="{{ $hadith->translations->where('locale', 'ar')->first()?->text ?? '' }}">
+                                {{ Str::limit($hadith->translations->where('locale', 'ar')->first()?->text ?? '—', 100) }}
                             </p>
                         </td>
                         <td class="px-4 py-3">

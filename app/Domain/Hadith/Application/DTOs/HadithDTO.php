@@ -39,7 +39,7 @@ final readonly class HadithDTO implements JsonSerializable
     {
         $translations = [];
         foreach ($hadith->translations as $translation) {
-            $translations[$translation->language_code] = [
+            $translations[$translation->locale] = [
                 'text' => $translation->text,
             ];
         }
@@ -60,8 +60,8 @@ final readonly class HadithDTO implements JsonSerializable
             collectionName: $hadith->book?->collection?->getNameInLocale($locale),
             translations: $translations,
             themes: $themes,
-            significance: $locale === 'ar' ? $hadith->significance_ar : $hadith->significance_en,
-            historicalContext: $locale === 'ar' ? $hadith->historical_context_ar : $hadith->historical_context_en
+            significance: null,
+            historicalContext: null,
         );
     }
 

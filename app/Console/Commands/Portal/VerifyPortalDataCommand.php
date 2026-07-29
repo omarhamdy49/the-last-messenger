@@ -48,33 +48,25 @@ class VerifyPortalDataCommand extends Command
 
         'hadith_books' => ['collection_id' => 'hadith_collections'],
         'hadith_chapters' => ['book_id' => 'hadith_books'],
-        'hadith_chapter_translations' => ['chapter_id' => 'hadith_chapters'],
-        'hadith_theme_translations' => ['theme_id' => 'hadith_themes'],
         // The two columns this export exists to carry: a narration attribution
         // that resolves onto the Sahaba module instead of being a loose string.
-        'hadith_companions' => ['sahaba_id' => 'sahaba'],
         'hadith_narrators' => ['sahaba_id' => 'sahaba'],
         'hadith_hadiths' => [
-            'book_id' => 'hadith_books',
             'chapter_id' => 'hadith_chapters',
-            'companion_id' => 'hadith_companions',
-            'merged_into_id' => 'hadith_hadiths',
+            'primary_narrator_id' => 'hadith_narrators',
         ],
         'hadith_translations' => ['hadith_id' => 'hadith_hadiths'],
         'hadith_sources' => ['hadith_id' => 'hadith_hadiths'],
-        'hadith_source_translations' => ['source_id' => 'hadith_sources'],
         'hadith_gradings' => [
             'hadith_id' => 'hadith_hadiths',
             'scholar_id' => 'hadith_scholars',
-            'grading_level_id' => 'hadith_grading_levels',
         ],
         'hadith_isnad' => ['hadith_id' => 'hadith_hadiths', 'narrator_id' => 'hadith_narrators'],
         'hadith_hadith_themes' => ['hadith_id' => 'hadith_hadiths', 'hadith_theme_id' => 'hadith_themes'],
         'hadith_keywords' => ['hadith_id' => 'hadith_hadiths'],
         'hadith_commentaries' => ['hadith_id' => 'hadith_hadiths', 'scholar_id' => 'hadith_scholars'],
-        'hadith_applications' => ['hadith_id' => 'hadith_hadiths'],
-        'hadith_fiqh_rulings' => ['hadith_id' => 'hadith_hadiths', 'scholar_id' => 'hadith_scholars'],
         'hadith_related_verses' => ['hadith_id' => 'hadith_hadiths', 'quran_verse_id' => 'quran_verses'],
+        'hadith_sync_logs' => ['collection_id' => 'hadith_collections'],
     ];
 
     public function handle(): int
