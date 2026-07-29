@@ -31,6 +31,7 @@ class DedupePeopleCommand extends Command
         {--apply : perform the merges (default is a dry run)}
         {--only= : limit to "sahaba" or "narrations"}
         {--drop-nameless : also detach and delete companion rows that carry no name at all}
+        {--merge-short-names : fold a one-word name into the single full name that extends it}
         {--show=12 : how many merge groups to print}';
 
     protected $description = 'Merge duplicate sahaba and hadith companion records, repointing every reference';
@@ -40,6 +41,9 @@ class DedupePeopleCommand extends Command
         'companion', 'companions', 'various companions', 'unknown', 'not specified', 'someone',
         'صحابي', 'صحابية', 'الصحابة', 'غير معروف', 'غير محدد',
     ];
+
+    /** Share of a stem's narrations one full name must hold before a bare given name folds into it. */
+    private const SHORT_NAME_DOMINANCE = 0.9;
 
     /** Identifying words a name without a patronymic needs before it may absorb lineage variants. */
     private const MIN_LINEAGE_TOKENS = 3;
@@ -489,6 +493,10 @@ class DedupePeopleCommand extends Command
             }
         }
 
+        if ($this->option('merge-short-names')) {
+            $this->foldShortNames($rows, $seen, $find, $parent, $skipped);
+        }
+
         $clusters = [];
         foreach ($rows as $row) {
             $clusters[$find((int) $row->id)][] = (int) $row->id;
@@ -531,6 +539,110 @@ class DedupePeopleCommand extends Command
         });
 
         $this->info('  merged.');
+    }
+
+    /**
+     * Folds a one-word attribution into the full name that extends it: the text
+     * says "Narrated Anas" and only one companion is an "Anas <something>", so
+     * they are the same man.
+     *
+     * What makes this safe rather than a guess is dominance: the leading
+     * candidate must carry at least SHORT_NAME_DOMINANCE of every narration
+     * attributed to any name starting with that word. "Anas ibn Malik" holds
+     * 98% of the "Anas …" narrations and takes the bare "Anas". "Abdullah"
+     * splits 43/20/10 across Ibn Umar, Ibn Abbas and Ibn 'Amr, so it matches
+     * none of them and stays on its own — as does "Jabir", contested between
+     * Ibn Abdullah and Ibn Samurah.
+     *
+     * @param  \Illuminate\Support\Collection<int, object>  $rows
+     * @param  array<string, array<string, int>>  $seen
+     * @param  array<int, int>  $parent
+     * @param  array<string, int>  $skipped
+     */
+    private function foldShortNames($rows, array $seen, callable $find, array &$parent, array &$skipped): void
+    {
+        // Index every multi-word name by its first word, per axis.
+        $byFirstWord = ['ar' => [], 'en' => []];
+        foreach ($rows as $row) {
+            foreach (['ar' => $this->foldArabic((string) $row->name_ar), 'en' => $this->foldEnglish((string) $row->name_en)] as $axis => $key) {
+                if ($key === '' || $this->identifyingTokens($key) < 2) {
+                    continue;
+                }
+                $byFirstWord[$axis][explode(' ', $key)[0]][$find((int) $row->id)] = true;
+            }
+        }
+
+        // Narrations per cluster, so dominance is measured on the merged
+        // person rather than on whichever spelling happens to be biggest.
+        $clusterUses = [];
+        foreach ($rows as $row) {
+            $root = $find((int) $row->id);
+            $clusterUses[$root] = ($clusterUses[$root] ?? 0) + (int) $row->uses;
+        }
+
+        $folded = 0;
+        $refused = [];
+
+        foreach ($rows as $row) {
+            $arabic = $this->foldArabic((string) $row->name_ar);
+            $english = $this->foldEnglish((string) $row->name_en);
+
+            if ($this->isPlaceholder((string) $row->name_ar) || $this->isPlaceholder((string) $row->name_en)) {
+                continue;
+            }
+            if (max($this->identifyingTokens($arabic), $this->identifyingTokens($english)) >= 2) {
+                continue;
+            }
+
+            $target = null;
+            foreach (['en' => $english, 'ar' => $arabic] as $axis => $key) {
+                if ($key === '') {
+                    continue;
+                }
+                $candidates = array_keys($byFirstWord[$axis][$key] ?? []);
+                $candidates = array_values(array_filter($candidates, fn (int $id) => $id !== $find((int) $row->id)));
+                if ($candidates === []) {
+                    continue;
+                }
+
+                $weights = [];
+                foreach ($candidates as $candidate) {
+                    $weights[$candidate] = $clusterUses[$candidate] ?? 0;
+                }
+                arsort($weights);
+                $total = array_sum($weights);
+                $leader = array_key_first($weights);
+
+                if ($total > 0 && $weights[$leader] / $total >= self::SHORT_NAME_DOMINANCE) {
+                    $target = $leader;
+                    break;
+                }
+            }
+
+            if ($target === null) {
+                $label = trim((string) ($row->name_en ?: $row->name_ar));
+                if ($label !== '' && (int) $row->uses > 50) {
+                    $refused[$label] = (int) $row->uses;
+                }
+
+                continue;
+            }
+
+            $a = $find($target);
+            $b = $find((int) $row->id);
+            if ($a !== $b) {
+                $parent[$b] = $a;
+                $folded++;
+                $skipped['single_token'] = max(0, $skipped['single_token'] - 1);
+            }
+        }
+
+        $this->line("  folded {$folded} one-word name(s) into the full name that dominates each.");
+
+        arsort($refused);
+        foreach (array_slice($refused, 0, 8, true) as $label => $uses) {
+            $this->line(sprintf('     left alone: %-24s %s narration(s) — no full name dominant enough', $label, number_format($uses)));
+        }
     }
 
     private function absorbNarrationSource(string $table, int $canonical, int $duplicate): void
