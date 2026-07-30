@@ -77,7 +77,7 @@ The old module has 22 external consumers. Deleting it first leaves the container
 - [X] T032 Remove the Hadith public routes from `routes/web.php` (lines 85-95)
 - [X] T033 Delete the obsolete route file `routes/admin/hadith.php` and the dead commented narrator block in `routes/admin.php` (lines 175-181)
 - [X] T034 [P] Update Hadith factory helpers in `tests/Helpers/TestHelper.php`
-- [ ] T035 Verify the application boots with no Hadith module present: `php artisan about`, `php artisan route:list`, `composer deptrac`
+- [X] T035 Verify the application boots with no Hadith module present: `php artisan about`, `php artisan route:list`, `composer deptrac`
 
 ### 2b. Delete the old module
 
@@ -123,35 +123,35 @@ Authored once from `data-model.md`, in foreign-key dependency order. Each migrat
 
 Follows `app/Domain/Seerah/`. Three repository pairs; no `Support/` namespace.
 
-- [ ] T060 [P] Create `app/Domain/Hadith/Enums/HadithGrade.php` with cases sahih, hasan, daif, mawdu, unknown
-- [ ] T061 [P] Create `app/Domain/Hadith/Enums/GradeScope.php` with cases hadith, isnad
-- [ ] T062 [P] Create `app/Domain/Hadith/Enums/ImportStatus.php` with cases pending, running, completed, failed
-- [ ] T063 [P] Create `app/Domain/Hadith/Models/HadithCollection.php` with explicit `$fillable`, `$translatable`, and `$casts`
-- [ ] T064 [P] Create `app/Domain/Hadith/Models/HadithBook.php`
-- [ ] T065 [P] Create `app/Domain/Hadith/Models/HadithChapter.php`
-- [ ] T066 Create `app/Domain/Hadith/Models/Hadith.php` with relations to book, chapter, texts, and gradings, applying `HasAuditLog` and `HasVersions`
-- [ ] T067 [P] Create `app/Domain/Hadith/Models/HadithText.php`
-- [ ] T068 [P] Create `app/Domain/Hadith/Models/HadithGrading.php`
-- [ ] T069 [P] Create `app/Domain/Hadith/Models/HadithScholar.php`
-- [ ] T070 [P] Create `app/Domain/Hadith/Models/HadithImportRun.php`
-- [ ] T071 [P] Create the DTO `app/Domain/Hadith/DTOs/ReferenceSet.php` as `final readonly` with canonical, inBook, translation, and translationDeprecated
-- [ ] T072 [P] Create the DTO `app/Domain/Hadith/DTOs/HadithDetail.php`
-- [ ] T073 [P] Create the DTO `app/Domain/Hadith/DTOs/HadithListItem.php`
-- [ ] T074 [P] Create the DTO `app/Domain/Hadith/DTOs/SearchCriteria.php` with a `perPage` accessor capped at 100
-- [ ] T075 [P] Create `app/Domain/Hadith/Repositories/CollectionRepositoryInterface.php` and `CollectionRepository.php`, owning collection, book, and chapter reads with explicit column selection
-- [ ] T076 [P] Create `app/Domain/Hadith/Repositories/HadithRepositoryInterface.php` and `HadithRepository.php`, with transactions inside the repository
-- [ ] T077 [P] Create `app/Domain/Hadith/Repositories/ScholarRepositoryInterface.php` and `ScholarRepository.php`
-- [ ] T078 [P] Create `app/Domain/Hadith/Services/HadithCacheKeys.php` following the `<scope>:<key>` shape used by `app/Domain/Seerah/Services/SeerahCacheKeys.php`
-- [ ] T079 Create `app/Domain/Hadith/Services/HadithVisibility.php` as the single publication gate; verify `grep -rn "is_published" app/Domain/Hadith` matches only this class and the models
-- [ ] T080 [P] Create `app/Domain/Hadith/Services/HadithDashboardStatsProvider.php` implementing `DashboardStatsProviderInterface`
-- [ ] T081 [P] Create `app/Domain/Hadith/Services/HadithExportAdapter.php` implementing `ExportableModuleInterface`
-- [ ] T082 [P] Create `app/Domain/Hadith/Services/HadithBulkHandler.php` implementing `BulkOperationHandlerInterface`
-- [ ] T083 [P] Create `database/factories/Hadith/` factories for collection, book, chapter, hadith, text, grading, and scholar
-- [ ] T084 [P] Write `tests/Feature/Hadith/Schema/CompositeForeignKeyTest.php` asserting the database rejects a hadith whose book belongs to another collection, and whose chapter belongs to another book
-- [ ] T085 [P] Write `tests/Feature/Hadith/Schema/ChapterDeletionTest.php` asserting deleting a chapter that still has hadiths is rejected
-- [ ] T086 [P] Write `tests/Feature/Hadith/Schema/ArabicOnlyHadithTest.php` asserting an Arabic-only hadith persists with exactly one `hadith_texts` row
-- [ ] T087 [P] Write `tests/Feature/Hadith/Schema/UrnUniquenessTest.php` asserting many NULL urns coexist while duplicate non-null urns are rejected
-- [ ] T088 Run the Phase 2 gate: `php artisan test --filter=Hadith`, `./vendor/bin/pint`, `composer deptrac`
+- [X] T060 [P] Create `app/Domain/Hadith/Enums/HadithGrade.php` with cases sahih, hasan, daif, mawdu, unknown
+- [X] T061 [P] Create `app/Domain/Hadith/Enums/GradeScope.php` with cases hadith, isnad
+- [X] T062 [P] Create `app/Domain/Hadith/Enums/ImportStatus.php` with cases pending, running, completed, failed
+- [X] T063 [P] Create `app/Domain/Hadith/Models/HadithCollection.php` with explicit `$fillable`, `$translatable`, and `$casts`
+- [X] T064 [P] Create `app/Domain/Hadith/Models/HadithBook.php`
+- [X] T065 [P] Create `app/Domain/Hadith/Models/HadithChapter.php`
+- [X] T066 Create `app/Domain/Hadith/Models/Hadith.php` with relations to book, chapter, texts, and gradings, applying `HasAuditLog` and `HasVersions`
+- [X] T067 [P] Create `app/Domain/Hadith/Models/HadithText.php`
+- [X] T068 [P] Create `app/Domain/Hadith/Models/HadithGrading.php`
+- [X] T069 [P] Create `app/Domain/Hadith/Models/HadithScholar.php`
+- [X] T070 [P] Create `app/Domain/Hadith/Models/HadithImportRun.php`
+- [X] T071 [P] Create the DTO `app/Domain/Hadith/DTOs/ReferenceSet.php` as `final readonly` with canonical, inBook, translation, and translationDeprecated
+- [X] T072 [P] Create the DTO `app/Domain/Hadith/DTOs/HadithDetail.php`
+- [X] T073 [P] Create the DTO `app/Domain/Hadith/DTOs/HadithListItem.php`
+- [X] T074 [P] Create the DTO `app/Domain/Hadith/DTOs/SearchCriteria.php` with a `perPage` accessor capped at 100
+- [X] T075 [P] Create `app/Domain/Hadith/Repositories/CollectionRepositoryInterface.php` and `CollectionRepository.php`, owning collection, book, and chapter reads with explicit column selection
+- [X] T076 [P] Create `app/Domain/Hadith/Repositories/HadithRepositoryInterface.php` and `HadithRepository.php`, with transactions inside the repository
+- [X] T077 [P] Create `app/Domain/Hadith/Repositories/ScholarRepositoryInterface.php` and `ScholarRepository.php`
+- [X] T078 [P] Create `app/Domain/Hadith/Services/HadithCacheKeys.php` following the `<scope>:<key>` shape used by `app/Domain/Seerah/Services/SeerahCacheKeys.php`
+- [X] T079 Create `app/Domain/Hadith/Services/HadithVisibility.php` as the single publication gate; verify `grep -rn "is_published" app/Domain/Hadith` matches only this class and the models
+- [X] T080 [P] Create `app/Domain/Hadith/Services/HadithDashboardStatsProvider.php` implementing `DashboardStatsProviderInterface`
+- [X] T081 [P] Create `app/Domain/Hadith/Services/HadithExportAdapter.php` implementing `ExportableModuleInterface`
+- [X] T082 [P] Create `app/Domain/Hadith/Services/HadithBulkHandler.php` implementing `BulkOperationHandlerInterface`
+- [X] T083 [P] Create `database/factories/Hadith/` factories for collection, book, chapter, hadith, text, grading, and scholar
+- [X] T084 [P] Write `tests/Feature/Hadith/Schema/CompositeForeignKeyTest.php` asserting the database rejects a hadith whose book belongs to another collection, and whose chapter belongs to another book
+- [X] T085 [P] Write `tests/Feature/Hadith/Schema/ChapterDeletionTest.php` asserting deleting a chapter that still has hadiths is rejected
+- [X] T086 [P] Write `tests/Feature/Hadith/Schema/ArabicOnlyHadithTest.php` asserting an Arabic-only hadith persists with exactly one `hadith_texts` row
+- [X] T087 [P] Write `tests/Feature/Hadith/Schema/UrnUniquenessTest.php` asserting many NULL urns coexist while duplicate non-null urns are rejected
+- [X] T088 Run the Phase 2 gate: `php artisan test --filter=Hadith`, `./vendor/bin/pint`, `composer deptrac`
 
 **Checkpoint**: Schema applied and constraints proven by tests. User stories may now begin.
 
@@ -184,7 +184,7 @@ and diff the three reference lines character-for-character against `https://sunn
 ### Implementation for User Story 1
 
 - [ ] T097 [US1] Create `app/Domain/Hadith/Services/ArabicTextNormalizer.php` stripping tashkeel and tatweel and folding alef, hamza, ya, and ta-marbuta variants
-- [ ] T098 [US1] Create `app/Domain/Hadith/Services/ReferenceBuilder.php` producing a `ReferenceSet` from the collection template, book number, and in-book number
+- [X] T098 [US1] Create `app/Domain/Hadith/Services/ReferenceBuilder.php` producing a `ReferenceSet` from the collection template, book number, and in-book number
 - [ ] T099 [US1] Create `app/Domain/Hadith/Import/GradeNormalizer.php` returning a **list** of claims, each with grade, scope, and optional `part_label`, recording uninterpretable inputs
 - [ ] T100 [US1] Create `app/Domain/Hadith/Import/SourceFileReader.php` reading a book JSON file with `json_decode` behind a file-size guard
 - [ ] T101 [US1] Create `app/Domain/Hadith/Import/HadithRecordMapper.php` mapping extracted JSON to DTOs per the T047 matrix, deriving `search_body` via the normalizer
@@ -194,7 +194,7 @@ and diff the three reference lines character-for-character against `https://sunn
 - [ ] T105 [US1] Extract Sahih al-Bukhari Book 1 with the Chrome extension to `storage/app/hadith_source/bukhari/book_1.json`, writing to a temporary path and renaming on success
 - [ ] T106 [US1] Write the extraction manifest `storage/app/hadith_source/bukhari/book_1.manifest.json` recording extractor version, source URL, expected and actual counts, and a checksum
 - [ ] T107 [US1] Import `storage/app/hadith_source/bukhari/book_1.json` and confirm 7 hadiths with Arabic and English text rows plus their gradings
-- [ ] T108 [US1] Create `app/Domain/Hadith/Services/HadithQueryService.php` with `findByCollectionAndNumber()` returning a `HadithDetail` including its `ReferenceSet`
+- [X] T108 [US1] Create `app/Domain/Hadith/Services/HadithQueryService.php` with `findByCollectionAndNumber()` returning a `HadithDetail` including its `ReferenceSet`
 - [ ] T109 [US1] Register the canonical route `/hadith/{collection}:{number}` in `routes/web.php`, declaring the static `/hadith/search` and `/hadith/urn/{urn}` routes first and constraining every dynamic segment
 - [ ] T110 [US1] Create `app/Http/Controllers/Site/HadithController.php` with a `show()` action calling exactly one service method
 - [ ] T111 [US1] Create `resources/views/public/hadith/show.blade.php` ported verbatim from `the-last-messenger-ui/hadith-single-enhanced.html`, using Amiri for hadith text and Cairo for UI
