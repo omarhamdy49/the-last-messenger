@@ -97,9 +97,9 @@ Two columns and the whole grading subsystem depend on selectors that are not yet
 here, not later, because the schema is authored once (§2d) and must not be edited after being applied.
 This is what satisfies FR-024: a column with no verified source is never created.
 
-- [ ] T045 Inspect a graded collection page (tirmidhi or abudawud) with the Chrome extension and record the **grade selector** in `specs/001-hadith-rebuild/research.md` §2 — without it every `raw_grade` is NULL and the grading subsystem ships dead
-- [ ] T046 Inspect a hadith page for the **English permalink identifier**; record the selector in research.md §2 or delete `sunnah_urn_en` from `data-model.md` §4 and its migration
-- [ ] T047 Write the source-selector → JSON-field → database-column matrix into `specs/001-hadith-rebuild/contracts/extraction-matrix.md`; any column with no source is removed from the schema
+- [X] T045 Inspect a graded collection page (tirmidhi or abudawud) with the Chrome extension and record the **grade selector** in `specs/001-hadith-rebuild/research.md` §2 — without it every `raw_grade` is NULL and the grading subsystem ships dead
+- [X] T046 Inspect a hadith page for the **English permalink identifier**; record the selector in research.md §2 or delete `sunnah_urn_en` from `data-model.md` §4 and its migration
+- [X] T047 Write the source-selector → JSON-field → database-column matrix into `specs/001-hadith-rebuild/contracts/extraction-matrix.md`; any column with no source is removed from the schema
 
 ### 2d. Create the fresh 8-table schema
 

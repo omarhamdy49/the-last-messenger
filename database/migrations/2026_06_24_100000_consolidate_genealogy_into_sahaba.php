@@ -293,187 +293,26 @@ return new class extends Migration
         });
     }
 
+    /**
+     * No-op since the 2026-07-30 Hadith rebuild.
+     *
+     * This previously backfilled `sahaba_id` onto `hadith_companions` and
+     * `hadith_narrators` by name matching. Both tables were dropped; the
+     * rebuilt `hadith_scholars` is populated by the sunnah.com import, which
+     * has no legacy rows to reconcile.
+     */
     private function linkHadithRoles(): void
     {
-        $index = $this->buildSahabaNameIndex();
-
-        foreach (DB::table('hadith_companions')->orderBy('id')->get() as $companion) {
-            $sahabiId = $this->resolveUniqueSahabi($index, [
-                $companion->name_ar,
-                $companion->name_en,
-                $companion->full_name_ar,
-                $companion->full_name_en,
-            ]);
-
-            if ($sahabiId === null) {
-                continue;
-            }
-
-            DB::table('hadith_companions')->where('id', $companion->id)->update([
-                'sahaba_id' => $sahabiId,
-                'name_ar' => null,
-                'name_en' => null,
-                'full_name_ar' => null,
-                'full_name_en' => null,
-                'title_ar' => null,
-                'title_en' => null,
-                'birth_year_hijri' => null,
-                'death_year_hijri' => null,
-                'bio_ar' => null,
-                'bio_en' => null,
-                'virtues' => null,
-            ]);
-        }
-
-        foreach (DB::table('hadith_narrators')->orderBy('id')->get() as $narrator) {
-            $sahabiId = $this->resolveUniqueSahabi($index, [
-                $narrator->name_ar,
-                $narrator->name_en,
-                $narrator->full_name_ar,
-                $narrator->full_name_en,
-            ]);
-
-            if ($sahabiId === null) {
-                continue;
-            }
-
-            DB::table('hadith_narrators')->where('id', $narrator->id)->update([
-                'sahaba_id' => $sahabiId,
-                'name_ar' => null,
-                'name_en' => null,
-                'full_name_ar' => null,
-                'full_name_en' => null,
-                'kunya' => null,
-                'birth_year_hijri' => null,
-                'death_year_hijri' => null,
-                'biography' => null,
-            ]);
-        }
+        // intentionally empty
     }
 
     /**
-     * @return array<string, array<int, int>>
+     * No-op since the 2026-07-30 Hadith rebuild: there are no linked hadith
+     * role rows to deduplicate. `data:dedupe` handles `hadith_scholars`.
      */
-    private function buildSahabaNameIndex(): array
-    {
-        $index = [];
-
-        $translations = DB::table('sahabi_translations')
-            ->join('sahaba', 'sahaba.id', '=', 'sahabi_translations.sahabi_id')
-            ->where('sahaba.is_sahabi', true)
-            ->select([
-                'sahabi_translations.sahabi_id',
-                'sahabi_translations.name',
-                'sahabi_translations.full_name',
-                'sahabi_translations.kunya',
-                'sahabi_translations.laqab',
-            ])
-            ->get();
-
-        foreach ($translations as $translation) {
-            foreach ([$translation->name, $translation->full_name, $translation->kunya, $translation->laqab] as $name) {
-                $normalized = $this->normalizeName($name);
-                if ($normalized !== '') {
-                    $index[$normalized][(int) $translation->sahabi_id] = (int) $translation->sahabi_id;
-                }
-            }
-        }
-
-        return $index;
-    }
-
-    /**
-     * @param  array<string, array<int, int>>  $index
-     * @param  array<int, string|null>  $names
-     */
-    private function resolveUniqueSahabi(array $index, array $names): ?int
-    {
-        $matches = [];
-
-        foreach ($names as $name) {
-            $normalized = $this->normalizeName($name);
-            foreach ($index[$normalized] ?? [] as $id) {
-                $matches[$id] = $id;
-            }
-        }
-
-        return count($matches) === 1 ? (int) reset($matches) : null;
-    }
-
     private function deduplicateLinkedHadithRoles(): void
     {
-        $this->deduplicateRole(
-            table: 'hadith_companions',
-            referenceTable: 'hadith_hadiths',
-            referenceColumn: 'companion_id',
-        );
-
-        $this->deduplicateRole(
-            table: 'hadith_narrators',
-            referenceTable: 'hadith_isnad',
-            referenceColumn: 'narrator_id',
-        );
-    }
-
-    private function deduplicateRole(string $table, string $referenceTable, string $referenceColumn): void
-    {
-        $groups = DB::table($table)
-            ->select('sahaba_id', DB::raw('MIN(id) AS canonical_id'), DB::raw('COUNT(*) AS aggregate_count'))
-            ->whereNotNull('sahaba_id')
-            ->groupBy('sahaba_id')
-            ->having('aggregate_count', '>', 1)
-            ->get();
-
-        foreach ($groups as $group) {
-            $duplicateIds = DB::table($table)
-                ->where('sahaba_id', $group->sahaba_id)
-                ->where('id', '!=', $group->canonical_id)
-                ->pluck('id');
-
-            if ($referenceTable === 'hadith_isnad') {
-                foreach ($duplicateIds as $duplicateId) {
-                    $conflictIds = DB::table('hadith_isnad as duplicate_isnad')
-                        ->join('hadith_isnad as canonical_isnad', function ($join) use ($group): void {
-                            $join->on('canonical_isnad.hadith_id', '=', 'duplicate_isnad.hadith_id')
-                                ->on('canonical_isnad.position_in_chain', '=', 'duplicate_isnad.position_in_chain')
-                                ->where('canonical_isnad.narrator_id', $group->canonical_id);
-                        })
-                        ->where('duplicate_isnad.narrator_id', $duplicateId)
-                        ->pluck('duplicate_isnad.id');
-
-                    if ($conflictIds->isNotEmpty()) {
-                        DB::table('hadith_isnad')->whereIn('id', $conflictIds)->delete();
-                    }
-
-                    DB::table('hadith_isnad')
-                        ->where('narrator_id', $duplicateId)
-                        ->update(['narrator_id' => $group->canonical_id]);
-                }
-            } else {
-                DB::table($referenceTable)
-                    ->whereIn($referenceColumn, $duplicateIds)
-                    ->update([$referenceColumn => $group->canonical_id]);
-            }
-
-            DB::table($table)->whereIn('id', $duplicateIds)->delete();
-        }
-
-        if ($referenceTable === 'hadith_isnad') {
-            $duplicateIsnads = DB::table('hadith_isnad')
-                ->select(DB::raw('MIN(id) AS keep_id'), 'hadith_id', 'narrator_id', 'position_in_chain')
-                ->groupBy('hadith_id', 'narrator_id', 'position_in_chain')
-                ->havingRaw('COUNT(*) > 1')
-                ->get();
-
-            foreach ($duplicateIsnads as $duplicate) {
-                DB::table('hadith_isnad')
-                    ->where('hadith_id', $duplicate->hadith_id)
-                    ->where('narrator_id', $duplicate->narrator_id)
-                    ->where('position_in_chain', $duplicate->position_in_chain)
-                    ->where('id', '!=', $duplicate->keep_id)
-                    ->delete();
-            }
-        }
+        // intentionally empty
     }
 
     private function enforceCanonicalConstraints(): void
@@ -485,17 +324,8 @@ return new class extends Migration
             });
         }
 
-        if (! $this->indexExists('hadith_companions', 'hadith_companions_sahaba_unique')) {
-            Schema::table('hadith_companions', function (Blueprint $table): void {
-                $table->unique('sahaba_id', 'hadith_companions_sahaba_unique');
-            });
-        }
-
-        if (! $this->indexExists('hadith_narrators', 'hadith_narrators_sahaba_unique')) {
-            Schema::table('hadith_narrators', function (Blueprint $table): void {
-                $table->unique('sahaba_id', 'hadith_narrators_sahaba_unique');
-            });
-        }
+        // The hadith side of this constraint now lives in the hadith_scholars
+        // create migration, which declares sahaba_id UNIQUE directly.
     }
 
     /**
@@ -541,19 +371,6 @@ return new class extends Migration
         $name = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $name) ?? $name;
 
         return trim(preg_replace('/\s+/u', ' ', $name) ?? $name);
-    }
-
-    private function indexExists(string $table, string $index): bool
-    {
-        if (DB::getDriverName() !== 'mysql') {
-            return false;
-        }
-
-        return DB::table('information_schema.STATISTICS')
-            ->where('TABLE_SCHEMA', DB::getDatabaseName())
-            ->where('TABLE_NAME', $table)
-            ->where('INDEX_NAME', $index)
-            ->exists();
     }
 
     private function foreignKeyReferences(string $table, string $column, string $referencedTable): bool
