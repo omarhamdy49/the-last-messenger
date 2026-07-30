@@ -7,6 +7,8 @@ namespace App\Providers;
 use App\Domain\Blog\Services\ArticleExportAdapter;
 use App\Domain\Blog\Services\BlogDashboardStatsProvider;
 use App\Domain\Genealogy\Services\GenealogyDashboardStatsProvider;
+use App\Domain\Hadith\Services\HadithDashboardStatsProvider;
+use App\Domain\Hadith\Services\HadithExportAdapter;
 use App\Domain\Media\Services\MediaDashboardStatsProvider;
 use App\Domain\Media\Services\MediaProgramExportAdapter;
 use App\Domain\Quran\Services\QuranDashboardStatsProvider;
@@ -39,6 +41,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $statsProviders = [
             new BlogDashboardStatsProvider,
+            new HadithDashboardStatsProvider,
             new QuranDashboardStatsProvider,
             new SeerahDashboardStatsProvider,
             new SahabaDashboardStatsProvider,
@@ -55,6 +58,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ExportGateway::class, function ($app): ExportGateway {
             return new ExportGateway(modules: [
                 $app->make(ArticleExportAdapter::class),
+                $app->make(HadithExportAdapter::class),
                 $app->make(QuranSurahExportAdapter::class),
                 $app->make(QuranVerseExportAdapter::class),
                 $app->make(QuranReciterExportAdapter::class),

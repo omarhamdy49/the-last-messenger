@@ -116,7 +116,7 @@ Authored once from `data-model.md`, in foreign-key dependency order. Each migrat
 - [X] T055 [P] Create `database/migrations/2026_07_31_000008_create_hadith_import_runs_table.php` per §8
 - [X] T056 Apply the migrations to `the_last_messenger_test`, then to `the_last_messenger`; verify 8 tables exist and roll back by explicit migration name, never `--step=N`
 - [X] T057 Verify no sunnah.com identifier leaked into the schema: `grep -rnE "HadithTable|BookData|ChapterData|arabicURN|englishURN" database/migrations` must return nothing
-- [ ] T058 Set `innodb_ft_min_token_size=2` in the MySQL container configuration, restart, and rebuild the FULLTEXT index; record the per-environment procedure in `specs/001-hadith-rebuild/quickstart.md`
+- [X] T058 Set `innodb_ft_min_token_size=2` in the MySQL container configuration, restart, and rebuild the FULLTEXT index; record the per-environment procedure in `specs/001-hadith-rebuild/quickstart.md`
 - [X] T059 Create `database/seeders/Hadith/HadithCollectionSeeder.php` seeding all 17 collections with `code`, translated names, author, capability flags, and `reference_template`
 
 ### 2e. Domain core

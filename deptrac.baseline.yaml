@@ -36,6 +36,7 @@ deptrac:
       - App\Models\User
     App\Domain\Shared\Enums\SearchModule:
       - App\Domain\Genealogy\Models\Person
+      - App\Domain\Hadith\Models\Hadith
       - App\Domain\Media\Models\MediaProgram
       - App\Domain\Quran\Models\Verse
       - App\Domain\Sahaba\Models\Sahabi
@@ -69,6 +70,8 @@ deptrac:
       - App\Models\User
     App\Domain\Shared\Services\AnalyticsService:
       - App\Domain\Genealogy\Models\Person
+      - App\Domain\Hadith\Models\Hadith
+      - App\Domain\Hadith\Models\HadithBook
       - App\Domain\Quran\Models\Reciter
       - App\Domain\Quran\Models\Surah
       - App\Domain\Quran\Models\Verse

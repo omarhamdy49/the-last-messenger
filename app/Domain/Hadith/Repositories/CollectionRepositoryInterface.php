@@ -1,0 +1,55 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domain\Hadith\Repositories;
+
+use App\Domain\Hadith\Models\HadithBook;
+use App\Domain\Hadith\Models\HadithChapter;
+use App\Domain\Hadith\Models\HadithCollection;
+use App\Domain\Shared\Contracts\RepositoryInterface;
+use Illuminate\Database\Eloquent\Collection;
+
+/**
+ * Owns collection, book and chapter reads. One repository rather than three
+ * because the three are never read independently — every book read is scoped to
+ * a collection and every chapter read to a book.
+ */
+interface CollectionRepositoryInterface extends RepositoryInterface
+{
+    /**
+     * Published collections for the hub, ordered by `featured` then
+     * `display_order`, with a hadith count. Synthetic books are excluded from
+     * the count.
+     *
+     * @return Collection<int, HadithCollection>
+     */
+    public function listPublishedCollections(): Collection;
+
+    /**
+     * A single published collection by `code`, or null. Never returns an
+     * unpublished row: unpublished must 404, not render empty.
+     */
+    public function findPublishedByCode(string $code): ?HadithCollection;
+
+    /**
+     * Books of a collection in `sort_order`, with hadith counts. Synthetic books
+     * are excluded — they exist only to satisfy the hierarchy.
+     *
+     * @return Collection<int, HadithBook>
+     */
+    public function booksFor(int $collectionId, bool $publishedOnly = true): Collection;
+
+    /**
+     * One book of a collection by its string number (`2`, `35b`, `introduction`).
+     */
+    public function findBook(int $collectionId, string $bookNumber, bool $publishedOnly = true): ?HadithBook;
+
+    /**
+     * Chapters of a book in `sort_order`. Empty for collections with
+     * `has_chapters = false` — that is a 200 with no rows, not a 404.
+     *
+     * @return Collection<int, HadithChapter>
+     */
+    public function chaptersFor(int $bookId, bool $publishedOnly = true): Collection;
+}
