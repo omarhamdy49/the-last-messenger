@@ -95,64 +95,14 @@ return new class extends Migration
             });
         }
 
-        if (! Schema::hasTable('hadith_source_translations')) {
-            Schema::create('hadith_source_translations', function (Blueprint $table) {
-                $table->id();
-                $table->foreignId('hadith_source_id')->constrained('hadith_sources')->cascadeOnDelete();
-                $table->string('locale', 5);
-                $table->string('name')->nullable();
-                $table->longText('description')->nullable();
-                $table->boolean('is_ready')->default(false);
-                $table->index('locale');
-                $table->unique(['hadith_source_id', 'locale']);
-            });
-
-            if (DB::getDriverName() === 'mysql') {
-                DB::statement('ALTER TABLE hadith_source_translations ADD FULLTEXT INDEX ft_hadith_source_translations (name, description)');
-            }
-        }
-
-        if (! Schema::hasTable('hadith_theme_translations')) {
-            Schema::create('hadith_theme_translations', function (Blueprint $table) {
-                $table->id();
-                $table->foreignId('hadith_theme_id')->constrained('hadith_themes')->cascadeOnDelete();
-                $table->string('locale', 5);
-                $table->string('name')->nullable();
-                $table->longText('description')->nullable();
-                $table->boolean('is_ready')->default(false);
-                $table->index('locale');
-                $table->unique(['hadith_theme_id', 'locale']);
-            });
-
-            if (DB::getDriverName() === 'mysql') {
-                DB::statement('ALTER TABLE hadith_theme_translations ADD FULLTEXT INDEX ft_hadith_theme_translations (name, description)');
-            }
-        }
-
-        if (! Schema::hasTable('hadith_chapter_translations')) {
-            Schema::create('hadith_chapter_translations', function (Blueprint $table) {
-                $table->id();
-                $table->foreignId('hadith_chapter_id')->constrained('hadith_chapters')->cascadeOnDelete();
-                $table->string('locale', 5);
-                $table->string('name')->nullable();
-                $table->longText('description')->nullable();
-                $table->boolean('is_ready')->default(false);
-                $table->timestamps();
-                $table->index('locale');
-                $table->unique(['hadith_chapter_id', 'locale']);
-            });
-
-            if (DB::getDriverName() === 'mysql') {
-                DB::statement('ALTER TABLE hadith_chapter_translations ADD FULLTEXT INDEX ft_hadith_chapter_translations (name, description)');
-            }
-        }
+        // hadith_source_translations / hadith_theme_translations / hadith_chapter_translations were
+        // removed by the 2026-07-30 Hadith rebuild: the new schema stores translations in spatie
+        // translatable JSON columns on hadith_collections/books/chapters/themes, so these side
+        // tables are redundant. See TODO_hadith-refactor.md §2.13.
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('hadith_chapter_translations');
-        Schema::dropIfExists('hadith_theme_translations');
-        Schema::dropIfExists('hadith_source_translations');
         Schema::dropIfExists('language_translations');
         Schema::dropIfExists('seerah_participant_translations');
         Schema::dropIfExists('reciter_translations');

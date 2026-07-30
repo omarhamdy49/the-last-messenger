@@ -67,12 +67,10 @@ return new class extends Migration
             });
         }
 
-        // hadith_books: books within a collection sorted by Arabic title
-        if (Schema::hasTable('hadith_books')) {
-            Schema::table('hadith_books', function (Blueprint $table) {
-                $table->index(['collection_id', 'title_ar'], 'idx_hadith_book_collection_title');
-            });
-        }
+        // hadith_books: the (collection_id, title_ar) index is gone — the 2026-07-30 Hadith rebuild
+        // replaced title_ar/title_en with a translatable `title` JSON column, and book ordering is
+        // now served by idx_hadith_books_reading_order (collection_id, sort_order), created in
+        // 2026_07_30_000002_create_hadith_books_table.
 
         // personal_access_tokens: user token + recency for cleanup / audit queries
         if (Schema::hasTable('personal_access_tokens')) {
@@ -102,11 +100,7 @@ return new class extends Migration
             });
         }
 
-        if (Schema::hasTable('hadith_books')) {
-            Schema::table('hadith_books', function (Blueprint $table) {
-                $table->dropIndex('idx_hadith_book_collection_title');
-            });
-        }
+        // idx_hadith_book_collection_title is no longer created — see up().
 
         if (Schema::hasTable('personal_access_tokens')) {
             Schema::table('personal_access_tokens', function (Blueprint $table) {

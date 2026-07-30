@@ -1,0 +1,29 @@
+{
+    "hadith_text": {
+        "ar": "نص اختبار الدرجة",
+        "en": "Unmapped grade test."
+    },
+    "verification_status": "source_verified",
+    "collections": [
+        {
+            "name_ar": "مجموعة الدرجة",
+            "name_en": "Unmapped Collection",
+            "book_name_ar": "كتاب الدرجة",
+            "book_name_en": "Unmapped Book",
+            "hadith_number": "1"
+        }
+    ],
+    "grading": {
+        "status": "citation only [unbalanced"
+    },
+    "metadata": {
+        "id": 900002,
+        "id_in_book": 1,
+        "chapter_id": 0,
+        "collection": {
+            "name_ar": "مجموعة الدرجة",
+            "name_en": "Unmapped Collection",
+            "total_hadiths": 1
+        }
+    }
+}

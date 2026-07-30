@@ -6,7 +6,7 @@ Schema review: [hadith-schema-review.md](hadith-schema-review.md). Live schema: 
 ## Pipeline (one pass per collection, 17 iterations)
 
 ```
-prophet-data-generator/hadith/final/<collection>/*.json   ← source of record (enrichment)
+prophet-data-generator/hadith/production/<collection>/*.json   ← SOURCE OF RECORD
         ↓ normalize: lowercase IDENTIFIERS only, unify field variants
 portal-data/<collection>/{collection,books,chapters,hadiths,narrators,gradings,...}.json
         ↓ import
@@ -15,37 +15,49 @@ MySQL  (field-mapping assertions run per table)
 Chrome extension → sunnah.com/<slug>/<book> → text parity report
 ```
 
+**Use `hadith/production/`, NOT `hadith/final/`.** `production/` is the reviewed promotion target
+(51,441 files — exactly the pre-purge `hadith_sources` count). `final/` is the upstream staging tree
+(50,883) and differs on four collections: mishkat +587, ahmed −15, malik −12, shamail −2.
+`hadith/production/README.md` defines the promotion gates; `hadith/audit/` holds the existing
+per-book review system that this plan defers to:
+
+- `audit/HADITH_PRODUCTION_REVIEW_TASKS.md` — per-book readiness ("Ready for production: True")
+- `audit/production_review_tasks.csv` — one row per raw hadith
+- `audit/check_book_production_readiness.py` — the promotion gate
+- `audit/hadith_database_schema_fields.json` — prior field mapping (covers the OLD 20 tables; must be
+  re-mapped onto the 16-table target schema)
+
 Sunnah.com is the **verification** authority for text, not the source: it supplies text/grade/URN/URL
 only, and its transformer sets `narrator_chain => null`. All isnad, themes, keywords, commentaries,
 related verses and applications exist **only** in the local JSON.
 
-## Source inventory — 50,883 files, 17 collections
+## Source inventory — `hadith/production/`, 51,441 files, 17 collections
 
-| # | collection dir | files | sunnah slug | notes |
-|---|---|---:|---|---|
-| 1 | `nawawi40` | 42 | the-forty-hadith-of-imam-nawawi | smallest — use as pipeline pilot |
-| 2 | `qudsi40` | 40 | the-forty-hadith-qudsi | |
-| 3 | `shahwaliullah40` | 40 | the-forty-hadith-of-shah-waliullah | |
-| 4 | `shamail_muhammadiyah` | 402 | shamail | |
-| 5 | `aladab_almufrad` | 1326 | adab | |
-| 6 | `ahmed` | 1374 | musnad-ahmad-ibn-hanbal | partial musnad |
-| 7 | `bulugh_almaram` | 1767 | bulugh | |
-| 8 | `riyad_assalihin` | 1896 | riyadussalihin | |
-| 9 | `malik` | 1985 | malik | |
-| 10 | `darimi` | 3406 | darimi | |
-| 11 | `tirmidhi` | 4053 | tirmidhi | |
-| 12 | `ibnmajah` | 4345 | ibnmajah | |
-| 13 | `mishkat_almasabih` | 4427 | mishkat | |
-| 14 | `abudawud` | 5276 | abudawud | |
-| 15 | `nasai` | 5768 | nasai | |
-| 16 | `bukhari` | 7277 | bukhari | |
-| 17 | `muslim` | 7459 | muslim | |
+| # | collection dir | files | sunnah slug |
+|---|---|---:|---|
+| 1 | `shahwaliullah40` | 40 | the-forty-hadith-of-shah-waliullah |
+| 2 | `qudsi40` | 40 | the-forty-hadith-qudsi |
+| 3 | `nawawi40` | 42 | the-forty-hadith-of-imam-nawawi |
+| 4 | `shamail_muhammadiyah` | 400 | shamail |
+| 5 | `aladab_almufrad` | 1326 | adab |
+| 6 | `ahmed` | 1359 | musnad-ahmad-ibn-hanbal |
+| 7 | `bulugh_almaram` | 1767 | bulugh |
+| 8 | `riyad_assalihin` | 1896 | riyadussalihin |
+| 9 | `malik` | 1973 | malik |
+| 10 | `darimi` | 3406 | darimi |
+| 11 | `tirmidhi` | 4053 | tirmidhi |
+| 12 | `ibnmajah` | 4345 | ibnmajah |
+| 13 | `mishkat_almasabih` | 5014 | mishkat |
+| 14 | `abudawud` | 5276 | abudawud |
+| 15 | `nasai` | 5768 | nasai |
+| 16 | `bukhari` | 7277 | bukhari |
+| 17 | `muslim` | 7459 | muslim |
 
-Run order is smallest-first: the 42-file `nawawi40` exercises every mapping branch at a size where a
+Total 51,441 — matches the pre-purge `hadith_sources` count exactly, so there is no reconciliation
+gap against `production/`. (The 553-row gap only appears if `final/` is used as the source.)
+
+Run order is smallest-first: `nawawi40` (42 files) exercises every mapping branch at a size where a
 full manual diff is possible. Do not start `bukhari`/`muslim` until a small collection has passed.
-
-**Reconciliation gap:** 50,883 files vs 51,436 pre-purge rows = 553 rows with no source file. Resolve
-during import (expected: dedup merges), do not silently accept a short count.
 
 ## Field mapping — JSON → column
 

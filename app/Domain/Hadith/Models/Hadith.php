@@ -122,6 +122,16 @@ class Hadith extends Model
         return $this->hasMany(HadithRelatedVerse::class, 'hadith_id');
     }
 
+    public function applications(): HasMany
+    {
+        return $this->hasMany(HadithApplication::class, 'hadith_id');
+    }
+
+    public function fiqhRulings(): HasMany
+    {
+        return $this->hasMany(HadithFiqhRuling::class, 'hadith_id');
+    }
+
     public function getTranslation(string $locale): ?HadithTranslation
     {
         return $this->translations()->where('locale', $locale)->first();
@@ -216,6 +226,8 @@ class Hadith extends Model
             'sources',
             'keywords',
             'relatedVerses',
+            'applications',
+            'fiqhRulings.scholar',
         ]);
     }
 

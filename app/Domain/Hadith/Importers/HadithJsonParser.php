@@ -44,14 +44,7 @@ class HadithJsonParser
      */
     public function parse(string $filePath): array
     {
-        $this->guardFile($filePath);
-
-        $jsonContent = file_get_contents($filePath);
-        $jsonData = json_decode((string) $jsonContent, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new InvalidArgumentException('Invalid JSON syntax: '.json_last_error_msg());
-        }
+        $jsonData = $this->decode($filePath);
 
         // Let the transformer auto-detect the structure and produce the envelope.
         $transformed = $this->transformer->transform($jsonData);
@@ -61,6 +54,18 @@ class HadithJsonParser
         $this->detectedFormat = $transformed['type'] ?? 'unknown';
 
         return $transformed;
+    }
+
+    public function decode(string $filePath): array
+    {
+        $this->guardFile($filePath);
+        $jsonData = json_decode((string) file_get_contents($filePath), true);
+
+        if (json_last_error() !== JSON_ERROR_NONE || ! is_array($jsonData)) {
+            throw new InvalidArgumentException('Invalid JSON syntax: '.json_last_error_msg());
+        }
+
+        return $jsonData;
     }
 
     /**

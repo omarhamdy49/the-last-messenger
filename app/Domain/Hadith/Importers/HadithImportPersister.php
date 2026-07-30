@@ -19,6 +19,7 @@ use App\Domain\Hadith\Models\HadithSource;
 use App\Domain\Hadith\Models\HadithSyncLog;
 use App\Domain\Hadith\Models\HadithTheme;
 use App\Domain\Hadith\Models\HadithTranslation;
+use App\Domain\Hadith\Repositories\HadithRebuildRepository;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -39,6 +40,10 @@ use Illuminate\Support\Facades\Log;
  */
 class HadithImportPersister
 {
+    public function __construct(
+        private readonly HadithRebuildRepository $rebuildRepository,
+    ) {}
+
     // =========================================================================
     // PUBLIC API
     // =========================================================================
@@ -146,6 +151,19 @@ class HadithImportPersister
         }
 
         return $summary;
+    }
+
+    public function quranVerseIds(array $coordinates): array
+    {
+        return $this->rebuildRepository->quranVerseIds($coordinates);
+    }
+
+    public function persistRebuildCollection(array $package): array
+    {
+        return $this->rebuildRepository->replaceCollection(
+            $package['collection'],
+            $package['tables'],
+        );
     }
 
     /**

@@ -30,6 +30,8 @@ class HadithTargetSchemaTest extends TestCase
             'hadith_chapters',
             'hadith_collections',
             'hadith_commentaries',
+            'hadith_applications',
+            'hadith_fiqh_rulings',
             'hadith_gradings',
             'hadith_hadith_themes',
             'hadith_hadiths',
@@ -45,10 +47,8 @@ class HadithTargetSchemaTest extends TestCase
         ];
 
         $droppedTables = [
-            'hadith_applications',
             'hadith_chapter_translations',
             'hadith_companions',
-            'hadith_fiqh_rulings',
             'hadith_grading_levels',
             'hadith_source_translations',
             'hadith_theme_translations',
@@ -123,6 +123,16 @@ class HadithTargetSchemaTest extends TestCase
             ],
             'hadith_related_verses' => [
                 'unique key `hadith_related_verses_hadith_id_quran_verse_id_unique` (`hadith_id`,`quran_verse_id`)',
+                'on delete restrict',
+            ],
+            'hadith_applications' => [
+                'key `idx_hadith_applications_order` (`hadith_id`,`display_order`)',
+                'constraint `chk_hadith_applications_review_lower` check',
+                'on delete cascade',
+            ],
+            'hadith_fiqh_rulings' => [
+                'key `idx_hadith_fiqh_rulings_order` (`hadith_id`,`type`,`display_order`)',
+                'constraint `chk_hadith_fiqh_rulings_type_lower` check',
                 'on delete restrict',
             ],
         ];

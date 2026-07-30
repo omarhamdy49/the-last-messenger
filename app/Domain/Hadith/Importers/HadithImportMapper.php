@@ -25,6 +25,10 @@ use InvalidArgumentException;
  */
 class HadithImportMapper
 {
+    public function __construct(
+        private readonly HadithCollectionNormalizer $collectionNormalizer,
+    ) {}
+
     // =========================================================================
     // PUBLIC API
     // =========================================================================
@@ -46,6 +50,19 @@ class HadithImportMapper
             'collection_based' => $this->mapCollectionBased($transformed),
             default => throw new InvalidArgumentException("Unknown JSON format type: {$format}"),
         };
+    }
+
+    public function mapRebuildCollection(
+        string $collection,
+        array $sources,
+        array $quranVerseIds,
+    ): array {
+        return $this->collectionNormalizer->normalize($collection, $sources, $quranVerseIds);
+    }
+
+    public function relatedVerseCoordinates(array $sources): array
+    {
+        return $this->collectionNormalizer->relatedVerseCoordinates($sources);
     }
 
     // =========================================================================

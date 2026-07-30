@@ -92,48 +92,19 @@ return new class extends Migration
         }
     }
 
+    /**
+     * No-op since the 2026-07-30 Hadith rebuild.
+     *
+     * This previously bolted a `sahaba_id` FK onto `hadith_companions` and `hadith_narrators`.
+     * Both tables were removed: companions collapsed into `hadith_scholars.is_companion`, and
+     * narrators into `hadith_scholars`, which declares `sahaba_id` in its own create migration
+     * (2026_07_30_000004). Nothing to add here any more.
+     *
+     * See TODO_hadith-refactor.md §2.13.
+     */
     private function addHadithLinks(): void
     {
-        if (! Schema::hasColumn('hadith_companions', 'sahaba_id')) {
-            Schema::table('hadith_companions', function (Blueprint $table): void {
-                $table->foreignId('sahaba_id')
-                    ->nullable()
-                    ->after('id')
-                    ->constrained('sahaba')
-                    ->nullOnDelete();
-            });
-        }
-
-        if (! Schema::hasColumn('hadith_narrators', 'sahaba_id')) {
-            Schema::table('hadith_narrators', function (Blueprint $table): void {
-                $table->foreignId('sahaba_id')
-                    ->nullable()
-                    ->after('id')
-                    ->constrained('sahaba')
-                    ->nullOnDelete();
-            });
-        }
-
-        if (DB::getDriverName() === 'mysql') {
-            if ($this->indexExists('hadith_narrators', 'ft_hadith_narrators_names')) {
-                DB::statement('ALTER TABLE hadith_narrators DROP INDEX ft_hadith_narrators_names');
-            }
-
-            DB::statement(
-                'ALTER TABLE hadith_narrators MODIFY name_ar VARCHAR(255)
-                 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL
-                 COMMENT "Narrator name in Arabic"'
-            );
-
-            DB::statement(
-                'ALTER TABLE hadith_narrators ADD FULLTEXT INDEX ft_hadith_narrators_names
-                 (name_ar, name_en, full_name_ar, full_name_en, kunya)'
-            );
-        } else {
-            Schema::table('hadith_narrators', function (Blueprint $table): void {
-                $table->string('name_ar', 255)->nullable()->change();
-            });
-        }
+        // intentionally empty
     }
 
     /**

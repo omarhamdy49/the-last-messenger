@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Hadith\Services;
 
+use App\Domain\Hadith\Importers\HadithCollectionPortalStore;
 use App\Domain\Hadith\Importers\HadithImportMapper;
 use App\Domain\Hadith\Importers\HadithImportPersister;
 use App\Domain\Hadith\Importers\HadithJsonParser;
@@ -35,6 +36,7 @@ class JsonImportService
         private readonly HadithJsonParser $parser,
         private readonly HadithImportMapper $mapper,
         private readonly HadithImportPersister $persister,
+        private readonly HadithCollectionPortalStore $portalStore,
     ) {}
 
     // =========================================================================
@@ -112,5 +114,53 @@ class JsonImportService
     public function validateJsonFile(string $filePath): bool
     {
         return $this->parser->validateFile($filePath);
+    }
+
+    public function rebuildCollection(
+        string $collection,
+        string $sourceRoot,
+        string $portalRoot,
+    ): array {
+        if (preg_match('/^[a-z0-9_]+$/', $collection) !== 1) {
+            throw new InvalidArgumentException('Collection must be a lowercase identifier');
+        }
+
+        $sourceDirectory = rtrim($sourceRoot, '/').'/'.$collection;
+        $files = $this->sourceFiles($sourceDirectory);
+        $sources = $this->decodeSources($files);
+        $coordinates = $this->mapper->relatedVerseCoordinates($sources);
+        $quranVerseIds = $this->persister->quranVerseIds($coordinates);
+        $normalized = $this->mapper->mapRebuildCollection($collection, $sources, $quranVerseIds);
+        $portal = $this->portalStore->write($portalRoot, $normalized);
+        $package = $this->portalStore->read($portalRoot, $collection);
+        $import = $this->persister->persistRebuildCollection($package);
+
+        return [
+            'collection' => $collection,
+            'source_directory' => $sourceDirectory,
+            'files_read' => count($files),
+            'portal' => $portal,
+            'mapping' => $package['report'],
+            'rows_written' => $import['rows'],
+            'database' => $import['database'],
+        ];
+    }
+
+    private function sourceFiles(string $sourceDirectory): array
+    {
+        $files = glob($sourceDirectory.'/*.json') ?: [];
+        sort($files, SORT_STRING);
+
+        return $files !== []
+            ? $files
+            : throw new InvalidArgumentException("No JSON files found in {$sourceDirectory}");
+    }
+
+    private function decodeSources(array $files): array
+    {
+        return array_map(fn (string $path): array => [
+            'path' => $path,
+            'json' => $this->parser->decode($path),
+        ], $files);
     }
 }
