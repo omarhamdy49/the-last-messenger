@@ -76,6 +76,14 @@ Route::get('/hadith/{collection}:{number}', [HadithController::class, 'show'])
     ->where('collection', '[a-z0-9_]+')
     ->where('number', '[A-Za-z0-9._-]+')
     ->name('public.hadith.show');
+Route::get('/hadith', [HadithController::class, 'hub'])->name('public.hadith');
+Route::get('/hadith/{collection}', [HadithController::class, 'collection'])
+    ->where('collection', '[a-z0-9_]+')->name('public.hadith.collection');
+// bookNumber allows `35b`, `introduction` and `letter`, which the source uses.
+Route::get('/hadith/{collection}/{bookNumber}', [HadithController::class, 'book'])
+    ->where('collection', '[a-z0-9_]+')
+    ->where('bookNumber', '[A-Za-z0-9_-]+')
+    ->name('public.hadith.book');
 
 // XML sitemap (articles surface)
 Route::get('/sitemap.xml', [\App\Http\Controllers\Site\SitemapController::class, 'articles'])->name('sitemap.articles');

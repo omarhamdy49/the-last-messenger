@@ -172,34 +172,34 @@ and diff the three reference lines character-for-character against `https://sunn
 
 > Write these tests FIRST and confirm they FAIL before implementing.
 
-- [ ] T089 [P] [US1] Write `tests/Unit/Hadith/ArabicTextNormalizerTest.php` asserting the normalised diacritised Bukhari 1 body equals its undiacritised form, and that alef, hamza, ya, and ta-marbuta variants fold
-- [ ] T090 [P] [US1] Write `tests/Unit/Hadith/ReferenceBuilderTest.php` asserting Bukhari 1 yields the three exact reference strings and the deprecation flag, and that a non-deprecated collection omits the note
-- [ ] T091 [P] [US1] Write `tests/Unit/Hadith/GradeNormalizerTest.php` with a fixture of the 130 observed raw grade strings in `tests/Fixtures/Hadith/raw-grades.json`, asserting exact expected claim lists, that no input loses its `raw_grade`, and that ambiguous prose yields `unknown`
-- [ ] T092 [P] [US1] Write `tests/Unit/Hadith/GradeNormalizerMultiClaimTest.php` asserting `Sanad Da'if wal-Hadith Hasan` yields two claims and `1: Hasan<br>2: Da'if` yields two labelled claims
-- [ ] T093 [P] [US1] Write `tests/Unit/Hadith/HadithRecordMapperTest.php` against a book-page JSON fixture in `tests/Fixtures/Hadith/bukhari-book-1.json`
-- [ ] T094 [P] [US1] Write `tests/Feature/Hadith/Import/ProvenanceIsNotGradingTest.php` asserting an `authenticated_by` value naming the collection's compiler produces zero grading rows
-- [ ] T095 [P] [US1] Write `tests/Feature/Hadith/Import/ImportIdempotencyTest.php` asserting a second import of the same source leaves row counts unchanged
-- [ ] T096 [P] [US1] Write `tests/Feature/Web/Hadith/HadithDetailPageTest.php` asserting the canonical route renders both locales and the three reference lines, and 404s for an unknown number
+- [X] T089 [P] [US1] Write `tests/Unit/Hadith/ArabicTextNormalizerTest.php` asserting the normalised diacritised Bukhari 1 body equals its undiacritised form, and that alef, hamza, ya, and ta-marbuta variants fold
+- [X] T090 [P] [US1] Write `tests/Unit/Hadith/ReferenceBuilderTest.php` asserting Bukhari 1 yields the three exact reference strings and the deprecation flag, and that a non-deprecated collection omits the note
+- [X] T091 [P] [US1] Write `tests/Unit/Hadith/GradeNormalizerTest.php` with a fixture of the 130 observed raw grade strings in `tests/Fixtures/Hadith/raw-grades.json`, asserting exact expected claim lists, that no input loses its `raw_grade`, and that ambiguous prose yields `unknown`
+- [X] T092 [P] [US1] Write `tests/Unit/Hadith/GradeNormalizerMultiClaimTest.php` asserting `Sanad Da'if wal-Hadith Hasan` yields two claims and `1: Hasan<br>2: Da'if` yields two labelled claims
+- [X] T093 [P] [US1] Write `tests/Unit/Hadith/HadithRecordMapperTest.php` against a book-page JSON fixture in `tests/Fixtures/Hadith/bukhari-book-1.json`
+- [X] T094 [P] [US1] Write `tests/Feature/Hadith/Import/ProvenanceIsNotGradingTest.php` asserting an `authenticated_by` value naming the collection's compiler produces zero grading rows
+- [X] T095 [P] [US1] Write `tests/Feature/Hadith/Import/ImportIdempotencyTest.php` asserting a second import of the same source leaves row counts unchanged
+- [X] T096 [P] [US1] Write `tests/Feature/Web/Hadith/HadithDetailPageTest.php` asserting the canonical route renders both locales and the three reference lines, and 404s for an unknown number
 
 ### Implementation for User Story 1
 
-- [ ] T097 [US1] Create `app/Domain/Hadith/Services/ArabicTextNormalizer.php` stripping tashkeel and tatweel and folding alef, hamza, ya, and ta-marbuta variants
+- [X] T097 [US1] Create `app/Domain/Hadith/Services/ArabicTextNormalizer.php` stripping tashkeel and tatweel and folding alef, hamza, ya, and ta-marbuta variants
 - [X] T098 [US1] Create `app/Domain/Hadith/Services/ReferenceBuilder.php` producing a `ReferenceSet` from the collection template, book number, and in-book number
-- [ ] T099 [US1] Create `app/Domain/Hadith/Import/GradeNormalizer.php` returning a **list** of claims, each with grade, scope, and optional `part_label`, recording uninterpretable inputs
-- [ ] T100 [US1] Create `app/Domain/Hadith/Import/SourceFileReader.php` reading a book JSON file with `json_decode` behind a file-size guard
-- [ ] T101 [US1] Create `app/Domain/Hadith/Import/HadithRecordMapper.php` mapping extracted JSON to DTOs per the T047 matrix, deriving `search_body` via the normalizer
-- [ ] T102 [US1] Create `app/Domain/Hadith/Import/HadithImporter.php` upserting on `(collection_id, hadith_number)`, reconciling child text and grading rows, and recomputing `display_grade` in the same transaction
-- [ ] T103 [US1] Add the source-owned versus editor-owned field declaration to `app/Domain/Hadith/Import/HadithImporter.php`, requiring `--reset` to overwrite editor-owned values
-- [ ] T104 [US1] Create `app/Console/Commands/HadithImportCommand.php` with `--collection=`, `--dry-run`, and `--reset`, using the T003 database guard
-- [ ] T105 [US1] Extract Sahih al-Bukhari Book 1 with the Chrome extension to `storage/app/hadith_source/bukhari/book_1.json`, writing to a temporary path and renaming on success
-- [ ] T106 [US1] Write the extraction manifest `storage/app/hadith_source/bukhari/book_1.manifest.json` recording extractor version, source URL, expected and actual counts, and a checksum
-- [ ] T107 [US1] Import `storage/app/hadith_source/bukhari/book_1.json` and confirm 7 hadiths with Arabic and English text rows plus their gradings
+- [X] T099 [US1] Create `app/Domain/Hadith/Import/GradeNormalizer.php` returning a **list** of claims, each with grade, scope, and optional `part_label`, recording uninterpretable inputs
+- [X] T100 [US1] Create `app/Domain/Hadith/Import/SourceFileReader.php` reading a book JSON file with `json_decode` behind a file-size guard
+- [X] T101 [US1] Create `app/Domain/Hadith/Import/HadithRecordMapper.php` mapping extracted JSON to DTOs per the T047 matrix, deriving `search_body` via the normalizer
+- [X] T102 [US1] Create `app/Domain/Hadith/Import/HadithImporter.php` upserting on `(collection_id, hadith_number)`, reconciling child text and grading rows, and recomputing `display_grade` in the same transaction
+- [X] T103 [US1] Add the source-owned versus editor-owned field declaration to `app/Domain/Hadith/Import/HadithImporter.php`, requiring `--reset` to overwrite editor-owned values
+- [X] T104 [US1] Create `app/Console/Commands/HadithImportCommand.php` with `--collection=`, `--dry-run`, and `--reset`, using the T003 database guard
+- [X] T105 [US1] Extract Sahih al-Bukhari Book 1 with the Chrome extension to `storage/app/hadith_source/bukhari/book_1.json`, writing to a temporary path and renaming on success
+- [X] T106 [US1] Write the extraction manifest `storage/app/hadith_source/bukhari/book_1.manifest.json` recording extractor version, source URL, expected and actual counts, and a checksum
+- [X] T107 [US1] Import `storage/app/hadith_source/bukhari/book_1.json` and confirm 7 hadiths with Arabic and English text rows plus their gradings
 - [X] T108 [US1] Create `app/Domain/Hadith/Services/HadithQueryService.php` with `findByCollectionAndNumber()` returning a `HadithDetail` including its `ReferenceSet`
-- [ ] T109 [US1] Register the canonical route `/hadith/{collection}:{number}` in `routes/web.php`, declaring the static `/hadith/search` and `/hadith/urn/{urn}` routes first and constraining every dynamic segment
-- [ ] T110 [US1] Create `app/Http/Controllers/Site/HadithController.php` with a `show()` action calling exactly one service method
-- [ ] T111 [US1] Create `resources/views/public/hadith/show.blade.php` ported verbatim from `the-last-messenger-ui/hadith-single-enhanced.html`, using Amiri for hadith text and Cairo for UI
-- [ ] T112 [P] [US1] Add the Hadith translation keys used by the detail page to all five files `resources/lang/{ar,en,fr,tr,ur}/hadith.php`
-- [ ] T113 [US1] Run `npm run build` and verify `/hadith/bukhari:1` in Chrome at Arabic and English, light and dark, and 375, 768, and 1280 pixels wide
+- [X] T109 [US1] Register the canonical route `/hadith/{collection}:{number}` in `routes/web.php`, declaring the static `/hadith/search` and `/hadith/urn/{urn}` routes first and constraining every dynamic segment
+- [X] T110 [US1] Create `app/Http/Controllers/Site/HadithController.php` with a `show()` action calling exactly one service method
+- [X] T111 [US1] Create `resources/views/public/hadith/show.blade.php` ported verbatim from `the-last-messenger-ui/hadith-single-enhanced.html`, using Amiri for hadith text and Cairo for UI
+- [X] T112 [P] [US1] Add the Hadith translation keys used by the detail page to all five files `resources/lang/{ar,en,fr,tr,ur}/hadith.php`
+- [X] T113 [US1] Run `npm run build` and verify `/hadith/bukhari:1` in Chrome at Arabic and English, light and dark, and 375, 768, and 1280 pixels wide
 
 **Checkpoint**: US1 is independently shippable — one hadith renders with references matching the source.
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Site;
 
+use App\Domain\Hadith\Services\HadithBrowseService;
 use App\Domain\Hadith\Services\HadithQueryService;
 use App\Http\Controllers\Controller;
 use Illuminate\Contracts\View\View;
@@ -13,7 +14,56 @@ final class HadithController extends Controller
 {
     public function __construct(
         private readonly HadithQueryService $hadithQueryService,
+        private readonly HadithBrowseService $browseService,
     ) {}
+
+    /** The hub: every published collection. */
+    public function hub(): View
+    {
+        return view('public.hadith.index', [
+            'collections' => $this->browseService->hub(),
+        ]);
+    }
+
+    /** One collection and its books, in source order. */
+    public function collection(string $collection): View
+    {
+        $model = $this->browseService->findCollection($collection);
+
+        if ($model === null) {
+            throw new NotFoundHttpException;
+        }
+
+        return view('public.hadith.collection', [
+            'collection' => $model,
+            'books' => $this->browseService->booksFor($model),
+        ]);
+    }
+
+    /** One book: its hadiths in reading order, under their chapter headings. */
+    public function book(string $collection, string $bookNumber): View
+    {
+        $model = $this->browseService->findCollection($collection);
+
+        if ($model === null) {
+            throw new NotFoundHttpException;
+        }
+
+        $book = $this->browseService->findBook($model, $bookNumber);
+
+        if ($book === null) {
+            throw new NotFoundHttpException;
+        }
+
+        $contents = $this->browseService->bookContents($book);
+
+        return view('public.hadith.book', [
+            'collection' => $model,
+            'book' => $book,
+            'paginator' => $contents['paginator'],
+            'groups' => $contents['groups'],
+        ]);
+    }
 
     /**
      * The canonical page: /hadith/{collection}:{number}
