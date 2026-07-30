@@ -98,4 +98,3 @@ Route::prefix('contact-messages')->name('admin.content.contact-messages.')->grou
 
 // Import status (read-only dashboards)
 Route::get('imports', [ImportStatusController::class, 'index'])->name('admin.content.imports.index');
-Route::get('imports/logs', [ImportStatusController::class, 'logs'])->name('admin.content.imports.logs');

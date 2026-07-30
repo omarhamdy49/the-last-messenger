@@ -7,7 +7,6 @@ use App\Http\Controllers\Site\ContactController;
 use App\Http\Controllers\Site\FaqController;
 use App\Http\Controllers\Site\FavoriteController;
 use App\Http\Controllers\Site\GenealogyController;
-use App\Http\Controllers\Site\HadithController;
 use App\Http\Controllers\Site\HomeController;
 use App\Http\Controllers\Site\HomeModuleCardImageController;
 use App\Http\Controllers\Site\MediaController;
@@ -81,18 +80,6 @@ Route::get('/articles', [ArticleController::class, 'index'])->name('public.artic
 Route::post('/articles/{id}/view', [ArticleController::class, 'registerView'])
     ->whereNumber('id')->middleware('throttle:30,1')->name('public.articles.view');
 Route::get('/articles/{slug}', [ArticleController::class, 'show'])->name('public.articles.show');
-
-// Hadith
-Route::get('/hadith', [HadithController::class, 'index'])->name('public.hadith');
-Route::get('/hadith/explorer', [HadithController::class, 'explorer'])->name('public.hadith.explorer');
-Route::get('/hadith/translations', [HadithController::class, 'translations'])
-    ->middleware('throttle:120,1')->name('public.hadith.translations');
-Route::get('/hadith/book/{slug}', [HadithController::class, 'book'])->name('public.hadith.book');
-Route::get('/hadith/book/{slug}/chapter/{chapter}', [HadithController::class, 'chapter'])
-    ->whereNumber('chapter')->name('public.hadith.chapter');
-Route::get('/hadith/{id}/narrations', [HadithController::class, 'narrations'])
-    ->whereNumber('id')->name('public.hadith.narrations');
-Route::get('/hadith/{id}', [HadithController::class, 'show'])->whereNumber('id')->name('public.hadith.show');
 
 // Seerah
 Route::get('/seerah', [SeerahController::class, 'index'])->name('public.seerah');

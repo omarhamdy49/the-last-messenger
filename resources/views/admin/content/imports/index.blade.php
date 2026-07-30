@@ -15,7 +15,7 @@
             <h1 class="text-3xl font-bold gradient-text mb-2">{{ __('admin.content_imports') }}</h1>
             <p class="text-sm" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">{{ __('admin.content_imports_hint') }}</p>
         </div>
-        <a href="{{ route('admin.content.imports.logs') }}"
+        <a href="{{ route('admin.hadith.import-runs.index') }}"
            class="px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 border-2"
            :class="darkMode ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'">
             <i data-lucide="scroll-text" class="w-5 h-5"></i>

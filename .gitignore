@@ -4,6 +4,7 @@
 .env
 .env.backup
 .env.production
+.env.testing
 .phpactor.json
 .phpunit.result.cache
 /.fleet
@@ -27,3 +28,7 @@ Thumbs.db
 
 # Generated/exported data + DB backups (portal:export target)
 /portal-data/
+
+# Extracted sunnah.com source JSON — regenerable, ~300MB, never committed
+/storage/app/hadith_source/*
+!/storage/app/hadith_source/.gitkeep

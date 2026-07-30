@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Site;
 
 use App\Domain\Content\Enums\HomeModuleCardPlacement;
 use App\Domain\Content\Services\HomeContentService;
+use App\Domain\Hadith\Enums\HadithGrade;
 use App\Domain\Hadith\Services\HadithDashboardStatsProvider;
 use App\Domain\Hadith\Services\HadithQueryService;
 use App\Domain\Quran\Services\QuranQueryService;
@@ -75,13 +76,9 @@ final class HomeController extends Controller
             86400,
             function () use ($locale): ?array {
                 try {
-                    $dto = $this->hadithQueryService->getRandomHadith(
-                        gradingStatus: 'sahih',
-                        withTranslations: true,
-                        locale: $locale,
-                    );
-
-                    return $dto->toArray();
+                    return $this->hadithQueryService
+                        ->randomPublished(locale: $locale, grade: HadithGrade::SAHIH)
+                        ?->toArray();
                 } catch (Throwable) {
                     return null;
                 }

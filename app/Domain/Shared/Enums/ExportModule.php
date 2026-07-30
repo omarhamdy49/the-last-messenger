@@ -12,7 +12,6 @@ enum ExportModule: string
 {
     case ARTICLES = 'articles';
     case HADITH = 'hadith';
-    case HADITH_NARRATORS = 'hadith_narrators';
     case MEDIA_PROGRAMS = 'media_programs';
     case MEDIA_EPISODES = 'media_episodes';
     case SEERAH_EVENTS = 'seerah_events';
@@ -40,7 +39,6 @@ enum ExportModule: string
         return match ($this) {
             self::ARTICLES => 'Articles',
             self::HADITH => 'Hadith',
-            self::HADITH_NARRATORS => 'Hadith Narrators',
             self::MEDIA_PROGRAMS => 'Media Programs',
             self::MEDIA_EPISODES => 'Media Episodes',
             self::SEERAH_EVENTS => 'Seerah Events',

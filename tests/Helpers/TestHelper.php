@@ -8,7 +8,6 @@ use App\Domain\Blog\Models\Article;
 use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Models\Series;
 use App\Domain\Blog\Models\Tag;
-use App\Domain\Hadith\Models\HadithBook;
 use App\Domain\Media\Models\MediaProgram;
 use App\Models\User;
 
@@ -72,14 +71,6 @@ trait TestHelper
     protected function createTestTag(array $attributes = []): Tag
     {
         return Tag::factory()->create($attributes);
-    }
-
-    /**
-     * Create a test hadith book
-     */
-    protected function createTestHadithBook(array $attributes = []): HadithBook
-    {
-        return HadithBook::factory()->create($attributes);
     }
 
     /**

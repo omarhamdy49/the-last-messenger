@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\DB;
  *
  *   - Quran verses:  quran_verse_translations.text_notashkeel (diacritic-free
  *                    column, so a plain LIKE matches reliably)
- *   - Hadiths:       hadith_translations.search_text for the Arabic locale
+ *   - Hadiths:       hadith_texts.search_body for the Arabic locale
  *                    (the diacritic-free Arabic matn)
  *   - Articles:      article_locale.title / content (ar) LIKE term
  *
@@ -180,23 +180,19 @@ class TopicSeeder extends Seeder
      */
     private function matchHadithIds(array $terms): array
     {
-        $ids = DB::table('hadith_translations as ht')
+        $ids = DB::table('hadith_texts as ht')
             ->join('hadith_hadiths as h', 'h.id', '=', 'ht.hadith_id')
             ->where('ht.locale', 'ar')
             ->where(function ($q) use ($terms): void {
                 foreach ($terms as $term) {
-                    $q->orWhere('ht.search_text', 'LIKE', "%{$term}%");
+                    $q->orWhere('ht.search_body', 'LIKE', "%{$term}%");
                 }
             })
-            ->orderByRaw("CASE
-                WHEN EXISTS (
-                    SELECT 1 FROM hadith_gradings hg
-                    WHERE hg.hadith_id = h.id AND hg.grade_key = 'sahih'
-                ) THEN 0
-                WHEN EXISTS (
-                    SELECT 1 FROM hadith_gradings hg
-                    WHERE hg.hadith_id = h.id AND hg.grade_key = 'hasan'
-                ) THEN 1
+            // display_grade is derived from the gradings rows, so ranking on it
+            // needs no correlated subquery per candidate.
+            ->orderByRaw("CASE h.display_grade
+                WHEN 'sahih' THEN 0
+                WHEN 'hasan' THEN 1
                 ELSE 2
             END")
             ->orderBy('h.id')

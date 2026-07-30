@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Domain\Blog\Importers\ArticleImporter;
-use App\Domain\Hadith\Importers\HadithNarratorImporter;
 use App\Domain\Quran\Importers\QuranSurahImporter;
 use App\Domain\Quran\Importers\QuranVerseImporter;
 use App\Domain\Quran\Importers\ReciterImporter;
@@ -132,7 +131,6 @@ class ProcessImport implements ShouldQueue
             'quran_verses' => new QuranVerseImporter($this->import),
             'reciters' => new ReciterImporter($this->import),
             'tafseer' => new TafseerImporter($this->import),
-            'hadith_narrators' => new HadithNarratorImporter($this->import),
             default => null,
         };
     }

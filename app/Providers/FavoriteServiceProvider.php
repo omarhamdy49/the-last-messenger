@@ -53,7 +53,7 @@ final class FavoriteServiceProvider extends ServiceProvider
 
         if ($repository instanceof FavoriteRepository) {
             $repository->eagerLoadFor(Article::class, ['locales']);
-            $repository->eagerLoadFor(Hadith::class, ['translations', 'book']);
+            $repository->eagerLoadFor(Hadith::class, ['texts', 'book', 'collection']);
             $repository->eagerLoadFor(Verse::class, ['translations', 'surah']);
             $repository->eagerLoadFor(SeerahEvent::class, ['translations']);
             $repository->eagerLoadFor(MediaProgram::class, ['translations']);
@@ -90,11 +90,13 @@ final class FavoriteServiceProvider extends ServiceProvider
     {
         return static function (Model $model, string $locale): array {
             /** @var Hadith $model */
-            $translation = $model->translations->firstWhere('language_code', $locale)
-                ?? $model->translations->firstWhere('language_code', 'ar')
-                ?? $model->translations->first();
+            // hadith_texts carries one row per locale that HAS text; Arabic is
+            // guaranteed present, English is absent for ~7% of records.
+            $text = $model->texts->firstWhere('locale', $locale)
+                ?? $model->texts->firstWhere('locale', 'ar')
+                ?? $model->texts->first();
 
-            $text = (string) ($translation->text ?? '');
+            $body = (string) ($text->body ?? '');
             $bookTitle = $model->book?->getTranslation('title', $locale)
                 ?? $model->book?->getTranslation('title', 'ar')
                 ?? null;
@@ -103,11 +105,16 @@ final class FavoriteServiceProvider extends ServiceProvider
                 ? trim($bookTitle.' — '.__('profile.hadith_number', ['number' => $model->hadith_number]))
                 : __('profile.hadith_number', ['number' => $model->hadith_number]);
 
+            $collectionCode = $model->collection?->code;
+
             return [
                 'title' => $title,
-                'excerpt' => $text !== '' ? mb_substr($text, 0, 160) : null,
-                'url' => Route::has('public.hadith.show')
-                    ? route('public.hadith.show', $model->getKey())
+                'excerpt' => $body !== '' ? mb_substr($body, 0, 160) : null,
+                'url' => ($collectionCode !== null && Route::has('public.hadith.show'))
+                    ? route('public.hadith.show', [
+                        'collection' => $collectionCode,
+                        'number' => $model->hadith_number,
+                    ])
                     : null,
             ];
         };

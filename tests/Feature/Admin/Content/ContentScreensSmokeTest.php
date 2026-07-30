@@ -31,7 +31,6 @@ class ContentScreensSmokeTest extends TestCase
             route('admin.content.faqs.index'),
             route('admin.content.contact-messages.index'),
             route('admin.content.imports.index'),
-            route('admin.content.imports.logs'),
         ];
 
         foreach ($screens as $url) {

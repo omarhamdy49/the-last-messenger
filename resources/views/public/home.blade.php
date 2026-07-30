@@ -721,9 +721,10 @@
 
                     @if($dailyHadith)
                         @php
-                            $hadithTextAr = $dailyHadith['translations']['ar']['text'] ?? null;
-                            $hadithTextEn = $dailyHadith['translations']['en']['text'] ?? null;
-                            $hadithGrading = $dailyHadith['grading_status'] ?? null;
+                            $hadithTexts = collect($dailyHadith['texts'] ?? []);
+                            $hadithTextAr = $hadithTexts->firstWhere('locale', 'ar')['body'] ?? null;
+                            $hadithTextEn = $hadithTexts->firstWhere('locale', 'en')['body'] ?? null;
+                            $hadithGrading = $dailyHadith['display_grade'] ?? null;
                             $hadithBook = $dailyHadith['book_title'] ?? null;
                             $hadithCollection = $dailyHadith['collection_name'] ?? null;
                         @endphp

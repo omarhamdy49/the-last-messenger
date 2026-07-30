@@ -84,9 +84,9 @@ class AnalyticsService
                             }
                             $row = (clone $q)->selectRaw("
                                 COUNT(*) as total,
-                                SUM(authenticity = 'sahih') as sahih,
-                                SUM(authenticity = 'hasan') as hasan,
-                                SUM(authenticity = 'daif') as daif
+                                SUM(display_grade = 'sahih') as sahih,
+                                SUM(display_grade = 'hasan') as hasan,
+                                SUM(display_grade = 'daif') as daif
                             ")->first();
 
                             return [
@@ -96,14 +96,14 @@ class AnalyticsService
                                 'daif' => (int) ($row->daif ?? 0),
                             ];
                         })(),
-                        'hadith_narrators' => (function () use ($startDate, $endDate): array {
-                            $q = DB::table('hadith_narrators');
+                        'hadith_scholars' => (function () use ($startDate, $endDate): array {
+                            $q = DB::table('hadith_scholars');
                             if ($startDate && $endDate) {
                                 $q->whereBetween('created_at', [$startDate, $endDate]);
                             }
                             $row = (clone $q)->selectRaw('
                                 COUNT(*) as total,
-                                SUM(is_sahabi = 1) as sahaba
+                                SUM(is_companion = 1) as sahaba
                             ')->first();
 
                             return [
@@ -158,21 +158,14 @@ class AnalyticsService
                     ")
                     ->first();
 
-                $hadithAgg = DB::table('hadith_hadiths')
-                    ->selectRaw('
-                        COUNT(*) as total,
-                        SUM(views_count) as total_views
-                    ')
-                    ->first();
-
                 $articleTotalViews = (int) ($articleAgg->total_views ?? 0);
                 $articleTotalFavs = (int) ($articleAgg->total_favorites ?? 0);
                 $articleTotal = (int) ($articleAgg->total ?? 0);
                 $articlePublished = (int) ($articleAgg->published_count ?? 0);
-                $hadithTotalViews = (int) ($hadithAgg->total_views ?? 0);
-                $hadithTotal = (int) ($hadithAgg->total ?? 0);
 
-                $totalViews = $articleTotalViews + $hadithTotalViews;
+                // Hadiths carry no view counter: the rebuilt schema stores identity
+                // and structure only, so there is no engagement metric to report.
+                $totalViews = $articleTotalViews;
 
                 return [
                     'total_views' => $totalViews,
@@ -186,12 +179,6 @@ class AnalyticsService
                             'total_favorites' => $articleTotalFavs,
                             'avg_views' => $articlePublished > 0
                                 ? round($articleTotalViews / $articlePublished, 2)
-                                : 0,
-                        ],
-                        'hadith' => [
-                            'total_views' => $hadithTotalViews,
-                            'avg_views' => $hadithTotal > 0
-                                ? round($hadithTotalViews / $hadithTotal, 2)
                                 : 0,
                         ],
                     ],
@@ -278,18 +265,6 @@ class AnalyticsService
                             'favorites' => $item->favorites_count ?? 0,
                             'created_at' => $item->created_at->format('Y-m-d'),
                         ]),
-                    'hadith' => Hadith::with('book:id,name')
-                        ->orderByDesc('views_count')
-                        ->take($limit)
-                        ->get(['id', 'arabic_text', 'book_id', 'hadith_number', 'views_count', 'created_at'])
-                        ->map(fn ($item) => [
-                            'id' => $item->id,
-                            'text' => mb_substr($item->arabic_text, 0, 100).'...',
-                            'book' => $item->book?->name ?? 'Unknown',
-                            'hadith_number' => $item->hadith_number,
-                            'views' => $item->views_count ?? 0,
-                            'created_at' => $item->created_at->format('Y-m-d'),
-                        ]),
                     'reciters' => Reciter::orderByDesc('order')
                         ->take($limit)
                         ->get(['id', 'name', 'style', 'is_featured'])
@@ -303,7 +278,6 @@ class AnalyticsService
             } catch (\Exception $e) {
                 return [
                     'articles' => collect(),
-                    'hadith' => collect(),
                     'reciters' => collect(),
                 ];
             }
@@ -691,7 +665,7 @@ class AnalyticsService
             'by_module' => [
                 'articles' => ['total' => 0, 'published' => 0, 'draft' => 0, 'archived' => 0],
                 'hadith' => ['total' => 0, 'sahih' => 0, 'hasan' => 0, 'daif' => 0],
-                'hadith_narrators' => ['total' => 0, 'sahaba' => 0],
+                'hadith_scholars' => ['total' => 0, 'sahaba' => 0],
                 'hadith_books' => ['total' => 0],
                 'seerah' => ['events' => 0],
                 'sahaba' => ['total' => 0],
@@ -714,7 +688,6 @@ class AnalyticsService
             'average_views_per_article' => 0,
             'by_module' => [
                 'articles' => ['total_views' => 0, 'total_favorites' => 0, 'avg_views' => 0],
-                'hadith' => ['total_views' => 0, 'avg_views' => 0],
             ],
             'engagement_rate' => 0,
         ];

@@ -30,12 +30,12 @@ Admin panel is served at `/su/portal/v1/admin`, not `/admin`.
 **Purpose**: The guardrails that make every later phase safe to run. A mis-targeted `migrate:fresh`
 destroyed the dev database during planning; T002–T004 exist so that cannot recur.
 
-- [ ] T001 Commit the current worktree as a checkpoint on branch `001-hadith-rebuild`; verify `git status --porcelain` is empty afterwards (23 files are currently untracked and would be destroyed irrecoverably by `rm -rf`)
-- [ ] T002 Create `.env.testing` with `DB_DATABASE=the_last_messenger_test` and `APP_ENV=testing`, since `--env=testing` silently falls back to `.env` when the file is absent
-- [ ] T003 Create `app/Console/Concerns/GuardsDatabaseTarget.php` exposing an `assertSafeDatabase(array $allowlist)` trait method that aborts when the resolved database name is not on the allowlist
-- [ ] T004 [P] Add a `DatabaseTargetGuardTest` in `tests/Unit/Console/DatabaseTargetGuardTest.php` asserting the guard aborts on `the_last_messenger` and passes on `the_last_messenger_test`
-- [ ] T005 [P] Add `hadith_source/` and `.env.testing` entries to `.gitignore`
-- [ ] T006 [P] Create the extraction output directory `storage/app/hadith_source/.gitkeep`
+- [X] T001 Commit the current worktree as a checkpoint on branch `001-hadith-rebuild`; verify `git status --porcelain` is empty afterwards (23 files are currently untracked and would be destroyed irrecoverably by `rm -rf`)
+- [X] T002 Create `.env.testing` with `DB_DATABASE=the_last_messenger_test` and `APP_ENV=testing`, since `--env=testing` silently falls back to `.env` when the file is absent
+- [X] T003 Create `app/Console/Concerns/GuardsDatabaseTarget.php` exposing an `assertSafeDatabase(array $allowlist)` trait method that aborts when the resolved database name is not on the allowlist
+- [X] T004 [P] Add a `DatabaseTargetGuardTest` in `tests/Unit/Console/DatabaseTargetGuardTest.php` asserting the guard aborts on `the_last_messenger` and passes on `the_last_messenger_test`
+- [X] T005 [P] Add `hadith_source/` and `.env.testing` entries to `.gitignore`
+- [X] T006 [P] Create the extraction output directory `storage/app/hadith_source/.gitkeep`
 
 **Checkpoint**: Destructive commands cannot target the main database.
 

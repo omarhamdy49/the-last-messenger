@@ -6,13 +6,11 @@ namespace App\Http\Controllers\Admin\Content;
 
 use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithCollection;
-use App\Domain\Hadith\Models\HadithSyncLog;
 use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Models\VerseTafsir;
 use App\Domain\Quran\Models\VerseTranslation;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
@@ -22,6 +20,9 @@ use Illuminate\View\View;
  * (App\Console\Commands\IslamicData\VerifyCommand) as web screens:
  * per-collection hadith coverage vs configured floors + source file
  * counts, and Quran totals vs canonical expectations.
+ *
+ * Per-run import history lives on the Hadith import-runs screen, which reads
+ * `hadith_import_runs` — the table that replaced `hadith_sync_logs`.
  */
 class ImportStatusController extends Controller
 {
@@ -33,40 +34,6 @@ class ImportStatusController extends Controller
         return view('admin.content.imports.index', [
             'quranChecks' => $this->quranChecks(),
             'hadithRows' => $this->hadithRows(),
-        ]);
-    }
-
-    /**
-     * Paginated hadith sync log with status/collection filters.
-     */
-    public function logs(Request $request): View
-    {
-        $validated = $request->validate([
-            'status' => ['nullable', 'in:pending,in_progress,completed,failed'],
-            'collection' => ['nullable', 'string', 'max:100'],
-        ]);
-
-        $logs = HadithSyncLog::query()
-            ->select(['id', 'collection_id', 'source_collection_code', 'type', 'status', 'summary', 'error_message', 'started_at', 'completed_at', 'created_at'])
-            ->with('collection:id,name')
-            ->when($validated['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
-            ->when($validated['collection'] ?? null, fn ($query, $collection) => $query->where('source_collection_code', $collection))
-            ->orderByDesc('id')
-            ->paginate(20)
-            ->withQueryString();
-
-        $collections = HadithSyncLog::query()
-            ->select('source_collection_code')
-            ->whereNotNull('source_collection_code')
-            ->distinct()
-            ->orderBy('source_collection_code')
-            ->pluck('source_collection_code');
-
-        return view('admin.content.imports.logs', [
-            'logs' => $logs,
-            'collections' => $collections,
-            'activeStatus' => $validated['status'] ?? '',
-            'activeCollection' => $validated['collection'] ?? '',
         ]);
     }
 
@@ -120,24 +87,28 @@ class ImportStatusController extends Controller
         $map = (array) config('islamic-data.hadith_collection_map');
         $floors = (array) config('islamic-data.expected_hadiths');
 
+        // hadith_hadiths carries collection_id directly, so this needs no join
+        // through books and chapters — and must not use one: chapter_id is NULL
+        // for collections with has_chapters = 0, which an inner chapter join
+        // would silently count as zero coverage.
         $dbCounts = HadithCollection::query()
-            ->leftJoin('hadith_books', 'hadith_books.collection_id', '=', 'hadith_collections.id')
-            ->leftJoin('hadith_chapters', 'hadith_chapters.book_id', '=', 'hadith_books.id')
-            ->leftJoin('hadith_hadiths', 'hadith_hadiths.chapter_id', '=', 'hadith_chapters.id')
-            ->selectRaw('hadith_collections.slug, COUNT(hadith_hadiths.id) AS hadith_count')
-            ->groupBy('hadith_collections.slug')
-            ->pluck('hadith_count', 'slug')
+            ->leftJoin('hadith_hadiths', 'hadith_hadiths.collection_id', '=', 'hadith_collections.id')
+            ->selectRaw('hadith_collections.code, COUNT(hadith_hadiths.id) AS hadith_count')
+            ->groupBy('hadith_collections.code')
+            ->pluck('hadith_count', 'code')
             ->all();
 
         $rows = [];
         $totalFloor = 0;
         $totalDb = 0;
 
+        // The production directory name is also the collection `code` on which
+        // the rebuilt schema keys, so the map's value is only a display label.
         foreach ($map as $directory => $sourceSlug) {
             $dirPath = rtrim($source, '/')."/{$directory}";
             $fileCount = is_dir($dirPath) ? count(glob($dirPath.'/*.json') ?: []) : null;
             $floor = (int) ($floors[$directory] ?? 0);
-            $dbCount = (int) ($dbCounts[$sourceSlug] ?? 0);
+            $dbCount = (int) ($dbCounts[$directory] ?? 0);
 
             $totalFloor += $floor;
             $totalDb += $dbCount;
@@ -153,7 +124,7 @@ class ImportStatusController extends Controller
         }
 
         $hadithsMissingArabic = Hadith::query()
-            ->whereDoesntHave('translations', fn ($query) => $query->where('locale', 'ar'))
+            ->whereDoesntHave('texts', fn ($query) => $query->where('locale', 'ar'))
             ->count();
         $knownMissingArabic = (int) config('islamic-data.known_missing_arabic');
 

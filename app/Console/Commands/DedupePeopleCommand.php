@@ -13,7 +13,7 @@ use Normalizer;
  *
  *  - `sahaba` — the scraped source produced the same person several times,
  *    visible in the slug suffixes the importer added (`abu-aziz-ibn-umair-2`).
- *  - `hadith_narrators` — the same narrator appears once per transliteration.
+ *  - `hadith_scholars` — the same narrator appears once per transliteration.
  *
  * Identity is decided on the ENGLISH name, which is populated and consistently
  * transliterated across the dataset. The Arabic name is used only as a veto,
@@ -43,7 +43,7 @@ class DedupePeopleCommand extends Command
         ['relationships', 'related_person_id'],
         ['sahaba', 'father_id'],
         ['sahaba', 'mother_id'],
-        ['hadith_narrators', 'sahaba_id'],
+        ['hadith_scholars', 'sahaba_id'],
     ];
 
     public function handle(): int
@@ -287,7 +287,7 @@ class DedupePeopleCommand extends Command
         DB::table('sahaba')->where('id', $canonical)->where('father_id', $canonical)->update(['father_id' => null]);
         DB::table('sahaba')->where('id', $canonical)->where('mother_id', $canonical)->update(['mother_id' => null]);
 
-        $this->repointUniqueSahabaLink('hadith_narrators', $canonical, $duplicate);
+        $this->repointUniqueSahabaLink('hadith_scholars', $canonical, $duplicate);
 
         DB::table('sahaba')->where('id', $duplicate)->delete();
     }
@@ -346,8 +346,9 @@ class DedupePeopleCommand extends Command
     }
 
     /**
-     * `sahaba_id` is UNIQUE on both hadith tables, so only one row may keep the
-     * link. The one carrying more narrations keeps it.
+     * `sahaba_id` is UNIQUE on `hadith_scholars`, so only one row may keep the
+     * link. The one cited in more gradings keeps it — transmission chains are no
+     * longer stored, so recorded verdicts are the only available weight.
      */
     private function repointUniqueSahabaLink(string $table, int $canonical, int $duplicate): void
     {
@@ -363,7 +364,7 @@ class DedupePeopleCommand extends Command
             return;
         }
 
-        [$weightColumn, $weightTable] = ['narrator_id', 'hadith_isnad'];
+        [$weightColumn, $weightTable] = ['scholar_id', 'hadith_gradings'];
 
         $holderWeight = DB::table($weightTable)->where($weightColumn, $holder->id)->count();
         $incumbentWeight = DB::table($weightTable)->where($weightColumn, $incumbent->id)->count();

@@ -4,48 +4,17 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Domain\Hadith\Services\HadithPublicVisibility;
-use App\Domain\Shared\Contracts\PublicVisibilityProviderInterface;
 use Illuminate\Support\ServiceProvider;
 
 class HadithServiceProvider extends ServiceProvider
 {
-    public function register(): void
-    {
-        $this->app->singleton(HadithPublicVisibility::class);
-        $this->app->tag(HadithPublicVisibility::class, PublicVisibilityProviderInterface::class);
-
-        $this->app->bind(
-            \App\Domain\Hadith\Repositories\HadithRepositoryInterface::class,
-            \App\Domain\Hadith\Repositories\HadithRepository::class
-        );
-        $this->app->bind(
-            \App\Domain\Hadith\Repositories\CollectionRepositoryInterface::class,
-            \App\Domain\Hadith\Repositories\CollectionRepository::class
-        );
-        $this->app->bind(
-            \App\Domain\Hadith\Repositories\BookRepositoryInterface::class,
-            \App\Domain\Hadith\Repositories\BookRepository::class
-        );
-        $this->app->bind(
-            \App\Domain\Hadith\Repositories\ChapterRepositoryInterface::class,
-            \App\Domain\Hadith\Repositories\ChapterRepository::class
-        );
-        $this->app->bind(
-            \App\Domain\Hadith\Repositories\NarratorRepositoryInterface::class,
-            \App\Domain\Hadith\Repositories\NarratorRepository::class
-        );
-        $this->app->bind(
-            \App\Domain\Hadith\Repositories\ScholarRepositoryInterface::class,
-            \App\Domain\Hadith\Repositories\ScholarRepository::class
-        );
-        $this->app->bind(
-            \App\Domain\Hadith\Repositories\ThemeRepositoryInterface::class,
-            \App\Domain\Hadith\Repositories\ThemeRepository::class
-        );
-        $this->app->bind(
-            \App\Domain\Shared\Events\EventDispatcherInterface::class,
-            \App\Domain\Shared\Events\LaravelEventDispatcher::class
-        );
-    }
+    /**
+     * Intentionally empty while the module is being rebuilt.
+     *
+     * The repository bindings and the `HadithVisibility` tag land here once
+     * app/Domain/Hadith exists again. They cannot be declared earlier:
+     * PublicVisibilityRegistry resolves every tagged provider eagerly, so
+     * tagging a class that does not yet exist breaks the container at boot.
+     */
+    public function register(): void {}
 }

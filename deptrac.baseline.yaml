@@ -25,8 +25,6 @@ deptrac:
       - App\Models\Article
     App\Domain\Blog\Services\SlugGeneratorService:
       - App\Models\ArticleLocale
-    App\Domain\Hadith\Importers\HadithJsonParser:
-      - App\Services\Json\JsonDataTransformer
     App\Domain\Sahaba\Models\Sahabi:
       - App\Models\Article
       - App\Models\User

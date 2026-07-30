@@ -48,25 +48,19 @@ class VerifyPortalDataCommand extends Command
 
         'hadith_books' => ['collection_id' => 'hadith_collections'],
         'hadith_chapters' => ['book_id' => 'hadith_books'],
-        // The two columns this export exists to carry: a narration attribution
-        // that resolves onto the Sahaba module instead of being a loose string.
-        'hadith_narrators' => ['sahaba_id' => 'sahaba'],
+        // The column this export exists to carry: a scholar attribution that
+        // resolves onto the Sahaba module instead of being a loose string.
+        'hadith_scholars' => ['sahaba_id' => 'sahaba'],
         'hadith_hadiths' => [
+            'collection_id' => 'hadith_collections',
+            'book_id' => 'hadith_books',
             'chapter_id' => 'hadith_chapters',
-            'primary_narrator_id' => 'hadith_narrators',
         ],
-        'hadith_translations' => ['hadith_id' => 'hadith_hadiths'],
-        'hadith_sources' => ['hadith_id' => 'hadith_hadiths'],
+        'hadith_texts' => ['hadith_id' => 'hadith_hadiths'],
         'hadith_gradings' => [
             'hadith_id' => 'hadith_hadiths',
             'scholar_id' => 'hadith_scholars',
         ],
-        'hadith_isnad' => ['hadith_id' => 'hadith_hadiths', 'narrator_id' => 'hadith_narrators'],
-        'hadith_hadith_themes' => ['hadith_id' => 'hadith_hadiths', 'hadith_theme_id' => 'hadith_themes'],
-        'hadith_keywords' => ['hadith_id' => 'hadith_hadiths'],
-        'hadith_commentaries' => ['hadith_id' => 'hadith_hadiths', 'scholar_id' => 'hadith_scholars'],
-        'hadith_related_verses' => ['hadith_id' => 'hadith_hadiths', 'quran_verse_id' => 'quran_verses'],
-        'hadith_sync_logs' => ['collection_id' => 'hadith_collections'],
     ];
 
     public function handle(): int

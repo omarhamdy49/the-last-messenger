@@ -410,8 +410,8 @@ class Sahabi extends Model implements HasMedia
     /**
      * Scope: Top narrators by the source's reported hadith count.
      * This is an import-time claim (see `reported_hadith_count` docs), not a
-     * live count from this database's own hadith graph — use
-     * `scopeWithNarratorLinkCount` for that.
+     * live count from this database's own hadith graph — the rebuilt Hadith
+     * schema stores no transmission chains, so no live count exists.
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -421,26 +421,6 @@ class Sahabi extends Model implements HasMedia
         return $query->where('reported_hadith_count', '>', 0)
             ->orderByDesc('reported_hadith_count')
             ->limit($limit);
-    }
-
-    /**
-     * Adds `narrator_link_count`: the number of hadith_isnad chain entries
-     * actually reachable through hadith_narrators.sahaba_id for this Sahabi —
-     * the real, live count, as opposed to the imported `reported_hadith_count`.
-     * Queries the table by name (no cross-module model import) to keep the
-     * Sahaba domain from depending on the Hadith domain.
-     *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    public function scopeWithNarratorLinkCount($query)
-    {
-        return $query->addSelect([
-            'narrator_link_count' => \Illuminate\Support\Facades\DB::table('hadith_isnad')
-                ->join('hadith_narrators', 'hadith_narrators.id', '=', 'hadith_isnad.narrator_id')
-                ->selectRaw('count(*)')
-                ->whereColumn('hadith_narrators.sahaba_id', 'sahaba.id'),
-        ]);
     }
 
     /**

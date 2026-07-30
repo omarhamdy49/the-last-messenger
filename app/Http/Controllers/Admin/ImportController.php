@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Domain\Blog\Importers\ArticleImporter;
-use App\Domain\Hadith\Importers\HadithNarratorImporter;
 use App\Domain\Quran\Importers\QuranSurahImporter;
 use App\Domain\Quran\Importers\QuranVerseImporter;
 use App\Domain\Quran\Importers\ReciterImporter;
@@ -398,7 +397,6 @@ class ImportController extends Controller
             'quran_verses' => new QuranVerseImporter($import),
             'reciters' => new ReciterImporter($import),
             'tafseer' => new TafseerImporter($import),
-            'hadith_narrators' => new HadithNarratorImporter($import),
             default => throw \App\Domain\Shared\Exceptions\ImporterNotFoundException::forModule($import->module),
         };
     }
@@ -416,7 +414,6 @@ class ImportController extends Controller
             'quran_verses',
             'reciters',
             'tafseer',
-            'hadith_narrators',
         ]);
     }
 
@@ -456,10 +453,6 @@ class ImportController extends Controller
                 'required' => ['surah_number', 'ayah_number', 'source', 'author', 'tafseer_ar', 'tafseer_en'],
                 'optional' => ['tafseer_fr', 'tafseer_tr', 'tafseer_ur'],
             ],
-            'hadith_narrators' => [
-                'required' => ['name_ar', 'name_en'],
-                'optional' => ['biography_ar', 'biography_en', 'grade', 'era', 'country', 'birth_hijri', 'death_hijri'],
-            ],
             default => ['required' => [], 'optional' => []],
         };
     }
@@ -482,17 +475,6 @@ class ImportController extends Controller
                     'category_name' => 'Seerah',
                     'tags' => 'Prophet,Biography,History',
                     'status' => 'published',
-                ],
-            ],
-            'hadith' => [
-                [
-                    'arabic_text' => 'إنما الأعمال بالنيات',
-                    'english_text' => 'Actions are according to intentions',
-                    'book_name' => 'Sahih Bukhari',
-                    'chapter_name' => 'Book of Revelation',
-                    'hadith_number' => '1',
-                    'narrators' => 'Umar ibn Al-Khattab|Abdullah ibn Umar',
-                    'grade' => 'sahih',
                 ],
             ],
             default => [],

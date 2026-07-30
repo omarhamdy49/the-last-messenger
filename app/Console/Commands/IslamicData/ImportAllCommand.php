@@ -6,39 +6,31 @@ namespace App\Console\Commands\IslamicData;
 
 use Illuminate\Console\Command;
 
+/**
+ * Hadith is deliberately absent here. It is no longer imported from the
+ * prophet-data-generator production files; it comes from sunnah.com pages
+ * extracted to storage/app/hadith_source and loaded by `hadith:import`,
+ * which is per-collection and cannot be a blind all-or-nothing stage.
+ */
 class ImportAllCommand extends Command
 {
     protected $signature = 'islamic-data:import-all
-                            {--fresh : Truncate Quran tables before importing (hadith import is always additive)}
-                            {--chunk=500 : Hadith files per batch}
-                            {--dry-run : Simulate both imports without writing}';
+                            {--fresh : Truncate Quran tables before importing}
+                            {--dry-run : Simulate the import without writing}';
 
-    protected $description = 'Import the full Quran and all hadith production data, then print combined status';
+    protected $description = 'Import the full Quran production data, then print combined status';
 
     public function handle(): int
     {
         $dryRun = (bool) $this->option('dry-run');
 
-        $this->info('=== 1/2 Quran import ===');
+        $this->info('=== Quran import ===');
         $quranExit = $this->call('islamic-data:import-quran', array_filter([
             '--fresh' => (bool) $this->option('fresh'),
             '--dry-run' => $dryRun,
         ]));
 
         if ($quranExit !== self::SUCCESS) {
-            $this->error('Quran import failed — aborting before hadith import.');
-
-            return self::FAILURE;
-        }
-
-        $this->newLine();
-        $this->info('=== 2/2 Hadith import ===');
-        $hadithExit = $this->call('islamic-data:import-hadith', array_filter([
-            '--chunk' => $this->option('chunk'),
-            '--dry-run' => $dryRun,
-        ]));
-
-        if ($hadithExit !== self::SUCCESS) {
             return self::FAILURE;
         }
 

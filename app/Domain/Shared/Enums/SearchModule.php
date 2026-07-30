@@ -48,7 +48,7 @@ enum SearchModule: string
         // are resolved via a relationship existence query by SearchQueryBuilder.
         return match ($this) {
             self::ARTICLE => ['locales.title', 'locales.excerpt', 'locales.content'],
-            self::HADITH => ['translations.text'],
+            self::HADITH => ['texts.body'],
             self::MEDIA => ['translations.title', 'translations.description'],
             self::SEERAH => ['translations.title', 'translations.description', 'location'],
             self::SAHABA => ['translations.name', 'translations.full_name', 'translations.kunya'],

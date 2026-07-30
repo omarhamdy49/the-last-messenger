@@ -127,24 +127,26 @@ class VerifyCommand extends Command
         $map = (array) config('islamic-data.hadith_collection_map');
         $floors = (array) config('islamic-data.expected_hadiths');
 
+        // Counted straight off the denormalised collection_id: chapter_id is NULL
+        // wherever has_chapters = 0, so a join through chapters would report those
+        // collections as empty.
         $dbCounts = HadithCollection::query()
-            ->leftJoin('hadith_books', 'hadith_books.collection_id', '=', 'hadith_collections.id')
-            ->leftJoin('hadith_chapters', 'hadith_chapters.book_id', '=', 'hadith_books.id')
-            ->leftJoin('hadith_hadiths', 'hadith_hadiths.chapter_id', '=', 'hadith_chapters.id')
-            ->selectRaw('hadith_collections.slug, COUNT(hadith_hadiths.id) AS hadith_count')
-            ->groupBy('hadith_collections.slug')
-            ->pluck('hadith_count', 'slug')
+            ->leftJoin('hadith_hadiths', 'hadith_hadiths.collection_id', '=', 'hadith_collections.id')
+            ->selectRaw('hadith_collections.code, COUNT(hadith_hadiths.id) AS hadith_count')
+            ->groupBy('hadith_collections.code')
+            ->pluck('hadith_count', 'code')
             ->all();
 
         $rows = [];
         $totalFloor = 0;
         $totalDb = 0;
 
+        // The production directory name is also the collection `code`.
         foreach ($map as $directory => $sourceSlug) {
             $dirPath = rtrim((string) $source, '/')."/{$directory}";
             $fileCount = is_dir($dirPath) ? count(glob($dirPath.'/*.json') ?: []) : 0;
             $floor = (int) ($floors[$directory] ?? 0);
-            $dbCount = (int) ($dbCounts[$sourceSlug] ?? 0);
+            $dbCount = (int) ($dbCounts[$directory] ?? 0);
 
             $totalFloor += $floor;
             $totalDb += $dbCount;
@@ -162,7 +164,7 @@ class VerifyCommand extends Command
         // 125 Malik source files are English-only — a documented source gap, not data loss.
         $knownMissingArabic = (int) config('islamic-data.known_missing_arabic');
         $hadithsMissingArabic = Hadith::query()
-            ->whereDoesntHave('translations', fn ($query) => $query->where('locale', 'ar'))
+            ->whereDoesntHave('texts', fn ($query) => $query->where('locale', 'ar'))
             ->count();
         $rows[] = $this->check(
             'Hadiths missing Arabic text',
@@ -171,8 +173,9 @@ class VerifyCommand extends Command
             $hadithsMissingArabic <= $knownMissingArabic,
         );
 
-        $orphanHadiths = Hadith::query()->whereDoesntHave('chapter.book')->count();
-        $rows[] = $this->check('Hadiths without a book', $orphanHadiths, '= 0', $orphanHadiths === 0);
+        // No "hadiths without a book" check: book_id is NOT NULL behind a composite
+        // foreign key, so the database cannot hold one. A check that can never fail
+        // reads as coverage without providing any.
 
         // Chapter linkage floor recorded after the 2026-06 chapter_id backfill.
         // Some source files legitimately carry no chapter info (e.g. qudsi40),

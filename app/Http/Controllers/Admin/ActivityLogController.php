@@ -191,7 +191,7 @@ class ActivityLogController extends Controller
     {
         $routes = [
             'App\Domain\Blog\Models\Article' => 'admin.articles.show',
-            'App\Domain\Hadith\Models\Hadith' => 'admin.hadith.show',
+            'App\Domain\Hadith\Models\Hadith' => 'admin.hadith.hadiths.show',
             'App\Domain\Media\Models\MediaProgram' => 'admin.media-programs.show',
             'App\Domain\Seerah\Models\SeerahEvent' => 'admin.seerah-events.show',
             'App\Domain\Sahaba\Models\Sahabi' => 'admin.sahaba.show',

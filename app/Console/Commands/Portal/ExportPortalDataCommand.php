@@ -13,7 +13,7 @@ use Throwable;
  * can be loaded into a fresh production database.
  *
  * Primary keys are preserved verbatim — the whole point of the export is that
- * `hadith_isnad.narrator_id`, `hadith_narrators.sahaba_id`, `quran_verse_translations.verse_id`
+ * `hadith_texts.hadith_id`, `hadith_scholars.sahaba_id`, `quran_verse_translations.verse_id`
  * and every other foreign key still resolve on the other side. Tables are
  * listed parent-before-child so a plain sequential insert satisfies every
  * constraint without deferring checks.
@@ -68,18 +68,10 @@ class ExportPortalDataCommand extends Command
             'hadith_books',
             'hadith_chapters',
             'hadith_scholars',
-            'hadith_themes',
-            'hadith_narrators',
             'hadith_hadiths',
-            'hadith_translations',
-            'hadith_sources',
+            'hadith_texts',
             'hadith_gradings',
-            'hadith_isnad',
-            'hadith_hadith_themes',
-            'hadith_keywords',
-            'hadith_commentaries',
-            'hadith_related_verses',
-            'hadith_sync_logs',
+            'hadith_import_runs',
         ],
     ];
 
@@ -111,17 +103,12 @@ class ExportPortalDataCommand extends Command
         'sahabi_categories' => ['key'],
         'relationships' => ['relationship_type'],
         'sahabi_timeline_item_translations' => ['locale'],
-        'hadith_collections' => ['code', 'slug'],
-        'hadith_themes' => ['slug', 'review_status'],
-        'hadith_narrators' => ['reliability_grade', 'school', 'region'],
-        'hadith_translations' => ['locale'],
-        'hadith_sources' => ['source_system', 'source_type', 'verification_method'],
-        'hadith_gradings' => ['grade_key', 'review_status'],
-        'hadith_isnad' => ['transmission_method'],
-        'hadith_keywords' => ['locale', 'review_status'],
-        'hadith_commentaries' => ['locale', 'review_status'],
-        'hadith_related_verses' => ['review_status'],
-        'hadith_sync_logs' => ['source_collection_code', 'type', 'status'],
+        'hadith_collections' => ['code'],
+        'hadith_scholars' => ['slug'],
+        'hadith_hadiths' => ['display_grade'],
+        'hadith_texts' => ['locale'],
+        'hadith_gradings' => ['grade', 'scope', 'locale'],
+        'hadith_import_runs' => ['collection_code', 'status'],
     ];
 
     /**
@@ -344,17 +331,15 @@ class ExportPortalDataCommand extends Command
             return [];
         }
 
+        // `hadith_scholars.sahaba_id` is the only hadith→sahaba edge that
+        // survives the rebuild: transmission chains and per-hadith primary
+        // narrators have no verified extraction source and are not stored.
         return [
-            'hadith_narrators_linked_to_sahaba' => DB::table('hadith_narrators')->whereNotNull('sahaba_id')->count(),
-            'hadiths_with_primary_narrator' => DB::table('hadith_hadiths')->whereNotNull('primary_narrator_id')->count(),
-            'hadiths_reaching_sahaba_via_primary_narrator' => DB::table('hadith_hadiths as h')
-                ->join('hadith_narrators as n', 'n.id', '=', 'h.primary_narrator_id')
-                ->whereNotNull('n.sahaba_id')->count(),
-            'isnad_links' => DB::table('hadith_isnad')->count(),
-            'isnad_links_reaching_sahaba' => DB::table('hadith_isnad as i')
-                ->join('hadith_narrators as n', 'n.id', '=', 'i.narrator_id')
-                ->whereNotNull('n.sahaba_id')->count(),
-            'hadith_related_quran_verses' => DB::table('hadith_related_verses')->whereNotNull('quran_verse_id')->count(),
+            'hadith_scholars_linked_to_sahaba' => DB::table('hadith_scholars')->whereNotNull('sahaba_id')->count(),
+            'gradings_attributed_to_a_scholar' => DB::table('hadith_gradings')->whereNotNull('scholar_id')->count(),
+            'gradings_reaching_sahaba_via_scholar' => DB::table('hadith_gradings as g')
+                ->join('hadith_scholars as s', 's.id', '=', 'g.scholar_id')
+                ->whereNotNull('s.sahaba_id')->count(),
         ];
     }
 
