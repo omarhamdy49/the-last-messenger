@@ -102,9 +102,69 @@ courteous path; worth filing in parallel with extraction work.
 
 `.col1` marks Musnad Ahmad's single-column layout — a different rendering that fixtures must cover.
 
-**Two selectors are still unknown and gate the schema:** there is no verified selector for the grade
-string, and none for the English permalink identifier. Both must be found before extraction, or the
-grading subsystem ships dead and `sunnah_urn_en` ships 100% NULL.
+### The two gating selectors — resolved 2026-07-30 (T045, T046)
+
+Both were verified live through the Chrome extension. **Neither column is dropped.**
+
+**Grade (T045)** — verified on `/tirmidhi/1` and `/abudawud/1`:
+
+```
+.actualHadithContainer .gradetable tr        → one row per grade claim
+    td.english_grade                         → the English pair
+    td.arabic_grade                          → the Arabic pair
+```
+
+Each row holds a label cell and a value cell for each language. **Cell order is not stable across
+languages:** English is `[label, value]` (`"Grade:"`, `"Sahih (Darussalam)"`), Arabic is
+`[value, label]` (`"حسن صحيح (الألباني)"`, `"حكم :"`) because the Arabic table renders RTL in source
+order. An extractor that indexes cells positionally silently swaps label and verdict on every Arabic
+row. Take the cell that is *not* the label instead.
+
+Measured on `/abudawud/1` (390 records): 369 English grade values, 389 Arabic grade values. The
+attributing scholar is embedded in the value in parentheses — `(Al-Albani)`, `(Darussalam)` — so it is
+part of `raw_grade`, not a separate field. `.gradetable tr` count per record was 0 or 1 across every
+page sampled; the multi-claim strings of §5 are carried *inside one value*, not as extra rows.
+
+**English permalink (T046)** — the documented `.hadith_permalink` carries no `<a href="/urn/…">` on
+book pages; it renders Report/Share/Copy controls. Both identifiers are in the report handler:
+
+```
+.actualHadithContainer .reportlink[onclick]  → reportHadith(<arabic_urn>, 'h<english_urn>')
+```
+
+The element ids on the same record (`h<english_urn>`, `htc<english_urn>`, `t<english_urn>`) confirm the
+second argument. Verified that `/urn/660010` and `/urn/700010` both resolve to Jami` at-Tirmidhi 1, so
+each is an independently valid permalink. `sunnah_urn_en` therefore **stays in the schema**.
+
+`.sharelink[onclick]` yields the canonical path (`share(this, '/tirmidhi:1')`) — a second, independent
+source for `(collection, hadith_number)`.
+
+### Collection codes — the directory names are NOT the codes (verified 2026-07-30)
+
+`/ahmed` returns **404**. `prophet-data-generator`'s directory names are not sunnah.com path segments,
+so nothing may key on them:
+
+| production directory | sunnah.com code | | production directory | sunnah.com code |
+|---|---|---|---|---|
+| `ahmed` | **`ahmad`** | | `mishkat_almasabih` | **`mishkat`** |
+| `aladab_almufrad` | **`adab`** | | `riyad_assalihin` | **`riyadussalihin`** |
+| `shamail_muhammadiyah` | **`shamail`** | | `bulugh_almaram` | **`bulugh`** |
+
+The remaining eleven match: bukhari, muslim, nasai, abudawud, tirmidhi, ibnmajah, malik, darimi,
+nawawi40, qudsi40, shahwaliullah40.
+
+### Live book inventory differs from the reference corpus
+
+Book lists include an `about` link that is **not** a book, and some collections carry a non-numeric
+book (`introduction` for darimi/riyadussalihin/mishkat/muslim/ibnmajah, `letter` for abudawud) that
+**is** one. Excluding `about`, live counts: bukhari 97, malik 61, muslim 57, adab 57, shamail 57,
+nasai 52, tirmidhi 49, abudawud 44, ibnmajah 38, mishkat 29, darimi 24, riyadussalihin 20, bulugh 16,
+ahmad 8, and **0 for all three forties** — roughly 609 book pages.
+
+**All three forties are bookless, not only `nawawi40`.** `/nawawi40`, `/qudsi40` and
+`/shahwaliullah40` expose no book links at all, yet `/nawawi40/1` returns a single hadith — the path
+segment is the hadith number, not a book number. The plan and `data-model.md` assume one synthetic
+book for `nawawi40`; **three** are required, one per forty.
 
 ## 3. Corpus inventory
 

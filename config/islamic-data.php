@@ -22,14 +22,16 @@ return [
     'quran_datasets_path' => env('ISLAMIC_DATA_QURAN_DATASETS', 'database/data/quran'),
 
     /*
-     * Production directory name => hadith_collections.slug.
+     * Production directory name => hadith_collections.code.
      * Used by islamic-data:verify to compare source file counts with DB rows.
+     *
+     * `code` is also the sunnah.com path segment, verified live on 2026-07-30:
+     * six of these differ from the directory name, and `/ahmed` 404s outright,
+     * so nothing may treat a directory name as a collection key.
      */
     'hadith_collection_map' => [
         'abudawud' => 'abudawud',
-        // The production directory is 'ahmed'; the collection this importer
-        // creates carries the fuller canonical slug, so the two differ here.
-        'ahmed' => 'musnad-ahmad-ibn-hanbal',
+        'ahmed' => 'ahmad',
         'aladab_almufrad' => 'adab',
         'bukhari' => 'bukhari',
         'bulugh_almaram' => 'bulugh',
@@ -39,10 +41,10 @@ return [
         'mishkat_almasabih' => 'mishkat',
         'muslim' => 'muslim',
         'nasai' => 'nasai',
-        'nawawi40' => 'the-forty-hadith-of-imam-nawawi',
-        'qudsi40' => 'the-forty-hadith-qudsi',
+        'nawawi40' => 'nawawi40',
+        'qudsi40' => 'qudsi40',
         'riyad_assalihin' => 'riyadussalihin',
-        'shahwaliullah40' => 'the-forty-hadith-of-shah-waliullah',
+        'shahwaliullah40' => 'shahwaliullah40',
         'shamail_muhammadiyah' => 'shamail',
         'tirmidhi' => 'tirmidhi',
     ],

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Genealogy;
 
 use App\Domain\Genealogy\Models\Person;
-use App\Domain\Sahaba\Models\Sahabi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;

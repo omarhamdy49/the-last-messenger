@@ -81,15 +81,15 @@ The old module has 22 external consumers. Deleting it first leaves the container
 
 ### 2b. Delete the old module
 
-- [ ] T036 Delete the entire old domain module directory `app/Domain/Hadith/` (125 files)
-- [ ] T037 [P] Delete `app/Http/Controllers/Admin/Hadith/`, `app/Http/Controllers/Api/HadithController.php`, `app/Http/Controllers/Site/HadithController.php`, and `app/Http/Controllers/Site/Concerns/NormalizesHadithGrading.php`
-- [ ] T038 [P] Delete `app/Http/Requests/Admin/Hadith/` (6 files) and the 6 `app/Http/Resources/Hadith*.php` files
-- [ ] T039 [P] Delete `resources/views/admin/hadith/`, `resources/views/admin/hadiths/`, and `resources/views/public/hadith/` (31 views)
-- [ ] T040 [P] Delete the obsolete commands `app/Console/Commands/DeriveHadithIsnadCommand.php`, `RebuildHadithCollectionCommand.php`, `SyncHadithFromJsonCommand.php`, `SyncHadithTextFromSunnahCommand.php`, `IslamicData/ImportHadithCommand.php`, and `app/Console/Concerns/DisplaysHadithSyncOutput.php`
-- [ ] T041 [P] Delete `app/Services/Hadith/JsonFileScanner.php` and `app/Services/Json/HadithJsonTransformer.php`, `HadithJsonValidator.php`, `HadithRecordExtractors.php`
-- [ ] T042 [P] Delete the 16 obsolete Hadith test files under `tests/Feature/`, `tests/Unit/`, and the `tests/Fixtures/HadithRebuild/` directory
-- [ ] T043 Delete every existing hadith migration in `database/migrations/`, including all 12 dated `2026_07_30_*`; only `2026_07_02_090001_rename_hadith_count_on_sahaba.php` survives because it touches the `sahaba` table
-- [ ] T044 [P] Delete the discarded data artifacts `storage/app/backups/*.sql`, `storage/app/hadith_reconcile/`, and `storage/app/hadith_sunnah_parity/`
+- [X] T036 Delete the entire old domain module directory `app/Domain/Hadith/` (125 files)
+- [X] T037 [P] Delete `app/Http/Controllers/Admin/Hadith/`, `app/Http/Controllers/Api/HadithController.php`, `app/Http/Controllers/Site/HadithController.php`, and `app/Http/Controllers/Site/Concerns/NormalizesHadithGrading.php`
+- [X] T038 [P] Delete `app/Http/Requests/Admin/Hadith/` (6 files) and the 6 `app/Http/Resources/Hadith*.php` files
+- [X] T039 [P] Delete `resources/views/admin/hadith/`, `resources/views/admin/hadiths/`, and `resources/views/public/hadith/` (31 views)
+- [X] T040 [P] Delete the obsolete commands `app/Console/Commands/DeriveHadithIsnadCommand.php`, `RebuildHadithCollectionCommand.php`, `SyncHadithFromJsonCommand.php`, `SyncHadithTextFromSunnahCommand.php`, `IslamicData/ImportHadithCommand.php`, and `app/Console/Concerns/DisplaysHadithSyncOutput.php`
+- [X] T041 [P] Delete `app/Services/Hadith/JsonFileScanner.php` and `app/Services/Json/HadithJsonTransformer.php`, `HadithJsonValidator.php`, `HadithRecordExtractors.php`
+- [X] T042 [P] Delete the 16 obsolete Hadith test files under `tests/Feature/`, `tests/Unit/`, and the `tests/Fixtures/HadithRebuild/` directory
+- [X] T043 Delete every existing hadith migration in `database/migrations/`, including all 12 dated `2026_07_30_*`; only `2026_07_02_090001_rename_hadith_count_on_sahaba.php` survives because it touches the `sahaba` table
+- [X] T044 [P] Delete the discarded data artifacts `storage/app/backups/*.sql`, `storage/app/hadith_reconcile/`, and `storage/app/hadith_sunnah_parity/`
 
 ### 2c. Verify extraction sources — BEFORE authoring the schema
 

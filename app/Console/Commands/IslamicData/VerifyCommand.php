@@ -141,12 +141,13 @@ class VerifyCommand extends Command
         $totalFloor = 0;
         $totalDb = 0;
 
-        // The production directory name is also the collection `code`.
-        foreach ($map as $directory => $sourceSlug) {
+        // The map's value is the collection `code`; the key is only a directory
+        // name. Six differ, so keying on the directory would report zero.
+        foreach ($map as $directory => $code) {
             $dirPath = rtrim((string) $source, '/')."/{$directory}";
             $fileCount = is_dir($dirPath) ? count(glob($dirPath.'/*.json') ?: []) : 0;
             $floor = (int) ($floors[$directory] ?? 0);
-            $dbCount = (int) ($dbCounts[$directory] ?? 0);
+            $dbCount = (int) ($dbCounts[$code] ?? 0);
 
             $totalFloor += $floor;
             $totalDb += $dbCount;
