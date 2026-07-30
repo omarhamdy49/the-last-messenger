@@ -106,18 +106,18 @@ This is what satisfies FR-024: a column with no verified source is never created
 Authored once from `data-model.md`, in foreign-key dependency order. Each migration has a working
 `down()`, and MySQL-only DDL is wrapped in a driver guard.
 
-- [ ] T048 [P] Create `database/migrations/2026_07_31_000001_create_hadith_collections_table.php` per data-model.md §1
-- [ ] T049 Create `database/migrations/2026_07_31_000002_create_hadith_books_table.php` per §2, including the `UNIQUE (id, collection_id)` parent key and `is_synthetic`
-- [ ] T050 Create `database/migrations/2026_07_31_000003_create_hadith_chapters_table.php` per §3, including the `UNIQUE (id, book_id)` parent key and RESTRICT deletion
-- [ ] T051 [P] Create `database/migrations/2026_07_31_000004_create_hadith_scholars_table.php` per §7
-- [ ] T052 Create `database/migrations/2026_07_31_000005_create_hadith_hadiths_table.php` per §4, including both composite foreign keys and the three publication-aware indexes
-- [ ] T053 Create `database/migrations/2026_07_31_000006_create_hadith_texts_table.php` per §5, with `FULLTEXT (search_body)` as the only full-text index
-- [ ] T054 [P] Create `database/migrations/2026_07_31_000007_create_hadith_gradings_table.php` per §6, with `raw_grade` as TEXT
-- [ ] T055 [P] Create `database/migrations/2026_07_31_000008_create_hadith_import_runs_table.php` per §8
-- [ ] T056 Apply the migrations to `the_last_messenger_test`, then to `the_last_messenger`; verify 8 tables exist and roll back by explicit migration name, never `--step=N`
-- [ ] T057 Verify no sunnah.com identifier leaked into the schema: `grep -rnE "HadithTable|BookData|ChapterData|arabicURN|englishURN" database/migrations` must return nothing
+- [X] T048 [P] Create `database/migrations/2026_07_31_000001_create_hadith_collections_table.php` per data-model.md §1
+- [X] T049 Create `database/migrations/2026_07_31_000002_create_hadith_books_table.php` per §2, including the `UNIQUE (id, collection_id)` parent key and `is_synthetic`
+- [X] T050 Create `database/migrations/2026_07_31_000003_create_hadith_chapters_table.php` per §3, including the `UNIQUE (id, book_id)` parent key and RESTRICT deletion
+- [X] T051 [P] Create `database/migrations/2026_07_31_000004_create_hadith_scholars_table.php` per §7
+- [X] T052 Create `database/migrations/2026_07_31_000005_create_hadith_hadiths_table.php` per §4, including both composite foreign keys and the three publication-aware indexes
+- [X] T053 Create `database/migrations/2026_07_31_000006_create_hadith_texts_table.php` per §5, with `FULLTEXT (search_body)` as the only full-text index
+- [X] T054 [P] Create `database/migrations/2026_07_31_000007_create_hadith_gradings_table.php` per §6, with `raw_grade` as TEXT
+- [X] T055 [P] Create `database/migrations/2026_07_31_000008_create_hadith_import_runs_table.php` per §8
+- [X] T056 Apply the migrations to `the_last_messenger_test`, then to `the_last_messenger`; verify 8 tables exist and roll back by explicit migration name, never `--step=N`
+- [X] T057 Verify no sunnah.com identifier leaked into the schema: `grep -rnE "HadithTable|BookData|ChapterData|arabicURN|englishURN" database/migrations` must return nothing
 - [ ] T058 Set `innodb_ft_min_token_size=2` in the MySQL container configuration, restart, and rebuild the FULLTEXT index; record the per-environment procedure in `specs/001-hadith-rebuild/quickstart.md`
-- [ ] T059 Create `database/seeders/Hadith/HadithCollectionSeeder.php` seeding all 17 collections with `code`, translated names, author, capability flags, and `reference_template`
+- [X] T059 Create `database/seeders/Hadith/HadithCollectionSeeder.php` seeding all 17 collections with `code`, translated names, author, capability flags, and `reference_template`
 
 ### 2e. Domain core
 

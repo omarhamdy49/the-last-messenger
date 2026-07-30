@@ -76,7 +76,7 @@ The `ngram` parser must **not** be used: it is CJK-oriented and wrong for Arabic
 
 ## 2. Schema application (T056) — DONE
 
-Applied to `the_last_messenger_test` on 2026-07-30 and verified:
+Applied to `the_last_messenger_test` **and** `the_last_messenger` on 2026-07-30. Both verified:
 
 | Check | Result |
 |---|---|
@@ -86,7 +86,7 @@ Applied to `the_last_messenger_test` on 2026-07-30 and verified:
 | FULLTEXT indexes on `hadith_texts` | exactly one — `ft_hadith_texts_search (search_body)` |
 | sunnah.com identifiers in migrations (T057) | none |
 
-**Not yet applied to `the_last_messenger`.** Apply per migration path, never `migrate:fresh`:
+Applied per migration path, never `migrate:fresh` — the command used:
 
 ```bash
 php artisan migrate --path=database/migrations/2026_07_31_000001_create_hadith_collections_table.php \
