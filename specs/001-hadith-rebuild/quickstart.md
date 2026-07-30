@@ -4,7 +4,7 @@ Operational procedures and recorded measurements for `specs/001-hadith-rebuild`.
 
 ---
 
-## 1. `innodb_ft_min_token_size = 2` (T058) — REQUIRED, NOT YET APPLIED
+## 1. `innodb_ft_min_token_size = 2` (T058) — APPLIED 2026-07-30
 
 MySQL's default is **3**, which silently makes every two-character Arabic token unindexable. Arabic
 search returns wrong results rather than failing loudly, and it returns *different* results per
@@ -13,11 +13,10 @@ environment if this is applied inconsistently (FR-012).
 `innodb_ft_min_token_size` is read-only at runtime — it needs a config change, a **server restart**,
 and a **FULLTEXT index rebuild** (existing index entries are not retroactively re-tokenised).
 
-### Current state (measured 2026-07-30)
+### State
 
-```
-mysql> SHOW VARIABLES LIKE 'innodb_ft_min_token_size';   →  3
-```
+Was **3**; set to **2** on 2026-07-30, container restarted, index rebuilt in both databases, and a
+two-character Arabic term proven to match. All four other databases on the container survived intact.
 
 ### The complication
 
@@ -57,12 +56,22 @@ The config is a bind mount: `/Volumes/Data/local-dev-machine/mysql-db/my.cnf` �
    done
    ```
 
-4. Prove it with the assertion T131 depends on — a two-character Arabic term must return rows:
+4. Prove it with the assertion T131 depends on — a two-character Arabic term must return rows.
 
-   ```sql
-   SELECT COUNT(*) FROM hadith_texts
-   WHERE MATCH(search_body) AGAINST ('من' IN BOOLEAN MODE);
+   **Verify through Laravel, not the `mysql` CLI.** `docker exec … mysql` negotiates a latin1
+   connection, which mangles Arabic on both insert and query: it reported 0 matches for a
+   two-character term *and* for a four-character one, while a three-character term matched. That is a
+   charset artifact, not an index problem, and it will send you chasing the wrong bug.
+
+   ```bash
+   php artisan --env=testing tinker --execute="
+     echo DB::table('hadith_texts')
+       ->whereRaw('MATCH(search_body) AGAINST (? IN BOOLEAN MODE)', ['من'])
+       ->count();
+   "
    ```
+
+   If you must use the CLI, pass `--default-character-set=utf8mb4`.
 
 ### Procedure — production
 
