@@ -37,13 +37,17 @@ trait HasAuditLog
                 return;
             }
 
-            $oldValues = $model->getOriginal();
-            $newValues = $model->getAttributes();
-
-            $changes = array_diff_assoc($newValues, $oldValues);
-
-            if (! empty($changes)) {
-                $model->logAudit('updated', 'Updated '.class_basename($model), $oldValues, $newValues);
+            // getChanges() is Eloquent's own dirty set. array_diff_assoc() over
+            // raw attributes cannot be used: it compares by string, and an
+            // enum-cast attribute is a BackedEnum instance, which fatals on
+            // conversion. It also mis-reports arrays and dates as changed.
+            if ($model->getChanges() !== []) {
+                $model->logAudit(
+                    'updated',
+                    'Updated '.class_basename($model),
+                    $model->getOriginal(),
+                    $model->getAttributes(),
+                );
             }
         });
 

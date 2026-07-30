@@ -33,7 +33,10 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
      * @var array<string, mixed>
      */
     private const DETAIL_RELATIONS = [
-        'collection:id,code,name,reference_template,has_volumes',
+        // is_published is selected because HadithVisibility::allowsHadith() reads
+        // it. Omitting a column the caller checks makes it silently NULL, which
+        // reads as "unpublished" and 404s every page.
+        'collection:id,code,name,reference_template,has_volumes,is_published',
         'book:id,collection_id,book_number,title',
         'chapter:id,book_id,chapter_number,title',
         'texts:id,hadith_id,locale,body,narrated_by,sanad',

@@ -1,0 +1,117 @@
+{
+    "source": {
+        "collection": "bukhari",
+        "book_number": "1",
+        "url": "https://sunnah.com/bukhari/1",
+        "extractor_version": "1.0.0"
+    },
+    "book": {
+        "number": "1",
+        "title": {
+            "en": "Revelation",
+            "ar": "كتاب بدء الوحى"
+        }
+    },
+    "counts": {
+        "chapters": 2,
+        "records": 2
+    },
+    "chapters": [
+        {
+            "number": "(1)",
+            "title": {
+                "en": "Chapter: How the Divine Revelation started being revealed to Allah's Messenger",
+                "ar": "باب كَيْفَ كَانَ بَدْءُ الْوَحْىِ إِلَى رَسُولِ اللَّهِ صلى الله عليه وسلم"
+            },
+            "intro": {
+                "en": null,
+                "ar": null
+            },
+            "sort_order": 1
+        },
+        {
+            "number": "(3)",
+            "title": {
+                "en": "Chapter:",
+                "ar": "باب"
+            },
+            "intro": {
+                "en": null,
+                "ar": null
+            },
+            "sort_order": 3
+        }
+    ],
+    "records": [
+        {
+            "hadith_number": "1",
+            "sunnah_urn": 10,
+            "sunnah_urn_en": 100010,
+            "chapter_number": "(1)",
+            "reference_rows": [
+                [
+                    "Reference",
+                    "Sahih al-Bukhari 1"
+                ],
+                [
+                    "In-book reference",
+                    "Book 1, Hadith 1"
+                ],
+                [
+                    "USC-MSA web (English) reference",
+                    "Vol. 1, Book 1, Hadith 1"
+                ],
+                [
+                    "(deprecated numbering scheme)"
+                ]
+            ],
+            "deprecated": true,
+            "texts": {
+                "ar": {
+                    "body": "حَدَّثَنَا الْحُمَيْدِيُّ عَبْدُ اللَّهِ بْنُ الزُّبَيْرِ، قَالَ حَدَّثَنَا سُفْيَانُ، قَالَ حَدَّثَنَا يَحْيَى بْنُ سَعِيدٍ الأَنْصَارِيُّ، قَالَ أَخْبَرَنِي مُحَمَّدُ بْنُ إِبْرَاهِيمَ التَّيْمِيُّ، أَنَّهُ سَمِعَ عَلْقَمَةَ بْنَ وَقَّاصٍ اللَّيْثِيَّ، يَقُولُ سَمِعْتُ عُمَرَ بْنَ الْخَطَّابِ ـ رضى الله عنه ـ عَلَى الْمِنْبَرِ قَالَ سَمِعْتُ رَسُولَ اللَّهِ صلى الله عليه وسلم يَقُولُ ‏\"‏  إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ، وَإِنَّمَا لِكُلِّ امْرِئٍ مَا نَوَى، فَمَنْ كَانَتْ هِجْرَتُهُ إِلَى دُنْيَا يُصِيبُهَا أَوْ إِلَى امْرَأَةٍ يَنْكِحُهَا فَهِجْرَتُهُ إِلَى مَا هَاجَرَ إِلَيْهِ ‏\"‏‏.‏",
+                    "sanad": "حَدَّثَنَا الْحُمَيْدِيُّ عَبْدُ اللَّهِ بْنُ الزُّبَيْرِ، قَالَ حَدَّثَنَا سُفْيَانُ، قَالَ حَدَّثَنَا يَحْيَى بْنُ سَعِيدٍ الأَنْصَارِيُّ، قَالَ أَخْبَرَنِي مُحَمَّدُ بْنُ إِبْرَاهِيمَ التَّيْمِيُّ، أَنَّهُ سَمِعَ عَلْقَمَةَ بْنَ وَقَّاصٍ اللَّيْثِيَّ، يَقُولُ سَمِعْتُ عُمَرَ بْنَ الْخَطَّابِ ـ رضى الله عنه ـ عَلَى الْمِنْبَرِ قَالَ سَمِعْتُ رَسُولَ اللَّهِ صلى الله عليه وسلم يَقُولُ ‏\"‏"
+                },
+                "en": {
+                    "body": "Narrated 'Umar bin Al-Khattab:\n\n     I heard Allah's Messenger (ﷺ) saying, \"The reward of deeds depends upon the \n     intentions and every person will get the reward according to what he \n     has intended. So whoever emigrated for worldly benefits or for a woman\n     to marry, his emigration was for what he emigrated for.\"",
+                    "narrated_by": "Narrated 'Umar bin Al-Khattab:"
+                }
+            },
+            "gradings": []
+        },
+        {
+            "hadith_number": "4",
+            "sunnah_urn": 32,
+            "sunnah_urn_en": 100040,
+            "chapter_number": "(3)",
+            "reference_rows": [
+                [
+                    "Reference",
+                    "Sahih al-Bukhari 4"
+                ],
+                [
+                    "In-book reference",
+                    "Book 1, Hadith 4"
+                ],
+                [
+                    "USC-MSA web (English) reference",
+                    "Vol. 1, Book 1, Hadith 3"
+                ],
+                [
+                    "(deprecated numbering scheme)"
+                ]
+            ],
+            "deprecated": true,
+            "texts": {
+                "ar": {
+                    "body": "قَالَ ابْنُ شِهَابٍ وَأَخْبَرَنِي أَبُو سَلَمَةَ بْنُ عَبْدِ الرَّحْمَنِ، أَنَّ جَابِرَ بْنَ عَبْدِ اللَّهِ الأَنْصَارِيَّ، قَالَ ـ وَهُوَ يُحَدِّثُ عَنْ فَتْرَةِ الْوَحْىِ، فَقَالَ ـ فِي حَدِيثِهِ ‏\"‏ بَيْنَا أَنَا أَمْشِي، إِذْ سَمِعْتُ صَوْتًا، مِنَ السَّمَاءِ، فَرَفَعْتُ بَصَرِي فَإِذَا الْمَلَكُ الَّذِي جَاءَنِي بِحِرَاءٍ جَالِسٌ عَلَى كُرْسِيٍّ بَيْنَ السَّمَاءِ وَالأَرْضِ، فَرُعِبْتُ مِنْهُ، فَرَجَعْتُ فَقُلْتُ زَمِّلُونِي‏.‏ فَأَنْزَلَ اللَّهُ تَعَالَى ‏‏{‏يَا أَيُّهَا الْمُدَّثِّرُ * قُمْ فَأَنْذِرْ‏}‏ إِلَى قَوْلِهِ ‏‏{‏وَالرُّجْزَ فَاهْجُرْ‏}‏ فَحَمِيَ الْوَحْىُ وَتَتَابَعَ ‏\"‏‏.‏ تَابَعَهُ عَبْدُ اللَّهِ بْنُ يُوسُفَ وَأَبُو صَالِحٍ‏.‏ وَتَابَعَهُ هِلاَلُ بْنُ رَدَّادٍ عَنِ الزُّهْرِيِّ‏.‏ وَقَالَ يُونُسُ وَمَعْمَرٌ ‏\"‏ بَوَادِرُهُ ‏\"‏‏.‏",
+                    "sanad": "قَالَ ابْنُ شِهَابٍ وَأَخْبَرَنِي أَبُو سَلَمَةَ بْنُ عَبْدِ الرَّحْمَنِ، أَنَّ جَابِرَ بْنَ عَبْدِ اللَّهِ الأَنْصَارِيَّ، قَالَ ـ وَهُوَ يُحَدِّثُ عَنْ فَتْرَةِ الْوَحْىِ، فَقَالَ ـ فِي حَدِيثِهِ ‏\"‏ بَيْنَا أَنَا أَمْشِي، إِذْ سَمِعْتُ صَوْتًا، مِنَ السَّمَاءِ، فَرَفَعْتُ بَصَرِي فَإِذَا الْمَلَكُ الَّذِي جَاءَنِي بِحِرَاءٍ جَالِسٌ عَلَى كُرْسِيٍّ بَيْنَ السَّمَاءِ وَالأَرْضِ، فَرُعِبْتُ مِنْهُ، فَرَجَعْتُ فَقُلْتُ زَمِّلُونِي‏.‏ فَأَنْزَلَ اللَّهُ تَعَالَى ‏‏{‏يَا أَيُّهَا الْمُدَّثِّرُ * قُمْ فَأَنْذِرْ‏}‏ إِلَى قَوْلِهِ ‏‏{‏وَالرُّجْزَ فَاهْجُرْ‏}‏ فَحَمِيَ الْوَحْىُ وَتَتَابَعَ ‏\"‏‏.‏ تَابَعَهُ عَبْدُ اللَّهِ بْنُ يُوسُفَ وَأَبُو صَالِحٍ‏.‏ وَتَابَعَهُ هِلاَلُ بْنُ رَدَّادٍ عَنِ الزُّهْرِيِّ‏.‏ وَقَالَ يُونُسُ وَمَعْمَرٌ ‏\"‏ بَوَادِرُهُ"
+                },
+                "en": {
+                    "body": "Narrated Jabir bin 'Abdullah Al-Ansari (while talking about the period of pause in revelation) reporting the speech of the Prophet:\"While I was walking, all of a sudden I heard a voice from the sky. I looked up and saw the same angel who had visited me at the cave of Hira' sitting on a chair between the sky and the earth. I got afraid of him and came back home and said, 'Wrap me (in blankets).' And then Allah revealed the following Holy Verses (of Quran):  'O you (i.e. Muhammad)! wrapped up in garments!' Arise and warn (the people against Allah's Punishment),... up to 'and desert the idols.' (74.1-5) After this the revelation started coming strongly, frequently and regularly.\"",
+                    "narrated_by": "Narrated Jabir bin 'Abdullah Al-Ansari (while talking about the period of pause in revelation) reporting the speech of the Prophet:"
+                }
+            },
+            "gradings": []
+        }
+    ]
+}

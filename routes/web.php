@@ -7,6 +7,7 @@ use App\Http\Controllers\Site\ContactController;
 use App\Http\Controllers\Site\FaqController;
 use App\Http\Controllers\Site\FavoriteController;
 use App\Http\Controllers\Site\GenealogyController;
+use App\Http\Controllers\Site\HadithController;
 use App\Http\Controllers\Site\HomeController;
 use App\Http\Controllers\Site\HomeModuleCardImageController;
 use App\Http\Controllers\Site\MediaController;
@@ -64,6 +65,17 @@ Route::get('/quran/page/{page}', [QuranController::class, 'page'])
 // routes above (reciters, live, juz, hizb, page).
 Route::get('/quran/{surahNumber}', [QuranController::class, 'surah'])
     ->whereNumber('surahNumber')->name('public.quran.surah.short');
+
+// Hadith
+// Static segments are declared BEFORE the dynamic canonical route so `search`
+// and `urn` can never be read as a collection code. Every dynamic segment is
+// constrained: `number` allows `1a`, which the source really uses.
+Route::get('/hadith/urn/{urn}', [HadithController::class, 'urn'])
+    ->whereNumber('urn')->name('public.hadith.urn');
+Route::get('/hadith/{collection}:{number}', [HadithController::class, 'show'])
+    ->where('collection', '[a-z0-9_]+')
+    ->where('number', '[A-Za-z0-9._-]+')
+    ->name('public.hadith.show');
 
 // XML sitemap (articles surface)
 Route::get('/sitemap.xml', [\App\Http\Controllers\Site\SitemapController::class, 'articles'])->name('sitemap.articles');

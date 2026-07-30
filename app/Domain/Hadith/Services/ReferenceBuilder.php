@@ -62,16 +62,19 @@ final class ReferenceBuilder
         );
     }
 
+    /**
+     * Deliberately NOT localised. These are scholarly citations that a reader
+     * copies into a paper or a message, and the spec requires them to match the
+     * source character-for-character. The labels beside them are translated;
+     * the citation itself is quoted, not translated.
+     */
     private function inBook(?string $bookNumber, ?int $inBookNumber): ?string
     {
         if ($bookNumber === null || $inBookNumber === null) {
             return null;
         }
 
-        return __('hadith.reference_in_book', [
-            'book' => $bookNumber,
-            'hadith' => (string) $inBookNumber,
-        ]);
+        return sprintf('Book %s, Hadith %d', $bookNumber, $inBookNumber);
     }
 
     /**
@@ -88,10 +91,6 @@ final class ReferenceBuilder
             return $this->inBook($bookNumber, $inBookNumber);
         }
 
-        return __('hadith.reference_translation', [
-            'volume' => $volumeNumber,
-            'book' => $bookNumber,
-            'hadith' => (string) $inBookNumber,
-        ]);
+        return sprintf('Vol. %s, Book %s, Hadith %d', $volumeNumber, $bookNumber, $inBookNumber);
     }
 }
