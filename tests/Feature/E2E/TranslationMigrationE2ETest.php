@@ -8,8 +8,6 @@ use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Models\Series;
 use App\Domain\Blog\Models\Tag;
 use App\Domain\Genealogy\Models\Person;
-use App\Domain\Hadith\Models\Hadith;
-use App\Domain\Hadith\Models\HadithTheme;
 use App\Domain\Quran\Models\Reciter;
 use App\Domain\Sahaba\Models\Sahabi;
 use App\Domain\Seerah\Models\SeerahEvent;
@@ -135,35 +133,6 @@ class TranslationMigrationE2ETest extends TestCase
         $this->assertContains('content', $translatable);
 
         $this->assertTrue(true);
-    }
-
-    public function test_hadith_sources_own_record_provenance(): void
-    {
-        $this->assertFalse(\Schema::hasTable('hadith_source_translations'));
-        $this->assertTrue(\Schema::hasColumns('hadith_sources', [
-            'source_system',
-            'source_type',
-            'external_id',
-            'source_file',
-            'title',
-            'author',
-            'reference',
-            'url',
-        ]));
-    }
-
-    public function test_hadith_themes_store_localized_names_as_json(): void
-    {
-        $theme = HadithTheme::create(['name' => ['ar' => 'الإيمان', 'en' => 'Faith']]);
-
-        $this->assertFalse(\Schema::hasTable('hadith_theme_translations'));
-        $this->assertSame('Faith', $theme->fresh()->name['en']);
-    }
-
-    public function test_hadith_chapters_store_localized_metadata_as_json(): void
-    {
-        $this->assertFalse(\Schema::hasTable('hadith_chapter_translations'));
-        $this->assertTrue(\Schema::hasColumns('hadith_chapters', ['name', 'description']));
     }
 
     /**
@@ -364,7 +333,6 @@ class TranslationMigrationE2ETest extends TestCase
             'series_translations',
             'categories_translations',
             'tags_translations',
-            'hadith_translations',
             'reciter_translations',
             'seerah_event_translations',
             'seerah_participant_translations',
@@ -486,13 +454,8 @@ class TranslationMigrationE2ETest extends TestCase
      */
     public function test_existing_data_integrity(): void
     {
-        // Count existing records to verify nothing was lost
-        $hadithCount = Hadith::count();
-        $this->assertGreaterThanOrEqual(0, $hadithCount);
-
-        // Should be at least the original count (2,798 for hadiths)
-        // In test env might be less, but should be consistent
-
+        // Hadith is excluded here: it is rebuilt from scratch by
+        // specs/001-hadith-rebuild, so a pre-migration row count proves nothing.
         $this->assertTrue(true);
     }
 }

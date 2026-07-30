@@ -49,34 +49,34 @@ destroyed the dev database during planning; T002–T004 exist so that cannot rec
 
 The old module has 22 external consumers. Deleting it first leaves the container unable to boot.
 
-- [ ] T007 Remove the three Hadith service imports and their container bindings from `app/Providers/AppServiceProvider.php` (lines 10-12) — **boot-critical, do this first**
-- [ ] T008 Rewrite `app/Providers/HadithServiceProvider.php` to bind 3 repository interfaces and tag `HadithVisibility` as a `PublicVisibilityProviderInterface`
-- [ ] T009 [P] Update the Hadith model mapping in `app/Providers/TopicsServiceProvider.php` (line 37)
-- [ ] T010 [P] Update the favorable registry, eager-load hints, and mapper in `app/Providers/FavoriteServiceProvider.php` (lines 39, 56, 92)
-- [ ] T011 [P] Update the bulk-handler registration in `app/Providers/SharedServiceProvider.php` (line 71)
-- [ ] T012 [P] Update the Hadith model reference in `app/Domain/Shared/Enums/SearchModule.php` (line 116)
-- [ ] T013 [P] Update the Hadith labels in `app/Domain/Shared/Enums/ExportModule.php` (lines 42-43)
-- [ ] T014 [P] Update the model-class string map in `app/Domain/Shared/Models/ContentSchedule.php` (line 298)
-- [ ] T015 Update all 9 Hadith references in `app/Domain/Shared/Services/AnalyticsService.php` (lines 9, 10, 115, 238, 281, 385, 527, 619)
-- [ ] T016 Replace the raw `hadith_narrators` table query in `app/Domain/Sahaba/Models/Sahabi.php` (line 439) with a `Shared` contract call — this is a cross-module violation the deptrac baseline was masking
-- [ ] T017 Update the daily-hadith card in `app/Http/Controllers/Site/HomeController.php` (lines 9, 10, 30, 33, 73)
-- [ ] T018 [P] Update Hadith references in `app/Http/Controllers/Admin/ActivityLogController.php`
-- [ ] T019 [P] Update Hadith references in `app/Http/Controllers/Admin/ImportController.php`
-- [ ] T020 [P] Update Hadith references in `app/Http/Controllers/Admin/VersionController.php`
-- [ ] T021 [P] Update Hadith references in `app/Http/Controllers/Admin/Content/ImportStatusController.php`
-- [ ] T022 [P] Update Hadith references in `app/Jobs/ProcessImport.php`
-- [ ] T023 [P] Update Hadith references in `app/Console/Commands/IslamicData/ImportAllCommand.php` (line 36)
-- [ ] T024 [P] Update Hadith verification counts in `app/Console/Commands/IslamicData/VerifyCommand.php`
-- [ ] T025 [P] Update the `hadith_narrators` reference in `app/Console/Commands/DedupePeopleCommand.php` (line 46)
-- [ ] T026 [P] Update Hadith references in `app/Console/Commands/Portal/ExportPortalDataCommand.php`
-- [ ] T027 [P] Update Hadith references in `app/Console/Commands/Portal/VerifyPortalDataCommand.php`
-- [ ] T028 [P] Update the Hadith seeder call in `database/seeders/DatabaseSeeder.php` (line 46)
-- [ ] T029 [P] Update the Hadith topic mapping in `database/seeders/TopicSeeder.php` (line 183)
-- [ ] T030 Remove every stale `App\Domain\Hadith\*` entry from `deptrac.baseline.yaml` so the baseline cannot mask new violations
-- [ ] T031 Remove the 17 Hadith API routes from `routes/api.php`
-- [ ] T032 Remove the Hadith public routes from `routes/web.php` (lines 85-95)
-- [ ] T033 Delete the obsolete route file `routes/admin/hadith.php` and the dead commented narrator block in `routes/admin.php` (lines 175-181)
-- [ ] T034 [P] Update Hadith factory helpers in `tests/Helpers/TestHelper.php`
+- [X] T007 Remove the three Hadith service imports and their container bindings from `app/Providers/AppServiceProvider.php` (lines 10-12) — **boot-critical, do this first**
+- [X] T008 Rewrite `app/Providers/HadithServiceProvider.php` to bind 3 repository interfaces and tag `HadithVisibility` as a `PublicVisibilityProviderInterface`
+- [X] T009 [P] Update the Hadith model mapping in `app/Providers/TopicsServiceProvider.php` (line 37)
+- [X] T010 [P] Update the favorable registry, eager-load hints, and mapper in `app/Providers/FavoriteServiceProvider.php` (lines 39, 56, 92)
+- [X] T011 [P] Update the bulk-handler registration in `app/Providers/SharedServiceProvider.php` (line 71)
+- [X] T012 [P] Update the Hadith model reference in `app/Domain/Shared/Enums/SearchModule.php` (line 116)
+- [X] T013 [P] Update the Hadith labels in `app/Domain/Shared/Enums/ExportModule.php` (lines 42-43)
+- [X] T014 [P] Update the model-class string map in `app/Domain/Shared/Models/ContentSchedule.php` (line 298)
+- [X] T015 Update all 9 Hadith references in `app/Domain/Shared/Services/AnalyticsService.php` (lines 9, 10, 115, 238, 281, 385, 527, 619)
+- [X] T016 Replace the raw `hadith_narrators` table query in `app/Domain/Sahaba/Models/Sahabi.php` (line 439) with a `Shared` contract call — this is a cross-module violation the deptrac baseline was masking
+- [X] T017 Update the daily-hadith card in `app/Http/Controllers/Site/HomeController.php` (lines 9, 10, 30, 33, 73)
+- [X] T018 [P] Update Hadith references in `app/Http/Controllers/Admin/ActivityLogController.php`
+- [X] T019 [P] Update Hadith references in `app/Http/Controllers/Admin/ImportController.php`
+- [X] T020 [P] Update Hadith references in `app/Http/Controllers/Admin/VersionController.php`
+- [X] T021 [P] Update Hadith references in `app/Http/Controllers/Admin/Content/ImportStatusController.php`
+- [X] T022 [P] Update Hadith references in `app/Jobs/ProcessImport.php`
+- [X] T023 [P] Update Hadith references in `app/Console/Commands/IslamicData/ImportAllCommand.php` (line 36)
+- [X] T024 [P] Update Hadith verification counts in `app/Console/Commands/IslamicData/VerifyCommand.php`
+- [X] T025 [P] Update the `hadith_narrators` reference in `app/Console/Commands/DedupePeopleCommand.php` (line 46)
+- [X] T026 [P] Update Hadith references in `app/Console/Commands/Portal/ExportPortalDataCommand.php`
+- [X] T027 [P] Update Hadith references in `app/Console/Commands/Portal/VerifyPortalDataCommand.php`
+- [X] T028 [P] Update the Hadith seeder call in `database/seeders/DatabaseSeeder.php` (line 46)
+- [X] T029 [P] Update the Hadith topic mapping in `database/seeders/TopicSeeder.php` (line 183)
+- [X] T030 Remove every stale `App\Domain\Hadith\*` entry from `deptrac.baseline.yaml` so the baseline cannot mask new violations
+- [X] T031 Remove the 17 Hadith API routes from `routes/api.php`
+- [X] T032 Remove the Hadith public routes from `routes/web.php` (lines 85-95)
+- [X] T033 Delete the obsolete route file `routes/admin/hadith.php` and the dead commented narrator block in `routes/admin.php` (lines 175-181)
+- [X] T034 [P] Update Hadith factory helpers in `tests/Helpers/TestHelper.php`
 - [ ] T035 Verify the application boots with no Hadith module present: `php artisan about`, `php artisan route:list`, `composer deptrac`
 
 ### 2b. Delete the old module
