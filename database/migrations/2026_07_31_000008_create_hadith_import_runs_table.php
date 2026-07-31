@@ -17,6 +17,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('hadith_import_runs')) {
+            return;
+        }
+
         Schema::create('hadith_import_runs', function (Blueprint $table): void {
             $table->id();
             $table->string('collection_code', 50);

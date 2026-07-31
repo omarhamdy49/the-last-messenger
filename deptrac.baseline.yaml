@@ -26,10 +26,8 @@ deptrac:
     App\Domain\Blog\Services\SlugGeneratorService:
       - App\Models\ArticleLocale
     App\Domain\Sahaba\Models\Sahabi:
-      - App\Models\Article
       - App\Models\User
     App\Domain\Genealogy\Models\Person:
-      - App\Models\Article
       - App\Models\User
     App\Domain\Seerah\Models\SeerahEvent:
       - App\Models\Article
@@ -110,8 +108,6 @@ deptrac:
     App\Http\Controllers\Site\ArticleController:
       - App\Models\Article
       - App\Models\ArticleLocale
-    App\Http\Controllers\Site\AuthController:
-      - App\Models\User
     App\Http\Controllers\Site\PasswordResetController:
       - App\Models\User
     App\Http\Controllers\Site\SocialAuthController:

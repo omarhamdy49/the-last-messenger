@@ -28,6 +28,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('hadith_gradings')) {
+            return;
+        }
+
         Schema::create('hadith_gradings', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('hadith_id')->constrained('hadith_hadiths')->cascadeOnDelete();

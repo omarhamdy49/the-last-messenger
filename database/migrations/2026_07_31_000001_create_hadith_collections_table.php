@@ -17,6 +17,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('hadith_collections')) {
+            return;
+        }
+
         Schema::create('hadith_collections', function (Blueprint $table): void {
             $table->id();
             // Also the URL and API path segment, and the sunnah.com path segment.

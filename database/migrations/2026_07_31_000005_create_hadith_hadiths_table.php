@@ -22,6 +22,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('hadith_hadiths')) {
+            return;
+        }
+
         Schema::create('hadith_hadiths', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('collection_id')->constrained('hadith_collections')->restrictOnDelete();

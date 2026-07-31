@@ -70,14 +70,17 @@ jobs:
       # and ban the runner.
       - name: 📡 Upload artifact
         run: |
-          scp -o StrictHostKeyChecking=no /tmp/tlm-release.zip \
-            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_SERVER_IP }}:/tmp/tlm-release.zip
+          scp -o StrictHostKeyChecking=no \
+            /tmp/tlm-release.zip deploy/deploy/deploy.sh \
+            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_SERVER_IP }}:/tmp/
 
       - name: 🚀 Deploy
         run: |
           ssh -o StrictHostKeyChecking=no \
             ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_SERVER_IP }} \
-            "${{ secrets.DEPLOY_PATH || '/var/www/rasoolallah' }}/bin/deploy.sh /tmp/tlm-release.zip ${{ github.sha }}"
+            "install -m 0755 /tmp/deploy.sh ${{ secrets.DEPLOY_PATH || '/var/www/rasoolallah' }}/bin/deploy.sh && \
+             rm -f /tmp/deploy.sh && \
+             ${{ secrets.DEPLOY_PATH || '/var/www/rasoolallah' }}/bin/deploy.sh /tmp/tlm-release.zip ${{ github.sha }}"
 
       - name: 🧹 Cleanup local artifact
         if: always()
