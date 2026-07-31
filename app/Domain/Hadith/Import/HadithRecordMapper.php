@@ -64,7 +64,7 @@ final class HadithRecordMapper
      *     chapter_number: ?string
      * }
      */
-    public function mapRecord(array $record): array
+    public function mapRecord(array $record, string $bookNumber = ''): array
     {
         $references = $this->parseReferences($record['reference_rows'] ?? []);
 
@@ -77,7 +77,7 @@ final class HadithRecordMapper
                 ? trim($n, '() ')
                 : null,
             'hadith' => [
-                'hadith_number' => $this->text($record['hadith_number'] ?? null) ?? '',
+                'hadith_number' => $this->hadithNumber($record, $bookNumber, $references['in_book_number']),
                 'in_book_number' => $references['in_book_number'],
                 'volume_number' => $references['volume_number'],
                 // 0 is sunnah.com's "absent" marker, not a real permalink.
@@ -87,6 +87,39 @@ final class HadithRecordMapper
             'texts' => $this->mapTexts($record['texts'] ?? [], $record['source_url'] ?? null),
             'gradings' => $this->mapGradings($record['gradings'] ?? []),
         ];
+    }
+
+    /**
+     * Malik and Darimi have no collection-wide hadith number at all: sunnah.com
+     * addresses them as /malik/1/1 and labels the reference "Arabic/English book
+     * reference — Book 1, Hadith 1". Bulugh, Mishkat, Adab, Ahmad and Muslim
+     * carry a mix.
+     *
+     * For those records the number is composed from the book and the in-book
+     * number ("1.1"), which is unique within the collection, stable across
+     * re-imports, and readable in a URL. Without it 7,324 records had no number
+     * and were skipped outright.
+     *
+     * @param  array<string, mixed>  $record
+     */
+    private function hadithNumber(array $record, string $bookNumber, ?int $inBookNumber): string
+    {
+        $flat = $this->text($record['hadith_number'] ?? null);
+
+        if ($flat !== null) {
+            return $flat;
+        }
+
+        if ($bookNumber !== '' && $inBookNumber !== null) {
+            return $bookNumber.'.'.$inBookNumber;
+        }
+
+        // Last resort. The urn is unique across the whole of sunnah.com, so this
+        // can never collide, and a record reaching here would otherwise be
+        // dropped silently — which is how 7,324 of them disappeared before.
+        $urn = $this->positiveInt($record['sunnah_urn'] ?? null);
+
+        return $urn !== null ? 'urn'.$urn : '';
     }
 
     /**
@@ -202,7 +235,9 @@ final class HadithRecordMapper
                 continue;
             }
 
-            if ($inBook === null && preg_match('/Hadith\s+(\d+)/i', $value, $m) === 1) {
+            // "Narration" is not a synonym anywhere else, but Sahih Muslim's
+            // introduction labels its entries "Introduction, Narration 7".
+            if ($inBook === null && preg_match('/(?:Hadith|Narration)\s+(\d+)/i', $value, $m) === 1) {
                 $inBook = (int) $m[1];
             }
 

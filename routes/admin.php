@@ -9,6 +9,9 @@ use App\Http\Controllers\Admin\AuditController;
 use App\Http\Controllers\Admin\BulkOperationController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ExportController;
+use App\Http\Controllers\Admin\Hadith\HadithBookController;
+use App\Http\Controllers\Admin\Hadith\HadithChapterController;
+use App\Http\Controllers\Admin\Hadith\HadithController;
 use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\LanguageSettingsController;
 use App\Http\Controllers\Admin\MediaController;
@@ -109,12 +112,17 @@ Route::prefix('su/portal/v1/admin')
             Route::post('/cache/clear', [DashboardController::class, 'clearCache'])->name('cache.clear');
         });
 
-        Route::get('hadith', fn () => view('admin.coming-soon', ['module' => __('admin.hadiths')]))
-            ->name('admin.hadith.index');
-        Route::get('hadith-books', fn () => view('admin.coming-soon', ['module' => __('admin.hadith_books')]))
-            ->name('admin.hadith-books.index');
-        Route::get('hadith-chapters', fn () => view('admin.coming-soon', ['module' => __('hadith.chapters')]))
-            ->name('admin.hadith-chapters.index');
+        Route::get('hadith', [HadithController::class, 'index'])->name('admin.hadith.index');
+        Route::get('hadith/{hadith}/edit', [HadithController::class, 'edit'])->name('admin.hadith.edit');
+        Route::put('hadith/{hadith}', [HadithController::class, 'update'])->name('admin.hadith.update');
+
+        Route::get('hadith-books', [HadithBookController::class, 'index'])->name('admin.hadith-books.index');
+        Route::get('hadith-books/{book}/edit', [HadithBookController::class, 'edit'])->name('admin.hadith-books.edit');
+        Route::put('hadith-books/{book}', [HadithBookController::class, 'update'])->name('admin.hadith-books.update');
+
+        Route::get('hadith-chapters', [HadithChapterController::class, 'index'])->name('admin.hadith-chapters.index');
+        Route::get('hadith-chapters/{chapter}/edit', [HadithChapterController::class, 'edit'])->name('admin.hadith-chapters.edit');
+        Route::put('hadith-chapters/{chapter}', [HadithChapterController::class, 'update'])->name('admin.hadith-chapters.update');
 
         // Analytics Routes
         Route::prefix('analytics')->name('admin.analytics.')->group(function (): void {

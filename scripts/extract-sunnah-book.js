@@ -105,7 +105,9 @@ async function extractSunnahBook(collection, bookNumber) {
     }
 
     records.push({
-      hadith_number: share.match(/'\/[^:]+:([^']+)'/)?.[1] ?? null,
+      // Two forms exist: /bukhari:1 (collection-wide) and /malik/1/1
+      // (book-scoped, for collections that have no flat number at all).
+      hadith_number: share.match(/'\/[^:'\/]+:([^']+)'/)?.[1] ?? null,
       sunnah_urn: urns ? Number(urns[1]) : null,
       sunnah_urn_en: urns ? Number(urns[2]) : null,
       // POSITION, not number. A chapter number does not identify a chapter:

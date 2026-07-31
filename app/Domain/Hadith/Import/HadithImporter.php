@@ -73,8 +73,8 @@ final class HadithImporter
             $book = $this->upsertBook($collection, $payload);
             $chapters = $this->upsertChapters($book, $payload['chapters']);
 
-            foreach ($payload['records'] as $record) {
-                $this->upsertRecord($collection, $book, $chapters, $record, $reset);
+            foreach ($payload['records'] as $position => $record) {
+                $this->upsertRecord($collection, $book, $chapters, $record, $reset, $position + 1);
             }
 
             return $this->counts;
@@ -105,6 +105,11 @@ final class HadithImporter
             'title' => $mapped['title'] !== [] ? $mapped['title'] : ($book->getTranslations('title') ?: ['ar' => $mapped['book_number']]),
             'sort_order' => $book->sort_order ?: $this->sortOrderFor($mapped['book_number']),
         ]);
+
+        // The three forties expose no books at all, yet book_id is NOT NULL.
+        // Their extraction declares a synthetic placeholder, which the public
+        // listings and counts must never surface.
+        $book->is_synthetic = (bool) ($payload['source']['synthetic_book'] ?? false);
 
         // A book nobody has published stays unpublished; publication is editorial.
         $book->is_published = $book->exists ? $book->is_published : true;
@@ -166,8 +171,9 @@ final class HadithImporter
         array $chapters,
         array $record,
         bool $reset,
+        int $sourcePosition,
     ): void {
-        $mapped = $this->mapper->mapRecord($record);
+        $mapped = $this->mapper->mapRecord($record, (string) $book->book_number);
         $number = $mapped['hadith']['hadith_number'];
 
         if ($number === '') {
@@ -182,15 +188,19 @@ final class HadithImporter
         // number silently discarded the second of every pair.
         $urn = $mapped['hadith']['sunnah_urn'] ?? null;
 
+        // Without a urn, the ordinal on the source page is the only thing that
+        // separates two records the source gives the same number. Malik book 11
+        // has exactly that: five records, four distinct numbers.
         $hadith = $urn !== null
             ? (Hadith::query()->where('sunnah_urn', $urn)->first() ?? new Hadith)
             : Hadith::query()->firstOrNew([
-                'collection_id' => $collection->id,
-                'hadith_number' => $number,
+                'book_id' => $book->id,
+                'source_position' => $sourcePosition,
             ]);
 
         $hadith->collection_id = $collection->id;
         $hadith->hadith_number = $number;
+        $hadith->source_position = $sourcePosition;
 
         $attributes = $mapped['hadith'];
         unset($attributes['hadith_number']);
