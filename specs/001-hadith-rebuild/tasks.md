@@ -327,10 +327,10 @@ itemised with a reason.
 
 ### Implementation for User Story 5
 
-- [ ] T171 [US5] Create the synthetic book for `nawawi40` in `database/seeders/Hadith/SyntheticBookSeeder.php` with `is_synthetic = true` and `book_number = '0'`
-- [ ] T172 [US5] Add extraction fixtures for each layout variant to `tests/Fixtures/Hadith/layouts/` — standard, single-column Ahmad, the three forties, missing-English, chapterless, and combined numbers such as `1a`
-- [ ] T173 [US5] Extract the remaining 15 collections with the Chrome extension into `storage/app/hadith_source/`, throttled, with a manifest per book
-- [ ] T174 [US5] Import all remaining collections from `storage/app/hadith_source/` and record each run in the `hadith_import_runs` table
+- [X] T171 [US5] Create the synthetic book for `nawawi40` in `database/seeders/Hadith/SyntheticBookSeeder.php` with `is_synthetic = true` and `book_number = '0'`
+- [X] T172 [US5] Add extraction fixtures for each layout variant to `tests/Fixtures/Hadith/layouts/` — standard, single-column Ahmad, the three forties, missing-English, chapterless, and combined numbers such as `1a`
+- [X] T173 [US5] Extract the remaining 15 collections with the Chrome extension into `storage/app/hadith_source/`, throttled, with a manifest per book
+- [X] T174 [US5] Import all remaining collections from `storage/app/hadith_source/` and record each run in the `hadith_import_runs` table
 - [ ] T175 [US5] Create `app/Console/Commands/HadithReconcileCommand.php` producing a per-collection expected-versus-actual table with an itemised skip list
 - [ ] T176 [US5] Create `app/Console/Commands/HadithDuplicateReportCommand.php` computing content hashes in-query and reporting duplicate groups without modifying data
 - [ ] T177 [US5] Cross-check 20 sampled records against `prophet-data-generator/hadith/production/` and record itemised discrepancies in `specs/001-hadith-rebuild/quickstart.md`
