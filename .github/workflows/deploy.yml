@@ -1,25 +1,73 @@
-name: Deploy (Production)
+# One workflow, two jobs. This file used to be Deploy-only, with architecture
+# checks in a separate deptrac.yml that ran in PARALLEL on the same push — so a
+# deploy could ship code that failed the architecture gate, and a push showed up
+# as one or two runs depending on whether it touched `app/**`. The gate is now a
+# job the deploy `needs:`, so main can only deploy what passes.
+name: CI & Deploy
 
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-production
-  cancel-in-progress: false
+  # Production deploys stay serialised (never cancel a half-finished deploy);
+  # superseded PR checks are safe to drop.
+  group: ci-deploy-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  deploy:
-    name: 🚀 Build & Deploy
+  # ── Gate: layer + module boundaries (the documented `composer deptrac`) ──────
+  architecture:
+    name: 🧭 Architecture boundaries
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
+      - name: 🐘 Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          tools: composer:v2
+          coverage: none
+
+      - name: 🗂️ Locate composer cache
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: ♻️ Cache composer downloads
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: 📦 Install dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      # Matches the documented local gate (`composer deptrac`). We do NOT pass
+      # --fail-on-uncovered: the codebase intentionally leaves many classes
+      # unlayered (~8k uncovered tokens), so that flag would always fail. This
+      # still fails on real layer-boundary violations, and on baseline entries
+      # that have gone stale.
+      - name: 🧭 Run deptrac
+        run: composer deptrac
+
+  # ── Deploy: only after the gate passes, and never from a pull request ────────
+  deploy:
+    name: 🚀 Build & Deploy
+    needs: architecture
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v5
 
       # --- Build front-end assets on the runner (Vite). ---
       - name: 🔧 Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
