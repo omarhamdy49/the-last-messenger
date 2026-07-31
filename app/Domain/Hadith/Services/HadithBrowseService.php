@@ -85,6 +85,26 @@ final class HadithBrowseService
         return ['paginator' => $paginator, 'groups' => $groups];
     }
 
+    /**
+     * A book's chapters in sort order. Empty for a collection with
+     * has_chapters = false, which is a 200 with no rows rather than a 404.
+     *
+     * @return Collection<int, \App\Domain\Hadith\Models\HadithChapter>
+     */
+    public function chaptersFor(HadithBook $book): Collection
+    {
+        return $this->collections->chaptersFor($book->id);
+    }
+
+    /**
+     * A book's hadiths as a plain paginator, for the API, which renders each
+     * record itself rather than grouping them under chapter headings.
+     */
+    public function paginateBookHadiths(HadithBook $book, int $perPage): LengthAwarePaginator
+    {
+        return $this->hadiths->paginateForBook($book->id, $perPage);
+    }
+
     public function perPage(): int
     {
         return self::HADITHS_PER_PAGE;

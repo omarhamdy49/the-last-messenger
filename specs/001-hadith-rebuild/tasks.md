@@ -249,21 +249,21 @@ diacritics returns identical result sets.
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T131 [P] [US3] Write `tests/Feature/Hadith/Search/ArabicSearchTest.php` asserting a two-character Arabic term returns results and that diacritised and undiacritised queries return identical sets
-- [ ] T132 [P] [US3] Write `tests/Feature/Hadith/Search/SearchFilterTest.php` asserting collection, grade, and locale filters narrow results correctly
-- [ ] T133 [P] [US3] Write `tests/Feature/Hadith/Search/SearchPageSizeCapTest.php` asserting an oversized `per_page` clamps to 100
-- [ ] T134 [P] [US3] Write `tests/Feature/Web/Hadith/SearchEmptyStateTest.php` asserting a no-match search renders a meaningful empty state
+- [X] T131 [P] [US3] Write `tests/Feature/Hadith/Search/ArabicSearchTest.php` asserting a two-character Arabic term returns results and that diacritised and undiacritised queries return identical sets
+- [X] T132 [P] [US3] Write `tests/Feature/Hadith/Search/SearchFilterTest.php` asserting collection, grade, and locale filters narrow results correctly
+- [X] T133 [P] [US3] Write `tests/Feature/Hadith/Search/SearchPageSizeCapTest.php` asserting an oversized `per_page` clamps to 100
+- [X] T134 [P] [US3] Write `tests/Feature/Web/Hadith/SearchEmptyStateTest.php` asserting a no-match search renders a meaningful empty state
 
 ### Implementation for User Story 3
 
-- [ ] T135 [US3] Create `app/Domain/Hadith/Services/HadithSearchService.php` matching `MATCH(search_body) AGAINST (… IN BOOLEAN MODE)`, normalising the query through `ArabicTextNormalizer` before matching
-- [ ] T136 [US3] Add `search()` to `app/Domain/Hadith/Repositories/HadithRepository.php` with explicit column selection and a capped page size
-- [ ] T137 [US3] Add a `search()` action to `app/Http/Controllers/Site/HadithController.php` and apply `throttle:search` to the route in `routes/web.php`
-- [ ] T138 [US3] Create `app/Http/Requests/Site/HadithSearchRequest.php` validating `q` at 2–200 characters and the optional filters
-- [ ] T139 [US3] Create `resources/views/public/hadith/search.blade.php` ported from `the-last-messenger-ui/hadith-explorer.html`, reusing `components/site/filter-pills.blade.php`
-- [ ] T140 [P] [US3] Add the search translation keys to all five files `resources/lang/{ar,en,fr,tr,ur}/hadith.php`
-- [ ] T141 [US3] Run `EXPLAIN` on the search query against the imported corpus and record the plan in `specs/001-hadith-rebuild/quickstart.md`, confirming FULLTEXT index use with no full scan
-- [ ] T142 [US3] Run `npm run build` and verify the search page in Chrome across both locales, both themes, and three viewports
+- [X] T135 [US3] Create `app/Domain/Hadith/Services/HadithSearchService.php` matching `MATCH(search_body) AGAINST (… IN BOOLEAN MODE)`, normalising the query through `ArabicTextNormalizer` before matching
+- [X] T136 [US3] Add `search()` to `app/Domain/Hadith/Repositories/HadithRepository.php` with explicit column selection and a capped page size
+- [X] T137 [US3] Add a `search()` action to `app/Http/Controllers/Site/HadithController.php` and apply `throttle:search` to the route in `routes/web.php`
+- [X] T138 [US3] Create `app/Http/Requests/Site/HadithSearchRequest.php` validating `q` at 2–200 characters and the optional filters
+- [X] T139 [US3] Create `resources/views/public/hadith/search.blade.php` ported from `the-last-messenger-ui/hadith-explorer.html`, reusing `components/site/filter-pills.blade.php`
+- [X] T140 [P] [US3] Add the search translation keys to all five files `resources/lang/{ar,en,fr,tr,ur}/hadith.php`
+- [X] T141 [US3] Run `EXPLAIN` on the search query against the imported corpus and record the plan in `specs/001-hadith-rebuild/quickstart.md`, confirming FULLTEXT index use with no full scan
+- [X] T142 [US3] Run `npm run build` and verify the search page in Chrome across both locales, both themes, and three viewports
 
 **Checkpoint**: Arabic and English search work, with the token-size trap proven closed.
 
@@ -349,20 +349,20 @@ documented codes.
 
 ### Tests for User Story 6 ⚠️
 
-- [ ] T179 [P] [US6] Write `tests/Feature/Api/Hadith/CollectionEndpointsTest.php` covering 200 and 404 for the three collection endpoints
-- [ ] T180 [P] [US6] Write `tests/Feature/Api/Hadith/BookChapterEndpointsTest.php` covering 200 and 404 for the book and chapter endpoints
-- [ ] T181 [P] [US6] Write `tests/Feature/Api/Hadith/HadithEndpointsTest.php` covering the canonical lookup, the random endpoint, and permalink lookup including a clean 404 for a urn-less hadith
-- [ ] T182 [P] [US6] Write `tests/Feature/Api/Hadith/SearchEndpointTest.php` covering 200, 422, and 429
-- [ ] T183 [P] [US6] Write `tests/Feature/Api/Hadith/ApiQueryCountTest.php` asserting constant query counts at 20 and 100 per page
+- [X] T179 [P] [US6] Write `tests/Feature/Api/Hadith/CollectionEndpointsTest.php` covering 200 and 404 for the three collection endpoints
+- [X] T180 [P] [US6] Write `tests/Feature/Api/Hadith/BookChapterEndpointsTest.php` covering 200 and 404 for the book and chapter endpoints
+- [X] T181 [P] [US6] Write `tests/Feature/Api/Hadith/HadithEndpointsTest.php` covering the canonical lookup, the random endpoint, and permalink lookup including a clean 404 for a urn-less hadith
+- [X] T182 [P] [US6] Write `tests/Feature/Api/Hadith/SearchEndpointTest.php` covering 200, 422, and 429
+- [X] T183 [P] [US6] Write `tests/Feature/Api/Hadith/ApiQueryCountTest.php` asserting constant query counts at 20 and 100 per page
 
 ### Implementation for User Story 6
 
-- [ ] T184 [US6] Create `app/Http/Controllers/Api/HadithController.php` with the ten actions from `contracts/hadith-api.md` §1–§10
-- [ ] T185 [P] [US6] Create `app/Http/Resources/Hadith/HadithResource.php` returning the documented shape with only populated locales
-- [ ] T186 [P] [US6] Create `app/Http/Resources/Hadith/HadithCollectionResource.php`, `HadithBookResource.php`, and `HadithChapterResource.php`
-- [ ] T187 [US6] Register the ten routes under `/api/v1/hadith` in `routes/api.php`, reusing the single `throttle:search` limiter and `HadithSearchRequest` already defined for the web search surface in T137–T138 rather than declaring new ones
-- [ ] T188 [US6] Implement the random endpoint in `app/Domain/Hadith/Repositories/HadithRepository.php` using the `(is_published, id)` index rather than `ORDER BY RAND()`
-- [ ] T189 [US6] Document the API in `docs/HADITH-API-DOCUMENTATION.md`, stating explicitly that it is not drop-in compatible with sunnah.com's client contract
+- [X] T184 [US6] Create `app/Http/Controllers/Api/HadithController.php` with the ten actions from `contracts/hadith-api.md` §1–§10
+- [X] T185 [P] [US6] Create `app/Http/Resources/Hadith/HadithResource.php` returning the documented shape with only populated locales
+- [X] T186 [P] [US6] Create `app/Http/Resources/Hadith/HadithCollectionResource.php`, `HadithBookResource.php`, and `HadithChapterResource.php`
+- [X] T187 [US6] Register the ten routes under `/api/v1/hadith` in `routes/api.php`, reusing the single `throttle:search` limiter and `HadithSearchRequest` already defined for the web search surface in T137–T138 rather than declaring new ones
+- [X] T188 [US6] Implement the random endpoint in `app/Domain/Hadith/Repositories/HadithRepository.php` using the `(is_published, id)` index rather than `ORDER BY RAND()`
+- [X] T189 [US6] Document the API in `docs/HADITH-API-DOCUMENTATION.md`, stating explicitly that it is not drop-in compatible with sunnah.com's client contract
 
 ---
 

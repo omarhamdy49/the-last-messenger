@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\ArticleController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\FilterController;
+use App\Http\Controllers\Api\HadithController;
 use App\Http\Controllers\Api\InteractionController;
 use App\Http\Controllers\Api\MediaProgramController;
 use App\Http\Controllers\Api\QuranController;
@@ -54,6 +55,37 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
         Route::get('/recent', [ArticleController::class, 'recent'])->name('articles.recent');
         Route::get('/search', [ArticleController::class, 'search'])->name('articles.search');
         Route::get('/{slug}', [ArticleController::class, 'show'])->name('articles.show');
+    });
+
+    /*
+     * Hadith — ten read-only endpoints (contracts/hadith-api.md).
+     *
+     * Static segments are declared before the dynamic ones so `random` can never
+     * be read as a urn and `search` never as a collection code. Search reuses the
+     * SAME `throttle:search` limiter and HadithSearchRequest as the web surface
+     * rather than declaring its own.
+     */
+    Route::prefix('hadith')->name('hadith.')->group(function (): void {
+        Route::get('/search', [HadithController::class, 'search'])
+            ->middleware('throttle:search')->name('search');
+
+        Route::get('/hadiths/random', [HadithController::class, 'random'])->name('random');
+        Route::get('/hadiths/{urn}', [HadithController::class, 'urn'])
+            ->whereNumber('urn')->name('urn');
+
+        Route::get('/collections', [HadithController::class, 'collections'])->name('collections');
+        Route::get('/collections/{code}', [HadithController::class, 'collection'])
+            ->where('code', '[a-z0-9_]+')->name('collections.show');
+        Route::get('/collections/{code}/books', [HadithController::class, 'books'])
+            ->where('code', '[a-z0-9_]+')->name('collections.books');
+        Route::get('/collections/{code}/books/{bookNumber}', [HadithController::class, 'book'])
+            ->where(['code' => '[a-z0-9_]+', 'bookNumber' => '[A-Za-z0-9_-]+'])->name('books.show');
+        Route::get('/collections/{code}/books/{bookNumber}/chapters', [HadithController::class, 'chapters'])
+            ->where(['code' => '[a-z0-9_]+', 'bookNumber' => '[A-Za-z0-9_-]+'])->name('books.chapters');
+        Route::get('/collections/{code}/books/{bookNumber}/hadiths', [HadithController::class, 'bookHadiths'])
+            ->where(['code' => '[a-z0-9_]+', 'bookNumber' => '[A-Za-z0-9_-]+'])->name('books.hadiths');
+        Route::get('/collections/{code}/hadiths/{hadithNumber}', [HadithController::class, 'hadith'])
+            ->where(['code' => '[a-z0-9_]+', 'hadithNumber' => '[A-Za-z0-9._-]+'])->name('collections.hadith');
     });
 
     // Media/Programs routes — full domain implementation

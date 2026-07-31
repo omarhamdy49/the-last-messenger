@@ -6,7 +6,9 @@ namespace App\Http\Requests\Site;
 
 use App\Domain\Hadith\DTOs\SearchCriteria;
 use App\Domain\Hadith\Enums\HadithGrade;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
 
 /**
@@ -46,6 +48,29 @@ class HadithSearchRequest extends FormRequest
             'q.min' => __('hadith.search_q_min'),
             'q.max' => __('hadith.search_q_max'),
         ];
+    }
+
+    /**
+     * API callers get the project's error envelope and a 422, whether or not
+     * they sent an Accept header. Laravel's default is a redirect for anything
+     * that does not explicitly ask for JSON, which is meaningless to an API
+     * client and contradicts contracts/hadith-api.md.
+     */
+    protected function failedValidation(Validator $validator): void
+    {
+        if (! $this->is('api/*')) {
+            parent::failedValidation($validator);
+
+            return;
+        }
+
+        throw new HttpResponseException(response()->json([
+            'success' => false,
+            // Not localised: the field-level messages under `errors` carry the
+            // reader-facing text, and this line is for the developer.
+            'message' => 'Validation failed',
+            'errors' => $validator->errors()->toArray(),
+        ], 422));
     }
 
     public function criteria(): SearchCriteria

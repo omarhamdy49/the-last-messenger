@@ -6,6 +6,7 @@ namespace App\Domain\Hadith\Services;
 
 use App\Domain\Hadith\DTOs\HadithDetail;
 use App\Domain\Hadith\Enums\HadithGrade;
+use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Repositories\HadithRepositoryInterface;
 
 /**
@@ -44,6 +45,32 @@ final class HadithQueryService
             $this->references->build($hadith),
             $locale ?? app()->getLocale(),
         );
+    }
+
+    /**
+     * The same three lookups, returning the loaded MODEL rather than a DTO.
+     *
+     * The API renders through HadithResource, which is its own documented shape
+     * and deliberately not the web DTO. These exist so the API still passes
+     * through the one publication gate instead of reaching for the repository.
+     */
+    public function modelByCollectionAndNumber(string $collectionCode, string $hadithNumber): ?Hadith
+    {
+        $hadith = $this->hadiths->findCanonical($collectionCode, $hadithNumber);
+
+        return $hadith !== null && $this->visibility->allowsHadith($hadith) ? $hadith : null;
+    }
+
+    public function modelByUrn(int $urn): ?Hadith
+    {
+        $hadith = $this->hadiths->findByUrn($urn);
+
+        return $hadith !== null && $this->visibility->allowsHadith($hadith) ? $hadith : null;
+    }
+
+    public function randomModel(?HadithGrade $grade = null): ?Hadith
+    {
+        return $this->hadiths->randomPublished($grade);
     }
 
     /**
