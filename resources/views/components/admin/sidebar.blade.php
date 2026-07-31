@@ -17,6 +17,8 @@
         'tags'            => 'content',
         'series'          => 'content',
         'hadith'          => 'hadith',
+        'hadith-books'    => 'hadith',
+        'hadith-chapters' => 'hadith',
         'hadith-collections' => 'hadith',
         'hadith-narrators' => 'hadith',
         'hadith-scholars' => 'hadith',
@@ -251,7 +253,8 @@
             <!-- Hadith Management -->
             <div>
                 <button @click="toggleSubmenu('hadith')"
-                        :class="openSubmenu === 'hadith' || activeMenu === 'hadith' ?
+                        :class="openSubmenu === 'hadith' ||
+                                ['hadith','hadith-books','hadith-chapters'].includes(activeMenu) ?
                             'bg-gradient-primary text-white shadow-lg' :
                             (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
                         class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
@@ -269,57 +272,27 @@
                      class="mt-2 ms-6 space-y-1">
                     <a href="{{ route('admin.hadith.index') }}"
                        @click="activeMenu = 'hadith'"
-                       :class="isActive('hadith') ?
-                           'text-accent font-semibold' :
+                       :class="isActive('hadith') ? 'text-accent font-semibold' :
                            (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
                        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
-                        <i data-lucide="book" class="w-4 h-4"></i>
+                        <i data-lucide="book-marked" class="w-4 h-4"></i>
                         <span>{{ __('admin.hadiths') }}</span>
                     </a>
-                    <a href="{{ route('admin.hadith.collections.index') }}"
-                       @click="activeMenu = 'hadith-collections'"
-                       :class="isActive('hadith-collections') ?
-                           'text-accent font-semibold' :
+                    <a href="{{ route('admin.hadith-books.index') }}"
+                       @click="activeMenu = 'hadith-books'"
+                       :class="isActive('hadith-books') ? 'text-accent font-semibold' :
                            (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
                        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
                         <i data-lucide="library" class="w-4 h-4"></i>
-                        <span>{{ __('admin.hadith_collections') }}</span>
+                        <span>{{ __('admin.hadith_books') }}</span>
                     </a>
-                    <a href="{{ route('admin.hadith.narrators.index') }}"
-                       @click="activeMenu = 'hadith-narrators'"
-                       :class="isActive('hadith-narrators') ?
-                           'text-accent font-semibold' :
+                    <a href="{{ route('admin.hadith-chapters.index') }}"
+                       @click="activeMenu = 'hadith-chapters'"
+                       :class="isActive('hadith-chapters') ? 'text-accent font-semibold' :
                            (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
                        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
-                        <i data-lucide="users" class="w-4 h-4"></i>
-                        <span>{{ __('admin.hadith_narrators') }}</span>
-                    </a>
-                    <a href="{{ route('admin.hadith.scholars.index') }}"
-                       @click="activeMenu = 'hadith-scholars'"
-                       :class="isActive('hadith-scholars') ?
-                           'text-accent font-semibold' :
-                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
-                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
-                        <i data-lucide="graduation-cap" class="w-4 h-4"></i>
-                        <span>{{ __('admin.hadith_scholars') }}</span>
-                    </a>
-                    <a href="{{ route('admin.hadith.themes.index') }}"
-                       @click="activeMenu = 'hadith-themes'"
-                       :class="isActive('hadith-themes') ?
-                           'text-accent font-semibold' :
-                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
-                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
-                        <i data-lucide="tags" class="w-4 h-4"></i>
-                        <span>{{ __('admin.hadith_themes') }}</span>
-                    </a>
-                    <a href="{{ route('admin.hadith.grading-levels.index') }}"
-                       @click="activeMenu = 'hadith-grading'"
-                       :class="isActive('hadith-grading') ?
-                           'text-accent font-semibold' :
-                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
-                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
-                        <i data-lucide="award" class="w-4 h-4"></i>
-                        <span>{{ __('admin.hadith_grading') }}</span>
+                        <i data-lucide="list-tree" class="w-4 h-4"></i>
+                        <span>{{ __('hadith.chapters') }}</span>
                     </a>
                 </div>
             </div>

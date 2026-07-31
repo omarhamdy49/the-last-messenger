@@ -109,6 +109,13 @@ Route::prefix('su/portal/v1/admin')
             Route::post('/cache/clear', [DashboardController::class, 'clearCache'])->name('cache.clear');
         });
 
+        Route::get('hadith', fn () => view('admin.coming-soon', ['module' => __('admin.hadiths')]))
+            ->name('admin.hadith.index');
+        Route::get('hadith-books', fn () => view('admin.coming-soon', ['module' => __('admin.hadith_books')]))
+            ->name('admin.hadith-books.index');
+        Route::get('hadith-chapters', fn () => view('admin.coming-soon', ['module' => __('hadith.chapters')]))
+            ->name('admin.hadith-chapters.index');
+
         // Analytics Routes
         Route::prefix('analytics')->name('admin.analytics.')->group(function (): void {
             Route::get('/', [AnalyticsController::class, 'dashboard'])->name('index');

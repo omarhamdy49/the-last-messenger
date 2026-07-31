@@ -176,10 +176,21 @@ final class HadithImporter
             return;
         }
 
-        $hadith = Hadith::query()->firstOrNew([
-            'collection_id' => $collection->id,
-            'hadith_number' => $number,
-        ]);
+        // sunnah_urn is the row identity where the source provides one: a
+        // hadith number is NOT unique within a collection. Tirmidhi lists 52
+        // numbers that cover two different hadiths each, and keying on the
+        // number silently discarded the second of every pair.
+        $urn = $mapped['hadith']['sunnah_urn'] ?? null;
+
+        $hadith = $urn !== null
+            ? (Hadith::query()->where('sunnah_urn', $urn)->first() ?? new Hadith)
+            : Hadith::query()->firstOrNew([
+                'collection_id' => $collection->id,
+                'hadith_number' => $number,
+            ]);
+
+        $hadith->collection_id = $collection->id;
+        $hadith->hadith_number = $number;
 
         $attributes = $mapped['hadith'];
         unset($attributes['hadith_number']);

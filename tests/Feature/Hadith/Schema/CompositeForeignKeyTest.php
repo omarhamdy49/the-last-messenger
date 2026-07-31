@@ -82,25 +82,54 @@ class CompositeForeignKeyTest extends TestCase
         ]);
     }
 
-    public function test_the_canonical_identity_is_unique_per_collection(): void
+    /**
+     * A hadith number does NOT identify a hadith. Jami` at-Tirmidhi lists 52
+     * numbers that each cover two genuinely different hadiths — 1322 is both
+     * "Go and judge between the people" and "The judges are three", with
+     * different text and different permalinks. A unique key here silently
+     * discarded the second of every pair.
+     */
+    public function test_a_collection_may_hold_two_hadiths_sharing_a_number(): void
+    {
+        $collection = HadithCollection::factory()->create();
+        $book = HadithBook::factory()->for($collection, 'collection')->create();
+
+        $first = Hadith::query()->create([
+            'collection_id' => $collection->id,
+            'book_id' => $book->id,
+            'hadith_number' => '1322',
+            'in_book_number' => 1,
+            'sunnah_urn' => 613700,
+        ]);
+
+        $second = Hadith::query()->create([
+            'collection_id' => $collection->id,
+            'book_id' => $book->id,
+            'hadith_number' => '1322',
+            'in_book_number' => 2,
+            'sunnah_urn' => 613710,
+        ]);
+
+        $this->assertNotSame($first->id, $second->id);
+        $this->assertSame(2, Hadith::query()->where('hadith_number', '1322')->count());
+    }
+
+    /** The urn remains the real row identity, and it is still unique. */
+    public function test_the_same_urn_may_not_appear_twice(): void
     {
         $collection = HadithCollection::factory()->create();
         $book = HadithBook::factory()->for($collection, 'collection')->create();
 
         Hadith::query()->create([
-            'collection_id' => $collection->id,
-            'book_id' => $book->id,
-            'hadith_number' => '1a',
-            'in_book_number' => 1,
+            'collection_id' => $collection->id, 'book_id' => $book->id,
+            'hadith_number' => '1', 'in_book_number' => 1, 'sunnah_urn' => 613700,
         ]);
 
         $this->expectException(QueryException::class);
 
         Hadith::query()->create([
-            'collection_id' => $collection->id,
-            'book_id' => $book->id,
-            'hadith_number' => '1a',
-            'in_book_number' => 2,
+            'collection_id' => $collection->id, 'book_id' => $book->id,
+            'hadith_number' => '2', 'in_book_number' => 2, 'sunnah_urn' => 613700,
         ]);
     }
 }

@@ -44,6 +44,10 @@ final class GradeNormalizer
         ['pattern' => 'muttafaq alayh', 'grade' => HadithGrade::SAHIH],
         ['pattern' => 'mawdu', 'grade' => HadithGrade::MAWDU],
         ['pattern' => 'mawdoo', 'grade' => HadithGrade::MAWDU],
+        // Surfaced by an import run's unmapped_grades: the source also spells it
+        // without the w. Exactly what FR-007's reporting exists to catch.
+        ['pattern' => 'maudu', 'grade' => HadithGrade::MAWDU],
+        ['pattern' => 'maudoo', 'grade' => HadithGrade::MAWDU],
         ['pattern' => 'fabricated', 'grade' => HadithGrade::MAWDU],
         ['pattern' => 'matruk', 'grade' => HadithGrade::DAIF],
         ['pattern' => 'munkar', 'grade' => HadithGrade::DAIF],

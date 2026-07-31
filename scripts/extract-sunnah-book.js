@@ -39,7 +39,9 @@
  */
 async function extractSunnahBook(collection, bookNumber) {
   const clean = (el) => (el ? el.textContent.replace(/ /g, ' ').trim() : null);
-  const blank = (s) => s === null || s === '';
+  // undefined matters: Array.find() returns it when no cell qualifies, and
+  // a looser check pushed a grading entry carrying no raw_grade at all.
+  const blank = (s) => s === null || s === undefined || s === '';
 
   const url = `https://sunnah.com/${collection}/${bookNumber}`;
   const res = await fetch(`/${collection}/${bookNumber}`);

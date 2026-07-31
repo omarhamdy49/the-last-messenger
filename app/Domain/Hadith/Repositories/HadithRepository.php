@@ -59,6 +59,11 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
                 ->when($publishedOnly, fn (Builder $q) => $q->where('is_published', true)))
             ->where('hadith_number', $hadithNumber)
             ->when($publishedOnly, fn (Builder $query) => $query->where('is_published', true))
+            // A number can cover two different hadiths — Tirmidhi has 52 such
+            // pairs — so the canonical URL resolves to the first in reading
+            // order, which is what sunnah.com's own /tirmidhi:1322 shows.
+            ->orderBy('in_book_number')
+            ->orderBy('id')
             ->first();
     }
 
