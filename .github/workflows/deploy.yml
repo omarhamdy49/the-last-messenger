@@ -78,9 +78,9 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no \
             ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_SERVER_IP }} \
-            "install -m 0755 /tmp/deploy.sh ${{ secrets.DEPLOY_PATH || '/var/www/rasoolallah' }}/bin/deploy.sh && \
-             rm -f /tmp/deploy.sh && \
-             ${{ secrets.DEPLOY_PATH || '/var/www/rasoolallah' }}/bin/deploy.sh /tmp/tlm-release.zip ${{ github.sha }}"
+            "chmod 0755 /tmp/deploy.sh && \
+             /tmp/deploy.sh /tmp/tlm-release.zip ${{ github.sha }} && \
+             rm -f /tmp/deploy.sh"
 
       - name: 🧹 Cleanup local artifact
         if: always()
