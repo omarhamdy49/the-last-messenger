@@ -232,9 +232,9 @@ introductions and endings.
 - [X] T125 [P] [US2] Create `resources/views/public/hadith/partials/chapter.blade.php` ported from `the-last-messenger-ui/hadith-book-chapter-enhanced.html`, rendering chapter intro and ending
 - [X] T126 [US2] Add empty and error states to every Hadith public view, using `resources/views/components/site/empty-state.blade.php`
 - [X] T127 [P] [US2] Add the browse translation keys to all five files `resources/lang/{ar,en,fr,tr,ur}/hadith.php`
-- [ ] T128 [US2] Extract all 97 Bukhari books with the Chrome extension into `storage/app/hadith_source/bukhari/`, throttled to roughly one request per second with per-book manifests
-- [ ] T129 [US2] Import Bukhari fully and verify 7,277 hadiths, then confirm `/hadith/bukhari/2` shows 51 hadiths under 43 chapters
-- [ ] T130 [US2] Run `npm run build` and verify all four page types in Chrome across both locales, both themes, and three viewports
+- [X] T128 [US2] Extract all 97 Bukhari books with the Chrome extension into `storage/app/hadith_source/bukhari/`, throttled to roughly one request per second with per-book manifests
+- [X] T129 [US2] Import Bukhari fully and verify 7,277 hadiths, then confirm `/hadith/bukhari/2` shows 51 hadiths under 43 chapters
+- [X] T130 [US2] Run `npm run build` and verify all four page types in Chrome across both locales, both themes, and three viewports
 
 **Checkpoint**: A reader can browse Sahih al-Bukhari end to end.
 

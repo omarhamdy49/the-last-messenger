@@ -60,6 +60,7 @@ final class HadithRecordMapper
      *     hadith: array<string, mixed>,
      *     texts: list<array<string, mixed>>,
      *     gradings: list<array<string, mixed>>,
+     *     chapter_index: ?int,
      *     chapter_number: ?string
      * }
      */
@@ -68,6 +69,10 @@ final class HadithRecordMapper
         $references = $this->parseReferences($record['reference_rows'] ?? []);
 
         return [
+            // Position, not number: a chapter number does not identify a chapter.
+            // Older extractions carry no chapter_index; those fall back to the
+            // ambiguous number so a stale file still imports, visibly degraded.
+            'chapter_index' => is_int($record['chapter_index'] ?? null) ? $record['chapter_index'] : null,
             'chapter_number' => ($n = $this->text($record['chapter_number'] ?? null)) !== null
                 ? trim($n, '() ')
                 : null,

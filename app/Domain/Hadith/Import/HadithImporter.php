@@ -116,11 +116,12 @@ final class HadithImporter
 
     /**
      * @param  list<array<string, mixed>>  $chapters
-     * @return array<string, HadithChapter> keyed by chapter_number
+     * @return array<int, HadithChapter> keyed by POSITION, which is the only
+     *                                   thing that identifies a chapter
      */
     private function upsertChapters(HadithBook $book, array $chapters): array
     {
-        $byNumber = [];
+        $byPosition = [];
 
         foreach ($chapters as $index => $chapter) {
             $mapped = $this->mapper->mapChapter($chapter, $index + 1);
@@ -136,17 +137,23 @@ final class HadithImporter
             $row->fill([
                 'chapter_number' => $mapped['chapter_number'],
                 'title' => $mapped['title'] !== [] ? $mapped['title'] : ($row->getTranslations('title') ?: ['ar' => $mapped['chapter_number']]),
-                'intro' => $mapped['intro'] !== [] ? $mapped['intro'] : $row->getTranslations('intro'),
             ]);
+
+            // Left untouched when the source has none, so the column stays a
+            // true NULL. Assigning [] wrote the literal JSON "[]" into a
+            // nullable column and made whereNull('intro') useless as a signal.
+            if ($mapped['intro'] !== []) {
+                $row->intro = $mapped['intro'];
+            }
             $row->is_published = $row->exists ? $row->is_published : true;
 
             $this->tally($row->exists ? 'chapters_updated' : 'chapters_created');
             $row->save();
 
-            $byNumber[$mapped['chapter_number']] ??= $row;
+            $byPosition[$index] = $row;
         }
 
-        return $byNumber;
+        return $byPosition;
     }
 
     /**
@@ -177,7 +184,9 @@ final class HadithImporter
         $attributes = $mapped['hadith'];
         unset($attributes['hadith_number']);
         $attributes['book_id'] = $book->id;
-        $attributes['chapter_id'] = $chapters[$mapped['chapter_number']]->id ?? null;
+        $attributes['chapter_id'] = $mapped['chapter_index'] !== null
+            ? ($chapters[$mapped['chapter_index']]->id ?? null)
+            : null;
 
         $existed = $hadith->exists;
 

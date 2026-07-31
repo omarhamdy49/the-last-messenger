@@ -106,6 +106,11 @@ async function extractSunnahBook(collection, bookNumber) {
       hadith_number: share.match(/'\/[^:]+:([^']+)'/)?.[1] ?? null,
       sunnah_urn: urns ? Number(urns[1]) : null,
       sunnah_urn_en: urns ? Number(urns[2]) : null,
+      // POSITION, not number. A chapter number does not identify a chapter:
+      // Bukhari repeats one within a book 354 times, and 6 chapters carry no
+      // number at all. Attributing by number silently linked 503 hadiths to the
+      // wrong chapter — 460 of book 65's 499 among them.
+      chapter_index: current ? chapters.length - 1 : null,
       chapter_number: current?.number ?? null,
       reference_rows: [...node.querySelectorAll('.hadith_reference tr')]
         .map((tr) => [...tr.children].map((td) => clean(td)?.replace(/^:\s*/, ''))),
