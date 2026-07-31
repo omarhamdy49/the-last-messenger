@@ -99,6 +99,29 @@ Alpine.store('geo', {
     },
 });
 
+/* ------------------------------------------------------- foldForSearch --- */
+// JS mirror of App\Domain\Hadith\Services\ArabicTextNormalizer::normalize().
+// Client-side filters compare a typed query against server-folded text
+// (`hadith_texts.search_body`), so the two sides must fold identically —
+// otherwise "الحياء" never matches the stored "الْحَيَاءُ".
+// Keep in step with the PHP class if its folding table changes.
+const ARABIC_FOLDING = {
+    'آ': 'ا', 'أ': 'ا', 'إ': 'ا', 'ٱ': 'ا',
+    'ؤ': 'و', 'ئ': 'ي', 'ى': 'ي', 'ی': 'ي', 'ے': 'ي',
+    'ة': 'ه', 'ہ': 'ه', 'ۃ': 'ه',
+    'ک': 'ك', 'ڪ': 'ك',
+};
+
+window.foldForSearch = (text) => (text || '')
+    .replace(/[​-‏﻿؜]/g, '')          // zero-width + directional
+    .replace(/[ً-ْٰۖ-ۭ]/g, '')   // tashkeel + Quranic marks
+    .replace(/ـ/g, '')                                // tatweel
+    .replace(/[آأإٱؤئىیےةہۃکڪ]/g, (c) => ARABIC_FOLDING[c])
+    .replace(/[«»“”"'‘’،؛؟.,;:!?()[\]{}]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
 /* ------------------------------------------------------------- apiFetch --- */
 // One request wrapper: merges CSRF + JSON headers + the shared geo headers into
 // every call, so feature code never re-implements header wiring (DRY).

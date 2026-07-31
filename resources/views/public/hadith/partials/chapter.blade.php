@@ -1,9 +1,21 @@
+{{--
+    One chapter group inside a book page: the chapter's heading and preamble,
+    then its hadiths as premium cards.
+
+    Rendered inside the book page's filter scope — `hit($el)` and `view` come
+    from that x-data, so this partial is not standalone.
+--}}
 @php $locale = app()->getLocale(); @endphp
 
-<section class="mb-10">
+{{-- The whole group hides when the filter empties it: a chapter heading with no
+     hadiths under it reads as missing content rather than as a filtered view.
+     No x-cloak — the unfiltered state is "shown", so the server-rendered markup
+     is already correct and there is nothing to hide before Alpine boots. --}}
+<section class="mb-10"
+         x-show="[...$el.querySelectorAll('[data-grade]')].some(card => hit(card))">
     @if ($chapter)
-        <header class="mb-4 ps-4 border-s-4 border-[#218838]">
-            <h2 class="text-lg font-bold text-gray-900 dark:text-white break-words">
+        <header class="mb-5 ps-4 border-s-4 border-[#218838] animate-fade-in-up">
+            <h2 class="text-lg sm:text-xl font-bold font-['Amiri'] text-gray-900 dark:text-white break-words">
                 {{-- Some chapters carry no number in the source. --}}
                 @if (filled($chapter->chapter_number))
                     <span class="text-[#0056b3] dark:text-[#64CCC5]">{{ $chapter->chapter_number }}.</span>
@@ -20,25 +32,10 @@
 
     <ol class="space-y-4">
         @foreach ($hadiths as $hadith)
-            @php $text = $hadith->textFor($locale); @endphp
-            <li class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#16213e] p-5">
-                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-                    <a href="{{ route('public.hadith.show', [$collection->code, $hadith->hadith_number]) }}"
-                       class="text-sm font-bold text-[#0056b3] dark:text-[#64CCC5] hover:underline">
-                        {{ $collection->code }}:{{ $hadith->hadith_number }}
-                    </a>
-                    <span class="text-xs text-gray-500 dark:text-gray-400">
-                        {{ __('hadith.grade') }}: {{ __('hadith.grade_'.$hadith->display_grade->value) }}
-                    </span>
-                </div>
-
-                @if ($text)
-                    <p dir="{{ $text->locale === 'ar' ? 'rtl' : 'ltr' }}" lang="{{ $text->locale }}"
-                       class="{{ $text->locale === 'ar' ? "font-['Amiri'] text-xl leading-[2.2]" : 'text-sm leading-7' }}
-                              text-gray-800 dark:text-gray-200 line-clamp-4 break-words text-start">
-                        {{ $text->body }}
-                    </p>
-                @endif
+            <li x-show="hit($el.firstElementChild)" x-transition.opacity>
+                {{-- showRef off: the book page's header already names the
+                     collection and book on every card's behalf. --}}
+                <x-site.hadith-card :hadith="$hadith" :index="$loop->index" :show-ref="false" />
             </li>
         @endforeach
     </ol>

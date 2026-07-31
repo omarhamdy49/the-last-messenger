@@ -81,6 +81,7 @@ final class HadithController extends Controller
             'book' => $book,
             'paginator' => $contents['paginator'],
             'groups' => $contents['groups'],
+            'adjacent' => $this->browseService->adjacentBooks($book),
         ]);
     }
 

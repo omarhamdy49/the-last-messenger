@@ -46,6 +46,15 @@ interface CollectionRepositoryInterface extends RepositoryInterface
     public function findBook(int $collectionId, string $bookNumber, bool $publishedOnly = true): ?HadithBook;
 
     /**
+     * The books immediately before and after `$book` in `sort_order`, for the
+     * reader's prev/next links. Two one-row reads rather than loading the whole
+     * book list — Musnad Ahmad has 904 of them.
+     *
+     * @return array{previous: ?HadithBook, next: ?HadithBook}
+     */
+    public function adjacentBooks(HadithBook $book, bool $publishedOnly = true): array;
+
+    /**
      * Chapters of a book in `sort_order`. Empty for collections with
      * `has_chapters = false` — that is a 200 with no rows, not a 404.
      *

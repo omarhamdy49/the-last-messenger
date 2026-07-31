@@ -41,7 +41,9 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
         'book:id,collection_id,book_number,title',
         'chapter:id,book_id,chapter_number,title',
         'primaryNarrator:id,slug,name',
-        'texts:id,hadith_id,locale,body,narrated_by,sanad',
+        // search_body is the diacritic-folded form; list pages put it on the
+        // card so the in-page filter folds the same way the server does.
+        'texts:id,hadith_id,locale,body,search_body,narrated_by,sanad',
         'gradings:id,hadith_id,scholar_id,grade,scope,part_label,raw_grade,locale',
         'gradings.scholar:id,name',
     ];

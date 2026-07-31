@@ -769,3 +769,189 @@
     opacity: 0.3;
     pointer-events: none;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Hadith module — ported from the prototypes
+   (hadith-books-enhanced.html, hadith-book-chapter-enhanced.html).
+
+   The prototypes are RTL-only, so every physical offset below is rewritten as a
+   logical property: the spine sits on the bound (inline-start) edge and the
+   pages fan out on the open edge in both directions.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+.animate-scale-in {
+    opacity: 0;
+    animation: scaleIn 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+.stagger-7 { animation-delay: 0.7s; }
+.stagger-8 { animation-delay: 0.8s; }
+
+/* Islamic pattern wash behind the library grid */
+.islamic-pattern {
+    background-image:
+        radial-gradient(circle at 25% 25%, rgba(0, 86, 179, 0.04) 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, rgba(33, 136, 56, 0.04) 0%, transparent 50%);
+    background-size: 640px 640px;
+}
+
+/* ── 3D book cover ───────────────────────────────────────────────────────── */
+.book-3d {
+    perspective: 2000px;
+}
+
+.book-container {
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.book-3d:hover .book-container,
+.book-3d:focus-visible .book-container {
+    transform: translateY(-10px) scale(1.04);
+}
+
+.book-cover-3d {
+    position: relative;
+    overflow: hidden;
+    border-start-end-radius: 8px;
+    border-end-end-radius: 8px;
+    box-shadow:
+        0 10px 20px rgba(0, 0, 0, 0.28),
+        0 15px 30px rgba(0, 0, 0, 0.18);
+}
+
+/* Page block along the open (unbound) edge. Flush at 0, not overhanging: the
+   cover clips overflow so a negative offset would just be cut off. */
+.book-pages {
+    position: absolute;
+    inset-inline-end: 0;
+    inset-block: 5px;
+    width: 8px;
+    background:
+        linear-gradient(to var(--book-pages-dir, left),
+            rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0) 60%),
+        repeating-linear-gradient(
+            to bottom,
+            #f4f1ea 0px,
+            #f4f1ea 2px,
+            rgba(120, 105, 80, 0.35) 2px,
+            rgba(120, 105, 80, 0.35) 3px
+        );
+    opacity: 0.85;
+}
+
+[dir="rtl"] .book-pages { --book-pages-dir: right; }
+
+/* Bound edge: a darkened band, not a separate element visually */
+.book-spine {
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block: 0;
+    /* Proportional to the cover, which is ~150px wide in the 6-up grid. */
+    width: 30px;
+    background: linear-gradient(
+        to var(--book-spine-dir, right),
+        rgba(0, 0, 0, 0.55) 0%,
+        rgba(0, 0, 0, 0.25) 55%,
+        transparent 100%
+    );
+}
+
+[dir="rtl"] .book-spine { --book-spine-dir: left; }
+
+.leather-texture::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Description panel that rises over the cover on hover */
+.book-info-overlay {
+    position: absolute;
+    inset: 0;
+    /* Above the cover's own content, which is z-10 so it clears the spine. */
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0.75rem;
+    /* Opaque enough that the cover's own title/stats don't read through as
+       noise behind the description. */
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0.88));
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.book-3d:hover .book-info-overlay,
+.book-3d:focus-visible .book-info-overlay {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ── Grade badges (colour + label; never colour alone) ───────────────────── */
+.grade-badge {
+    color: #fff;
+    white-space: nowrap;
+}
+
+.grade-badge-sahih   { background: linear-gradient(135deg, #10b981, #047857); box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
+.grade-badge-hasan   { background: linear-gradient(135deg, #0284c7, #0369a1); box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3); }
+.grade-badge-daif    { background: linear-gradient(135deg, #d97706, #b45309); box-shadow: 0 4px 10px rgba(217, 119, 6, 0.3); }
+.grade-badge-mawdu   { background: linear-gradient(135deg, #e11d48, #9f1239); box-shadow: 0 4px 10px rgba(225, 29, 72, 0.3); }
+.grade-badge-unknown { background: linear-gradient(135deg, #64748b, #475569); box-shadow: 0 4px 10px rgba(100, 116, 139, 0.3); }
+
+/* ── Premium hadith row card ─────────────────────────────────────────────── */
+.hadith-card {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+/* Top accent rail — the card's one piece of chrome */
+.hadith-card::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    height: 3px;
+    background: linear-gradient(to right, #0056b3, #218838, #64CCC5);
+    opacity: 0.75;
+    transition: opacity 0.3s ease;
+}
+
+.hadith-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0, 86, 179, 0.14);
+}
+
+.hadith-card:hover::before { opacity: 1; }
+
+.hadith-card:focus-within { border-color: #218838; }
+
+@media (prefers-reduced-motion: reduce) {
+    .book-container,
+    .book-3d:hover .book-container,
+    .hadith-card,
+    .hadith-card:hover {
+        transform: none;
+        transition: none;
+    }
+
+    .animate-scale-in { animation: none; opacity: 1; }
+}
+
+/* Reading density for the book page's view toggle. Driven by a data attribute
+   on the list rather than per-card Alpine state, so the card component stays
+   usable on pages (search) that have no toggle. */
+.hadith-list[data-view="compact"] .hadith-matn { -webkit-line-clamp: 1; }
+.hadith-list[data-view="expanded"] .hadith-matn { -webkit-line-clamp: unset; overflow: visible; }

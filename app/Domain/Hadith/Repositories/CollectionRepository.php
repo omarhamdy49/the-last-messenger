@@ -28,7 +28,12 @@ class CollectionRepository extends BaseRepository implements CollectionRepositor
             ->where('is_published', true)
             // withCount, not a stored counter: 17 rows and the counter would
             // drift the moment an editor publishes or unpublishes a hadith.
-            ->withCount(['hadiths' => fn ($query) => $query->where('is_published', true)])
+            // Both counts in one query — the hub card shows them side by side.
+            // Synthetic books are excluded to match booksFor().
+            ->withCount([
+                'hadiths' => fn ($query) => $query->where('is_published', true),
+                'books' => fn ($query) => $query->where('is_published', true)->where('is_synthetic', false),
+            ])
             ->orderByDesc('featured')
             ->orderBy('display_order')
             ->get();
@@ -76,6 +81,24 @@ class CollectionRepository extends BaseRepository implements CollectionRepositor
             ->where('is_synthetic', false)
             ->when($publishedOnly, fn ($query) => $query->where('is_published', true))
             ->first();
+    }
+
+    /** @return array{previous: ?HadithBook, next: ?HadithBook} */
+    public function adjacentBooks(HadithBook $book, bool $publishedOnly = true): array
+    {
+        $neighbour = fn (string $operator, string $direction): ?HadithBook => HadithBook::query()
+            ->select(['id', 'collection_id', 'book_number', 'sort_order', 'title'])
+            ->where('collection_id', $book->collection_id)
+            ->where('is_synthetic', false)
+            ->when($publishedOnly, fn ($query) => $query->where('is_published', true))
+            ->where('sort_order', $operator, $book->sort_order)
+            ->orderBy('sort_order', $direction)
+            ->first();
+
+        return [
+            'previous' => $neighbour('<', 'desc'),
+            'next' => $neighbour('>', 'asc'),
+        ];
     }
 
     public function chaptersFor(int $bookId, bool $publishedOnly = true): Collection

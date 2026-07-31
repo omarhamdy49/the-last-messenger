@@ -57,6 +57,16 @@ final class HadithBrowseService
     }
 
     /**
+     * The previous/next book, for the reader's book-to-book navigation.
+     *
+     * @return array{previous: ?HadithBook, next: ?HadithBook}
+     */
+    public function adjacentBooks(HadithBook $book): array
+    {
+        return $this->collections->adjacentBooks($book);
+    }
+
+    /**
      * A book's hadiths in reading order, grouped under their chapter.
      *
      * Chapters are fetched once and joined in memory rather than eager-loaded

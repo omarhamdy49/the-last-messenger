@@ -6,14 +6,19 @@
     to the clipboard; it only reports success when a copy actually succeeded.
 
     Props:
-        $url   — absolute URL to share
-        $title — share sheet title
-        $text  — optional share sheet body
+        $url     — absolute URL to share
+        $title   — share sheet title
+        $text    — optional share sheet body
+        $variant — 'glass' (default) on coloured panels, 'surface' on white/dark
+                   cards. A prop rather than a class override: both variants set
+                   background and text colour, and utility order in the built
+                   sheet — not source order — decides which wins.
 --}}
 @props([
     'url',
     'title',
     'text' => null,
+    'variant' => 'glass',
 ])
 
 <div x-data="{
@@ -44,9 +49,14 @@
             aria-label="{{ __('site.share') }}"
             {{ $attributes->class([
                 'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full',
-                'bg-white/15 text-white ring-1 ring-inset ring-white/25 backdrop-blur-sm',
-                'transition hover:bg-white/25 focus:outline-none focus-visible:ring-2',
-                'focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
+                'ring-1 ring-inset transition focus:outline-none focus-visible:ring-2',
+                'bg-white/15 text-white ring-white/25 backdrop-blur-sm hover:bg-white/25
+                 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent'
+                    => $variant === 'glass',
+                'bg-gray-100 text-gray-600 ring-gray-200 hover:bg-gray-200
+                 dark:bg-[#0f3460] dark:text-gray-200 dark:ring-gray-700 dark:hover:bg-[#0f3460]/70
+                 focus-visible:ring-[#218838]'
+                    => $variant === 'surface',
             ]) }}>
         <i class="h-5 w-5" data-lucide="share-2" x-show="!copied"></i>
         <i class="h-5 w-5" data-lucide="check" x-show="copied" x-cloak></i>
