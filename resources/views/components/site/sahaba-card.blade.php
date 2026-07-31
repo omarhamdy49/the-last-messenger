@@ -58,68 +58,10 @@
     $deathYear = preg_match('/\d+/', (string) $sahabi->death_date_hijri, $m) ? $m[0] : null;
 @endphp
 
-@once
-@push('head')
-<style>
-    /* ── Refined Medallion card ──────────────────────────────────────────────
-       Self-contained: the carousel keeps its `.sahaba-card` measurement hook,
-       and all motion is GPU-only (transform/opacity) and gated behind
-       prefers-reduced-motion so the card stays a clean static composition when
-       motion is unwelcome. */
-    .sahaba-medallion-card {
-        transition: transform .45s cubic-bezier(.22, 1, .36, 1),
-                    box-shadow .45s cubic-bezier(.22, 1, .36, 1),
-                    border-color .45s ease;
-        will-change: transform;
-    }
-
-    /* The portrait header clips the sheen sweep and the oversized medallion. */
-    .sahaba-portrait { isolation: isolate; }
-
-    /* Layered geometric medallion behind the monogram. */
-    .sahaba-medallion { transform-box: fill-box; transform-origin: center; }
-    .sahaba-medallion .ring-outer,
-    .sahaba-medallion .ring-inner {
-        transform-box: fill-box;
-        transform-origin: center;
-        transition: transform 1.2s cubic-bezier(.22, 1, .36, 1);
-    }
-
-    /* Diagonal light sheen — parked off the start edge, sweeps across on hover. */
-    .sahaba-sheen {
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(115deg, transparent 32%, rgba(255, 255, 255, .35) 50%, transparent 68%);
-        transform: translateX(-130%);
-        pointer-events: none;
-        z-index: 2;
-    }
-    [dir="rtl"] .sahaba-sheen {
-        background: linear-gradient(245deg, transparent 32%, rgba(255, 255, 255, .35) 50%, transparent 68%);
-        transform: translateX(130%);
-    }
-
-    /* Read-link arrow nudges toward the reading direction on hover. */
-    .sahaba-card-arrow { transition: transform .45s cubic-bezier(.22, 1, .36, 1); }
-
-    @media (prefers-reduced-motion: no-preference) {
-        .sahaba-medallion-card:hover,
-        .sahaba-medallion-card:focus-visible {
-            transform: translateY(-8px);
-        }
-        .group:hover .sahaba-card-arrow { transform: translateX(4px); }
-        [dir="rtl"] .group:hover .sahaba-card-arrow { transform: translateX(-4px); }
-        .group:hover .sahaba-medallion .ring-outer { transform: rotate(45deg); }
-        .group:hover .sahaba-medallion .ring-inner { transform: rotate(-30deg); }
-        .group:hover .sahaba-sheen {
-            transition: transform 1s cubic-bezier(.22, 1, .36, 1);
-            transform: translateX(130%);
-        }
-        [dir="rtl"] .group:hover .sahaba-sheen { transform: translateX(-130%); }
-    }
-</style>
-@endpush
-@endonce
+{{-- Card styles live in their own component so the genealogy list view can
+     render the identical medallion card from Alpine data. The carousel keeps
+     its `.sahaba-card` measurement hook on the root element below. --}}
+<x-site.medallion-card-styles />
 
 <div class="flex-shrink-0 {{ $width }} h-full sahaba-card">
     <a href="{{ $href }}"

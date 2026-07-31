@@ -33,9 +33,84 @@
         animation-delay: var(--enter-delay, 0ms);
     }
 
-    .node-card { transition: transform .3s cubic-bezier(.4,0,.2,1), box-shadow .3s; }
-    .node-card:hover { transform: translateY(-6px) scale(1.03); }
-    .node-card:active { transform: translateY(-2px) scale(.97); }
+    /* ── Family tree ────────────────────────────────────────────────────────
+       A real org-chart connector system. The previous version drew one
+       `inset-x-6` bar per row, so the line never actually met the cards it was
+       supposed to join. Every rule below is written with logical properties so
+       the same CSS mirrors correctly in RTL with no separate rule set.
+
+       Geometry per level: trunk (from the parent, `--gtree-drop` tall) →
+       sibling bar → drop into each child (`--gtree-drop` again). The sibling
+       bar overhangs each cell by half the gap, so consecutive cells' bars meet
+       exactly; the outer ends are clipped back to the first/last cell centre. */
+    .gtree {
+        --gtree-gap: 1.5rem;
+        --gtree-drop: 1.25rem;
+        --gtree-line: rgba(0, 86, 179, .28);
+    }
+    @media (min-width: 640px) { .gtree { --gtree-gap: 2rem; } }
+    .dark .gtree { --gtree-line: rgba(100, 204, 197, .32); }
+
+    .gtree-node { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+    .gtree-card { cursor: pointer; transition: transform .4s cubic-bezier(.22,1,.36,1), box-shadow .4s cubic-bezier(.22,1,.36,1), border-color .3s ease; }
+    .gtree-card:hover { transform: translateY(-6px); }
+    .gtree-card:active { transform: translateY(-2px); }
+
+    .gtree-children {
+        position: relative;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        gap: var(--gtree-gap);
+        padding-top: var(--gtree-drop);
+        margin-top: .5rem;
+    }
+    /* Trunk leaving the parent card. */
+    .gtree-children::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        inset-inline-start: calc(50% - 1px);
+        width: 2px;
+        height: var(--gtree-drop);
+        background: var(--gtree-line);
+    }
+
+    .gtree-cell { position: relative; padding-top: var(--gtree-drop); }
+    /* Sibling bar. */
+    .gtree-cell::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        inset-inline: calc(var(--gtree-gap) / -2);
+        height: 2px;
+        background: var(--gtree-line);
+    }
+    .gtree-cell:first-child::before { inset-inline-start: calc(50% - 1px); }
+    .gtree-cell:last-child::before  { inset-inline-end: calc(50% - 1px); }
+    .gtree-cell:only-child::before  { display: none; }
+    /* Drop into the child card. */
+    .gtree-cell::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        inset-inline-start: calc(50% - 1px);
+        width: 2px;
+        height: var(--gtree-drop);
+        background: var(--gtree-line);
+    }
+
+    /* Marriage is not a descent edge, so it gets a dashed connector of its own. */
+    .gtree-marriage-link {
+        width: 0;
+        height: 1.75rem;
+        border-inline-start: 2px dashed rgba(233, 30, 99, .45);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .gtree-card { transition: none !important; }
+        .gtree-card:hover, .gtree-card:active { transform: none !important; }
+    }
 
     /* Edge fades hinting the tree scrolls horizontally — shown/hidden by
        Alpine based on actual scroll position, not just decoration.
@@ -48,23 +123,47 @@
 
     @media (prefers-reduced-motion: reduce) {
         .genealogy-glow, .card-enter { animation: none !important; }
-        .node-card { transition: none !important; }
-        .node-card:hover, .node-card:active { transform: none !important; }
     }
 </style>
 @endpush
 
 @section('content')
+{{-- The list view renders the Sahaba "Refined Medallion" card from Alpine data,
+     so it needs that component's stylesheet even though no x-site.sahaba-card
+     is rendered on this page. --}}
+<x-site.medallion-card-styles />
 @php
     $peopleJson = json_encode($people, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS);
     $childrenIdsJson = json_encode($childrenIds, JSON_UNESCAPED_UNICODE);
     $grandchildrenIdsJson = json_encode($grandchildrenIds, JSON_UNESCAPED_UNICODE);
     $spouseIdsJson = json_encode($spouseIds, JSON_UNESCAPED_UNICODE);
     $isRtl = in_array(app()->getLocale(), ['ar', 'ur'], true);
+
+    // Ids of every node that actually has descendants, and the subset that
+    // starts collapsed. Rendering all three generations expanded is what turned
+    // the chart into a horizontal sprawl nobody could read, so anything below
+    // the Prophet's own children opens on demand.
+    $collectBranches = function (array $node, int $depth) use (&$collectBranches): array {
+        $children = $node['children'] ?? [];
+        if ($children === []) {
+            return [];
+        }
+        $found = [['id' => (int) $node['id'], 'depth' => $depth]];
+        foreach ($children as $child) {
+            $found = array_merge($found, $collectBranches($child, $depth + 1));
+        }
+
+        return $found;
+    };
+    $branches = $hasTree ? $collectBranches($tree, 0) : [];
+    $branchIdsJson = json_encode(array_column($branches, 'id'));
+    $collapsedIdsJson = json_encode(
+        array_column(array_filter($branches, fn (array $b): bool => $b['depth'] >= 1), 'id')
+    );
 @endphp
 
 <div
-    x-data="genealogyPage({{ $peopleJson }}, {{ $childrenIdsJson }}, {{ $grandchildrenIdsJson }}, {{ $spouseIdsJson }})"
+    x-data="genealogyPage({{ $peopleJson }}, {{ $childrenIdsJson }}, {{ $grandchildrenIdsJson }}, {{ $spouseIdsJson }}, {{ $branchIdsJson }}, {{ $collapsedIdsJson }})"
     x-init="init()"
     class="min-h-screen">
 
@@ -182,6 +281,22 @@
                                 <i data-lucide="maximize-2" class="w-4 h-4"></i>
                             </button>
                         </div>
+
+                        {{-- Expand / collapse every branch at once — without this the
+                             only way to see the third generation is clicking each
+                             branch, and the only way back is clicking each again. --}}
+                        <div x-show="viewMode === 'tree'" class="hidden sm:flex items-center gap-1 p-1 rounded-lg bg-gray-100 dark:bg-[#0f3460]">
+                            <button type="button" @click="expandAll()"
+                                    class="p-2 rounded-md text-gray-600 dark:text-gray-200 hover:bg-white dark:hover:bg-[#16213e] transition-all"
+                                    :title="'{{ __('genealogy.public.expand_all') }}'" aria-label="{{ __('genealogy.public.expand_all') }}">
+                                <i data-lucide="chevrons-down" class="w-4 h-4"></i>
+                            </button>
+                            <button type="button" @click="collapseAll()"
+                                    class="p-2 rounded-md text-gray-600 dark:text-gray-200 hover:bg-white dark:hover:bg-[#16213e] transition-all"
+                                    :title="'{{ __('genealogy.public.collapse_all') }}'" aria-label="{{ __('genealogy.public.collapse_all') }}">
+                                <i data-lucide="chevrons-up" class="w-4 h-4"></i>
+                            </button>
+                        </div>
                     @endif
                 </div>
 
@@ -214,13 +329,34 @@
         @if ($hasTree)
             {{-- ===== TREE VIEW ===== --}}
             <div x-show="viewMode === 'tree'" x-cloak class="container mx-auto px-4 sm:px-6 lg:px-8">
-                @if (! empty($spouses))
-                    <p class="text-center text-xs font-semibold uppercase tracking-wide mb-2 text-gray-500 dark:text-gray-400">
-                        {{ __('genealogy.public.generations_shown', ['count' => $stats['generations']]) }}
-                        · <button type="button" @click="viewMode = 'list'; activeFilter = 'wives'"
-                                  class="underline hover:text-accent transition-colors">{{ __('genealogy.public.filter_wives') }}</button>
-                    </p>
-                @endif
+                {{-- Legend + interaction hint. The palette now encodes generation
+                     rather than decoration, so it needs a key; and drag-to-pan is
+                     undiscoverable without being told. Every legend entry carries
+                     a label, never colour alone. --}}
+                <div class="mb-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-gray-500 dark:text-gray-400">
+                    <span class="inline-flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#0056b3] to-[#218838]"></span>
+                        {{ __('genealogy.public.legend_root') }}
+                    </span>
+                    <span class="inline-flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#0056b3] to-[#3b82f6]"></span>
+                        {{ __('genealogy.public.filter_children') }}
+                    </span>
+                    <span class="inline-flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#218838] to-[#64CCC5]"></span>
+                        {{ __('genealogy.public.filter_grandchildren') }}
+                    </span>
+                    @if (! empty($spouses))
+                        <span class="inline-flex items-center gap-1.5">
+                            <span class="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#c2185b] to-[#e91e63]"></span>
+                            {{ __('genealogy.public.filter_wives') }}
+                        </span>
+                    @endif
+                    <span class="hidden sm:inline-flex items-center gap-1.5 ps-4 border-s border-gray-200 dark:border-gray-700">
+                        <i data-lucide="move" class="w-3.5 h-3.5"></i>
+                        {{ __('genealogy.public.tree_hint') }}
+                    </span>
+                </div>
                 <div class="relative">
                     {{-- Scroll-hint fades + real pan buttons — the arrows actually scroll the tree now, not just decorative --}}
                     <div class="tree-scroll-fade tree-scroll-fade--start bg-gradient-to-r rtl:bg-gradient-to-l from-[#F8F9FA] dark:from-[#1a1a2e] to-transparent"
@@ -264,36 +400,55 @@
                              :style="`transform: scale(${zoom}); transform-origin: top center;`">
 
                             @if (! empty($spouses))
-                                {{-- Spouses — a marriage edge, not a descent edge, so it gets a distinct
-                                     dashed connector + icon rather than the solid parent→child lines below. --}}
-                                <div class="flex flex-col items-center mb-2">
-                                    <p class="text-xs font-bold text-accent mb-3 flex items-center gap-1.5">
+                                {{-- Spouses — a marriage edge, not a descent edge, so it keeps a
+                                     dashed connector and its own colour. Rendered as a compact,
+                                     collapsible chip row: as full-size cards these twelve out-shouted
+                                     the Prophet ﷺ node they are attached to. --}}
+                                <div class="flex flex-col items-center">
+                                    <button type="button" @click="wivesOpen = !wivesOpen"
+                                            :aria-expanded="wivesOpen ? 'true' : 'false'"
+                                            class="inline-flex items-center gap-1.5 mb-3 px-3.5 py-1.5 rounded-full text-xs font-bold
+                                                   text-[#c2185b] dark:text-pink-300 bg-pink-50 dark:bg-pink-500/10
+                                                   border border-pink-200 dark:border-pink-500/25 transition-all active:scale-95
+                                                   hover:border-pink-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400">
                                         <i data-lucide="heart" class="w-3.5 h-3.5"></i>
-                                        {{ __('genealogy.public.wives_of_prophet') }}
-                                    </p>
-                                    <div class="flex flex-wrap justify-center gap-4 sm:gap-6 pb-6">
-                                        @foreach ($spouses as $i => $spouse)
-                                            <button type="button" @click="openPerson({{ (int) $spouse['id'] }})"
-                                                    style="--enter-delay: {{ $i * 60 }}ms"
-                                                    class="node-card card-enter rounded-xl border border-dashed border-accent/40
-                                                           bg-white dark:bg-[#16213e] shadow-md hover:shadow-xl p-3 sm:p-4 transition-all">
-                                                <div class="flex flex-col items-center gap-2">
-                                                    <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center shadow
-                                                                bg-gradient-to-br from-pink-500 to-rose-500">
-                                                        <i data-lucide="user" class="w-6 h-6 sm:w-7 sm:h-7 text-white"></i>
-                                                    </div>
-                                                    <h4 class="text-xs sm:text-sm font-bold text-center max-w-[8rem] line-clamp-2 text-gray-900 dark:text-white">
-                                                        {{ $spouse['name'] }}
-                                                    </h4>
-                                                </div>
-                                            </button>
-                                        @endforeach
+                                        <span>{{ __('genealogy.public.wives_of_prophet') }}</span>
+                                        <span class="tabular-nums opacity-70">({{ count($spouses) }})</span>
+                                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 transition-transform duration-300"
+                                           :class="wivesOpen ? 'rotate-180' : ''"></i>
+                                    </button>
+
+                                    <div x-show="wivesOpen" x-collapse.duration.400ms class="w-full">
+                                        <div class="flex flex-wrap justify-center gap-2.5 sm:gap-3 pb-5">
+                                            @foreach ($spouses as $i => $spouse)
+                                                @php
+                                                    $spouseName = trim((string) ($spouse['name'] ?? '')) ?: __('genealogy.public.unnamed');
+                                                    $spouseInitial = mb_substr(preg_replace('/^[^\p{L}\p{N}]+/u', '', $spouseName) ?: $spouseName, 0, 1) ?: '۞';
+                                                @endphp
+                                                <button type="button" @click="openPerson({{ (int) $spouse['id'] }})"
+                                                        style="--enter-delay: {{ min($i * 45, 500) }}ms"
+                                                        title="{{ $spouseName }}"
+                                                        class="gtree-card card-enter w-[6.5rem] sm:w-28 px-2 pt-3 pb-2.5 rounded-xl
+                                                               border border-dashed border-pink-300/70 dark:border-pink-400/30
+                                                               bg-white dark:bg-[#16213e] shadow-md hover:shadow-xl
+                                                               flex flex-col items-center
+                                                               focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400">
+                                                    <span class="w-11 h-11 rounded-full flex items-center justify-center shadow select-none
+                                                                 bg-gradient-to-br from-[#c2185b] to-[#e91e63] ring-2 ring-white/70 dark:ring-white/15">
+                                                        <span class="text-lg font-bold leading-none text-white" aria-hidden="true">{{ $spouseInitial }}</span>
+                                                    </span>
+                                                    <h4 class="mt-2 text-[11px] font-bold text-center leading-snug line-clamp-2
+                                                               text-gray-900 dark:text-white">{{ $spouseName }}</h4>
+                                                </button>
+                                            @endforeach
+                                        </div>
                                     </div>
-                                    <span class="w-px h-6 bg-gradient-to-b from-accent/50 to-primary/30" aria-hidden="true"></span>
+
+                                    <span class="gtree-marriage-link" aria-hidden="true"></span>
                                 </div>
                             @endif
 
-                            <div class="flex justify-center pt-2">
+                            <div class="gtree flex justify-center pt-2">
                                 @include('public.genealogy._node', ['node' => $tree, 'depth' => 0, 'index' => 0])
                             </div>
                         </div>
@@ -320,45 +475,149 @@
 
             <div x-show="!loading">
                 @if (count($people))
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <template x-for="(person, idx) in filteredPeople" :key="person.id">
-                            <article class="card-premium p-6 hover-scale active:scale-[0.98] transition-all card-enter"
-                                     :style="`--enter-delay: ${Math.min(idx, 11) * 40}ms`">
-                                <div class="flex items-center gap-4 mb-4">
-                                    <div class="w-16 h-16 rounded-full flex items-center justify-center shadow-lg shrink-0
-                                                bg-gradient-to-br from-primary to-secondary">
-                                        <i :data-lucide="person.isProphet ? 'crown' : (person.gender === 'female' ? 'user' : 'user')"
-                                           class="w-8 h-8 text-white"></i>
+                    {{-- The same "Refined Medallion" card the Sahaba directory uses
+                         (styles come from the x-site.medallion-card-styles component above), rendered
+                         from Alpine data instead of a Blade component because this list
+                         is fetched and paged client-side. --}}
+                    <div x-ref="listTop" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+                        <template x-for="(person, idx) in pagedPeople" :key="person.id">
+                            <button type="button" @click="openPerson(person.id)"
+                                    :style="`--enter-delay: ${Math.min(idx, 11) * 40}ms`"
+                                    :title="personName(person)"
+                                    class="sahaba-medallion-card card-enter group flex h-full w-full flex-col rounded-2xl overflow-hidden text-start
+                                           bg-gradient-to-br from-white to-[#F8F9FA] dark:from-[#16213e] dark:to-[#1a1a2e]
+                                           shadow-[0_10px_30px_-12px_rgba(0,0,0,0.25)] hover:shadow-[0_28px_50px_-12px_rgba(0,0,0,0.35)]
+                                           border border-black/5 hover:border-black/10 dark:border-white/10 dark:hover:border-white/20
+                                           focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0056b3] focus-visible:ring-offset-2
+                                           focus-visible:ring-offset-[#F8F9FA] dark:focus-visible:ring-offset-[#1a1a2e]">
+
+                                {{-- Portrait --}}
+                                <div class="sahaba-portrait relative h-44 sm:h-48 overflow-hidden flex items-center justify-center bg-gradient-to-br"
+                                     :class="cardPalette(person, idx).card">
+
+                                    <div class="absolute inset-0 opacity-90"
+                                         style="background:radial-gradient(120% 90% at 50% 18%, rgba(255,255,255,.18) 0%, transparent 55%);"></div>
+
+                                    <div class="absolute top-2.5 end-2.5 z-[4] w-7 h-7 rounded-full flex items-center justify-center
+                                                bg-gradient-to-br shadow-md ring-2 ring-white/60 dark:ring-white/20"
+                                         :class="cardPalette(person, idx).ring">
+                                        <i class="w-4 h-4 text-white" :data-lucide="cardPalette(person, idx).icon"></i>
                                     </div>
-                                    <div class="min-w-0">
-                                        <h3 class="text-lg font-bold text-gray-900 dark:text-white truncate" x-html="highlightMatch(person.name)"></h3>
-                                        <p class="text-sm text-accent truncate"
-                                           x-text="person.isProphet ? '{{ __('genealogy.public.prophet_relation') }}' : (person.title || person.typeLabel || '')"></p>
+
+                                    <div class="relative z-[1] -mt-3 flex items-center justify-center
+                                                transition-transform duration-500 group-hover:scale-105">
+                                        <svg class="sahaba-medallion absolute w-24 h-24 text-white/90" viewBox="0 0 100 100"
+                                             fill="none" aria-hidden="true">
+                                            <circle cx="50" cy="50" r="47" stroke="currentColor" stroke-width="0.6"
+                                                    stroke-dasharray="1 3" opacity="0.45"/>
+                                            <g class="ring-outer" opacity="0.5">
+                                                <rect x="22" y="22" width="56" height="56" rx="4" stroke="currentColor" stroke-width="0.9"/>
+                                                <rect x="22" y="22" width="56" height="56" rx="4" stroke="currentColor" stroke-width="0.9"
+                                                      transform="rotate(45 50 50)"/>
+                                            </g>
+                                            <g class="ring-inner" opacity="0.7">
+                                                <circle cx="50" cy="50" r="29" stroke="currentColor" stroke-width="0.8"/>
+                                                <circle cx="50" cy="50" r="24" stroke="currentColor" stroke-width="0.5" opacity="0.6"/>
+                                            </g>
+                                        </svg>
+
+                                        <div class="relative w-14 h-14 rounded-full flex items-center justify-center
+                                                    bg-white/15 backdrop-blur-sm border border-white/30 shadow-inner">
+                                            <span class="text-white text-3xl leading-none select-none drop-shadow"
+                                                  style="text-shadow:0 2px 8px rgba(0,0,0,.25);"
+                                                  x-text="personInitial(person)"></span>
+                                        </div>
+                                    </div>
+
+                                    <span class="sahaba-sheen"></span>
+
+                                    {{-- Name overlay --}}
+                                    <div class="absolute bottom-0 start-0 end-0 z-[3] px-3.5 pb-2.5 pt-7 text-white
+                                                bg-gradient-to-t from-black/75 via-black/30 to-transparent">
+                                        <template x-if="personHonorific(person)">
+                                            <span class="inline-flex max-w-full items-center mb-1 px-2 py-0.5 rounded-full
+                                                         text-[10px] font-semibold bg-white/20 backdrop-blur-sm truncate"
+                                                  x-text="personHonorific(person)"></span>
+                                        </template>
+                                        <h3 class="text-lg sm:text-xl font-bold leading-tight truncate"
+                                            x-html="highlightMatch(personName(person))"></h3>
+                                        <template x-if="person.tribe">
+                                            <span class="inline-flex max-w-full items-center mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold
+                                                         bg-black/25 ring-1 ring-white/25 text-white/90 backdrop-blur-sm truncate"
+                                                  x-text="person.tribe"></span>
+                                        </template>
                                     </div>
                                 </div>
-                                <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-4 min-h-[2.5rem]"
-                                   x-text="person.biography || '{{ __('genealogy.public.no_biography') }}'"></p>
-                                <button type="button" @click="openPerson(person.id)"
-                                        class="w-full px-4 py-2.5 rounded-lg font-semibold text-white active:scale-[0.97]
-                                               bg-gradient-to-l from-primary to-secondary hover:shadow-lg transition-all">
-                                    {{ __('genealogy.public.view_details') }}
-                                </button>
-                            </article>
+
+                                {{-- Footer — pinned so the action line aligns across cards. --}}
+                                <div class="relative mt-auto px-4 pb-3.5 pt-3 w-full">
+                                    <span class="absolute inset-x-4 top-0 h-px opacity-40 text-[#0056b3]" aria-hidden="true"
+                                          style="background:linear-gradient(90deg,transparent,currentColor,transparent);"></span>
+
+                                    <div class="flex items-center justify-between gap-3">
+                                        <template x-if="personDeathYear(person)">
+                                            <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold
+                                                         text-gray-500 dark:text-gray-400">
+                                                <i class="h-3.5 w-3.5 shrink-0" data-lucide="calendar" aria-hidden="true"></i>
+                                                <span class="tabular-nums" x-text="personDeathYear(person)"></span>
+                                            </span>
+                                        </template>
+                                        <template x-if="!personDeathYear(person)"><span></span></template>
+
+                                        <span class="inline-flex items-center gap-1.5 text-xs font-bold text-[#0056b3] dark:text-[#64CCC5]">
+                                            <span>{{ __('genealogy.public.view_details') }}</span>
+                                            <i class="sahaba-card-arrow h-4 w-4 shrink-0"
+                                               data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}" aria-hidden="true"></i>
+                                        </span>
+                                    </div>
+                                </div>
+                            </button>
                         </template>
                     </div>
 
-                    {{-- Load more — with 10k+ genealogy records, the initial batch (tree nodes + a page of recents) is a fraction of the total; this is how the rest becomes reachable --}}
-                    <div class="flex flex-col items-center gap-3 mt-10" x-show="hasMorePeople && filteredPeople.length > 0">
-                        <button type="button" @click="loadMore()" :disabled="loadingMore"
-                                class="inline-flex items-center gap-2 px-8 py-3 rounded-full font-bold transition-all active:scale-[0.97]
-                                       bg-white dark:bg-[#16213e] text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700
-                                       hover:border-primary/50 hover:shadow-lg disabled:opacity-60 disabled:cursor-wait">
-                            <i x-show="!loadingMore" data-lucide="chevron-down" class="w-4 h-4"></i>
-                            <i x-show="loadingMore" data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
-                            <span x-text="loadingMore ? '{{ __('genealogy.public.loading_more') }}' : '{{ __('genealogy.public.load_more') }}'"></span>
-                        </button>
-                        <p class="text-xs text-gray-500 dark:text-gray-400" x-text="peopleLoadedLabel"></p>
-                    </div>
+                    {{-- Pagination. With 10k+ records the list is paged, never dumped
+                         whole: each page holds `perPage` cards, and stepping past what
+                         is cached transparently pulls the next server page first. --}}
+                    <nav x-show="filteredPeople.length > 0" role="navigation" aria-label="{{ __('genealogy.public.pagination_label') }}"
+                         class="flex flex-col sm:flex-row items-center justify-between gap-4 mt-10">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            {{ __('site.showing') }}
+                            <span class="font-semibold tabular-nums" x-text="pageRangeStart"></span>–<span class="font-semibold tabular-nums" x-text="pageRangeEnd"></span>
+                            {{ __('site.of') }}
+                            <span class="font-semibold tabular-nums" x-text="resultTotal"></span>
+                        </p>
+
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" @click="goToPage(currentPage - 1)"
+                                    :disabled="currentPage === 1 || paging"
+                                    class="px-3 py-2 rounded-lg transition-colors text-gray-600 dark:text-gray-300
+                                           hover:bg-primary/10 hover:text-primary
+                                           disabled:text-gray-300 dark:disabled:text-gray-600 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                                    aria-label="{{ __('genealogy.public.prev_page') }}">
+                                <i data-lucide="chevron-{{ $isRtl ? 'right' : 'left' }}" class="w-4 h-4"></i>
+                            </button>
+
+                            <template x-for="page in pageWindow" :key="page">
+                                <button type="button" @click="goToPage(page)" :disabled="paging"
+                                        :aria-current="page === currentPage ? 'page' : null"
+                                        class="px-4 py-2 rounded-lg font-semibold tabular-nums transition-colors"
+                                        :class="page === currentPage
+                                            ? 'font-bold text-white bg-gradient-to-l from-primary to-secondary shadow-md'
+                                            : 'text-gray-700 dark:text-gray-200 hover:bg-primary/10 hover:text-primary'"
+                                        x-text="page"></button>
+                            </template>
+
+                            <button type="button" @click="goToPage(currentPage + 1)"
+                                    :disabled="(currentPage >= totalPages && !hasMorePeople) || paging"
+                                    class="px-3 py-2 rounded-lg transition-colors text-gray-600 dark:text-gray-300
+                                           hover:bg-primary/10 hover:text-primary
+                                           disabled:text-gray-300 dark:disabled:text-gray-600 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                                    aria-label="{{ __('genealogy.public.next_page') }}">
+                                <i x-show="!paging" data-lucide="chevron-{{ $isRtl ? 'left' : 'right' }}" class="w-4 h-4"></i>
+                                <i x-show="paging" data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+                            </button>
+                        </div>
+                    </nav>
 
                     {{-- Empty (after filtering) --}}
                     <div x-show="filteredPeople.length === 0" x-cloak>
@@ -525,13 +784,22 @@
 
 @push('scripts')
 <script>
-    function genealogyPage(people, childrenIds, grandchildrenIds, spouseIds) {
+    function genealogyPage(people, childrenIds, grandchildrenIds, spouseIds, branchIds, collapsedIds) {
         return {
             people: people || [],
             childrenIds: new Set(childrenIds || []),
             grandchildrenIds: new Set(grandchildrenIds || []),
             spouseIds: new Set(spouseIds || []),
             loading: true,
+
+            // ── Tree collapse state ─────────────────────────────────────────
+            // The markup for every generation is server-rendered (crawlable);
+            // this map decides what is *shown*. Anything below the Prophet's
+            // own children starts closed — expanded, the third generation was
+            // a horizontal sprawl several screens wide.
+            branchIds: branchIds || [],
+            collapsed: Object.fromEntries((collapsedIds || []).map((id) => [id, true])),
+            wivesOpen: true,
             viewMode: @json($hasTree) ? 'tree' : 'list',
             zoom: 1,
             activeFilter: 'all',
@@ -553,6 +821,13 @@
             loadingMore: false,
             lastFetchedQuery: '',
             searchDebounceTimer: null,
+
+            // Client-side paging over whatever is loaded; stepping past the end
+            // pulls the next server page first, so the grid never renders more
+            // than one page of cards at a time.
+            perPage: 12,
+            currentPage: 1,
+            paging: false,
 
             displayStats: { people: 0, children: 0, generations: 0 },
             treeScroll: { start: false, end: false },
@@ -576,11 +851,72 @@
                     this.updateTreeScroll();
                 }));
                 this.$watch('selectedPerson', () => this.$nextTick(() => window.lucide?.createIcons()));
-                this.$watch('activeFilter',   () => this.$nextTick(() => window.lucide?.createIcons()));
+                // Changing the result set must reset the cursor, otherwise a
+                // filter with fewer pages leaves you stranded on an empty one.
+                this.$watch('activeFilter', () => {
+                    this.currentPage = 1;
+                    this.$nextTick(() => window.lucide?.createIcons());
+                });
                 this.$watch('searchQuery', () => {
+                    this.currentPage = 1;
                     this.$nextTick(() => window.lucide?.createIcons());
                     this.debouncedSearch();
                 });
+                // Collapsing a branch changes how wide the tree is, so the
+                // scroll-hint fades have to be re-measured after the transition.
+                this.$watch('collapsed', () => setTimeout(() => this.updateTreeScroll(), 450));
+            },
+
+            // ── Tree branches ───────────────────────────────────────────────
+            isOpen(id)     { return ! this.collapsed[id]; },
+            toggleNode(id) { this.collapsed = { ...this.collapsed, [id]: ! this.collapsed[id] }; },
+            expandAll()    { this.collapsed = {}; },
+            collapseAll()  { this.collapsed = Object.fromEntries(this.branchIds.map((id) => [id, true])); },
+
+            // ── List cards ──────────────────────────────────────────────────
+            personName(person) {
+                return (person?.name || '').trim() || '{{ __('genealogy.public.unnamed') }}';
+            },
+
+            // Calligraphic monogram — leading punctuation is skipped so
+            // transliterations like "'Umar" don't render as an apostrophe.
+            personInitial(person) {
+                const name = this.personName(person);
+                return (name.replace(/^[^\p{L}\p{N}]+/u, '') || name).charAt(0).toUpperCase() || '۞';
+            },
+
+            personHonorific(person) {
+                if (person?.isProphet) return '{{ __('genealogy.public.prophet_relation') }}';
+                return person?.title || person?.typeLabel || '';
+            },
+
+            // death_date_hijri is stored as "13 AH" — show the year with the
+            // localized era suffix, or nothing at all when the column is empty.
+            personDeathYear(person) {
+                const match = String(person?.deathDateHijri || '').match(/\d+/);
+                return match ? `${match[0]} {{ __('sahaba.year_hijri') }}` : '';
+            },
+
+            // Palette rotates for variety but stays anchored: the Prophet ﷺ and
+            // his wives always get their own colour so the list agrees with the
+            // tree's legend rather than recolouring them at random.
+            cardPalette(person, index) {
+                if (person?.isProphet) {
+                    return { card: 'from-[#0056b3] to-[#218838]', ring: 'from-yellow-400 to-yellow-600', icon: 'crown' };
+                }
+                if (this.spouseIds.has(person?.id)) {
+                    return { card: 'from-[#c2185b] to-[#e91e63]', ring: 'from-pink-300 to-pink-500', icon: 'heart' };
+                }
+                // Five entries against a four-column grid on purpose: an even
+                // count would line each colour up into a vertical stripe.
+                const palettes = [
+                    { card: 'from-[#0056b3] to-[#004c9e]', ring: 'from-yellow-400 to-yellow-600',   icon: 'star' },
+                    { card: 'from-[#218838] to-[#1e7e34]', ring: 'from-[#64CCC5] to-[#218838]',     icon: 'shield' },
+                    { card: 'from-[#6f42c1] to-[#5a32a3]', ring: 'from-purple-400 to-purple-600',   icon: 'award' },
+                    { card: 'from-[#0f766e] to-[#64CCC5]', ring: 'from-teal-300 to-teal-500',       icon: 'users' },
+                    { card: 'from-[#FF7F50] to-[#e8633a]', ring: 'from-orange-400 to-orange-600',   icon: 'flame' },
+                ];
+                return palettes[index % palettes.length];
             },
 
             prefersReducedMotion() {
@@ -649,8 +985,63 @@
                 ).slice(0, 12);
             },
 
-            get peopleLoadedLabel() {
-                return `${this.people.length} / ${this.peopleTotal}`;
+            // ── Pagination ──────────────────────────────────────────────────
+            get totalPages() {
+                return Math.max(1, Math.ceil(this.filteredPeople.length / this.perPage));
+            },
+
+            get pagedPeople() {
+                const start = (this.currentPage - 1) * this.perPage;
+                return this.filteredPeople.slice(start, start + this.perPage);
+            },
+
+            // Only the unfiltered list is backed by the server's full count; a
+            // filter pill narrows to a set that is already fully loaded.
+            get resultTotal() {
+                return (this.activeFilter === 'all' && ! this.searchQuery.trim())
+                    ? this.peopleTotal
+                    : this.filteredPeople.length;
+            },
+
+            get pageRangeStart() {
+                return this.filteredPeople.length === 0 ? 0 : (this.currentPage - 1) * this.perPage + 1;
+            },
+
+            get pageRangeEnd() {
+                return Math.min(this.currentPage * this.perPage, this.filteredPeople.length);
+            },
+
+            // Five-page window around the cursor, same shape the server-side
+            // site.pagination component renders.
+            get pageWindow() {
+                const last = this.totalPages;
+                let from = Math.max(1, this.currentPage - 2);
+                const to = Math.min(last, from + 4);
+                from = Math.max(1, to - 4);
+                return Array.from({ length: to - from + 1 }, (_, i) => from + i);
+            },
+
+            async goToPage(page) {
+                if (this.paging || page < 1) return;
+                // Walking past the cached tail: pull server pages until the
+                // requested page exists (or the feed runs dry).
+                if (page > this.totalPages) {
+                    if (! this.hasMorePeople) return;
+                    this.paging = true;
+                    try {
+                        while (page > this.totalPages && this.hasMorePeople) {
+                            const before = this.people.length;
+                            await this.loadMore();
+                            if (this.people.length === before) break; // no progress — stop rather than spin
+                        }
+                    } finally {
+                        this.paging = false;
+                    }
+                }
+                this.currentPage = Math.min(page, this.totalPages);
+                this.$nextTick(() => {
+                    this.$refs.listTop?.scrollIntoView({ block: 'start', behavior: this.prefersReducedMotion() ? 'auto' : 'smooth' });
+                });
             },
 
             get seerahUrl() {
