@@ -7,6 +7,7 @@ namespace App\Domain\Hadith\Services;
 use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithBook;
 use App\Domain\Hadith\Models\HadithChapter;
+use App\Domain\Hadith\Models\HadithCollection;
 use App\Domain\Hadith\Repositories\HadithRepositoryInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -102,6 +103,26 @@ final class HadithAdminService
             ]);
 
             return $locked->fresh(['collection']);
+        });
+    }
+
+    /** @param array<string, mixed> $data */
+    public function updateCollection(HadithCollection $collection, array $data): HadithCollection
+    {
+        return DB::transaction(function () use ($collection, $data): HadithCollection {
+            /** @var HadithCollection $locked */
+            $locked = HadithCollection::query()->lockForUpdate()->findOrFail($collection->id);
+            $this->guardVersion($locked, (string) $data['updated_at']);
+            $locked->update([
+                'name' => $data['name'],
+                'author' => $data['author'],
+                'short_intro' => $data['short_intro'],
+                'about' => $data['about'],
+                'is_published' => $data['is_published'],
+                'featured' => $data['featured'],
+            ]);
+
+            return $locked->fresh();
         });
     }
 

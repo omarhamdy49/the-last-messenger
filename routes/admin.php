@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ExportController;
 use App\Http\Controllers\Admin\Hadith\HadithBookController;
 use App\Http\Controllers\Admin\Hadith\HadithChapterController;
+use App\Http\Controllers\Admin\Hadith\HadithCollectionController;
 use App\Http\Controllers\Admin\Hadith\HadithController;
 use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\LanguageSettingsController;
@@ -115,6 +116,10 @@ Route::prefix('su/portal/v1/admin')
         Route::get('hadith', [HadithController::class, 'index'])->name('admin.hadith.index');
         Route::get('hadith/{hadith}/edit', [HadithController::class, 'edit'])->name('admin.hadith.edit');
         Route::put('hadith/{hadith}', [HadithController::class, 'update'])->name('admin.hadith.update');
+
+        Route::get('hadith-collections', [HadithCollectionController::class, 'index'])->name('admin.hadith-collections.index');
+        Route::get('hadith-collections/{collection}', [HadithCollectionController::class, 'show'])->name('admin.hadith-collections.show');
+        Route::put('hadith-collections/{collection}', [HadithCollectionController::class, 'update'])->name('admin.hadith-collections.update');
 
         Route::get('hadith-books', [HadithBookController::class, 'index'])->name('admin.hadith-books.index');
         Route::get('hadith-books/{book}/edit', [HadithBookController::class, 'edit'])->name('admin.hadith-books.edit');

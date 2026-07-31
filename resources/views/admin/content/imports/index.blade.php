@@ -15,12 +15,15 @@
             <h1 class="text-3xl font-bold gradient-text mb-2">{{ __('admin.content_imports') }}</h1>
             <p class="text-sm" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">{{ __('admin.content_imports_hint') }}</p>
         </div>
+        {{-- The import-runs screen is not built yet; the link appears once it is. --}}
+        @if (\Illuminate\Support\Facades\Route::has('admin.hadith.import-runs.index'))
         <a href="{{ route('admin.hadith.import-runs.index') }}"
            class="px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 border-2"
            :class="darkMode ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'">
             <i data-lucide="scroll-text" class="w-5 h-5"></i>
             <span>{{ __('admin.content_import_logs') }}</span>
         </a>
+        @endif
     </div>
 
     {{-- Quran coverage --}}

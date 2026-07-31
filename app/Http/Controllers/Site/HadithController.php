@@ -6,7 +6,9 @@ namespace App\Http\Controllers\Site;
 
 use App\Domain\Hadith\Services\HadithBrowseService;
 use App\Domain\Hadith\Services\HadithQueryService;
+use App\Domain\Hadith\Services\HadithSearchService;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Site\HadithSearchRequest;
 use Illuminate\Contracts\View\View;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -15,7 +17,24 @@ final class HadithController extends Controller
     public function __construct(
         private readonly HadithQueryService $hadithQueryService,
         private readonly HadithBrowseService $browseService,
+        private readonly HadithSearchService $searchService,
     ) {}
+
+    /**
+     * Full-text search. Rate limited on the route, and the page size is clamped
+     * inside SearchCriteria rather than validated, so an oversized value narrows
+     * instead of erroring.
+     */
+    public function search(HadithSearchRequest $request): View
+    {
+        $criteria = $request->criteria();
+
+        return view('public.hadith.search', [
+            'criteria' => $criteria,
+            'results' => $this->searchService->search($criteria),
+            'collections' => $this->browseService->hub(),
+        ]);
+    }
 
     /** The hub: every published collection. */
     public function hub(): View

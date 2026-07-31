@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Hadith\Repositories;
 
+use App\Domain\Hadith\DTOs\SearchCriteria;
 use App\Domain\Hadith\Enums\HadithGrade;
 use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Shared\Contracts\RepositoryInterface;
@@ -41,6 +42,18 @@ interface HadithRepositoryInterface extends RepositoryInterface
      * sorts the whole table on every call.
      */
     public function randomPublished(?HadithGrade $grade = null): ?Hadith;
+
+    /**
+     * Full-text search, paginated, newest-relevance first.
+     *
+     * `$expression` is a prepared BOOLEAN MODE expression from
+     * HadithSearchService — already normalised to match the indexed text.
+     *
+     * The total is counted over DISTINCT hadiths: MySQL rewrites COUNT(*) on a
+     * MATCH query and returns a figure larger than the table itself, which would
+     * make the paginator claim pages that do not exist.
+     */
+    public function search(string $expression, SearchCriteria $criteria): LengthAwarePaginator;
 
     /**
      * Recompute `display_grade` from this hadith's `hadith`-scope gradings and

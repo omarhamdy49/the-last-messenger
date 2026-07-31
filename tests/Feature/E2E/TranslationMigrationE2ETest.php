@@ -252,16 +252,42 @@ class TranslationMigrationE2ETest extends TestCase
             ->in(base_path('app/Models'))
             ->name('*.php');
 
-        $hasTranslationsCount = 0;
+        $offenders = [];
         foreach ($finder as $file) {
             if (strpos($file->getContents(), 'Spatie\\Translatable\\HasTranslations') !== false) {
-                $hasTranslationsCount++;
+                $offenders[] = $file->getRelativePathname();
             }
         }
 
-        // Article model intentionally uses Spatie HasTranslations for JSON columns (title, excerpt, content, etc.)
-        // rather than a per-table translation model — this is the only remaining allowed usage.
-        $this->assertLessThanOrEqual(1, $hasTranslationsCount, 'Only Article may use Spatie HasTranslations; all Domain models must use HasLocalizedContent');
+        // Article uses Spatie HasTranslations for its JSON columns rather than a
+        // per-table translation model.
+        //
+        // The rebuilt Hadith module does too, deliberately: dropping the three
+        // hadith_*_translations tables in favour of JSON columns is part of what
+        // takes that schema from 22 tables to 8, and data-model.md records the
+        // decision. Listing the files by name rather than counting them keeps
+        // this test meaningful — a NEW model reaching for Spatie still fails.
+        // Paths are relative to whichever of the two Finder roots matched, so
+        // app/Models/Article.php arrives as a bare filename.
+        $allowed = [
+            'Article.php',
+            'Hadith/Models/HadithCollection.php',
+            'Hadith/Models/HadithBook.php',
+            'Hadith/Models/HadithChapter.php',
+            'Hadith/Models/HadithScholar.php',
+        ];
+
+        $unexpected = array_values(array_filter(
+            $offenders,
+            static fn (string $path): bool => ! in_array(str_replace('\\', '/', $path), $allowed, true),
+        ));
+
+        $this->assertSame(
+            [],
+            $unexpected,
+            'These models use Spatie HasTranslations without being on the allow-list; '
+            .'Domain models should use HasLocalizedContent unless there is a recorded reason.',
+        );
     }
 
     /**

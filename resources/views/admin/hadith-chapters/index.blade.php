@@ -73,7 +73,12 @@
                         <tr :class="darkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'">
                             <td class="px-5 py-4"><div class="font-bold">{{ $chapter->title }}</div><div class="mt-1 text-xs text-gray-500">#{{ $chapter->chapter_number }} · {{ __('hadith.admin.order') }} {{ $chapter->sort_order }}</div></td>
                             <td class="px-5 py-4"><div class="font-semibold">{{ $chapter->book->title }}</div><div class="text-xs text-gray-500">#{{ $chapter->book->book_number }}</div></td>
-                            <td class="px-5 py-4">{{ $chapter->book->collection->name }}</td>
+                            <td class="px-5 py-4">
+                                <a href="{{ route('admin.hadith-collections.show', $chapter->book->collection) }}"
+                                   class="font-semibold text-[#0056b3] hover:underline dark:text-[#64CCC5]">
+                                    {{ $chapter->book->collection->name }}
+                                </a>
+                            </td>
                             <td class="px-5 py-4 font-bold tabular-nums">{{ number_format($chapter->hadiths_count) }}</td>
                             <td class="px-5 py-4"><span class="rounded-full px-2.5 py-1 text-xs font-bold {{ $chapter->is_published ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }}">{{ $chapter->is_published ? __('hadith.admin.published') : __('hadith.admin.hidden') }}</span></td>
                             <td class="px-5 py-4 text-end"><a href="{{ route('admin.hadith-chapters.edit', $chapter) }}" class="inline-flex rounded-lg p-2.5 text-[#0056b3] hover:bg-blue-50 dark:text-[#64CCC5] dark:hover:bg-gray-800" aria-label="{{ __('admin.edit') }}"><i data-lucide="square-pen" class="h-5 w-5"></i></a></td>

@@ -131,8 +131,58 @@ alongside the already-neutered `addHadithLinks()`, and four helpers that became 
 
 ---
 
-## 4. Measurements still to record
+## 4. Search query plan (T141) — measured 2026-07-31 on the full corpus
 
-- `EXPLAIN` for the search query (T141) and the five hot paths (T192)
+99,991 text rows, 51,775 hadiths.
+
+```
+EXPLAIN SELECT hadith_id, MAX(MATCH(search_body) AGAINST (? IN BOOLEAN MODE))
+        FROM hadith_texts
+        WHERE MATCH(search_body) AGAINST (? IN BOOLEAN MODE)
+        GROUP BY hadith_id;
+
+table=hadith_texts  type=fulltext  key=ft_hadith_texts_search  rows=1
+Extra: Using where; Ft_hints: no_ranking; Using temporary
+```
+
+`type=fulltext` on `ft_hadith_texts_search` — the index serves the query and
+there is no full scan.
+
+| Query | Hadiths | Time |
+|---|---:|---:|
+| `+الاعمال` | 113 | 14.8 ms |
+| `+انما +الاعمال` | 16 | 6.0 ms |
+| `+intentions` | 41 | 2.4 ms |
+| `+ما` (a very common two-letter token) | 11,144 | 199.7 ms |
+
+The worst case is a single extremely common two-character token, which matches
+about a fifth of the corpus. It sits right at the 200 ms budget; adding a second
+term drops it to single digits, which is the normal shape of a real search.
+
+### Two MySQL behaviours worth knowing before touching this code
+
+**`COUNT(*)` over a `MATCH` query lies.** MySQL rewrites it and returned 114,334
+for a table holding 99,991 rows. Pagination therefore counts DISTINCT hadiths
+through a joined subquery; a naive `count()` makes the paginator offer pages
+that do not exist.
+
+**FULLTEXT is not transactional.** InnoDB does not update the index until
+commit, so a test wrapped in `RefreshDatabase`'s transaction sees no matches at
+all. The search tests use `DatabaseTruncation` for that reason.
+
+**Deleted rows linger in the index.** After repeated wipe-and-reimport cycles the
+auxiliary tables hold stale document IDs. Purge with:
+
+```sql
+SET GLOBAL innodb_optimize_fulltext_only = ON;
+OPTIMIZE TABLE hadith_texts;
+SET GLOBAL innodb_optimize_fulltext_only = OFF;
+```
+
+---
+
+## 5. Measurements still to record
+
+- `EXPLAIN` for the five hot paths (T192)
 - Per-collection reconciliation, expected vs actual (T178)
 - The 20-record cross-check against `prophet-data-generator/hadith/production/` (T177)

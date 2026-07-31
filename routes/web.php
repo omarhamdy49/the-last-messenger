@@ -70,6 +70,8 @@ Route::get('/quran/{surahNumber}', [QuranController::class, 'surah'])
 // Static segments are declared BEFORE the dynamic canonical route so `search`
 // and `urn` can never be read as a collection code. Every dynamic segment is
 // constrained: `number` allows `1a`, which the source really uses.
+Route::get('/hadith/search', [HadithController::class, 'search'])
+    ->middleware('throttle:search')->name('public.hadith.search');
 Route::get('/hadith/urn/{urn}', [HadithController::class, 'urn'])
     ->whereNumber('urn')->name('public.hadith.urn');
 Route::get('/hadith/{collection}:{number}', [HadithController::class, 'show'])

@@ -254,7 +254,7 @@
             <div>
                 <button @click="toggleSubmenu('hadith')"
                         :class="openSubmenu === 'hadith' ||
-                                ['hadith','hadith-books','hadith-chapters'].includes(activeMenu) ?
+                                ['hadith','hadith-collections','hadith-books','hadith-chapters'].includes(activeMenu) ?
                             'bg-gradient-primary text-white shadow-lg' :
                             (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
                         class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
@@ -270,6 +270,14 @@
                 <div x-show="openSubmenu === 'hadith'"
                      x-collapse
                      class="mt-2 ms-6 space-y-1">
+                    <a href="{{ route('admin.hadith-collections.index') }}"
+                       @click="activeMenu = 'hadith-collections'"
+                       :class="isActive('hadith-collections') ? 'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="library-big" class="w-4 h-4"></i>
+                        <span>{{ __('admin.hadith_collections') }}</span>
+                    </a>
                     <a href="{{ route('admin.hadith.index') }}"
                        @click="activeMenu = 'hadith'"
                        :class="isActive('hadith') ? 'text-accent font-semibold' :

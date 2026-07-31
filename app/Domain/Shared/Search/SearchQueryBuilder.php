@@ -115,7 +115,9 @@ class SearchQueryBuilder
     {
         return match ($module) {
             SearchModule::ARTICLE => ['locales', 'writer', 'category'],
-            SearchModule::HADITH => ['chapter.book.collection', 'translations'],
+            // The rebuilt module keeps per-locale bodies in `texts` and reaches
+            // its collection directly, not through chapter -> book.
+            SearchModule::HADITH => ['collection', 'book', 'texts'],
             // `category` is an enum column on media_programs (not a relation);
             // searchable text lives in the translations table.
             SearchModule::MEDIA => ['translations'],

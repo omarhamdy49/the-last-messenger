@@ -113,7 +113,10 @@
                                 <div class="mt-1 text-xs text-gray-500">ID {{ $hadith->id }}@if($hadith->sunnah_urn) · URN {{ $hadith->sunnah_urn }}@endif</div>
                             </td>
                             <td class="px-5 py-4">
-                                <div class="font-semibold">{{ $hadith->collection->name }}</div>
+                                <a href="{{ route('admin.hadith-collections.show', $hadith->collection) }}"
+                                   class="font-semibold text-[#0056b3] hover:underline dark:text-[#64CCC5]">
+                                    {{ $hadith->collection->name }}
+                                </a>
                                 <div class="mt-1 text-sm text-gray-500">{{ $hadith->book->book_number }} — {{ $hadith->book->title }}</div>
                                 @if($hadith->chapter)<div class="mt-1 text-xs text-gray-500">{{ __('hadith.chapter') }} {{ $hadith->chapter->chapter_number }}</div>@endif
                             </td>

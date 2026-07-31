@@ -65,7 +65,13 @@
                     @forelse($books as $book)
                         <tr :class="darkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'">
                             <td class="px-5 py-4"><div class="font-bold">{{ $book->title }}</div><div class="mt-1 text-xs text-gray-500">#{{ $book->book_number }} · {{ __('hadith.admin.order') }} {{ $book->sort_order }}</div></td>
-                            <td class="px-5 py-4"><div class="font-semibold">{{ $book->collection->name }}</div><div class="text-xs text-gray-500">{{ $book->collection->code }}</div></td>
+                            <td class="px-5 py-4">
+                                <a href="{{ route('admin.hadith-collections.show', $book->collection) }}"
+                                   class="font-semibold text-[#0056b3] hover:underline dark:text-[#64CCC5]">
+                                    {{ $book->collection->name }}
+                                </a>
+                                <div class="text-xs text-gray-500">{{ $book->collection->code }}</div>
+                            </td>
                             <td class="px-5 py-4 font-bold tabular-nums">{{ number_format($book->chapters_count) }}</td>
                             <td class="px-5 py-4 font-bold tabular-nums">{{ number_format($book->hadiths_count) }}</td>
                             <td class="px-5 py-4"><span class="rounded-full px-2.5 py-1 text-xs font-bold {{ $book->is_published ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }}">{{ $book->is_published ? __('hadith.admin.published') : __('hadith.admin.hidden') }}</span></td>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Hadith\Repositories;
 
+use App\Domain\Hadith\DTOs\SearchCriteria;
 use App\Domain\Hadith\Enums\GradeScope;
 use App\Domain\Hadith\Enums\HadithGrade;
 use App\Domain\Hadith\Models\Hadith;
@@ -111,6 +112,41 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             ->select(self::DETAIL_COLUMNS)
             ->with(self::DETAIL_RELATIONS)
             ->find($id);
+    }
+
+    public function search(string $expression, SearchCriteria $criteria): LengthAwarePaginator
+    {
+        if ($expression === '') {
+            // An empty AGAINST expression is a MySQL syntax error, and a query
+            // of only stop-words legitimately matches nothing.
+            return new \Illuminate\Pagination\LengthAwarePaginator(
+                [], 0, $criteria->perPage(), $criteria->page(),
+                ['path' => \Illuminate\Pagination\Paginator::resolveCurrentPath()],
+            );
+        }
+
+        $matches = DB::table('hadith_texts')
+            ->select('hadith_id')
+            ->selectRaw('MAX(MATCH(search_body) AGAINST (? IN BOOLEAN MODE)) AS score', [$expression])
+            ->whereRaw('MATCH(search_body) AGAINST (? IN BOOLEAN MODE)', [$expression])
+            ->when($criteria->locale !== null, fn ($query) => $query->where('locale', $criteria->locale))
+            // One row per hadith: a bilingual record matches twice and must not
+            // occupy two result slots.
+            ->groupBy('hadith_id');
+
+        $query = Hadith::query()
+            ->select(self::DETAIL_COLUMNS)
+            ->addSelect('matches.score')
+            ->with(self::DETAIL_RELATIONS)
+            ->joinSub($matches, 'matches', 'matches.hadith_id', '=', 'hadith_hadiths.id')
+            ->where('hadith_hadiths.is_published', true)
+            ->when($criteria->grade !== null, fn (Builder $q) => $q->where('display_grade', $criteria->grade))
+            ->when($criteria->collectionCode !== null, fn (Builder $q) => $q
+                ->whereHas('collection', fn (Builder $c) => $q->getQuery() && $c->where('code', $criteria->collectionCode)))
+            ->orderByDesc('matches.score')
+            ->orderBy('hadith_hadiths.id');
+
+        return $query->paginate($criteria->perPage(), ['*'], 'page', $criteria->page());
     }
 
     public function recomputeDisplayGrade(int $hadithId): HadithGrade

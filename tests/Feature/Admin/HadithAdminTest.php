@@ -8,6 +8,7 @@ use App\Domain\Hadith\Enums\HadithGrade;
 use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithBook;
 use App\Domain\Hadith\Models\HadithChapter;
+use App\Domain\Hadith\Models\HadithCollection;
 use App\Domain\Hadith\Models\HadithText;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -27,8 +28,52 @@ final class HadithAdminTest extends TestCase
         $this->actingAs($this->createAdminUser());
 
         $this->get(route('admin.hadith.index'))->assertOk();
+        $this->get(route('admin.hadith-collections.index'))->assertOk();
         $this->get(route('admin.hadith-books.index'))->assertOk();
         $this->get(route('admin.hadith-chapters.index'))->assertOk();
+    }
+
+    public function test_collection_names_link_to_the_collection_page_from_management_lists(): void
+    {
+        $hadith = Hadith::factory()->create();
+        $collectionUrl = route('admin.hadith-collections.show', $hadith->collection);
+        $this->actingAs($this->createAdminUser());
+
+        $this->get(route('admin.hadith.index'))->assertSee($collectionUrl, false);
+        $this->get(route('admin.hadith-books.index'))->assertSee($collectionUrl, false);
+        $this->get(route('admin.hadith-chapters.index'))->assertSee($collectionUrl, false);
+    }
+
+    public function test_admin_can_manage_collection_content_without_changing_imported_identity(): void
+    {
+        $collection = HadithCollection::factory()->create();
+        $originalIdentity = $collection->only([
+            'code',
+            'has_books',
+            'has_chapters',
+            'has_volumes',
+            'reference_template',
+            'display_order',
+        ]);
+        $this->actingAs($this->createAdminUser());
+
+        $this->get(route('admin.hadith-collections.show', $collection))->assertOk();
+
+        $this->put(route('admin.hadith-collections.update', $collection), [
+            'updated_at' => $collection->updated_at->toISOString(),
+            'is_published' => '0',
+            'featured' => '1',
+            'name' => ['ar' => 'مجموعة محررة', 'en' => 'Edited Collection', 'fr' => null, 'tr' => null, 'ur' => null],
+            'author' => ['ar' => 'مؤلف محرر', 'en' => 'Edited Author', 'fr' => null, 'tr' => null, 'ur' => null],
+            'short_intro' => ['ar' => 'مقدمة مختصرة', 'en' => null, 'fr' => null, 'tr' => null, 'ur' => null],
+            'about' => ['ar' => 'نبذة محررة', 'en' => null, 'fr' => null, 'tr' => null, 'ur' => null],
+        ])->assertRedirect(route('admin.hadith-collections.show', $collection));
+
+        $updated = $collection->fresh();
+        $this->assertSame($originalIdentity, $updated->only(array_keys($originalIdentity)));
+        $this->assertSame('Edited Collection', $updated->getTranslation('name', 'en'));
+        $this->assertFalse($updated->is_published);
+        $this->assertTrue($updated->featured);
     }
 
     public function test_admin_can_search_hadith_identity(): void
