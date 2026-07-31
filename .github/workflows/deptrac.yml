@@ -6,11 +6,13 @@ on:
     paths:
       - "app/**"
       - "deptrac.yaml"
+      - "deptrac.baseline.yaml"
       - ".github/workflows/deptrac.yml"
   pull_request:
     paths:
       - "app/**"
       - "deptrac.yaml"
+      - "deptrac.baseline.yaml"
       - ".github/workflows/deptrac.yml"
 
 jobs:
