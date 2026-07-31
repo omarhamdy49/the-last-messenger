@@ -125,13 +125,16 @@ final class HadithImporter
         foreach ($chapters as $index => $chapter) {
             $mapped = $this->mapper->mapChapter($chapter, $index + 1);
 
+            // Keyed on sort_order, not chapter_number: the source repeats a
+            // chapter number within a book 354 times across Bukhari alone, and
+            // those are different chapters.
             $row = HadithChapter::query()->firstOrNew([
                 'book_id' => $book->id,
-                'chapter_number' => $mapped['chapter_number'],
+                'sort_order' => $mapped['sort_order'],
             ]);
 
             $row->fill([
-                'sort_order' => $mapped['sort_order'],
+                'chapter_number' => $mapped['chapter_number'],
                 'title' => $mapped['title'] !== [] ? $mapped['title'] : ($row->getTranslations('title') ?: ['ar' => $mapped['chapter_number']]),
                 'intro' => $mapped['intro'] !== [] ? $mapped['intro'] : $row->getTranslations('intro'),
             ]);
@@ -140,7 +143,7 @@ final class HadithImporter
             $this->tally($row->exists ? 'chapters_updated' : 'chapters_created');
             $row->save();
 
-            $byNumber[$mapped['chapter_number']] = $row;
+            $byNumber[$mapped['chapter_number']] ??= $row;
         }
 
         return $byNumber;

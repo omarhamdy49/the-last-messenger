@@ -15,6 +15,46 @@ declare(strict_types=1);
  *
  * Run:  php -S 127.0.0.1:8899 extraction-sink.php
  */
+/**
+ * Writes one book file plus its manifest. Written to a .part name and renamed
+ * on success: a half-written file that still parses is the worst outcome for a
+ * resumable extraction run.
+ *
+ * @param  array<string, mixed>  $decoded
+ */
+function writeBook(string $collection, string $book, string $body, array $decoded): string
+{
+    $dir = ROOT.'/'.$collection;
+
+    if (! is_dir($dir) && ! mkdir($dir, 0o755, true) && ! is_dir($dir)) {
+        throw new RuntimeException('cannot create '.$dir);
+    }
+
+    $path = $dir.'/book_'.$book.'.json';
+    $tmp = $path.'.part';
+    file_put_contents($tmp, $body);
+    rename($tmp, $path);
+
+    $records = is_array($decoded['records'] ?? null) ? count($decoded['records']) : 0;
+    $chapters = is_array($decoded['chapters'] ?? null) ? count($decoded['chapters']) : 0;
+
+    file_put_contents($dir.'/book_'.$book.'.manifest.json', json_encode([
+        'collection' => $collection,
+        'book_number' => $book,
+        'source_url' => $decoded['source']['url'] ?? null,
+        'extractor_version' => $decoded['source']['extractor_version'] ?? null,
+        'expected_records' => $decoded['counts']['records'] ?? null,
+        'actual_records' => $records,
+        'expected_chapters' => $decoded['counts']['chapters'] ?? null,
+        'actual_chapters' => $chapters,
+        'bytes' => strlen($body),
+        'sha256' => hash('sha256', $body),
+        'extracted_at' => date('c'),
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+    return $book;
+}
+
 const ROOT = '/Volumes/Data/projects/the-last-massenger/the-last-messenger-be/storage/app/hadith_source';
 
 header('Access-Control-Allow-Origin: *');
@@ -66,6 +106,37 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 $collection = (string) ($_GET['collection'] ?? '');
 $book = (string) ($_GET['book'] ?? '');
 
+// Batch mode: one POST carrying many books, so a 97-book collection costs a
+// handful of browser round-trips instead of three hundred.
+if ($book === '__batch__') {
+    $batch = json_decode((string) file_get_contents('php://input'), true);
+
+    if (! is_array($batch)) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'error' => 'batch is not valid json']);
+        exit;
+    }
+
+    $written = [];
+    $failed = [];
+
+    foreach ($batch as $entry) {
+        $number = (string) ($entry['source']['book_number'] ?? '');
+        $code = (string) ($entry['source']['collection'] ?? $collection);
+
+        if (! preg_match('/^[a-z0-9_]{1,40}$/', $code) || ! preg_match('/^[a-z0-9_-]{1,40}$/', $number)) {
+            $failed[] = $number === '' ? '(unnamed)' : $number;
+
+            continue;
+        }
+
+        $written[] = writeBook($code, $number, json_encode($entry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $entry);
+    }
+
+    echo json_encode(['ok' => $failed === [], 'written' => count($written), 'failed' => $failed, 'books' => $written]);
+    exit;
+}
+
 // Whitelist, not sanitisation: anything outside this set is refused rather than
 // rewritten, so a surprising book number surfaces instead of being mangled.
 if (! preg_match('/^[a-z0-9_]{1,40}$/', $collection) || ! preg_match('/^[a-z0-9_-]{1,40}$/', $book)) {
@@ -91,39 +162,11 @@ if (! is_array($decoded)) {
     exit;
 }
 
-$dir = ROOT.'/'.$collection;
+writeBook($collection, $book, $body, $decoded);
 
-if (! is_dir($dir) && ! mkdir($dir, 0o755, true) && ! is_dir($dir)) {
-    http_response_code(500);
-    echo json_encode(['ok' => false, 'error' => 'cannot create '.$dir]);
-    exit;
-}
-
-$path = $dir.'/book_'.$book.'.json';
-
-// Write to a temporary name and rename on success: a half-written file that
-// still parses is the worst possible outcome for a resumable extraction run.
-$tmp = $path.'.part';
-file_put_contents($tmp, $body);
-rename($tmp, $path);
-
-$records = is_array($decoded['records'] ?? null) ? count($decoded['records']) : 0;
-$chapters = is_array($decoded['chapters'] ?? null) ? count($decoded['chapters']) : 0;
-
-$manifest = [
-    'collection' => $collection,
-    'book_number' => $book,
-    'source_url' => $decoded['source']['url'] ?? null,
-    'extractor_version' => $decoded['source']['extractor_version'] ?? null,
-    'expected_records' => $decoded['counts']['records'] ?? null,
-    'actual_records' => $records,
-    'expected_chapters' => $decoded['counts']['chapters'] ?? null,
-    'actual_chapters' => $chapters,
-    'bytes' => strlen($body),
+echo json_encode([
+    'ok' => true,
+    'path' => ROOT.'/'.$collection.'/book_'.$book.'.json',
+    'records' => is_array($decoded['records'] ?? null) ? count($decoded['records']) : 0,
     'sha256' => hash('sha256', $body),
-    'extracted_at' => date('c'),
-];
-
-file_put_contents($dir.'/book_'.$book.'.manifest.json', json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-
-echo json_encode(['ok' => true, 'path' => $path, 'records' => $records, 'chapters' => $chapters, 'sha256' => $manifest['sha256']]);
+]);

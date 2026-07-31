@@ -215,23 +215,23 @@ introductions and endings.
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T114 [P] [US2] Write `tests/Feature/Web/Hadith/HadithHubPageTest.php` asserting only published collections appear
-- [ ] T115 [P] [US2] Write `tests/Feature/Web/Hadith/HadithBookPageTest.php` asserting hadiths render under chapter headings in `in_book_number` order, and that unknown books 404
-- [ ] T116 [P] [US2] Write `tests/Feature/Web/Hadith/SyntheticBookHiddenTest.php` asserting a synthetic book never appears in public listings or counts
-- [ ] T117 [P] [US2] Write `tests/Feature/Web/Hadith/BookPageQueryCountTest.php` asserting the query count is identical at 20 and 100 hadiths per page
+- [X] T114 [P] [US2] Write `tests/Feature/Web/Hadith/HadithHubPageTest.php` asserting only published collections appear
+- [X] T115 [P] [US2] Write `tests/Feature/Web/Hadith/HadithBookPageTest.php` asserting hadiths render under chapter headings in `in_book_number` order, and that unknown books 404
+- [X] T116 [P] [US2] Write `tests/Feature/Web/Hadith/SyntheticBookHiddenTest.php` asserting a synthetic book never appears in public listings or counts
+- [X] T117 [P] [US2] Write `tests/Feature/Web/Hadith/BookPageQueryCountTest.php` asserting the query count is identical at 20 and 100 hadiths per page
 
 ### Implementation for User Story 2
 
-- [ ] T118 [US2] Add `listPublishedCollections()`, `booksFor()`, and `chaptersFor()` to `app/Domain/Hadith/Repositories/CollectionRepository.php` with explicit column selection and `withCount` aggregates
-- [ ] T119 [US2] Add the synthetic-book exclusion to `app/Domain/Hadith/Services/HadithVisibility.php`
-- [ ] T120 [US2] Add `hub()`, `collection()`, and `book()` actions to `app/Http/Controllers/Site/HadithController.php`
-- [ ] T121 [US2] Register `/hadith`, `/hadith/{collection}`, and `/hadith/{collection}/{bookNumber}` in `routes/web.php` after the static routes
-- [ ] T122 [P] [US2] Create `resources/views/public/hadith/index.blade.php` ported from `the-last-messenger-ui/hadith-books-enhanced.html`
-- [ ] T123 [P] [US2] Create `resources/views/public/hadith/collection.blade.php` listing books in source order
-- [ ] T124 [P] [US2] Create `resources/views/public/hadith/book.blade.php` ported from `the-last-messenger-ui/hadith-book-single-enhanced.html`
-- [ ] T125 [P] [US2] Create `resources/views/public/hadith/partials/chapter.blade.php` ported from `the-last-messenger-ui/hadith-book-chapter-enhanced.html`, rendering chapter intro and ending
-- [ ] T126 [US2] Add empty and error states to every Hadith public view, using `resources/views/components/site/empty-state.blade.php`
-- [ ] T127 [P] [US2] Add the browse translation keys to all five files `resources/lang/{ar,en,fr,tr,ur}/hadith.php`
+- [X] T118 [US2] Add `listPublishedCollections()`, `booksFor()`, and `chaptersFor()` to `app/Domain/Hadith/Repositories/CollectionRepository.php` with explicit column selection and `withCount` aggregates
+- [X] T119 [US2] Add the synthetic-book exclusion to `app/Domain/Hadith/Services/HadithVisibility.php`
+- [X] T120 [US2] Add `hub()`, `collection()`, and `book()` actions to `app/Http/Controllers/Site/HadithController.php`
+- [X] T121 [US2] Register `/hadith`, `/hadith/{collection}`, and `/hadith/{collection}/{bookNumber}` in `routes/web.php` after the static routes
+- [X] T122 [P] [US2] Create `resources/views/public/hadith/index.blade.php` ported from `the-last-messenger-ui/hadith-books-enhanced.html`
+- [X] T123 [P] [US2] Create `resources/views/public/hadith/collection.blade.php` listing books in source order
+- [X] T124 [P] [US2] Create `resources/views/public/hadith/book.blade.php` ported from `the-last-messenger-ui/hadith-book-single-enhanced.html`
+- [X] T125 [P] [US2] Create `resources/views/public/hadith/partials/chapter.blade.php` ported from `the-last-messenger-ui/hadith-book-chapter-enhanced.html`, rendering chapter intro and ending
+- [X] T126 [US2] Add empty and error states to every Hadith public view, using `resources/views/components/site/empty-state.blade.php`
+- [X] T127 [P] [US2] Add the browse translation keys to all five files `resources/lang/{ar,en,fr,tr,ur}/hadith.php`
 - [ ] T128 [US2] Extract all 97 Bukhari books with the Chrome extension into `storage/app/hadith_source/bukhari/`, throttled to roughly one request per second with per-book manifests
 - [ ] T129 [US2] Import Bukhari fully and verify 7,277 hadiths, then confirm `/hadith/bukhari/2` shows 51 hadiths under 43 chapters
 - [ ] T130 [US2] Run `npm run build` and verify all four page types in Chrome across both locales, both themes, and three viewports

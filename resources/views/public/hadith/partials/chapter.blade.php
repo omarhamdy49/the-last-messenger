@@ -4,7 +4,10 @@
     @if ($chapter)
         <header class="mb-4 ps-4 border-s-4 border-[#218838]">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white break-words">
-                <span class="text-[#0056b3] dark:text-[#64CCC5]">{{ $chapter->chapter_number }}.</span>
+                {{-- Some chapters carry no number in the source. --}}
+                @if (filled($chapter->chapter_number))
+                    <span class="text-[#0056b3] dark:text-[#64CCC5]">{{ $chapter->chapter_number }}.</span>
+                @endif
                 {{ $chapter->getTranslation('title', $locale, true) }}
             </h2>
 

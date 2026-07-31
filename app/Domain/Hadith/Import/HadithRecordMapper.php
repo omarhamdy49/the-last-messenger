@@ -38,11 +38,16 @@ final class HadithRecordMapper
      */
     public function mapChapter(array $chapter, int $sortOrder): array
     {
+        // The source prints chapter numbers parenthesised — "(1)". The parens are
+        // presentation, and keeping them would put them in every URL and every
+        // UNIQUE (book_id, chapter_number) key.
+        $number = trim((string) ($this->text($chapter['number'] ?? null) ?? ''), '() ');
+
         return [
-            // The source prints chapter numbers parenthesised — "(1)". The parens
-            // are presentation, and keeping them would put them in every URL and
-            // every UNIQUE (book_id, chapter_number) key.
-            'chapter_number' => trim((string) ($this->text($chapter['number'] ?? null) ?? (string) $sortOrder), '() '),
+            // Some chapters genuinely carry no number — Bukhari book 2 has one,
+            // a Quranic-verse heading. It is stored empty rather than given an
+            // invented number; identity comes from sort_order.
+            'chapter_number' => $number,
             'sort_order' => (int) ($chapter['sort_order'] ?? $sortOrder),
             'title' => $this->translatable($chapter['title'] ?? []),
             'intro' => $this->translatable($chapter['intro'] ?? []),
