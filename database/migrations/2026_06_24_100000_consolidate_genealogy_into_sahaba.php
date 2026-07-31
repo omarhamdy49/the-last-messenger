@@ -100,7 +100,7 @@ return new class extends Migration
      * narrators into `hadith_scholars`, which declares `sahaba_id` in its own create migration
      * (2026_07_30_000004). Nothing to add here any more.
      *
-     * See TODO_hadith-refactor.md §2.13.
+     * See specs/001-hadith-rebuild/data-model.md.
      */
     private function addHadithLinks(): void
     {

@@ -368,15 +368,15 @@ documented codes.
 
 ## Phase 9: Polish & Cross-Cutting Concerns
 
-- [ ] T190 [P] Verify translation-key parity across `resources/lang/{ar,en,fr,tr,ur}/hadith.php` with zero missing keys
-- [ ] T191 [P] Audit every new Blade view for logical properties only and flipped directional icons; fix any physical `left-`/`right-`/`pl-`/`pr-` usage
-- [ ] T192 Run `EXPLAIN` on the five hot query paths against the full corpus and record the plans in `specs/001-hadith-rebuild/quickstart.md`; add composite indexes only where a plan demands one
-- [ ] T193 Remove any index that T192 shows unused from the migrations in `database/migrations/`
-- [ ] T194 [P] Update the Hadith section of the root `CLAUDE.md` to record Service + Repository, the 8-table list, and that Quran retains CQRS
-- [ ] T195 [P] Update the Hadith rows of `WEB_APP_MODULES_ANALYSIS.md`
-- [ ] T196 [P] Delete the superseded `docs/hadith-rebuild-plan.md` and `TODO_hadith-refactor.md`, whose content now lives in `specs/001-hadith-rebuild/`
-- [ ] T197 Confirm the file-count and table-count targets from spec SC-013: under 45 files in `app/Domain/Hadith/` and 8 `hadith_*` tables
-- [ ] T198 Run the full gate: `php artisan test`, `./vendor/bin/pint --test`, and `composer deptrac` with no Hadith entries in `deptrac.baseline.yaml`
+- [X] T190 [P] Verify translation-key parity across `resources/lang/{ar,en,fr,tr,ur}/hadith.php` with zero missing keys
+- [X] T191 [P] Audit every new Blade view for logical properties only and flipped directional icons; fix any physical `left-`/`right-`/`pl-`/`pr-` usage
+- [X] T192 Run `EXPLAIN` on the five hot query paths against the full corpus and record the plans in `specs/001-hadith-rebuild/quickstart.md`; add composite indexes only where a plan demands one
+- [X] T193 Remove any index that T192 shows unused from the migrations in `database/migrations/`
+- [X] T194 [P] Update the Hadith section of the root `CLAUDE.md` to record Service + Repository, the 8-table list, and that Quran retains CQRS
+- [X] T195 [P] Update the Hadith rows of `WEB_APP_MODULES_ANALYSIS.md`
+- [X] T196 [P] Delete the superseded `docs/hadith-rebuild-plan.md` and `TODO_hadith-refactor.md`, whose content now lives in `specs/001-hadith-rebuild/`
+- [X] T197 Confirm the file-count and table-count targets from spec SC-013: under 45 files in `app/Domain/Hadith/` and 8 `hadith_*` tables
+- [X] T198 Run the full gate: `php artisan test`, `./vendor/bin/pint --test`, and `composer deptrac` with no Hadith entries in `deptrac.baseline.yaml`
 
 ---
 

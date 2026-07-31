@@ -98,7 +98,7 @@ return new class extends Migration
         // hadith_source_translations / hadith_theme_translations / hadith_chapter_translations were
         // removed by the 2026-07-30 Hadith rebuild: the new schema stores translations in spatie
         // translatable JSON columns on hadith_collections/books/chapters/themes, so these side
-        // tables are redundant. See TODO_hadith-refactor.md §2.13.
+        // tables are redundant. See specs/001-hadith-rebuild/data-model.md.
     }
 
     public function down(): void

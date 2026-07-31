@@ -181,7 +181,45 @@ SET GLOBAL innodb_optimize_fulltext_only = OFF;
 
 ---
 
-## 5. Measurements still to record
+## 5. Hot query paths (T192, T193) — measured 2026-07-31 on the full corpus
+
+51,775 hadiths, 15,239 chapters, 99,991 text rows.
+
+| Path | type | Index chosen | Rows |
+|---|---|---|---:|
+| Canonical lookup `(collection, number)` | ref | `collection_id_hadith_number_index` | 1 |
+| Book reading order | ref | `book_id_is_published_in_book_number_index` | 1 |
+| Chapter reading order | ref | `chapter_id_is_published_in_book_number_index` | 1 |
+| Random selection | ref | `is_published_id_index` | index-only |
+| Urn permalink | index_merge | union of both `sunnah_urn*_unique` | 2 |
+| Books in sort order | ref | `books_collection_id_sort_order_index` | 97 |
+| Chapters in sort order | ref | `chapters_book_id_sort_order_unique` | 1 |
+| Import-run listing | ref | `import_runs_collection_code_status_index` | 13 |
+| Texts by hadith | ref | `texts_hadith_id_locale_unique` | 1 |
+| Collections hub | **ALL** | none | 17 |
+
+Both reading-order paths report `Using index` — the composite indexes cover them,
+so the rows are never touched.
+
+The collections hub is a deliberate full scan. At 17 rows a scan beats an index,
+and data-model.md §1 declines one on purpose (Constitution II: no speculative
+indexes). It is the only path without one.
+
+The canonical lookup reports `Using filesort`, which is expected and harmless:
+`ORDER BY in_book_number, id` exists to pick the first of the 52 Tirmidhi number
+collisions deterministically, and it sorts one or two rows.
+
+Random selection measures **18.1 ms** per call across 51,775 rows. It is a count
+plus an offset walk on a covering index rather than `ORDER BY RAND()`, which
+would sort the whole table on every request.
+
+**T193: no index was removed.** Every index declared in the schema is chosen by
+at least one real query path, including `hadith_gradings (grade, hadith_id)`,
+which serves a grade-filtered search.
+
+---
+
+## 6. Measurements still to record
 
 - `EXPLAIN` for the five hot paths (T192)
 - Per-collection reconciliation, expected vs actual (T178)
