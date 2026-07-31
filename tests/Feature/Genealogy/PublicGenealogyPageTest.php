@@ -135,6 +135,17 @@ class PublicGenealogyPageTest extends TestCase
         $this->get(route('public.sahaba.show', $person->slug))->assertNotFound();
     }
 
+    public function test_arabic_page_does_not_present_an_english_biography_as_arabic(): void
+    {
+        $person = $this->makePerson('english-biography-only', ['ar' => 'صاحب السيرة', 'en' => 'Biography Owner']);
+        $person->syncTranslations(['biography' => ['en' => 'English biography must not be mislabeled as Arabic.']]);
+
+        $response = $this->get(route('public.genealogy'));
+
+        $response->assertOk();
+        $response->assertDontSee('English biography must not be mislabeled as Arabic.');
+    }
+
     public function test_people_endpoint_paginates_beyond_the_initial_page(): void
     {
         for ($i = 1; $i <= 35; $i++) {

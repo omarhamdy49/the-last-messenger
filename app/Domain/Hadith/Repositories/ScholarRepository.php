@@ -28,6 +28,19 @@ class ScholarRepository extends BaseRepository implements ScholarRepositoryInter
             ->first();
     }
 
+    public function findPublicNarratorBySlug(string $slug): ?HadithScholar
+    {
+        return HadithScholar::query()
+            ->select(['id', 'slug', 'name', 'full_name', 'kunya', 'biography',
+                'birth_year_hijri', 'death_year_hijri', 'generation', 'reliability',
+                'is_companion', 'sahaba_id'])
+            ->where('slug', $slug)
+            ->whereHas('primaryHadiths', fn (Builder $query) => $query
+                ->where('is_published', true)
+                ->whereHas('collection', fn (Builder $collection) => $collection->where('is_published', true)))
+            ->first();
+    }
+
     public function resolveByName(string $name): HadithScholar
     {
         $slug = Str::slug($name);

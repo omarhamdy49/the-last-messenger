@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use App\Domain\Sahaba\Services\SahabaJsonImportService;
 use Illuminate\Console\Command;
+use RuntimeException;
 use Throwable;
 
 final class ImportSahabaJsonCommand extends Command
@@ -13,8 +14,10 @@ final class ImportSahabaJsonCommand extends Command
     protected $signature = 'sahaba:import-json
                             {path : Directory containing one Sahabi JSON file per record}
                             {--dry-run : Validate every JSON file without writing}
+                            {--existing-only : Enrich only identities already present; permits scholar records}
                             {--overwrite-relations : Replace conflicting father/mother links}
-                            {--stop-on-error : Stop on the first invalid file or database error}';
+                            {--stop-on-error : Stop on the first invalid file or database error}
+                            {--report= : JSON report path for counts, conflicts, and errors}';
 
     protected $description = 'Import Sahaba JSON files and build their canonical family relationships';
 
@@ -49,6 +52,7 @@ final class ImportSahabaJsonCommand extends Command
             $stats = $this->importService->importDirectory(
                 directory: $directory,
                 dryRun: (bool) $this->option('dry-run'),
+                existingOnly: (bool) $this->option('existing-only'),
                 overwriteRelations: (bool) $this->option('overwrite-relations'),
                 stopOnError: (bool) $this->option('stop-on-error'),
                 progress: function (string $phase, int $current, int $total) use (&$lastPhase, &$bar): void {
@@ -76,6 +80,7 @@ final class ImportSahabaJsonCommand extends Command
                 ['Validated', $stats['validated']],
                 ['Created', $stats['created']],
                 ['Updated', $stats['updated']],
+                ['Skipped (not present)', $stats['skipped']],
                 ['Relation placeholders', $stats['placeholders_created']],
                 ['Translations upserted', $stats['translations_upserted']],
                 ['Parent links', $stats['parents_linked']],
@@ -93,6 +98,8 @@ final class ImportSahabaJsonCommand extends Command
                 }
             }
 
+            $this->writeReport($directory, $stats);
+
             return $stats['failed'] === 0 ? self::SUCCESS : self::FAILURE;
         } catch (Throwable $exception) {
             if ($bar !== null) {
@@ -103,5 +110,30 @@ final class ImportSahabaJsonCommand extends Command
 
             return self::FAILURE;
         }
+    }
+
+    /** @param array<string, mixed> $stats */
+    private function writeReport(string $directory, array $stats): void
+    {
+        $reportPath = (string) $this->option('report');
+        if ($reportPath === '') {
+            return;
+        }
+
+        $report = [
+            'generated_at' => now()->toIso8601String(),
+            'directory' => $directory,
+            'dry_run' => (bool) $this->option('dry-run'),
+            ...$stats,
+        ];
+        $written = file_put_contents(
+            $reportPath,
+            json_encode($report, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)."\n",
+        );
+        if ($written === false) {
+            throw new RuntimeException("Unable to write report: {$reportPath}");
+        }
+
+        $this->line("Report: {$reportPath}");
     }
 }

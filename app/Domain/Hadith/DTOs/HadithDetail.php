@@ -23,6 +23,7 @@ final readonly class HadithDetail
     /**
      * @param  list<array<string, mixed>>  $texts
      * @param  list<array<string, mixed>>  $gradings
+     * @param  array{slug: string, name: string}|null  $primaryNarrator
      */
     public function __construct(
         public int $id,
@@ -35,6 +36,7 @@ final readonly class HadithDetail
         public ?int $inBookNumber,
         public HadithGrade $displayGrade,
         public ReferenceSet $reference,
+        public ?array $primaryNarrator,
         public array $texts,
         public array $gradings,
     ) {}
@@ -57,6 +59,10 @@ final readonly class HadithDetail
             inBookNumber: $hadith->in_book_number,
             displayGrade: $hadith->display_grade,
             reference: $reference,
+            primaryNarrator: $hadith->primaryNarrator === null ? null : [
+                'slug' => $hadith->primaryNarrator->slug,
+                'name' => $hadith->primaryNarrator->getTranslation('name', $locale, true),
+            ],
             texts: $hadith->texts->map(static fn ($text): array => [
                 'locale' => $text->locale,
                 'body' => $text->body,
@@ -87,6 +93,7 @@ final readonly class HadithDetail
             'in_book_number' => $this->inBookNumber,
             'display_grade' => $this->displayGrade->value,
             'reference' => $this->reference->toArray(),
+            'primary_narrator' => $this->primaryNarrator,
             'texts' => $this->texts,
             'gradings' => $this->gradings,
         ];

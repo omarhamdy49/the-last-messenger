@@ -274,7 +274,14 @@
                                  src="{{ $featuredImage }}" />
                         @endif
                         <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
-                        <div class="relative z-10">
+                        {{-- `text-start`: this block inherits the hero wrapper's
+                             text-center, which centred the badge, title and
+                             description while the CTA below is a flex row that
+                             ignores text-align and packs to the start — so the
+                             four lines never agreed. The card is a bottom-corner
+                             overlay and `max-w-md` on the description already
+                             assumes start alignment. --}}
+                        <div class="relative z-10 text-start">
                             @if ($featuredHeroCard['badge'])
                                 <div class="inline-flex items-center space-s-2 backdrop-blur-sm px-4 py-2 rounded-full mb-4 bg-gray-900/60 border border-gray-700 dark:bg-white/20 dark:border-white/30">
                                     @if ($featuredHeroCard['icon'])
@@ -428,13 +435,14 @@
             </button>
         </div>
 
-        {{-- View all button --}}
-        <div class="text-center mt-8">
-            <a href="{{ $sahabaUrl }}"
-               class="inline-flex items-center gap-2 bg-gradient-to-r from-[#6f42c1] to-[#8b5cf6] text-white font-bold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all">
-                <span>{{ __('site.view_all_companions') }}</span>
-                <i class="w-5 h-5" data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}"></i>
-            </a>
+        {{-- View all — the count comes from the same aggregate the stats row uses,
+             so the button says how much is behind it instead of just "all". --}}
+        <div class="mt-10 text-center">
+            <x-site.view-all-link
+                :href="$sahabaUrl"
+                :label="__('site.view_all_companions')"
+                :count="$stats['sahaba'] ?? null"
+                gradient="from-[#6f42c1] to-[#8b5cf6]" />
         </div>
     </div>
 </section>
@@ -468,7 +476,11 @@
                         </div>
                     </div>
 
-                    <div class="flex-1 text-center md:text-{{ $isRtl ? 'right' : 'left' }}">
+                    {{-- `md:text-start`, not an interpolated md:text-{left|right}:
+                         Tailwind cannot compile a class built from a runtime value,
+                         so neither variant was ever in the bundle and this block
+                         stayed centred at every breakpoint in both directions. --}}
+                    <div class="flex-1 text-center md:text-start">
                         <div class="inline-flex items-center gap-2 mb-2">
                             <span class="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-4 py-1.5 rounded-full text-xs font-black border-2 border-yellow-300/50 shadow-lg backdrop-blur-sm">
                                 {{ __('site.seal_of_prophets') }}
@@ -623,186 +635,21 @@
 
 {{-- ===================================================================
      SECTION 4 — DAILY QURAN & HADITH
-     Verbatim port of index-enhanced.html lines ~1147-1294
+     Composed from <x-site.daily-verse> / <x-site.daily-hadith>, which share the
+     <x-site.daily-panel> shell. The `daily` home_sections row still supplies both
+     headings (heading → Quran, subheading → Hadith).
      =================================================================== --}}
 <section data-home-section="daily" class="py-16 sm:py-20 bg-[#F8F9FA] dark:bg-[#1a1a2e]">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="grid grid-cols-1 items-stretch gap-8 lg:grid-cols-2">
 
-            {{-- Daily Quran Verse --}}
-            <div class="bg-gradient-to-br from-[#17a2b8] to-[#138496] rounded-2xl shadow-2xl overflow-hidden">
-                <div class="p-8">
-                    <div class="flex items-center justify-between mb-6">
-                        <div>
-                            <span class="bg-white/20 text-white px-4 py-2 rounded-full text-sm font-bold backdrop-blur-sm">{{ __('site.quran_of_day') }}</span>
-                            <h3 class="text-3xl font-black text-white mt-3">{{ $homeSectionsByKey->get('daily')?->heading }}</h3>
-                        </div>
-                        <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                            <i class="w-10 h-10 text-white" data-lucide="book-open"></i>
-                        </div>
-                    </div>
+            <x-site.daily-verse
+                :verse="$dailyVerse"
+                :title="$homeSectionsByKey->get('daily')?->heading" />
 
-                    @if($dailyVerse)
-                        {{-- Surah info --}}
-                        <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 mb-6 border border-white/20">
-                            <div class="flex items-center justify-between mb-4">
-                                <div>
-                                    <h4 class="text-2xl font-bold text-white mb-1">
-                                        {{ $dailyVerse['surah_name'] ?? __('site.quran') }}
-                                    </h4>
-                                    <p class="text-gray-200 text-sm">{{ __('site.surah_label') }}</p>
-                                </div>
-                                <div class="text-end">
-                                    <p class="text-white font-bold text-lg">{{ $dailyVerse['surah_id'] ?? '' }}</p>
-                                    <p class="text-gray-200 text-xs">{{ __('site.surah_number') }}</p>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-4 text-sm text-gray-200">
-                                <div class="flex items-center gap-2">
-                                    <i class="w-4 h-4" data-lucide="file-text"></i>
-                                    <span>{{ __('site.verse') }} {{ $dailyVerse['verse_number'] ?? '' }}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- Verse text --}}
-                        <div class="bg-white rounded-xl p-6 mb-6">
-                            @if($dailyVerse['text_arabic'])
-                                <p class="text-center text-2xl leading-loose font-arabic text-gray-800 mb-4" dir="rtl">
-                                    {{ $dailyVerse['text_arabic'] }}
-                                </p>
-                            @endif
-                            @php
-                                $enTranslation = $dailyVerse['translations']['en'] ?? null;
-                            @endphp
-                            @if($enTranslation && $locale !== 'ar')
-                                <p class="text-center text-sm text-gray-600 mb-2">{{ $enTranslation }}</p>
-                            @endif
-                            <div class="text-center mt-3">
-                                <span class="bg-[#17a2b8]/10 text-[#17a2b8] px-3 py-1 rounded-full text-xs font-semibold">
-                                    {{ __('site.verse') }} {{ $dailyVerse['verse_number'] ?? '' }}
-                                </span>
-                            </div>
-                        </div>
-                    @else
-                        {{-- Empty/loading state --}}
-                        <div class="bg-white/10 rounded-xl p-6 mb-6 text-center">
-                            <p class="text-white/70 text-sm">{{ __('site.loading') }}</p>
-                        </div>
-                    @endif
-
-                    {{-- Actions --}}
-                    <div class="flex gap-3">
-                        <a href="{{ $quranUrl }}"
-                           class="flex-1 bg-white text-[#17a2b8] font-bold py-3 px-4 rounded-xl hover:bg-gray-100 transition text-center flex items-center justify-center gap-2">
-                            <i class="w-5 h-5" data-lucide="book-open"></i>
-                            <span>{{ __('site.read_surah') }}</span>
-                        </a>
-                        <button class="w-14 h-14 bg-white/20 backdrop-blur-sm text-white rounded-xl hover:bg-white/30 transition flex items-center justify-center"
-                                aria-label="{{ __('site.share') }}">
-                            <i class="w-6 h-6" data-lucide="share-2"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Daily Hadith --}}
-            <div class="bg-gradient-to-br from-[#218838] to-[#1e7e34] rounded-2xl shadow-2xl overflow-hidden">
-                <div class="p-8">
-                    <div class="flex items-center justify-between mb-6">
-                        <div>
-                            <span class="bg-white/20 text-white px-4 py-2 rounded-full text-sm font-bold backdrop-blur-sm">{{ __('site.hadith_of_day') }}</span>
-                            <h3 class="text-3xl font-black text-white mt-3">{{ $homeSectionsByKey->get('daily')?->subheading }}</h3>
-                        </div>
-                        <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                            <i class="w-10 h-10 text-white" data-lucide="message-square-quote"></i>
-                        </div>
-                    </div>
-
-                    @if($dailyHadith)
-                        @php
-                            $hadithTexts = collect($dailyHadith['texts'] ?? []);
-                            $hadithTextAr = $hadithTexts->firstWhere('locale', 'ar')['body'] ?? null;
-                            $hadithTextEn = $hadithTexts->firstWhere('locale', 'en')['body'] ?? null;
-                            $hadithGrading = $dailyHadith['display_grade'] ?? null;
-                            $hadithBook = $dailyHadith['book_title'] ?? null;
-                            $hadithCollection = $dailyHadith['collection_name'] ?? null;
-                        @endphp
-
-                        {{-- Hadith text card --}}
-                        <div class="bg-white rounded-xl p-6 mb-6">
-                            <div class="text-center mb-4">
-                                <div class="inline-flex items-center justify-center w-12 h-12 bg-[#218838]/10 rounded-full mb-3">
-                                    <i class="w-6 h-6 text-[#218838]" data-lucide="quote"></i>
-                                </div>
-                            </div>
-                            @if($hadithTextAr)
-                                <p class="text-lg leading-relaxed text-gray-800 text-center mb-4" dir="rtl">"{{ $hadithTextAr }}"</p>
-                            @endif
-                            @if($hadithTextEn && $locale !== 'ar')
-                                <p class="text-sm text-gray-600 text-center mb-4">"{{ $hadithTextEn }}"</p>
-                            @endif
-
-                            <div class="border-t border-gray-200 pt-4">
-                                <div class="flex items-center justify-between text-sm">
-                                    <div class="space-y-1">
-                                        @if($hadithCollection)
-                                            <div class="flex items-center gap-2 text-gray-600">
-                                                <i class="w-4 h-4" data-lucide="book-marked"></i>
-                                                <span>{{ $hadithCollection }}</span>
-                                            </div>
-                                        @elseif($hadithBook)
-                                            <div class="flex items-center gap-2 text-gray-600">
-                                                <i class="w-4 h-4" data-lucide="book-marked"></i>
-                                                <span>{{ $hadithBook }}</span>
-                                            </div>
-                                        @endif
-                                    </div>
-                                    @if($hadithGrading)
-                                        <div class="mt-2 flex items-center gap-2">
-                                            <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">
-                                                {{ __('site.grading_' . $hadithGrading) ?: $hadithGrading }}
-                                            </span>
-                                        </div>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- Brief explanation --}}
-                        <div class="bg-white/10 backdrop-blur-sm rounded-xl p-5 mb-6 border border-white/20">
-                            <h4 class="text-white font-bold mb-2 flex items-center gap-2">
-                                <i class="w-5 h-5" data-lucide="lightbulb"></i>
-                                <span>{{ __('site.benefit') }}</span>
-                            </h4>
-                            <p class="text-gray-200 text-sm leading-relaxed">
-                                {{ __('site.hadith_benefit_placeholder') }}
-                            </p>
-                        </div>
-                    @else
-                        <div class="bg-white/10 rounded-xl p-6 mb-6 text-center">
-                            <p class="text-white/70 text-sm">{{ __('site.loading') }}</p>
-                        </div>
-                    @endif
-
-                    {{-- Actions --}}
-                    <div class="flex gap-3">
-                        <a href="{{ $hadithUrl }}"
-                           class="flex-1 bg-white text-[#218838] font-bold py-3 px-4 rounded-xl hover:bg-gray-100 transition text-center flex items-center justify-center gap-2">
-                            <i class="w-5 h-5" data-lucide="book-open"></i>
-                            <span>{{ __('site.read_explanation') }}</span>
-                        </a>
-                        <button class="w-14 h-14 bg-white/20 backdrop-blur-sm text-white rounded-xl hover:bg-white/30 transition flex items-center justify-center"
-                                aria-label="{{ __('site.bookmark') }}">
-                            <i class="w-6 h-6" data-lucide="bookmark"></i>
-                        </button>
-                        <button class="w-14 h-14 bg-white/20 backdrop-blur-sm text-white rounded-xl hover:bg-white/30 transition flex items-center justify-center"
-                                aria-label="{{ __('site.share') }}">
-                            <i class="w-6 h-6" data-lucide="share-2"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <x-site.daily-hadith
+                :hadith="$dailyHadith"
+                :title="$homeSectionsByKey->get('daily')?->subheading" />
 
         </div>
     </div>
@@ -909,11 +756,10 @@
                 <h2 class="text-3xl md:text-4xl font-black mb-2">{{ $homeSectionsByKey->get('featured_content')?->heading }}</h2>
                 <p class="text-gray-600 dark:text-gray-300">{{ $homeSectionsByKey->get('featured_content')?->subheading }}</p>
             </div>
-            <a href="{{ Route::has('public.articles') ? route('public.articles') : '#' }}"
-               class="hidden md:flex items-center space-s-2 font-semibold text-[#0056b3] dark:text-[#4a9eff] hover:underline">
-                <span>{{ __('site.view_all') }}</span>
-                <i class="w-5 h-5" data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}"></i>
-            </a>
+            <x-site.view-all-link
+                variant="inline"
+                :href="Route::has('public.articles') ? route('public.articles') : '#'"
+                class="hidden md:inline-flex" />
         </div>
 
         <div class="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">

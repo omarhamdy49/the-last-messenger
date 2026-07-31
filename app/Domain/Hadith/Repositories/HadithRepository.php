@@ -23,7 +23,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
      * @var list<string>
      */
     private const DETAIL_COLUMNS = [
-        'id', 'collection_id', 'book_id', 'chapter_id', 'hadith_number',
+        'id', 'collection_id', 'book_id', 'chapter_id', 'primary_narrator_id', 'hadith_number',
         'in_book_number', 'volume_number', 'sunnah_urn', 'sunnah_urn_en',
         'display_grade', 'is_published',
     ];
@@ -40,6 +40,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
         'collection:id,code,name,reference_template,has_volumes,is_published',
         'book:id,collection_id,book_number,title',
         'chapter:id,book_id,chapter_number,title',
+        'primaryNarrator:id,slug,name',
         'texts:id,hadith_id,locale,body,narrated_by,sanad',
         'gradings:id,hadith_id,scholar_id,grade,scope,part_label,raw_grade,locale',
         'gradings.scholar:id,name',
@@ -90,6 +91,18 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             ->where('book_id', $bookId)
             ->when($publishedOnly, fn (Builder $query) => $query->where('is_published', true))
             ->orderBy('in_book_number')
+            ->paginate($perPage);
+    }
+
+    public function paginateForNarrator(int $narratorId, int $perPage = 20): LengthAwarePaginator
+    {
+        return Hadith::query()
+            ->select(self::DETAIL_COLUMNS)
+            ->with(self::DETAIL_RELATIONS)
+            ->where('primary_narrator_id', $narratorId)
+            ->where('is_published', true)
+            ->whereHas('collection', fn (Builder $query) => $query->where('is_published', true))
+            ->orderBy('id')
             ->paginate($perPage);
     }
 

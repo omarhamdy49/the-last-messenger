@@ -22,6 +22,8 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * Sahabi Model (Companion of Prophet Muhammad ﷺ)
  *
  * @property int $id
+ * @property string|null $external_id
+ * @property string|null $source_url
  * @property string $slug
  * @property string $gender
  * @property string|null $birth_date_hijri
@@ -80,6 +82,7 @@ class Sahabi extends Model implements HasMedia
      */
     protected $fillable = [
         'external_id',
+        'source_url',
         'slug',
         'gender',
         'person_type',

@@ -52,6 +52,7 @@ return [
     'conversion' => 'إسلامه',
     'conversion_order' => 'ترتيب إسلامه',
     'age_at_death' => 'العمر عند الوفاة',
+    'death_year' => 'سنة الوفاة',
     'roles' => 'الأدوار',
     'battles' => 'المشاهد والمعارك',
     'hadith_narrated' => 'الأحاديث المروية',

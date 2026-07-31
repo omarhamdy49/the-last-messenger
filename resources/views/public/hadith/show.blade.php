@@ -7,6 +7,7 @@
     $translation = $texts->first(fn ($t) => $t['locale'] !== 'ar');
     $reference = $hadith['reference'] ?? [];
     $gradings = collect($hadith['gradings'] ?? []);
+    $primaryNarrator = $hadith['primary_narrator'] ?? null;
     $gradeKey = $hadith['display_grade'] ?? 'unknown';
 
     // Colour carries meaning here, so it is paired with the text label rather
@@ -51,6 +52,12 @@
                                 {{ __('hadith.chapter') }} {{ $hadith['chapter_number'] }}
                             @endif
                         </p>
+                        @if ($primaryNarrator)
+                            <a href="{{ route('public.hadith.narrators.show', ['slug' => $primaryNarrator['slug']]) }}"
+                               class="mt-4 inline-flex min-h-11 items-center rounded-full bg-white/15 px-4 py-2 text-sm font-semibold text-white ring-1 ring-inset ring-white/30 transition hover:bg-white/25 focus:outline-none focus:ring-2 focus:ring-white">
+                                {{ __('hadith.narrated_by') }}: {{ $primaryNarrator['name'] }}
+                            </a>
+                        @endif
                     </div>
 
                     <span class="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold {{ $gradeStyles[$gradeKey] ?? $gradeStyles['unknown'] }}">

@@ -33,6 +33,7 @@ return [
     'view_all' => 'Voir tout',
     'load_more' => 'Charger plus',
     'share' => 'Partager',
+    'link_copied' => 'Lien copié',
     'bookmark' => 'Marquer',
     'download' => 'Télécharger',
     'print' => 'Imprimer',

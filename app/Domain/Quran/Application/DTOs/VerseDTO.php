@@ -77,7 +77,10 @@ final readonly class VerseDTO implements JsonSerializable
             pageNumber: $verse->page_number ?? 1,
             textArabic: $textArabic,
             translations: $translations,
-            surahName: $verse->relationLoaded('surah') ? $verse->surah->name_ar : null,
+            // Follow the requested locale like SurahInfoDTO does — this was
+            // pinned to name_ar, so every non-Arabic reader got the Arabic
+            // surah name. `name_en` is already in the SURAH_EAGER select.
+            surahName: $verse->relationLoaded('surah') ? $verse->surah->getDisplayName($locale) : null,
             createdAt: $verse->created_at?->toIso8601String(),
             updatedAt: $verse->updated_at?->toIso8601String(),
         );

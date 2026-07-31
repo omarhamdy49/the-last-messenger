@@ -63,12 +63,13 @@ class GenealogyIndexFilterTest extends TestCase
 
         $this->makePerson('zayd', ['ar' => 'زيد', 'en' => 'Zayd']);
         $this->makePerson('abu-bakr', ['ar' => 'أبو بكر', 'en' => 'Abu Bakr']);
+        $this->makePerson('english-only', ['en' => 'Aardvark']);
 
         $response = $this->get(route('admin.genealogy.index'));
 
         $response->assertOk();
         $slugs = $response->viewData('people')->pluck('slug')->all();
-        $this->assertSame(['abu-bakr', 'zayd'], $slugs);
+        $this->assertSame(['abu-bakr', 'zayd', 'english-only'], $slugs);
     }
 
     public function test_search_filters_by_name(): void

@@ -349,8 +349,6 @@ class GenealogyService extends BaseService
      */
     public function countRelationships(): int
     {
-        // Count relationships by querying the Relationship model or similar
-        // For now, return count of all parent-child relationships
-        return $this->repository->count();
+        return Relationship::query()->count();
     }
 }

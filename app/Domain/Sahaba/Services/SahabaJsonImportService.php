@@ -12,6 +12,7 @@ use App\Domain\Sahaba\Models\Sahabi;
 use App\Domain\Sahaba\Models\SahabiCategory;
 use App\Domain\Sahaba\Models\SahabiTranslation;
 use App\Domain\Sahaba\Repositories\SahabiRepositoryInterface;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use JsonException;
@@ -27,6 +28,11 @@ use Throwable;
  */
 final class SahabaJsonImportService
 {
+    private const UNKNOWN_TEXT_VALUES = [
+        'unknown', 'n/a', 'na', 'not available', 'not known', 'not specified', 'unspecified',
+        'مجهول', 'غير معروف', 'غير معلوم', 'غير محدد', 'لا يعلم',
+    ];
+
     private const TRANSLATION_FIELDS = [
         'name',
         'full_name',
@@ -92,23 +98,29 @@ final class SahabaJsonImportService
     public function importDirectory(
         string $directory,
         bool $dryRun = false,
+        bool $existingOnly = false,
         bool $overwriteRelations = false,
         bool $stopOnError = false,
         ?callable $progress = null,
     ): array {
         $files = $this->jsonFiles($directory);
+        $existingExternalIds = $existingOnly
+            ? Sahabi::query()->whereNotNull('external_id')->pluck('external_id')->flip()->all()
+            : [];
 
         $stats = [
             'files' => count($files),
             'validated' => 0,
             'created' => 0,
             'updated' => 0,
+            'skipped' => 0,
             'placeholders_created' => 0,
             'translations_upserted' => 0,
             'parents_linked' => 0,
             'children_linked' => 0,
             'relationships_upserted' => 0,
             'relation_conflicts' => 0,
+            'relation_conflict_details' => [],
             'failed' => 0,
             'errors' => [],
         ];
@@ -116,7 +128,7 @@ final class SahabaJsonImportService
         if ($dryRun) {
             foreach ($files as $index => $file) {
                 try {
-                    $this->readRecord($file);
+                    $this->readRecord($file, $existingOnly);
                     $stats['validated']++;
                     if ($progress !== null) {
                         $progress('validate', $index + 1, count($files), basename($file));
@@ -132,14 +144,21 @@ final class SahabaJsonImportService
             return $stats;
         }
 
+        $relationFiles = [];
+
         // Pass 1: all full identities exist before any relation is applied.
         foreach ($files as $index => $file) {
             try {
-                DB::transaction(function () use ($file, &$stats): void {
-                    $record = $this->readRecord($file);
-                    $stats['validated']++;
-                    $this->upsertFullIdentity($record, $stats);
-                });
+                $record = $this->readRecord($file, $existingOnly);
+                $stats['validated']++;
+                if ($existingOnly && ! isset($existingExternalIds[$record['external_id']])) {
+                    $stats['skipped']++;
+                } else {
+                    DB::transaction(function () use ($record, &$stats): void {
+                        $this->upsertFullIdentity($record, $stats);
+                    });
+                    $relationFiles[] = $file;
+                }
                 if ($progress !== null) {
                     $progress('identity', $index + 1, count($files), basename($file));
                 }
@@ -154,7 +173,7 @@ final class SahabaJsonImportService
         if ($overwriteRelations) {
             // Apply inferred links first so authoritative lineage can overwrite them.
             $this->processRelationPass(
-                $files,
+                $relationFiles,
                 'relations',
                 function (array $record) use (&$stats): void {
                     $this->applyRelationshipEdgesAndChildren($record, true, $stats);
@@ -164,7 +183,7 @@ final class SahabaJsonImportService
                 $progress,
             );
             $this->processRelationPass(
-                $files,
+                $relationFiles,
                 'lineage',
                 function (array $record) use (&$stats): void {
                     $this->applyExplicitParents($record, true, $stats);
@@ -176,7 +195,7 @@ final class SahabaJsonImportService
         } else {
             // Preserve existing data, but give explicit lineage priority over child hints.
             $this->processRelationPass(
-                $files,
+                $relationFiles,
                 'lineage',
                 function (array $record) use (&$stats): void {
                     $this->applyExplicitParents($record, false, $stats);
@@ -186,7 +205,7 @@ final class SahabaJsonImportService
                 $progress,
             );
             $this->processRelationPass(
-                $files,
+                $relationFiles,
                 'relations',
                 function (array $record) use (&$stats): void {
                     $this->applyRelationshipEdgesAndChildren($record, false, $stats);
@@ -199,6 +218,9 @@ final class SahabaJsonImportService
 
         $this->sahabiRepository->clearCache();
         $this->personRepository->clearCache();
+        foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $locale) {
+            Cache::forget("public_genealogy_index_v4_{$locale}");
+        }
 
         return $stats;
     }
@@ -229,7 +251,7 @@ final class SahabaJsonImportService
     /**
      * @return array<string, mixed>
      */
-    private function readRecord(string $file): array
+    private function readRecord(string $file, bool $allowScholar = false): array
     {
         $contents = file_get_contents($file);
         if ($contents === false) {
@@ -252,7 +274,7 @@ final class SahabaJsonImportService
             }
         }
 
-        if (($record['entity'] ?? null) !== 'sahabi') {
+        if (($record['entity'] ?? null) !== 'sahabi' && ! ($allowScholar && ($record['entity'] ?? null) === 'scholar')) {
             throw new RuntimeException("Unsupported entity in {$file}");
         }
 
@@ -286,12 +308,19 @@ final class SahabaJsonImportService
         $tribal = is_array($record['tribal_affiliation'] ?? null) ? $record['tribal_affiliation'] : [];
         $history = is_array($record['islamic_history'] ?? null) ? $record['islamic_history'] : [];
         $translations = is_array($record['translations']) ? $record['translations'] : [];
+        $acquisition = is_array($record['acquisition'] ?? null) ? $record['acquisition'] : [];
+
+        $incomingPersonType = self::PERSON_TYPE_MAP[$classification['person_type'] ?? ''] ?? 'sahabi';
+        $personType = ! $created && $incomingPersonType === 'historical' && ! $sahabi->is_sahabi
+            ? $sahabi->person_type->value
+            : $incomingPersonType;
 
         $sahabi->fill([
             'external_id' => $externalId,
+            'source_url' => $this->nullableString($acquisition['source_url'] ?? null),
             'slug' => $this->uniqueSlug((string) $record['slug'], $sahabi->getKey()),
             'gender' => $this->enumValue($classification['gender'] ?? null, ['male', 'female'], 'male'),
-            'person_type' => self::PERSON_TYPE_MAP[$classification['person_type'] ?? ''] ?? 'sahabi',
+            'person_type' => $personType,
             'is_sahabi' => (bool) ($classification['is_sahabi'] ?? true),
             'generation' => $this->nullableInt($classification['generation'] ?? null),
             'is_verified' => (bool) ($classification['is_verified'] ?? false),
@@ -495,7 +524,7 @@ final class SahabaJsonImportService
         foreach ($files as $index => $file) {
             try {
                 DB::transaction(function () use ($file, $operation): void {
-                    $operation($this->readRecord($file));
+                    $operation($this->readRecord($file, true));
                 });
                 if ($progress !== null) {
                     $progress($phase, $index + 1, count($files), basename($file));
@@ -527,6 +556,10 @@ final class SahabaJsonImportService
         if ($externalId !== null) {
             $existing = Sahabi::where('external_id', $externalId)->first();
             if ($existing !== null) {
+                if ($existing->source_url === null && ($sourceUrl = $this->sourceUrl($externalId)) !== null) {
+                    $existing->update(['source_url' => $sourceUrl]);
+                }
+
                 return $existing;
             }
         }
@@ -543,7 +576,10 @@ final class SahabaJsonImportService
                 }
 
                 if ($match->external_id === null) {
-                    $match->update(['external_id' => $externalId]);
+                    $match->update([
+                        'external_id' => $externalId,
+                        'source_url' => $this->sourceUrl($externalId),
+                    ]);
 
                     return $match;
                 }
@@ -561,6 +597,7 @@ final class SahabaJsonImportService
 
         $placeholder = Sahabi::create([
             'external_id' => $externalId,
+            'source_url' => $this->sourceUrl($externalId),
             'slug' => $this->uniqueSlug($slugBase),
             'gender' => $gender ?? $this->inferGender($name),
             'person_type' => 'family',
@@ -583,6 +620,15 @@ final class SahabaJsonImportService
         return $placeholder;
     }
 
+    private function sourceUrl(?string $externalId): ?string
+    {
+        if ($externalId === null || preg_match('/^muslimscholars:(\d+)$/', $externalId, $match) !== 1) {
+            return null;
+        }
+
+        return "https://muslimscholars.info/manage.php?submit=scholar&ID={$match[1]}";
+    }
+
     /**
      * @param  array<string, mixed>  $stats
      */
@@ -600,6 +646,15 @@ final class SahabaJsonImportService
         $current = $child->{$column};
         if ($current !== null && (int) $current !== $parent->id && ! $overwrite) {
             $stats['relation_conflicts']++;
+            $stats['relation_conflict_details'][] = [
+                'child_id' => $child->id,
+                'child_external_id' => $child->external_id,
+                'parent_column' => $column,
+                'existing_parent_id' => (int) $current,
+                'existing_parent_external_id' => Sahabi::query()->whereKey($current)->value('external_id'),
+                'proposed_parent_id' => $parent->id,
+                'proposed_parent_external_id' => $parent->external_id,
+            ];
 
             return;
         }
@@ -642,7 +697,9 @@ final class SahabaJsonImportService
 
         $value = trim((string) $value);
 
-        return $value === '' ? null : $value;
+        return $value === '' || in_array(mb_strtolower($value), self::UNKNOWN_TEXT_VALUES, true)
+            ? null
+            : $value;
     }
 
     private function nullableInt(mixed $value): ?int

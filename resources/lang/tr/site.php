@@ -33,6 +33,7 @@ return [
     'view_all' => 'Tümünü Gör',
     'load_more' => 'Daha Fazla Yükle',
     'share' => 'Paylaş',
+    'link_copied' => 'Bağlantı kopyalandı',
     'bookmark' => 'İşaretle',
     'download' => 'İndir',
     'print' => 'Yazdır',

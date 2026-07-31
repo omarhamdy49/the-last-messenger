@@ -65,10 +65,10 @@
 
                     <!-- Desktop Navigation -->
                     {{-- 8 items + actions don't fit between lg and xl — the hamburger covers that range --}}
-                    <div class="hidden xl:flex items-baseline space-s-1 2xl:space-s-6">
+                    <div class="hidden xl:flex items-center space-s-1 2xl:space-s-6">
                         @foreach ($headerMenu as $item)
                             <a href="{{ $menuItemUrl($item) }}"
-                               class="px-2.5 2xl:px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 transition-all {{ $menuItemIsActive($item) ? 'bg-[#E9ECEF]/50 dark:bg-[#0f3460]/50' : '' }}">
+                               class="whitespace-nowrap px-2 2xl:px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 transition-all {{ $menuItemIsActive($item) ? 'bg-[#E9ECEF]/50 dark:bg-[#0f3460]/50' : '' }}">
                                 {{ $item['label'] }}
                             </a>
                         @endforeach

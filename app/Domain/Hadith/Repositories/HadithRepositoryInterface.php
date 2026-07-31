@@ -35,6 +35,9 @@ interface HadithRepositoryInterface extends RepositoryInterface
      */
     public function paginateForBook(int $bookId, int $perPage, bool $publishedOnly = true): LengthAwarePaginator;
 
+    /** Published hadiths attributed to one primary narrator. */
+    public function paginateForNarrator(int $narratorId, int $perPage = 20): LengthAwarePaginator;
+
     /**
      * One random published hadith.
      *

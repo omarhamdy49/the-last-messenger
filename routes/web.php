@@ -8,6 +8,7 @@ use App\Http\Controllers\Site\FaqController;
 use App\Http\Controllers\Site\FavoriteController;
 use App\Http\Controllers\Site\GenealogyController;
 use App\Http\Controllers\Site\HadithController;
+use App\Http\Controllers\Site\HadithNarratorController;
 use App\Http\Controllers\Site\HomeController;
 use App\Http\Controllers\Site\HomeModuleCardImageController;
 use App\Http\Controllers\Site\MediaController;
@@ -74,6 +75,8 @@ Route::get('/hadith/search', [HadithController::class, 'search'])
     ->middleware('throttle:search')->name('public.hadith.search');
 Route::get('/hadith/urn/{urn}', [HadithController::class, 'urn'])
     ->whereNumber('urn')->name('public.hadith.urn');
+Route::get('/hadith/narrators/{slug}', [HadithNarratorController::class, 'show'])
+    ->where('slug', '[a-z0-9-]+')->name('public.hadith.narrators.show');
 Route::get('/hadith/{collection}:{number}', [HadithController::class, 'show'])
     ->where('collection', '[a-z0-9_]+')
     ->where('number', '[A-Za-z0-9._-]+')

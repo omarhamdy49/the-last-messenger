@@ -21,6 +21,9 @@
 <a href="{{ $href }}" {{ $attributes->merge(['class' => 'flex items-center space-s-3']) }}>
     <x-site.brand-icon :size="$iconSize" :alt="$name" :eager="$eager" />
     @if ($showName)
-        <span class="text-2xl font-bold gradient-text hidden sm:block">{{ $name }}</span>
+        {{-- nowrap + truncate: the English wordmark is far longer than the Arabic
+         one and wrapped to two lines at xl, which pushed the nav row out of
+         alignment. --}}
+        <span class="hidden truncate whitespace-nowrap text-xl font-bold gradient-text sm:block 2xl:text-2xl">{{ $name }}</span>
     @endif
 </a>

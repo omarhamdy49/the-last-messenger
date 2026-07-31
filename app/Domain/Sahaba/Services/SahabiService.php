@@ -63,7 +63,10 @@ class SahabiService extends BaseService
      */
     public function getCompanionBySlug(string $slug): Sahabi
     {
-        $sahabi = $this->repository->findBySlug($slug);
+        /** @var Sahabi|null $sahabi */
+        $sahabi = ctype_digit($slug)
+            ? $this->repository->find((int) $slug)
+            : $this->repository->findBySlug($slug);
 
         if (! $sahabi) {
             throw new ResourceNotFoundException("Companion not found: {$slug}");

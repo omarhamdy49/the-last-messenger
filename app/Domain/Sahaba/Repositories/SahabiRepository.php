@@ -231,7 +231,8 @@ class SahabiRepository extends BaseRepository implements SahabiRepositoryInterfa
             ->leftJoin('sahabi_translations as name_fb', function ($join) use ($fallback) {
                 $join->on('name_fb.sahabi_id', '=', 'sahaba.id')->where('name_fb.locale', $fallback);
             })
-            ->orderByRaw('COALESCE(name_loc.name, name_fb.name) ASC')
+            ->orderByRaw("CASE WHEN NULLIF(name_loc.name, '') IS NULL THEN 1 ELSE 0 END ASC")
+            ->orderByRaw("COALESCE(NULLIF(name_loc.name, ''), name_fb.name) ASC")
             ->select('sahaba.*');
     }
 

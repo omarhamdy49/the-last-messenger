@@ -28,6 +28,7 @@
 ])
 @php
     $locale   = app()->getLocale();
+    $isRtl    = in_array($locale, ['ar', 'ur'], true);
     $name     = $sahabi->getTranslation('name', $locale) ?: $sahabi->getTranslation('name', 'ar');
     $laqab    = $sahabi->getTranslation('laqab', $locale) ?: $sahabi->getTranslation('laqab', 'ar');
     $kunya    = $sahabi->getTranslation('kunya', $locale) ?: $sahabi->getTranslation('kunya', 'ar');
@@ -45,9 +46,16 @@
 
     // Calligraphic monogram — first grapheme of the display name. Falls back to a
     // neutral mark for empty names so the medallion never renders blank.
-    $initial = mb_substr(trim($name), 0, 1) ?: '۞';
+    // Skip leading punctuation before taking the initial: transliterations like
+    // "'Umar" / "'Uthman" would otherwise render an apostrophe in the medallion.
+    $initial = mb_substr(preg_replace('/^[^\p{L}\p{N}]+/u', '', trim($name)) ?: trim($name), 0, 1) ?: '۞';
 
     $href  = Route::has('public.sahaba.show') ? route('public.sahaba.show', $sahabi->slug) : '#';
+
+    // death_date_hijri is stored as "13 AH" — take the year and pair it with the
+    // localized era suffix so the chip reads "13 هـ" / "13 AH" / "13 H". Omitted
+    // entirely when the column is empty rather than rendering a bare icon.
+    $deathYear = preg_match('/\d+/', (string) $sahabi->death_date_hijri, $m) ? $m[0] : null;
 @endphp
 
 @once
@@ -91,11 +99,16 @@
         transform: translateX(130%);
     }
 
+    /* Read-link arrow nudges toward the reading direction on hover. */
+    .sahaba-card-arrow { transition: transform .45s cubic-bezier(.22, 1, .36, 1); }
+
     @media (prefers-reduced-motion: no-preference) {
         .sahaba-medallion-card:hover,
         .sahaba-medallion-card:focus-visible {
             transform: translateY(-8px);
         }
+        .group:hover .sahaba-card-arrow { transform: translateX(4px); }
+        [dir="rtl"] .group:hover .sahaba-card-arrow { transform: translateX(-4px); }
         .group:hover .sahaba-medallion .ring-outer { transform: rotate(45deg); }
         .group:hover .sahaba-medallion .ring-inner { transform: rotate(-30deg); }
         .group:hover .sahaba-sheen {
@@ -118,7 +131,9 @@
               focus-visible:ring-offset-transparent {{ str_replace('text-', 'focus-visible:ring-', $accent) }}">
 
         {{-- Portrait header --}}
-        <div class="sahaba-portrait relative h-36 sm:h-40 overflow-hidden bg-gradient-to-br {{ $cardColor }}
+        {{-- Taller than the original h-36/h-40: the name scrim covers the lower
+             third, and at the old height it crowded the medallion. --}}
+        <div class="sahaba-portrait relative h-44 sm:h-48 overflow-hidden bg-gradient-to-br {{ $cardColor }}
                     flex items-center justify-center">
 
             {{-- Soft radial vignette adds depth under the medallion. --}}
@@ -177,6 +192,37 @@
                 @else
                     <p class="text-[11px] text-white/80">{{ $sahabi->gender === 'female' ? __('site.radia_allah_anha') : __('site.radi_allah_anhu') }}</p>
                 @endif
+            </div>
+        </div>
+
+        {{-- Footer. The card used to end at the portrait: no metadata, and nothing
+             saying it was clickable beyond a hover lift. `mt-auto` pins it so the
+             read-link lines up across cards whatever the name length. --}}
+        <div class="relative mt-auto px-4 pb-3.5 pt-3">
+            {{-- Hairline in the card's accent, brightest at the centre. --}}
+            <span class="absolute inset-x-4 top-0 h-px opacity-40 {{ $accent }}" aria-hidden="true"
+                  style="background:linear-gradient(90deg,transparent,currentColor,transparent);"></span>
+
+            {{-- One row, not two: the year is metadata and the read-link is the
+                 affordance, so they read as a single footer line rather than a
+                 stack that pushes the card taller. --}}
+            <div class="flex items-center justify-between gap-3">
+                @if($deathYear)
+                    <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold
+                                 text-gray-500 dark:text-gray-400">
+                        <i class="h-3.5 w-3.5 shrink-0" data-lucide="calendar" aria-hidden="true"></i>
+                        <span class="sr-only">{{ __('sahaba.death_year') }}:</span>
+                        <span class="tabular-nums">{{ $deathYear }} {{ __('sahaba.year_hijri') }}</span>
+                    </span>
+                @else
+                    <span></span>
+                @endif
+
+                <span class="inline-flex items-center gap-1.5 text-xs font-bold {{ $accent }}">
+                    <span>{{ __('site.read_biography') }}</span>
+                    <i class="sahaba-card-arrow h-4 w-4 shrink-0"
+                       data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}" aria-hidden="true"></i>
+                </span>
             </div>
         </div>
     </a>

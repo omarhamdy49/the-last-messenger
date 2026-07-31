@@ -52,6 +52,7 @@ return [
     'conversion' => 'Müslüman Oluşu',
     'conversion_order' => 'İslam’a Giriş Sırası',
     'age_at_death' => 'Vefat Yaşı',
+    'death_year' => 'Vefat yılı',
     'roles' => 'Rolleri',
     'battles' => 'Savaşlar ve Seferler',
     'hadith_narrated' => 'Rivayet Ettiği Hadisler',

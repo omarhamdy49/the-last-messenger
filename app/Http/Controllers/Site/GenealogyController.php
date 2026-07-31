@@ -84,7 +84,7 @@ final class GenealogyController extends Controller
         // mapPerson()) can't serve a stale array missing those keys to this
         // method until the 1-hour TTL naturally expires.
         $payload = Cache::remember(
-            "public_genealogy_index_v3_{$locale}",
+            "public_genealogy_index_v4_{$locale}",
             3600,
             fn (): array => $this->buildPayload($locale),
         );
@@ -364,8 +364,8 @@ final class GenealogyController extends Controller
      */
     private function localized(Person $person, string $field, string $locale): string
     {
-        return $person->getTranslation($field, $locale)
-            ?: $person->getTranslation($field, 'ar')
+        return $person->getTranslation($field, $locale, false)
+            ?: $person->getTranslation($field, 'ar', false)
             ?: '';
     }
 

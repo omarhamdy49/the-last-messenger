@@ -27,6 +27,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $collection_id
  * @property int $book_id
  * @property int|null $chapter_id
+ * @property int|null $primary_narrator_id
  * @property string $hadith_number
  * @property int|null $in_book_number
  * @property string|null $volume_number
@@ -37,6 +38,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read HadithCollection $collection
  * @property-read HadithBook $book
  * @property-read HadithChapter|null $chapter
+ * @property-read HadithScholar|null $primaryNarrator
  * @property-read \Illuminate\Database\Eloquent\Collection<int, HadithText> $texts
  * @property-read \Illuminate\Database\Eloquent\Collection<int, HadithGrading> $gradings
  */
@@ -55,6 +57,7 @@ class Hadith extends Model
         'collection_id',
         'book_id',
         'chapter_id',
+        'primary_narrator_id',
         'hadith_number',
         'in_book_number',
         'source_position',
@@ -71,6 +74,7 @@ class Hadith extends Model
             'collection_id' => 'integer',
             'book_id' => 'integer',
             'chapter_id' => 'integer',
+            'primary_narrator_id' => 'integer',
             'in_book_number' => 'integer',
             'source_position' => 'integer',
             'sunnah_urn' => 'integer',
@@ -93,6 +97,11 @@ class Hadith extends Model
     public function chapter(): BelongsTo
     {
         return $this->belongsTo(HadithChapter::class, 'chapter_id');
+    }
+
+    public function primaryNarrator(): BelongsTo
+    {
+        return $this->belongsTo(HadithScholar::class, 'primary_narrator_id');
     }
 
     public function texts(): HasMany

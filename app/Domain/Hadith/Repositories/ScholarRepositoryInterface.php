@@ -12,6 +12,9 @@ interface ScholarRepositoryInterface extends RepositoryInterface
 {
     public function findBySlug(string $slug): ?HadithScholar;
 
+    /** A scholar that has at least one published primary-narrator attribution. */
+    public function findPublicNarratorBySlug(string $slug): ?HadithScholar;
+
     /**
      * Resolve a scholar by the name embedded in a grade string — "(Al-Albani)",
      * "(Darussalam)" — creating one if absent, so the import never drops an

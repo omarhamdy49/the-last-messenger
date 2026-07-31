@@ -8,7 +8,10 @@ use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithBook;
 use App\Domain\Hadith\Models\HadithChapter;
 use App\Domain\Hadith\Models\HadithCollection;
+use App\Domain\Hadith\Models\HadithScholar;
 use App\Domain\Hadith\Models\HadithText;
+use App\Domain\Sahaba\Models\Sahabi;
+use App\Domain\Sahaba\Models\SahabiTranslation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -138,5 +141,38 @@ class HadithDetailPageTest extends TestCase
     public function test_an_unknown_urn_is_a_clean_404(): void
     {
         $this->get('/hadith/urn/999999')->assertNotFound();
+    }
+
+    public function test_a_primary_narrator_links_the_hadith_profile_and_sahaba_profile(): void
+    {
+        $sahabi = Sahabi::query()->create(['slug' => 'umar-ibn-al-khattab']);
+        SahabiTranslation::query()->create([
+            'sahabi_id' => $sahabi->id,
+            'locale' => 'en',
+            'name' => 'Umar ibn al-Khattab',
+            'is_ready' => true,
+        ]);
+        $narrator = HadithScholar::factory()->companion()->create([
+            'slug' => 'umar-ibn-al-khattab',
+            'name' => ['ar' => 'عمر بن الخطاب', 'en' => 'Umar ibn al-Khattab'],
+            'full_name' => ['en' => 'Umar ibn al-Khattab ibn Nufayl'],
+            'biography' => ['en' => 'A Companion and narrator of hadith.'],
+            'sahaba_id' => $sahabi->id,
+        ]);
+        $hadith = $this->makeHadith(['primary_narrator_id' => $narrator->id]);
+        HadithText::factory()->for($hadith, 'hadith')->english('Actions are judged by intentions')->create();
+
+        $this->get('/hadith/bukhari:1?lang=en')
+            ->assertOk()
+            ->assertSee('Umar ibn al-Khattab')
+            ->assertSee(route('public.hadith.narrators.show', $narrator->slug), false);
+
+        $this->get(route('public.hadith.narrators.show', $narrator->slug))
+            ->assertOk()
+            ->assertSee('A Companion and narrator of hadith.')
+            ->assertSee(route('public.hadith.show', ['collection' => 'bukhari', 'number' => '1']), false)
+            ->assertSee(route('public.sahaba.show', ['slug' => $sahabi->id]), false);
+
+        $this->get(route('public.sahaba.show', ['slug' => $sahabi->id]))->assertOk();
     }
 }

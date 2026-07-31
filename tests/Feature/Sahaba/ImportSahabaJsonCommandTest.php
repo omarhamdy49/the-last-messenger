@@ -69,8 +69,16 @@ final class ImportSahabaJsonCommandTest extends TestCase
         $child = Sahabi::where('external_id', 'muslimscholars:8000')->firstOrFail();
 
         $this->assertTrue($first->is_sahabi);
+        $this->assertSame(
+            'https://muslimscholars.info/manage.php?submit=scholar&ID=2',
+            $first->source_url,
+        );
         $this->assertTrue($second->is_sahabi);
         $this->assertFalse($father->is_sahabi);
+        $this->assertSame(
+            'https://muslimscholars.info/manage.php?submit=scholar&ID=9000',
+            $father->source_url,
+        );
         $this->assertSame($father->id, $first->father_id);
         $this->assertSame($first->id, $child->father_id);
         $this->assertDatabaseHas('relationships', [
@@ -103,6 +111,51 @@ final class ImportSahabaJsonCommandTest extends TestCase
         $this->assertSame(0, Sahabi::count());
     }
 
+    public function test_existing_only_enriches_a_genealogy_placeholder_from_a_scholar_record(): void
+    {
+        Sahabi::create([
+            'external_id' => 'muslimscholars:1',
+            'slug' => 'prophet-placeholder',
+            'gender' => 'male',
+            'person_type' => 'family',
+            'is_sahabi' => false,
+        ]);
+
+        $prophet = $this->record(
+            externalId: 'muslimscholars:1',
+            slug: 'prophet-muhammad',
+            name: 'Prophet Muhammad',
+        );
+        $prophet['entity'] = 'scholar';
+        $prophet['classification']['is_sahabi'] = false;
+        $prophet['classification']['person_type'] = 'prophet';
+        $prophet['translations']['ar']['name'] = 'محمد ﷺ';
+        $prophet['translations']['en']['biography'] = 'Trusted English biography.';
+        $this->writeJson('00001.json', $prophet);
+
+        $unrelated = $this->record(
+            externalId: 'muslimscholars:999',
+            slug: 'unrelated-scholar',
+            name: 'Unrelated Scholar',
+        );
+        $unrelated['entity'] = 'scholar';
+        $unrelated['classification']['is_sahabi'] = false;
+        $unrelated['classification']['person_type'] = 'historical_figure';
+        $this->writeJson('00999.json', $unrelated);
+
+        $this->artisan('sahaba:import-json', [
+            'path' => $this->directory,
+            '--existing-only' => true,
+        ])->assertSuccessful();
+
+        $saved = Sahabi::where('external_id', 'muslimscholars:1')->firstOrFail();
+        $this->assertSame(1, Sahabi::count());
+        $this->assertSame('prophet', $saved->person_type->value);
+        $this->assertSame('محمد ﷺ', $saved->getTranslation('name', 'ar', false));
+        $this->assertSame('Prophet Muhammad', $saved->getTranslation('name', 'en', false));
+        $this->assertSame('Trusted English biography.', $saved->getTranslation('biography', 'en', false));
+    }
+
     public function test_distinct_external_ids_are_not_merged_when_names_match(): void
     {
         $this->writeJson('00002.json', $this->record(
@@ -127,6 +180,74 @@ final class ImportSahabaJsonCommandTest extends TestCase
         $this->assertSame($parent->id, $secondChild->father_id);
     }
 
+    public function test_relation_conflicts_are_preserved_in_the_json_report(): void
+    {
+        $sharedChild = [['external_id' => 'muslimscholars:8000', 'name' => 'Shared Child']];
+        $this->writeJson('00002.json', $this->record(
+            externalId: 'muslimscholars:2',
+            slug: 'first-parent',
+            name: 'First Parent',
+            children: $sharedChild,
+        ));
+        $this->writeJson('00003.json', $this->record(
+            externalId: 'muslimscholars:3',
+            slug: 'second-parent',
+            name: 'Second Parent',
+            children: $sharedChild,
+        ));
+        $reportPath = $this->directory.'/_import-report.json';
+
+        $this->artisan('sahaba:import-json', [
+            'path' => $this->directory,
+            '--report' => $reportPath,
+        ])->assertSuccessful();
+
+        $report = json_decode(File::get($reportPath), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(1, $report['relation_conflicts']);
+        $this->assertSame(
+            'muslimscholars:8000',
+            $report['relation_conflict_details'][0]['child_external_id'],
+        );
+        $this->assertSame(
+            'muslimscholars:3',
+            $report['relation_conflict_details'][0]['proposed_parent_external_id'],
+        );
+    }
+
+    public function test_unknown_relation_name_does_not_create_a_fake_identity(): void
+    {
+        $this->writeJson('00002.json', $this->record(
+            externalId: 'muslimscholars:2',
+            slug: 'known-parent',
+            name: 'Known Parent',
+            children: [['external_id' => null, 'name' => 'Unknown']],
+        ));
+
+        $this->artisan('sahaba:import-json', ['path' => $this->directory])
+            ->assertSuccessful();
+
+        $this->assertSame(1, Sahabi::query()->count());
+        $this->assertSame(0, Sahabi::query()->where('external_id', 'like', 'derived-name:%')->count());
+    }
+
+    public function test_name_only_relation_does_not_invent_a_source_url(): void
+    {
+        $this->writeJson('00002.json', $this->record(
+            externalId: 'muslimscholars:2',
+            slug: 'known-parent',
+            name: 'Known Parent',
+            children: [['external_id' => null, 'name' => 'Known Name Only Child']],
+        ));
+
+        $this->artisan('sahaba:import-json', ['path' => $this->directory])
+            ->assertSuccessful();
+
+        $placeholder = Sahabi::query()
+            ->where('external_id', 'like', 'derived-name:%')
+            ->firstOrFail();
+        $this->assertNull($placeholder->source_url);
+    }
+
     /**
      * @param  array<string, mixed>  $lineage
      * @param  array<int, array<string, mixed>>  $relationships
@@ -141,10 +262,17 @@ final class ImportSahabaJsonCommandTest extends TestCase
         array $relationships = [],
         array $children = [],
     ): array {
+        $sourceExternalId = explode(':', $externalId, 2)[1] ?? $externalId;
+
         return [
             'schema_version' => '1.0',
             'entity' => 'sahabi',
             'external_id' => $externalId,
+            'acquisition' => [
+                'source' => 'muslimscholars.info',
+                'source_external_id' => $sourceExternalId,
+                'source_url' => "https://muslimscholars.info/manage.php?submit=scholar&ID={$sourceExternalId}",
+            ],
             'slug' => $slug,
             'classification' => [
                 'is_sahabi' => true,

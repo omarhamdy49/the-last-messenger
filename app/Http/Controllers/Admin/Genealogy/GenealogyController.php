@@ -299,7 +299,7 @@ class GenealogyController extends Controller
     private function forgetPublicGenealogyCache(): void
     {
         foreach (config('translatable.locales') as $locale) {
-            Cache::forget("public_genealogy_index_v3_{$locale}");
+            Cache::forget("public_genealogy_index_v4_{$locale}");
         }
     }
 

@@ -249,8 +249,16 @@
                          is a paint-only effect and doesn't grow layout size/scrollHeight), so this
                          box has no real vertical overflow to trap — vertical wheel/touch scroll
                          chains straight through to the page normally. --}}
-                    <div x-ref="treeScrollContainer" @scroll.passive="updateTreeScroll()"
-                         class="overflow-x-auto scrollbar-hide pb-6">
+                    <div x-ref="treeScrollContainer"
+                         @scroll.passive="updateTreeScroll()"
+                         @pointerdown="startTreeDrag($event)"
+                         @pointermove.window="moveTreeDrag($event)"
+                         @pointerup.window="endTreeDrag($event)"
+                         @pointercancel.window="endTreeDrag($event)"
+                         @click.capture="suppressTreeClick($event)"
+                         class="overflow-x-auto scrollbar-hide pb-6 select-none"
+                         :class="treeDrag.active ? 'cursor-grabbing' : 'cursor-grab'"
+                         style="touch-action: none">
                         <div class="inline-block min-w-full"
                              style="transition: transform .25s ease-out"
                              :style="`transform: scale(${zoom}); transform-origin: top center;`">
@@ -548,6 +556,7 @@
 
             displayStats: { people: 0, children: 0, generations: 0 },
             treeScroll: { start: false, end: false },
+            treeDrag: { active: false, pointerId: null, startX: 0, startY: 0, startScrollLeft: 0, startPageY: 0, scrollBehavior: '', moved: false, suppressClick: false },
 
             filters: [
                 { value: 'all',           label: '{{ __('genealogy.public.filter_all') }}' },
@@ -742,6 +751,51 @@
                 // an instant jump that reliably works beats an animated pan
                 // that sometimes does nothing at all.
                 el.scrollBy({ left: delta, behavior: 'auto' });
+            },
+
+            startTreeDrag(event) {
+                if (event.button !== undefined && event.button !== 0) return;
+                const el = this.$refs.treeScrollContainer;
+                if (!el) return;
+                this.treeDrag = {
+                    active: true,
+                    pointerId: event.pointerId,
+                    startX: event.clientX,
+                    startY: event.clientY,
+                    startScrollLeft: el.scrollLeft,
+                    startPageY: window.scrollY,
+                    scrollBehavior: document.documentElement.style.scrollBehavior,
+                    moved: false,
+                    suppressClick: false,
+                };
+                document.documentElement.style.scrollBehavior = 'auto';
+            },
+
+            moveTreeDrag(event) {
+                if (!this.treeDrag.active || event.pointerId !== this.treeDrag.pointerId) return;
+                const el = this.$refs.treeScrollContainer;
+                const deltaX = event.clientX - this.treeDrag.startX;
+                const deltaY = event.clientY - this.treeDrag.startY;
+                if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) this.treeDrag.moved = true;
+                const rtlDirection = getComputedStyle(el).direction === 'rtl' ? -1 : 1;
+                el.scrollLeft = this.treeDrag.startScrollLeft - (deltaX * rtlDirection);
+                document.scrollingElement.scrollTop = this.treeDrag.startPageY - deltaY;
+            },
+
+            endTreeDrag(event) {
+                if (!this.treeDrag.active || event.pointerId !== this.treeDrag.pointerId) return;
+                this.treeDrag.active = false;
+                document.documentElement.style.scrollBehavior = this.treeDrag.scrollBehavior;
+                this.treeDrag.suppressClick = this.treeDrag.moved;
+                if (this.treeDrag.suppressClick) {
+                    requestAnimationFrame(() => { this.treeDrag.suppressClick = false; });
+                }
+            },
+
+            suppressTreeClick(event) {
+                if (!this.treeDrag.suppressClick) return;
+                event.preventDefault();
+                event.stopPropagation();
             },
 
             zoomIn()    { if (this.zoom < 1.5) this.zoom = Math.round((this.zoom + 0.1) * 10) / 10; this.$nextTick(() => setTimeout(() => this.updateTreeScroll(), 260)); },

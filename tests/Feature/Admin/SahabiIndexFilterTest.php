@@ -65,6 +65,7 @@ class SahabiIndexFilterTest extends TestCase
 
         $this->makeSahabi('zayd', ['ar' => 'زيد', 'en' => 'Zayd']);
         $this->makeSahabi('abu-bakr', ['ar' => 'أبو بكر', 'en' => 'Abu Bakr']);
+        $this->makeSahabi('english-only', ['en' => 'Aardvark']);
 
         $response = $this->get(route('admin.sahaba.index'));
 
@@ -72,7 +73,7 @@ class SahabiIndexFilterTest extends TestCase
         $response->assertViewHas('sahaba');
 
         $names = $response->viewData('sahaba')->pluck('slug')->all();
-        $this->assertSame(['abu-bakr', 'zayd'], $names);
+        $this->assertSame(['abu-bakr', 'zayd', 'english-only'], $names);
     }
 
     public function test_search_filters_by_kunya(): void

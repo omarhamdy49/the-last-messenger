@@ -52,6 +52,7 @@ return [
     'conversion' => 'قبولِ اسلام',
     'conversion_order' => 'اسلام لانے کی ترتیب',
     'age_at_death' => 'وفات کے وقت عمر',
+    'death_year' => 'سالِ وفات',
     'roles' => 'کردار',
     'battles' => 'غزوات و سرایا',
     'hadith_narrated' => 'مروی احادیث',

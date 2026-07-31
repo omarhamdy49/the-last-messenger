@@ -19,6 +19,7 @@ use Spatie\Translatable\HasTranslations;
  * goes through a Shared contract. There is deliberately no `sahabi()` relation.
  *
  * @property int $id
+ * @property string|null $external_id
  * @property string $slug
  * @property int|null $birth_year_hijri
  * @property int|null $death_year_hijri
@@ -26,6 +27,7 @@ use Spatie\Translatable\HasTranslations;
  * @property string|null $reliability
  * @property bool $is_companion
  * @property int|null $sahaba_id
+ * @property string|null $source_url
  */
 class HadithScholar extends Model
 {
@@ -38,6 +40,7 @@ class HadithScholar extends Model
 
     /** @var array<string> */
     protected $fillable = [
+        'external_id',
         'slug',
         'name',
         'full_name',
@@ -49,6 +52,7 @@ class HadithScholar extends Model
         'reliability',
         'is_companion',
         'sahaba_id',
+        'source_url',
     ];
 
     /** @return array<string, string> */
@@ -65,6 +69,11 @@ class HadithScholar extends Model
     public function gradings(): HasMany
     {
         return $this->hasMany(HadithGrading::class, 'scholar_id');
+    }
+
+    public function primaryHadiths(): HasMany
+    {
+        return $this->hasMany(Hadith::class, 'primary_narrator_id');
     }
 
     /**

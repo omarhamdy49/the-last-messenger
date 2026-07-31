@@ -52,6 +52,7 @@ return [
     'conversion' => 'Conversion',
     'conversion_order' => 'Order of Conversion',
     'age_at_death' => 'Age at Death',
+    'death_year' => 'Year of death',
     'roles' => 'Roles',
     'battles' => 'Battles & Expeditions',
     'hadith_narrated' => 'Hadiths Narrated',
