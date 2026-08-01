@@ -18,7 +18,6 @@ GIT_SHA="${2:-manual}"
 [[ -f /etc/tlm-deploy.env ]] && source /etc/tlm-deploy.env
 APP_DIR="${APP_DIR:-/var/www/rasoolallah}"
 PHP_VERSION="${PHP_VERSION:-8.4}"
-KEEP_RELEASES="${KEEP_RELEASES:-5}"
 PHP_BIN="/usr/bin/php${PHP_VERSION}"
 
 RELEASES_DIR="${APP_DIR}/releases"
@@ -111,8 +110,12 @@ case "${code}" in
 esac
 
 trap - ERR
-log "Pruning old releases (keeping ${KEEP_RELEASES})..."
-ls -1dt "${RELEASES_DIR}"/*/ 2>/dev/null | tail -n +$((KEEP_RELEASES + 1)) | xargs -r rm -rf
+log "Pruning inactive releases (keeping current only)..."
+current_release="$(readlink -f "${CURRENT}")"
+for release in "${RELEASES_DIR}"/*/; do
+  [[ -d "${release}" ]] || continue
+  [[ "$(readlink -f "${release}")" == "${current_release}" ]] || rm -rf -- "${release}"
+done
 
 rm -f "${ARTIFACT}"
 log "✅ Deploy ${TS} (sha ${GIT_SHA}) complete -> ${RELEASE}"

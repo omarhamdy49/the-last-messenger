@@ -48,7 +48,6 @@ cat > /etc/tlm-deploy.env <<EOF
 APP_DIR=${APP_DIR}
 PHP_VERSION=${PHP_VERSION}
 DEPLOY_USER=${DEPLOY_USER}
-KEEP_RELEASES=${KEEP_RELEASES}
 APP_DOMAIN=${APP_DOMAIN}
 EOF
 chmod 644 /etc/tlm-deploy.env
