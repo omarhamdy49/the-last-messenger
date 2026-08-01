@@ -28,7 +28,12 @@ Thumbs.db
 
 # Generated/exported data + DB backups (portal:export target)
 /portal-data/
+/deploy/backups/
 
 # Extracted sunnah.com source JSON — regenerable, ~300MB, never committed
 /storage/app/hadith_source/*
 !/storage/app/hadith_source/.gitkeep
+
+# SSH deploy key (never commit)
+/ovh_vps
+/ovh_vps.pub
