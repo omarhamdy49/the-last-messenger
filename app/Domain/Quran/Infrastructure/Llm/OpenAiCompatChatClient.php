@@ -53,6 +53,7 @@ final class OpenAiCompatChatClient implements ChatClientInterface
         return new ChatResult(
             message: $message,
             usage: (array) ($response->json('usage') ?? []),
+            provider: $this->provider,
         );
     }
 
@@ -208,7 +209,7 @@ final class OpenAiCompatChatClient implements ChatClientInterface
             $message['tool_calls'] = array_values($toolCalls);
         }
 
-        return new ChatResult(message: $message, usage: $usage);
+        return new ChatResult(message: $message, usage: $usage, provider: $this->provider);
     }
 
     /**

@@ -20,15 +20,19 @@ final class AskQuranSmokeCommand extends Command
 {
     protected $signature = 'quran:ai-smoke {question : The question to ask} {--locale=en : Answer locale (ar|en|fr|tr|ur)} {--stream : Exercise the streaming (SSE) path} {--detailed : Request the thorough (2-slot) answer variant}';
 
-    protected $description = 'Live smoke test of the Ask Quran AI bridge (DeepSeek + quran.ai MCP). Requires DEEPSEEK_API_KEY.';
+    protected $description = 'Live smoke test of the Ask Quran AI bridge (active LLM provider + quran.ai MCP). Requires the provider API key.';
 
     public function handle(QuranAiInquiryService $service): int
     {
-        if (empty(config('services.deepseek.api_key'))) {
-            $this->error('DEEPSEEK_API_KEY is not set — cannot run the live smoke test.');
+        $provider = (string) config('services.quran_ai.provider', 'deepseek');
+
+        if (empty(config("services.{$provider}.api_key"))) {
+            $this->error(strtoupper($provider).'_API_KEY is not set — cannot run the live smoke test.');
 
             return self::FAILURE;
         }
+
+        $this->line("provider: {$provider} (".config("services.{$provider}.model").')');
 
         $question = (string) $this->argument('question');
         $locale = (string) $this->option('locale');

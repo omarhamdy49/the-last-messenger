@@ -54,7 +54,22 @@ class QuranServiceProvider extends ServiceProvider
         // carries per-request session state, so it must not be a singleton).
         $this->app->bind(
             \App\Domain\Quran\Infrastructure\Llm\ChatClientInterface::class,
-            \App\Domain\Quran\Infrastructure\Llm\DeepSeekChatClient::class
+            function (): \App\Domain\Quran\Infrastructure\Llm\ChatClientInterface {
+                $provider = (string) config('services.quran_ai.provider', 'deepseek');
+                $fallback = (string) config('services.quran_ai.fallback_provider', '');
+
+                $primary = new \App\Domain\Quran\Infrastructure\Llm\OpenAiCompatChatClient($provider);
+
+                // An unset (or self-referencing) fallback means no fallback at all.
+                if ($fallback === '' || $fallback === $provider) {
+                    return $primary;
+                }
+
+                return new \App\Domain\Quran\Infrastructure\Llm\FallbackChatClient(
+                    $primary,
+                    new \App\Domain\Quran\Infrastructure\Llm\OpenAiCompatChatClient($fallback),
+                );
+            }
         );
         $this->app->bind(
             \App\Domain\Quran\Infrastructure\Mcp\QuranMcpClientInterface::class,

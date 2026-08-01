@@ -6,38 +6,40 @@ namespace App\Domain\Quran\Services;
 
 use App\Domain\Quran\Application\DTOs\AiAnswerDTO;
 use App\Domain\Quran\Infrastructure\Llm\ChatClientInterface;
+use App\Domain\Quran\Infrastructure\Llm\ChatResult;
 use App\Domain\Quran\Infrastructure\Mcp\QuranMcpClientInterface;
 
 /**
- * The DeepSeek <-> quran.ai MCP bridge.
+ * The LLM <-> quran.ai MCP bridge.
  *
  * Runs a bounded tool-calling loop: the LLM may call MCP tools (search / fetch
  * verse / translation / tafsir) to ground its answer; we execute each call and
  * feed the result back. The loop is capped (`max_tool_calls`) and the final
  * iteration forces an answer (`tool_choice: none`) so it always terminates.
  *
- * Cost: the system prompt (grounding rules + persona) is byte-stable so DeepSeek
- * prefix-caches it; tafsir editions and verse counts are clamped in the MCP
- * client; output is capped in the chat client.
+ * Provider-agnostic: the prompt, the loop and the grounding rules are identical
+ * whichever provider `services.quran_ai.provider` selects — only the chat client
+ * and the pricing table differ, which is what makes the two comparable.
+ *
+ * Cost: the system prompt (grounding rules + persona) is byte-stable so the
+ * provider prefix-caches it; tafsir editions and verse counts are clamped in the
+ * MCP client; output is capped in the chat client.
  */
 final class QuranAiInquiryService
 {
-    // DeepSeek V4 Flash pricing, USD per 1M tokens. For the cost ledger /
-    // observability only — not billing. Keep in sync with the provider.
-    private const PRICE_INPUT = 0.14;
-
-    private const PRICE_CACHED_INPUT = 0.0028;
-
-    private const PRICE_OUTPUT = 0.28;
-
     private const LOCALE_NAMES = [
         'ar' => 'Arabic', 'en' => 'English', 'fr' => 'French', 'tr' => 'Turkish', 'ur' => 'Urdu',
     ];
 
+    private readonly string $provider;
+
     public function __construct(
         private readonly ChatClientInterface $chat,
         private readonly QuranMcpClientInterface $mcp,
-    ) {}
+        ?string $provider = null,
+    ) {
+        $this->provider = $provider ?? (string) config('services.quran_ai.provider', 'deepseek');
+    }
 
     public function answer(string $question, string $locale, bool $detailed = false): AiAnswerDTO
     {
@@ -50,7 +52,7 @@ final class QuranAiInquiryService
         ];
 
         $maxToolCalls = (int) config('services.quran_mcp.max_tool_calls', 4);
-        $usage = ['prompt' => 0, 'completion' => 0, 'cached' => 0, 'miss' => 0];
+        $usage = ['prompt' => 0, 'completion' => 0, 'cached' => 0, 'miss' => 0, 'cost' => 0.0, 'provider' => ''];
         $citations = [];
         $toolCallCount = 0;
 
@@ -63,7 +65,7 @@ final class QuranAiInquiryService
                 $toolsEnabled ? $tools : [],
                 $toolsEnabled ? 'auto' : 'none',
             );
-            $this->accumulate($usage, $result->usage);
+            $this->accumulate($usage, $result);
 
             $calls = $result->toolCalls();
             if ($calls === [] || ! $toolsEnabled) {
@@ -114,7 +116,7 @@ final class QuranAiInquiryService
         ];
 
         $maxToolCalls = (int) config('services.quran_mcp.max_tool_calls', 4);
-        $usage = ['prompt' => 0, 'completion' => 0, 'cached' => 0, 'miss' => 0];
+        $usage = ['prompt' => 0, 'completion' => 0, 'cached' => 0, 'miss' => 0, 'cost' => 0.0, 'provider' => ''];
         $citations = [];
         $toolCallCount = 0;
 
@@ -139,7 +141,7 @@ final class QuranAiInquiryService
                 $toolsEnabled ? 'auto' : 'none',
                 $onDelta,
             );
-            $this->accumulate($usage, $result->usage);
+            $this->accumulate($usage, $result);
 
             $calls = $result->toolCalls();
             if ($calls === [] || ! $toolsEnabled) {
@@ -187,9 +189,7 @@ final class QuranAiInquiryService
      */
     private function finalize(string $answer, array $usage, array $citations, int $toolCalls): AiAnswerDTO
     {
-        $cost = $usage['miss'] / 1_000_000 * self::PRICE_INPUT
-            + $usage['cached'] / 1_000_000 * self::PRICE_CACHED_INPUT
-            + $usage['completion'] / 1_000_000 * self::PRICE_OUTPUT;
+        $provider = $usage['provider'] ?: $this->provider;
 
         return new AiAnswerDTO(
             answer: trim($answer),
@@ -198,25 +198,48 @@ final class QuranAiInquiryService
             outputTokens: $usage['completion'],
             cachedTokens: $usage['cached'],
             toolCalls: $toolCalls,
-            costUsd: round($cost, 6),
-            model: (string) config('services.deepseek.model', 'deepseek-chat'),
+            costUsd: round($usage['cost'], 6),
+            model: (string) config("services.{$provider}.model", $provider),
         );
     }
 
     /**
-     * @param  array{prompt:int, completion:int, cached:int, miss:int}  $usage
-     * @param  array<string, mixed>  $turnUsage
+     * Fold one turn into the running ledger. The turn is costed immediately, at
+     * the prices of the provider that actually served it — with a fallback
+     * provider configured, a single inquiry can span two price lists.
+     *
+     * @param  array{prompt:int, completion:int, cached:int, miss:int, cost:float, provider:string}  $usage
      */
-    private function accumulate(array &$usage, array $turnUsage): void
+    private function accumulate(array &$usage, ChatResult $result): void
     {
+        $provider = $result->provider ?? $this->provider;
+        $turnUsage = $result->usage;
+
         $prompt = (int) ($turnUsage['prompt_tokens'] ?? 0);
-        $cached = (int) ($turnUsage['prompt_cache_hit_tokens'] ?? 0);
+        // DeepSeek reports cache hits as top-level keys; Gemini uses the OpenAI
+        // `prompt_tokens_details` shape.
+        $cached = (int) ($turnUsage['prompt_cache_hit_tokens']
+            ?? $turnUsage['prompt_tokens_details']['cached_tokens']
+            ?? 0);
         $miss = (int) ($turnUsage['prompt_cache_miss_tokens'] ?? max(0, $prompt - $cached));
+        $completion = (int) ($turnUsage['completion_tokens'] ?? 0);
+
+        // Gemini omits thinking tokens from `completion_tokens` but bills them as
+        // output and counts them in `total_tokens`; without this the ledger
+        // undercounts by ~3x. DeepSeek's total is prompt+completion, so this is 0.
+        $hidden = max(0, (int) ($turnUsage['total_tokens'] ?? 0) - $prompt - $completion);
+
+        /** @var array<string, float> $prices */
+        $prices = (array) config("services.{$provider}.prices", []);
 
         $usage['prompt'] += $prompt;
-        $usage['completion'] += (int) ($turnUsage['completion_tokens'] ?? 0);
+        $usage['completion'] += $completion + $hidden;
         $usage['cached'] += $cached;
         $usage['miss'] += $miss;
+        $usage['provider'] = $provider;
+        $usage['cost'] += $miss / 1_000_000 * (float) ($prices['input'] ?? 0)
+            + $cached / 1_000_000 * (float) ($prices['cached_input'] ?? 0)
+            + ($completion + $hidden) / 1_000_000 * (float) ($prices['output'] ?? 0);
     }
 
     /**
