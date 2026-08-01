@@ -125,7 +125,7 @@
                     @if (in_array('google', $socialProviders, true))
                         <a href="{{ route('public.social.redirect', 'google') }}?redirect={{ urlencode($here) }}"
                            class="flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-300 dark:border-[#0f3460] text-sm font-semibold hover:bg-gray-50 dark:hover:bg-[#0f3460]/40 transition">
-                            <i data-lucide="chrome" class="w-5 h-5 text-[#EA4335]"></i>
+                            <img src="{{ asset('images/site/google-g.svg') }}" alt="" aria-hidden="true" class="w-5 h-5">
                             <span class="truncate">{{ __('auth_web.continue_with_google') }}</span>
                         </a>
                     @endif

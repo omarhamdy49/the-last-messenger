@@ -56,6 +56,7 @@ return [
     'social_cancelled' => 'Sign-in was cancelled. You can try again or use your email.',
     'social_failed' => 'We could not sign you in with this provider. Please try again.',
     'social_no_email' => 'Your social account did not share an email address. Please register with your email instead.',
+    'social_unverified_email' => 'Google did not provide a verified email address. Please use another Google account or register with your email.',
 
     // Benefits (marketing column)
     'benefit_content_title' => 'Thousands of articles and content',

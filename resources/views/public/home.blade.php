@@ -22,7 +22,7 @@
     $quranUrl  = Route::has('public.quran')  ? route('public.quran')  : '#';
     $genealogyUrl = Route::has('public.genealogy') ? route('public.genealogy') : '#';
     $searchUrl = Route::has('public.search') ? route('public.search') : '#';
-    $registerUrl = Route::has('register') ? route('register') : '#';
+    $registerUrl = route('public.register');
 
     // Module cards arrive DB-managed from HomeContentService (controller prop).
     // The maps below are purely presentational: Tailwind can't compile classes

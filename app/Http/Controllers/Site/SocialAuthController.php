@@ -82,6 +82,10 @@ final class SocialAuthController extends Controller
             return $this->failToLogin(__('auth_web.social_no_email'));
         }
 
+        if ($provider === 'google' && ! $this->hasVerifiedGoogleEmail($providerUser)) {
+            return $this->failToLogin(__('auth_web.social_unverified_email'));
+        }
+
         $user = $this->resolveUser($provider, $providerUser);
 
         Auth::login($user, remember: true);
@@ -107,6 +111,12 @@ final class SocialAuthController extends Controller
         return redirect()
             ->route('public.login')
             ->withErrors(['social' => $message]);
+    }
+
+    private function hasVerifiedGoogleEmail(ProviderUser $providerUser): bool
+    {
+        return method_exists($providerUser, 'getRaw')
+            && data_get($providerUser->getRaw(), 'verified_email') === true;
     }
 
     private function resolveUser(string $provider, ProviderUser $providerUser): User

@@ -35,14 +35,17 @@ final class SocialAuthTest extends TestCase
         string $id = 'provider-id-123',
         string $email = 'social@example.com',
         ?string $name = 'Social Visitor',
+        bool $verifiedEmail = true,
     ): void {
-        $socialUser = (new SocialiteUser)->map([
-            'id' => $id,
-            'name' => $name,
-            'nickname' => null,
-            'email' => $email,
-            'avatar' => null,
-        ]);
+        $socialUser = (new SocialiteUser)
+            ->setRaw(['verified_email' => $verifiedEmail])
+            ->map([
+                'id' => $id,
+                'name' => $name,
+                'nickname' => null,
+                'email' => $email,
+                'avatar' => null,
+            ]);
 
         $driver = Mockery::mock(Provider::class);
         $driver->shouldReceive('user')->andReturn($socialUser);
@@ -58,8 +61,9 @@ final class SocialAuthTest extends TestCase
 
         Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
 
-        $this->get(route('public.social.redirect', 'google'))
-            ->assertRedirect('https://accounts.google.com/o/oauth2/auth');
+        $this->get(route('public.social.redirect', 'google').'?redirect=/quran/ask')
+            ->assertRedirect('https://accounts.google.com/o/oauth2/auth')
+            ->assertSessionHas('url.intended', url('/quran/ask'));
     }
 
     public function test_callback_creates_a_verified_user_and_logs_in(): void
@@ -165,6 +169,25 @@ final class SocialAuthTest extends TestCase
         $this->assertSame(0, User::count());
     }
 
+    public function test_callback_without_verified_google_email_is_rejected(): void
+    {
+        $existing = User::factory()->create([
+            'email' => 'unverified@example.com',
+            'provider' => null,
+            'provider_id' => null,
+        ]);
+
+        $this->mockProviderUser(email: 'unverified@example.com', verifiedEmail: false);
+
+        $response = $this->get(route('public.social.callback', 'google'));
+
+        $response->assertRedirect(route('public.login'));
+        $response->assertSessionHasErrors('social');
+        $this->assertGuest();
+        $this->assertSame(1, User::count());
+        $this->assertNull($existing->fresh()->provider);
+    }
+
     public function test_unconfigured_provider_redirects_to_login(): void
     {
         config(['services.facebook.client_id' => null]);
@@ -216,5 +239,14 @@ final class SocialAuthTest extends TestCase
         $this->get(route('public.register'))
             ->assertOk()
             ->assertDontSee('/auth/google/redirect');
+    }
+
+    public function test_public_google_buttons_use_the_google_identity_mark(): void
+    {
+        $googleMark = asset('images/site/google-g.svg');
+
+        $this->get(route('public.login'))->assertSee($googleMark, false);
+        $this->get(route('public.register'))->assertSee($googleMark, false);
+        $this->get(route('public.home'))->assertSee($googleMark, false);
     }
 }

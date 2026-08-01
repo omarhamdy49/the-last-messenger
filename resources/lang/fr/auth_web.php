@@ -56,6 +56,7 @@ return [
     'social_cancelled' => 'La connexion a été annulée. Vous pouvez réessayer ou utiliser votre e-mail.',
     'social_failed' => 'Impossible de vous connecter via ce service. Veuillez réessayer.',
     'social_no_email' => 'Votre compte social n\'a pas partagé d\'adresse e-mail. Veuillez vous inscrire avec votre e-mail.',
+    'social_unverified_email' => 'Google n\'a pas fourni d\'adresse e-mail vérifiée. Utilisez un autre compte Google ou inscrivez-vous avec votre e-mail.',
 
     // Benefits (marketing column)
     'benefit_content_title' => 'Des milliers d\'articles et de contenus',

@@ -56,6 +56,7 @@ return [
     'social_cancelled' => 'Giriş iptal edildi. Tekrar deneyebilir veya e-postanızı kullanabilirsiniz.',
     'social_failed' => 'Bu hizmetle giriş yapılamadı. Lütfen tekrar deneyin.',
     'social_no_email' => 'Sosyal hesabınız bir e-posta adresi paylaşmadı. Lütfen e-postanızla kayıt olun.',
+    'social_unverified_email' => 'Google doğrulanmış bir e-posta adresi sağlamadı. Başka bir Google hesabı kullanın veya e-postanızla kaydolun.',
 
     // Benefits (marketing column)
     'benefit_content_title' => 'Binlerce makale ve içerik',

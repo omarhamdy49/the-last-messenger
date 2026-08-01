@@ -15,6 +15,15 @@ final class HomeSectionTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_guest_registration_cta_uses_the_public_registration_route(): void
+    {
+        $this->seed(HomeSectionsSeeder::class);
+
+        $this->get(route('public.home'))
+            ->assertOk()
+            ->assertSee('href="'.route('public.register').'"', false);
+    }
+
     public function test_deactivated_section_disappears_from_home(): void
     {
         $this->seed(HomeSectionsSeeder::class);
