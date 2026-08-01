@@ -192,7 +192,7 @@ final class QuranAiInquiryService
         $provider = $usage['provider'] ?: $this->provider;
 
         return new AiAnswerDTO(
-            answer: trim($answer),
+            answer: $this->stripGroundingFooter($answer),
             citations: $citations,
             inputTokens: $usage['prompt'],
             outputTokens: $usage['completion'],
@@ -201,6 +201,26 @@ final class QuranAiInquiryService
             costUsd: round($usage['cost'], 6),
             model: (string) config("services.{$provider}.model", $provider),
         );
+    }
+
+    /**
+     * Drop the trailing `_Grounded with quran.ai: fetch_quran(...)_` provenance line.
+     *
+     * This is not model disobedience: the quran.ai MCP grounding rules are prepended
+     * to our system prompt and their "Citation Requirement" section mandates that
+     * footer verbatim, which contradicts our own "no source footers" rule. The models
+     * follow the MCP rules, so no prompt wording reliably wins — strip it here instead.
+     * Nothing is lost: the same tool calls are already captured structurally in
+     * AiAnswerDTO::$citations and surfaced by the UI.
+     *
+     * The "Partially grounded"/"not grounded" variants are deliberately NOT stripped —
+     * those warn the reader that content is unverified, which must reach the user.
+     */
+    private function stripGroundingFooter(string $answer): string
+    {
+        $stripped = preg_replace('/\n*[ \t]*_?[ \t]*Grounded with quran\.ai:[^\n]*$/iu', '', trim($answer));
+
+        return trim($stripped ?? $answer);
     }
 
     /**
