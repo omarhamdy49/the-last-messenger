@@ -26,6 +26,15 @@ enum HadithGrade: string
         return array_column(self::cases(), 'value');
     }
 
+    /** @return list<string> */
+    public static function publicFilterValues(): array
+    {
+        return array_values(array_filter(
+            self::values(),
+            static fn (string $value): bool => $value !== self::UNKNOWN->value,
+        ));
+    }
+
     public function label(): string
     {
         return __('hadith.grade_'.$this->value);

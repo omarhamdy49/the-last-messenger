@@ -41,8 +41,8 @@ return new class extends Migration
             $table->unsignedInteger('sunnah_urn')->nullable()->unique();
             $table->unsignedInteger('sunnah_urn_en')->nullable()->unique();
             // Derived from hadith_gradings; never edited directly.
-            $table->enum('display_grade', ['sahih', 'hasan', 'daif', 'mawdu', 'unknown'])
-                ->default('unknown');
+            $table->enum('display_grade', ['sahih', 'hasan', 'daif', 'mawdu'])
+                ->nullable();
             $table->boolean('is_published')->default(false);
             $table->timestamps();
 

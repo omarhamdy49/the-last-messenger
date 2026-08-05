@@ -87,7 +87,7 @@
                 @foreach ($profile->hadiths as $hadith)
                     @php
                         $text = $hadith->textFor($locale);
-                        $grade = $hadith->display_grade->value;
+                        $grade = $hadith->display_grade?->value;
                     @endphp
                     <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-[#16213e] sm:p-6">
                         <div class="flex flex-wrap items-center justify-between gap-3">
@@ -95,7 +95,9 @@
                                class="font-bold text-[#0056b3] hover:underline focus:outline-none focus:ring-2 focus:ring-[#0056b3] focus:ring-offset-2 dark:text-[#64CCC5] dark:focus:ring-offset-[#16213e]">
                                 {{ $hadith->collection->getTranslation('name', $locale, true) }} · {{ __('hadith.hadith') }} {{ $hadith->hadith_number }}
                             </a>
-                            <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $gradeStyles[$grade] ?? $gradeStyles['unknown'] }}">{{ __('hadith.grade_'.$grade) }}</span>
+                            @if ($grade)
+                                <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $gradeStyles[$grade] ?? $gradeStyles['unknown'] }}">{{ __('hadith.grade_'.$grade) }}</span>
+                            @endif
                         </div>
                         @if ($text)
                             <p dir="{{ $text->locale === 'ar' ? 'rtl' : 'ltr' }}" lang="{{ $text->locale }}"

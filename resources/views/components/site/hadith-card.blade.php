@@ -26,15 +26,7 @@
     $text = $locale === 'en'
         ? ($englishText ?? $arabicText)
         : ($arabicText ?? $englishText);
-    $grade = $hadith->display_grade->value;
-    $gradingContext = is_array($hadith->source_metadata)
-        ? ($hadith->source_metadata['grading_context'] ?? [])
-        : [];
-    $gradeLabel = $grade === 'unknown'
-        && is_array($gradingContext)
-        && ($gradingContext['per_hadith_status'] ?? null) === 'not_provided_by_source'
-            ? __('hadith.per_hadith_grade_not_provided')
-            : __('hadith.grade_'.$grade);
+    $grade = $hadith->display_grade?->value;
     $url = route('public.hadith.show', [$hadith->collection->code, $hadith->hadith_number]);
 
     // Each language follows its source `narrated_by`, falling back to the linked
@@ -42,8 +34,14 @@
     $fallbackChain = $hadith->primaryNarrator?->name
         ? __('hadith.narrated_by').': '.$hadith->primaryNarrator->name
         : null;
-    $arabicChain = $arabicText?->narrated_by ?: $fallbackChain;
+    $arabicChain = $arabicText?->sanad ?: $arabicText?->narrated_by ?: $fallbackChain;
     $englishChain = $englishText?->narrated_by ?: $fallbackChain;
+    if ($arabicChain && str_starts_with(ltrim($arabicText?->body ?? ''), $arabicChain)) {
+        $arabicChain = null;
+    }
+    if ($englishChain && str_starts_with(ltrim($englishText?->body ?? ''), $englishChain)) {
+        $englishChain = null;
+    }
 
     // Colour is paired with the label, never carrying the verdict alone.
     $gradeIcon = match ($grade) {
@@ -60,7 +58,7 @@
 {{-- data-text is the server-folded `search_body` (diacritics stripped, hamza
      forms collapsed) so an in-page filter can match what a reader actually
      types. window.foldForSearch() applies the same fold to the query. --}}
-<article data-grade="{{ $grade }}"
+<article data-grade="{{ $grade ?? '' }}"
          data-text="{{ \Illuminate\Support\Str::lower(
              collect([$arabicText, $englishText])->filter()->map(
                  fn ($localeText) => ($localeText->search_body ?: $localeText->body).' '.$localeText->narrated_by
@@ -100,12 +98,14 @@
                         </a>
                     </h3>
 
-                    <span class="grade-badge grade-badge-{{ $grade }}
-                                 inline-flex items-center gap-1.5 shrink-0
-                                 px-3 py-1 rounded-full text-[11px] font-black">
-                        <i data-lucide="{{ $gradeIcon }}" class="w-3.5 h-3.5" aria-hidden="true"></i>
-                        {{ $gradeLabel }}
-                    </span>
+                    @if ($grade)
+                        <span class="grade-badge grade-badge-{{ $grade }}
+                                     inline-flex items-center gap-1.5 shrink-0
+                                     px-3 py-1 rounded-full text-[11px] font-black">
+                            <i data-lucide="{{ $gradeIcon }}" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                            {{ __('hadith.grade_'.$grade) }}
+                        </span>
+                    @endif
                 </div>
 
                 @if ($arabicText)

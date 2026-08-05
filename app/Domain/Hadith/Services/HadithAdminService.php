@@ -118,6 +118,7 @@ final class HadithAdminService
                 'author' => $data['author'],
                 'short_intro' => $data['short_intro'],
                 'about' => $data['about'],
+                'introduction' => $data['introduction'],
                 'is_published' => $data['is_published'],
                 'featured' => $data['featured'],
             ]);

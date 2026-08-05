@@ -85,6 +85,12 @@
                                               class="w-full rounded-xl border px-4 py-3 leading-7 focus:ring-2 focus:ring-accent"
                                               :class="darkMode ? 'border-gray-700 bg-gray-900 text-white' : 'border-gray-300 bg-white'">{{ old("about.$locale", $collection->getTranslation('about', $locale, false)) }}</textarea>
                                 </div>
+                                <div class="md:col-span-2">
+                                    <label class="mb-2 block text-sm font-semibold">{{ __('hadith.admin.introduction') }}</label>
+                                    <textarea name="introduction[{{ $locale }}]" rows="12"
+                                              class="w-full rounded-xl border px-4 py-3 leading-7 focus:ring-2 focus:ring-accent"
+                                              :class="darkMode ? 'border-gray-700 bg-gray-900 text-white' : 'border-gray-300 bg-white'">{{ old("introduction.$locale", $collection->getTranslation('introduction', $locale, false)) }}</textarea>
+                                </div>
                             </div>
                         </x-admin.language-tab-panel>
                     @endforeach

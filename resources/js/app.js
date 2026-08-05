@@ -275,7 +275,7 @@ Alpine.data('hadithSuggest', ({ endpoint, basePath, locale, limit = 5 }) => ({
         return {
             key: `${h.collection}:${h.hadith_number}`,
             reference: h.reference?.canonical || `${h.collection} ${h.hadith_number}`,
-            grade: h.display_grade || 'unknown',
+            grade: h.display_grade || null,
             body: (text?.body || '').slice(0, 190),
             // Built from a base path rather than a placeholder-substituted named
             // route: `public.hadith.show` is `/hadith/{collection}:{number}`, and

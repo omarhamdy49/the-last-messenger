@@ -72,7 +72,7 @@ class HadithExporter extends BaseExporter
             'locale' => $text?->locale,
             'narrated_by' => $text?->narrated_by,
             'body' => $text?->body,
-            'display_grade' => $row->display_grade->value,
+            'display_grade' => $row->display_grade?->value,
             'raw_grades' => $row->gradings->pluck('raw_grade')->filter()->implode(' | '),
             'is_published' => $row->is_published ? 1 : 0,
         ];

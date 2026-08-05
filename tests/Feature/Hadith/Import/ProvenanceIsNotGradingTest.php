@@ -8,6 +8,7 @@ use App\Domain\Hadith\Enums\HadithGrade;
 use App\Domain\Hadith\Import\HadithImporter;
 use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithCollection;
+use App\Domain\Hadith\Models\HadithGrading;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -65,7 +66,7 @@ class ProvenanceIsNotGradingTest extends TestCase
         $this->importPayload([$this->record()]);
 
         $this->assertDatabaseCount('hadith_gradings', 0);
-        $this->assertSame(HadithGrade::UNKNOWN, Hadith::query()->first()->display_grade);
+        $this->assertNull(Hadith::query()->first()->display_grade);
     }
 
     public function test_an_authenticated_by_style_field_is_never_read_as_a_grading(): void
@@ -103,10 +104,10 @@ class ProvenanceIsNotGradingTest extends TestCase
         ])]);
 
         $this->assertDatabaseHas('hadith_scholars', ['slug' => 'al-albani']);
-        $this->assertNotNull(\App\Domain\Hadith\Models\HadithGrading::query()->first()->scholar_id);
+        $this->assertNotNull(HadithGrading::query()->first()->scholar_id);
     }
 
-    public function test_conflicting_hadith_scope_verdicts_yield_unknown(): void
+    public function test_conflicting_hadith_scope_verdicts_yield_null(): void
     {
         $this->importPayload([$this->record([
             'gradings' => [
@@ -116,18 +117,18 @@ class ProvenanceIsNotGradingTest extends TestCase
         ])]);
 
         $this->assertDatabaseCount('hadith_gradings', 2);
-        $this->assertSame(HadithGrade::UNKNOWN, Hadith::query()->first()->display_grade);
+        $this->assertNull(Hadith::query()->first()->display_grade);
     }
 
     public function test_an_isnad_scope_verdict_does_not_set_the_display_grade(): void
     {
         // A verdict on the chain says nothing about the text, so display_grade
-        // stays unknown rather than inheriting the chain's weakness.
+        // stays null rather than inheriting the chain's weakness.
         $this->importPayload([$this->record([
             'gradings' => [['locale' => 'en', 'raw_grade' => "Isnād Da'īf (Zubair `Aliza'i)"]],
         ])]);
 
         $this->assertDatabaseHas('hadith_gradings', ['scope' => 'isnad', 'grade' => 'daif']);
-        $this->assertSame(HadithGrade::UNKNOWN, Hadith::query()->first()->display_grade);
+        $this->assertNull(Hadith::query()->first()->display_grade);
     }
 }

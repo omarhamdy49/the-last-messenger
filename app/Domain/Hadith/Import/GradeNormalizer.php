@@ -81,7 +81,7 @@ final class GradeNormalizer
      */
     private const ISNAD_MARKERS = [
         'isnad', 'isnaad', 'sanad', 'in chain', 'chain is', 'its chain',
-        'اسناده', 'اسناد', 'سنده', 'سند',
+        'اسناده', 'اسانيد', 'اسناد', 'سنده', 'سند',
     ];
 
     /** Splits a string that asserts one thing about the chain and another about the text. */

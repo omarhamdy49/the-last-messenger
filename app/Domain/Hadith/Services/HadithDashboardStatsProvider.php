@@ -32,11 +32,10 @@ class HadithDashboardStatsProvider implements DashboardStatsProviderInterface
                 SUM(is_published = 1) AS published,
                 SUM(display_grade = ?) AS sahih,
                 SUM(display_grade = ?) AS hasan,
-                SUM(display_grade = ?) AS unknown_grade
+                SUM(display_grade IS NULL) AS ungraded
             ', [
                 HadithGrade::SAHIH->value,
                 HadithGrade::HASAN->value,
-                HadithGrade::UNKNOWN->value,
             ])->first();
 
             return [
@@ -44,7 +43,7 @@ class HadithDashboardStatsProvider implements DashboardStatsProviderInterface
                 'published' => (int) ($row->published ?? 0),
                 'sahih' => (int) ($row->sahih ?? 0),
                 'hasan' => (int) ($row->hasan ?? 0),
-                'ungraded' => (int) ($row->unknown_grade ?? 0),
+                'ungraded' => (int) ($row->ungraded ?? 0),
             ];
         } catch (\Throwable) {
             return ['total' => 0, 'published' => 0, 'sahih' => 0, 'hasan' => 0, 'ungraded' => 0];

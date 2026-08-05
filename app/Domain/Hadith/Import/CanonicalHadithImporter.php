@@ -73,7 +73,7 @@ final class CanonicalHadithImporter
                     throw new RuntimeException("{$file}: declared {$declared} hadiths but contains ".count($records));
                 }
 
-                $bookId = $this->insertBook($collectionId, $metadata, basename($file, '.json'), $sortOrder + 1);
+                $bookId = $this->insertBook($collectionId, $metadata, $records, basename($file, '.json'), $sortOrder + 1);
                 [$chapters, $recordChapterIds] = $this->insertChapters($bookId, $metadata, $records);
                 $counts['books']++;
                 $counts['chapters'] += $chapters;
@@ -180,11 +180,16 @@ final class CanonicalHadithImporter
         $title = $this->translations($data['title'] ?? $data['name'] ?? []);
         $now = now();
         $about = is_array($data['about'] ?? null) ? $data['about'] : [];
+        $introduction = is_array($data['introduction'] ?? null) ? $data['introduction'] : [];
         DB::table('hadith_collections')->updateOrInsert(['code' => $code], [
             'name' => $this->jsonValue($title !== [] ? $title : ['en' => $code]),
             'author' => null,
             'short_intro' => $this->jsonNullable($this->translations($data['description'] ?? [])),
             'about' => $this->jsonNullable($this->translations($data['about_text'] ?? []) ?: (is_string($about['text'] ?? null) && trim($about['text']) !== '' ? ['en' => trim($about['text'])] : [])),
+            'introduction' => $this->jsonNullable(
+                $this->translations($data['introduction_text'] ?? [])
+                    ?: $this->translations($introduction['text'] ?? []),
+            ),
             'has_books' => true,
             'has_chapters' => true,
             'has_volumes' => false,
@@ -194,7 +199,11 @@ final class CanonicalHadithImporter
             'display_order' => array_search($code, array_keys($this->categories), true) ?: 0,
             'source_url' => $data['source_url'] ?? null,
             'about_url' => $data['about_url'] ?? $about['url'] ?? null,
+            'introduction_url' => $data['introduction_url'] ?? $introduction['url'] ?? null,
             'source_category' => $this->categories[$code] ?? null,
+            'source_capture_complete' => is_bool($data['source_capture_complete'] ?? null)
+                ? $data['source_capture_complete']
+                : null,
             'source_metadata' => $this->jsonValue($data),
             'created_at' => $now,
             'updated_at' => $now,
@@ -204,7 +213,7 @@ final class CanonicalHadithImporter
     }
 
     /** @param array<string, mixed> $metadata */
-    private function insertBook(int $collectionId, array $metadata, string $fallback, int $sortOrder): int
+    private function insertBook(int $collectionId, array $metadata, array $records, string $fallback, int $sortOrder): int
     {
         $number = (string) ($metadata['number'] ?? $metadata['source_book_id'] ?? $fallback);
         $title = $this->translations($metadata['title'] ?? $metadata['name'] ?? []);
@@ -212,6 +221,7 @@ final class CanonicalHadithImporter
             $metadata['intro'] ?? $metadata['introductory_text'] ?? $metadata['description'] ?? [],
         );
         $referenceRange = $metadata['source_reference_range'] ?? $metadata['reference_range'] ?? [];
+        $derivedRange = $this->recordRange($records);
 
         return (int) DB::table('hadith_books')->insertGetId([
             'collection_id' => $collectionId,
@@ -219,11 +229,13 @@ final class CanonicalHadithImporter
             'sort_order' => $sortOrder,
             'title' => $this->jsonValue($title !== [] ? $title : ['en' => $number]),
             'intro' => $this->jsonNullable($description),
-            'first_hadith_number' => $referenceRange['first'] ?? $referenceRange['start'] ?? null,
-            'last_hadith_number' => $referenceRange['last'] ?? $referenceRange['end'] ?? null,
+            'first_hadith_number' => $referenceRange['first'] ?? $referenceRange['start'] ?? $derivedRange['first'],
+            'last_hadith_number' => $referenceRange['last'] ?? $referenceRange['end'] ?? $derivedRange['last'],
             'is_synthetic' => $number === 'collection',
             'is_published' => true,
             'source_url' => $metadata['source_url'] ?? null,
+            'source_status' => $this->positiveInt($metadata['source_status'] ?? null),
+            'source_error' => $this->nullableText($metadata['source_error'] ?? null),
             'source_metadata' => $this->jsonValue($this->without($metadata, ['hadiths'])),
             'created_at' => now(),
             'updated_at' => now(),
@@ -315,12 +327,12 @@ final class CanonicalHadithImporter
                 'volume_number' => $this->volumeNumber($references),
                 'sunnah_urn' => $urn,
                 'sunnah_urn_en' => $urnEn,
-                'display_grade' => 'unknown',
+                'display_grade' => null,
                 'is_published' => true,
                 'source_container_id' => $source['container_id'] ?? null,
                 'source_reference' => $sourceReference === null ? null : mb_substr($sourceReference, 0, 255),
                 'canonical_url' => $references['canonical_url'] ?? $source['reference_url'] ?? null,
-                'source_text_sha256' => $source['text_sha256'] ?? null,
+                'source_text_sha256' => $source['text_sha256'] ?? $this->sourceTextHash($text),
                 // Keep the source's grading context even when it contains no
                 // independent per-hadith verdict. Sahih Muslim explicitly
                 // supplies a collection classification, while Bukhari explains
@@ -379,17 +391,19 @@ final class CanonicalHadithImporter
      *
      * @param  list<array<string, mixed>>  $rows
      */
-    private function displayGrade(array $rows): string
+    private function displayGrade(array $rows): ?string
     {
         $claims = collect($rows)->where('scope', 'hadith');
 
         if ($claims->isEmpty() || $claims->contains(fn (array $claim): bool => $claim['part_label'] !== null)) {
-            return 'unknown';
+            return null;
         }
 
         $grades = $claims->pluck('grade')->unique()->values();
 
-        return $grades->count() === 1 ? (string) $grades->first() : 'unknown';
+        $grade = $grades->count() === 1 ? (string) $grades->first() : null;
+
+        return $grade === 'unknown' ? null : $grade;
     }
 
     /** @return list<array<string, mixed>> */
@@ -433,27 +447,38 @@ final class CanonicalHadithImporter
                 if (is_array($item)) {
                     $raw = trim((string) ($item['source_text'] ?? $item['grade'] ?? ''));
                     if ($raw !== '') {
-                        $items[] = [$locale, $raw, $item['graded_by'] ?? null];
+                        $items[] = [
+                            $locale,
+                            $raw,
+                            $item['graded_by'] ?? null,
+                            trim((string) ($item['grade'] ?? $raw)),
+                            $item['scope'] ?? null,
+                            $item['part_label'] ?? null,
+                        ];
                     }
                 }
             }
         }
         if ($items === [] && is_string($grading['displayed'] ?? null)) {
-            $items[] = ['en', trim($grading['displayed']), null];
+            $items[] = ['en', trim($grading['displayed']), null, trim($grading['displayed']), null, null];
         }
         if ($items === [] && is_string($grading['source_text'] ?? null) && trim($grading['source_text']) !== '') {
-            $items[] = ['en', trim($grading['source_text']), $grading['grader'] ?? null];
+            $items[] = ['en', trim($grading['source_text']), $grading['grader'] ?? null, trim($grading['source_text']), null, null];
         }
 
         $rows = [];
-        foreach ($items as [$locale, $raw, $grader]) {
-            foreach ($this->grades->normalize($raw, $locale) as $claim) {
+        foreach ($items as [$locale, $raw, $grader, $normalizedGrade, $explicitScope, $explicitPartLabel]) {
+            foreach ($this->grades->normalize($normalizedGrade, $locale) as $claim) {
                 $rows[] = [
                     'hadith_id' => $hadithId,
                     'scholar_id' => is_string($grader) && trim($grader) !== '' ? $this->grader($grader) : null,
                     'grade' => $claim['grade']->value,
-                    'scope' => $claim['scope']->value,
-                    'part_label' => $claim['part_label'],
+                    'scope' => in_array($explicitScope, ['hadith', 'isnad'], true)
+                        ? $explicitScope
+                        : $claim['scope']->value,
+                    'part_label' => is_string($explicitPartLabel) && trim($explicitPartLabel) !== ''
+                        ? trim($explicitPartLabel)
+                        : $claim['part_label'],
                     'authority_rank' => 100,
                     'raw_grade' => $raw,
                     'locale' => $locale,
@@ -570,8 +595,9 @@ final class CanonicalHadithImporter
 
     private function inBookNumber(array $references): ?int
     {
-        foreach ($references as $key => $value) {
-            if (is_string($value) && (str_contains(Str::lower((string) $key), 'book') || str_contains(Str::lower((string) $key), 'reference')) && preg_match('/(?:Hadith|Narration)\s+(\d+)/iu', $value, $m) === 1) {
+        foreach (['in_book_reference', 'In-book reference', 'book_reference', 'Book reference'] as $key) {
+            $value = $references[$key] ?? null;
+            if (is_string($value) && preg_match('/(?:Hadith|Narration)\s+(\d+)/iu', $value, $m) === 1) {
                 return (int) $m[1];
             }
         }
@@ -638,7 +664,7 @@ final class CanonicalHadithImporter
         foreach (['en', 'ar'] as $locale) {
             foreach (is_array($grading[$locale] ?? null) ? $grading[$locale] : [] as $item) {
                 if (is_array($item)) {
-                    $raw = trim((string) ($item['source_text'] ?? $item['grade'] ?? ''));
+                    $raw = trim((string) ($item['grade'] ?? $item['source_text'] ?? ''));
                     if ($raw !== '') {
                         $raws[] = [$locale, $raw];
                     }
@@ -677,6 +703,47 @@ final class CanonicalHadithImporter
     private function positiveInt(mixed $value): ?int
     {
         return is_numeric($value) && (int) $value > 0 ? (int) $value : null;
+    }
+
+    /**
+     * Derive the reader-visible range when the capture omitted its book-level
+     * summary. This only accepts explicit source references; it never guesses
+     * from array positions, which would conceal gaps such as Abdurrazzaq 3.
+     *
+     * @param  list<array<string, mixed>>  $records
+     * @return array{first: ?string, last: ?string}
+     */
+    private function recordRange(array $records): array
+    {
+        $numbers = [];
+
+        foreach ($records as $record) {
+            $source = is_array($record['source'] ?? null) ? $record['source'] : [];
+            $references = is_array($source['references'] ?? null) ? $source['references'] : [];
+            $reference = $this->sourceReference($source, $references);
+
+            if (is_string($reference) && preg_match('/(?:Hadith|Narration)\s+([0-9A-Za-z.-]+)/iu', $reference, $matches) === 1) {
+                $numbers[] = $matches[1];
+            }
+        }
+
+        return [
+            'first' => $numbers[0] ?? null,
+            'last' => $numbers === [] ? null : $numbers[array_key_last($numbers)],
+        ];
+    }
+
+    /** @param array<string, mixed> $text */
+    private function sourceTextHash(array $text): ?string
+    {
+        foreach (['ar', 'en'] as $locale) {
+            $body = trim((string) ($text[$locale] ?? ''));
+            if ($body !== '') {
+                return hash('sha256', $body);
+            }
+        }
+
+        return null;
     }
 
     /** @return array<string, array<string, mixed>> */

@@ -178,7 +178,7 @@
                     <div class="flex justify-between gap-3"><dt class="text-gray-500">{{ __('admin.hadith_number') }}</dt><dd class="font-bold">{{ $hadith->hadith_number }}</dd></div>
                     <div class="flex justify-between gap-3"><dt class="text-gray-500">{{ __('hadith.admin.in_book_number') }}</dt><dd class="font-bold">{{ $hadith->in_book_number ?? '—' }}</dd></div>
                     <div class="flex justify-between gap-3"><dt class="text-gray-500">{{ __('hadith.admin.urn') }}</dt><dd class="font-bold">{{ $hadith->sunnah_urn ?? '—' }}</dd></div>
-                    <div class="flex justify-between gap-3"><dt class="text-gray-500">{{ __('hadith.admin.derived_grade') }}</dt><dd class="font-bold">{{ $hadith->display_grade->label() }}</dd></div>
+                    <div class="flex justify-between gap-3"><dt class="text-gray-500">{{ __('hadith.admin.derived_grade') }}</dt><dd class="font-bold">{{ $hadith->display_grade?->label() ?? '—' }}</dd></div>
                 </dl>
             </x-admin.form-section>
             @error('updated_at')<div class="rounded-xl border border-red-300 bg-red-50 p-4 text-sm font-semibold text-red-700">{{ $message }}</div>@enderror

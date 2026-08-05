@@ -67,7 +67,8 @@ final class HadithController extends Controller
             })
             ->when($collectionId > 0, fn (Builder $query) => $query->where('collection_id', $collectionId))
             ->when($bookId > 0, fn (Builder $query) => $query->where('book_id', $bookId))
-            ->when(in_array($grade, HadithGrade::values(), true), fn (Builder $query) => $query->where('display_grade', $grade))
+            ->when(in_array($grade, HadithGrade::publicFilterValues(), true), fn (Builder $query) => $query->where('display_grade', $grade))
+            ->when($grade === 'ungraded', fn (Builder $query) => $query->whereNull('display_grade'))
             ->when($status === 'published', fn (Builder $query) => $query->where('is_published', true))
             ->when($status === 'draft', fn (Builder $query) => $query->where('is_published', false))
             ->orderBy('collection_id')
@@ -86,7 +87,7 @@ final class HadithController extends Controller
         $stats = [
             'total' => Hadith::query()->count(),
             'published' => Hadith::query()->where('is_published', true)->count(),
-            'ungraded' => Hadith::query()->where('display_grade', HadithGrade::UNKNOWN)->count(),
+            'ungraded' => Hadith::query()->whereNull('display_grade')->count(),
             'translations' => HadithText::query()->count(),
         ];
 

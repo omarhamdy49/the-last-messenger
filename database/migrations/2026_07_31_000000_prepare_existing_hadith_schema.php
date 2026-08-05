@@ -65,8 +65,8 @@ return new class extends Migration
 
         if (! Schema::hasColumn('hadith_hadiths', 'display_grade')) {
             Schema::table('hadith_hadiths', function (Blueprint $table): void {
-                $table->enum('display_grade', ['sahih', 'hasan', 'daif', 'mawdu', 'unknown'])
-                    ->default('unknown')->after('sunnah_urn_en');
+                $table->enum('display_grade', ['sahih', 'hasan', 'daif', 'mawdu'])
+                    ->nullable()->after('sunnah_urn_en');
             });
 
             if (Schema::hasColumn('hadith_hadiths', 'grade')) {

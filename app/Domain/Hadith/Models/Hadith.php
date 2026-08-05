@@ -7,11 +7,13 @@ namespace App\Domain\Hadith\Models;
 use App\Domain\Hadith\Enums\HadithGrade;
 use App\Domain\Shared\Traits\HasAuditLog;
 use App\Domain\Shared\Traits\HasVersions;
+use Database\Factories\Hadith\HadithFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Identity and structure only — no text. Bodies live in `hadith_texts`, one row
@@ -34,14 +36,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property string|null $volume_number
  * @property int|null $sunnah_urn
  * @property int|null $sunnah_urn_en
- * @property HadithGrade $display_grade
+ * @property HadithGrade|null $display_grade
  * @property bool $is_published
  * @property-read HadithCollection $collection
  * @property-read HadithBook $book
  * @property-read HadithChapter|null $chapter
  * @property-read HadithScholar|null $primaryNarrator
- * @property-read \Illuminate\Database\Eloquent\Collection<int, HadithText> $texts
- * @property-read \Illuminate\Database\Eloquent\Collection<int, HadithGrading> $gradings
+ * @property-read Collection<int, HadithText> $texts
+ * @property-read Collection<int, HadithGrading> $gradings
  */
 class Hadith extends Model
 {
@@ -144,8 +146,8 @@ class Hadith extends Model
      * Factories live under Database\Factories\Hadith, which Laravel cannot
      * derive from this model's namespace.
      */
-    protected static function newFactory(): \Database\Factories\Hadith\HadithFactory
+    protected static function newFactory(): HadithFactory
     {
-        return \Database\Factories\Hadith\HadithFactory::new();
+        return HadithFactory::new();
     }
 }

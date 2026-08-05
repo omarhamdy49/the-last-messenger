@@ -39,7 +39,8 @@ final class ReferenceBuilder
         $bookNumber = $hadith->book?->book_number;
 
         return new ReferenceSet(
-            canonical: $this->canonical($template, $hadith->hadith_number, $bookNumber, $code),
+            canonical: $hadith->source_reference
+                ?: $this->canonical($template, $hadith->hadith_number, $bookNumber, $code),
             inBook: $this->inBook($bookNumber, $hadith->in_book_number),
             translation: $this->translation($hadith->volume_number, $bookNumber, $hadith->in_book_number),
             translationDeprecated: in_array($code, self::DEPRECATED_TRANSLATION_NUMBERING, true),

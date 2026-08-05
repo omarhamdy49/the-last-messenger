@@ -29,6 +29,8 @@ final class UpdateHadithCollectionRequest extends FormRequest
             'short_intro.*' => ['nullable', 'string'],
             'about' => ['required', 'array:ar,en,fr,tr,ur'],
             'about.*' => ['nullable', 'string'],
+            'introduction' => ['required', 'array:ar,en,fr,tr,ur'],
+            'introduction.*' => ['nullable', 'string'],
         ];
     }
 

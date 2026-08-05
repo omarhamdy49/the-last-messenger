@@ -17,7 +17,7 @@
     $backIcon = $isRtl ? 'chevron-right' : 'chevron-left';
     $forwardIcon = $isRtl ? 'chevron-left' : 'chevron-right';
 
-    $grades = ['sahih', 'hasan', 'daif', 'mawdu', 'unknown'];
+    $grades = ['sahih', 'hasan', 'daif', 'mawdu'];
 @endphp
 
 @section('title', $bookTitle.' — '.$collectionName)
@@ -122,7 +122,7 @@
                  q: '',
                  grade: '',
                  view: 'normal',
-                 textLanguage: @js($locale === 'en' ? 'en' : 'ar'),
+                 textLanguage: @js($locale === 'en' && ($book->english_texts_count ?? 0) > 0 ? 'en' : 'ar'),
                  hit(el) {
                      const needle = window.foldForSearch(this.q);
 
@@ -136,7 +136,7 @@
 
             @if ($paginator->total() > 0)
                 <div class="mt-6 flex justify-end">
-                    <x-site.hadith-language-toggle />
+                    <x-site.hadith-language-toggle :english-available="($book->english_texts_count ?? 0) > 0" />
                 </div>
 
                 <section class="rounded-2xl mt-6 p-4 sm:p-5 shadow-lg animate-fade-in-up stagger-1

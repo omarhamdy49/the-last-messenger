@@ -63,5 +63,5 @@ interface HadithRepositoryInterface extends RepositoryInterface
      * persist it. Must run inside the caller's transaction alongside the grading
      * write, or a concurrent read sees a grade that contradicts its claims.
      */
-    public function recomputeDisplayGrade(int $hadithId): HadithGrade;
+    public function recomputeDisplayGrade(int $hadithId): ?HadithGrade;
 }

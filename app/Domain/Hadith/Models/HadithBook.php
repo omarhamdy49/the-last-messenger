@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Hadith\Models;
 
+use Database\Factories\Hadith\HadithBookFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -47,6 +48,8 @@ class HadithBook extends Model
         'is_synthetic',
         'is_published',
         'source_url',
+        'source_status',
+        'source_error',
         'source_metadata',
     ];
 
@@ -59,6 +62,7 @@ class HadithBook extends Model
             'is_synthetic' => 'boolean',
             'is_published' => 'boolean',
             'source_metadata' => 'array',
+            'source_status' => 'integer',
         ];
     }
 
@@ -81,8 +85,8 @@ class HadithBook extends Model
      * Factories live under Database\Factories\Hadith, which Laravel cannot
      * derive from this model's namespace.
      */
-    protected static function newFactory(): \Database\Factories\Hadith\HadithBookFactory
+    protected static function newFactory(): HadithBookFactory
     {
-        return \Database\Factories\Hadith\HadithBookFactory::new();
+        return HadithBookFactory::new();
     }
 }

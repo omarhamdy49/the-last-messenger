@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Hadith\Models;
 
+use Database\Factories\Hadith\HadithCollectionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -33,7 +34,7 @@ class HadithCollection extends Model
     protected $table = 'hadith_collections';
 
     /** @var array<string> */
-    public array $translatable = ['name', 'author', 'short_intro', 'about'];
+    public array $translatable = ['name', 'author', 'short_intro', 'about', 'introduction'];
 
     /** @var array<string> */
     protected $fillable = [
@@ -42,6 +43,7 @@ class HadithCollection extends Model
         'author',
         'short_intro',
         'about',
+        'introduction',
         'has_books',
         'has_chapters',
         'has_volumes',
@@ -51,7 +53,9 @@ class HadithCollection extends Model
         'display_order',
         'source_url',
         'about_url',
+        'introduction_url',
         'source_category',
+        'source_capture_complete',
         'source_metadata',
     ];
 
@@ -66,6 +70,7 @@ class HadithCollection extends Model
             'featured' => 'boolean',
             'display_order' => 'integer',
             'source_metadata' => 'array',
+            'source_capture_complete' => 'boolean',
         ];
     }
 
@@ -87,8 +92,8 @@ class HadithCollection extends Model
      * Factories live under Database\Factories\Hadith, which Laravel cannot
      * derive from this model's namespace.
      */
-    protected static function newFactory(): \Database\Factories\Hadith\HadithCollectionFactory
+    protected static function newFactory(): HadithCollectionFactory
     {
-        return \Database\Factories\Hadith\HadithCollectionFactory::new();
+        return HadithCollectionFactory::new();
     }
 }

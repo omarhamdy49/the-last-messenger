@@ -30,7 +30,7 @@ class HadithResource extends JsonResource
             'chapter_number' => $this->whenLoaded('chapter', fn (): ?string => $this->chapter?->chapter_number),
             'hadith_number' => (string) $this->hadith_number,
             'in_book_number' => $this->in_book_number,
-            'display_grade' => $this->display_grade->value,
+            'display_grade' => $this->display_grade?->value,
             'reference' => $reference->toArray(),
 
             // Only locales that HAVE text: an Arabic-only hadith has one entry,

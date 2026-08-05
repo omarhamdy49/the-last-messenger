@@ -77,13 +77,21 @@ class CollectionRepository extends BaseRepository implements CollectionRepositor
     {
         return HadithCollection::query()
             ->select([
-                'id', 'code', 'name', 'author', 'short_intro', 'about',
+                'id', 'code', 'name', 'author', 'short_intro', 'about', 'introduction',
                 'has_books', 'has_chapters', 'has_volumes', 'reference_template',
-                'featured', 'display_order',
+                'featured', 'display_order', 'source_url', 'introduction_url', 'source_capture_complete',
             ])
             ->where('code', $code)
             ->where('is_published', true)
-            ->withCount(['hadiths' => fn ($query) => $query->where('is_published', true)])
+            ->withCount([
+                'hadiths' => fn ($query) => $query->where('is_published', true),
+                'hadiths as arabic_texts_count' => fn ($query) => $query
+                    ->where('is_published', true)
+                    ->whereHas('texts', fn ($texts) => $texts->where('locale', 'ar')),
+                'hadiths as english_texts_count' => fn ($query) => $query
+                    ->where('is_published', true)
+                    ->whereHas('texts', fn ($texts) => $texts->where('locale', 'en')),
+            ])
             ->first();
     }
 
@@ -93,12 +101,21 @@ class CollectionRepository extends BaseRepository implements CollectionRepositor
             ->select([
                 'id', 'collection_id', 'book_number', 'sort_order', 'title',
                 'first_hadith_number', 'last_hadith_number', 'is_published',
+                'source_status', 'source_error',
             ])
             ->where('collection_id', $collectionId)
             // Synthetic books are the hierarchy's plumbing, never content.
             ->where('is_synthetic', false)
             ->when($publishedOnly, fn ($query) => $query->where('is_published', true))
-            ->withCount(['hadiths' => fn ($query) => $query->where('is_published', true)])
+            ->withCount([
+                'hadiths' => fn ($query) => $query->where('is_published', true),
+                'hadiths as arabic_texts_count' => fn ($query) => $query
+                    ->where('is_published', true)
+                    ->whereHas('texts', fn ($texts) => $texts->where('locale', 'ar')),
+                'hadiths as english_texts_count' => fn ($query) => $query
+                    ->where('is_published', true)
+                    ->whereHas('texts', fn ($texts) => $texts->where('locale', 'en')),
+            ])
             ->orderBy('sort_order')
             ->get();
     }
@@ -109,6 +126,7 @@ class CollectionRepository extends BaseRepository implements CollectionRepositor
             ->select([
                 'id', 'collection_id', 'book_number', 'sort_order', 'title', 'intro',
                 'first_hadith_number', 'last_hadith_number', 'is_published',
+                'source_status', 'source_error',
             ])
             ->where('collection_id', $collectionId)
             ->where('is_synthetic', true)
@@ -122,11 +140,20 @@ class CollectionRepository extends BaseRepository implements CollectionRepositor
             ->select([
                 'id', 'collection_id', 'book_number', 'sort_order', 'title', 'intro',
                 'first_hadith_number', 'last_hadith_number', 'is_published',
+                'source_status', 'source_error',
             ])
             ->where('collection_id', $collectionId)
             ->where('book_number', $bookNumber)
             ->where('is_synthetic', false)
             ->when($publishedOnly, fn ($query) => $query->where('is_published', true))
+            ->withCount([
+                'hadiths as arabic_texts_count' => fn ($query) => $query
+                    ->where('is_published', true)
+                    ->whereHas('texts', fn ($texts) => $texts->where('locale', 'ar')),
+                'hadiths as english_texts_count' => fn ($query) => $query
+                    ->where('is_published', true)
+                    ->whereHas('texts', fn ($texts) => $texts->where('locale', 'en')),
+            ])
             ->first();
     }
 

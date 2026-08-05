@@ -2,7 +2,7 @@
 
 @php
     $locale = app()->getLocale();
-    $grades = ['sahih', 'hasan', 'daif', 'mawdu', 'unknown'];
+    $grades = ['sahih', 'hasan', 'daif', 'mawdu'];
     $hasFilters = $criteria->collectionCode || $criteria->grade;
 @endphp
 

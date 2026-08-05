@@ -114,6 +114,7 @@ Resolves an external `sunnah_urn`.
 
 `texts` contains **only locales that have text** — an Arabic-only hadith has one entry.
 `gradings` may contain several entries for one hadith, including two derived from a single source string.
+`display_grade` is `null` when the source provides no single, unambiguous Hadith-level verdict.
 
 **404** — no hadith carries that `urn`. Around 35% of records have none, so this is an ordinary outcome,
 not an error condition.
@@ -132,7 +133,7 @@ Must use the `(is_published, id)` index rather than `ORDER BY RAND()` over the f
 |---|---|---|
 | `q` | string, required, 2–200 chars | normalised before matching |
 | `collection` | string, optional | collection `code` |
-| `grade` | enum, optional | `sahih`\|`hasan`\|`daif`\|`mawdu`\|`unknown` |
+| `grade` | enum, optional | `sahih`\|`hasan`\|`daif`\|`mawdu` |
 | `locale` | enum, optional | restricts which text rows are searched |
 | `page`, `per_page` | int, optional | `per_page` capped at 100 |
 

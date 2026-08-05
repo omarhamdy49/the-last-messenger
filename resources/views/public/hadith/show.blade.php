@@ -6,12 +6,12 @@
     $arabic = $texts->firstWhere('locale', 'ar');
     $translation = $texts->first(fn ($t) => $t['locale'] !== 'ar');
     $reference = $hadith['reference'] ?? [];
-    $gradings = collect($hadith['gradings'] ?? []);
+    $gradings = collect($hadith['gradings'] ?? [])->reject(
+        fn ($grading) => ($grading['grade'] ?? null) === 'unknown'
+    );
     $primaryNarrator = $hadith['primary_narrator'] ?? null;
-    $gradeKey = $hadith['display_grade'] ?? 'unknown';
+    $gradeKey = $hadith['display_grade'] ?? null;
     $gradingContext = $hadith['grading_context'] ?? [];
-    $perHadithGradeMissing = $gradeKey === 'unknown'
-        && ($gradingContext['per_hadith_status'] ?? null) === 'not_provided_by_source';
 
     // Colour carries meaning here, so it is paired with the text label rather
     // than replacing it — a reader who cannot distinguish the hues still reads
@@ -63,10 +63,11 @@
                         @endif
                     </div>
 
-                    <span class="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold {{ $gradeStyles[$gradeKey] ?? $gradeStyles['unknown'] }}">
-                        {{ __('hadith.grade') }}:
-                        {{ $perHadithGradeMissing ? __('hadith.per_hadith_grade_not_provided') : __('hadith.grade_'.$gradeKey) }}
-                    </span>
+                    @if ($gradeKey)
+                        <span class="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold {{ $gradeStyles[$gradeKey] ?? $gradeStyles['unknown'] }}">
+                            {{ __('hadith.grade') }}: {{ __('hadith.grade_'.$gradeKey) }}
+                        </span>
+                    @endif
                 </div>
             </header>
 
@@ -163,8 +164,9 @@
                 {{-- Gradings: one row per claim. raw_grade is shown verbatim so a
                      reader can see what the source actually said, not only how we
                      classified it. --}}
-                <section aria-label="{{ __('hadith.grade') }}"
-                         class="pt-6 border-t border-gray-200 dark:border-gray-800">
+                @if ($gradings->isNotEmpty())
+                    <section aria-label="{{ __('hadith.grade') }}"
+                             class="pt-6 border-t border-gray-200 dark:border-gray-800">
                     <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
                         {{ __('hadith.grade') }}
                     </h2>
@@ -179,7 +181,7 @@
                         </div>
                     @endif
 
-                    @forelse ($gradings as $grading)
+                    @foreach ($gradings as $grading)
                         <div class="flex flex-wrap items-center gap-2 py-2 border-b last:border-0 border-gray-100 dark:border-gray-800">
                             <span class="px-2.5 py-1 rounded-full text-xs font-semibold {{ $gradeStyles[$grading['grade']] ?? $gradeStyles['unknown'] }}">
                                 {{ __('hadith.grade_'.$grading['grade']) }}
@@ -202,17 +204,9 @@
                                 {{ $grading['raw_grade'] }}
                             </span>
                         </div>
-                    @empty
-                        <p class="text-sm text-gray-600 dark:text-gray-300">
-                            {{ $perHadithGradeMissing ? __('hadith.no_per_hadith_grading_at_source') : __('hadith.no_gradings') }}
-                        </p>
-                        @if (! empty($gradingContext['source_note']))
-                            <p lang="en" dir="ltr" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                                {{ $gradingContext['source_note'] }}
-                            </p>
-                        @endif
-                    @endforelse
-                </section>
+                    @endforeach
+                    </section>
+                @endif
             </div>
         </article>
     </div>

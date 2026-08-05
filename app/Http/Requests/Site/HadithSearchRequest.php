@@ -31,7 +31,7 @@ class HadithSearchRequest extends FormRequest
             // a one-character query cannot match anything and would look broken.
             'q' => ['required', 'string', 'min:2', 'max:200'],
             'collection' => ['nullable', 'string', 'max:50', 'exists:hadith_collections,code'],
-            'grade' => ['nullable', Rule::in(HadithGrade::values())],
+            'grade' => ['nullable', Rule::in(HadithGrade::publicFilterValues())],
             'locale' => ['nullable', Rule::in(['ar', 'en', 'fr', 'tr', 'ur'])],
             'page' => ['nullable', 'integer', 'min:1'],
             // Not rejected when oversized — clamped in SearchCriteria, per the

@@ -121,7 +121,7 @@ deleted it is not an acceptable outcome (FR-010).
 | `volume_number` | varchar(20) NULL | for the translation reference line |
 | `sunnah_urn` | unsigned int UNIQUE NULL | ~65% populated |
 | `sunnah_urn_en` | unsigned int UNIQUE NULL | ~58% populated |
-| `display_grade` | enum(sahih,hasan,daif,mawdu,unknown) default unknown | **derived, never edited** |
+| `display_grade` | enum(sahih,hasan,daif,mawdu) NULL | **derived, never edited**; NULL when no single Hadith-level verdict is available |
 | `is_published` | boolean default 0 | |
 | timestamps | | |
 
@@ -149,7 +149,7 @@ query rather than stored and indexed across 51k rows.
 
 1. Consider only `hadith_gradings` rows with `scope = 'hadith'`.
 2. Exactly one distinct `grade` → that grade.
-3. Zero rows, conflicting grades, or any row with a non-null `part_label` → `unknown`.
+3. Zero rows, conflicting grades, an `unknown` normalisation, or any row with a non-null `part_label` → `NULL`.
 
 Recomputed inside the same transaction as any grading write, owned by `HadithAdminService`. Never
 directly editable in the admin.

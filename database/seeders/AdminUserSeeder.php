@@ -35,7 +35,7 @@ class AdminUserSeeder extends Seeder
             email: (string) env('SUPER_ADMIN_EMAIL', 'supm@dwit.com'),
             name: 'Super Admin',
             role: 'super_admin',
-            passwordEnv: 'SUPER_ADMIN_PASSWORD',
+            passwordEnv: 'ADMIN_PASSWORD',
         );
 
         $this->createAdminUser(

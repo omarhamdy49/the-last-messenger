@@ -67,9 +67,10 @@
                 <select id="grade-filter" name="grade" class="w-full rounded-xl border px-3 py-2.5"
                         :class="darkMode ? 'border-gray-700 bg-gray-800 text-white' : 'border-gray-300 bg-white'">
                     <option value="">{{ __('admin.all') }}</option>
-                    @foreach(\App\Domain\Hadith\Enums\HadithGrade::cases() as $grade)
+                    @foreach(array_filter(\App\Domain\Hadith\Enums\HadithGrade::cases(), fn ($grade) => $grade !== \App\Domain\Hadith\Enums\HadithGrade::UNKNOWN) as $grade)
                         <option value="{{ $grade->value }}" @selected(request('grade') === $grade->value)>{{ $grade->label() }}</option>
                     @endforeach
+                    <option value="ungraded" @selected(request('grade') === 'ungraded')>{{ __('hadith.admin.ungraded') }}</option>
                 </select>
             </div>
             <div>
@@ -125,7 +126,7 @@
                             </td>
                             <td class="px-5 py-4">
                                 <span class="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-bold text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                                    {{ $hadith->display_grade->label() }}
+                                    {{ $hadith->display_grade?->label() ?? '—' }}
                                 </span>
                             </td>
                             <td class="px-5 py-4">

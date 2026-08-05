@@ -39,6 +39,7 @@ class HadithCollectionResource extends JsonResource
             'author' => $this->getTranslation('author', $locale, true) ?: null,
             'short_intro' => $this->getTranslation('short_intro', $locale, true) ?: null,
             'about' => $this->withAbout ? ($this->getTranslation('about', $locale, true) ?: null) : null,
+            'introduction' => $this->withAbout ? ($this->getTranslation('introduction', $locale, true) ?: null) : null,
             'has_books' => $this->has_books,
             'has_chapters' => $this->has_chapters,
             'has_volumes' => $this->has_volumes,

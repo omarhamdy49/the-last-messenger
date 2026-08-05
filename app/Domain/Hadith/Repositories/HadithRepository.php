@@ -26,7 +26,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
     private const DETAIL_COLUMNS = [
         'id', 'collection_id', 'book_id', 'chapter_id', 'primary_narrator_id', 'hadith_number',
         'in_book_number', 'volume_number', 'sunnah_urn', 'sunnah_urn_en',
-        'display_grade', 'is_published', 'source_metadata', 'source_unavailable_fields',
+        'display_grade', 'is_published', 'source_reference', 'source_metadata', 'source_unavailable_fields',
     ];
 
     /**
@@ -165,11 +165,11 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
         return $query->paginate($criteria->perPage(), ['*'], 'page', $criteria->page());
     }
 
-    public function recomputeDisplayGrade(int $hadithId): HadithGrade
+    public function recomputeDisplayGrade(int $hadithId): ?HadithGrade
     {
         // data-model.md §4: only hadith-scope claims count; exactly one distinct
         // grade wins; zero rows, conflicting grades, or any part-labelled claim
-        // yields `unknown`. Computed in one aggregate rather than by loading rows.
+        // yields NULL. Computed in one aggregate rather than by loading rows.
         $summary = DB::table('hadith_gradings')
             ->where('hadith_id', $hadithId)
             ->where('scope', GradeScope::HADITH->value)
@@ -179,12 +179,16 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             ->first();
 
         $grade = ((int) ($summary->distinct_grades ?? 0) === 1 && (int) ($summary->labelled ?? 0) === 0)
-            ? HadithGrade::from((string) $summary->only_grade)
-            : HadithGrade::UNKNOWN;
+            ? HadithGrade::tryFrom((string) $summary->only_grade)
+            : null;
+
+        if ($grade === HadithGrade::UNKNOWN) {
+            $grade = null;
+        }
 
         // Not ->update() on the model: display_grade is absent from $fillable by
         // design, and this is the one place allowed to write it.
-        DB::table('hadith_hadiths')->where('id', $hadithId)->update(['display_grade' => $grade->value]);
+        DB::table('hadith_hadiths')->where('id', $hadithId)->update(['display_grade' => $grade?->value]);
 
         return $grade;
     }

@@ -103,6 +103,24 @@ class ReferenceBuilderTest extends TestCase
         $this->assertSame('Hadith 1, 40 Hadith an-Nawawi', $set->canonical);
     }
 
+    public function test_an_exact_stored_source_reference_wins_over_template_or_fallback(): void
+    {
+        $set = $this->builder->build($this->hadith(
+            ['code' => 'nawawi40', 'reference_template' => null],
+            ['book_number' => 'collection'],
+            [
+                'hadith_number' => '42',
+                'in_book_number' => null,
+                'volume_number' => null,
+                'source_reference' => 'Hadith 42, 40 Hadith an-Nawawi',
+            ],
+        ));
+
+        $this->assertSame('Hadith 42, 40 Hadith an-Nawawi', $set->canonical);
+        $this->assertNull($set->inBook);
+        $this->assertNull($set->translation);
+    }
+
     public function test_a_non_numeric_hadith_number_is_carried_through(): void
     {
         $set = $this->builder->build($this->hadith(

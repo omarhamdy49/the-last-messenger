@@ -285,14 +285,14 @@ class HadithBrowsePagesTest extends TestCase
 
         $this->get('/hadith/muslim:1')
             ->assertOk()
-            ->assertSee('Not provided by source')
-            ->assertSee('Collection-level classification')
-            ->assertSee('Sahih')
-            ->assertSee('not an independent verdict');
+            ->assertDontSee('Not provided by source')
+            ->assertDontSee('Collection-level classification')
+            ->assertDontSee('not an independent verdict');
 
         $this->get('/hadith/muslim/1')
             ->assertOk()
-            ->assertSee('Not provided by source')
+            ->assertDontSee('Not provided by source')
+            ->assertDontSee('Collection-level classification')
             ->assertDontSee('Unknown', false);
     }
 

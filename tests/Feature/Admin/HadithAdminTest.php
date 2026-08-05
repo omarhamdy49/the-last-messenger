@@ -155,7 +155,7 @@ final class HadithAdminTest extends TestCase
 
     public function test_hadith_update_normalizes_search_text_and_recomputes_grade(): void
     {
-        $hadith = Hadith::factory()->create(['display_grade' => HadithGrade::UNKNOWN]);
+        $hadith = Hadith::factory()->create(['display_grade' => null]);
         HadithText::factory()->for($hadith)->arabic()->create();
         $this->actingAs($this->createAdminUser());
 
