@@ -27,6 +27,19 @@ interface CollectionRepositoryInterface extends RepositoryInterface
     public function listPublishedCollections(): Collection;
 
     /**
+     * Library-wide published totals for the hub header.
+     *
+     * A dedicated aggregate rather than a sum over listPublishedCollections():
+     * these figures describe the whole library, so deriving them from whatever
+     * that listing happens to return would start silently under-reporting the
+     * day the listing is paginated, filtered or capped. The scope definitions
+     * here are the same ones listPublishedCollections() counts per row.
+     *
+     * @return array{collections: int, hadiths: int, books: int}
+     */
+    public function publishedLibraryTotals(): array;
+
+    /**
      * A single published collection by `code`, or null. Never returns an
      * unpublished row: unpublished must 404, not render empty.
      */
@@ -39,6 +52,13 @@ interface CollectionRepositoryInterface extends RepositoryInterface
      * @return Collection<int, HadithBook>
      */
     public function booksFor(int $collectionId, bool $publishedOnly = true): Collection;
+
+    /**
+     * The hidden hierarchy placeholder for a bookless collection, if present.
+     * It is never subject to public book visibility because callers use it only
+     * as a storage anchor for the collection's published hadiths.
+     */
+    public function syntheticBookFor(int $collectionId): ?HadithBook;
 
     /**
      * One book of a collection by its string number (`2`, `35b`, `introduction`).

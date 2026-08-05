@@ -106,7 +106,7 @@
                 </thead>
                 <tbody class="divide-y" :class="darkMode ? 'divide-gray-800' : 'divide-gray-100'">
                     @forelse($hadiths as $hadith)
-                        @php($preview = $hadith->texts->firstWhere('locale', app()->getLocale()) ?? $hadith->texts->firstWhere('locale', 'ar'))
+                        @php($preview = $hadith->texts->firstWhere('locale', app()->getLocale()) ?? $hadith->texts->firstWhere('locale', 'ar') ?? $hadith->texts->first())
                         <tr class="transition-colors" :class="darkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'">
                             <td class="px-5 py-4">
                                 <div class="font-bold">{{ $hadith->hadith_number }}</div>

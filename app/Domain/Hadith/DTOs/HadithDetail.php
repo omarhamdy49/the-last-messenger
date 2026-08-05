@@ -23,6 +23,7 @@ final readonly class HadithDetail
     /**
      * @param  list<array<string, mixed>>  $texts
      * @param  list<array<string, mixed>>  $gradings
+     * @param  array<string, mixed>  $gradingContext
      * @param  array{slug: string, name: string}|null  $primaryNarrator
      */
     public function __construct(
@@ -39,6 +40,7 @@ final readonly class HadithDetail
         public ?array $primaryNarrator,
         public array $texts,
         public array $gradings,
+        public array $gradingContext,
     ) {}
 
     /**
@@ -76,7 +78,23 @@ final readonly class HadithDetail
                 'raw_grade' => $grading->raw_grade,
                 'scholar' => $grading->scholar?->getTranslation('name', $locale, true) ?: null,
             ])->all(),
+            gradingContext: self::gradingContext($hadith),
         );
+    }
+
+    /** @return array<string, mixed> */
+    private static function gradingContext(Hadith $hadith): array
+    {
+        $source = is_array($hadith->source_metadata) ? ($hadith->source_metadata['grading_context'] ?? []) : [];
+        $source = is_array($source) ? $source : [];
+
+        return [
+            'per_hadith_status' => $hadith->gradings->isNotEmpty()
+                ? 'explicit'
+                : ($source['per_hadith_status'] ?? 'not_recorded'),
+            'collection_classification' => $source['collection_classification'] ?? null,
+            'source_note' => $source['source_note'] ?? null,
+        ];
     }
 
     /** @return array<string, mixed> */
@@ -96,6 +114,7 @@ final readonly class HadithDetail
             'primary_narrator' => $this->primaryNarrator,
             'texts' => $this->texts,
             'gradings' => $this->gradings,
+            'grading_context' => $this->gradingContext,
         ];
     }
 }

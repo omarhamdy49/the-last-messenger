@@ -110,18 +110,26 @@
         @endif
 
         {{-- Same card as the book pages: a hadith looks the same wherever it is listed. --}}
-        <div class="space-y-4">
-            @forelse ($results as $hadith)
-                <x-site.hadith-card :hadith="$hadith" :index="$loop->index" />
-            @empty
-                @if ($criteria->query !== '')
-                    <x-site.empty-state icon="search-x"
-                                        :title="__('hadith.search_no_results')"
-                                        :message="__('hadith.search_no_results_hint')" />
-                @else
-                    <x-site.empty-state icon="search" :title="__('hadith.search_start')" message="" />
-                @endif
-            @endforelse
+        <div x-data="{ textLanguage: @js($locale === 'en' ? 'en' : 'ar') }">
+            @if ($results->total() > 0)
+                <div class="mb-4 flex justify-end">
+                    <x-site.hadith-language-toggle />
+                </div>
+            @endif
+
+            <div class="space-y-4">
+                @forelse ($results as $hadith)
+                    <x-site.hadith-card :hadith="$hadith" :index="$loop->index" />
+                @empty
+                    @if ($criteria->query !== '')
+                        <x-site.empty-state icon="search-x"
+                                            :title="__('hadith.search_no_results')"
+                                            :message="__('hadith.search_no_results_hint')" />
+                    @else
+                        <x-site.empty-state icon="search" :title="__('hadith.search_start')" message="" />
+                    @endif
+                @endforelse
+            </div>
         </div>
 
         @if ($results->hasPages())

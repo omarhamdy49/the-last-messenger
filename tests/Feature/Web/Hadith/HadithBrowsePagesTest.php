@@ -9,6 +9,7 @@ use App\Domain\Hadith\Models\HadithBook;
 use App\Domain\Hadith\Models\HadithChapter;
 use App\Domain\Hadith\Models\HadithCollection;
 use App\Domain\Hadith\Models\HadithText;
+use App\Domain\Hadith\Services\HadithBrowseService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -103,8 +104,8 @@ class HadithBrowsePagesTest extends TestCase
         $this->get('/hadith/bukhari')->assertNotFound();
     }
 
-    /** A synthetic book exists only to satisfy the hierarchy; it is not content. */
-    public function test_a_synthetic_book_never_appears_in_listings_or_counts(): void
+    /** A synthetic book is hidden plumbing, but its hadiths are real content. */
+    public function test_a_bookless_collection_renders_its_hadiths_without_exposing_the_synthetic_book(): void
     {
         $collection = $this->collection(['code' => 'nawawi40', 'has_books' => false]);
         $synthetic = HadithBook::factory()->for($collection, 'collection')->synthetic()->create([
@@ -117,7 +118,8 @@ class HadithBrowsePagesTest extends TestCase
         $response->assertOk();
         $response->assertDontSee('Synthetic placeholder');
         $response->assertDontSee('كتاب اصطناعي', false);
-        $response->assertSee(__('hadith.no_books'));
+        $response->assertSee('nawawi40:1');
+        $response->assertDontSee(__('hadith.no_books'));
     }
 
     public function test_a_collection_with_no_books_shows_an_empty_state(): void
@@ -173,11 +175,66 @@ class HadithBrowsePagesTest extends TestCase
             ->assertSee('خاتمة الباب', false);
     }
 
+    public function test_a_book_page_exposes_one_accessible_toggle_for_bilingual_hadith_cards(): void
+    {
+        $collection = $this->collection();
+        $book = HadithBook::factory()->for($collection, 'collection')->create(['book_number' => '1']);
+        $hadith = $this->hadithIn($book, $collection, null, '1', 1);
+        HadithText::factory()->for($hadith, 'hadith')->english('Actions are judged by intentions')->create();
+
+        $this->get('/hadith/bukhari/1')
+            ->assertOk()
+            ->assertSee('role="group" aria-label="'.__('hadith.text_language').'"', false)
+            ->assertSee('العربية', false)
+            ->assertSee('English', false)
+            ->assertSee('نص الحديث 1', false)
+            ->assertSee('Actions are judged by intentions', false)
+            ->assertSee('dir="rtl" lang="ar"', false)
+            ->assertSee('dir="ltr" lang="en"', false)
+            ->assertSee("x-show=\"textLanguage === 'en' || false\"", false);
+    }
+
+    public function test_selecting_english_keeps_arabic_visible_when_a_card_has_no_translation(): void
+    {
+        $collection = $this->collection();
+        $book = HadithBook::factory()->for($collection, 'collection')->create(['book_number' => '1']);
+        $this->hadithIn($book, $collection, null, '1', 1);
+
+        $this->get('/hadith/bukhari/1')
+            ->assertOk()
+            ->assertSee("x-show=\"textLanguage === 'ar' || true\"", false)
+            ->assertSee('نص الحديث 1', false)
+            ->assertDontSee('dir="ltr" lang="en"', false);
+    }
+
     public function test_an_unknown_book_is_a_404(): void
     {
         $this->collection();
 
         $this->get('/hadith/bukhari/999')->assertNotFound();
+    }
+
+    public function test_a_named_introduction_book_uses_the_book_route_and_view(): void
+    {
+        $collection = $this->collection([
+            'code' => 'muslim',
+            'name' => ['ar' => 'صحيح مسلم', 'en' => 'Sahih Muslim'],
+        ]);
+        $book = HadithBook::factory()->for($collection, 'collection')->create([
+            'book_number' => 'introduction',
+            // Production imported this named book without a localized title,
+            // which used to leave both the H1 and document title blank.
+            'title' => ['ar' => '', 'en' => ''],
+        ]);
+        $this->hadithIn($book, $collection, null, 'intro.1', 1);
+
+        $this->get('/hadith/muslim/introduction')
+            ->assertOk()
+            ->assertViewIs('public.hadith.book')
+            ->assertViewHas('book', fn (HadithBook $rendered): bool => $rendered->book_number === 'introduction')
+            ->assertSee('muslim:intro.1')
+            ->assertSee('<title>المقدمة — صحيح مسلم</title>', false)
+            ->assertSee('المقدمة', false);
     }
 
     public function test_an_unpublished_hadith_does_not_appear_in_its_book(): void
@@ -207,6 +264,38 @@ class HadithBrowsePagesTest extends TestCase
         $this->get('/hadith/ahmad/1')->assertOk()->assertSee('ahmad:1');
     }
 
+    public function test_source_missing_individual_grade_is_not_presented_as_a_negative_grading(): void
+    {
+        app()->setLocale('en');
+        $collection = $this->collection([
+            'code' => 'muslim',
+            'name' => ['ar' => 'صحيح مسلم', 'en' => 'Sahih Muslim'],
+            'reference_template' => 'Sahih Muslim {hadithNumber}',
+        ]);
+        $book = HadithBook::factory()->for($collection, 'collection')->create(['book_number' => '1']);
+        $hadith = $this->hadithIn($book, $collection, null, '1', 1);
+        $hadith->update([
+            'source_metadata' => [
+                'grading_context' => [
+                    'per_hadith_status' => 'not_provided_by_source',
+                    'collection_classification' => 'Sahih',
+                ],
+            ],
+        ]);
+
+        $this->get('/hadith/muslim:1')
+            ->assertOk()
+            ->assertSee('Not provided by source')
+            ->assertSee('Collection-level classification')
+            ->assertSee('Sahih')
+            ->assertSee('not an independent verdict');
+
+        $this->get('/hadith/muslim/1')
+            ->assertOk()
+            ->assertSee('Not provided by source')
+            ->assertDontSee('Unknown', false);
+    }
+
     /**
      * The query count must not grow with the page size, or a 100-row page costs
      * five times a 20-row one for the same work.
@@ -224,7 +313,7 @@ class HadithBrowsePagesTest extends TestCase
         }
 
         $count = function (int $perPage): int {
-            $service = app(\App\Domain\Hadith\Services\HadithBrowseService::class);
+            $service = app(HadithBrowseService::class);
             $collection = $service->findCollection('bukhari');
             $book = $service->findBook($collection, '1');
 

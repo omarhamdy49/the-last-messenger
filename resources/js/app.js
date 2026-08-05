@@ -199,6 +199,123 @@ Alpine.data('readingProgress', () => ({
     },
 }));
 
+/* Live hadith suggestions under the library hero's search field.
+   The form itself still submits to the server-rendered search page, so this is
+   purely an accelerator: a reader who recognises their hadith in the dropdown
+   skips a page load, and everyone else presses Enter as before.
+
+   State is explicit ('idle' | 'loading' | 'ready' | 'error') rather than
+   inferred from `results.length`, because "no results yet" and "no results at
+   all" need different UI and an empty array cannot tell them apart. */
+Alpine.data('hadithSuggest', ({ endpoint, basePath, locale, limit = 5 }) => ({
+    q: '',
+    state: 'idle',
+    results: [],
+    total: 0,
+    open: false,
+    active: -1,
+    timer: null,
+    // Abort rather than ignore: a slow request for "ال" must not land after a
+    // fast one for "الحياء" and overwrite the newer results.
+    controller: null,
+
+    get canQuery() { return this.q.trim().length >= 2; },
+    get showPanel() { return this.open && this.canQuery; },
+
+    onInput() {
+        this.active = -1;
+        this.open = true;
+        clearTimeout(this.timer);
+
+        if (!this.canQuery) {
+            this.abort();
+            this.state = 'idle';
+            this.results = [];
+            return;
+        }
+
+        // Typing is bursty; one request per pause, not per keystroke.
+        this.timer = setTimeout(() => this.fetch(), 300);
+    },
+
+    async fetch() {
+        this.abort();
+        this.controller = new AbortController();
+        this.state = 'loading';
+
+        try {
+            const url = `${endpoint}?q=${encodeURIComponent(this.q.trim())}&per_page=${limit}`;
+            const res = await window.apiFetch(url, {
+                signal: this.controller.signal,
+                headers: { 'Accept-Language': locale },
+            });
+
+            if (!res.ok) throw new Error(res.status);
+
+            const body = await res.json();
+            this.results = (body.data || []).map((h) => this.toSuggestion(h));
+            this.total = body.meta?.total ?? this.results.length;
+            this.state = 'ready';
+        } catch (e) {
+            // An abort is this component cancelling itself, not a failure the
+            // reader should see — leave the panel showing the older state.
+            if (e.name === 'AbortError') return;
+            this.state = 'error';
+        }
+    },
+
+    /* The API returns every stored text; pick the reader's locale and fall back
+       to Arabic, which every hadith has. */
+    toSuggestion(h) {
+        const texts = h.texts || [];
+        const text = texts.find((t) => t.locale === locale)
+            || texts.find((t) => t.locale === 'ar')
+            || texts[0];
+
+        return {
+            key: `${h.collection}:${h.hadith_number}`,
+            reference: h.reference?.canonical || `${h.collection} ${h.hadith_number}`,
+            grade: h.display_grade || 'unknown',
+            body: (text?.body || '').slice(0, 190),
+            // Built from a base path rather than a placeholder-substituted named
+            // route: `public.hadith.show` is `/hadith/{collection}:{number}`, and
+            // a placeholder token wide enough to survive URL generation would
+            // itself have to violate the route's own segment constraints.
+            url: `${basePath}/${encodeURIComponent(h.collection)}:${encodeURIComponent(h.hadith_number)}`,
+        };
+    },
+
+    abort() {
+        this.controller?.abort();
+        this.controller = null;
+    },
+
+    move(step) {
+        if (!this.results.length) return;
+        const n = this.results.length;
+        this.active = (this.active + step + n) % n;
+    },
+
+    // Enter on a highlighted suggestion opens it; otherwise the form submits
+    // and the reader lands on the full search page. Both are valid outcomes.
+    choose(event) {
+        const hit = this.results[this.active];
+        if (!hit) return;
+        event.preventDefault();
+        window.location.href = hit.url;
+    },
+
+    close() {
+        this.open = false;
+        this.active = -1;
+    },
+
+    destroy() {
+        clearTimeout(this.timer);
+        this.abort();
+    },
+}));
+
 // Persisted grid/list view toggle.
 Alpine.data('viewToggle', (key = 'viewMode', initial = 'grid') => ({
     mode: localStorage.getItem(key) || initial,

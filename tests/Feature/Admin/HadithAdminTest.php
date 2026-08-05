@@ -76,6 +76,42 @@ final class HadithAdminTest extends TestCase
         $this->assertTrue($updated->featured);
     }
 
+    public function test_collection_page_counts_text_locales_and_hides_synthetic_books(): void
+    {
+        $collection = HadithCollection::factory()->create([
+            'has_books' => false,
+            'name' => ['ar' => 'مجموعة', 'en' => 'Collection'],
+        ]);
+        $syntheticBook = HadithBook::factory()->for($collection, 'collection')->synthetic()->create();
+        $hadith = Hadith::factory()->for($collection, 'collection')->for($syntheticBook, 'book')->create([
+            'chapter_id' => null,
+        ]);
+        HadithText::factory()->for($hadith)->arabic()->create();
+        $this->actingAs($this->createAdminUser());
+
+        $this->get(route('admin.hadith-collections.show', $collection))
+            ->assertOk()
+            ->assertViewHas('availableLanguages', 1)
+            ->assertViewHas('collection', fn (HadithCollection $viewCollection): bool => $viewCollection->books_count === 0)
+            ->assertViewHas('books', fn ($books): bool => $books->isEmpty())
+            ->assertDontSee(route('admin.hadith-books.edit', $syntheticBook), false);
+    }
+
+    public function test_hadith_list_falls_back_to_english_when_arabic_is_unavailable(): void
+    {
+        $hadith = Hadith::factory()->create();
+        HadithText::factory()->for($hadith)->create([
+            'locale' => 'en',
+            'body' => 'English-only source text',
+            'search_body' => 'English-only source text',
+        ]);
+        $this->actingAs($this->createAdminUser());
+
+        $this->get(route('admin.hadith.index'))
+            ->assertOk()
+            ->assertSee('English-only source text');
+    }
+
     public function test_admin_can_search_hadith_identity(): void
     {
         $hadith = Hadith::factory()->create(['hadith_number' => 'admin-needle']);

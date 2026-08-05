@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Hadith\Repositories;
 
+use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithBook;
 use App\Domain\Hadith\Models\HadithChapter;
 use App\Domain\Hadith\Models\HadithCollection;
@@ -39,6 +40,39 @@ class CollectionRepository extends BaseRepository implements CollectionRepositor
             ->get();
     }
 
+    public function publishedLibraryTotals(): array
+    {
+        // A factory, not a shared builder: each total needs its own instance,
+        // and handing the same builder to two parent queries invites the kind
+        // of binding reuse that only shows up under a specific call order.
+        $publishedCollectionIds = fn () => HadithCollection::query()
+            ->select('id')
+            ->where('is_published', true);
+
+        return [
+            'collections' => HadithCollection::query()
+                ->where('is_published', true)
+                ->count(),
+
+            // Scoped through the collection, not just `is_published` on the row:
+            // a published hadith under an unpublished collection is unreachable
+            // to readers and must not be advertised as part of the library.
+            'hadiths' => Hadith::query()
+                ->where('is_published', true)
+                ->whereIn('collection_id', $publishedCollectionIds())
+                ->count(),
+
+            // Synthetic books are hierarchy plumbing for bookless collections;
+            // excluded here exactly as booksFor() and the per-row count exclude
+            // them, so the total can never exceed the sum of the parts.
+            'books' => HadithBook::query()
+                ->where('is_published', true)
+                ->where('is_synthetic', false)
+                ->whereIn('collection_id', $publishedCollectionIds())
+                ->count(),
+        ];
+    }
+
     public function findPublishedByCode(string $code): ?HadithCollection
     {
         return HadithCollection::query()
@@ -67,6 +101,19 @@ class CollectionRepository extends BaseRepository implements CollectionRepositor
             ->withCount(['hadiths' => fn ($query) => $query->where('is_published', true)])
             ->orderBy('sort_order')
             ->get();
+    }
+
+    public function syntheticBookFor(int $collectionId): ?HadithBook
+    {
+        return HadithBook::query()
+            ->select([
+                'id', 'collection_id', 'book_number', 'sort_order', 'title', 'intro',
+                'first_hadith_number', 'last_hadith_number', 'is_published',
+            ])
+            ->where('collection_id', $collectionId)
+            ->where('is_synthetic', true)
+            ->orderBy('sort_order')
+            ->first();
     }
 
     public function findBook(int $collectionId, string $bookNumber, bool $publishedOnly = true): ?HadithBook

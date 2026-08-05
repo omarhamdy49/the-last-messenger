@@ -114,7 +114,7 @@ class CompositeForeignKeyTest extends TestCase
         $this->assertSame(2, Hadith::query()->where('hadith_number', '1322')->count());
     }
 
-    /** The urn remains the real row identity, and it is still unique. */
+    /** The urn remains the real row identity inside its collection. */
     public function test_the_same_urn_may_not_appear_twice(): void
     {
         $collection = HadithCollection::factory()->create();

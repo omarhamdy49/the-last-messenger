@@ -41,6 +41,10 @@ final class HadithController extends Controller
     {
         return view('public.hadith.index', [
             'collections' => $this->browseService->hub(),
+            // Aggregated at the source rather than summed from `collections`:
+            // the hero states what the library holds, which must stay true if
+            // that listing is ever paginated or filtered.
+            'totals' => $this->browseService->libraryTotals(),
         ]);
     }
 
@@ -53,9 +57,17 @@ final class HadithController extends Controller
             throw new NotFoundHttpException;
         }
 
+        $books = $this->browseService->booksFor($model);
+
         return view('public.hadith.collection', [
             'collection' => $model,
-            'books' => $this->browseService->booksFor($model),
+            'books' => $books,
+            // Bookless collections still own real hadiths. Their synthetic book
+            // is schema plumbing, so render its contents at the collection URL
+            // without exposing a fake book in the index or route structure.
+            'booklessContents' => $books->isEmpty() && ($model->hadiths_count ?? 0) > 0
+                ? $this->browseService->booklessContents($model)
+                : null,
         ]);
     }
 

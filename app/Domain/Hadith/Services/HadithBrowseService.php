@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Hadith\Services;
 
 use App\Domain\Hadith\Models\HadithBook;
+use App\Domain\Hadith\Models\HadithChapter;
 use App\Domain\Hadith\Models\HadithCollection;
 use App\Domain\Hadith\Repositories\CollectionRepositoryInterface;
 use App\Domain\Hadith\Repositories\HadithRepositoryInterface;
@@ -38,6 +39,16 @@ final class HadithBrowseService
         return $this->collections->listPublishedCollections();
     }
 
+    /**
+     * What the published library holds, independent of what the hub renders.
+     *
+     * @return array{collections: int, hadiths: int, books: int}
+     */
+    public function libraryTotals(): array
+    {
+        return $this->collections->publishedLibraryTotals();
+    }
+
     public function findCollection(string $code): ?HadithCollection
     {
         return $this->collections->findPublishedByCode($code);
@@ -49,6 +60,23 @@ final class HadithBrowseService
     public function booksFor(HadithCollection $collection): Collection
     {
         return $this->collections->booksFor($collection->id);
+    }
+
+    /**
+     * Published hadiths stored under a bookless collection's hidden placeholder.
+     * The placeholder remains absent from book listings and URLs; it is only the
+     * database anchor required by hadith_hadiths.book_id.
+     *
+     * @return array{
+     *     paginator: LengthAwarePaginator,
+     *     groups: SupportCollection<int, array{chapter: mixed, hadiths: SupportCollection}>
+     * }|null
+     */
+    public function booklessContents(HadithCollection $collection): ?array
+    {
+        $syntheticBook = $this->collections->syntheticBookFor($collection->id);
+
+        return $syntheticBook === null ? null : $this->bookContents($syntheticBook);
     }
 
     public function findBook(HadithCollection $collection, string $bookNumber): ?HadithBook
@@ -99,7 +127,7 @@ final class HadithBrowseService
      * A book's chapters in sort order. Empty for a collection with
      * has_chapters = false, which is a 200 with no rows rather than a 404.
      *
-     * @return Collection<int, \App\Domain\Hadith\Models\HadithChapter>
+     * @return Collection<int, HadithChapter>
      */
     public function chaptersFor(HadithBook $book): Collection
     {

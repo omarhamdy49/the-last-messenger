@@ -55,6 +55,24 @@ class HadithResource extends JsonResource
                 ])
                 ->values()->all()),
 
+            // Distinguishes an explicit independent verdict from a source that
+            // prints no per-hadith grading. Collection classification remains
+            // provenance only and never changes display_grade.
+            'grading_context' => $this->whenLoaded('gradings', function (): array {
+                $source = is_array($this->source_metadata)
+                    ? ($this->source_metadata['grading_context'] ?? [])
+                    : [];
+                $source = is_array($source) ? $source : [];
+
+                return [
+                    'per_hadith_status' => $this->gradings->isNotEmpty()
+                        ? 'explicit'
+                        : ($source['per_hadith_status'] ?? 'not_recorded'),
+                    'collection_classification' => $source['collection_classification'] ?? null,
+                    'source_note' => $source['source_note'] ?? null,
+                ];
+            }),
+
             // Present only on search results, per §10.
             'score' => $this->when(isset($this->score), fn (): float => round((float) $this->score, 4)),
         ];

@@ -21,18 +21,29 @@
 
 @php
     $locale = app()->getLocale();
-    $text = $hadith->textFor($locale);
+    $arabicText = $hadith->texts->firstWhere('locale', 'ar');
+    $englishText = $hadith->texts->firstWhere('locale', 'en');
+    $text = $locale === 'en'
+        ? ($englishText ?? $arabicText)
+        : ($arabicText ?? $englishText);
     $grade = $hadith->display_grade->value;
+    $gradingContext = is_array($hadith->source_metadata)
+        ? ($hadith->source_metadata['grading_context'] ?? [])
+        : [];
+    $gradeLabel = $grade === 'unknown'
+        && is_array($gradingContext)
+        && ($gradingContext['per_hadith_status'] ?? null) === 'not_provided_by_source'
+            ? __('hadith.per_hadith_grade_not_provided')
+            : __('hadith.grade_'.$grade);
     $url = route('public.hadith.show', [$hadith->collection->code, $hadith->hadith_number]);
 
-    // The chain line: the source's own `narrated_by` where it exists, otherwise
-    // the linked narrator record. Never both — they say the same thing.
-    $chain = $text?->narrated_by
-        ?: ($hadith->primaryNarrator?->name
-            ? __('hadith.narrated_by').': '.$hadith->primaryNarrator->name
-            : null);
-
-    $isArabic = $text?->locale === 'ar';
+    // Each language follows its source `narrated_by`, falling back to the linked
+    // narrator only when that locale has no chain label of its own.
+    $fallbackChain = $hadith->primaryNarrator?->name
+        ? __('hadith.narrated_by').': '.$hadith->primaryNarrator->name
+        : null;
+    $arabicChain = $arabicText?->narrated_by ?: $fallbackChain;
+    $englishChain = $englishText?->narrated_by ?: $fallbackChain;
 
     // Colour is paired with the label, never carrying the verdict alone.
     $gradeIcon = match ($grade) {
@@ -51,7 +62,9 @@
      types. window.foldForSearch() applies the same fold to the query. --}}
 <article data-grade="{{ $grade }}"
          data-text="{{ \Illuminate\Support\Str::lower(
-             ($text?->search_body ?: $text?->body ?? '').' '.$chain.' '.$hadith->hadith_number
+             collect([$arabicText, $englishText])->filter()->map(
+                 fn ($localeText) => ($localeText->search_body ?: $localeText->body).' '.$localeText->narrated_by
+             )->implode(' ').' '.$fallbackChain.' '.$hadith->hadith_number
          ) }}"
          {{ $attributes->class([
              'hadith-card group animate-fade-in-up '.$stagger,
@@ -91,24 +104,40 @@
                                  inline-flex items-center gap-1.5 shrink-0
                                  px-3 py-1 rounded-full text-[11px] font-black">
                         <i data-lucide="{{ $gradeIcon }}" class="w-3.5 h-3.5" aria-hidden="true"></i>
-                        {{ __('hadith.grade_'.$grade) }}
+                        {{ $gradeLabel }}
                     </span>
                 </div>
 
-                @if ($text)
-                    <p dir="{{ $isArabic ? 'rtl' : 'ltr' }}" lang="{{ $text->locale }}"
-                       class="hadith-matn mt-2.5 break-words text-start line-clamp-3
-                              text-gray-900 dark:text-gray-100
-                              transition-colors group-hover:text-[#0056b3] dark:group-hover:text-[#64CCC5]
-                              {{ $isArabic ? "font-['Amiri'] text-lg sm:text-xl leading-[2.1]" : 'text-sm sm:text-base leading-8' }}">
-                        {{ $text->body }}
-                    </p>
+                @if ($arabicText)
+                    <div x-show="textLanguage === 'ar' || {{ $englishText ? 'false' : 'true' }}">
+                        <p dir="rtl" lang="ar"
+                           class="hadith-matn mt-2.5 break-words text-start line-clamp-3
+                                  text-gray-900 dark:text-gray-100
+                                  transition-colors group-hover:text-[#0056b3] dark:group-hover:text-[#64CCC5]
+                                  font-['Amiri'] text-lg sm:text-xl leading-[2.1]">
+                            {{ $arabicText->body }}
+                        </p>
+                        @if ($arabicChain)
+                            <p class="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-300 line-clamp-1 break-words"
+                               dir="rtl" lang="ar">{{ $arabicChain }}</p>
+                        @endif
+                    </div>
                 @endif
 
-                @if ($chain)
-                    <p class="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-300 line-clamp-1 break-words">
-                        {{ $chain }}
-                    </p>
+                @if ($englishText)
+                    <div x-show="textLanguage === 'en' || {{ $arabicText ? 'false' : 'true' }}"
+                         @if ($arabicText) x-cloak @endif>
+                        <p dir="ltr" lang="en"
+                           class="hadith-matn mt-2.5 break-words text-start line-clamp-3
+                                  text-sm sm:text-base leading-8 text-gray-900 dark:text-gray-100
+                                  transition-colors group-hover:text-[#0056b3] dark:group-hover:text-[#64CCC5]">
+                            {{ $englishText->body }}
+                        </p>
+                        @if ($englishChain)
+                            <p class="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-300 line-clamp-1 break-words"
+                               dir="ltr" lang="en">{{ $englishChain }}</p>
+                        @endif
+                    </div>
                 @endif
             </div>
         </div>

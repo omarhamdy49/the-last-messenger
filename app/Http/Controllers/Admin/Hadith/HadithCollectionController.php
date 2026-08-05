@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Admin\Hadith;
 use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithBook;
 use App\Domain\Hadith\Models\HadithCollection;
+use App\Domain\Hadith\Models\HadithText;
 use App\Domain\Hadith\Services\HadithAdminService;
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
@@ -29,7 +30,10 @@ final class HadithCollectionController extends Controller
         $status = $request->string('status')->toString();
 
         $collections = HadithCollection::query()
-            ->withCount(['books', 'hadiths'])
+            ->withCount([
+                'books as books_count' => fn (Builder $query) => $query->where('is_synthetic', false),
+                'hadiths',
+            ])
             ->when($search !== '', fn (Builder $query) => $query->where(
                 fn (Builder $query) => $query->where('code', 'like', "%{$search}%")
                     ->orWhere('name', 'like', "%{$search}%"),
@@ -51,22 +55,33 @@ final class HadithCollectionController extends Controller
 
     public function show(HadithCollection $collection): View
     {
-        $collection->loadCount(['books', 'hadiths']);
+        $collection->loadCount([
+            'books as books_count' => fn (Builder $query) => $query->where('is_synthetic', false),
+            'hadiths',
+        ]);
 
         $books = HadithBook::query()
             ->where('collection_id', $collection->id)
+            ->where('is_synthetic', false)
             ->withCount(['chapters', 'hadiths'])
             ->orderBy('sort_order')
             ->get();
 
+        $availableLanguages = HadithText::query()
+            ->whereHas('hadith', fn (Builder $query) => $query->where('collection_id', $collection->id))
+            ->distinct()
+            ->count('locale');
+
+        $previewLocales = array_values(array_unique([app()->getLocale(), 'ar', 'en']));
+
         $recentHadiths = Hadith::query()
             ->where('collection_id', $collection->id)
-            ->with(['book:id,book_number,title', 'texts' => fn ($query) => $query->whereIn('locale', ['ar', 'en'])])
+            ->with(['book:id,book_number,title', 'texts' => fn ($query) => $query->whereIn('locale', $previewLocales)])
             ->latest('id')
             ->limit(10)
             ->get();
 
-        return view('admin.hadith-collections.show', compact('collection', 'books', 'recentHadiths'));
+        return view('admin.hadith-collections.show', compact('collection', 'books', 'recentHadiths', 'availableLanguages'));
     }
 
     public function update(

@@ -29,7 +29,7 @@
         <x-admin.stats-card icon="library-big" :title="__('hadith.books')" :value="$collection->books_count" :gradient="true" :compact="true" />
         <x-admin.stats-card icon="list-tree" :title="__('hadith.chapters')" :value="$books->sum('chapters_count')" :compact="true" />
         <x-admin.stats-card icon="scroll-text" :title="__('hadith.hadiths')" :value="$collection->hadiths_count" :compact="true" />
-        <x-admin.stats-card icon="languages" :title="__('hadith.admin.available_languages')" :value="count($collection->getTranslations('name'))" :compact="true" />
+        <x-admin.stats-card icon="languages" :title="__('hadith.admin.available_languages')" :value="$availableLanguages" :compact="true" />
     </div>
 
     <div class="flex flex-wrap gap-3">
@@ -156,7 +156,7 @@
             <h2 class="mb-4 text-lg font-bold">{{ __('hadith.admin.recent_hadiths') }}</h2>
             <div class="space-y-3">
                 @foreach($recentHadiths as $hadith)
-                    @php($preview = $hadith->texts->firstWhere('locale', app()->getLocale()) ?? $hadith->texts->firstWhere('locale', 'ar'))
+                    @php($preview = $hadith->texts->firstWhere('locale', app()->getLocale()) ?? $hadith->texts->firstWhere('locale', 'ar') ?? $hadith->texts->first())
                     <a href="{{ route('admin.hadith.edit', $hadith) }}"
                        class="flex items-start gap-4 rounded-xl border p-4 transition-colors"
                        :class="darkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'">

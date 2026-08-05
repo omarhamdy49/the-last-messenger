@@ -5,6 +5,12 @@
     $isRtl = in_array($locale, ['ar', 'ur'], true);
     $collectionName = $collection->getTranslation('name', $locale, true);
     $bookTitle = $book->getTranslation('title', $locale, true);
+    if (! is_string($bookTitle) || trim($bookTitle) === '') {
+        $namedBookKey = 'hadith.book_name_'.$book->book_number;
+        $bookTitle = \Illuminate\Support\Facades\Lang::has($namedBookKey)
+            ? __($namedBookKey)
+            : __('hadith.book').' '.$book->book_number;
+    }
     $intro = $book->getTranslation('intro', $locale, true);
 
     // Icons point the way the reader travels, which flips with the script.
@@ -116,6 +122,7 @@
                  q: '',
                  grade: '',
                  view: 'normal',
+                 textLanguage: @js($locale === 'en' ? 'en' : 'ar'),
                  hit(el) {
                      const needle = window.foldForSearch(this.q);
 
@@ -128,6 +135,10 @@
              }">
 
             @if ($paginator->total() > 0)
+                <div class="mt-6 flex justify-end">
+                    <x-site.hadith-language-toggle />
+                </div>
+
                 <section class="rounded-2xl mt-6 p-4 sm:p-5 shadow-lg animate-fade-in-up stagger-1
                                 bg-white dark:bg-[#16213e] border border-gray-100 dark:border-gray-800">
                     <div class="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">

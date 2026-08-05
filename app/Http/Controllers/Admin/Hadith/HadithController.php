@@ -11,6 +11,7 @@ use App\Domain\Hadith\Models\HadithBook;
 use App\Domain\Hadith\Models\HadithCollection;
 use App\Domain\Hadith\Models\HadithImportRun;
 use App\Domain\Hadith\Models\HadithScholar;
+use App\Domain\Hadith\Models\HadithText;
 use App\Domain\Hadith\Services\ArabicTextNormalizer;
 use App\Domain\Hadith\Services\HadithAdminService;
 use App\Domain\Shared\Services\AdminLoggerService;
@@ -40,13 +41,14 @@ final class HadithController extends Controller
         $perPage = in_array($request->integer('per_page'), [15, 30, 50], true)
             ? $request->integer('per_page')
             : 30;
+        $previewLocales = array_values(array_unique([app()->getLocale(), 'ar', 'en']));
 
         $hadiths = Hadith::query()
             ->with([
                 'collection:id,code,name',
                 'book:id,collection_id,book_number,title',
                 'chapter:id,book_id,chapter_number,title',
-                'texts' => fn ($query) => $query->whereIn('locale', ['ar', 'en']),
+                'texts' => fn ($query) => $query->whereIn('locale', $previewLocales),
             ])
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(function (Builder $query) use ($search): void {
@@ -85,7 +87,7 @@ final class HadithController extends Controller
             'total' => Hadith::query()->count(),
             'published' => Hadith::query()->where('is_published', true)->count(),
             'ungraded' => Hadith::query()->where('display_grade', HadithGrade::UNKNOWN)->count(),
-            'translations' => \App\Domain\Hadith\Models\HadithText::query()->count(),
+            'translations' => HadithText::query()->count(),
         ];
 
         $imports = HadithImportRun::query()->latest()->limit(5)->get();

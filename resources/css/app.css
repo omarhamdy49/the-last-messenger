@@ -799,6 +799,27 @@
     background-size: 640px 640px;
 }
 
+/* ── Hub hero: the "vault" band ──────────────────────────────────────────────
+   The page's one dark surface, matching the language the homepage hero already
+   establishes (dark ground, light type, brand gradient underneath). Layered
+   radials give the depth a flat gradient can't; the geometric tile carries the
+   Islamic register without an image request. */
+.hadith-vault {
+    background-color: #071a30;
+    background-image:
+        radial-gradient(88% 120% at 80% -12%, rgba(33, 136, 56, 0.40) 0%, transparent 58%),
+        radial-gradient(78% 110% at 10% 6%, rgba(0, 86, 179, 0.46) 0%, transparent 60%),
+        linear-gradient(158deg, #071a30 0%, #0a2137 46%, #072418 100%);
+}
+
+/* Eight-point khatam tile — two squares at 45° plus the joins that let it
+   repeat seamlessly. Low opacity: texture, not decoration competing with type. */
+.hadith-vault-tile {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%2364CCC5' stroke-width='1'%3E%3Crect x='22' y='22' width='36' height='36'/%3E%3Crect x='22' y='22' width='36' height='36' transform='rotate(45 40 40)'/%3E%3Cpath d='M0 40h9M71 40h9M40 0v9M40 71v9'/%3E%3Ccircle cx='40' cy='40' r='2.5'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 80px 80px;
+    opacity: 0.16;
+}
+
 /* ── 3D book cover ───────────────────────────────────────────────────────── */
 .book-3d {
     perspective: 2000px;
@@ -937,6 +958,42 @@
 
 .hadith-card:focus-within { border-color: #218838; }
 
+/* ── Skeleton shimmer ─────────────────────────────────────────────────────
+   A sweep rather than a pulse: the light travelling across the placeholder
+   reads as "content is arriving", where a whole block fading in and out reads
+   as "something is broken". Sized off the block itself, so one class serves the
+   cover placeholders and the search-suggestion rows alike. */
+.skeleton-shimmer {
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.62) 50%,
+        transparent 100%);
+    animation: skeletonSweep 1.5s ease-in-out infinite;
+}
+
+/* The sweep should travel with the reading direction, not against it. */
+[dir="rtl"] .skeleton-shimmer::after { transform: translateX(100%); }
+[dir="rtl"] .skeleton-shimmer::after { animation-name: skeletonSweepRtl; }
+
+.dark .skeleton-shimmer::after {
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.10) 50%,
+        transparent 100%);
+}
+
+@keyframes skeletonSweep    { 100% { transform: translateX(100%); } }
+@keyframes skeletonSweepRtl { 100% { transform: translateX(-100%); } }
+
 @media (prefers-reduced-motion: reduce) {
     .book-container,
     .book-3d:hover .book-container,
@@ -947,6 +1004,10 @@
     }
 
     .animate-scale-in { animation: none; opacity: 1; }
+
+    /* The placeholder still has to read as a placeholder without the sweep, so
+       the block keeps its tone and only the travelling highlight is dropped. */
+    .skeleton-shimmer::after { display: none; }
 }
 
 /* Reading density for the book page's view toggle. Driven by a data attribute

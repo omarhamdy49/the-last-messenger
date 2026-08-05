@@ -192,7 +192,10 @@ final class HadithImporter
         // separates two records the source gives the same number. Malik book 11
         // has exactly that: five records, four distinct numbers.
         $hadith = $urn !== null
-            ? (Hadith::query()->where('sunnah_urn', $urn)->first() ?? new Hadith)
+            ? (Hadith::query()
+                ->where('collection_id', $collection->id)
+                ->where('sunnah_urn', $urn)
+                ->first() ?? new Hadith)
             : Hadith::query()->firstOrNew([
                 'book_id' => $book->id,
                 'source_position' => $sourcePosition,

@@ -9,6 +9,9 @@
     $gradings = collect($hadith['gradings'] ?? []);
     $primaryNarrator = $hadith['primary_narrator'] ?? null;
     $gradeKey = $hadith['display_grade'] ?? 'unknown';
+    $gradingContext = $hadith['grading_context'] ?? [];
+    $perHadithGradeMissing = $gradeKey === 'unknown'
+        && ($gradingContext['per_hadith_status'] ?? null) === 'not_provided_by_source';
 
     // Colour carries meaning here, so it is paired with the text label rather
     // than replacing it — a reader who cannot distinguish the hues still reads
@@ -61,7 +64,8 @@
                     </div>
 
                     <span class="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold {{ $gradeStyles[$gradeKey] ?? $gradeStyles['unknown'] }}">
-                        {{ __('hadith.grade') }}: {{ __('hadith.grade_'.$gradeKey) }}
+                        {{ __('hadith.grade') }}:
+                        {{ $perHadithGradeMissing ? __('hadith.per_hadith_grade_not_provided') : __('hadith.grade_'.$gradeKey) }}
                     </span>
                 </div>
             </header>
@@ -165,6 +169,16 @@
                         {{ __('hadith.grade') }}
                     </h2>
 
+                    @if (! empty($gradingContext['collection_classification']))
+                        <div class="mb-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100">
+                            <span class="font-semibold">{{ __('hadith.collection_classification') }}:</span>
+                            {{ $gradingContext['collection_classification'] }}
+                            <p class="mt-1 text-xs text-sky-800/80 dark:text-sky-200/80">
+                                {{ __('hadith.collection_classification_help') }}
+                            </p>
+                        </div>
+                    @endif
+
                     @forelse ($gradings as $grading)
                         <div class="flex flex-wrap items-center gap-2 py-2 border-b last:border-0 border-gray-100 dark:border-gray-800">
                             <span class="px-2.5 py-1 rounded-full text-xs font-semibold {{ $gradeStyles[$grading['grade']] ?? $gradeStyles['unknown'] }}">
@@ -189,7 +203,14 @@
                             </span>
                         </div>
                     @empty
-                        <p class="text-sm text-gray-600 dark:text-gray-300">{{ __('hadith.no_gradings') }}</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-300">
+                            {{ $perHadithGradeMissing ? __('hadith.no_per_hadith_grading_at_source') : __('hadith.no_gradings') }}
+                        </p>
+                        @if (! empty($gradingContext['source_note']))
+                            <p lang="en" dir="ltr" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                {{ $gradingContext['source_note'] }}
+                            </p>
+                        @endif
                     @endforelse
                 </section>
             </div>

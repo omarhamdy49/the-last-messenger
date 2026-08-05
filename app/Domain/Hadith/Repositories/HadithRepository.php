@@ -12,6 +12,7 @@ use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
 
 class HadithRepository extends BaseRepository implements HadithRepositoryInterface
@@ -25,7 +26,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
     private const DETAIL_COLUMNS = [
         'id', 'collection_id', 'book_id', 'chapter_id', 'primary_narrator_id', 'hadith_number',
         'in_book_number', 'volume_number', 'sunnah_urn', 'sunnah_urn_en',
-        'display_grade', 'is_published',
+        'display_grade', 'is_published', 'source_metadata', 'source_unavailable_fields',
     ];
 
     /**
@@ -136,7 +137,7 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
             // of only stop-words legitimately matches nothing.
             return new \Illuminate\Pagination\LengthAwarePaginator(
                 [], 0, $criteria->perPage(), $criteria->page(),
-                ['path' => \Illuminate\Pagination\Paginator::resolveCurrentPath()],
+                ['path' => Paginator::resolveCurrentPath()],
             );
         }
 
