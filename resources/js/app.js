@@ -22,7 +22,7 @@ window.renderIcons = renderIcons;
 
 /* ----------------------------------------------------------- dark mode --- */
 Alpine.store('theme', {
-    dark: localStorage.getItem('darkMode') !== 'false', // default: DARK (prototype: `!== 'false'`)
+    dark: localStorage.getItem('darkMode') === 'true', // default: light; honor an explicit dark preference
     toggle() {
         this.dark = !this.dark;
         localStorage.setItem('darkMode', this.dark);

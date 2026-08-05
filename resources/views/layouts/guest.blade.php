@@ -24,7 +24,7 @@
 
     {{-- Prevent dark-mode flash before Alpine boots (matches the public layout). --}}
     <script>
-        if (localStorage.getItem('darkMode') !== 'false') {
+        if (localStorage.getItem('darkMode') === 'true') {
             document.documentElement.classList.add('dark');
         }
     </script>

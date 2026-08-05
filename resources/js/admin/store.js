@@ -18,7 +18,7 @@ Alpine.store('admin', {
     // ============================================
     // DARK MODE
     // ============================================
-    darkMode: localStorage.getItem('adminDarkMode') !== 'false', // Default to dark
+    darkMode: localStorage.getItem('adminDarkMode') === 'true', // Default to light
 
     toggleDarkMode() {
         this.darkMode = !this.darkMode;

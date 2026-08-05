@@ -14,7 +14,7 @@
 <script>
 function tagForm() {
     return {
-        darkMode: localStorage.getItem('darkMode') !== 'false',
+        darkMode: localStorage.getItem('darkMode') === 'true',
         activeLanguage: '{{ $defLang }}',
 
         handleSubmit(e) {
@@ -253,4 +253,3 @@ function tagForm() {
         </div>
     </div>
 </form>
-

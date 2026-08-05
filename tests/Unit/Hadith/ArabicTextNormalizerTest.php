@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Hadith;
 
 use App\Domain\Hadith\Services\ArabicTextNormalizer;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 class ArabicTextNormalizerTest extends TestCase
@@ -33,7 +34,7 @@ class ArabicTextNormalizerTest extends TestCase
         );
     }
 
-    /** @dataProvider letterVariants */
+    #[DataProvider('letterVariants')]
     public function test_letter_variants_fold_together(string $a, string $b, string $why): void
     {
         $this->assertSame(

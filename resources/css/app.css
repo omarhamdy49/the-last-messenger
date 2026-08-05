@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../../tailwind.config.js";
 
 /* Self-hosted fonts (was render-blocking Google Fonts). unicode-range
    lets the browser fetch only the script it needs; swap = no render block. */

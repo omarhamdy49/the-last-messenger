@@ -8,6 +8,7 @@ use App\Domain\Hadith\Enums\GradeScope;
 use App\Domain\Hadith\Enums\HadithGrade;
 use App\Domain\Hadith\Import\GradeNormalizer;
 use App\Domain\Hadith\Services\ArabicTextNormalizer;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -24,7 +25,7 @@ class GradeNormalizerTest extends TestCase
         $this->normalizer = new GradeNormalizer(new ArabicTextNormalizer);
     }
 
-    /** @dataProvider observedStrings */
+    #[DataProvider('observedStrings')]
     public function test_every_observed_string_yields_at_least_one_claim(string $raw, string $locale): void
     {
         $claims = $this->normalizer->normalize($raw, $locale);
@@ -59,7 +60,7 @@ class GradeNormalizerTest extends TestCase
         );
     }
 
-    /** @dataProvider exactExpectations */
+    #[DataProvider('exactExpectations')]
     public function test_known_strings_map_to_the_expected_claim(string $raw, HadithGrade $grade, GradeScope $scope): void
     {
         $claims = $this->normalizer->normalize($raw);

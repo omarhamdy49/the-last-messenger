@@ -7,6 +7,7 @@ namespace App\Domain\Hadith\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Spatie\Translatable\HasTranslations;
 
 /**
@@ -74,6 +75,13 @@ class HadithScholar extends Model
     public function primaryHadiths(): HasMany
     {
         return $this->hasMany(Hadith::class, 'primary_narrator_id');
+    }
+
+    public function narratedHadiths(): BelongsToMany
+    {
+        return $this->belongsToMany(Hadith::class, 'hadith_narrators', 'scholar_id', 'hadith_id')
+            ->withPivot(['position', 'display_name_ar', 'source_metadata'])
+            ->withTimestamps();
     }
 
     /**

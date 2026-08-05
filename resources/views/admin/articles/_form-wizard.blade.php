@@ -1445,7 +1445,7 @@ function articleForm(article, locales) {
     return {
         activeTab: 'main',
         activeLang: 'ar',
-        darkMode: localStorage.getItem('darkMode') !== 'false',
+        darkMode: localStorage.getItem('darkMode') === 'true',
         hasUnsavedChanges: false,
         showUnsavedToast: false,
         toastDismissed: false,
@@ -1883,7 +1883,7 @@ function moduleSelector() {
     const apiPrefix = '/api/v1';
     return {
         show: false,
-        darkMode: localStorage.getItem('darkMode') !== 'false',
+        darkMode: localStorage.getItem('darkMode') === 'true',
         moduleType: '',
         targetLocale: '',
         insertMode: 'block', // 'block' or 'inline'

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * Identity and structure only — no text. Bodies live in `hadith_texts`, one row
@@ -65,6 +66,12 @@ class Hadith extends Model
         'sunnah_urn',
         'sunnah_urn_en',
         'is_published',
+        'source_container_id',
+        'source_reference',
+        'canonical_url',
+        'source_text_sha256',
+        'source_metadata',
+        'source_unavailable_fields',
     ];
 
     /** @return array<string, string> */
@@ -81,6 +88,8 @@ class Hadith extends Model
             'sunnah_urn_en' => 'integer',
             'display_grade' => HadithGrade::class,
             'is_published' => 'boolean',
+            'source_metadata' => 'array',
+            'source_unavailable_fields' => 'array',
         ];
     }
 
@@ -112,6 +121,14 @@ class Hadith extends Model
     public function gradings(): HasMany
     {
         return $this->hasMany(HadithGrading::class, 'hadith_id');
+    }
+
+    public function narrators(): BelongsToMany
+    {
+        return $this->belongsToMany(HadithScholar::class, 'hadith_narrators', 'hadith_id', 'scholar_id')
+            ->withPivot(['position', 'display_name_ar', 'source_metadata'])
+            ->withTimestamps()
+            ->orderByPivot('position');
     }
 
     /**

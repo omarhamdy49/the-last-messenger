@@ -49,6 +49,10 @@ class HadithCollection extends Model
         'is_published',
         'featured',
         'display_order',
+        'source_url',
+        'about_url',
+        'source_category',
+        'source_metadata',
     ];
 
     /** @return array<string, string> */
@@ -61,6 +65,7 @@ class HadithCollection extends Model
             'is_published' => 'boolean',
             'featured' => 'boolean',
             'display_order' => 'integer',
+            'source_metadata' => 'array',
         ];
     }
 

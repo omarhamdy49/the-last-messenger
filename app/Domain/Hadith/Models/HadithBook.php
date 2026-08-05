@@ -46,6 +46,8 @@ class HadithBook extends Model
         'last_hadith_number',
         'is_synthetic',
         'is_published',
+        'source_url',
+        'source_metadata',
     ];
 
     /** @return array<string, string> */
@@ -56,6 +58,7 @@ class HadithBook extends Model
             'sort_order' => 'integer',
             'is_synthetic' => 'boolean',
             'is_published' => 'boolean',
+            'source_metadata' => 'array',
         ];
     }
 

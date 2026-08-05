@@ -11,9 +11,8 @@
  * - Smooth transitions
  */
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../../tailwind.config.js";
 
 /* ============================================
    CSS VARIABLES
@@ -192,7 +191,7 @@
 
   /* Glass card */
   .glass-card {
-    @apply glass rounded-2xl p-6 shadow-lg transition-all duration-300;
+    @apply bg-white/80 dark:bg-white/5 backdrop-blur-lg border border-gray-200/50 dark:border-white/10 rounded-2xl p-6 shadow-lg transition-all duration-300;
   }
 
   .glass-card:hover {
@@ -394,7 +393,7 @@
 
   /* Custom select */
   .select-custom {
-    @apply input-custom appearance-none;
+    @apply w-full px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all duration-300 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 appearance-none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 1rem center;
@@ -501,7 +500,10 @@
    ============================================ */
 
 @layer components {
-  .skeleton {
+  .skeleton,
+  .skeleton-text,
+  .skeleton-circle,
+  .skeleton-card {
     @apply bg-gray-200 dark:bg-gray-700 rounded;
     @apply animate-shimmer;
     background-image: linear-gradient(
@@ -514,15 +516,15 @@
   }
 
   .skeleton-text {
-    @apply skeleton h-4 w-full;
+    @apply h-4 w-full;
   }
 
   .skeleton-circle {
-    @apply skeleton rounded-full;
+    @apply rounded-full;
   }
 
   .skeleton-card {
-    @apply skeleton h-48 w-full rounded-2xl;
+    @apply h-48 w-full rounded-2xl;
   }
 }
 
@@ -611,7 +613,7 @@
 
 @layer components {
   .dropdown-menu {
-    @apply glass-strong rounded-xl shadow-xl py-2 min-w-[200px];
+    @apply bg-white/90 dark:bg-white/10 backdrop-blur-xl border border-gray-200/70 dark:border-white/20 rounded-xl shadow-xl py-2 min-w-[200px];
     @apply opacity-0 invisible scale-95;
     @apply transition-all duration-300;
     @apply origin-top-right;
@@ -649,7 +651,7 @@
 @layer components {
   .sidebar {
     @apply fixed top-0 left-0 h-screen;
-    @apply glass-strong shadow-2xl;
+    @apply bg-white/90 dark:bg-white/10 backdrop-blur-xl border border-gray-200/70 dark:border-white/20 shadow-2xl;
     @apply transition-all duration-500;
     width: var(--sidebar-width);
   }
@@ -703,7 +705,7 @@
 @layer components {
   .header {
     @apply fixed top-0 right-0 z-50;
-    @apply glass-strong shadow-lg;
+    @apply bg-white/90 dark:bg-white/10 backdrop-blur-xl border border-gray-200/70 dark:border-white/20 shadow-lg;
     height: var(--header-height);
     left: var(--sidebar-width);
     @apply transition-all duration-500;

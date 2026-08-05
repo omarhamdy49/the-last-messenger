@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}"
       dir="{{ in_array(app()->getLocale(), ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
       x-data="{
-          darkMode: localStorage.getItem('darkMode') !== 'false',
+          darkMode: localStorage.getItem('darkMode') === 'true',
           sidebarOpen: window.innerWidth >= 1024,
           currentLang: '{{ app()->getLocale() }}',
 

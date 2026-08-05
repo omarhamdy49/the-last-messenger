@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Tests\Feature\Genealogy;
 
 use App\Domain\Content\Enums\SiteSettingType;
+use App\Domain\Content\Services\SiteSettingsService;
 use App\Domain\Genealogy\Enums\RelationshipType;
 use App\Domain\Genealogy\Models\Person;
 use App\Domain\Genealogy\Models\Relationship;
 use App\Domain\Genealogy\Services\GenealogyService;
+use App\Http\Controllers\Site\GenealogyController;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -291,7 +293,7 @@ class PublicGenealogyPageTest extends TestCase
 
     public function test_max_children_per_level_setting_caps_tree_children(): void
     {
-        app(\App\Domain\Content\Services\SiteSettingsService::class)->set(
+        app(SiteSettingsService::class)->set(
             'genealogy_tree_max_children_per_level',
             '1',
             ['group' => 'genealogy_tree', 'type' => SiteSettingType::TEXT->value],
@@ -383,9 +385,8 @@ class PublicGenealogyPageTest extends TestCase
      */
     private function invokeBuildPayload(): array
     {
-        $controller = app(\App\Http\Controllers\Site\GenealogyController::class);
+        $controller = app(GenealogyController::class);
         $method = new \ReflectionMethod($controller, 'buildPayload');
-        $method->setAccessible(true);
 
         return $method->invoke($controller, 'ar');
     }
