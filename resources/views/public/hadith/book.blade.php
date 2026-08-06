@@ -12,6 +12,10 @@
             : __('hadith.book').' '.$book->book_number;
     }
     $intro = $book->getTranslation('intro', $locale, true);
+    $bookLabelKey = 'hadith.book_name_'.$book->book_number;
+    $bookNumberLabel = \Illuminate\Support\Facades\Lang::has($bookLabelKey)
+        ? __($bookLabelKey)
+        : $book->book_number;
 
     // Icons point the way the reader travels, which flips with the script.
     $backIcon = $isRtl ? 'chevron-right' : 'chevron-left';
@@ -53,7 +57,7 @@
                                     {{ $collectionName }}
                                 </a>
                                 <p class="text-xs text-gray-500 dark:text-gray-400">
-                                    {{ __('hadith.book') }} {{ $book->book_number }}
+                                    {{ __('hadith.book') }} {{ $bookNumberLabel }}
                                 </p>
                             </div>
                         </div>

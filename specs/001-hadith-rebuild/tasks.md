@@ -280,7 +280,7 @@ makes it 404 publicly.
 ### Tests for User Story 4 ⚠️
 
 - [ ] T143 [P] [US4] Write `tests/Feature/Admin/Hadith/AuthorizationTest.php` asserting every admin action denies an unauthorised user
-- [ ] T144 [P] [US4] Write `tests/Feature/Admin/Hadith/DisplayGradeDerivationTest.php` asserting the documented policy — one distinct hadith-scope grade wins, conflicts and part-labelled claims yield `unknown` — and that `display_grade` is not directly writable
+- [ ] T144 [P] [US4] Write `tests/Feature/Admin/Hadith/DisplayGradeDerivationTest.php` asserting the documented policy — one distinct unlabelled hadith-scope grade wins, conflicts yield `NULL`, and part-labelled claims are excluded — and that `display_grade` is not directly writable
 - [ ] T145 [P] [US4] Write `tests/Feature/Admin/Hadith/UnpublishHidesFromPublicTest.php` asserting an unpublished hadith 404s on its canonical URL
 - [ ] T146 [P] [US4] Write `tests/Feature/Admin/Hadith/OptimisticLockingTest.php` asserting a stale-`updated_at` save is rejected
 - [ ] T147 [P] [US4] Write `tests/Feature/Admin/Hadith/ValidationTest.php` asserting field-level 422 responses for each FormRequest

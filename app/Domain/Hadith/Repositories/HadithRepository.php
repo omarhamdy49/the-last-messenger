@@ -26,7 +26,8 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
     private const DETAIL_COLUMNS = [
         'id', 'collection_id', 'book_id', 'chapter_id', 'primary_narrator_id', 'hadith_number',
         'in_book_number', 'volume_number', 'sunnah_urn', 'sunnah_urn_en',
-        'display_grade', 'is_published', 'source_reference', 'source_metadata', 'source_unavailable_fields',
+        'display_grade', 'is_published', 'source_reference', 'source_in_book_reference',
+        'source_translation_reference', 'source_metadata', 'source_unavailable_fields',
     ];
 
     /**
@@ -167,18 +168,18 @@ class HadithRepository extends BaseRepository implements HadithRepositoryInterfa
 
     public function recomputeDisplayGrade(int $hadithId): ?HadithGrade
     {
-        // data-model.md §4: only hadith-scope claims count; exactly one distinct
-        // grade wins; zero rows, conflicting grades, or any part-labelled claim
-        // yields NULL. Computed in one aggregate rather than by loading rows.
+        // data-model.md §4: only unlabelled hadith-scope claims grade the whole
+        // hadith. Exactly one distinct grade wins; zero rows or conflicts yield
+        // NULL. Computed in one aggregate rather than by loading rows.
         $summary = DB::table('hadith_gradings')
             ->where('hadith_id', $hadithId)
             ->where('scope', GradeScope::HADITH->value)
+            ->whereNull('part_label')
             ->selectRaw('COUNT(DISTINCT grade) AS distinct_grades')
             ->selectRaw('MIN(grade) AS only_grade')
-            ->selectRaw('SUM(part_label IS NOT NULL) AS labelled')
             ->first();
 
-        $grade = ((int) ($summary->distinct_grades ?? 0) === 1 && (int) ($summary->labelled ?? 0) === 0)
+        $grade = (int) ($summary->distinct_grades ?? 0) === 1
             ? HadithGrade::tryFrom((string) $summary->only_grade)
             : null;
 

@@ -37,6 +37,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null $sunnah_urn
  * @property int|null $sunnah_urn_en
  * @property HadithGrade|null $display_grade
+ * @property string|null $source_reference
+ * @property string|null $source_in_book_reference
+ * @property string|null $source_translation_reference
  * @property bool $is_published
  * @property-read HadithCollection $collection
  * @property-read HadithBook $book
@@ -70,6 +73,8 @@ class Hadith extends Model
         'is_published',
         'source_container_id',
         'source_reference',
+        'source_in_book_reference',
+        'source_translation_reference',
         'canonical_url',
         'source_text_sha256',
         'source_metadata',

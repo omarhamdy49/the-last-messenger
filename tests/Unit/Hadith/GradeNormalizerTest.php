@@ -26,11 +26,15 @@ class GradeNormalizerTest extends TestCase
     }
 
     #[DataProvider('observedStrings')]
-    public function test_every_observed_string_yields_at_least_one_claim(string $raw, string $locale): void
+    public function test_no_observed_string_yields_an_unknown_claim(string $raw, string $locale): void
     {
         $claims = $this->normalizer->normalize($raw, $locale);
 
-        $this->assertNotEmpty($claims, "produced no claim for: {$raw}");
+        $this->assertNotContains(
+            HadithGrade::UNKNOWN,
+            array_column($claims, 'grade'),
+            "produced an unknown claim for: {$raw}",
+        );
     }
 
     /**
@@ -46,9 +50,9 @@ class GradeNormalizerTest extends TestCase
 
         foreach ($rows as $row) {
             $claims = $this->normalizer->normalize($row['raw'], $row['locale']);
-            $isUnknown = count($claims) === 1 && $claims[0]['grade'] === HadithGrade::UNKNOWN;
+            $isInterpreted = $claims !== [];
             $total += $row['n'];
-            $interpreted += $isUnknown ? 0 : $row['n'];
+            $interpreted += $isInterpreted ? $row['n'] : 0;
         }
 
         $share = $interpreted / $total;
@@ -80,6 +84,7 @@ class GradeNormalizerTest extends TestCase
             'macron form' => ['Sahīh (Zubair `Aliza\'i)', HadithGrade::SAHIH, GradeScope::HADITH],
             'compound wins over sahih' => ['Hasan Sahih (Al-Albani)', HadithGrade::HASAN, GradeScope::HADITH],
             'agreed upon is sahih' => ['Muttafaqun \'alayh (Zubair `Aliza\'i)', HadithGrade::SAHIH, GradeScope::HADITH],
+            'plain agreed upon is sahih' => ['Agreed upon (Al-Albani)', HadithGrade::SAHIH, GradeScope::HADITH],
             'isnad scope english' => ['Isnād Da\'īf (Zubair `Aliza\'i)', HadithGrade::DAIF, GradeScope::ISNAD],
             'arabic plain' => ['صحيح', HadithGrade::SAHIH, GradeScope::HADITH],
             'arabic diacritised' => ['صَحِيحٌ   (الألباني)', HadithGrade::SAHIH, GradeScope::HADITH],
@@ -87,17 +92,18 @@ class GradeNormalizerTest extends TestCase
             'arabic weak' => ['ضعيف   (الألباني)', HadithGrade::DAIF, GradeScope::HADITH],
             'arabic compound' => ['حسن صحيح   (الألباني)', HadithGrade::HASAN, GradeScope::HADITH],
             'arabic agreed upon' => ['متفق عليه   (زبیر علی زئی)', HadithGrade::SAHIH, GradeScope::HADITH],
+            'arabic transposed agreed-upon typo' => ['مُتَّفق علهي   (الألباني)', HadithGrade::SAHIH, GradeScope::HADITH],
+            'arabic flimsy is weak' => ['واه   (الألباني)', HadithGrade::DAIF, GradeScope::HADITH],
             'arabic isnad scope' => ['إسنادہ ضعيف   (زبیر علی زئی)', HadithGrade::DAIF, GradeScope::ISNAD],
             'fabricated' => ['Mawdu\'', HadithGrade::MAWDU, GradeScope::HADITH],
         ];
     }
 
-    public function test_an_uninterpretable_string_yields_unknown_and_is_reported(): void
+    public function test_an_uninterpretable_string_yields_no_claim_and_is_reported(): void
     {
         $claims = $this->normalizer->normalize('See the discussion in volume three');
 
-        $this->assertCount(1, $claims);
-        $this->assertSame(HadithGrade::UNKNOWN, $claims[0]['grade']);
+        $this->assertSame([], $claims);
         $this->assertContains('See the discussion in volume three', $this->normalizer->unmappedGrades());
     }
 

@@ -46,7 +46,13 @@ class ReferenceBuilderTest extends TestCase
         $set = $this->builder->build($this->hadith(
             ['code' => 'bukhari', 'reference_template' => 'Sahih al-Bukhari {hadithNumber}'],
             ['book_number' => '1'],
-            ['hadith_number' => '1', 'in_book_number' => 1, 'volume_number' => '1'],
+            [
+                'hadith_number' => '1',
+                'in_book_number' => 1,
+                'volume_number' => '1',
+                'source_in_book_reference' => 'Book 1, Hadith 1',
+                'source_translation_reference' => 'Vol. 1, Book 1, Hadith 1',
+            ],
         ));
 
         $this->assertSame('Sahih al-Bukhari 1', $set->canonical);
@@ -67,7 +73,7 @@ class ReferenceBuilderTest extends TestCase
         $this->assertFalse($set->translationDeprecated);
     }
 
-    public function test_a_collection_without_volumes_falls_back_to_the_in_book_form(): void
+    public function test_optional_reference_lines_are_not_fabricated_from_structural_numbers(): void
     {
         $set = $this->builder->build($this->hadith(
             ['code' => 'adab', 'reference_template' => 'Al-Adab Al-Mufrad {hadithNumber}'],
@@ -76,7 +82,8 @@ class ReferenceBuilderTest extends TestCase
         ));
 
         $this->assertSame('Al-Adab Al-Mufrad 14', $set->canonical);
-        $this->assertSame('Book 2, Hadith 14', $set->translation);
+        $this->assertNull($set->inBook);
+        $this->assertNull($set->translation);
     }
 
     /** malik and darimi use the book-scoped form as their canonical reference. */
@@ -119,6 +126,60 @@ class ReferenceBuilderTest extends TestCase
         $this->assertSame('Hadith 42, 40 Hadith an-Nawawi', $set->canonical);
         $this->assertNull($set->inBook);
         $this->assertNull($set->translation);
+    }
+
+    public function test_exact_optional_references_can_be_recovered_from_source_metadata(): void
+    {
+        $set = $this->builder->build($this->hadith(
+            ['code' => 'riyadussalihin', 'reference_template' => null],
+            ['book_number' => 'introduction'],
+            [
+                'hadith_number' => '1',
+                'in_book_number' => 1,
+                'volume_number' => null,
+                'source_reference' => 'Riyad as-Salihin 1',
+                'source_metadata' => [
+                    'source' => [
+                        'references' => [
+                            'in_book_reference' => 'Introduction, Hadith 1',
+                        ],
+                    ],
+                ],
+            ],
+        ));
+
+        $this->assertSame('Riyad as-Salihin 1', $set->canonical);
+        $this->assertSame('Introduction, Hadith 1', $set->inBook);
+        $this->assertNull($set->translation);
+    }
+
+    public function test_mishkat_book_30_suppresses_the_invalid_raw_english_translation_reference(): void
+    {
+        $set = $this->builder->build($this->hadith(
+            ['code' => 'mishkat', 'reference_template' => null],
+            ['book_number' => '30'],
+            [
+                'hadith_number' => '30.62',
+                'in_book_number' => 62,
+                'volume_number' => null,
+                'source_reference' => 'Book 30, Hadith 62',
+                'source_in_book_reference' => 'Book 30, Hadith 62',
+                'source_translation_reference' => null,
+                'source_metadata' => [
+                    'source' => [
+                        'references' => [
+                            'sunnah_com_reference' => 'Book 30, Hadith 62',
+                            'english_translation' => 'Book 26, Hadith 0',
+                        ],
+                    ],
+                ],
+            ],
+        ));
+
+        $this->assertSame('Book 30, Hadith 62', $set->canonical);
+        $this->assertSame('Book 30, Hadith 62', $set->inBook);
+        $this->assertNull($set->translation);
+        $this->assertFalse($set->translationDeprecated);
     }
 
     public function test_a_non_numeric_hadith_number_is_carried_through(): void

@@ -61,15 +61,21 @@
                  number is a string and `35b` must follow `35`. --}}
             <ul class="grid gap-3 sm:grid-cols-2">
                 @foreach ($books as $book)
+                    @php
+                        $bookLabelKey = 'hadith.book_name_'.$book->book_number;
+                        $bookNumberLabel = \Illuminate\Support\Facades\Lang::has($bookLabelKey)
+                            ? __($bookLabelKey)
+                            : $book->book_number;
+                    @endphp
                     <li>
                         <a href="{{ route('public.hadith.book', [$collection->code, $book->book_number]) }}"
                            class="flex items-center gap-4 rounded-xl border border-gray-200 dark:border-gray-800
                                   bg-white dark:bg-[#16213e] px-4 py-3.5
                                   transition hover:border-[#218838] hover:shadow-sm">
-                            <span class="shrink-0 w-11 h-11 rounded-lg bg-[#0056b3]/10 dark:bg-[#0f3460]
+                            <span class="shrink-0 min-w-11 min-h-11 px-2 rounded-lg bg-[#0056b3]/10 dark:bg-[#0f3460]
                                          flex items-center justify-center text-sm font-bold
                                          text-[#0056b3] dark:text-[#64CCC5]">
-                                {{ $book->book_number }}
+                                {{ $bookNumberLabel }}
                             </span>
                             <span class="min-w-0 flex-1">
                                 <span class="block font-semibold text-gray-900 dark:text-white line-clamp-1">

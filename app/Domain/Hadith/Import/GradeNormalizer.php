@@ -42,6 +42,7 @@ final class GradeNormalizer
         // "Agreed upon by al-Bukhari and Muslim" is the strongest authentication.
         ['pattern' => 'muttafaqun alayh', 'grade' => HadithGrade::SAHIH],
         ['pattern' => 'muttafaq alayh', 'grade' => HadithGrade::SAHIH],
+        ['pattern' => 'agreed upon', 'grade' => HadithGrade::SAHIH],
         ['pattern' => 'mawdu', 'grade' => HadithGrade::MAWDU],
         ['pattern' => 'mawdoo', 'grade' => HadithGrade::MAWDU],
         // Surfaced by an import run's unmapped_grades: the source also spells it
@@ -63,12 +64,14 @@ final class GradeNormalizer
         ['pattern' => 'صحيح لغيره', 'grade' => HadithGrade::SAHIH],
         ['pattern' => 'حسن لغيره', 'grade' => HadithGrade::HASAN],
         ['pattern' => 'متفق عليه', 'grade' => HadithGrade::SAHIH],
+        ['pattern' => 'متفق علهي', 'grade' => HadithGrade::SAHIH],
         ['pattern' => 'ضعيف جدا', 'grade' => HadithGrade::DAIF],
         ['pattern' => 'موضوع', 'grade' => HadithGrade::MAWDU],
         ['pattern' => 'متروك', 'grade' => HadithGrade::DAIF],
         ['pattern' => 'منكر', 'grade' => HadithGrade::DAIF],
         ['pattern' => 'شاذ', 'grade' => HadithGrade::DAIF],
         ['pattern' => 'ضعيف', 'grade' => HadithGrade::DAIF],
+        ['pattern' => 'واه', 'grade' => HadithGrade::DAIF],
         ['pattern' => 'حسن', 'grade' => HadithGrade::HASAN],
         ['pattern' => 'صحيح', 'grade' => HadithGrade::SAHIH],
     ];
@@ -85,7 +88,7 @@ final class GradeNormalizer
     ];
 
     /** Splits a string that asserts one thing about the chain and another about the text. */
-    private const SCOPE_SPLIT = '/\s*(?:wal-|wa al-|wa\'l-|,|;|\||\bو\b)\s*(?=hadith|the hadith|الحديث|المتن)/iu';
+    private const SCOPE_SPLIT = '/\s*(?:wal-|wa al-|wa\'l-|,|،|;|\||\band\b|\bو\b|و(?=الحديث))\s*(?=had[iī]th|the had[iī]th|الحديث|المتن)/iu';
 
     /** Numbered multi-verdict strings: "1: Hasan<br>2: Da'if". */
     private const PART_SPLIT = '/(?:<br\s*\/?>|\n|\r\n)+/i';
@@ -129,11 +132,11 @@ final class GradeNormalizer
             // so the rules can be improved without re-reading the corpus (FR-007).
             $this->unmapped[] = $raw;
 
-            return [[
-                'grade' => HadithGrade::UNKNOWN,
-                'scope' => GradeScope::HADITH,
-                'part_label' => null,
-            ]];
+            // A source note such as "not studied", "mursal", or an
+            // unrecognised classification is provenance, not an authenticity
+            // verdict. Keep it in source metadata and leave the derived grade
+            // NULL instead of fabricating an `unknown` grading row.
+            return [];
         }
 
         return $this->deduplicate($claims);

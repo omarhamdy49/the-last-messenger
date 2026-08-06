@@ -8,6 +8,7 @@ use App\Domain\Hadith\Enums\GradeScope;
 use App\Domain\Hadith\Enums\HadithGrade;
 use App\Domain\Hadith\Import\GradeNormalizer;
 use App\Domain\Hadith\Services\ArabicTextNormalizer;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -66,16 +67,34 @@ class GradeNormalizerMultiClaimTest extends TestCase
         $this->assertCount(1, $claims);
     }
 
-    /**
-     * "Its study was not completed" is the source stating it has NOT graded this
-     * hadith. `unknown` is the correct reading, not a gap in the rules — so it
-     * must not be quietly mapped onto a verdict later.
-     */
-    public function test_an_explicit_not_yet_graded_note_is_unknown_by_intent(): void
+    #[DataProvider('mishkatRef107Strings')]
+    public function test_mishkat_ref_107_bilingual_chain_and_hadith_verdicts_are_split(string $raw): void
+    {
+        $claims = $this->normalizer->normalize($raw);
+
+        $this->assertCount(2, $claims, "expected two claims for: {$raw}");
+        $this->assertSame(HadithGrade::DAIF, $claims[0]['grade']);
+        $this->assertSame(GradeScope::ISNAD, $claims[0]['scope']);
+        $this->assertSame(HadithGrade::SAHIH, $claims[1]['grade']);
+        $this->assertSame(GradeScope::HADITH, $claims[1]['scope']);
+        $this->assertNotContains(HadithGrade::UNKNOWN, array_column($claims, 'grade'));
+    }
+
+    /** @return array<string, array{string}> */
+    public static function mishkatRef107Strings(): array
+    {
+        return [
+            'English' => ["Isnād Da'īf and the Hadīth is Sahīh (Zubair `Aliza'i)"],
+            'Arabic' => ['إسنادہ ضعيف والحديث صحيح (زبیر علی زئی)'],
+        ];
+    }
+
+    /** A status that explicitly says no study was completed is not a verdict. */
+    public function test_an_explicit_not_yet_graded_note_yields_no_claim(): void
     {
         $claims = $this->normalizer->normalize('لم تتمّ دراسته   (الألباني)');
 
-        $this->assertCount(1, $claims);
-        $this->assertSame(HadithGrade::UNKNOWN, $claims[0]['grade']);
+        $this->assertSame([], $claims);
+        $this->assertContains('لم تتمّ دراسته   (الألباني)', $this->normalizer->unmappedGrades());
     }
 }

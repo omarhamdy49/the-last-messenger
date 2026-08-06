@@ -8,8 +8,9 @@ use App\Domain\Hadith\DTOs\ReferenceSet;
 use App\Domain\Hadith\Models\Hadith;
 
 /**
- * Rebuilds the three scholarly reference lines from the collection template and
- * the stored numbers.
+ * Builds the scholarly reference lines from exact source values. A template is
+ * only a fallback for the canonical line; optional citation lines are never
+ * fabricated from structural numbers.
  *
  * They are rebuilt, never stored: storing them would let a corrected book number
  * and a stale reference line disagree, and the reference is the one thing a
@@ -37,12 +38,18 @@ final class ReferenceBuilder
         $code = (string) $hadith->collection->code;
         $template = $hadith->collection->reference_template;
         $bookNumber = $hadith->book?->book_number;
+        $sourceReferences = $hadith->source_metadata['source']['references'] ?? [];
 
         return new ReferenceSet(
             canonical: $hadith->source_reference
                 ?: $this->canonical($template, $hadith->hadith_number, $bookNumber, $code),
-            inBook: $this->inBook($bookNumber, $hadith->in_book_number),
-            translation: $this->translation($hadith->volume_number, $bookNumber, $hadith->in_book_number),
+            inBook: $hadith->source_in_book_reference
+                ?: $this->sourceValue($sourceReferences, [
+                    'in_book_reference', 'In-book reference', 'book_reference', 'Book reference',
+                    'arabic_english_book_reference', 'sunnah_com_reference',
+                ]),
+            translation: $hadith->source_translation_reference
+                ?: $this->translationSourceValue($sourceReferences, $bookNumber),
             translationDeprecated: in_array($code, self::DEPRECATED_TRANSLATION_NUMBERING, true),
         );
     }
@@ -69,29 +76,38 @@ final class ReferenceBuilder
      * source character-for-character. The labels beside them are translated;
      * the citation itself is quoted, not translated.
      */
-    private function inBook(?string $bookNumber, ?int $inBookNumber): ?string
+    /** @param mixed $references @param list<string> $keys */
+    private function sourceValue(mixed $references, array $keys): ?string
     {
-        if ($bookNumber === null || $inBookNumber === null) {
+        if (! is_array($references)) {
             return null;
         }
 
-        return sprintf('Book %s, Hadith %d', $bookNumber, $inBookNumber);
+        foreach ($keys as $key) {
+            $value = $references[$key] ?? null;
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        return null;
     }
 
-    /**
-     * The volume segment appears only for collections whose translation is
-     * volume-numbered; omitting it entirely is correct for the rest.
-     */
-    private function translation(?string $volumeNumber, ?string $bookNumber, ?int $inBookNumber): ?string
+    private function translationSourceValue(mixed $references, ?string $bookNumber): ?string
     {
-        if ($bookNumber === null || $inBookNumber === null) {
+        $reference = $this->sourceValue($references, [
+            'english_translation', 'usc_msa_web_english_reference',
+            'USC-MSA web (English) reference',
+        ]);
+        if ($reference === null || preg_match('/(?:Hadith|Narration)\s+0\b/iu', $reference) === 1) {
+            return null;
+        }
+        if ($bookNumber !== null
+            && preg_match('/Book\s+([0-9A-Za-z.-]+)/iu', $reference, $match) === 1
+            && $match[1] !== $bookNumber) {
             return null;
         }
 
-        if ($volumeNumber === null || $volumeNumber === '') {
-            return $this->inBook($bookNumber, $inBookNumber);
-        }
-
-        return sprintf('Vol. %s, Book %s, Hadith %d', $volumeNumber, $bookNumber, $inBookNumber);
+        return $reference;
     }
 }

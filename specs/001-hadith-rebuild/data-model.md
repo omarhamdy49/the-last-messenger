@@ -149,7 +149,8 @@ query rather than stored and indexed across 51k rows.
 
 1. Consider only `hadith_gradings` rows with `scope = 'hadith'`.
 2. Exactly one distinct `grade` → that grade.
-3. Zero rows, conflicting grades, an `unknown` normalisation, or any row with a non-null `part_label` → `NULL`.
+3. Exclude rows with a non-null `part_label`; they grade only a named recension or part, not the whole hadith.
+4. Zero remaining rows, conflicting remaining grades, or an `unknown` normalisation → `NULL`.
 
 Recomputed inside the same transaction as any grading write, owned by `HadithAdminService`. Never
 directly editable in the admin.

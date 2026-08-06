@@ -49,6 +49,8 @@ class HadithDetailPageTest extends TestCase
             'hadith_number' => '1',
             'in_book_number' => 1,
             'volume_number' => '1',
+            'source_in_book_reference' => 'Book 1, Hadith 1',
+            'source_translation_reference' => 'Vol. 1, Book 1, Hadith 1',
             'sunnah_urn' => 10,
             'is_published' => true,
         ], $overrides));
