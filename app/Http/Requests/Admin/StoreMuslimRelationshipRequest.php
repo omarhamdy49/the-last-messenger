@@ -34,7 +34,7 @@ class StoreMuslimRelationshipRequest extends FormRequest
             // Mirrors chk_muslim_relationships_not_self so the editor sees a
             // 422 rather than a database error.
             if ((int) $this->input('muslim_id') === (int) $this->input('related_muslim_id')) {
-                $v->errors()->add('related_muslim_id', __('people.errors.self_relationship'));
+                $v->errors()->add('related_muslim_id', __('sahaba.errors.self_relationship'));
             }
         });
     }

@@ -4,73 +4,46 @@ declare(strict_types=1);
 
 namespace App\Domain\Hadith\Models;
 
+use App\Domain\Shared\Contracts\PersonLookup;
 use Database\Factories\Hadith\HadithCollectionFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Spatie\Translatable\HasTranslations;
 
 /**
- * One of the 17 collections. `code` is the URL segment, the API path segment,
- * and the sunnah.com path segment all at once.
- *
- * No `total_hadiths` attribute: use `withCount('hadiths')`. A stored counter
- * drifts the moment admin CRUD exists, and there are only 17 rows.
+ * A hadith collection.
  *
  * @property int $id
- * @property string $code
+ * @property string $slug
+ * @property string|null $reference_template
+ * @property int|null $compiler_id
+ * @property int|null $total_hadith
  * @property bool $has_books
  * @property bool $has_chapters
- * @property bool $has_volumes
- * @property string|null $reference_template
  * @property bool $is_published
- * @property bool $featured
- * @property int $display_order
  */
 class HadithCollection extends Model
 {
-    use HasFactory, HasTranslations;
+    use HasFactory;
 
     protected $table = 'hadith_collections';
 
-    /** @var array<string> */
-    public array $translatable = ['name', 'author', 'short_intro', 'about', 'introduction'];
-
-    /** @var array<string> */
     protected $fillable = [
-        'code',
-        'name',
-        'author',
-        'short_intro',
-        'about',
-        'introduction',
-        'has_books',
-        'has_chapters',
-        'has_volumes',
-        'reference_template',
-        'is_published',
-        'featured',
-        'display_order',
-        'source_url',
-        'about_url',
-        'introduction_url',
-        'source_category',
-        'source_capture_complete',
-        'source_metadata',
+        'slug', 'thumb', 'reference_template', 'title_ar', 'title_en',
+        'intro_ar', 'intro_en', 'compiler_id', 'total_hadith',
+        'has_books', 'has_chapters', 'sort_order', 'is_featured', 'is_published',
     ];
 
-    /** @return array<string, string> */
     protected function casts(): array
     {
         return [
             'has_books' => 'boolean',
             'has_chapters' => 'boolean',
-            'has_volumes' => 'boolean',
+            'is_featured' => 'boolean',
             'is_published' => 'boolean',
-            'featured' => 'boolean',
-            'display_order' => 'integer',
-            'source_metadata' => 'array',
-            'source_capture_complete' => 'boolean',
+            'total_hadith' => 'integer',
+            'sort_order' => 'integer',
         ];
     }
 
@@ -79,19 +52,46 @@ class HadithCollection extends Model
         return $this->hasMany(HadithBook::class, 'collection_id');
     }
 
-    /**
-     * Reachable directly because `collection_id` is denormalised onto the
-     * hadith row — the canonical lookup must not join through books.
-     */
     public function hadiths(): HasMany
     {
         return $this->hasMany(Hadith::class, 'collection_id');
     }
 
     /**
-     * Factories live under Database\Factories\Hadith, which Laravel cannot
-     * derive from this model's namespace.
+     * NOTE: there is deliberately no `compiler()` relation. `compiler_id` is a
+     * database foreign key into `muslims`, which is allowed, but an Eloquent
+     * relation would mean importing App\Domain\People — which constitution IV
+     * forbids and deptrac rejects. Resolve it through
+     * {@see PersonLookup} instead.
      */
+    public function scopePublished(Builder $query): Builder
+    {
+        return $query->where('is_published', true);
+    }
+
+    public function title(?string $locale = null): string
+    {
+        return ($locale ?? app()->getLocale()) === 'ar' ? $this->title_ar : $this->title_en;
+    }
+
+    public function intro(?string $locale = null): ?string
+    {
+        return ($locale ?? app()->getLocale()) === 'ar' ? $this->intro_ar : $this->intro_en;
+    }
+
+    /**
+     * How many hadiths a reader can actually open right now.
+     *
+     * Distinct from `total_hadith`, which is what the BOOK declares and never
+     * changes when an editor publishes or unpublishes a row. Exposing them
+     * under different names is what stops a template claiming content the site
+     * does not serve.
+     */
+    public function availableHadithsCount(): int
+    {
+        return (int) $this->hadiths()->where('is_published', true)->count();
+    }
+
     protected static function newFactory(): HadithCollectionFactory
     {
         return HadithCollectionFactory::new();

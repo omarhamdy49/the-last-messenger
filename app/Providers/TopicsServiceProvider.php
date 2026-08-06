@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Quran\Models\Verse;
 use App\Domain\Topics\Enums\TopicItemType;
 use App\Domain\Topics\Repositories\TopicRepository;
@@ -34,7 +33,6 @@ final class TopicsServiceProvider extends ServiceProvider
         // Merge (not replace) so any existing morph map entries are preserved.
         Relation::morphMap([
             TopicItemType::VERSE->value => Verse::class,
-            TopicItemType::HADITH->value => Hadith::class,
             TopicItemType::ARTICLE->value => Article::class,
         ]);
     }

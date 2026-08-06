@@ -4,101 +4,61 @@ declare(strict_types=1);
 
 namespace App\Domain\Hadith\Models;
 
-use App\Domain\Hadith\Enums\HadithGrade;
-use App\Domain\Shared\Traits\HasAuditLog;
-use App\Domain\Shared\Traits\HasVersions;
+use App\Domain\Hadith\Enums\Grade;
 use Database\Factories\Hadith\HadithFactory;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Identity and structure only — no text. Bodies live in `hadith_texts`, one row
- * per locale that actually has text.
+ * A single narration.
  *
- * Not translatable: nothing on this row is language-specific.
- *
- * `display_grade` is derived from the `hadith` scope gradings and is never
- * written directly; `HadithAdminService` owns the recomputation inside the same
- * transaction as any grading write (data-model.md §4). It is deliberately absent
- * from `$fillable` so mass assignment cannot set it.
+ * Two identities, deliberately distinct:
+ *   `reference_key` — the stable public address, unique per collection, derived
+ *                     from source structural position. This is what URLs use.
+ *   `number`        — the displayed scholarly number. MAY repeat within a
+ *                     collection. Never use it to look a hadith up; assuming it
+ *                     was unique cost this project 56 Tirmidhi records once.
  *
  * @property int $id
  * @property int $collection_id
- * @property int $book_id
+ * @property int|null $book_id null for bookless collections
  * @property int|null $chapter_id
- * @property int|null $primary_narrator_id
- * @property string $hadith_number
- * @property int|null $in_book_number
- * @property string|null $volume_number
- * @property int|null $sunnah_urn
- * @property int|null $sunnah_urn_en
- * @property HadithGrade|null $display_grade
- * @property string|null $source_reference
- * @property string|null $source_in_book_reference
- * @property string|null $source_translation_reference
+ * @property string $reference_key
+ * @property string $number
+ * @property Grade|null $grade
+ * @property string|null $raw_grade
+ * @property string|null $text_ar null for the 38 documented Arabic-less records
  * @property bool $is_published
- * @property-read HadithCollection $collection
- * @property-read HadithBook $book
- * @property-read HadithChapter|null $chapter
- * @property-read HadithScholar|null $primaryNarrator
- * @property-read Collection<int, HadithText> $texts
- * @property-read Collection<int, HadithGrading> $gradings
  */
 class Hadith extends Model
 {
-    use HasAuditLog, HasFactory, HasVersions;
+    use HasFactory;
 
-    protected $table = 'hadith_hadiths';
+    protected $table = 'hadiths';
 
-    /**
-     * `display_grade` is excluded on purpose — it is derived, never assigned.
-     *
-     * @var array<string>
-     */
     protected $fillable = [
-        'collection_id',
-        'book_id',
-        'chapter_id',
-        'primary_narrator_id',
-        'hadith_number',
-        'in_book_number',
-        'source_position',
-        'volume_number',
-        'sunnah_urn',
-        'sunnah_urn_en',
+        'collection_id', 'book_id', 'chapter_id', 'reference_key', 'number',
+        'in_book_number', 'sort_order', 'grade', 'raw_grade',
+        'text_ar', 'text_en', 'search_ar', 'search_en', 'narrated_by',
+        'canonical_reference', 'in_book_reference', 'translation_reference',
         'is_published',
-        'source_container_id',
-        'source_reference',
-        'source_in_book_reference',
-        'source_translation_reference',
-        'canonical_url',
-        'source_text_sha256',
-        'source_metadata',
-        'source_unavailable_fields',
     ];
 
-    /** @return array<string, string> */
     protected function casts(): array
     {
         return [
-            'collection_id' => 'integer',
-            'book_id' => 'integer',
-            'chapter_id' => 'integer',
-            'primary_narrator_id' => 'integer',
-            'in_book_number' => 'integer',
-            'source_position' => 'integer',
-            'sunnah_urn' => 'integer',
-            'sunnah_urn_en' => 'integer',
-            'display_grade' => HadithGrade::class,
+            'grade' => Grade::class,
             'is_published' => 'boolean',
-            'source_metadata' => 'array',
-            'source_unavailable_fields' => 'array',
+            'sort_order' => 'integer',
         ];
     }
+
+    // ---------------------------------------------------------------------
+    // Relations
+    // ---------------------------------------------------------------------
 
     public function collection(): BelongsTo
     {
@@ -115,42 +75,75 @@ class Hadith extends Model
         return $this->belongsTo(HadithChapter::class, 'chapter_id');
     }
 
-    public function primaryNarrator(): BelongsTo
+    /** The chain, in source order. */
+    public function narrators(): HasMany
     {
-        return $this->belongsTo(HadithScholar::class, 'primary_narrator_id');
+        return $this->hasMany(HadithNarrator::class, 'hadith_id')->orderBy('position');
     }
 
-    public function texts(): HasMany
+    public function primaryNarrator(): HasMany
     {
-        return $this->hasMany(HadithText::class, 'hadith_id');
+        return $this->hasMany(HadithNarrator::class, 'hadith_id')->where('is_primary', true);
     }
 
-    public function gradings(): HasMany
+    // ---------------------------------------------------------------------
+    // Scopes
+    // ---------------------------------------------------------------------
+
+    /**
+     * Public visibility: the hadith AND every ancestor must be published.
+     *
+     * This is the single place that rule lives. Applying it per-controller is
+     * how it ends up inconsistent between detail, browse, search and random —
+     * which FR-033 exists to prevent.
+     */
+    public function scopePubliclyVisible(Builder $query): Builder
     {
-        return $this->hasMany(HadithGrading::class, 'hadith_id');
+        return $query
+            ->where('hadiths.is_published', true)
+            ->whereHas('collection', fn (Builder $q) => $q->where('is_published', true))
+            ->where(fn (Builder $q) => $q
+                ->whereNull('book_id')
+                ->orWhereHas('book', fn (Builder $b) => $b->where('is_published', true)))
+            ->where(fn (Builder $q) => $q
+                ->whereNull('chapter_id')
+                ->orWhereHas('chapter', fn (Builder $c) => $c->where('is_published', true)));
     }
 
-    public function narrators(): BelongsToMany
+    public function scopeForReference(Builder $query, int $collectionId, string $referenceKey): Builder
     {
-        return $this->belongsToMany(HadithScholar::class, 'hadith_narrators', 'hadith_id', 'scholar_id')
-            ->withPivot(['position', 'display_name_ar', 'source_metadata'])
-            ->withTimestamps()
-            ->orderByPivot('position');
+        return $query->where('collection_id', $collectionId)
+            ->where('reference_key', $referenceKey);
+    }
+
+    // ---------------------------------------------------------------------
+    // Presentation
+    // ---------------------------------------------------------------------
+
+    public function text(?string $locale = null): ?string
+    {
+        return ($locale ?? app()->getLocale()) === 'ar' ? $this->text_ar : $this->text_en;
     }
 
     /**
-     * The body for a locale, falling back to Arabic — which is always present.
+     * The public address. A colon, not a slash: `/hadith/{slug}/{bookNumber}`
+     * already occupies the slash form, so `/hadith/bukhari/12` would be
+     * ambiguous between book 12 and reference key 12.
      */
-    public function textFor(string $locale): ?HadithText
+    public function publicPath(): string
     {
-        return $this->texts->firstWhere('locale', $locale)
-            ?? $this->texts->firstWhere('locale', 'ar');
+        return '/hadith/'.$this->collection->slug.':'.$this->reference_key;
     }
 
     /**
-     * Factories live under Database\Factories\Hadith, which Laravel cannot
-     * derive from this model's namespace.
+     * Publishable only with Arabic text. Mirrors `chk_hadiths_publishable` so
+     * the admin surface reports a validation error instead of a database one.
      */
+    public function isPublishable(): bool
+    {
+        return $this->text_ar !== null && $this->search_ar !== null;
+    }
+
     protected static function newFactory(): HadithFactory
     {
         return HadithFactory::new();

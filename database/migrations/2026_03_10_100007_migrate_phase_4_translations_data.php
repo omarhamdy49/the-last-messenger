@@ -5,11 +5,15 @@ declare(strict_types=1);
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * The `people` -> `person_translations` pass was removed with the Genealogy
+ * module: neither table exists on a fresh build. The remaining three are
+ * unaffected.
+ */
 return new class extends Migration
 {
     public function up(): void
     {
-        $this->migrateTableTranslations('people', 'person_translations', 'person_id', ['name', 'title', 'biography', 'birth_place', 'death_place', 'burial_place', 'occupation', 'notes']);
         $this->migrateTableTranslations('quran_reciters', 'reciter_translations', 'reciter_id', ['name', 'description']);
         $this->migrateTableTranslations('seerah_participants', 'seerah_participant_translations', 'seerah_participant_id', ['name', 'description']);
         $this->migrateTableTranslations('languages', 'language_translations', 'language_id', ['name']);
@@ -17,7 +21,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        DB::table('person_translations')->delete();
         DB::table('reciter_translations')->delete();
         DB::table('seerah_participant_translations')->delete();
         DB::table('language_translations')->delete();

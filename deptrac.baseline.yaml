@@ -25,19 +25,13 @@ deptrac:
       - App\Models\Article
     App\Domain\Blog\Services\SlugGeneratorService:
       - App\Models\ArticleLocale
-    App\Domain\Sahaba\Models\Sahabi:
-      - App\Models\User
-    App\Domain\Genealogy\Models\Person:
-      - App\Models\User
     App\Domain\Seerah\Models\SeerahEvent:
       - App\Models\Article
       - App\Models\User
     App\Domain\Shared\Enums\SearchModule:
-      - App\Domain\Genealogy\Models\Person
-      - App\Domain\Hadith\Models\Hadith
       - App\Domain\Media\Models\MediaProgram
+      - App\Domain\People\Models\Muslim
       - App\Domain\Quran\Models\Verse
-      - App\Domain\Sahaba\Models\Sahabi
       - App\Domain\Seerah\Models\SeerahEvent
       - App\Models\Article
     App\Domain\Shared\Models\AdminLog:
@@ -67,13 +61,10 @@ deptrac:
     App\Domain\Shared\Services\AdminLoggerService:
       - App\Models\User
     App\Domain\Shared\Services\AnalyticsService:
-      - App\Domain\Genealogy\Models\Person
-      - App\Domain\Hadith\Models\Hadith
-      - App\Domain\Hadith\Models\HadithBook
+      - App\Domain\People\Models\Muslim
       - App\Domain\Quran\Models\Reciter
       - App\Domain\Quran\Models\Surah
       - App\Domain\Quran\Models\Verse
-      - App\Domain\Sahaba\Models\Sahabi
       - App\Domain\Seerah\Models\SeerahEvent
       - App\Models\User
     App\Domain\Shared\Services\DashboardService:

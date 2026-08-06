@@ -68,11 +68,8 @@ class SharedServiceProvider extends ServiceProvider
                     adminLogger: $app->make(\App\Domain\Shared\Services\AdminLoggerService::class),
                     handlers: [
                         new \App\Domain\Blog\Services\ArticleBulkHandler,
-                        new \App\Domain\Hadith\Services\HadithBulkHandler,
                         new \App\Domain\Quran\Services\VerseBulkHandler,
-                        new \App\Domain\Sahaba\Services\SahabiBulkHandler,
                         new \App\Domain\Seerah\Services\SeerahEventBulkHandler,
-                        new \App\Domain\Genealogy\Services\GenealogyBulkHandler,
                         new \App\Domain\Media\Services\MediaProgramBulkHandler,
                     ],
                 );

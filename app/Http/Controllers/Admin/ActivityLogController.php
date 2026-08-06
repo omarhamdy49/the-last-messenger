@@ -96,12 +96,11 @@ class ActivityLogController extends Controller
         // Get unique model types for filter
         $modelTypes = [
             'App\Domain\Blog\Models\Article' => 'مقال',
-            'App\Domain\Hadith\Models\Hadith' => 'حديث',
             'App\Domain\Media\Models\MediaProgram' => 'برنامج إعلامي',
             'App\Domain\Seerah\Models\SeerahEvent' => 'حدث سيرة',
-            'App\Domain\Sahaba\Models\Sahabi' => 'صحابي',
+            'App\Domain\People\Models\Muslim' => 'صحابي',
             'App\Domain\Quran\Models\QuranVerse' => 'آية قرآنية',
-            'App\Domain\Genealogy\Models\Person' => 'شخصية',
+            'App\Domain\People\Models\Muslim2' => 'شخصية',
             'App\Models\User' => 'مستخدم',
         ];
 
@@ -191,12 +190,11 @@ class ActivityLogController extends Controller
     {
         $routes = [
             'App\Domain\Blog\Models\Article' => 'admin.articles.show',
-            'App\Domain\Hadith\Models\Hadith' => 'admin.hadith.hadiths.show',
             'App\Domain\Media\Models\MediaProgram' => 'admin.media-programs.show',
             'App\Domain\Seerah\Models\SeerahEvent' => 'admin.seerah-events.show',
-            'App\Domain\Sahaba\Models\Sahabi' => 'admin.sahaba.show',
+            'App\Domain\People\Models\Muslim' => 'admin.muslims.edit',
             'App\Domain\Quran\Models\QuranVerse' => 'admin.quran.show',
-            'App\Domain\Genealogy\Models\Person' => 'admin.genealogy.show',
+            'App\Domain\People\Models\Muslim2' => 'admin.genealogy.show',
             'App\Models\User' => 'admin.users.show',
         ];
 
@@ -218,12 +216,11 @@ class ActivityLogController extends Controller
     {
         $names = [
             'App\Domain\Blog\Models\Article' => 'مقال',
-            'App\Domain\Hadith\Models\Hadith' => 'حديث',
             'App\Domain\Media\Models\MediaProgram' => 'برنامج إعلامي',
             'App\Domain\Seerah\Models\SeerahEvent' => 'حدث سيرة',
-            'App\Domain\Sahaba\Models\Sahabi' => 'صحابي',
+            'App\Domain\People\Models\Muslim' => 'صحابي',
             'App\Domain\Quran\Models\QuranVerse' => 'آية قرآنية',
-            'App\Domain\Genealogy\Models\Person' => 'شخصية',
+            'App\Domain\People\Models\Muslim2' => 'شخصية',
             'App\Models\User' => 'مستخدم',
         ];
 

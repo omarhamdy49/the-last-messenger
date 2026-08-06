@@ -5,8 +5,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Migrate translatable data from JSON columns in seerah_events and sahaba tables
- * into the new seerah_event_translations and sahabi_translations tables.
+ * Migrate translatable data from JSON columns in seerah_events into
+ * seerah_event_translations.
+ *
+ * The sahabi half was removed with the Sahaba module — that table no longer
+ * exists on a fresh build. Seerah is unaffected and still needs this.
  *
  * This migration is idempotent — safe to run multiple times.
  */
@@ -18,7 +21,6 @@ return new class extends Migration
     public function up(): void
     {
         $this->migrateSeerahEventTranslations();
-        $this->migrateSahabiTranslations();
     }
 
     /**
@@ -67,56 +69,6 @@ return new class extends Migration
             });
 
         Log::info('seerah.translation.migration', [
-            'translations_created' => $total,
-        ]);
-    }
-
-    /**
-     * Migrate sahaba JSON columns → sahabi_translations rows.
-     */
-    private function migrateSahabiTranslations(): void
-    {
-        $fields = ['name', 'full_name', 'kunya', 'laqab', 'biography', 'virtues', 'famous_narrations'];
-        $total = 0;
-
-        DB::table('sahaba')
-            ->select(array_merge(['id'], $fields))
-            ->orderBy('id')
-            ->chunk(100, function ($companions) use ($fields, &$total) {
-                foreach ($companions as $companion) {
-                    $locales = $this->extractLocalesFromJsonFields($companion, $fields);
-
-                    foreach ($locales as $locale => $data) {
-                        $hasContent = false;
-                        foreach ($data as $value) {
-                            if (! empty(trim((string) ($value ?? '')))) {
-                                $hasContent = true;
-                                break;
-                            }
-                        }
-
-                        if (! $hasContent) {
-                            continue;
-                        }
-
-                        DB::table('sahabi_translations')->updateOrInsert(
-                            [
-                                'sahabi_id' => $companion->id,
-                                'locale' => $locale,
-                            ],
-                            array_merge($data, [
-                                'is_ready' => ! empty(trim((string) ($data['name'] ?? ''))),
-                                'created_at' => now(),
-                                'updated_at' => now(),
-                            ])
-                        );
-
-                        $total++;
-                    }
-                }
-            });
-
-        Log::info('sahabi.translation.migration', [
             'translations_created' => $total,
         ]);
     }
@@ -175,6 +127,5 @@ return new class extends Migration
         // Data migration reverse: copy back from translation tables to JSON columns
         // This is a safety measure — normally you wouldn't reverse this
         DB::table('seerah_event_translations')->truncate();
-        DB::table('sahabi_translations')->truncate();
     }
 };

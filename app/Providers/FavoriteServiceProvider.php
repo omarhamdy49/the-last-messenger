@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Media\Models\MediaProgram;
 use App\Domain\Quran\Models\Verse;
 use App\Domain\Seerah\Models\SeerahEvent;
@@ -36,7 +35,6 @@ final class FavoriteServiceProvider extends ServiceProvider
             $registry = new FavorableRegistry;
 
             $registry->register(FavorableType::ARTICLE, Article::class, $this->articleMapper());
-            $registry->register(FavorableType::HADITH, Hadith::class, $this->hadithMapper());
             $registry->register(FavorableType::QURAN, Verse::class, $this->quranMapper());
             $registry->register(FavorableType::SEERAH, SeerahEvent::class, $this->seerahMapper());
             $registry->register(FavorableType::MEDIA, MediaProgram::class, $this->mediaMapper());
@@ -53,7 +51,6 @@ final class FavoriteServiceProvider extends ServiceProvider
 
         if ($repository instanceof FavoriteRepository) {
             $repository->eagerLoadFor(Article::class, ['locales']);
-            $repository->eagerLoadFor(Hadith::class, ['texts', 'book', 'collection']);
             $repository->eagerLoadFor(Verse::class, ['translations', 'surah']);
             $repository->eagerLoadFor(SeerahEvent::class, ['translations']);
             $repository->eagerLoadFor(MediaProgram::class, ['translations']);

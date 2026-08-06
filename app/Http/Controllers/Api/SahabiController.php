@@ -4,147 +4,137 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
-use App\Domain\Sahaba\Services\SahabiService;
-use App\Http\Resources\SahabiResource;
-use App\Support\Traits\ApiResponse;
+use App\Domain\People\DTOs\MuslimListFilters;
+use App\Domain\People\Services\GenealogyTreeService;
+use App\Domain\People\Services\MuslimDirectoryService;
+use App\Http\Controllers\Controller;
+use App\Http\Resources\IslamicRoleResource;
+use App\Http\Resources\MuslimResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controller;
 
+/**
+ * Replaces the entire /api/v1/sahaba surface and the narrator profile route.
+ * One person, one profile, many roles.
+ *
+ * Controllers call exactly one service method and hold no Eloquent
+ * (constitution I).
+ */
 class SahabiController extends Controller
 {
-    use ApiResponse;
-
-    /**
-     * SahabiController constructor
-     */
     public function __construct(
-        private readonly SahabiService $sahabiService
+        private readonly MuslimDirectoryService $directory,
+        private readonly GenealogyTreeService $tree,
     ) {}
 
-    /**
-     * Get all companions with pagination
-     */
+    public function roles(): JsonResponse
+    {
+        return $this->ok(IslamicRoleResource::collection($this->directory->roles()));
+    }
+
     public function index(Request $request): JsonResponse
     {
-        $perPage = $request->integer('per_page', 15);
-        $companions = $this->sahabiService->getAllCompanions($perPage);
+        $people = $this->directory->list(MuslimListFilters::fromRequest($request));
 
-        return $this->success(
-            SahabiResource::collection($companions)->response()->getData(true)
-        );
+        return response()->json([
+            'success' => true,
+            'data' => MuslimResource::collection($people->items()),
+            'meta' => [
+                'current_page' => $people->currentPage(),
+                'per_page' => $people->perPage(),
+                'total' => $people->total(),
+                'last_page' => $people->lastPage(),
+            ],
+        ]);
     }
 
-    /**
-     * Get a single companion by slug
-     */
-    public function show(string $slug): JsonResponse
-    {
-        try {
-            $companion = $this->sahabiService->getCompanionBySlug($slug);
-
-            return $this->success(
-                new SahabiResource($companion)
-            );
-        } catch (\Throwable $e) {
-            return $this->notFound($e->getMessage());
-        }
-    }
-
-    /**
-     * Get companions by historical-rank category (badr, ansar, muhajir, ...)
-     */
-    public function byStatus(Request $request, string $status): JsonResponse
-    {
-        $perPage = $request->integer('per_page', 15);
-        $companions = $this->sahabiService->getCompanionsByCategory($status, $perPage);
-
-        return $this->success(
-            SahabiResource::collection($companions)->response()->getData(true)
-        );
-    }
-
-    /**
-     * Get companions by tribe
-     */
-    public function byTribe(Request $request, string $tribe): JsonResponse
-    {
-        $perPage = $request->integer('per_page', 15);
-        $companions = $this->sahabiService->getCompanionsByTribe($tribe, $perPage);
-
-        return $this->success(
-            SahabiResource::collection($companions)->response()->getData(true)
-        );
-    }
-
-    /**
-     * Get companions who participated in a battle
-     */
-    public function byBattle(Request $request, string $battle): JsonResponse
-    {
-        $perPage = $request->integer('per_page', 15);
-        $companions = $this->sahabiService->getCompanionsByBattle($battle, $perPage);
-
-        return $this->success(
-            SahabiResource::collection($companions)->response()->getData(true)
-        );
-    }
-
-    /**
-     * Get featured companions
-     */
-    public function featured(Request $request): JsonResponse
-    {
-        $limit = $request->integer('limit', 10);
-        $companions = $this->sahabiService->getFeaturedCompanions($limit);
-
-        return $this->success(
-            SahabiResource::collection($companions)
-        );
-    }
-
-    /**
-     * Get early Muslims by conversion order
-     */
-    public function earlyMuslims(Request $request): JsonResponse
-    {
-        $limit = $request->integer('limit', 10);
-        $companions = $this->sahabiService->getEarlyMuslims($limit);
-
-        return $this->success(
-            SahabiResource::collection($companions)
-        );
-    }
-
-    /**
-     * Get top hadith narrators
-     */
-    public function topNarrators(Request $request): JsonResponse
-    {
-        $limit = $request->integer('limit', 10);
-        $companions = $this->sahabiService->getTopNarrators($limit);
-
-        return $this->success(
-            SahabiResource::collection($companions)
-        );
-    }
-
-    /**
-     * Search companions
-     */
     public function search(Request $request): JsonResponse
     {
-        $query = $request->input('q', '');
-        $perPage = $request->integer('per_page', 15);
+        $term = trim((string) $request->query('q', ''));
 
-        if (empty($query)) {
-            return $this->error('Search query is required', 400);
+        if (mb_strlen($term) < 2) {
+            return response()->json([
+                'success' => false,
+                'message' => __('sahaba.errors.query_too_short'),
+            ], 422);
         }
 
-        $companions = $this->sahabiService->searchCompanions($query, $perPage);
+        return $this->ok(MuslimResource::collection($this->directory->search($term)));
+    }
 
-        return $this->success(
-            SahabiResource::collection($companions)->response()->getData(true)
-        );
+    public function show(string $slug): JsonResponse
+    {
+        $muslim = $this->directory->profile($slug);
+
+        if ($muslim === null) {
+            // Indistinguishable from "does not exist" on purpose: a distinct
+            // response would leak the existence of unpublished people.
+            return $this->notFound();
+        }
+
+        return $this->ok(new MuslimResource($muslim));
+    }
+
+    public function tree(Request $request, string $slug): JsonResponse
+    {
+        $muslim = $this->directory->profile($slug);
+
+        if ($muslim === null) {
+            return $this->notFound();
+        }
+
+        $requested = (int) $request->query('depth', GenealogyTreeService::MAX_DEPTH);
+        $ancestors = $this->tree->ancestors($muslim, $requested);
+        $descendants = $this->tree->descendants($muslim, $requested);
+
+        return $this->ok([
+            'root' => ['slug' => $muslim->slug, 'name' => $muslim->name()],
+            'ancestors' => $this->visible($ancestors['nodes']),
+            'descendants' => $this->visible($descendants['nodes']),
+            'relations' => $this->tree->relations($muslim, app()->getLocale()),
+            'depth_reached' => max($ancestors['depth_reached'], $descendants['depth_reached']),
+            // Reported, never silently truncated (constitution X).
+            'depth_capped' => $ancestors['depth_capped'] || $descendants['depth_capped'],
+        ]);
+    }
+
+    /**
+     * Publication and hide_from_tree are applied at RENDER, not at selection —
+     * an unpublished person is still a valid ancestor.
+     *
+     * @param  array<int, array<string, mixed>>  $nodes
+     * @return array<int, array<string, mixed>>
+     */
+    private function visible(array $nodes): array
+    {
+        $locale = app()->getLocale();
+
+        return array_values(array_map(
+            static fn (array $n): array => [
+                'slug' => $n['slug'],
+                'name' => $locale === 'ar'
+                    ? ($n['name_ar'] ?? $n['name_en'] ?? '')
+                    : ($n['name_en'] ?? $n['name_ar'] ?? ''),
+                'depth' => (int) $n['depth'],
+                'relation' => $n['relation'] ?? null,
+            ],
+            array_filter(
+                $nodes,
+                static fn (array $n): bool => (bool) $n['is_published'] && ! (bool) $n['hide_from_tree'],
+            ),
+        ));
+    }
+
+    private function ok(mixed $data): JsonResponse
+    {
+        return response()->json(['success' => true, 'data' => $data]);
+    }
+
+    private function notFound(): JsonResponse
+    {
+        return response()->json([
+            'success' => false,
+            'message' => __('sahaba.errors.not_found'),
+        ], 404);
     }
 }

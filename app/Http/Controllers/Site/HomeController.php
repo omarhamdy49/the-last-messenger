@@ -6,11 +6,9 @@ namespace App\Http\Controllers\Site;
 
 use App\Domain\Content\Enums\HomeModuleCardPlacement;
 use App\Domain\Content\Services\HomeContentService;
-use App\Domain\Hadith\Enums\HadithGrade;
-use App\Domain\Hadith\Services\HadithDashboardStatsProvider;
-use App\Domain\Hadith\Services\HadithQueryService;
 use App\Domain\Quran\Services\QuranQueryService;
-use App\Domain\Sahaba\Services\SahabiService;
+use App\Domain\People\DTOs\MuslimListFilters;
+use App\Domain\People\Services\MuslimDirectoryService;
 use App\Domain\Seerah\Services\SeerahEventService;
 use App\Http\Controllers\Controller;
 use App\Repositories\ArticleRepository;
@@ -26,12 +24,10 @@ final class HomeController extends Controller
     private const SURAH_COUNT = 114;
 
     public function __construct(
-        private readonly SahabiService $sahabiService,
+        private readonly MuslimDirectoryService $muslimDirectory,
         private readonly QuranQueryService $quranQueryService,
-        private readonly HadithQueryService $hadithQueryService,
         private readonly HomeContentService $homeContentService,
         private readonly SeerahEventService $seerahEventService,
-        private readonly HadithDashboardStatsProvider $hadithStatsProvider,
         private readonly ArticleRepository $articleRepository,
     ) {}
 
@@ -39,11 +35,16 @@ final class HomeController extends Controller
     {
         $locale = app()->getLocale();
 
-        // Featured sahaba for the carousel — cached 30 min, explicit limit 8
+        // Featured companions for the carousel. A companion is now a `muslims`
+        // row carrying the `sahabi` role, not a separate record.
         $featuredSahaba = Cache::remember(
             "home_featured_sahaba_{$locale}_8",
             1800,
-            fn () => $this->sahabiService->getFeaturedCompanions(8),
+            fn () => $this->muslimDirectory->list(new MuslimListFilters(
+                roleSlug: 'sahabi',
+                featured: true,
+                perPage: 8,
+            ))->items(),
         );
 
         $featuredArticles = Cache::remember(
@@ -70,28 +71,16 @@ final class HomeController extends Controller
             },
         );
 
-        // Daily hadith — random sahih, cached per day
-        $dailyHadith = Cache::remember(
-            "home_daily_hadith_{$locale}_".now()->format('Y-m-d'),
-            86400,
-            function () use ($locale): ?array {
-                try {
-                    return $this->hadithQueryService
-                        ->randomPublished(locale: $locale, grade: HadithGrade::SAHIH)
-                        ?->toArray();
-                } catch (Throwable) {
-                    return null;
-                }
-            },
-        );
+        // The Hadith module is being rebuilt; there is no daily hadith until it
+        // returns. The view already tolerates null.
+        $dailyHadith = null;
 
         // Real derived counts (replaces the previous hardcoded numbers) —
         // each source is a single aggregate query, cached for 1 hour.
         $stats = Cache::remember('home_module_stats', 3600, fn (): array => [
-            'hadiths' => (int) ($this->hadithStatsProvider->getStats()['total'] ?? 0),
             'surahs' => self::SURAH_COUNT,
             'seerah_events' => (int) ($this->seerahEventService->getIndexStats()['total'] ?? 0),
-            'sahaba' => (int) ($this->sahabiService->getIndexStats()['total'] ?? 0),
+            'sahaba' => \App\Domain\People\Models\Muslim::query()->where('is_published', true)->count(),
         ]);
 
         // Module cards + hero quick-filter chips — DB-managed Content domain

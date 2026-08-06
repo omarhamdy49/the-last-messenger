@@ -54,7 +54,6 @@ final class SearchPageTest extends TestCase
             ->assertViewHas('facets', function (array $facets): bool {
                 return ($facets['seerah'] ?? 0) === 1
                     && array_key_exists('quran', $facets)
-                    && array_key_exists('hadith', $facets)
                     && array_key_exists('article', $facets)
                     && array_key_exists('sahaba', $facets);
             });
@@ -64,11 +63,12 @@ final class SearchPageTest extends TestCase
     {
         $this->makeMatchingSeerahEvent('filtered-facets-event');
 
-        // Filter to hadith only — the seerah checkbox must still show its
-        // real count (computed via a COUNT query, not 0).
-        $this->get(route('public.search', ['q' => self::SEARCH_TERM, 'type' => ['hadith']]))
+        // Filter to articles only — the seerah checkbox must still show its
+        // real count (computed via a COUNT query, not 0). This used to filter
+        // on `hadith`, which is no longer a search module.
+        $this->get(route('public.search', ['q' => self::SEARCH_TERM, 'type' => ['article']]))
             ->assertOk()
-            ->assertViewHas('activeTypes', ['hadith'])
+            ->assertViewHas('activeTypes', ['article'])
             ->assertViewHas('facets', fn (array $facets): bool => ($facets['seerah'] ?? 0) === 1)
             ->assertViewHas('results', fn (array $results): bool => $results === []);
     }

@@ -266,13 +266,11 @@ class VersionController extends Controller
     {
         $modelClass = match ($type) {
             'articles' => \App\Domain\Blog\Models\Article::class,
-            'hadith' => \App\Domain\Hadith\Models\Hadith::class,
             'seerah' => \App\Domain\Seerah\Models\SeerahEvent::class,
-            'sahaba' => \App\Domain\Sahaba\Models\Sahabi::class,
+            'muslims' => \App\Domain\People\Models\Muslim::class,
             'media-programs' => \App\Domain\Media\Models\MediaProgram::class,
             'media-episodes' => \App\Domain\Media\Models\MediaEpisode::class,
             'quran-verses' => \App\Domain\Quran\Models\QuranVerse::class,
-            'people' => \App\Domain\Genealogy\Models\Person::class,
             default => throw new \InvalidArgumentException("Invalid model type: {$type}"),
         };
 

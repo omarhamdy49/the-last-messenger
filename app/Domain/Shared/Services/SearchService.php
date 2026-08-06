@@ -400,9 +400,11 @@ class SearchService
         }
 
         $eloquentQuery = $modelClass::query();
-        if ($module !== SearchModule::GENEALOGY) {
-            $this->publicVisibility->apply($eloquentQuery, app()->getLocale());
-        }
+
+        // Public visibility gating applies to every searchable module. The
+        // previous Genealogy exemption is gone with that module: people are now
+        // `muslims` rows and are gated by `is_published` like everything else.
+        $this->publicVisibility->apply($eloquentQuery, app()->getLocale());
 
         // Delegate full-text / LIKE search to the query builder
         $this->queryBuilder->applySearch(

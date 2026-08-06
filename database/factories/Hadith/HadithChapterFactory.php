@@ -11,18 +11,26 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 /**
  * @extends Factory<HadithChapter>
  */
-class HadithChapterFactory extends Factory
+final class HadithChapterFactory extends Factory
 {
     protected $model = HadithChapter::class;
 
     public function definition(): array
     {
+        $n = $this->faker->unique()->numberBetween(1, 100000);
+
         return [
             'book_id' => HadithBook::factory(),
-            'chapter_number' => (string) $this->faker->unique()->numberBetween(1, 9999),
-            'sort_order' => $this->faker->numberBetween(1, 100),
-            'title' => ['ar' => 'باب', 'en' => 'Chapter'],
+            'chapter_number' => (string) $n,
+            'title_ar' => 'باب '.$n,
+            'title_en' => 'Chapter '.$n,
+            'sort_order' => $n,
             'is_published' => true,
         ];
+    }
+
+    public function unpublished(): static
+    {
+        return $this->state(fn (): array => ['is_published' => false]);
     }
 }

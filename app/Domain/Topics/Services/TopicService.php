@@ -69,11 +69,9 @@ final class TopicService
             ->values()
             ->all();
 
-        $hadiths = $this->repository->itemsForTopic($topic->id, TopicItemType::HADITH->value, $locale)
-            ->map(fn (TopicItem $item): ?array => $this->mapHadith($item->itemable, $locale))
-            ->filter()
-            ->values()
-            ->all();
+        // The Hadith module is being rebuilt; topics carry no hadith items
+        // until it returns. The shape is kept so the view needs no change.
+        $hadiths = [];
 
         $articles = $this->repository->itemsForTopic($topic->id, TopicItemType::ARTICLE->value, $locale)
             ->map(fn (TopicItem $item): ?array => $this->mapArticle($item->itemable, $locale))

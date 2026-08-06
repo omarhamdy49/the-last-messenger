@@ -16,7 +16,6 @@ namespace App\Domain\Topics\Enums;
 enum TopicItemType: string
 {
     case VERSE = 'verse';
-    case HADITH = 'hadith';
     case ARTICLE = 'article';
 
     /**

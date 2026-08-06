@@ -5,22 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature\Api;
 
 use App\Domain\Blog\Models\Category;
-use App\Domain\Hadith\Enums\GradeScope;
-use App\Domain\Hadith\Enums\HadithGrade;
-use App\Domain\Hadith\Models\Hadith;
-use App\Domain\Hadith\Models\HadithBook;
-use App\Domain\Hadith\Models\HadithChapter;
-use App\Domain\Hadith\Models\HadithCollection;
-use App\Domain\Hadith\Models\HadithGrading;
-use App\Domain\Hadith\Models\HadithText;
 use App\Domain\Media\Models\MediaEpisode;
+use App\Domain\People\Models\Muslim;
 use App\Domain\Media\Models\MediaEpisodeTranslation;
 use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Models\Verse;
-use App\Domain\Sahaba\Models\Sahabi;
-use App\Domain\Sahaba\Models\SahabiBattle;
-use App\Domain\Sahaba\Models\SahabiCategory;
-use App\Domain\Sahaba\Models\SahabiTranslation;
 use App\Domain\Seerah\Models\SeerahEventType;
 use App\Domain\Shared\Models\SavedFilter;
 use App\Models\Article;
@@ -170,45 +159,6 @@ class ApiRouteSmokeTest extends TestCase
             'description' => ['ar' => 'وصف', 'en' => 'Description'],
         ]);
 
-        $collection = HadithCollection::query()->create([
-            'code' => 'smoke',
-            'name' => ['ar' => 'مجموعة اختبار', 'en' => 'Smoke Collection'],
-            'reference_template' => 'Smoke Collection {hadithNumber}',
-            'is_published' => true,
-        ]);
-        $book = HadithBook::query()->create([
-            'collection_id' => $collection->id,
-            'book_number' => '1',
-            'title' => ['ar' => 'كتاب الاختبار', 'en' => 'Smoke Book'],
-            'is_published' => true,
-        ]);
-        $chapter = HadithChapter::query()->create([
-            'book_id' => $book->id,
-            'chapter_number' => '1',
-            'title' => ['ar' => 'باب الاختبار', 'en' => 'Smoke Chapter'],
-            'is_published' => true,
-        ]);
-        $hadith = Hadith::query()->create([
-            'collection_id' => $collection->id,
-            'book_id' => $book->id,
-            'chapter_id' => $chapter->id,
-            'hadith_number' => '1',
-            'in_book_number' => 1,
-            'sunnah_urn' => 900001,
-            'is_published' => true,
-        ]);
-        HadithText::query()->create([
-            'hadith_id' => $hadith->id,
-            'locale' => 'en',
-            'body' => 'Smoke test narration',
-            'search_body' => 'Smoke test narration',
-        ]);
-        HadithGrading::query()->create([
-            'hadith_id' => $hadith->id,
-            'grade' => HadithGrade::SAHIH,
-            'scope' => GradeScope::HADITH,
-            'raw_grade' => 'Sahih',
-        ]);
 
         $surah = Surah::query()->create([
             'revelation_place' => 'makkah',
@@ -231,39 +181,6 @@ class ApiRouteSmokeTest extends TestCase
             'manzil_number' => 1,
             'sajdah_number' => 1,
             'page_number' => 1,
-        ]);
-
-        $sahabi = Sahabi::query()->create([
-            'slug' => 'route-smoke-sahabi',
-            'gender' => 'male',
-            'person_type' => 'sahabi',
-            'is_sahabi' => true,
-            'is_verified' => true,
-            'father_id' => null,
-            'mother_id' => null,
-            'tribe' => 'Quraysh',
-            'roles' => ['narrator'],
-            'reported_hadith_count' => 1,
-            'views_count' => 0,
-            'is_featured' => true,
-            'importance_rank' => 1,
-        ]);
-        SahabiTranslation::query()->create([
-            'sahabi_id' => $sahabi->id,
-            'locale' => 'en',
-            'name' => 'Smoke Companion',
-            'full_name' => 'Smoke Companion',
-            'biography' => 'Smoke biography',
-            'is_ready' => true,
-        ]);
-        $sahabiCategory = SahabiCategory::query()->firstOrCreate(
-            ['key' => 'badr'],
-            ['rank' => 9]
-        );
-        $sahabi->categories()->syncWithoutDetaching($sahabiCategory);
-        SahabiBattle::query()->create([
-            'sahabi_id' => $sahabi->id,
-            'battle_name' => 'Badr',
         ]);
 
         $eventType = SeerahEventType::query()->firstOrCreate(
@@ -310,32 +227,29 @@ class ApiRouteSmokeTest extends TestCase
             'is_default' => false,
         ]));
 
+        $muslim = Muslim::query()->create([
+            'slug' => 'route-smoke-companion',
+            'name_ar' => 'صحابي اختبار',
+            'name_en' => 'Smoke Companion',
+            'is_published' => true,
+        ]);
+
         $this->routeParameters = [
+            'v1.sahaba.show:slug' => $muslim->slug,
+            'v1.sahaba.tree:slug' => $muslim->slug,
+            'v1.engagement.content:type' => 'Article',
+            'v1.engagement.content:id' => $article->id,
             'v1.articles.show:slug' => $article->slug,
             'v1.categories.show:slug' => $category->slug,
-            'v1.engagement.content:type' => 'Hadith',
-            'v1.engagement.content:id' => $hadith->id,
             'v1.engagement.user:id' => $this->user->id,
-            'v1.filters.preferences.get:module' => 'hadith',
-            'v1.filters.preferences.save:module' => 'hadith',
+            'v1.filters.preferences.get:module' => 'article',
+            'v1.filters.preferences.save:module' => 'article',
             'v1.filters.update:id' => $filters[0]->id,
             'v1.filters.destroy:id' => $filters[1]->id,
             'v1.filters.apply:id' => $filters[2]->id,
             'v1.filters.set-default:id' => $filters[3]->id,
-            'smoke.hadith.id' => $hadith->id,
             // The rebuilt Hadith API addresses collections by `code` and books
             // by their string number, never by id.
-            'v1.hadith.collections.show:code' => $collection->code,
-            'v1.hadith.collections.books:code' => $collection->code,
-            'v1.hadith.books.show:code' => $collection->code,
-            'v1.hadith.books.show:bookNumber' => $book->book_number,
-            'v1.hadith.books.chapters:code' => $collection->code,
-            'v1.hadith.books.chapters:bookNumber' => $book->book_number,
-            'v1.hadith.books.hadiths:code' => $collection->code,
-            'v1.hadith.books.hadiths:bookNumber' => $book->book_number,
-            'v1.hadith.collections.hadith:code' => $collection->code,
-            'v1.hadith.collections.hadith:hadithNumber' => $hadith->hadith_number,
-            'v1.hadith.urn:urn' => $hadith->sunnah_urn,
             'v1.media.programs.by-category:categoryId' => 'seerah',
             'v1.media.programs.show:slug' => $program->slug,
             'v1.media.programs.episodes:slug' => $program->slug,
@@ -348,11 +262,7 @@ class ApiRouteSmokeTest extends TestCase
             'v1.quran.verses:surahNumber' => $surah->revelation_order,
             'v1.quran.verse:surahNumber' => $surah->revelation_order,
             'v1.quran.verse:verseNumber' => 1,
-            'v1.sahaba.by-battle:battle' => 'Badr',
-            'v1.sahaba.by-status:status' => $sahabiCategory->key,
-            'v1.sahaba.by-tribe:tribe' => $sahabi->tribe,
-            'v1.sahaba.show:slug' => $sahabi->slug,
-            'v1.search.module:module' => 'hadith',
+            'v1.search.module:module' => 'article',
             'v1.seerah.by-gregorian-year:year' => $event->gregorian_year,
             'v1.seerah.by-hijri-year:year' => $event->hijri_year,
             'v1.seerah.by-type:type' => $eventType->slug,
@@ -384,14 +294,14 @@ class ApiRouteSmokeTest extends TestCase
                 'per_page' => 1,
             ],
             'v1.filters.preferences.save' => [
-                'default_filters' => ['grading_status' => 'sahih'],
+                'default_filters' => ['status' => 'published'],
                 'default_sort' => 'relevance',
                 'default_order' => 'desc',
                 'default_per_page' => 10,
             ],
             'v1.interactions.store' => [
-                'interactable_type' => 'Hadith',
-                'interactable_id' => $this->routeParameters['smoke.hadith.id'],
+                'interactable_type' => 'Article',
+                'interactable_id' => $this->routeParameters['v1.articles.show:slug'],
                 'interaction_type' => 'view',
             ],
             'v1.media.progress.store' => [

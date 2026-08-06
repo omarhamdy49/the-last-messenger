@@ -10,11 +10,11 @@ final class GenealogyCycleException extends RuntimeException
 {
     public static function selfParent(): self
     {
-        return new self(__('people.errors.self_parent'));
+        return new self(__('sahaba.errors.self_parent'));
     }
 
     public static function ancestorCycle(string $name): self
     {
-        return new self(__('people.errors.ancestor_cycle', ['name' => $name]));
+        return new self(__('sahaba.errors.ancestor_cycle', ['name' => $name]));
     }
 }

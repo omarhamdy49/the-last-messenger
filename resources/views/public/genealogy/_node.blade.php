@@ -14,6 +14,10 @@
     $children   = $node['children'] ?? [];
     $childCount = count($children);
     $isRoot     = ! empty($node['isRoot']) || $depth === 0;
+    // The Prophet ﷺ badge is keyed off an EXPLICIT flag, never off being the
+    // tree root. Any person can now be the root — labelling whoever sits there
+    // as the Prophet is a false claim, not a styling choice.
+    $isProphet  = ! empty($node['isProphet']);
     $nodeId     = (int) $node['id'];
 
     $name = trim((string) ($node['name'] ?? '')) ?: __('genealogy.public.unnamed');
@@ -31,7 +35,7 @@
         default      => 'from-[#218838] to-[#64CCC5]',
     };
 
-    $subtitle = $isRoot
+    $subtitle = $isProphet
         ? __('genealogy.public.prophet_relation')
         : (($node['title'] ?? '') ?: ($node['typeLabel'] ?? ''));
 
@@ -61,7 +65,7 @@
 
         {{-- Role badge: only where it means something (the Prophet ﷺ), rather
              than a generic person glyph repeated on every single card. --}}
-        @if ($isRoot)
+        @if ($isProphet)
             <span class="absolute -top-2.5 start-1/2 -translate-x-1/2 rtl:translate-x-1/2 z-[2]
                          inline-flex items-center gap-1 px-2.5 py-1 rounded-full
                          text-[10px] font-bold text-white shadow-md

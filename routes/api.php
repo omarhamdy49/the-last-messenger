@@ -6,7 +6,6 @@ use App\Http\Controllers\Api\ArticleController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\FilterController;
-use App\Http\Controllers\Api\HadithController;
 use App\Http\Controllers\Api\InteractionController;
 use App\Http\Controllers\Api\MediaProgramController;
 use App\Http\Controllers\Api\QuranController;
@@ -57,37 +56,6 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
         Route::get('/{slug}', [ArticleController::class, 'show'])->name('articles.show');
     });
 
-    /*
-     * Hadith — ten read-only endpoints (contracts/hadith-api.md).
-     *
-     * Static segments are declared before the dynamic ones so `random` can never
-     * be read as a urn and `search` never as a collection code. Search reuses the
-     * SAME `throttle:search` limiter and HadithSearchRequest as the web surface
-     * rather than declaring its own.
-     */
-    Route::prefix('hadith')->name('hadith.')->group(function (): void {
-        Route::get('/search', [HadithController::class, 'search'])
-            ->middleware('throttle:search')->name('search');
-
-        Route::get('/hadiths/random', [HadithController::class, 'random'])->name('random');
-        Route::get('/hadiths/{urn}', [HadithController::class, 'urn'])
-            ->whereNumber('urn')->name('urn');
-
-        Route::get('/collections', [HadithController::class, 'collections'])->name('collections');
-        Route::get('/collections/{code}', [HadithController::class, 'collection'])
-            ->where('code', '[a-z0-9_]+')->name('collections.show');
-        Route::get('/collections/{code}/books', [HadithController::class, 'books'])
-            ->where('code', '[a-z0-9_]+')->name('collections.books');
-        Route::get('/collections/{code}/books/{bookNumber}', [HadithController::class, 'book'])
-            ->where(['code' => '[a-z0-9_]+', 'bookNumber' => '[A-Za-z0-9_-]+'])->name('books.show');
-        Route::get('/collections/{code}/books/{bookNumber}/chapters', [HadithController::class, 'chapters'])
-            ->where(['code' => '[a-z0-9_]+', 'bookNumber' => '[A-Za-z0-9_-]+'])->name('books.chapters');
-        Route::get('/collections/{code}/books/{bookNumber}/hadiths', [HadithController::class, 'bookHadiths'])
-            ->where(['code' => '[a-z0-9_]+', 'bookNumber' => '[A-Za-z0-9_-]+'])->name('books.hadiths');
-        Route::get('/collections/{code}/hadiths/{hadithNumber}', [HadithController::class, 'hadith'])
-            ->where(['code' => '[a-z0-9_]+', 'hadithNumber' => '[A-Za-z0-9._-]+'])->name('collections.hadith');
-    });
-
     // Media/Programs routes — full domain implementation
     Route::prefix('media')->group(function () {
         // Public endpoints
@@ -120,33 +88,19 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
         Route::get('/{slug}', [SeerahEventController::class, 'show'])->name('seerah.show');
     });
 
-    // Muslims — unified person identity. Replaces the /sahaba surface.
-    // Static segments declared before {slug} so `search` and `roles` can never
-    // be read as a slug.
-    Route::prefix('muslims')->group(function (): void {
-        Route::get('/search', [\App\Http\Controllers\Api\MuslimController::class, 'search'])
-            ->middleware('throttle:search')->name('muslims.search');
-        Route::get('/', [\App\Http\Controllers\Api\MuslimController::class, 'index'])->name('muslims.index');
-        Route::get('/{slug}/tree', [\App\Http\Controllers\Api\MuslimController::class, 'tree'])
-            ->where('slug', '[a-z0-9-]+')->name('muslims.tree');
-        Route::get('/{slug}', [\App\Http\Controllers\Api\MuslimController::class, 'show'])
-            ->where('slug', '[a-z0-9-]+')->name('muslims.show');
-    });
-    Route::get('/roles', [\App\Http\Controllers\Api\MuslimController::class, 'roles'])->name('roles.index');
-
-    // Sahaba routes (Companions of the Prophet)
-    Route::prefix('sahaba')->group(function () {
-        // Public routes
+    // Sahaba — public companions API, backed by the internal `muslims` table.
+    // Static segments declared before {slug} so `search` can never be read as
+    // a slug.
+    Route::prefix('sahaba')->group(function (): void {
+        Route::get('/search', [SahabiController::class, 'search'])
+            ->middleware('throttle:search')->name('sahaba.search');
         Route::get('/', [SahabiController::class, 'index'])->name('sahaba.index');
-        Route::get('/featured', [SahabiController::class, 'featured'])->name('sahaba.featured');
-        Route::get('/early-muslims', [SahabiController::class, 'earlyMuslims'])->name('sahaba.early-muslims');
-        Route::get('/top-narrators', [SahabiController::class, 'topNarrators'])->name('sahaba.top-narrators');
-        Route::get('/search', [SahabiController::class, 'search'])->name('sahaba.search');
-        Route::get('/status/{status}', [SahabiController::class, 'byStatus'])->name('sahaba.by-status');
-        Route::get('/tribe/{tribe}', [SahabiController::class, 'byTribe'])->name('sahaba.by-tribe');
-        Route::get('/battle/{battle}', [SahabiController::class, 'byBattle'])->name('sahaba.by-battle');
-        Route::get('/{slug}', [SahabiController::class, 'show'])->name('sahaba.show');
+        Route::get('/{slug}/tree', [SahabiController::class, 'tree'])
+            ->where('slug', '[a-z0-9-]+')->name('sahaba.tree');
+        Route::get('/{slug}', [SahabiController::class, 'show'])
+            ->where('slug', '[a-z0-9-]+')->name('sahaba.show');
     });
+    Route::get('/roles', [SahabiController::class, 'roles'])->name('roles.index');
 
     // Quran routes (Holy Quran - Surahs & Verses)
     Route::prefix('quran')->group(function () {

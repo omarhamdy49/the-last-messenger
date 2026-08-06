@@ -5,13 +5,10 @@ declare(strict_types=1);
 namespace App\Domain\Shared\Services;
 
 use App\Domain\Blog\Models\Article;
-use App\Domain\Genealogy\Models\Person;
-use App\Domain\Hadith\Models\Hadith;
-use App\Domain\Hadith\Models\HadithBook;
 use App\Domain\Quran\Models\Reciter;
 use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Models\Verse;
-use App\Domain\Sahaba\Models\Sahabi;
+use App\Domain\People\Models\Muslim;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Shared\Models\AdminLog;
 use App\Models\User;
@@ -111,14 +108,11 @@ class AnalyticsService
                                 'sahaba' => (int) ($row->sahaba ?? 0),
                             ];
                         })(),
-                        'hadith_books' => [
-                            'total' => $query(HadithBook::class)->count(),
-                        ],
                         'seerah' => [
                             'events' => $query(SeerahEvent::class)->count(),
                         ],
                         'sahaba' => [
-                            'total' => $query(Sahabi::class)->count(),
+                            'total' => $query(Muslim::class)->count(),
                         ],
                         'quran' => [
                             'surahs' => Surah::count(),
@@ -126,7 +120,7 @@ class AnalyticsService
                             'reciters' => $query(Reciter::class)->count(),
                         ],
                         'genealogy' => [
-                            'people' => $query(Person::class)->count(),
+                            'people' => $query(Muslim::class)->count(),
                         ],
                     ],
                 ];
@@ -221,9 +215,6 @@ class AnalyticsService
 
                 // Articles trend
                 $trends['articles'] = $this->getTrendData(Article::class, $startDate, $dateFormat);
-
-                // Hadith trend
-                $trends['hadith'] = $this->getTrendData(Hadith::class, $startDate, $dateFormat);
 
                 // Users trend
                 $trends['users'] = $this->getTrendData(User::class, $startDate, $dateFormat);
@@ -356,16 +347,9 @@ class AnalyticsService
                         'color' => '#0056b3',
                     ],
                     [
-                        'name' => 'Hadith',
-                        'slug' => 'hadith',
-                        'model' => Hadith::class,
-                        'icon' => 'book',
-                        'color' => '#218838',
-                    ],
-                    [
-                        'name' => 'Sahaba',
-                        'slug' => 'sahaba',
-                        'model' => Sahabi::class,
+                        'name' => 'Muslims',
+                        'slug' => 'muslims',
+                        'model' => Muslim::class,
                         'icon' => 'users',
                         'color' => '#3B82F6',
                     ],
@@ -382,13 +366,6 @@ class AnalyticsService
                         'model' => Verse::class,
                         'icon' => 'book-open',
                         'color' => '#10B981',
-                    ],
-                    [
-                        'name' => 'Genealogy',
-                        'slug' => 'genealogy',
-                        'model' => Person::class,
-                        'icon' => 'git-branch',
-                        'color' => '#8B5CF6',
                     ],
                 ];
 
@@ -498,11 +475,9 @@ class AnalyticsService
 
         $models = [
             Article::class,
-            Hadith::class,
             SeerahEvent::class,
-            Sahabi::class,
+            Muslim::class,
             Verse::class,
-            Person::class,
         ];
 
         foreach ($models as $model) {
@@ -590,7 +565,6 @@ class AnalyticsService
     {
         return [
             'articles' => Article::whereBetween('created_at', [$startDate, $endDate])->count(),
-            'hadith' => Hadith::whereBetween('created_at', [$startDate, $endDate])->count(),
             'users' => User::whereBetween('created_at', [$startDate, $endDate])->count(),
             'activity' => AdminLog::whereBetween('created_at', [$startDate, $endDate])->count(),
         ];

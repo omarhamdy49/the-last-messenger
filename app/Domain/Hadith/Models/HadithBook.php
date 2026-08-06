@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Hadith\Models;
 
 use Database\Factories\Hadith\HadithBookFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,19 +13,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Translatable\HasTranslations;
 
 /**
- * `book_number` is a string: the source carries `35b`, `introduction` and
- * `letter`. Real ordering lives in `sort_order`, never in the number.
- *
- * `is_synthetic` marks the hidden placeholder each bookless collection needs —
- * all three forties, not just nawawi40 (research.md §2).
+ * A division of a collection.
  *
  * @property int $id
  * @property int $collection_id
- * @property string $book_number
- * @property int $sort_order
- * @property string|null $first_hadith_number
- * @property string|null $last_hadith_number
- * @property bool $is_synthetic
+ * @property string $book_number string, not int — '35b', 'introduction', 'letter'
  * @property bool $is_published
  */
 class HadithBook extends Model
@@ -33,36 +26,19 @@ class HadithBook extends Model
 
     protected $table = 'hadith_books';
 
-    /** @var array<string> */
-    public array $translatable = ['title', 'intro'];
-
-    /** @var array<string> */
     protected $fillable = [
-        'collection_id',
-        'book_number',
-        'sort_order',
-        'title',
-        'intro',
-        'first_hadith_number',
-        'last_hadith_number',
-        'is_synthetic',
-        'is_published',
-        'source_url',
-        'source_status',
-        'source_error',
-        'source_metadata',
+        'collection_id', 'book_number', 'title_ar', 'title_en', 'intro',
+        'first_hadith_number', 'last_hadith_number', 'sort_order', 'is_published',
     ];
 
-    /** @return array<string, string> */
+    /** {ar,en} only (Decision D). */
+    public array $translatable = ['intro'];
+
     protected function casts(): array
     {
         return [
-            'collection_id' => 'integer',
-            'sort_order' => 'integer',
-            'is_synthetic' => 'boolean',
             'is_published' => 'boolean',
-            'source_metadata' => 'array',
-            'source_status' => 'integer',
+            'sort_order' => 'integer',
         ];
     }
 
@@ -81,10 +57,19 @@ class HadithBook extends Model
         return $this->hasMany(Hadith::class, 'book_id');
     }
 
-    /**
-     * Factories live under Database\Factories\Hadith, which Laravel cannot
-     * derive from this model's namespace.
-     */
+    public function scopePublished(Builder $query): Builder
+    {
+        return $query->where('is_published', true);
+    }
+
+    /** English titles are optional in the sources; fall back rather than render blank. */
+    public function title(?string $locale = null): string
+    {
+        return ($locale ?? app()->getLocale()) === 'ar'
+            ? $this->title_ar
+            : ($this->title_en ?? $this->title_ar);
+    }
+
     protected static function newFactory(): HadithBookFactory
     {
         return HadithBookFactory::new();

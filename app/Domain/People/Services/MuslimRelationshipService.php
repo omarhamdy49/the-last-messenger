@@ -28,7 +28,7 @@ final class MuslimRelationshipService
         bool $hideFromTree = false,
     ): MuslimRelationship {
         if ($muslimId === $relatedMuslimId) {
-            throw new ModelNotFoundException(__('people.errors.self_relationship'));
+            throw new ModelNotFoundException(__('sahaba.errors.self_relationship'));
         }
 
         [$near, $far] = $this->orderPair($muslimId, $relatedMuslimId, $type);

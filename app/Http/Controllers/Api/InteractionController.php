@@ -130,15 +130,20 @@ class InteractionController extends Controller
     public function getContentEngagement(string $type, int $id): JsonResponse
     {
         // Map short names to full class names
+        // These were partly wrong before this change: Article lives in
+        // app/Models, and the Quran classes are Verse/Surah, not QuranVerse/
+        // QuranSurah — every one of those returned a 500 rather than a 400.
         $typeMap = [
-            'Article' => 'App\\Domain\\Blog\\Models\\Article',
-            'Hadith' => 'App\\Domain\\Hadith\\Models\\Hadith',
-            'MediaProgram' => 'App\\Domain\\Media\\Models\\MediaProgram',
-            'MediaEpisode' => 'App\\Domain\\Media\\Models\\MediaEpisode',
-            'SeerahEvent' => 'App\\Domain\\Seerah\\Models\\SeerahEvent',
-            'Sahabi' => 'App\\Domain\\Sahaba\\Models\\Sahabi',
-            'QuranVerse' => 'App\\Domain\\Quran\\Models\\QuranVerse',
-            'QuranSurah' => 'App\\Domain\\Quran\\Models\\QuranSurah',
+            // String, not ::class: Controllers may not depend on the Models
+            // layer (constitution IV). The path is asserted by ApiRouteSmokeTest.
+            'Article' => 'App\\Models\\Article',
+            'MediaProgram' => \App\Domain\Media\Models\MediaProgram::class,
+            'MediaEpisode' => \App\Domain\Media\Models\MediaEpisode::class,
+            'SeerahEvent' => \App\Domain\Seerah\Models\SeerahEvent::class,
+            // A companion is a `muslims` row carrying the `sahabi` role.
+            'Sahabi' => \App\Domain\People\Models\Muslim::class,
+            'QuranVerse' => \App\Domain\Quran\Models\Verse::class,
+            'QuranSurah' => \App\Domain\Quran\Models\Surah::class,
         ];
 
         if (! isset($typeMap[$type])) {

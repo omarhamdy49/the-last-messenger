@@ -12,12 +12,10 @@ enum SearchModule: string
 {
     case ALL = 'all';
     case ARTICLE = 'article';
-    case HADITH = 'hadith';
     case MEDIA = 'media';
     case SEERAH = 'seerah';
     case SAHABA = 'sahaba';
     case QURAN = 'quran';
-    case GENEALOGY = 'genealogy';
 
     /**
      * Get module label
@@ -27,12 +25,10 @@ enum SearchModule: string
         return match ($this) {
             self::ALL => 'All Content',
             self::ARTICLE => 'Articles',
-            self::HADITH => 'Hadith',
             self::MEDIA => 'Media Programs',
             self::SEERAH => 'Seerah Events',
-            self::SAHABA => 'Companions',
+            self::SAHABA => 'Muslims',
             self::QURAN => 'Quran',
-            self::GENEALOGY => 'Genealogy',
         };
     }
 
@@ -48,12 +44,10 @@ enum SearchModule: string
         // are resolved via a relationship existence query by SearchQueryBuilder.
         return match ($this) {
             self::ARTICLE => ['locales.title', 'locales.excerpt', 'locales.content'],
-            self::HADITH => ['texts.body'],
             self::MEDIA => ['translations.title', 'translations.description'],
             self::SEERAH => ['translations.title', 'translations.description', 'location'],
-            self::SAHABA => ['translations.name', 'translations.full_name', 'translations.kunya'],
+            self::SAHABA => ['name_ar', 'name_en'],
             self::QURAN => ['translations.text', 'translations.text_notashkeel'],
-            self::GENEALOGY => ['translations.full_name', 'translations.name', 'translations.biography'],
             self::ALL => [],
         };
     }
@@ -73,9 +67,6 @@ enum SearchModule: string
                 'published_at' => FilterType::DATE_RANGE,
                 'created_at' => FilterType::DATE_RANGE,
             ],
-            self::HADITH => [
-                'chapter_id' => FilterType::SELECT,
-            ],
             self::MEDIA => [
                 // Real media_programs columns (category is an enum string, not a FK).
                 'category' => FilterType::SELECT,
@@ -89,18 +80,13 @@ enum SearchModule: string
                 'gregorian_date' => FilterType::DATE_RANGE,
             ],
             self::SAHABA => [
-                'status' => FilterType::SELECT,
-                'tribe' => FilterType::SELECT,
+                // `status` and `tribe` were dropped with the Sahaba module.
                 'gender' => FilterType::SELECT,
             ],
             self::QURAN => [
                 'surah_id' => FilterType::SELECT,
                 'juz_number' => FilterType::SELECT,
                 'revelation_type' => FilterType::SELECT,
-            ],
-            self::GENEALOGY => [
-                'gender' => FilterType::SELECT,
-                'birth_date' => FilterType::DATE_RANGE,
             ],
             self::ALL => [],
         };
@@ -113,12 +99,10 @@ enum SearchModule: string
     {
         return match ($this) {
             self::ARTICLE => \App\Models\Article::class,
-            self::HADITH => \App\Domain\Hadith\Models\Hadith::class,
             self::MEDIA => \App\Domain\Media\Models\MediaProgram::class,
             self::SEERAH => \App\Domain\Seerah\Models\SeerahEvent::class,
-            self::SAHABA => \App\Domain\Sahaba\Models\Sahabi::class,
+            self::SAHABA => \App\Domain\People\Models\Muslim::class,
             self::QURAN => \App\Domain\Quran\Models\Verse::class,
-            self::GENEALOGY => \App\Domain\Genealogy\Models\Person::class,
             self::ALL => null,
         };
     }

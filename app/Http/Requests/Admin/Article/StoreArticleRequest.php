@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin\Article;
 
+use App\Domain\Blog\Enums\ArticleStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -72,7 +73,7 @@ class StoreArticleRequest extends FormRequest
         // Publishing
         // Without a status rule, validated() drops the field and articles are always
         // created as drafts regardless of the form's status select.
-        $rules['status'] = ['nullable', \Illuminate\Validation\Rule::in(\App\Domain\Blog\Enums\ArticleStatus::values())];
+        $rules['status'] = ['nullable', Rule::in(ArticleStatus::values())];
         $rules['scheduled_at'] = ['nullable', 'date', 'required_if:status,scheduled'];
         $rules['is_featured'] = 'nullable|boolean';
         $rules['is_pinned'] = 'nullable|boolean';

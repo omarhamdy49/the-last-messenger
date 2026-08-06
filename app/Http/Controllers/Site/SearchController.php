@@ -18,7 +18,9 @@ final class SearchController extends Controller
      *
      * @var array<int, string>
      */
-    private const PUBLIC_MODULES = ['quran', 'hadith', 'article', 'seerah', 'sahaba'];
+    // `hadith` is absent while the module is rebuilt; `sahaba` now resolves
+    // to the `muslims` identity table.
+    private const PUBLIC_MODULES = ['quran', 'article', 'seerah', 'sahaba'];
 
     private const PER_PAGE = 12;
 

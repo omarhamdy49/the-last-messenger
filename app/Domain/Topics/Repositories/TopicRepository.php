@@ -41,11 +41,6 @@ class TopicRepository implements TopicRepositoryInterface
                 'surah:id,name_ar,name_en,revelation_order',
                 'translations:id,verse_id,lang,text',
             ],
-            TopicItemType::HADITH->value => [
-                'book:id,collection_id,title_ar,title_en',
-                'book.collection:id,name_ar,name_en',
-                'translations:id,hadith_id,language_code,text,is_primary',
-            ],
             TopicItemType::ARTICLE->value => [
                 'category:id,slug,icon,color',
                 'category.translations:id,category_id,locale,name',
@@ -62,11 +57,6 @@ class TopicRepository implements TopicRepositoryInterface
                 'items as verses_count' => fn (Builder $query) => $this->visibleItems(
                     $query->where('itemable_type', TopicItemType::VERSE->value),
                     [TopicItemType::VERSE->value],
-                    $locale,
-                ),
-                'items as hadiths_count' => fn (Builder $query) => $this->visibleItems(
-                    $query->where('itemable_type', TopicItemType::HADITH->value),
-                    [TopicItemType::HADITH->value],
                     $locale,
                 ),
                 'items as articles_count' => fn (Builder $query) => $this->visibleItems(

@@ -421,8 +421,14 @@ class InteractionService extends BaseService
     /**
      * Format seconds into human-readable time
      */
-    protected function formatSeconds(int $seconds): string
+    /**
+     * Nullable: a user with no recorded sessions has NULL aggregates, not 0.
+     * Previously this fataled with a TypeError on the first such user.
+     */
+    protected function formatSeconds(?int $seconds): string
     {
+        $seconds ??= 0;
+
         if ($seconds < 60) {
             return "{$seconds}s";
         }

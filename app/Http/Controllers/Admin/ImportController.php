@@ -9,7 +9,6 @@ use App\Domain\Quran\Importers\QuranSurahImporter;
 use App\Domain\Quran\Importers\QuranVerseImporter;
 use App\Domain\Quran\Importers\ReciterImporter;
 use App\Domain\Quran\Importers\TafseerImporter;
-use App\Domain\Sahaba\Importers\SahabiImporter;
 use App\Domain\Seerah\Importers\SeerahEventImporter;
 use App\Domain\Shared\Models\Import;
 use App\Domain\Shared\Repositories\ImportRepositoryInterface;
@@ -392,7 +391,6 @@ class ImportController extends Controller
         return match ($import->module) {
             'articles' => new ArticleImporter($import),
             'seerah_events' => new SeerahEventImporter($import),
-            'sahaba' => new SahabiImporter($import),
             'quran_surahs' => new QuranSurahImporter($import),
             'quran_verses' => new QuranVerseImporter($import),
             'reciters' => new ReciterImporter($import),

@@ -331,7 +331,7 @@ selection uses; do not drop it without an `EXPLAIN` proving the composite serves
 
 | Column | Type | Notes |
 |--------|------|-------|
-| `hadith_id` | BIGINT UNSIGNED | FK → `hadiths` CASCADE |
+| `hadith_id` | BIGINT UNSIGNED | FK → `hadiths` **RESTRICT** — see below |
 | `narrator_id` | BIGINT UNSIGNED | FK → `muslims` RESTRICT |
 | `position` | **UNSIGNED SMALLINT** | not TINYINT — the current pivot needs the width |
 | `is_primary` | TINYINT(1) NOT NULL DEFAULT 0 | was `primary` (reserved) |
@@ -347,6 +347,13 @@ primary_hadith_id BIGINT UNSIGNED
     GENERATED ALWAYS AS (CASE WHEN is_primary = 1 THEN hadith_id ELSE NULL END) STORED,
 UNIQUE KEY uq_hadith_narrators_one_primary (primary_hadith_id)
 ```
+
+**The FK is RESTRICT, not CASCADE, and it has to be.** MySQL refuses a STORED
+generated column derived from a column carrying `ON DELETE CASCADE`, so the
+cascade and the single-primary guarantee cannot coexist. The guarantee wins:
+deleting a hadith deletes its chain rows first, inside the same repository
+transaction. Verified against MySQL 8 — attempting both yields
+`SQLSTATE[HY000] 1215 Cannot add foreign key constraint`.
 
 The generated column enforces one primary narrator per hadith: a UNIQUE index permits multiple NULLs
 in MySQL, so non-primary rows never collide while two primaries on one hadith do. The domain service

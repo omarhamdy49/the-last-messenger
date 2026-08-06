@@ -4,310 +4,229 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Site;
 
-use App\Domain\Sahaba\Enums\CompanionStatus;
-use App\Domain\Sahaba\Models\Sahabi;
-use App\Domain\Sahaba\Services\SahabiService;
+use App\Domain\People\DTOs\MuslimListFilters;
+use App\Domain\People\Models\Muslim;
+use App\Domain\People\Repositories\MuslimRepositoryInterface;
+use App\Domain\People\Services\GenealogyTreeService;
 use App\Http\Controllers\Controller;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Throwable;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
+/**
+ * The public companions surface.
+ *
+ * `muslims` is the internal identity table — a companion is a row in it
+ * carrying the `sahabi` role. The URLs, views and view-data contract are the
+ * ones that existed before this rebuild; only the source of the data changed,
+ * so `resources/views/public/sahaba/*` is used unmodified.
+ *
+ * Fields the old `sahaba` table carried and `muslims` does not (tribe, clan,
+ * conversion order, battles, categories, media gallery) resolve to null or an
+ * empty array. Every view already guards those sections, so they simply do not
+ * render — see Owner Decisions 2, 4 and 6.
+ */
 final class SahabaController extends Controller
 {
+    private const PER_PAGE_OPTIONS = [20, 40, 60];
+
     public function __construct(
-        private readonly SahabiService $sahabiService,
+        private readonly MuslimRepositoryInterface $muslims,
+        private readonly GenealogyTreeService $tree,
     ) {}
 
-    /**
-     * Companions listing — hero + stats, search, status/featured filter pills,
-     * grid of sahaba cards, pagination.
-     */
     public function index(Request $request): View
     {
         $locale = app()->getLocale();
 
         $perPage = (int) $request->query('per_page', 20);
-        $perPage = in_array($perPage, [20, 40, 60], true) ? $perPage : 20;
-        $page = max(1, (int) $request->query('page', 1));
+        $perPage = in_array($perPage, self::PER_PAGE_OPTIONS, true) ? $perPage : 20;
 
-        $search = trim((string) $request->query('q', ''));
-        $search = mb_substr($search, 0, 100);
-
+        $search = mb_substr(trim((string) $request->query('q', '')), 0, 100);
         $filter = (string) $request->query('filter', 'all');
-        $allowedFilters = ['all', 'featured', CompanionStatus::ANSAR->value, CompanionStatus::MUHAJIR->value];
-        $filter = in_array($filter, $allowedFilters, true) ? $filter : 'all';
+        $filter = in_array($filter, ['all', 'featured'], true) ? $filter : 'all';
 
-        // Aggregate stats — cached, single query inside the service.
+        $paginator = $this->muslims->paginate(new MuslimListFilters(
+            roleSlug: 'sahabi',
+            featured: $filter === 'featured' ? true : null,
+            search: $search !== '' ? $search : null,
+            perPage: $perPage,
+        ));
+
         $stats = Cache::remember(
             "public_sahaba_stats_{$locale}",
             1800,
             fn (): array => $this->resolveStats(),
         );
 
-        // The companion paginator. Search bypasses the cache (highly variable
-        // input); the cheap filtered/all listings are cached per page+locale.
-        $paginator = $this->resolvePaginator($search, $filter, $perPage);
-
-        $companions = $paginator->getCollection();
-
-        // Filter pills with live counts derived from cached stats.
-        $filterPills = $this->buildFilterPills($filter, $stats, $request);
-
         return view('public.sahaba.index', [
-            'companions' => $companions,
+            'companions' => $paginator->getCollection(),
             'paginator' => $paginator,
             'stats' => $stats,
-            'filterPills' => $filterPills,
+            'filterPills' => $this->buildFilterPills($filter, $stats, $request),
             'activeFilter' => $filter,
             'search' => $search,
             'perPage' => $perPage,
-            'currentPage' => $page,
+            'currentPage' => $paginator->currentPage(),
         ]);
     }
 
-    /**
-     * Single companion profile — story/virtues/martyrdom/timeline/related,
-     * matching the sahabaah-single prototype.
-     */
     public function show(string $slug): View
     {
+        $muslim = $this->muslims->findBySlug($slug);
+
+        if ($muslim === null) {
+            // Indistinguishable from "does not exist": a different response
+            // would leak the existence of unpublished people.
+            throw new NotFoundHttpException;
+        }
+
         $locale = app()->getLocale();
 
-        try {
-            $sahabi = $this->sahabiService->getCompanionBySlug($slug);
-        } catch (Throwable) {
-            abort(404);
-        }
-
-        $sahabi->loadMissing([
-            'translations',
-            'battles',
-            'timelineItems.translations',
-            'categories',
-        ]);
-
-        $profile = $this->mapProfile($sahabi, $locale);
-
-        // Related companions — featured set excluding the current one.
-        $related = Cache::remember(
-            "public_sahaba_related_{$locale}_{$sahabi->id}",
-            1800,
-            fn (): array => $this->resolveRelated($sahabi),
-        );
-
         return view('public.sahaba.show', [
-            'sahabi' => $sahabi,
-            'profile' => $profile,
-            'related' => $related,
+            'sahabi' => $muslim,
+            'profile' => $this->mapProfile($muslim, $locale),
+            'related' => $this->resolveRelated($muslim),
         ]);
     }
 
     /**
-     * Resolve the paginator for the current search/filter combination.
+     * The family tree, rooted at this person. Uses the existing genealogy view.
      */
-    private function resolvePaginator(string $search, string $filter, int $perPage): \Illuminate\Pagination\LengthAwarePaginator
+    public function tree(string $slug): RedirectResponse
     {
-        try {
-            if ($search !== '') {
-                return $this->sahabiService->searchCompanions($search, $perPage);
-            }
+        $muslim = $this->muslims->findBySlug($slug);
 
-            if ($filter === 'featured') {
-                // Featured returns a Collection; wrap it in a paginator for a
-                // consistent view contract.
-                $featured = $this->sahabiService->getFeaturedCompanions(48);
-
-                return $this->paginateCollection($featured, $perPage);
-            }
-
-            if (in_array($filter, [CompanionStatus::ANSAR->value, CompanionStatus::MUHAJIR->value], true)) {
-                return $this->sahabiService->getCompanionsByCategory($filter, $perPage);
-            }
-
-            return $this->sahabiService->getAllCompanions($perPage);
-        } catch (Throwable $e) {
-            report($e);
-
-            return $this->paginateCollection(collect(), $perPage);
+        if ($muslim === null) {
+            throw new NotFoundHttpException;
         }
+
+        // Reuse the genealogy explorer, rooted at this person.
+        return redirect()->route('public.genealogy', ['root' => $muslim->slug]);
     }
 
     /**
-     * Wrap a collection in a LengthAwarePaginator using the current page.
-     */
-    private function paginateCollection(\Illuminate\Support\Collection|\Illuminate\Database\Eloquent\Collection $items, int $perPage): \Illuminate\Pagination\LengthAwarePaginator
-    {
-        $page = \Illuminate\Pagination\Paginator::resolveCurrentPage();
-        $total = $items->count();
-        $slice = $items->slice(($page - 1) * $perPage, $perPage)->values();
-
-        return new \Illuminate\Pagination\LengthAwarePaginator(
-            $slice,
-            $total,
-            $perPage,
-            $page,
-            ['path' => \Illuminate\Pagination\Paginator::resolveCurrentPath()],
-        );
-    }
-
-    /**
-     * Build the status filter pills with counts and query-preserving URLs.
+     * The `$profile` array the existing show view consumes. Keys with no source
+     * column in the new schema are returned as null / empty so the view's own
+     * guards omit those blocks.
      *
+     * @return array<string, mixed>
+     */
+    private function mapProfile(Muslim $muslim, string $locale): array
+    {
+        $muslim->loadMissing('roles');
+
+        return [
+            'name' => $muslim->name($locale),
+            'fullName' => $muslim->name($locale),
+            'kunya' => $muslim->getTranslation('kunya', $locale) ?: null,
+            'biography' => $muslim->getTranslation('bio', $locale) ?: null,
+            'birthPlace' => $muslim->getTranslation('birth_place', $locale) ?: null,
+            'isFemale' => $muslim->gender?->value === 'female',
+            'birthDateHijri' => $muslim->birth_date_hijri,
+            'deathDateHijri' => $muslim->death_date_hijri,
+            'hadithCount' => 0,
+            'roles' => $muslim->roles->map(fn ($role): string => $role->name($locale))->all(),
+            'statusLabel' => $muslim->roles->first()?->name($locale),
+
+            // Retired with the Sahaba module (Owner Decisions 2, 4, 6).
+            'laqab' => null,
+            'virtues' => null,
+            'famousNarrations' => null,
+            'martyrdom' => null,
+            'categories' => [],
+            'tribe' => null,
+            'clan' => null,
+            'deathPlace' => null,
+            'burialPlace' => null,
+            'conversionDateHijri' => null,
+            'conversionOrder' => null,
+            'ageAtDeath' => null,
+            'battles' => [],
+            'battlesCount' => 0,
+            'timeline' => [],
+            'article' => null,
+
+            // Presentation-only keys the view expects.
+            'title' => $muslim->name($locale),
+            'description' => $muslim->getTranslation('bio', $locale) ?: null,
+            'hijriDate' => $muslim->death_date_hijri,
+            'hijriYear' => $muslim->death_year_hijri,
+            'color' => 'from-[#6f42c1] to-[#5a32a3]',
+        ];
+    }
+
+    /**
+     * Featured companions other than this one.
+     *
+     * @return array<int, Muslim>
+     */
+    private function resolveRelated(Muslim $muslim): array
+    {
+        return $this->muslims->paginate(new MuslimListFilters(
+            roleSlug: 'sahabi',
+            featured: true,
+            perPage: 5,
+        ))->getCollection()
+            ->reject(fn (Muslim $m): bool => $m->id === $muslim->id)
+            ->take(4)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array{total:int,male:int,female:int,featured:int,ansar:int,muhajir:int}
+     */
+    private function resolveStats(): array
+    {
+        $base = Muslim::query()->published()->withRole('sahabi');
+
+        return [
+            'total' => (clone $base)->count(),
+            'male' => (clone $base)->where('gender', 'male')->count(),
+            'female' => (clone $base)->where('gender', 'female')->count(),
+            'featured' => Muslim::query()->published()
+                ->whereHas('roles', fn ($q) => $q->where('islamic_roles.slug', 'sahabi')
+                    ->where('muslims_roles.is_featured', true))
+                ->count(),
+            // Ansar/Muhajir were companion categories, retired with them.
+            'ansar' => 0,
+            'muhajir' => 0,
+        ];
+    }
+
+    /**
      * @param  array{total:int,male:int,female:int,featured:int,ansar:int,muhajir:int}  $stats
      * @return array<int, array<string, mixed>>
      */
     private function buildFilterPills(string $active, array $stats, Request $request): array
     {
         $base = $request->except(['filter', 'page']);
-
         $make = fn (string $value): string => $request->fullUrlWithQuery(
             array_merge($base, ['filter' => $value, 'page' => 1]),
         );
 
+        // Only `all` and `featured` survive: the Ansar/Muhajir pills were driven
+        // by companion categories, which are retired.
         return [
-            [
-                'value' => 'all',
-                'label' => __('sahaba.filter_all'),
-                'icon' => 'users',
-                'count' => $stats['total'],
-                'url' => $make('all'),
-            ],
-            [
-                'value' => 'featured',
-                'label' => __('sahaba.filter_featured'),
-                'icon' => 'star',
-                'count' => $stats['featured'],
-                'url' => $make('featured'),
-            ],
-            [
-                'value' => CompanionStatus::ANSAR->value,
-                'label' => __('sahaba.filter_ansar'),
-                'icon' => 'shield',
-                'count' => $stats['ansar'],
-                'url' => $make(CompanionStatus::ANSAR->value),
-            ],
-            [
-                'value' => CompanionStatus::MUHAJIR->value,
-                'label' => __('sahaba.filter_muhajir'),
-                'icon' => 'route',
-                'count' => $stats['muhajir'],
-                'url' => $make(CompanionStatus::MUHAJIR->value),
-            ],
+            ['value' => 'all', 'label' => __('sahaba.filter_all'), 'icon' => 'users',
+                'count' => $stats['total'], 'url' => $make('all')],
+            ['value' => 'featured', 'label' => __('sahaba.filter_featured'), 'icon' => 'star',
+                'count' => $stats['featured'], 'url' => $make('featured')],
         ];
     }
 
     /**
-     * Resolve aggregate stats for the hero + filter counts.
-     *
-     * @return array{total:int,male:int,female:int,featured:int,ansar:int,muhajir:int}
-     */
-    private function resolveStats(): array
-    {
-        try {
-            $base = $this->sahabiService->getPublicIndexStats();
-
-            return [
-                'total' => $base['total'] ?? 0,
-                'male' => $base['male'] ?? 0,
-                'female' => $base['female'] ?? 0,
-                'featured' => $this->sahabiService->getFeaturedCompanions(48)->count(),
-                'ansar' => $this->sahabiService->getCompanionsByCategory(CompanionStatus::ANSAR, 1)->total(),
-                'muhajir' => $this->sahabiService->getCompanionsByCategory(CompanionStatus::MUHAJIR, 1)->total(),
-            ];
-        } catch (Throwable $e) {
-            report($e);
-
-            return ['total' => 0, 'male' => 0, 'female' => 0, 'featured' => 0, 'ansar' => 0, 'muhajir' => 0];
-        }
-    }
-
-    /**
-     * Resolve a small set of related companions for the single page.
-     *
+     * @param  array<int, array<string, mixed>>  $nodes
      * @return array<int, array<string, mixed>>
      */
-    private function resolveRelated(Sahabi $current): array
+    private function visible(array $nodes): array
     {
-        try {
-            return $this->sahabiService->getFeaturedCompanions(8)
-                ->reject(fn (Sahabi $s) => $s->id === $current->id)
-                ->take(4)
-                ->map(fn (Sahabi $s) => [
-                    'slug' => $s->slug,
-                    'name' => $s->getTranslation('name', app()->getLocale()) ?: $s->getTranslation('name', 'ar'),
-                    'laqab' => $s->getTranslation('laqab', app()->getLocale()) ?: $s->getTranslation('laqab', 'ar'),
-                    'isFemale' => $s->gender === 'female',
-                ])
-                ->values()
-                ->all();
-        } catch (Throwable) {
-            return [];
-        }
-    }
-
-    /**
-     * Map a companion model into the plain array the profile view consumes.
-     *
-     * @return array<string, mixed>
-     */
-    private function mapProfile(Sahabi $sahabi, string $locale): array
-    {
-        $tr = fn (string $field): ?string => $sahabi->getTranslation($field, $locale)
-            ?: $sahabi->getTranslation($field, 'ar');
-
-        // A Sahabi can hold several historical-rank categories at once (e.g. a
-        // Muhajir who also fought at Badr) — join every label rather than
-        // picking just one, since the old single-value `status` column could
-        // only ever show one even when several applied.
-        $categoryLabels = $sahabi->categories
-            ->sortByDesc('rank')
-            ->map(fn ($category) => CompanionStatus::tryFrom($category->key))
-            ->filter()
-            ->map(fn (CompanionStatus $category) => $locale === 'ar' ? $category->labelArabic() : $category->label())
-            ->values()
-            ->all();
-
-        $battles = $sahabi->battles->pluck('battle_name')->filter()->values()->all();
-
-        $timeline = $sahabi->timelineItems
-            ->map(fn ($item) => [
-                'title' => $item->getTranslation('title', $locale) ?: $item->getTranslation('title', 'ar'),
-                'description' => $item->getTranslation('description', $locale) ?: $item->getTranslation('description', 'ar'),
-                'hijriDate' => $item->hijri_date,
-                'hijriYear' => $item->hijri_year,
-                'color' => $item->color ?: 'sky',
-            ])
-            ->all();
-
-        return [
-            'name' => $tr('name'),
-            'fullName' => $tr('full_name'),
-            'kunya' => $tr('kunya'),
-            'laqab' => $tr('laqab'),
-            'biography' => $tr('biography'),
-            'virtues' => $tr('virtues'),
-            'famousNarrations' => $tr('famous_narrations'),
-            'martyrdom' => $tr('martyrdom'),
-            'isFemale' => $sahabi->gender === 'female',
-            'statusLabel' => $categoryLabels !== [] ? implode('، ', $categoryLabels) : null,
-            'categories' => $categoryLabels,
-            'tribe' => $sahabi->tribe,
-            'clan' => $sahabi->clan,
-            'birthPlace' => $sahabi->birth_place,
-            'deathPlace' => $sahabi->death_place,
-            'burialPlace' => $sahabi->burial_place,
-            'birthDateHijri' => $sahabi->birth_date_hijri,
-            'deathDateHijri' => $sahabi->death_date_hijri,
-            'conversionDateHijri' => $sahabi->conversion_date_hijri,
-            'conversionOrder' => $sahabi->conversion_order,
-            'ageAtDeath' => $sahabi->age_at_death,
-            'hadithCount' => $sahabi->reported_hadith_count,
-            'roles' => is_array($sahabi->roles) ? $sahabi->roles : [],
-            'battles' => $battles,
-            'battlesCount' => count($battles),
-            'timeline' => $timeline,
-            'article' => null,
-        ];
+        return array_values(array_filter(
+            $nodes,
+            static fn (array $n): bool => (bool) $n['is_published'] && ! (bool) $n['hide_from_tree'],
+        ));
     }
 }

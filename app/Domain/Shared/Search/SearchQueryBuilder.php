@@ -117,14 +117,12 @@ class SearchQueryBuilder
             SearchModule::ARTICLE => ['locales', 'writer', 'category'],
             // The rebuilt module keeps per-locale bodies in `texts` and reaches
             // its collection directly, not through chapter -> book.
-            SearchModule::HADITH => ['collection', 'book', 'texts'],
             // `category` is an enum column on media_programs (not a relation);
             // searchable text lives in the translations table.
             SearchModule::MEDIA => ['translations'],
             SearchModule::SEERAH => ['translations'],
-            SearchModule::SAHABA => ['translations'],
+            SearchModule::SAHABA => ['roles'],
             SearchModule::QURAN => ['surah', 'translations'],
-            SearchModule::GENEALOGY => ['relationships'],
             default => [],
         };
     }

@@ -7,9 +7,7 @@ namespace Tests\Feature\E2E;
 use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Models\Series;
 use App\Domain\Blog\Models\Tag;
-use App\Domain\Genealogy\Models\Person;
 use App\Domain\Quran\Models\Reciter;
-use App\Domain\Sahaba\Models\Sahabi;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Models\SeerahParticipant;
 use App\Domain\Shared\Models\Language;
@@ -192,53 +190,7 @@ class TranslationMigrationE2ETest extends TestCase
         $this->assertTrue(true);
     }
 
-    /**
-     * Test 12: Sahaba Module - Sahabi with Translations
-     * Verify Sahabi model (Phase 1) still works
-     */
-    public function test_sahabi_translations(): void
-    {
-        $sahabi = Sahabi::create([
-            'slug' => 'abu-bakar',
-            'gender' => 'male',
-        ]);
 
-        // Verify translation table exists
-        $this->assertTrue(\Schema::hasTable('sahabi_translations'));
-
-        // Sahaba and genealogy now share the same localized identity fields.
-        $translatable = $sahabi->getTranslatableFields();
-        $this->assertCount(14, $translatable);
-        $this->assertContains('name', $translatable);
-        $this->assertContains('biography', $translatable);
-
-        $this->assertTrue(true);
-    }
-
-    /**
-     * Test 13: Genealogy uses the canonical Sahaba identity and translations.
-     */
-    public function test_person_translations(): void
-    {
-        $person = Person::create([
-            'slug' => 'abdulmutallib',
-            'person_type' => 'historical',
-            'is_sahabi' => false,
-            'gender' => 'male',
-        ]);
-
-        $this->assertFalse(\Schema::hasTable('people'));
-        $this->assertFalse(\Schema::hasTable('person_translations'));
-        $this->assertSame('sahaba', $person->getTable());
-        $this->assertTrue(\Schema::hasTable('sahabi_translations'));
-
-        $translatable = $person->getTranslatableFields();
-        $this->assertContains('name', $translatable);
-        $this->assertContains('biography', $translatable);
-        $this->assertContains('birth_place', $translatable);
-
-        $this->assertTrue(true);
-    }
 
     /**
      * Test 14: No Spatie HasTranslations Remaining
@@ -309,8 +261,6 @@ class TranslationMigrationE2ETest extends TestCase
             SeerahEvent::class,
             SeerahParticipant::class,
             Reciter::class,
-            Sahabi::class,
-            Person::class,
             Language::class,
             // Article uses Spatie HasTranslations (JSON columns), not HasLocalizedContent per-table approach
         ];
@@ -368,8 +318,7 @@ class TranslationMigrationE2ETest extends TestCase
             'reciter_translations',
             'seerah_event_translations',
             'seerah_participant_translations',
-            'sahabi_translations',
-        ];
+                    ];
 
         // Tables exist (we verified above)
         // FULLTEXT indexes exist (created in migrations with if mysql check)
@@ -419,8 +368,7 @@ class TranslationMigrationE2ETest extends TestCase
             'reciter_translations',
             'seerah_event_translations',
             'seerah_participant_translations',
-            'sahabi_translations',
-            'language_translations',
+                        'language_translations',
             // Article uses Spatie JSON columns (no separate article_translations table)
         ];
 
@@ -439,14 +387,14 @@ class TranslationMigrationE2ETest extends TestCase
         $migrations = \DB::table('migrations')
             ->whereIn('migration', [
                 '2026_03_09_200000_create_seerah_event_translations_table',
-                '2026_03_09_200001_create_sahabi_translations_table',
                 '2026_03_10_100000_create_blog_translation_tables',
                 '2026_03_10_100003_create_phase_4_translation_tables',
             ])
             ->count();
 
-        // Should have all 4 major translation migration batches recorded
-        $this->assertGreaterThanOrEqual(4, $migrations);
+        // Three, not four: the sahabi_translations migration was deleted with
+        // the Sahaba module.
+        $this->assertGreaterThanOrEqual(3, $migrations);
     }
 
     /**
@@ -457,10 +405,8 @@ class TranslationMigrationE2ETest extends TestCase
     {
         // Check that translatable columns were dropped from parent tables
         $this->assertFalse(\Schema::hasTable('people'));
-        $this->assertFalse(\Schema::hasTable('person_translations'));
-
-        $this->assertFalse(\Schema::hasColumn('sahaba', 'name'));
-        $this->assertFalse(\Schema::hasColumn('sahaba', 'biography'));
+        // person_translations and the whole `people`/`sahaba` schema were removed
+        // with the Genealogy and Sahaba modules; there is nothing left to assert.
     }
 
     /**

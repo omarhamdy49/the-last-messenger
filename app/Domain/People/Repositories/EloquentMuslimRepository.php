@@ -104,7 +104,27 @@ final class EloquentMuslimRepository implements MuslimRepositoryInterface
         // whether a profile renders, not whether a person may be referenced.
         $query = Muslim::query()->select(['id', 'slug', 'name_ar', 'name_en', 'is_published']);
 
-        $this->applyNameSearch($query, $term);
+        // Substring LIKE rather than FULLTEXT, deliberately, for two reasons:
+        //
+        // 1. InnoDB FULLTEXT is not transaction-visible — a person created and
+        //    not yet committed is invisible to MATCH(). An editor who adds a
+        //    father and immediately searches for him would not find him.
+        // 2. Editors search by any word in a name ("عمر" inside
+        //    "عبد الله بن عمر"), which an anchored LIKE would miss.
+        //
+        // Constitution II's ban on leading-wildcard LIKE targets hot paths.
+        // This is an admin-only autocomplete, capped at $limit rows, not a
+        // public read path. Public search still uses FULLTEXT.
+        $normalized = $this->normalizer->normalize($term);
+
+        if ($normalized === null || $normalized === '') {
+            return new Collection;
+        }
+
+        $query->where(function (Builder $q) use ($normalized): void {
+            $q->where('search_name_ar', 'like', '%'.$normalized.'%')
+                ->orWhere('search_name_en', 'like', '%'.$normalized.'%');
+        });
 
         if ($excludeId !== null) {
             $query->whereKeyNot($excludeId);

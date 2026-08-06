@@ -6,6 +6,10 @@ namespace App\Providers;
 
 use App\Domain\People\Repositories\EloquentMuslimRepository;
 use App\Domain\People\Repositories\MuslimRepositoryInterface;
+use App\Domain\People\Services\MuslimPersonLookup;
+use App\Domain\People\Services\MuslimPublicVisibility;
+use App\Domain\Shared\Contracts\PersonLookup;
+use App\Domain\Shared\Contracts\PublicVisibilityProviderInterface;
 use App\Domain\Shared\Support\ArabicNormalizer;
 use Illuminate\Support\ServiceProvider;
 
@@ -20,5 +24,13 @@ class PeopleServiceProvider extends ServiceProvider
         $this->app->singleton(ArabicNormalizer::class);
 
         $this->app->bind(MuslimRepositoryInterface::class, EloquentMuslimRepository::class);
+
+        // How Hadith (and any other module) reaches a person without importing
+        // this one — constitution IV.
+        $this->app->bind(PersonLookup::class, MuslimPersonLookup::class);
+
+        // Without this, unpublished people leak into cross-module search.
+        $this->app->singleton(MuslimPublicVisibility::class);
+        $this->app->tag(MuslimPublicVisibility::class, PublicVisibilityProviderInterface::class);
     }
 }

@@ -42,7 +42,13 @@ use Spatie\Translatable\HasTranslations;
  */
 class Muslim extends Model
 {
-    use HasFactory, HasTranslations, SoftDeletes;
+    use HasFactory, SoftDeletes;
+    use HasTranslations {
+        // Aliased because getTranslation() is overridden below to bridge the
+        // existing Blade components onto the new column shape. `parent::` does
+        // not reach a trait method, so the original is called through this.
+        getTranslation as protected spatieGetTranslation;
+    }
 
     protected $table = 'muslims';
 
@@ -198,5 +204,111 @@ class Muslim extends Model
     protected static function newFactory(): MuslimFactory
     {
         return MuslimFactory::new();
+    }
+
+    /**
+     * Compatibility shim for the existing Blade components.
+     *
+     * The public views were written against the old Sahabi model, which stored
+     * `name` and `laqab` in a translations table. On `muslims` the name is two
+     * flat columns (`name_ar` / `name_en`) because MySQL FULLTEXT cannot index
+     * inside a JSON column, and `laqab` was not carried forward.
+     *
+     * Rather than rewrite the designed views, this maps the old translation
+     * keys onto the new shape. Keys that no longer have a source return an
+     * empty string, which every view already treats as "omit the section".
+     */
+    public function getTranslation(string $key, string $locale, bool $useFallbackLocale = true): mixed
+    {
+        if ($key === 'name') {
+            return $locale === 'ar'
+                ? ($this->name_ar ?? ($useFallbackLocale ? $this->name_en : null) ?? '')
+                : ($this->name_en ?? ($useFallbackLocale ? $this->name_ar : null) ?? '');
+        }
+
+        // Retired with the Sahaba module; no source column exists.
+        if (in_array($key, ['laqab', 'full_name', 'virtues', 'famous_narrations', 'martyrdom'], true)) {
+            return '';
+        }
+
+        if ($key === 'biography') {
+            $key = 'bio';
+        }
+
+        return $this->spatieGetTranslation($key, $locale, $useFallbackLocale);
+    }
+
+    /**
+     * Media shim. `Muslim` does not implement Spatie HasMedia — Owner Decision
+     * 4 replaced the companion gallery with a single scalar `thumb`. The
+     * existing views still call getFirstMediaUrl(), so it resolves to that
+     * path (or an empty string, which every view treats as "use the initial").
+     */
+    public function getFirstMediaUrl(string $collectionName = 'default', string $conversionName = ''): string
+    {
+        return $this->thumb ?? '';
+    }
+
+    public function hasMedia(string $collectionName = 'default'): bool
+    {
+        return $this->thumb !== null && $this->thumb !== '';
+    }
+
+    /**
+     * Property-style name access for the existing views. Without this Eloquent
+     * treats `$muslim->name` as a relationship call, because `name()` is a
+     * method. The accessor wins over relation resolution.
+     */
+    public function getNameAttribute(): string
+    {
+        return $this->name(app()->getLocale());
+    }
+
+    public function getFullNameAttribute(): string
+    {
+        return $this->name(app()->getLocale());
+    }
+
+    public function getBiographyAttribute(): ?string
+    {
+        return $this->getTranslation('bio', app()->getLocale()) ?: null;
+    }
+
+    public function getLaqabAttribute(): ?string
+    {
+        // Retired with the Sahaba module; no source column.
+        return null;
+    }
+
+    /**
+     * Hijri year accessors named for the old string columns the views read.
+     * The new columns are signed integers — negative means pre-Hijra.
+     */
+    public function getBirthDateHijriAttribute(): ?string
+    {
+        return $this->birth_year_hijri === null ? null : (string) $this->birth_year_hijri;
+    }
+
+    public function getDeathDateHijriAttribute(): ?string
+    {
+        return $this->death_year_hijri === null ? null : (string) $this->death_year_hijri;
+    }
+
+    /**
+     * Fields the old Sahabi table carried that `muslims` deliberately does not.
+     * They resolve to null so the existing views simply omit those sections
+     * instead of erroring (Owner Decisions 2, 4 and 6).
+     */
+    public function __get($key)
+    {
+        if (in_array($key, [
+            'tribe', 'clan', 'death_place', 'burial_place', 'conversion_date_hijri',
+            'conversion_order', 'age_at_death', 'is_verified', 'reported_hadith_count',
+            'birth_date_gregorian', 'death_date_gregorian', 'person_type', 'status',
+        ], true) && ! array_key_exists($key, $this->attributes)) {
+            return null;
+        }
+
+        return parent::__get($key);
     }
 }

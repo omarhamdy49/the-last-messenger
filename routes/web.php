@@ -6,9 +6,6 @@ use App\Http\Controllers\Site\AuthController;
 use App\Http\Controllers\Site\ContactController;
 use App\Http\Controllers\Site\FaqController;
 use App\Http\Controllers\Site\FavoriteController;
-use App\Http\Controllers\Site\GenealogyController;
-use App\Http\Controllers\Site\HadithController;
-use App\Http\Controllers\Site\HadithNarratorController;
 use App\Http\Controllers\Site\HomeController;
 use App\Http\Controllers\Site\HomeModuleCardImageController;
 use App\Http\Controllers\Site\MediaController;
@@ -19,6 +16,7 @@ use App\Http\Controllers\Site\QuranController;
 use App\Http\Controllers\Site\SahabaController;
 use App\Http\Controllers\Site\SearchController;
 use App\Http\Controllers\Site\SeerahController;
+use App\Http\Controllers\Site\SitemapController;
 use App\Http\Controllers\Site\SocialAuthController;
 use App\Http\Controllers\Site\TopicController;
 use Illuminate\Support\Facades\Route;
@@ -71,27 +69,9 @@ Route::get('/quran/{surahNumber}', [QuranController::class, 'surah'])
 // Static segments are declared BEFORE the dynamic canonical route so `search`
 // and `urn` can never be read as a collection code. Every dynamic segment is
 // constrained: `number` allows `1a`, which the source really uses.
-Route::get('/hadith/search', [HadithController::class, 'search'])
-    ->middleware('throttle:search')->name('public.hadith.search');
-Route::get('/hadith/urn/{urn}', [HadithController::class, 'urn'])
-    ->whereNumber('urn')->name('public.hadith.urn');
-Route::get('/hadith/narrators/{slug}', [HadithNarratorController::class, 'show'])
-    ->where('slug', '[a-z0-9-]+')->name('public.hadith.narrators.show');
-Route::get('/hadith/{collection}:{number}', [HadithController::class, 'show'])
-    ->where('collection', '[a-z0-9_]+')
-    ->where('number', '[A-Za-z0-9._-]+')
-    ->name('public.hadith.show');
-Route::get('/hadith', [HadithController::class, 'hub'])->name('public.hadith');
-Route::get('/hadith/{collection}', [HadithController::class, 'collection'])
-    ->where('collection', '[a-z0-9_]+')->name('public.hadith.collection');
 // bookNumber allows `35b`, `introduction` and `letter`, which the source uses.
-Route::get('/hadith/{collection}/{bookNumber}', [HadithController::class, 'book'])
-    ->where('collection', '[a-z0-9_]+')
-    ->where('bookNumber', '[A-Za-z0-9_-]+')
-    ->name('public.hadith.book');
-
 // XML sitemap (articles surface)
-Route::get('/sitemap.xml', [\App\Http\Controllers\Site\SitemapController::class, 'articles'])->name('sitemap.articles');
+Route::get('/sitemap.xml', [SitemapController::class, 'articles'])->name('sitemap.articles');
 
 // robots.txt served dynamically so the Sitemap directive uses the real request host.
 Route::get('/robots.txt', function () {
@@ -112,23 +92,23 @@ Route::get('/seerah/events', [SeerahController::class, 'events'])->name('public.
 Route::get('/seerah/event/{slug}', [SeerahController::class, 'event'])->name('public.seerah.event');
 
 // Sahaba
-// Muslims — the unified person identity (replaces /sahaba and /hadith/narrators).
-// Static segments first so `tree` can never be read as a slug.
-Route::get('/muslims', [\App\Http\Controllers\Site\MuslimController::class, 'index'])
-    ->name('public.muslims.index');
-Route::get('/muslims/{slug}/tree', [\App\Http\Controllers\Site\MuslimController::class, 'tree'])
-    ->where('slug', '[a-z0-9-]+')->name('public.muslims.tree');
-Route::get('/muslims/{slug}', [\App\Http\Controllers\Site\MuslimController::class, 'show'])
-    ->where('slug', '[a-z0-9-]+')->name('public.muslims.show');
+// Sahaba — the public companions surface, backed by the internal `muslims`
+// identity. Static segments first so `tree` can never be read as a slug.
+Route::get('/sahaba', [SahabaController::class, 'index'])
+    ->name('public.sahaba');
+Route::get('/sahaba/{slug}/tree', [SahabaController::class, 'tree'])
+    ->where('slug', '[a-z0-9-]+')->name('public.sahaba.tree');
+Route::get('/sahaba/{slug}', [SahabaController::class, 'show'])
+    ->where('slug', '[a-z0-9-]+')->name('public.sahaba.show');
 
-Route::get('/sahaba', [SahabaController::class, 'index'])->name('public.sahaba');
-Route::get('/sahaba/{slug}', [SahabaController::class, 'show'])->name('public.sahaba.show');
-
-// Genealogy
-Route::get('/genealogy', [GenealogyController::class, 'index'])->name('public.genealogy');
-Route::get('/genealogy/people', [GenealogyController::class, 'people'])
+// Genealogy — the family-tree explorer, rebuilt on `muslims`. `?root=` picks
+// the person the tree is drawn from; any muslim is a valid root.
+Route::get('/genealogy', [\App\Http\Controllers\Site\GenealogyController::class, 'index'])
+    ->name('public.genealogy');
+Route::get('/genealogy/people', [\App\Http\Controllers\Site\GenealogyController::class, 'people'])
     ->middleware('throttle:search')->name('public.genealogy.people');
 
+// Genealogy
 // Media / Programs
 Route::get('/media', [MediaController::class, 'index'])->name('public.media');
 // Live channel single page — registered before the {slug} program route so the

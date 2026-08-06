@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin\Article;
 
+use App\Domain\Blog\Enums\ArticleStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -81,7 +82,7 @@ class UpdateArticleRequest extends FormRequest
         // Publishing
         // Without a status rule, validated() drops the field and the DTO falls back
         // to the article's current status — making status unchangeable from the form.
-        $rules['status'] = ['nullable', Rule::in(\App\Domain\Blog\Enums\ArticleStatus::values())];
+        $rules['status'] = ['nullable', Rule::in(ArticleStatus::values())];
         $rules['scheduled_at'] = ['nullable', 'date', 'required_if:status,scheduled'];
         $rules['is_featured'] = 'nullable|boolean';
         $rules['is_pinned'] = 'nullable|boolean';

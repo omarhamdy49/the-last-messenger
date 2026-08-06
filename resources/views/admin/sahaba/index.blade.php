@@ -184,26 +184,6 @@
                            :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
                 </div>
 
-                <!-- Categories -->
-                <div class="space-y-2">
-                    <label class="text-sm font-bold block" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                        {{ __('admin.categories') }}
-                    </label>
-                    <div class="space-y-1.5">
-                        @foreach(\App\Domain\Sahaba\Enums\CompanionStatus::cases() as $category)
-                            @php $isRtlLocale = in_array(app()->getLocale(), ['ar', 'ur']); @endphp
-                            <label class="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all"
-                                   :class="darkMode ? 'bg-gray-800 hover:bg-gray-750' : 'bg-gray-100 hover:bg-gray-200'">
-                                <input type="checkbox" name="categories[]" value="{{ $category->value }}"
-                                       {{ in_array($category->value, $filters->categories, true) ? 'checked' : '' }}
-                                       class="form-checkbox rounded text-accent focus:ring-accent">
-                                <span class="text-sm font-medium" :class="darkMode ? 'text-gray-200' : 'text-gray-700'">
-                                    {{ $isRtlLocale ? $category->labelArabic() : $category->label() }}
-                                </span>
-                            </label>
-                        @endforeach
-                    </div>
-                </div>
 
                 <!-- Toggles -->
                 <div class="space-y-2">
@@ -337,7 +317,9 @@
                             $secondaryName = $sahabi->getTranslation('name', $secondaryLocale);
                             $kunya = $sahabi->getTranslation('kunya', $locale) ?: $sahabi->getTranslation('kunya', 'ar');
                             $laqab = $sahabi->getTranslation('laqab', $locale) ?: $sahabi->getTranslation('laqab', 'ar');
-                            $isPublished = $sahabi->translations->isNotEmpty() && $sahabi->translations->every(fn ($t) => (bool) $t->is_ready);
+                            // Publication is a plain boolean on `muslims` now; the old
+                            // per-locale translation `is_ready` flags are gone.
+                            $isPublished = (bool) $sahabi->is_published;
                         @endphp
                         <tr class="border-b transition-colors duration-150"
                             :class="darkMode ? 'border-gray-800 hover:bg-gray-800/60' : 'border-gray-200 hover:bg-gray-50'">
@@ -405,19 +387,6 @@
                                 <span :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ $sahabi->tribe ?: '—' }}</span>
                             </td>
 
-                            <!-- Categories -->
-                            <td class="px-4 py-2.5" x-show="visibleColumns.includes('categories')">
-                                <div class="flex flex-wrap gap-1">
-                                    @forelse($sahabi->categories as $category)
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                                              :class="darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-800'">
-                                            {{ \App\Domain\Sahaba\Enums\CompanionStatus::tryFrom($category->key)?->labelArabic() }}
-                                        </span>
-                                    @empty
-                                        <span :class="darkMode ? 'text-gray-600' : 'text-gray-400'">—</span>
-                                    @endforelse
-                                </div>
-                            </td>
 
                             <!-- Hadith count -->
                             <td class="px-4 py-2.5" x-show="visibleColumns.includes('hadith_count')">
@@ -525,7 +494,6 @@
             { key: 'laqab', label: '{{ __('sahaba.laqab') }}' },
             { key: 'gender', label: '{{ __('admin.gender') }}' },
             { key: 'tribe', label: '{{ __('sahaba.tribe') }}' },
-            { key: 'categories', label: '{{ __('admin.categories') }}' },
             { key: 'hadith_count', label: '{{ __('sahaba.hadith_narrated') }}' },
             { key: 'verified', label: '{{ __('admin.verified') }}' },
             { key: 'status', label: '{{ __('admin.status') }}' },

@@ -7,8 +7,10 @@ namespace Tests\Feature;
 use App\Domain\Media\Models\MediaEpisode;
 use App\Domain\Media\Models\MediaEpisodeTranslation;
 use App\Domain\Media\Models\MediaProgram;
-use App\Domain\Sahaba\Models\Sahabi;
-use App\Domain\Sahaba\Repositories\SahabiRepositoryInterface;
+use App\Domain\People\DTOs\MuslimListFilters;
+use App\Domain\People\Models\IslamicRole;
+use App\Domain\People\Models\Muslim;
+use App\Domain\People\Repositories\MuslimRepositoryInterface;
 use App\Domain\Shared\Services\SearchService;
 use App\Domain\Topics\Enums\TopicItemType;
 use App\Domain\Topics\Models\Topic;
@@ -87,23 +89,7 @@ final class PublicVisibilityGatingTest extends TestCase
             ->assertJsonMissing(['video_url' => $draft->video_url]);
     }
 
-    public function test_ssg_002_public_sahaba_lists_search_featured_and_counts_require_ready_locale(): void
-    {
-        $ready = $this->createSahabi('ready-sahabi', true);
-        $unready = $this->createSahabi('unready-sahabi', false);
-        $repository = app(SahabiRepositoryInterface::class);
 
-        $listedIds = $repository->getAllPaginated()->getCollection()->pluck('id')->all();
-        $searchedIds = $repository->search('G')->getCollection()->pluck('id')->all();
-        $featuredIds = $repository->getFeatured()->pluck('id')->all();
-
-        foreach ([$listedIds, $searchedIds, $featuredIds] as $ids) {
-            $this->assertContains($ready->id, $ids);
-            $this->assertNotContains($unready->id, $ids);
-        }
-
-        $this->assertSame(1, $repository->getPublicIndexStats()['total']);
-    }
 
     private function createArticle(string $slug, string $status, string $title): Article
     {
@@ -120,25 +106,7 @@ final class PublicVisibilityGatingTest extends TestCase
         return $article;
     }
 
-    private function createSahabi(string $slug, bool $ready): Sahabi
-    {
-        $sahabi = Sahabi::create([
-            'slug' => $slug,
-            'gender' => 'male',
-            'father_id' => null,
-            'mother_id' => null,
-            'is_sahabi' => true,
-            'is_featured' => true,
-            'importance_rank' => 1,
-        ]);
-        $sahabi->translations()->create([
-            'locale' => 'ar',
-            'name' => "G {$slug}",
-            'is_ready' => $ready,
-        ]);
 
-        return $sahabi;
-    }
 
     private function createEpisode(
         MediaProgram $program,
@@ -166,4 +134,43 @@ final class PublicVisibilityGatingTest extends TestCase
 
         return $episode;
     }
+    public function test_ssg_002_public_sahaba_lists_and_search_exclude_unpublished_people(): void
+    {
+        // A companion is now a `muslims` row carrying the `sahabi` role, and
+        // publication is a plain boolean rather than a per-locale ready flag.
+        $published = $this->createCompanion('published-companion', true);
+        $draft = $this->createCompanion('draft-companion', false);
+
+        $repository = app(MuslimRepositoryInterface::class);
+
+        $listed = $repository->paginate(new MuslimListFilters(roleSlug: 'sahabi'))
+            ->getCollection()->pluck('id')->all();
+
+        $this->assertContains($published->id, $listed);
+        $this->assertNotContains($draft->id, $listed);
+
+        // ...but the admin picker still offers the unpublished person, because
+        // an unpublished person is a valid ancestor.
+        $picked = $repository->pickerSearch('companion')->pluck('id')->all();
+        $this->assertContains($draft->id, $picked);
+    }
+
+    private function createCompanion(string $slug, bool $published): Muslim
+    {
+        $role = IslamicRole::query()->firstOrCreate(
+            ['slug' => 'sahabi'],
+            ['name_ar' => 'صحابي', 'name_en' => 'Companion'],
+        );
+
+        $muslim = Muslim::create([
+            'slug' => $slug,
+            'name_ar' => 'صحابي',
+            'name_en' => 'Companion '.$slug,
+            'is_published' => $published,
+        ]);
+        $muslim->roles()->attach($role->id, ['is_featured' => false, 'sort_order' => 0]);
+
+        return $muslim;
+    }
+
 }

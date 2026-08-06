@@ -6,7 +6,6 @@ use App\Http\Controllers\Admin\Content\ContactMessageController;
 use App\Http\Controllers\Admin\Content\FaqController;
 use App\Http\Controllers\Admin\Content\HomeModuleCardController;
 use App\Http\Controllers\Admin\Content\HomeSectionController;
-use App\Http\Controllers\Admin\Content\ImportStatusController;
 use App\Http\Controllers\Admin\Content\MenuItemController;
 use App\Http\Controllers\Admin\Content\QuickFilterChipController;
 use App\Http\Controllers\Admin\Content\SiteSettingController;
@@ -97,4 +96,3 @@ Route::prefix('contact-messages')->name('admin.content.contact-messages.')->grou
 });
 
 // Import status (read-only dashboards)
-Route::get('imports', [ImportStatusController::class, 'index'])->name('admin.content.imports.index');

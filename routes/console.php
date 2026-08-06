@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domain\Shared\Services\SchedulerService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
@@ -39,7 +40,7 @@ Artisan::command('content:process-scheduled', function () {
         $this->info('✓ Content scheduling processing completed successfully');
 
         return 0;
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         $this->error('Failed to process scheduled content: '.$e->getMessage());
 
         return 1;
@@ -54,10 +55,10 @@ Schedule::command('content:process-scheduled')
     ->withoutOverlapping()
     ->runInBackground()
     ->onSuccess(function () {
-        \Illuminate\Support\Facades\Log::info('Scheduled content processed successfully');
+        Log::info('Scheduled content processed successfully');
     })
     ->onFailure(function () {
-        \Illuminate\Support\Facades\Log::error('Failed to process scheduled content');
+        Log::error('Failed to process scheduled content');
     });
 
 /**
@@ -69,7 +70,7 @@ Schedule::command('media:publish-scheduled')
     ->withoutOverlapping()
     ->runInBackground()
     ->onFailure(function () {
-        \Illuminate\Support\Facades\Log::error('Failed to publish scheduled media programs');
+        Log::error('Failed to publish scheduled media programs');
     });
 
 /**
@@ -81,7 +82,7 @@ Schedule::command('articles:publish-scheduled')
     ->withoutOverlapping()
     ->runInBackground()
     ->onFailure(function () {
-        \Illuminate\Support\Facades\Log::error('Failed to publish scheduled articles');
+        Log::error('Failed to publish scheduled articles');
     });
 
 /**
@@ -93,5 +94,5 @@ Schedule::command('quran:ai-prune')
     ->withoutOverlapping()
     ->runInBackground()
     ->onFailure(function () {
-        \Illuminate\Support\Facades\Log::error('Failed to prune Ask Quran AI inquiries');
+        Log::error('Failed to prune Ask Quran AI inquiries');
     });

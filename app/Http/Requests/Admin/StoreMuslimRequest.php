@@ -72,14 +72,14 @@ class StoreMuslimRequest extends FormRequest
     {
         $validator->after(function (Validator $v): void {
             if (blank($this->input('name_ar')) && blank($this->input('name_en'))) {
-                $v->errors()->add('name_ar', __('people.errors.name_required'));
+                $v->errors()->add('name_ar', __('sahaba.errors.name_required'));
             }
 
             $id = $this->route('muslim')?->id;
             if ($id !== null) {
                 foreach (['father_id', 'mother_id'] as $column) {
                     if ((int) $this->input($column) === (int) $id) {
-                        $v->errors()->add($column, __('people.errors.self_parent'));
+                        $v->errors()->add($column, __('sahaba.errors.self_parent'));
                     }
                 }
             }
