@@ -212,8 +212,8 @@ the-last-messenger-be/
 ## Technology Stack
 
 ### Backend Framework
-- **PHP**: 8.2+
-- **Laravel**: 12.0 (latest)
+- **PHP**: 8.5 (`composer.json` requires `^8.5`; `config.platform.php` pinned to 8.5.4)
+- **Laravel**: 13.0 (`composer.json` requires `^13.0`)
 - **Database**: MySQL 8.0+
 - **Queue**: Laravel Queue (Database driver)
 - **Cache**: File-based cache (can upgrade to Redis)
@@ -903,7 +903,7 @@ ray($variable);
 - `ARABIC_RTL_CONFIGURATION_SUMMARY.md` — RTL support guide
 
 ### External Documentation
-- Laravel 12 Docs: https://laravel.com/docs/12.x
+- Laravel 13 Docs: https://laravel.com/docs/13.x
 - Spatie Translatable: https://spatie.be/docs/laravel-translatable
 - Spatie Media Library: https://spatie.be/docs/laravel-medialibrary
 - Spatie Permission: https://spatie.be/docs/laravel-permission
@@ -922,6 +922,6 @@ ray($variable);
 ---
 
 **Last Updated:** March 2026
-**Laravel Version:** 12.0
-**PHP Version:** 8.2+
+**Laravel Version:** 13.0
+**PHP Version:** 8.5
 - localize all view make it in arabic by default

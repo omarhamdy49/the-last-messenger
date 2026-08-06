@@ -120,6 +120,20 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
         Route::get('/{slug}', [SeerahEventController::class, 'show'])->name('seerah.show');
     });
 
+    // Muslims — unified person identity. Replaces the /sahaba surface.
+    // Static segments declared before {slug} so `search` and `roles` can never
+    // be read as a slug.
+    Route::prefix('muslims')->group(function (): void {
+        Route::get('/search', [\App\Http\Controllers\Api\MuslimController::class, 'search'])
+            ->middleware('throttle:search')->name('muslims.search');
+        Route::get('/', [\App\Http\Controllers\Api\MuslimController::class, 'index'])->name('muslims.index');
+        Route::get('/{slug}/tree', [\App\Http\Controllers\Api\MuslimController::class, 'tree'])
+            ->where('slug', '[a-z0-9-]+')->name('muslims.tree');
+        Route::get('/{slug}', [\App\Http\Controllers\Api\MuslimController::class, 'show'])
+            ->where('slug', '[a-z0-9-]+')->name('muslims.show');
+    });
+    Route::get('/roles', [\App\Http\Controllers\Api\MuslimController::class, 'roles'])->name('roles.index');
+
     // Sahaba routes (Companions of the Prophet)
     Route::prefix('sahaba')->group(function () {
         // Public routes

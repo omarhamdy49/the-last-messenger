@@ -7,6 +7,7 @@ namespace App\Domain\Shared\Contracts;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 /**
  * Base Repository Interface
@@ -45,7 +46,7 @@ interface RepositoryInterface
      * @param  array<string>  $columns
      * @param  array<string>  $relations
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function findOrFail(int $id, array $columns = ['*'], array $relations = []): Model;
 

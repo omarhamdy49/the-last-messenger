@@ -112,6 +112,15 @@ Route::get('/seerah/events', [SeerahController::class, 'events'])->name('public.
 Route::get('/seerah/event/{slug}', [SeerahController::class, 'event'])->name('public.seerah.event');
 
 // Sahaba
+// Muslims — the unified person identity (replaces /sahaba and /hadith/narrators).
+// Static segments first so `tree` can never be read as a slug.
+Route::get('/muslims', [\App\Http\Controllers\Site\MuslimController::class, 'index'])
+    ->name('public.muslims.index');
+Route::get('/muslims/{slug}/tree', [\App\Http\Controllers\Site\MuslimController::class, 'tree'])
+    ->where('slug', '[a-z0-9-]+')->name('public.muslims.tree');
+Route::get('/muslims/{slug}', [\App\Http\Controllers\Site\MuslimController::class, 'show'])
+    ->where('slug', '[a-z0-9-]+')->name('public.muslims.show');
+
 Route::get('/sahaba', [SahabaController::class, 'index'])->name('public.sahaba');
 Route::get('/sahaba/{slug}', [SahabaController::class, 'show'])->name('public.sahaba.show');
 

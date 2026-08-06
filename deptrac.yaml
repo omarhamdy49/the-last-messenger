@@ -58,6 +58,20 @@ deptrac:
         - type: directory
           value: app/Domain/Genealogy/
 
+    # -------------------------------------------------------------------------
+    # People Layer — the application-wide person identity (`muslims`).
+    # Referenced by Hadith (narrator_id, compiler_id), genealogy, and the
+    # companion directory, so it cannot live inside any one of them without
+    # forcing a module-to-module import. Depends on Shared only; other modules
+    # reach it through Shared\Contracts\PersonReference. Database foreign keys
+    # into `muslims` may cross modules — deptrac cannot see those, and the
+    # constitution permits them; it is the PHP import that must not happen.
+    # -------------------------------------------------------------------------
+    - name: People
+      collectors:
+        - type: directory
+          value: app/Domain/People/
+
     - name: DomainSeerah
       collectors:
         - type: directory
@@ -135,6 +149,7 @@ deptrac:
   ruleset:
     Controllers:
       - Shared
+      - People
       - DomainBlog
       - DomainContent
       - DomainHadith
@@ -164,6 +179,9 @@ deptrac:
     DomainSahaba:
       - Shared
 
+    People:
+      - Shared
+
     DomainSeerah:
       - Shared
 
@@ -184,6 +202,7 @@ deptrac:
 
     Bootstrap:
       - Shared
+      - People
       - DomainBlog
       - DomainContent
       - DomainHadith

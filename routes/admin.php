@@ -333,6 +333,7 @@ Route::prefix('su/portal/v1/admin')
         require __DIR__.'/admin/blog.php';
         require __DIR__.'/admin/quran.php';
         require __DIR__.'/admin/seerah.php';
+        require __DIR__.'/admin/people.php';
         require __DIR__.'/admin/sahaba.php';
         require __DIR__.'/admin/genealogy.php';
         require __DIR__.'/admin/media.php';

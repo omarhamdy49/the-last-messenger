@@ -275,6 +275,12 @@ class TranslationMigrationE2ETest extends TestCase
             'Hadith/Models/HadithBook.php',
             'Hadith/Models/HadithChapter.php',
             'Hadith/Models/HadithScholar.php',
+            // The rebuilt person identity, same reasoning: `kunya`, `bio`,
+            // `content`, and `birth_place` are JSON {ar,en} columns rather than
+            // a `muslim_translations` table (data-model.md §2, Decision B).
+            // Flat columns are used only where MySQL needs an index or
+            // FULLTEXT — `name_ar`/`name_en` and `search_name_*`.
+            'People/Models/Muslim.php',
         ];
 
         $unexpected = array_values(array_filter(

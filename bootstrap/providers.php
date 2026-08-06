@@ -10,6 +10,7 @@ return [
     App\Providers\SeerahServiceProvider::class,
     App\Providers\SahabaServiceProvider::class,
     App\Providers\GenealogyServiceProvider::class,
+    App\Providers\PeopleServiceProvider::class,
     App\Providers\MediaServiceProvider::class,
     App\Providers\SharedServiceProvider::class,
     App\Providers\FavoriteServiceProvider::class,
