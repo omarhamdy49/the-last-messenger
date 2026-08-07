@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Site;
 
+use App\Domain\Quran\Application\DTOs\VerseDTO;
 use App\Domain\Quran\Application\Handlers\AskQuranHandler;
 use App\Domain\Quran\Application\Handlers\ListRevelationContextsHandler;
 use App\Domain\Quran\Application\Queries\AskQuranQuery;
@@ -21,6 +22,7 @@ use App\Domain\Quran\Services\VerseAudioUrlResolver;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Site\AskQuranRequest;
 use App\Http\Support\QuestionSanitizer;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -410,13 +412,16 @@ final class QuranController extends Controller
         $reciters = Cache::remember('public_quran_reciters_audio_list', 3600, function () {
             try {
                 $all = $this->quranQueryService->listReciters(
-                    perPage: 50,
+                    // Must exceed the catalogue size — a short page silently drops
+                    // reciters from the picker rather than paginating it.
+                    perPage: 200,
                     activeOnly: true,
+                    kind: 'recitation',
                 );
 
                 // listReciters returns a paginator; collect($all) would serialize its
                 // meta array (current_page, ...) and silently yield zero reciters.
-                $items = $all instanceof \Illuminate\Contracts\Pagination\LengthAwarePaginator
+                $items = $all instanceof LengthAwarePaginator
                     ? collect($all->items())
                     : collect($all);
 
@@ -642,14 +647,17 @@ final class QuranController extends Controller
                 $featured = collect($all)->take(3);
 
                 $allReciters = $this->quranQueryService->listReciters(
-                    perPage: 50,
+                    perPage: 200,
                     activeOnly: true,
                     locale: $locale,
+                    // Recited translations share this table but are not qaris;
+                    // the public reciters page lists reciters only.
+                    kind: 'recitation',
                 );
 
                 // listReciters returns a paginator; collect($all) would serialize its
                 // meta array (current_page, ...) and silently yield zero reciters.
-                $items = $allReciters instanceof \Illuminate\Contracts\Pagination\LengthAwarePaginator
+                $items = $allReciters instanceof LengthAwarePaginator
                     ? collect($allReciters->items())
                     : collect($allReciters);
 
@@ -764,7 +772,7 @@ final class QuranController extends Controller
      * page remains the place for tafsir. The Arabic translation equals the verse
      * text, so it is nulled to avoid showing the same line twice.
      *
-     * @param  iterable<\App\Domain\Quran\Application\DTOs\VerseDTO>  $verses
+     * @param  iterable<VerseDTO>  $verses
      * @return array<int, array<string, mixed>>
      */
     private function mapReaderVerses(iterable $verses, string $locale): array

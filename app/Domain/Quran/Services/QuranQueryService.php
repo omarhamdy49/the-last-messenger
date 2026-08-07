@@ -392,6 +392,7 @@ final class QuranQueryService
         ?string $style = null,
         bool $featuredOnly = false,
         string $locale = 'ar',
+        ?string $kind = null,
     ): LengthAwarePaginator|Collection {
         $query = new ListRecitersQuery(
             perPage: $perPage,
@@ -400,6 +401,7 @@ final class QuranQueryService
             style: $style,
             featuredOnly: $featuredOnly,
             locale: $locale,
+            kind: $kind,
         );
 
         return $this->listRecitersHandler->handle($query);

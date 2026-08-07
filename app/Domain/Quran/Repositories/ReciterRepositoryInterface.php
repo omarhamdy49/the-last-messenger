@@ -17,7 +17,7 @@ interface ReciterRepositoryInterface
     /**
      * Get paginated reciters
      */
-    public function paginate(int $perPage = 15, bool $activeOnly = true): LengthAwarePaginator;
+    public function paginate(int $perPage = 15, bool $activeOnly = true, ?string $kind = null): LengthAwarePaginator;
 
     /**
      * Get reciter by ID

@@ -45,7 +45,7 @@ final readonly class ListRecitersHandler
             );
         }
 
-        $results = $this->reciterRepository->paginate($query->perPage, $query->activeOnly);
+        $results = $this->reciterRepository->paginate($query->perPage, $query->activeOnly, $query->kind);
 
         $results->getCollection()->transform(
             fn ($reciter) => ReciterDTO::fromModel($reciter, $query->locale)

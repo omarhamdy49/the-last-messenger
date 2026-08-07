@@ -33,34 +33,47 @@ class ImportQuranRecitationsCommand extends Command
     private const BASE = 'https://api.quran.com/api/v4';
 
     /**
-     * Our reciter slug => Quran.com chapter-recitation id.
+     * Reciter id (an everyayah catalogue id — see quran:import-reciters) =>
+     * Quran.com chapter-recitation id.
      *
-     * Quran.com exposes whole-chapter audio only for these reciters; maher-al-muaiqly
-     * has no chapter recitation there, so it stays per-verse only (its surah play
-     * button falls back to the "audio unavailable" notice).
+     * Each pairing was verified against the audio URL the endpoint returns, not
+     * guessed from the id: Quran.com's chapter-recitation ids are a *different*
+     * sequence from its verse-recitation ids and they diverge past 10.
      *
-     * @var array<string, int>
+     * Quran.com publishes whole-chapter audio for only a fraction of the
+     * catalogue. Every other reciter plays a surah by chaining their per-verse
+     * files, so an absent entry here is not a gap in the reader.
+     *
+     * @var array<int, int>
      */
     private const RECITER_MAP = [
-        'abdul-basit-abdus-samad-mujawwad' => 1,
-        'abdul-basit-abdus-samad-murattal' => 2,
-        'abdurrahman-as-sudais' => 3,
-        'abu-bakr-al-shatri' => 4,
-        'hani-ar-rifai' => 5,
-        'mahmoud-khalil-al-husary' => 6,
-        'mishary-rashid-alafasy' => 7,
-        'mohamed-siddiq-el-minshawi' => 9,
-        'saud-al-shuraim' => 10,
-        'saad-al-ghamdi' => 13,
+        3 => 1,    // Abdul Basit — Mujawwad
+        2 => 2,    // Abdul Basit — Murattal
+        8 => 3,    // Abdurrahmaan As-Sudais
+        11 => 4,   // Abu Bakr Ash-Shaatree
+        18 => 5,   // Hani Rifai
+        20 => 6,   // Husary
+        15 => 7,   // Alafasy
+        33 => 8,   // Minshawy — Mujawwad
+        34 => 9,   // Minshawy — Murattal
+        44 => 10,  // Saood ash-Shuraym
+        52 => 11,  // Muhsin Al Qasim
+        65 => 12,  // Husary — Muallim
+        16 => 13,  // Ghamadi
+        77 => 14,  // Fares Abbad
+        70 => 17,  // Sahl Yassin
+        51 => 18,  // Salaah Bukhatir
+        71 => 19,  // Ahmed Ibn Ali Al Ajamy
+        37 => 22,  // Muhammad Ayyoub
     ];
 
     public function handle(): int
     {
         $only = array_filter(array_map('trim', explode(',', (string) $this->option('only'))));
 
-        $reciters = Reciter::query()->pluck('id', 'slug');
-        if ($reciters->isEmpty()) {
-            $this->error('No reciters found — seed quran_reciters first.');
+        $slugs = Reciter::query()->pluck('slug', 'id');
+        if ($slugs->isEmpty()) {
+            $this->error('No reciters found — run quran:import-reciters first.');
 
             return self::FAILURE;
         }
@@ -68,15 +81,15 @@ class ImportQuranRecitationsCommand extends Command
         $imported = 0;
         $skipped = [];
 
-        foreach (self::RECITER_MAP as $slug => $quranComId) {
-            if ($only && ! in_array($slug, $only, true)) {
+        foreach (self::RECITER_MAP as $reciterId => $quranComId) {
+            $slug = $slugs[$reciterId] ?? null;
+            if ($slug === null) {
+                $skipped[] = "reciter #{$reciterId} (not in quran_reciters)";
+
                 continue;
             }
 
-            $reciterId = $reciters[$slug] ?? null;
-            if ($reciterId === null) {
-                $skipped[] = "{$slug} (not in quran_reciters)";
-
+            if ($only && ! in_array($slug, $only, true)) {
                 continue;
             }
 
@@ -126,7 +139,10 @@ class ImportQuranRecitationsCommand extends Command
         Cache::flush();
 
         $this->newLine();
-        $this->info("Imported {$imported} recitation rows.");
+        // Report stored rows, not API entries — a few endpoints list a chapter
+        // more than once, and updateOrCreate collapses those.
+        $stored = Recitation::query()->count();
+        $this->info("Imported {$imported} audio files into {$stored} recitation rows.");
 
         foreach ($skipped as $note) {
             $this->warn("Skipped: {$note}");

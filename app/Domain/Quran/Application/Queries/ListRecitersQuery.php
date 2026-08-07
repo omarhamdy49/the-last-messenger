@@ -16,5 +16,6 @@ final readonly class ListRecitersQuery
         public ?string $style = null,
         public bool $featuredOnly = false,
         public string $locale = 'ar',
+        public ?string $kind = null,
     ) {}
 }

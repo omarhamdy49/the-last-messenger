@@ -33,6 +33,7 @@ final readonly class ReciterDTO implements JsonSerializable
         public ?string $createdAt,
         public ?string $updatedAt,
         public ?string $everyayahFolder = null,
+        public string $kind = 'recitation',
     ) {}
 
     /**
@@ -56,6 +57,7 @@ final readonly class ReciterDTO implements JsonSerializable
             createdAt: $reciter->created_at?->toIso8601String(),
             updatedAt: $reciter->updated_at?->toIso8601String(),
             everyayahFolder: $reciter->everyayah_folder,
+            kind: $reciter->kind ?? 'recitation',
         );
     }
 
@@ -95,6 +97,7 @@ final readonly class ReciterDTO implements JsonSerializable
             'created_at' => $this->createdAt,
             'updated_at' => $this->updatedAt,
             'everyayah_folder' => $this->everyayahFolder,
+            'kind' => $this->kind,
         ];
     }
 

@@ -26,7 +26,7 @@ class ReciterRepository implements ReciterRepositoryInterface
     /**
      * Get paginated reciters
      */
-    public function paginate(int $perPage = 15, bool $activeOnly = true): LengthAwarePaginator
+    public function paginate(int $perPage = 15, bool $activeOnly = true, ?string $kind = null): LengthAwarePaginator
     {
         // Eager-load translations: DTO name/description maps come from
         // reciter_translations and would otherwise lazy-load per row.
@@ -36,6 +36,10 @@ class ReciterRepository implements ReciterRepositoryInterface
 
         if ($activeOnly) {
             $query->active();
+        }
+
+        if ($kind !== null) {
+            $query->where('kind', $kind);
         }
 
         return $query->paginate($perPage);

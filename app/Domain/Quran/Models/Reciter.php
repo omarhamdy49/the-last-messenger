@@ -47,6 +47,7 @@ class Reciter extends Model
      */
     protected $fillable = [
         'slug',
+        'kind',
         'style',
         'riwayah',
         'everyayah_folder',
@@ -130,11 +131,17 @@ class Reciter extends Model
      */
     public function getProfileImageUrlAttribute(): ?string
     {
-        if ($this->profile_image) {
-            return asset('storage/'.$this->profile_image);
+        if (! $this->profile_image) {
+            return null;
         }
 
-        return null;
+        // Portraits sourced from Wikimedia Commons are stored as absolute URLs;
+        // uploaded files stay relative to the public storage disk.
+        if (str_starts_with($this->profile_image, 'https://') || str_starts_with($this->profile_image, 'http://')) {
+            return $this->profile_image;
+        }
+
+        return asset('storage/'.$this->profile_image);
     }
 
     /**
@@ -153,6 +160,17 @@ class Reciter extends Model
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
+    }
+
+    /**
+     * Scope: Quran reciters only, excluding recited translations.
+     *
+     * The everyayah catalogue mixes both, and a translation recording must never
+     * appear where a listener is choosing a qari.
+     */
+    public function scopeRecitationsOnly(Builder $query): Builder
+    {
+        return $query->where('kind', 'recitation');
     }
 
     /**
