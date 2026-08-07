@@ -262,6 +262,10 @@ return [
         'all_surahs' => 'Tüm sureler',
         'display_settings' => 'Görüntüleme ayarları',
         'ask_about_surah' => 'Bu sure hakkında sor',
+        'rail_settings' => 'Ayarlar',
+        'rail_surahs' => 'Sureler',
+        'rail_info' => 'Bilgi',
+        'rail_ask' => 'Sor',
         'audio_unavailable' => 'Bu sure için şu anda ses mevcut değil.',
         'choose_reciter' => 'Okuyucu seçin',
 

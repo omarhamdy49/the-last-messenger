@@ -109,6 +109,7 @@
         margin: 0 0.12em;
         vertical-align: middle;
         user-select: none;
+        cursor: pointer;
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cg fill='none' stroke='%23c9a227' stroke-width='1.1'%3E%3Ccircle cx='24' cy='24' r='15'/%3E%3Ccircle cx='24' cy='24' r='20' stroke-width='1' stroke-dasharray='0.6 2.6' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E");
         background-size: contain;
         background-repeat: no-repeat;
@@ -144,42 +145,106 @@
         border-bottom: 1px solid rgba(120, 120, 120, 0.16);
     }
 
-    /* ---- Floating tools rail ---- */
-    .mushaf-rail { position: fixed; z-index: 45; }
+    /* ---- Floating tools rail ----
+       Frosted-glass panel over a 4-step elevation scale. The gold (#c9a227) is the
+       same accent the ayah rosette uses, so the rail reads as part of the mushaf
+       rather than generic chrome. All motion is gated behind prefers-reduced-motion. */
+    .mushaf-rail {
+        position: fixed;
+        z-index: 45;
+        --rail-ease: cubic-bezier(0.22, 1, 0.36, 1); /* spring-like ease-out */
+        --rail-gold: #c9a227;
+    }
     .mushaf-rail-inner {
         display: flex;
         gap: 0.25rem;
         padding: 0.4rem;
         border-radius: 9999px;
-        border: 1px solid rgba(0, 0, 0, 0.08);
-        background: rgba(255, 255, 255, 0.92);
-        box-shadow: 0 10px 34px rgba(0, 0, 0, 0.16);
-        -webkit-backdrop-filter: blur(10px);
-        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        /* Two layers: a soft top-light sheen over the frosted base. */
+        background:
+            linear-gradient(160deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.42)),
+            rgba(248, 250, 252, 0.66);
+        box-shadow:
+            0 1px 2px rgba(15, 23, 42, 0.06),
+            0 8px 20px rgba(15, 23, 42, 0.09),
+            0 24px 48px rgba(15, 23, 42, 0.12),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        backdrop-filter: blur(20px) saturate(180%);
     }
     .mushaf-rail-inner.mushaf-rail-dark {
-        border-color: rgba(255, 255, 255, 0.1);
-        background: rgba(17, 24, 39, 0.92);
+        border-color: rgba(255, 255, 255, 0.09);
+        background:
+            linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+            rgba(15, 23, 42, 0.72);
+        box-shadow:
+            0 1px 2px rgba(0, 0, 0, 0.4),
+            0 8px 20px rgba(0, 0, 0, 0.45),
+            0 24px 48px rgba(0, 0, 0, 0.5),
+            inset 0 1px 0 rgba(255, 255, 255, 0.07);
     }
     .mushaf-rail-item { position: relative; display: flex; }
     .mushaf-rail-btn {
-        width: 2.6rem;
-        height: 2.6rem;
+        position: relative;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         border-radius: 9999px;
-        color: #4b5563;
-        transition: background-color 0.15s ease, color 0.15s ease;
+        color: #475569;
+        -webkit-tap-highlight-color: transparent;
+        transition:
+            background-color 0.22s var(--rail-ease),
+            color 0.22s var(--rail-ease),
+            box-shadow 0.22s var(--rail-ease),
+            transform 0.16s var(--rail-ease);
+    }
+    .mushaf-rail-btn > svg { flex-shrink: 0; }
+    .mushaf-rail-label {
+        font-weight: 600;
+        line-height: 1.15;
+        white-space: nowrap;
     }
     .mushaf-rail-dark .mushaf-rail-btn { color: #cbd5e1; }
-    .mushaf-rail-btn:hover { background: rgba(0, 86, 179, 0.1); color: #0056b3; }
-    .mushaf-rail-dark .mushaf-rail-btn:hover { background: rgba(100, 204, 197, 0.14); color: #64CCC5; }
+
+    .mushaf-rail-btn:hover {
+        background: rgba(0, 86, 179, 0.09);
+        color: #0056b3;
+    }
+    .mushaf-rail-dark .mushaf-rail-btn:hover { background: rgba(100, 204, 197, 0.13); color: #64CCC5; }
+
+    /* Keyboard focus must be visible on its own, not only via the label chip. */
+    .mushaf-rail-btn:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.95), 0 0 0 4px #0056b3;
+    }
+    .mushaf-rail-dark .mushaf-rail-btn:focus-visible {
+        box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.95), 0 0 0 4px #64CCC5;
+    }
+
+    /* Tactile press — scale only, so nothing around it reflows. */
+    .mushaf-rail-btn:active { transform: scale(0.93); }
+
+    /* Active tool: brand gradient lozenge lifted off the glass, edged in gold. */
     .mushaf-rail-btn.is-active {
         color: #fff;
-        background: linear-gradient(135deg, #0056b3, #218838);
+        background: linear-gradient(135deg, #0056b3 0%, #14746b 55%, #218838 100%);
+        box-shadow:
+            0 2px 6px rgba(0, 86, 179, 0.32),
+            0 6px 16px rgba(33, 136, 56, 0.28),
+            inset 0 1px 0 rgba(255, 255, 255, 0.28),
+            inset 0 0 0 1px rgba(201, 162, 39, 0.45);
     }
-    .mushaf-rail-divider { display: block; background: rgba(120, 120, 120, 0.2); }
+    .mushaf-rail-btn.is-active:hover { color: #fff; }
+
+    /* Hairline that fades at both ends instead of a flat grey bar. */
+    .mushaf-rail-divider {
+        display: block;
+        background: linear-gradient(to right, transparent, rgba(100, 116, 139, 0.34), transparent);
+    }
+    .mushaf-rail-dark .mushaf-rail-divider {
+        background: linear-gradient(to right, transparent, rgba(148, 163, 184, 0.28), transparent);
+    }
 
     /* Popovers anchored off each rail button */
     .mushaf-rail-pop {
@@ -231,21 +296,70 @@
     }
     .mushaf-pop-dark .mushaf-pop-select { background: #1f2937; border-color: rgba(255,255,255,0.12); color: #f3f4f6; }
 
+    /* Every action stacks its icon over an always-visible label, on both
+       breakpoints — the only difference between them is how the rail is placed. */
+    .mushaf-rail-btn {
+        flex-direction: column;
+        gap: 0.22rem;
+        height: auto;
+        min-width: 0;
+        border-radius: 0.8rem;
+    }
+    /* No opacity dimming on inactive labels — at this size it would drop contrast
+       below 4.5:1, and the active state is already carried by the gradient
+       lozenge and the gold underline. */
+    .mushaf-rail-label {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    /* Gold underline marks the active tool — a second cue beyond the gradient,
+       so the state is not carried by colour alone. */
+    .mushaf-rail-btn.is-active::after {
+        content: '';
+        position: absolute;
+        bottom: 0.22rem;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 1.1rem;
+        height: 2px;
+        border-radius: 2px;
+        background: var(--rail-gold);
+    }
+
     /* Desktop: vertical rail on the inline-end edge; popovers open toward content. */
     @media (min-width: 1024px) {
         .mushaf-rail { inset-inline-end: 1.25rem; top: 50%; transform: translateY(-50%); }
-        .mushaf-rail-inner { flex-direction: column; }
-        .mushaf-rail-divider { width: 1.4rem; height: 1px; margin: 0.15rem auto; }
+        .mushaf-rail-inner { flex-direction: column; align-items: stretch; border-radius: 1.25rem; }
+        .mushaf-rail-item > .mushaf-rail-btn { width: 100%; }
+        .mushaf-rail-btn { width: 4.6rem; padding: 0.55rem 0.3rem 0.5rem; }
+        .mushaf-rail-label { font-size: 0.68rem; }
+        .mushaf-rail-divider { width: auto; height: 1px; margin: 0.25rem 0.55rem; }
         .mushaf-rail-pop { inset-inline-end: calc(100% + 0.6rem); top: 0; }
     }
-    /* Mobile: horizontal bar pinned bottom-centre; popovers open upward. */
+    /* Mobile: horizontal bar pinned bottom. Items flex-share the width so the bar
+       never overflows narrow screens — the popovers are absolutely positioned
+       inside the bar, so it must not scroll. */
     @media (max-width: 1023px) {
-        .mushaf-rail { inset-inline-start: 0; inset-inline-end: 0; bottom: 1rem; display: flex; justify-content: center; transition: bottom 0.2s ease; }
-        .mushaf-rail-inner { flex-direction: row; }
-        .mushaf-rail-divider { width: 1px; height: 1.4rem; margin: auto 0.15rem; }
+        .mushaf-rail { inset-inline-start: 0; inset-inline-end: 0; bottom: 1rem; display: flex; justify-content: center; padding-inline: 0.5rem; transition: bottom 0.2s ease; }
+        .mushaf-rail-inner { flex-direction: row; align-items: stretch; width: 100%; max-width: 30rem; border-radius: 1.15rem; gap: 0.1rem; }
+        .mushaf-rail-item { flex: 1 1 0; min-width: 0; }
+        .mushaf-rail-inner > .mushaf-rail-btn { flex: 1 1 0; }
+        .mushaf-rail-btn { width: 100%; padding: 0.5rem 0.15rem 0.45rem; }
+        .mushaf-rail-label { font-size: 0.625rem; }
+        /* No room for a separator once every action carries a label. */
+        .mushaf-rail-divider { display: none; }
         .mushaf-rail-pop { bottom: calc(100% + 0.6rem); inset-inline-end: 0; }
         /* Lift the rail above the shared player bar when it's visible. */
         body.site-has-audio .mushaf-rail { bottom: 5.25rem; }
+    }
+
+    /* Motion is decoration here — the rail stays fully usable without it. */
+    @media (prefers-reduced-motion: reduce) {
+        .mushaf-rail,
+        .mushaf-rail-inner,
+        .mushaf-rail-btn { transition: none !important; }
+        .mushaf-rail-btn:active { transform: none; }
     }
 </style>
 @endpush
@@ -296,6 +410,7 @@
         switcherSearch: '',
 
         openTafsir: {},
+        tafsirVerse: null,      // verse shown in the reading-mode tafsir modal (null = closed)
         tafsirResources: {{ $tafsirResourcesJson }},
         selectedTafsirId: parseInt(localStorage.getItem('selectedTafsirId')) || ({{ $tafsirResources[0]['id'] ?? 0 }}),
         tafsirCache: {},        // resourceId -> { verseId: text } (filled per verse, on demand)
@@ -467,6 +582,20 @@
         toggleTafsir(verse) {
             this.openTafsir[verse.id] = !this.openTafsir[verse.id];
             if (this.openTafsir[verse.id]) { this.loadVerseTafsir(verse); } // fetch on open
+        },
+
+        // Reading (mushaf) view has no per-verse accordion, so tapping an ayah —
+        // any of its words or its end medallion — opens its tafsir in a modal.
+        // Delegated from the card wrapper so the server-rendered mushaf markup
+        // (and its own hover script) stay untouched.
+        openTafsirFromMushaf(event) {
+            const el = event.target.closest('[data-verse]');
+            if (!el) { return; }
+            const number = parseInt(el.dataset.verse, 10);
+            const verse = this.verses.find(v => v.number === number);
+            if (!verse) { return; }
+            this.tafsirVerse = verse;
+            this.loadVerseTafsir(verse);
         },
 
         currentTafsir(verse) {
@@ -653,6 +782,8 @@
                         {{-- In mushaf mode → icon shows the target (verse list); in verse mode → shows the mushaf (open book). --}}
                         <svg x-show="viewMode === 'reading'" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></svg>
                         <svg x-show="viewMode !== 'reading'" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.5C10.5 5 8 4.5 4 4.5v13c4 0 6.5.5 8 2 1.5-1.5 4-2 8-2v-13c-4 0-6.5.5-8 2zM12 6.5v13"/></svg>
+                        {{-- Label tracks the icon: it names the mode you switch *to*. --}}
+                        <span class="mushaf-rail-label" x-text="viewMode === 'reading' ? @js(__('quran.public.view_by_verse')) : @js(__('quran.public.view_reading'))"></span>
                     </button>
 
                     {{-- Display mode: Arabic / Translation / Both --}}
@@ -661,6 +792,7 @@
                             class="mushaf-rail-btn" :class="panel === 'display' ? 'is-active' : ''"
                             title="{{ __('quran.public.filter_display') }}" aria-label="{{ __('quran.public.filter_display') }}">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5h7M4 5c0 4 3 9 7 11M9 3v2m-2 9c2-1 4-3 5-6m6 13-3-7-3 7m1.2-3h3.6"/></svg>
+                            <span class="mushaf-rail-label">{{ __('quran.public.filter_display') }}</span>
                         </button>
                         <div x-show="panel === 'display'" x-cloak x-transition.opacity class="mushaf-rail-pop" :class="$store.theme.dark ? 'mushaf-pop-dark' : ''">
                             <p class="mushaf-pop-title">{{ __('quran.public.filter_display') }}</p>
@@ -676,6 +808,7 @@
                             class="mushaf-rail-btn" :class="panel === 'font' ? 'is-active' : ''"
                             title="{{ __('quran.public.filter_font') }}" aria-label="{{ __('quran.public.filter_font') }}">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 18 8.5 7l4.5 11M5.4 14h6.2M15 18l3-8 3 8m-5.3-2.8h4.6"/></svg>
+                            <span class="mushaf-rail-label">{{ __('quran.public.filter_font') }}</span>
                         </button>
                         <div x-show="panel === 'font'" x-cloak x-transition.opacity class="mushaf-rail-pop" :class="$store.theme.dark ? 'mushaf-pop-dark' : ''">
                             <p class="mushaf-pop-title">{{ __('quran.public.filter_font') }}</p>
@@ -698,6 +831,7 @@
                         title="{{ __('quran.public.listen') }}" aria-label="{{ __('quran.public.listen') }}">
                         <svg x-show="!$store.audioPlayer.playing" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.84A1 1 0 004 3.7v12.6a1 1 0 001.5.86l11-6.3a1 1 0 000-1.72l-11-6.3z"/></svg>
                         <svg x-show="$store.audioPlayer.playing" x-cloak class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M6 4a1 1 0 011 1v10a1 1 0 11-2 0V5a1 1 0 011-1zm7 0a1 1 0 011 1v10a1 1 0 11-2 0V5a1 1 0 011-1z"/></svg>
+                        <span class="mushaf-rail-label">{{ __('quran.public.listen') }}</span>
                     </button>
 
                     {{-- Settings: translation edition + tafsir source (filters, tucked away) --}}
@@ -706,6 +840,7 @@
                             class="mushaf-rail-btn" :class="panel === 'settings' ? 'is-active' : ''"
                             title="{{ __('quran.public.display_settings') }}" aria-label="{{ __('quran.public.display_settings') }}">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h10m4 0h2M4 12h2m4 0h10M4 18h10m4 0h2"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/></svg>
+                            <span class="mushaf-rail-label">{{ __('quran.public.rail_settings') }}</span>
                         </button>
                         <div x-show="panel === 'settings'" x-cloak x-transition.opacity class="mushaf-rail-pop mushaf-rail-pop-wide" :class="$store.theme.dark ? 'mushaf-pop-dark' : ''">
                             <div x-show="editionsForLang.length > 1">
@@ -735,18 +870,21 @@
                     <button type="button" @click="openSwitcher(); panel = null"
                         class="mushaf-rail-btn" title="{{ __('quran.public.switch_surah') }}" aria-label="{{ __('quran.public.switch_surah') }}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+                        <span class="mushaf-rail-label">{{ __('quran.public.rail_surahs') }}</span>
                     </button>
 
                     {{-- Surah info — opens the description modal --}}
                     <button type="button" @click="infoOpen = true; panel = null"
                         class="mushaf-rail-btn" title="{{ __('quran.public.surah_info') }}" aria-label="{{ __('quran.public.surah_info') }}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 11v5M12 8h.01"/></svg>
+                        <span class="mushaf-rail-label">{{ __('quran.public.rail_info') }}</span>
                     </button>
 
                     {{-- Ask about this surah — prefilled AI question --}}
                     <a href="{{ route('public.quran.ask', ['q' => $surah['nameAr'].': ']) }}"
                         class="mushaf-rail-btn" title="{{ __('quran.public.ask_about_surah') }}" aria-label="{{ __('quran.public.ask_about_surah') }}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8zM18 14l.9 2.1L21 17l-2.1.9L18 20l-.9-2.1L15 17l2.1-.9z"/></svg>
+                        <span class="mushaf-rail-label">{{ __('quran.public.rail_ask') }}</span>
                     </a>
                 </div>
             </div>
@@ -901,7 +1039,9 @@
             {{-- Mushaf reading (line-for-line, page-by-page — quran.com reading mode) --}}
             @if(! empty($mushaf))
             <div x-show="viewMode === 'reading'" x-cloak class="mb-12">
+                {{-- Tapping any ayah (word or end medallion) opens its tafsir. --}}
                 <div class="verse-card mushaf-card rounded-2xl shadow-lg px-5 sm:px-8 py-8 mx-auto"
+                     @click="openTafsirFromMushaf($event)"
                      :class="$store.theme.dark ? 'bg-gray-900' : 'bg-white'">
                     @include('public.quran._mushaf')
                 </div>
@@ -921,7 +1061,7 @@
                     <div class="verse-card rounded-2xl shadow-lg p-6 sm:p-8" :class="$store.theme.dark ? 'bg-gray-900' : 'bg-white'">
                         <p class="font-['Amiri'] leading-loose text-start" dir="rtl"
                            :class="$store.theme.dark ? 'text-white' : 'text-gray-900'"
-                           :style="`font-size: ${fontSize}px`"><template x-for="verse in grp.items" :key="verse.id"><span><span x-text="verse.arabic"></span><span class="inline-flex items-center justify-center align-middle mx-1 w-7 h-7 text-xs font-sans font-bold rounded-full" :class="$store.theme.dark ? 'bg-gray-800 text-[#64CCC5]' : 'bg-gray-100 text-[#0056b3]'" x-text="verse.number"></span> </span></template></p>
+                           :style="`font-size: ${fontSize}px`"><template x-for="verse in grp.items" :key="verse.id"><span class="cursor-pointer" @click="tafsirVerse = verse; loadVerseTafsir(verse)"><span x-text="verse.arabic"></span><span class="inline-flex items-center justify-center align-middle mx-1 w-7 h-7 text-xs font-sans font-bold rounded-full" :class="$store.theme.dark ? 'bg-gray-800 text-[#64CCC5]' : 'bg-gray-100 text-[#0056b3]'" x-text="verse.number"></span> </span></template></p>
                     </div>
                 </div>
                 </template>
@@ -967,6 +1107,40 @@
     </div>{{-- /grid --}}
 
 </main>
+
+{{-- ============================================================ --}}
+{{-- VERSE TAFSIR MODAL (reading view — tapping an ayah opens this)  --}}
+{{-- ============================================================ --}}
+<div x-show="tafsirVerse" x-cloak x-transition.opacity
+     @keydown.escape.window="tafsirVerse = null"
+     class="fixed inset-0 flex items-center justify-center p-4" style="z-index: 70;">
+    <div class="absolute inset-0 bg-black/50" @click="tafsirVerse = null"></div>
+    <div class="relative w-full max-w-lg overflow-hidden rounded-2xl shadow-2xl flex flex-col"
+         style="max-height: 80vh;" :class="$store.theme.dark ? 'bg-gray-900' : 'bg-white'"
+         role="dialog" aria-modal="true">
+        <div class="p-5 bg-gradient-to-br from-[#0056b3] to-[#218838] text-white relative flex-shrink-0">
+            <button @click="tafsirVerse = null" type="button" class="absolute top-3 end-3 p-1.5 rounded-full hover:bg-white/20 transition-colors" aria-label="{{ __('quran.public.close') }}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <p class="text-xs text-white/80">{{ $surah['nameAr'] }} · <span x-text="tafsirVerse ? tafsirVerse.verse_key : ''"></span></p>
+            <p class="font-['Amiri'] text-2xl leading-relaxed mt-2 pe-8" dir="rtl" x-text="tafsirVerse ? tafsirVerse.arabic : ''"></p>
+        </div>
+        <div class="p-5 overflow-y-auto">
+            <p class="mushaf-pop-title mb-2" x-text="currentTafsirName()"></p>
+            {{-- Loading --}}
+            <p x-show="tafsirVerse && tafsirLoadingVerse === tafsirVerse.id" class="text-sm animate-pulse"
+               :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">{{ __('quran.public.tafsir_loading') }}</p>
+            {{-- Text --}}
+            <p x-show="tafsirVerse && tafsirLoadingVerse !== tafsirVerse.id && currentTafsir(tafsirVerse)"
+               class="leading-relaxed font-['Amiri'] text-lg" dir="auto"
+               :class="$store.theme.dark ? 'text-gray-300' : 'text-gray-700'"
+               x-text="tafsirVerse ? currentTafsir(tafsirVerse) : ''"></p>
+            {{-- Loaded but this edition has no tafsir for the verse --}}
+            <p x-show="tafsirVerse && tafsirLoadingVerse !== tafsirVerse.id && tafsirLoaded(tafsirVerse) && !currentTafsir(tafsirVerse)"
+               class="text-sm italic" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">{{ __('quran.public.no_tafsir') }}</p>
+        </div>
+    </div>
+</div>
 
 {{-- ============================================================ --}}
 {{-- SURAH INFO MODAL --}}

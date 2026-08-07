@@ -262,6 +262,10 @@ return [
         'all_surahs' => 'Toutes les sourates',
         'display_settings' => 'Paramètres d’affichage',
         'ask_about_surah' => 'Poser une question sur cette sourate',
+        'rail_settings' => 'Réglages',
+        'rail_surahs' => 'Sourates',
+        'rail_info' => 'Infos',
+        'rail_ask' => 'Demander',
         'audio_unavailable' => 'L\'audio n\'est pas disponible pour cette sourate en ce moment.',
         'choose_reciter' => 'Choisir un récitateur',
 

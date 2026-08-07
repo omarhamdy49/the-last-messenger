@@ -31,7 +31,7 @@
     @foreach($mushaf as $page)
         <section class="mushaf-page" data-page="{{ $page['page'] }}">
             @foreach($page['lines'] as $line)
-                <div class="mushaf-line {{ $loop->last ? 'mushaf-line-end' : '' }}">@foreach($line['words'] as $w)@if($w['type'] === 'end')<span class="ayah-end" role="img" aria-label="{{ __('quran.public.verse_label') }} {{ $w['verse'] }}"><span class="ayah-end-num">{{ $toDigits($w['verse']) }}</span></span>@else <span class="qw" data-word-location="{{ $w['location'] }}" data-verse="{{ $w['verse'] }}">{{ $w['text'] }}</span> @endif @endforeach</div>
+                <div class="mushaf-line {{ $loop->last ? 'mushaf-line-end' : '' }}">@foreach($line['words'] as $w)@if($w['type'] === 'end')<span class="ayah-end" role="img" data-verse="{{ $w['verse'] }}" aria-label="{{ __('quran.public.verse_label') }} {{ $w['verse'] }}"><span class="ayah-end-num">{{ $toDigits($w['verse']) }}</span></span>@else <span class="qw" data-word-location="{{ $w['location'] }}" data-verse="{{ $w['verse'] }}">{{ $w['text'] }}</span> @endif @endforeach</div>
             @endforeach
             <div class="mushaf-pageno"><span class="mushaf-pageno-badge">{{ $toDigits($page['page']) }}</span></div>
         </section>

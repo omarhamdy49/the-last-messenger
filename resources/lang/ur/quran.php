@@ -262,6 +262,10 @@ return [
         'all_surahs' => 'تمام سورتیں',
         'display_settings' => 'ڈسپلے سیٹنگز',
         'ask_about_surah' => 'اس سورت کے بارے میں پوچھیں',
+        'rail_settings' => 'ترتیبات',
+        'rail_surahs' => 'سورتیں',
+        'rail_info' => 'معلومات',
+        'rail_ask' => 'پوچھیں',
         'audio_unavailable' => 'اس سورہ کا آڈیو ابھی دستیاب نہیں ہے۔',
         'choose_reciter' => 'قاری منتخب کریں',
 

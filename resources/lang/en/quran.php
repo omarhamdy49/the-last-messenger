@@ -298,6 +298,10 @@ return [
         'all_surahs' => 'All surahs',
         'display_settings' => 'Display settings',
         'ask_about_surah' => 'Ask about this surah',
+        'rail_settings' => 'Settings',
+        'rail_surahs' => 'Surahs',
+        'rail_info' => 'Info',
+        'rail_ask' => 'Ask',
         'audio_unavailable' => 'Audio is not available for this surah at the moment.',
         'choose_reciter' => 'Choose a reciter',
 
