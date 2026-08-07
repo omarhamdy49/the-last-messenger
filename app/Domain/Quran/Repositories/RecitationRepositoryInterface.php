@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Quran\Repositories;
 
 use App\Domain\Quran\Models\Recitation;
+use App\Domain\Quran\Models\Surah;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -24,10 +25,10 @@ interface RecitationRepositoryInterface
     public function getByReciterKeyedBySurah(int $reciterId): Collection;
 
     /**
-     * Get all 114 surahs ordered by surah number (revelation_order),
+     * Get all 114 surahs ordered by surah number (id),
      * selecting only the columns the admin profile lists.
      *
-     * @return Collection<int, \App\Domain\Quran\Models\Surah>
+     * @return Collection<int, Surah>
      */
     public function getAllSurahs(): Collection;
 

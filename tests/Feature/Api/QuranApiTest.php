@@ -308,6 +308,9 @@ class QuranApiTest extends TestCase
     private function seedSurah(int $number, string $nameAr, string $nameEn, int $versesCount): void
     {
         DB::table('quran_surahs')->insert([
+            // The surah number is the id (mushaf order); revelation_order is the
+            // chronological order and must not stand in for it.
+            'id' => $number,
             'revelation_order' => $number,
             'revelation_place' => 'makkah',
             'bismillah_pre' => true,

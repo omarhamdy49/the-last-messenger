@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Repositories;
 
+use App\Domain\Quran\Models\TafsirResource;
 use App\Domain\Shared\Contracts\RepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
@@ -24,7 +25,7 @@ interface TafseerRepositoryInterface extends RepositoryInterface
     /**
      * Active tafsir editions (resources) ordered for the reader's source selector.
      *
-     * @return Collection<int, \App\Domain\Quran\Models\TafsirResource>
+     * @return Collection<int, TafsirResource>
      */
     public function getActiveResources(): Collection;
 

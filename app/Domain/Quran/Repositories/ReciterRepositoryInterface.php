@@ -115,9 +115,9 @@ interface ReciterRepositoryInterface
     /**
      * Get a sorted, distinct list of non-null country codes
      *
-     * @return \Illuminate\Support\Collection<int, string>
+     * @return Collection<int, string>
      */
-    public function getDistinctCountries(): \Illuminate\Support\Collection;
+    public function getDistinctCountries(): Collection;
 
     /**
      * Get reciters whose image paths need to be cleaned up for a set of IDs

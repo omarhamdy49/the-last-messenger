@@ -114,7 +114,7 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
             self::CACHE_TTL,
             function () use ($surahNumber, $resourceId): array {
                 $verseIds = Verse::query()
-                    ->whereHas('surah', fn ($q) => $q->where('revelation_order', $surahNumber))
+                    ->where('surah_id', $surahNumber)
                     ->pluck('id');
 
                 return VerseTranslation::query()
@@ -147,7 +147,7 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
 
     /**
      * Get verse by surah number and verse number.
-     * surahNumber maps to quran_surahs.revelation_order.
+     * surahNumber is the mushaf number, i.e. quran_surahs.id.
      */
     public function getBySurahAndVerse(int $surahNumber, int $verseNumber): ?Verse
     {
@@ -156,9 +156,7 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
             self::CACHE_TTL,
             fn () => $this->model
                 ->select(self::VERSE_COLUMNS)
-                ->whereHas('surah', function ($query) use ($surahNumber) {
-                    $query->where('revelation_order', $surahNumber);
-                })
+                ->where('surah_id', $surahNumber)
                 ->where('verse_number', $verseNumber)
                 ->with([self::SURAH_EAGER, self::TRANSLATIONS_EAGER, self::TRANSLATION_RESOURCE_EAGER])
                 ->first()
@@ -311,7 +309,7 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
         string $search = '',
         string $sortBy = 'verse_key',
         array $filters = []
-    ): \Illuminate\Pagination\LengthAwarePaginator {
+    ): LengthAwarePaginator {
         $hasSearch = $search !== '';
 
         // Use qualified column names when a JOIN is present to avoid ambiguity.
@@ -394,7 +392,7 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
         int $perPage = 15,
         ?int $surahId = null,
         string $language = 'ar'
-    ): \Illuminate\Pagination\LengthAwarePaginator {
+    ): LengthAwarePaginator {
         $q = $this->model
             ->select(self::VERSE_COLUMNS_QUALIFIED)
             ->join('quran_verse_translations', 'quran_verses.id', '=', 'quran_verse_translations.verse_id')

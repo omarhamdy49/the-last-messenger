@@ -10,6 +10,7 @@ use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 
 class SurahRepository extends BaseRepository implements SurahRepositoryInterface
@@ -55,13 +56,15 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
             fn () => $this->model
                 ->select($selectColumns)
                 ->with($relations)
-                ->orderBy('revelation_order')
+                ->orderBy('id')
                 ->get()
         );
     }
 
     /**
-     * Get surah by number (1-114) — number maps to revelation_order
+     * Get surah by number (1-114) — the surah number is the id (mushaf order).
+     * `revelation_order` is the chronological order of revelation (Al-Fatihah
+     * is surah 1 but was revealed 5th), so it must never stand in for the number.
      */
     public function getByNumber(int $number): ?Surah
     {
@@ -70,7 +73,7 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
             self::CACHE_TTL,
             fn () => $this->model
                 ->select(self::SURAH_COLUMNS)
-                ->where('revelation_order', $number)
+                ->where('id', $number)
                 ->first()
         );
     }
@@ -88,7 +91,7 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
             fn () => $this->model
                 ->select(self::SURAH_COLUMNS)
                 ->where('revelation_place', $placeValue)
-                ->orderBy('revelation_order')
+                ->orderBy('id')
                 ->get()
         );
     }
@@ -97,7 +100,7 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
      * Get surahs by Juz — not directly queryable on surah level;
      * returns all surahs whose pages overlap the given juz.
      * Since there is no juz column on surahs, this returns all surahs
-     * ordered by revelation_order as a safe fallback.
+     * in mushaf order as a safe fallback.
      */
     public function getByJuz(int $juz): Collection
     {
@@ -106,7 +109,7 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
             self::CACHE_TTL,
             fn () => $this->model
                 ->select(self::SURAH_COLUMNS)
-                ->orderBy('revelation_order')
+                ->orderBy('id')
                 ->get()
         );
     }
@@ -119,9 +122,9 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
     public function paginateWithFilters(
         int $perPage = 15,
         string $search = '',
-        string $sortBy = 'revelation_order',
+        string $sortBy = 'id',
         array $filters = []
-    ): \Illuminate\Pagination\LengthAwarePaginator {
+    ): LengthAwarePaginator {
         $query = $this->model->select(self::SURAH_COLUMNS);
 
         // Apply search across name_ar, name_en, and transliteration
@@ -130,7 +133,7 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
                 $q->where('name_ar', 'LIKE', "%{$search}%")
                     ->orWhere('name_en', 'LIKE', "%{$search}%")
                     ->orWhere('transliteration', 'LIKE', "%{$search}%")
-                    ->orWhere('revelation_order', 'LIKE', "%{$search}%");
+                    ->orWhere('id', 'LIKE', "%{$search}%");
             });
         }
 
@@ -140,8 +143,8 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
         }
 
         // Apply sorting
-        $allowedSorts = ['revelation_order', 'verses_count', 'created_at'];
-        $sortBy = in_array($sortBy, $allowedSorts, true) ? $sortBy : 'revelation_order';
+        $allowedSorts = ['id', 'revelation_order', 'verses_count', 'created_at'];
+        $sortBy = in_array($sortBy, $allowedSorts, true) ? $sortBy : 'id';
         $query->orderBy($sortBy);
 
         return $query->paginate($perPage);
@@ -174,7 +177,7 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
     /**
      * Search surahs by name_ar, name_en, and transliteration
      */
-    public function search(string $query, int $perPage = 15, ?string $revelationPlace = null): \Illuminate\Pagination\LengthAwarePaginator
+    public function search(string $query, int $perPage = 15, ?string $revelationPlace = null): LengthAwarePaginator
     {
         $q = $this->model->select(self::SURAH_COLUMNS);
 
@@ -182,14 +185,14 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
             $subQuery->where('name_ar', 'LIKE', "%{$query}%")
                 ->orWhere('name_en', 'LIKE', "%{$query}%")
                 ->orWhere('transliteration', 'LIKE', "%{$query}%")
-                ->orWhere('revelation_order', 'LIKE', "%{$query}%");
+                ->orWhere('id', 'LIKE', "%{$query}%");
         });
 
         if ($revelationPlace !== null) {
             $q->where('revelation_place', $revelationPlace);
         }
 
-        return $q->orderBy('revelation_order')->paginate($perPage);
+        return $q->orderBy('id')->paginate($perPage);
     }
 
     /**

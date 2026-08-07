@@ -43,7 +43,7 @@ class RecitationRepository implements RecitationRepositoryInterface
     }
 
     /**
-     * Get all 114 surahs ordered by surah number, selecting only the
+     * Get all 114 surahs in mushaf order (id), selecting only the
      * columns the admin profile lists.
      *
      * @return Collection<int, Surah>
@@ -59,7 +59,7 @@ class RecitationRepository implements RecitationRepositoryInterface
                 'revelation_order',
                 'verses_count',
             ])
-            ->orderBy('revelation_order')
+            ->orderBy('id')
             ->get();
     }
 

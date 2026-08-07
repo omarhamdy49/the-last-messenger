@@ -6,6 +6,7 @@ namespace App\Domain\Quran\Repositories;
 
 use App\Domain\Quran\Models\AiInquiry;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
 final class AiInquiryRepository implements AiInquiryRepositoryInterface
@@ -121,7 +122,7 @@ final class AiInquiryRepository implements AiInquiryRepositoryInterface
      * Batched hard-delete shared by the retention sweeps. Deletes by id in chunks
      * so a large backlog never holds a long table lock; with $dryRun it only counts.
      *
-     * @param  \Closure(): \Illuminate\Database\Eloquent\Builder<AiInquiry>  $query
+     * @param  \Closure(): Builder<AiInquiry>  $query
      */
     private function purge(\Closure $query, bool $dryRun, int $chunk): int
     {

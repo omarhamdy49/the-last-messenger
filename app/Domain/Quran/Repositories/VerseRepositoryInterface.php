@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Repositories;
 
+use App\Domain\Quran\Models\TranslationResource;
+use App\Domain\Quran\Models\Verse;
+use App\Domain\Quran\Models\Word;
 use App\Domain\Shared\Contracts\RepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -18,7 +21,7 @@ interface VerseRepositoryInterface extends RepositoryInterface
     /**
      * Active translation editions (resources), excluding the Arabic source text.
      *
-     * @return Collection<int, \App\Domain\Quran\Models\TranslationResource>
+     * @return Collection<int, TranslationResource>
      */
     public function getActiveTranslationResources(): Collection;
 
@@ -32,7 +35,7 @@ interface VerseRepositoryInterface extends RepositoryInterface
     /**
      * Get verse by surah number and verse number
      */
-    public function getBySurahAndVerse(int $surahNumber, int $verseNumber): ?\App\Domain\Quran\Models\Verse;
+    public function getBySurahAndVerse(int $surahNumber, int $verseNumber): ?Verse;
 
     /**
      * Get verses by Juz
@@ -67,7 +70,7 @@ interface VerseRepositoryInterface extends RepositoryInterface
     /**
      * Get random verse
      */
-    public function getRandomVerse(): ?\App\Domain\Quran\Models\Verse;
+    public function getRandomVerse(): ?Verse;
 
     /**
      * Get paginated verses with filters
@@ -103,7 +106,7 @@ interface VerseRepositoryInterface extends RepositoryInterface
      * Printed-mushaf word layout for a surah, ordered for line-by-line rendering
      * (page → line → position).
      *
-     * @return Collection<int, \App\Domain\Quran\Models\Word>
+     * @return Collection<int, Word>
      */
     public function getMushafWordsBySurah(int $surahNumber): Collection;
 }
