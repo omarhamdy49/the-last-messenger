@@ -442,7 +442,9 @@
             this.$store.audioPlayer.configure({
                 reciters: this.reciters,
                 reciterId: this.selectedReciterId,
-                surah: { nameAr: this.surah.nameAr },
+                // number + versesCount let the player chain per-verse audio for
+                // reciters that have no whole-surah recording.
+                surah: { nameAr: this.surah.nameAr, number: this.surah.number, versesCount: this.surah.versesCount },
             });
 
             // Deep link to a specific verse (#v65): the native jump fires before

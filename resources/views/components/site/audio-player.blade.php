@@ -97,10 +97,17 @@
             _saveTimer: null,
 
             // Reciter switching (configured per surah page)
-            reciters: [],           // [{ id, nameAr, nameEn, surahAudioUrl }]
+            reciters: [],           // [{ id, nameAr, nameEn, surahAudioUrl, everyayah_folder }]
             reciterId: null,
-            surahMeta: null,        // { nameAr } — title + URL re-resolution on reciter change
+            surahMeta: null,        // { nameAr, number, versesCount }
             reciterOpen: false,
+
+            // Verse-chaining fallback. Only a fraction of reciters have a
+            // whole-surah recording; the rest play a surah by queueing their
+            // per-verse files. Non-null queue means we are in that mode.
+            queue: null,            // [url, ...] indexed by ayah - 1
+            queueIndex: 0,
+            _preload: null,
 
             init() {
                 try {
@@ -120,6 +127,8 @@
             configure({ reciters, reciterId, surah }) {
                 this.reciters = Array.isArray(reciters) ? reciters : [];
                 this.surahMeta = surah || null;
+                // A queue belongs to the surah that built it.
+                this.queue = null; this.queueIndex = 0; this._preload = null;
                 const stored = parseInt(localStorage.getItem('siteReciterId') ?? '', 10);
                 const valid = (id) => this.reciters.some((r) => r.id === id);
                 this.reciterId = valid(stored) ? stored
@@ -130,22 +139,93 @@
             reciterName() { const r = this.currentReciter(); return r ? (r.nameAr || r.nameEn || '') : ''; },
             surahUrl() { const r = this.currentReciter(); return r ? r.surahAudioUrl : null; },
 
-            // Play the configured surah with the selected reciter (rail Play button).
-            playSurah() {
-                const url = this.surahUrl();
-                if (!url) { window.toast?.('{{ __('quran.public.audio_unavailable') }}', 'error'); return; }
-                this.play({ url, title: this.surahMeta?.nameAr || '', subtitle: this.reciterName() });
+            // everyayah lays per-verse audio out as {folder}/{SSS}{AAA}.mp3.
+            _verseQueue(reciter) {
+                const surah = this.surahMeta;
+                if (!reciter?.everyayah_folder || !surah?.number || !surah?.versesCount) { return null; }
+                const s = String(surah.number).padStart(3, '0');
+                return Array.from({ length: surah.versesCount }, (_, i) =>
+                    `https://everyayah.com/data/${reciter.everyayah_folder}/${s}${String(i + 1).padStart(3, '0')}.mp3`);
             },
 
-            // Switch reciter and resume the same surah from the current position.
+            // Subtitle carries the ayah position, since in queue mode the progress
+            // bar only ever describes the current verse.
+            _subtitle() {
+                if (!this.queue) { return this.reciterName(); }
+                return `${this.reciterName()} · {{ __('quran.public.verse_label') }} ${this.queueIndex + 1}/${this.queue.length}`;
+            },
+
+            // Play the configured surah with the selected reciter (rail Play button).
+            // Prefers the single whole-surah file; falls back to chaining verses.
+            playSurah() {
+                const url = this.surahUrl();
+                if (url) {
+                    this.queue = null;
+                    this.play({ url, title: this.surahMeta?.nameAr || '', subtitle: this.reciterName() });
+                    return;
+                }
+
+                const queue = this._verseQueue(this.currentReciter());
+                if (!queue) { window.toast?.('{{ __('quran.public.audio_unavailable') }}', 'error'); return; }
+
+                this.queue = queue;
+                this.queueIndex = 0;
+                this._playQueued(true);
+            },
+
+            // Load the queued ayah. autoplay=false is used when only re-pointing
+            // the source (e.g. a reciter switch while paused).
+            _playQueued(autoplay) {
+                this._teardown();
+                this.track = { url: this.queue[this.queueIndex], title: this.surahMeta?.nameAr || '', subtitle: this._subtitle() };
+                this.currentTime = 0; this.duration = 0;
+                this._ensureAudio();
+                this._persist();
+                if (autoplay) { this.audio.play().catch(() => {}); }
+                this._preloadNext();
+            },
+
+            // Warm the next ayah so the gap between verses stays short.
+            _preloadNext() {
+                const next = this.queue?.[this.queueIndex + 1];
+                if (!next) { this._preload = null; return; }
+                const a = new Audio();
+                a.preload = 'auto';
+                a.src = next;
+                this._preload = a;
+            },
+
+            // Advance within the queue. Returns false at the end of the surah.
+            _advance() {
+                if (!this.queue || this.queueIndex >= this.queue.length - 1) { return false; }
+                this.queueIndex++;
+                this._playQueued(true);
+                return true;
+            },
+
+            // Switch reciter and resume the same surah. In queue mode that means
+            // the same ayah — a wall-clock offset does not carry across reciters.
             selectReciter(id) {
                 this.reciterId = id;
                 this.reciterOpen = false;
                 localStorage.setItem('siteReciterId', String(id));
-                const url = this.surahUrl();
-                if (!url || !this.track) { return; }
-                const resumeAt = this.currentTime;
+                if (!this.track) { return; }
+
                 const wasPlaying = this.playing;
+                const url = this.surahUrl();
+
+                if (!url) {
+                    const queue = this._verseQueue(this.currentReciter());
+                    if (!queue) { window.toast?.('{{ __('quran.public.audio_unavailable') }}', 'error'); return; }
+                    // Keep the listener's place in the surah across the switch.
+                    this.queueIndex = Math.min(this.queue ? this.queueIndex : 0, queue.length - 1);
+                    this.queue = queue;
+                    this._playQueued(wasPlaying);
+                    return;
+                }
+
+                const resumeAt = this.queue ? 0 : this.currentTime;
+                this.queue = null;
                 this._teardown();
                 this.track = { url, title: this.surahMeta?.nameAr || this.track.title, subtitle: this.reciterName() };
                 this._ensureAudio();
@@ -188,6 +268,7 @@
             close() {
                 this._teardown();
                 this.track = null; this.playing = false; this.currentTime = 0; this.duration = 0;
+                this.queue = null; this.queueIndex = 0; this._preload = null;
                 localStorage.removeItem('sitePlayerTrack');
             },
 
@@ -208,7 +289,21 @@
                 a.addEventListener('timeupdate', () => { this.currentTime = a.currentTime; this._persistSoon(); });
                 a.addEventListener('play', () => { this.playing = true; });
                 a.addEventListener('pause', () => { this.playing = false; this._persist(); });
-                a.addEventListener('ended', () => { this.playing = false; this.currentTime = 0; this._persist(); });
+                a.addEventListener('ended', () => {
+                    if (this.audio !== a) { return; }
+                    // In queue mode the surah continues into the next ayah.
+                    if (this._advance()) { return; }
+                    this.playing = false; this.currentTime = 0; this._persist();
+                });
+                // everyayah is missing the odd ayah file for some reciters; skip
+                // past it rather than stalling the surah on a dead request.
+                // The identity check matters: _teardown() clears src, which fires
+                // `error` on the element being discarded — without it, advancing
+                // one ayah tears down the old audio and cascades through the surah.
+                a.addEventListener('error', () => {
+                    if (this.audio !== a) { return; }
+                    if (!this._advance()) { this.playing = false; }
+                });
                 this.audio = a;
             },
             _teardown() { if (this.audio) { this.audio.pause(); this.audio.src = ''; this.audio = null; } },
