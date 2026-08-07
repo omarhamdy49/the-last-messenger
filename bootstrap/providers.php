@@ -1,15 +1,29 @@
 <?php
 
+use App\Providers\AppServiceProvider;
+use App\Providers\BlogServiceProvider;
+use App\Providers\ContentServiceProvider;
+use App\Providers\FavoriteServiceProvider;
+use App\Providers\HadithServiceProvider;
+use App\Providers\MediaServiceProvider;
+use App\Providers\PeopleServiceProvider;
+use App\Providers\QuranServiceProvider;
+use App\Providers\SeerahServiceProvider;
+use App\Providers\SharedServiceProvider;
+use App\Providers\TopicsServiceProvider;
+use App\Providers\TranslationServiceProvider;
+
 return [
-    App\Providers\AppServiceProvider::class,
-    App\Providers\TranslationServiceProvider::class,
-    App\Providers\BlogServiceProvider::class,
-    App\Providers\ContentServiceProvider::class,
-    App\Providers\QuranServiceProvider::class,
-    App\Providers\SeerahServiceProvider::class,
-    App\Providers\PeopleServiceProvider::class,
-    App\Providers\MediaServiceProvider::class,
-    App\Providers\SharedServiceProvider::class,
-    App\Providers\FavoriteServiceProvider::class,
-    App\Providers\TopicsServiceProvider::class,
+    AppServiceProvider::class,
+    TranslationServiceProvider::class,
+    BlogServiceProvider::class,
+    ContentServiceProvider::class,
+    QuranServiceProvider::class,
+    SeerahServiceProvider::class,
+    PeopleServiceProvider::class,
+    HadithServiceProvider::class,
+    MediaServiceProvider::class,
+    SharedServiceProvider::class,
+    FavoriteServiceProvider::class,
+    TopicsServiceProvider::class,
 ];
