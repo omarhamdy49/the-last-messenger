@@ -6,6 +6,8 @@ namespace Tests\Feature\Web;
 
 use App\Domain\Content\Models\HomeSection;
 use App\Domain\Content\Services\HomeSectionService;
+use App\Domain\Hadith\Models\Hadith;
+use App\Domain\Hadith\Models\HadithCollection;
 use Database\Seeders\HomeSectionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -130,5 +132,27 @@ final class HomeSectionTest extends TestCase
 
         $this->assertCount(8, $sections);
         $this->assertCount(2, $queries);
+    }
+
+    public function test_daily_hadith_renders_a_published_narration_and_skips_unpublished_ones(): void
+    {
+        $this->seed(HomeSectionsSeeder::class);
+
+        $collection = HadithCollection::factory()->create(['title_ar' => 'مجموعة الاختبار']);
+        Hadith::factory()->for($collection, 'collection')->create([
+            'number' => '4242',
+            'text_ar' => 'نص الحديث المنشور',
+        ]);
+        // Must never be picked — the pool is published rows only.
+        Hadith::factory()->for($collection, 'collection')->unpublished()->create([
+            'text_ar' => 'نص الحديث غير المنشور',
+        ]);
+
+        $this->get(route('public.home'))
+            ->assertOk()
+            ->assertSee('نص الحديث المنشور', false)
+            ->assertSee('مجموعة الاختبار', false)
+            ->assertSee('#4242', false)
+            ->assertDontSee('نص الحديث غير المنشور', false);
     }
 }
