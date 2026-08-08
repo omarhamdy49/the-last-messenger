@@ -321,10 +321,13 @@
             }).observe(document.body, { childList: true, subtree: true });
         });
 
-        // Handle window resize for sidebar
+        // Handle window resize for sidebar.
+        // `window.Alpine` is guarded: this script is inline and runs during
+        // parsing, while the Alpine bundle is deferred — a resize fired in that
+        // window threw "Alpine is not defined" on load.
         window.addEventListener('resize', () => {
-            if (window.innerWidth >= 1024) {
-                Alpine.store('sidebarOpen', true);
+            if (window.innerWidth >= 1024 && window.Alpine) {
+                window.Alpine.store('sidebarOpen', true);
             }
         });
     </script>

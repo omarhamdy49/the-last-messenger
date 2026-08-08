@@ -121,6 +121,7 @@ return [
     'mission_start' => 'Start of Prophethood',
     'hira_cave' => 'Cave of Hira',
     'age_40' => 'At the age of 40',
+    'age_at' => 'At the age of :age',
     'death_date' => 'Date of Passing',
     'prophet_death_hijri' => '12 Rabi\' al-Awwal – 11 AH',
     'monday' => 'Monday',

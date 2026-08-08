@@ -11,6 +11,10 @@ Route::prefix('sahaba')->group(function (): void {
     Route::get('/picker', [SahabiController::class, 'picker'])
         ->middleware('throttle:search')
         ->name('admin.sahaba.picker');
+    // Paginated browser behind the parent-picker modal.
+    Route::get('/browse', [SahabiController::class, 'browse'])
+        ->middleware('throttle:search')
+        ->name('admin.sahaba.browse');
     Route::get('/roles', [SahabiController::class, 'roles'])->name('admin.sahaba.roles');
     // Bulk actions the existing index view posts to.
     Route::post('/bulk-delete', [SahabiController::class, 'bulkDelete'])->name('admin.sahaba.bulk-delete');

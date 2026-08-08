@@ -39,6 +39,13 @@ class DatabaseSeeder extends Seeder
             MediaCategorySeeder::class,
         ]);
 
+        // People: the Islamic roles taxonomy, then the Prophet ﷺ and his paternal
+        // lineage — which is what the family tree roots itself at.
+        $this->call([
+            IslamicRoleSeeder::class,
+            ProphetLineageSeeder::class,
+        ]);
+
         // Topics auto-curate from EXISTING Quran/Hadith/Article content, so only
         // run once that content has been imported. Otherwise it would create empty
         // topics. Always runnable standalone via: php artisan db:seed --class=TopicSeeder

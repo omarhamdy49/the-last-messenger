@@ -121,6 +121,7 @@ return [
     'mission_start' => 'بداية البعثة',
     'hira_cave' => 'غار حراء',
     'age_40' => 'وعمره 40 سنة',
+    'age_at' => 'وعمره :age سنة',
     'death_date' => 'تاريخ الوفاة',
     'prophet_death_hijri' => '12 ربيع الأول - 11 هـ',
     'monday' => 'يوم الإثنين',

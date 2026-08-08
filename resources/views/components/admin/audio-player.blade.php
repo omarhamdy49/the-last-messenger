@@ -44,7 +44,13 @@
 
         {{-- Volume + close --}}
         <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-            <i data-lucide="volume-2" class="w-4 h-4 hidden sm:block" :class="darkMode ? 'text-gray-400' : 'text-gray-500'"></i>
+            {{-- Theme class on the wrapper, not the <i>: Lucide replaces each
+                 <i data-lucide> with a generated <svg>, copying the attributes onto
+                 a fresh node that Alpine re-evaluates outside this scope — which
+                 threw a ReferenceError on every admin page load. --}}
+            <span class="hidden sm:block" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                <i data-lucide="volume-2" class="w-4 h-4"></i>
+            </span>
             <input type="range" min="0" max="1" step="0.05" :value="$store.audioPlayer.volume"
                    @input="$store.audioPlayer.setVolume(parseFloat($event.target.value))"
                    class="w-16 lg:w-24 accent-[#218838] hidden sm:block" aria-label="{{ __('quran.recitations.player_volume') }}">

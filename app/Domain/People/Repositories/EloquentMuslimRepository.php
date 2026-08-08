@@ -55,9 +55,17 @@ final class EloquentMuslimRepository implements MuslimRepositoryInterface
             $this->applyNameSearch($query, $filters->search);
         }
 
+        if ($filters->excludeId !== null) {
+            $query->whereKeyNot($filters->excludeId);
+        }
+
         return $query
             ->with(['roles:id,slug,name_ar,name_en'])
-            ->orderBy('id')
+            ->when(
+                $filters->latestFirst,
+                fn (Builder $q) => $q->orderByDesc('id'),
+                fn (Builder $q) => $q->orderBy('id'),
+            )
             ->paginate($filters->perPage)
             ->withQueryString();
     }

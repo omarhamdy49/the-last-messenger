@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Domain\People\Enums\Gender;
+use App\Domain\People\Enums\Generation;
 use App\Domain\People\Models\Muslim;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -30,7 +31,7 @@ final class MuslimFactory extends Factory
             // Negative years are pre-Hijra and entirely normal for companions.
             'birth_year_hijri' => $this->faker->numberBetween(-60, 10),
             'death_year_hijri' => $this->faker->numberBetween(11, 120),
-            'generation' => 'صحابي',
+            'generation' => Generation::Companion->value,
             'is_published' => true,
         ];
     }

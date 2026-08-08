@@ -21,6 +21,17 @@ final readonly class MuslimListFilters
         public ?string $search = null,
         public bool $publishedOnly = true,
         public int $perPage = 20,
+        /**
+         * Omit one person from the results. The parent picker needs this: a
+         * person must never be offered as their own father or mother.
+         */
+        public ?int $excludeId = null,
+        /**
+         * Newest first instead of by id. The picker opens on "the latest
+         * people", because a just-imported person is the one an editor is
+         * most likely to be looking for.
+         */
+        public bool $latestFirst = false,
     ) {}
 
     public static function fromRequest(Request $request, bool $publishedOnly = true): self

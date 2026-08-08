@@ -17,6 +17,10 @@ use Illuminate\Database\Seeder;
 final class IslamicRoleSeeder extends Seeder
 {
     private const ROLES = [
+        // `prophet` is the role the tree roots itself at, and the one
+        // Site\GenealogyController::mapPerson() already reads to mark a node as
+        // the Prophet ﷺ. It was referenced in code before it existed here.
+        ['slug' => 'prophet', 'name_ar' => 'نبي', 'name_en' => 'Prophet'],
         ['slug' => 'sahabi', 'name_ar' => 'صحابي', 'name_en' => 'Companion'],
         ['slug' => 'narrator', 'name_ar' => 'راوي', 'name_en' => 'Narrator'],
         ['slug' => 'scholar', 'name_ar' => 'عالم', 'name_en' => 'Scholar'],

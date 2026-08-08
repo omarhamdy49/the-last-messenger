@@ -1,531 +1,356 @@
 @extends('layouts.admin')
 
-@section('page-header')
-<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-    <!-- Page Title -->
-    <div>
-        <div class="flex items-center gap-2 text-sm mb-2" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-            <a href="{{ route('admin.sahaba.index') }}" class="hover:text-accent transition-colors">الصحابة الكرام</a>
-            <i data-lucide="chevron-left" class="w-4 h-4"></i>
-            <a href="{{ route('admin.sahaba.show', $sahabi->id) }}" class="hover:text-accent transition-colors">{{ $sahabi->getTranslation('name', 'ar') }}</a>
-            <i data-lucide="chevron-left" class="w-4 h-4"></i>
-            <span>{{ __('admin.edit') }}</span>
-        </div>
-        <h1 class="text-3xl font-bold gradient-text flex items-center gap-3">
-            <div class="p-3 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] shadow-lg">
-                <i data-lucide="edit-2" class="w-7 h-7 text-white"></i>
-            </div>
-            تعديل الصحابي: {{ $sahabi->getTranslation('name', 'ar') }}
-        </h1>
-    </div>
+{{--
+    Person profile — edit.
 
-    <!-- Action Buttons -->
-    <div class="flex flex-wrap items-center gap-3">
-        <a href="{{ route('admin.sahaba.show', $sahabi->id) }}"
-           class="px-4 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 border-2"
-           :class="darkMode ? 'border-gray-700 bg-gray-800 text-white hover:bg-gray-700' : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'">
-            <i data-lucide="x" class="w-5 h-5"></i>
-            <span>{{ __('admin.cancel') }}</span>
-        </a>
+    The form is long (five to nine sections depending on the person's roles), so
+    the two things that matter most are: knowing where you are, and being able to
+    save without scrolling to find the button.
+
+      - A section rail on the left tracks scroll position and jumps.
+      - The save bar is sticky at the bottom and only asserts itself once
+        something has actually changed, so it is a status line rather than a
+        permanently shouting toolbar.
+      - The destructive action lives apart from save/cancel and behind a confirm.
+--}}
+
+@php
+    $locale = app()->getLocale();
+    $isRtl = in_array($locale, ['ar', 'ur'], true);
+    $backArrow = $isRtl ? 'right' : 'left';
+
+    $roleSlugs = $muslim->roles->pluck('slug')->all();
+    $isProphet = in_array('prophet', $roleSlugs, true);
+
+    // The rail mirrors the sections _form.blade.php renders, including the
+    // role-restricted profile groups, so it can never list one that is absent.
+    $rail = collect([
+        ['id' => 'sec-identity', 'label' => __('sahaba.section_identity'), 'icon' => 'user'],
+        ['id' => 'sec-dates', 'label' => __('sahaba.section_dates'), 'icon' => 'calendar'],
+        ['id' => 'sec-roles', 'label' => __('sahaba.section_roles'), 'icon' => 'shield-check'],
+        ['id' => 'sec-lineage', 'label' => __('sahaba.section_lineage'), 'icon' => 'git-fork'],
+    ]);
+
+    foreach (\App\Domain\People\ValueObjects\MuslimProfile::GROUPS as $group) {
+        if (\App\Domain\People\ValueObjects\MuslimProfile::fieldsInGroup($group, $roleSlugs) === []) {
+            continue;
+        }
+
+        $rail->push([
+            'id' => 'sec-profile-'.$group,
+            'label' => __('sahaba.profile_groups.'.$group),
+            'icon' => ['identity' => 'id-card', 'birth' => 'baby', 'death' => 'moon', 'mission' => 'sparkles'][$group] ?? 'info',
+        ]);
+    }
+
+    $rail->push(['id' => 'sec-publishing', 'label' => __('sahaba.section_publishing'), 'icon' => 'eye']);
+@endphp
+
+@push('styles')
+<style>
+    @media (prefers-reduced-motion: reduce) {
+        .edit-animate { animation: none !important; }
+        html { scroll-behavior: auto !important; }
+    }
+</style>
+@endpush
+
+@section('page-header')
+<div class="rounded-2xl border shadow-sm px-5 py-4 edit-animate"
+     :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div class="flex items-center gap-4 min-w-0">
+            <span class="w-12 h-12 shrink-0 rounded-xl grid place-items-center shadow-lg
+                         {{ $isProphet ? 'bg-gradient-to-br from-yellow-400 to-amber-500' : 'bg-gradient-primary' }}">
+                <i data-lucide="user-pen" class="w-6 h-6 text-white"></i>
+            </span>
+
+            <div class="min-w-0">
+                <p class="text-[11px] font-bold uppercase tracking-[0.2em]"
+                   :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ __('sahaba.edit') }}</p>
+                <h1 class="text-xl sm:text-2xl font-bold truncate" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                    {{ $muslim->name }}
+                </h1>
+
+                <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <code class="px-2 py-0.5 rounded text-[11px] font-mono" dir="ltr"
+                          :class="darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'">{{ $muslim->slug }}</code>
+
+                    @foreach ($muslim->roles as $role)
+                        <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold"
+                              :class="darkMode ? 'bg-accent/15 text-accent' : 'bg-[#0056b3]/10 text-[#0056b3]'">{{ $role->name() }}</span>
+                    @endforeach
+
+                    @if ($muslim->is_published)
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold"
+                              :class="darkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'">
+                            <i data-lucide="check-circle" class="w-3 h-3"></i>
+                            {{ __('sahaba.published') }}
+                        </span>
+                    @else
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold"
+                              :class="darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'">
+                            <i data-lucide="circle-slash" class="w-3 h-3"></i>
+                            {{ __('sahaba.unpublished') }}
+                        </span>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <a href="{{ route('admin.sahaba.show', $muslim) }}"
+               class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 border
+                      focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+               :class="darkMode ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'">
+                <i data-lucide="eye" class="w-4 h-4"></i>
+                <span>{{ __('admin.view') }}</span>
+            </a>
+
+            {{-- Only offered when there is a public page to reach: an
+                 unpublished profile 404s on the site. --}}
+            @if ($muslim->is_published)
+                <a href="{{ route('public.sahaba.show', $muslim->slug) }}" target="_blank" rel="noopener"
+                   aria-label="{{ __('sahaba.view_public') }}"
+                   class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 border
+                          focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                   :class="darkMode ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'">
+                    <i data-lucide="external-link" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">{{ __('sahaba.view_public') }}</span>
+                </a>
+            @endif
+
+            <a href="{{ route('admin.sahaba.index') }}"
+               aria-label="{{ __('sahaba.back_to_list') }}"
+               class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 border
+                      focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+               :class="darkMode ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'">
+                <i data-lucide="arrow-{{ $backArrow }}" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">{{ __('sahaba.back_to_list') }}</span>
+            </a>
+        </div>
     </div>
 </div>
 @endsection
 
 @section('content')
-<form action="{{ route('admin.sahaba.update', $sahabi->id) }}" method="POST" enctype="multipart/form-data" x-data="{ activeTab: 'ar' }">
-    @csrf
-    @method('PUT')
+<div x-data="muslimEditor">
+    <div class="grid gap-6 lg:grid-cols-12 lg:items-start">
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        <!-- Main Form -->
-        <div class="lg:col-span-2 space-y-6">
-
-            <!-- Names (Multi-language) -->
-            <div class="rounded-2xl border p-6"
-                 :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-                <h2 class="text-xl font-bold mb-6 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                    <i data-lucide="languages" class="w-5 h-5 text-accent"></i>
-                    الاسم والسيرة
-                </h2>
-
-                <!-- Language Tabs -->
-                <div class="flex flex-wrap gap-2 border-b pb-4 mb-6" :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
-                    @foreach(['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'] as $lang => $label)
-                    <button type="button"
-                            @click="activeTab = '{{ $lang }}'"
-                            class="px-4 py-2 rounded-lg font-medium transition-all"
-                            :class="activeTab === '{{ $lang }}' ?
-                                'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white' :
-                                (darkMode ? 'bg-gray-800 text-gray-400 hover:text-white' : 'bg-gray-100 text-gray-600 hover:text-gray-900')">
-                        {{ $label }}
-                    </button>
+        {{-- ==================== SECTION RAIL ==================== --}}
+        <nav class="hidden lg:block lg:col-span-3 lg:sticky lg:top-4"
+             aria-label="{{ __('sahaba.section_overview') }}">
+            <div class="rounded-2xl border shadow-sm p-2"
+                 :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
+                <ul class="space-y-0.5">
+                    @foreach($rail as $item)
+                        <li>
+                            <a href="#{{ $item['id'] }}"
+                               @click="active = '{{ $item['id'] }}'"
+                               class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors
+                                      focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                               :class="active === '{{ $item['id'] }}'
+                                   ? 'bg-gradient-primary text-white shadow'
+                                   : (darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')">
+                                <i data-lucide="{{ $item['icon'] }}" class="w-4 h-4 shrink-0"></i>
+                                <span class="truncate">{{ $item['label'] }}</span>
+                            </a>
+                        </li>
                     @endforeach
-                </div>
-
-                <!-- Tab Contents -->
-                @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $lang)
-                <div x-show="activeTab === '{{ $lang }}'" class="space-y-4">
-                    <!-- Name -->
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            الاسم ({{ strtoupper($lang) }})
-                            @if($lang === 'ar') <span class="text-red-500">*</span> @endif
-                        </label>
-                        <input type="text"
-                               name="name[{{ $lang }}]"
-                               value="{{ old("name.{$lang}", $sahabi->getTranslation('name', $lang)) }}"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                               dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                               placeholder="أدخل اسم الصحابي..."
-                               {{ $lang === 'ar' ? 'required' : '' }}>
-                        @error("name.{$lang}")
-                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- Full Name -->
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            الاسم الكامل ({{ strtoupper($lang) }})
-                        </label>
-                        <input type="text"
-                               name="full_name[{{ $lang }}]"
-                               value="{{ old("full_name.{$lang}", $sahabi->getTranslation('full_name', $lang)) }}"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                               dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                               placeholder="أدخل الاسم الكامل...">
-                        @error("full_name.{$lang}")
-                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- Kunya -->
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            الكنية ({{ strtoupper($lang) }})
-                        </label>
-                        <input type="text"
-                               name="kunya[{{ $lang }}]"
-                               value="{{ old("kunya.{$lang}", $sahabi->getTranslation('kunya', $lang)) }}"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                               dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                               placeholder="مثال: أبو بكر">
-                        @error("kunya.{$lang}")
-                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- Laqab (honorific) -->
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            اللقب ({{ strtoupper($lang) }})
-                        </label>
-                        <input type="text"
-                               name="laqab[{{ $lang }}]"
-                               value="{{ old("laqab.{$lang}", $sahabi->getTranslation('laqab', $lang)) }}"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                               dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                               placeholder="مثال: الصديق">
-                        @error("laqab.{$lang}")
-                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- Title -->
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            اللقب الرسمي ({{ strtoupper($lang) }})
-                        </label>
-                        <input type="text"
-                               name="title[{{ $lang }}]"
-                               value="{{ old("title.{$lang}", $sahabi->getTranslation('title', $lang)) }}"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                               dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                               placeholder="مثال: الخليفة الأول">
-                        @error("title.{$lang}")
-                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- Occupation -->
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            المهنة / الدور ({{ strtoupper($lang) }})
-                        </label>
-                        <input type="text"
-                               name="occupation[{{ $lang }}]"
-                               value="{{ old("occupation.{$lang}", $sahabi->getTranslation('occupation', $lang)) }}"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                               dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                               placeholder="مثال: تاجر">
-                        @error("occupation.{$lang}")
-                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- Biography -->
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            السيرة الذاتية ({{ strtoupper($lang) }})
-                        </label>
-                        <x-admin.form.wysiwyg
-                            name="biography[{{ $lang }}]"
-                            :value="old('biography.'.$lang, $sahabi->getTranslation('biography', $lang))"
-                            dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                            height="240px"
-                            placeholder="أدخل السيرة الذاتية..." />
-                        @error("biography.{$lang}")
-                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- Virtues -->
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            الفضائل والمناقب ({{ strtoupper($lang) }})
-                        </label>
-                        <x-admin.form.wysiwyg
-                            name="virtues[{{ $lang }}]"
-                            :value="old('virtues.'.$lang, $sahabi->getTranslation('virtues', $lang))"
-                            dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                            height="180px"
-                            placeholder="أدخل الفضائل والمناقب..." />
-                        @error("virtues.{$lang}")
-                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- Famous Narrations -->
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            الأحاديث المشهورة ({{ strtoupper($lang) }})
-                        </label>
-                        <x-admin.form.wysiwyg
-                            name="famous_narrations[{{ $lang }}]"
-                            :value="old('famous_narrations.'.$lang, $sahabi->getTranslation('famous_narrations', $lang))"
-                            dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                            height="180px"
-                            placeholder="أدخل الأحاديث المشهورة..." />
-                        @error("famous_narrations.{$lang}")
-                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- Martyrdom -->
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            الاستشهاد / سبب الوفاة ({{ strtoupper($lang) }})
-                        </label>
-                        <x-admin.form.wysiwyg
-                            name="martyrdom[{{ $lang }}]"
-                            :value="old('martyrdom.'.$lang, $sahabi->getTranslation('martyrdom', $lang))"
-                            dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                            height="150px"
-                            placeholder="أدخل تفاصيل الاستشهاد إن وجدت..." />
-                        @error("martyrdom.{$lang}")
-                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- Notes -->
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            ملاحظات ({{ strtoupper($lang) }})
-                        </label>
-                        <textarea name="notes[{{ $lang }}]" rows="3"
-                                  class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                                  :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                                  dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                                  placeholder="أدخل ملاحظات إضافية...">{{ old("notes.{$lang}", $sahabi->getTranslation('notes', $lang)) }}</textarea>
-                        @error("notes.{$lang}")
-                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-                </div>
-                @endforeach
+                </ul>
             </div>
 
-            <!-- Details -->
-            <div class="rounded-2xl border p-6"
-                 :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-                <h2 class="text-xl font-bold mb-6 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                    <i data-lucide="info" class="w-5 h-5 text-accent"></i>
-                    التفاصيل
-                </h2>
+            {{-- Destructive action, deliberately far from Save and behind a
+                 confirm. Placed at the end of the rail, not in the save bar. --}}
+            <button type="button"
+                    class="mt-3 w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2
+                           focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+                    :class="darkMode ? 'bg-red-900/25 text-red-400 hover:bg-red-900/40' : 'bg-red-50 text-red-600 hover:bg-red-100'"
+                    @click="$dispatch('show-confirm', {
+                        title: '{{ __('admin.confirm_delete') }}',
+                        message: '{{ __('admin.delete_warning') }}',
+                        type: 'danger',
+                        onConfirm: () => document.getElementById('delete-muslim-form').submit(),
+                    })">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                <span>{{ __('admin.delete') }}</span>
+            </button>
+        </nav>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الرابط المختصر (Slug) <span class="text-red-500">*</span></label>
-                        <input type="text" name="slug" value="{{ old('slug', $sahabi->slug) }}"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                               pattern="[a-z0-9\-]+" required>
-                        <p class="mt-1 text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">أحرف إنجليزية صغيرة وأرقام وشرطات فقط</p>
-                        @error('slug') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الجنس <span class="text-red-500">*</span></label>
-                        <select name="gender" required
-                                class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                            <option value="">اختر الجنس</option>
-                            <option value="male" {{ old('gender', $sahabi->gender) == 'male' ? 'selected' : '' }}>ذكر</option>
-                            <option value="female" {{ old('gender', $sahabi->gender) == 'female' ? 'selected' : '' }}>أنثى</option>
-                        </select>
-                        @error('gender') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">المراتب التاريخية</label>
-                        @php $currentCategoryKeys = old('categories', $sahabi->categories->pluck('key')->all()); @endphp
-                        <div class="flex flex-wrap gap-3">
-                            @foreach(\App\Domain\Sahaba\Enums\CompanionStatus::cases() as $category)
-                                <label class="flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer"
-                                       :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                                    <input type="checkbox" name="categories[]" value="{{ $category->value }}"
-                                           {{ in_array($category->value, $currentCategoryKeys) ? 'checked' : '' }}>
-                                    {{ $category->labelArabic() }}
-                                </label>
-                            @endforeach
-                        </div>
-                        @error('categories') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">القبيلة</label>
-                        <input type="text" name="tribe" value="{{ old('tribe', $sahabi->tribe) }}"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                               placeholder="مثال: قريش">
-                        @error('tribe') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">البطن / الفخذ</label>
-                        <input type="text" name="clan" value="{{ old('clan', $sahabi->clan) }}"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                               placeholder="مثال: بنو هاشم">
-                        @error('clan') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">تاريخ الولادة (هجري)</label>
-                        <input type="text" name="birth_date_hijri" value="{{ old('birth_date_hijri', $sahabi->birth_date_hijri) }}"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                        @error('birth_date_hijri') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">تاريخ الوفاة (هجري)</label>
-                        <input type="text" name="death_date_hijri" value="{{ old('death_date_hijri', $sahabi->death_date_hijri) }}"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                        @error('death_date_hijri') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">مكان الولادة</label>
-                        <input type="text" name="birth_place" value="{{ old('birth_place', $sahabi->birth_place) }}"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                        @error('birth_place') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">مكان الوفاة</label>
-                        <input type="text" name="death_place" value="{{ old('death_place', $sahabi->death_place) }}"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                        @error('death_place') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">مكان الدفن</label>
-                        <input type="text" name="burial_place" value="{{ old('burial_place', $sahabi->burial_place) }}"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                               placeholder="مثال: البقيع">
-                        @error('burial_place') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">عدد الأحاديث المروية (كما ورد في المصدر)</label>
-                        <input type="number" name="reported_hadith_count" value="{{ old('reported_hadith_count', $sahabi->reported_hadith_count) }}" min="0"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                        @error('reported_hadith_count') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">ترتيب الأهمية</label>
-                        <input type="number" name="importance_rank" value="{{ old('importance_rank', $sahabi->importance_rank) }}" min="0"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                        @error('importance_rank') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-                    </div>
+        {{-- ==================== FORM ==================== --}}
+        <div class="lg:col-span-9">
+            <form id="muslim-form" action="{{ route('admin.sahaba.update', $muslim) }}" method="POST"
+                  @submit="submitting = true">
+                @csrf
+                @method('PUT')
 
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">تاريخ الولادة (ميلادي)</label>
-                        <input type="date" name="birth_date_gregorian" value="{{ old('birth_date_gregorian', optional($sahabi->birth_date_gregorian)->format('Y-m-d')) }}"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                        @error('birth_date_gregorian') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-                    </div>
+                @include('admin.sahaba._form', ['muslim' => $muslim, 'roles' => $roles])
 
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">تاريخ الوفاة (ميلادي)</label>
-                        <input type="date" name="death_date_gregorian" value="{{ old('death_date_gregorian', optional($sahabi->death_date_gregorian)->format('Y-m-d')) }}"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                        @error('death_date_gregorian') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-                    </div>
+                {{-- Sticky save bar. Announces unsaved changes rather than
+                     leaving the editor to remember. --}}
+                <div class="sticky bottom-4 mt-6 z-20">
+                    <div class="rounded-2xl border shadow-xl px-4 py-3 glass flex flex-wrap items-center gap-3"
+                         :class="darkMode ? 'glass-dark border-gray-800' : 'glass-light border-gray-200'">
 
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">العمر عند الوفاة</label>
-                        <input type="number" name="age_at_death" value="{{ old('age_at_death', $sahabi->age_at_death) }}" min="0"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                        @error('age_at_death') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-                    </div>
+                        <p class="text-sm flex items-center gap-2 me-auto" aria-live="polite">
+                            <template x-if="dirty">
+                                <span class="flex items-center gap-2 font-semibold"
+                                      :class="darkMode ? 'text-amber-400' : 'text-amber-600'">
+                                    <span class="w-2 h-2 rounded-full bg-current" aria-hidden="true"></span>
+                                    {{ __('sahaba.unsaved_changes') }}
+                                </span>
+                            </template>
+                            <template x-if="! dirty">
+                                <span :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
+                                    {{ __('sahaba.no_changes') }}
+                                </span>
+                            </template>
+                        </p>
 
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">تاريخ الإسلام (هجري)</label>
-                        <input type="text" name="conversion_date_hijri" value="{{ old('conversion_date_hijri', $sahabi->conversion_date_hijri) }}"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                               placeholder="مثال: 1 هـ">
-                        @error('conversion_date_hijri') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-                    </div>
+                        <a href="{{ route('admin.sahaba.show', $muslim) }}"
+                           class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors
+                                  focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                           :class="darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'">
+                            {{ __('admin.cancel') }}
+                        </a>
 
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">ترتيب الإسلام (من السابقين الأولين)</label>
-                        <input type="number" name="conversion_order" value="{{ old('conversion_order', $sahabi->conversion_order) }}" min="1"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                               placeholder="مثال: 3">
-                        @error('conversion_order') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-                    </div>
-
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الأدوار (مفصولة بفواصل)</label>
-                        <input type="text" name="roles" value="{{ old('roles', is_array($sahabi->roles) ? implode('، ', $sahabi->roles) : '') }}"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                               placeholder="مثال: خليفة، قائد عسكري، راوي">
-                        @error('roles') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+                        <button type="submit" :disabled="submitting"
+                                class="px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg flex items-center gap-2
+                                       bg-gradient-primary text-white
+                                       disabled:opacity-60 disabled:cursor-not-allowed
+                                       focus:outline-none focus-visible:ring-2 focus-visible:ring-accent
+                                       transition-opacity">
+                            {{-- The x-show sits on the span, not the <i>: Lucide replaces
+                                 the <i> with a generated <svg>, and a binding copied onto
+                                 that new node evaluates outside this scope and throws. --}}
+                            <span x-show="submitting" style="display:none" class="inline-flex">
+                                <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+                            </span>
+                            <span x-show="! submitting" class="inline-flex">
+                                <i data-lucide="save" class="w-4 h-4"></i>
+                            </span>
+                            <span x-text="submitting ? '{{ __('sahaba.saving') }}' : '{{ __('sahaba.save') }}'"></span>
+                        </button>
                     </div>
                 </div>
-            </div>
-        </div>
+            </form>
 
-        <!-- Sidebar -->
-        <div class="space-y-6">
-
-            <!-- Profile Image -->
-            <div class="rounded-2xl border p-6"
-                 :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-                <h3 class="text-lg font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                    <i data-lucide="image" class="w-5 h-5 text-accent"></i>
-                    صورة الصحابي
-                </h3>
-
-                <x-admin.image-upload
-                    name="profile_image"
-                    aspectClass="aspect-square"
-                    placeholderIcon="user"
-                    maxSize="10MB"
-                    formats="JPG, PNG, WebP"
-                    :currentImage="$sahabi->getFirstMediaUrl('profile_image') ?: null"
-                    :mediaLibrary="false"
-                />
-            </div>
-
-            <!-- Status -->
-            <div class="rounded-2xl border p-6"
-                 :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-                <h3 class="text-lg font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                    <i data-lucide="toggle-right" class="w-5 h-5 text-accent"></i>
-                    الحالة
-                </h3>
-
-                <div class="space-y-4">
-                    <label class="flex items-center gap-3 cursor-pointer p-3 rounded-xl transition-all"
-                           :class="darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'">
-                        <input type="checkbox" name="is_featured" value="1"
-                               {{ old('is_featured', $sahabi->is_featured) ? 'checked' : '' }}
-                               class="w-5 h-5 rounded text-amber-500 border-gray-300 focus:ring-amber-500">
-                        <span :class="darkMode ? 'text-gray-300' : 'text-gray-700'">صحابي مميز</span>
-                    </label>
-
-                    <label class="flex items-center gap-3 cursor-pointer p-3 rounded-xl transition-all"
-                           :class="darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'">
-                        <input type="checkbox" name="is_verified" value="1"
-                               {{ old('is_verified', $sahabi->is_verified) ? 'checked' : '' }}
-                               class="w-5 h-5 rounded text-green-500 border-gray-300 focus:ring-green-500">
-                        <span :class="darkMode ? 'text-gray-300' : 'text-gray-700'">بيانات موثقة</span>
-                    </label>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الجيل (بالنسبة للنبي ﷺ)</label>
-                        <input type="number" name="generation" value="{{ old('generation', $sahabi->generation) }}" min="0"
-                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                        @error('generation') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-                    </div>
-                </div>
-            </div>
-
-            <!-- Info -->
-            <div class="rounded-2xl border p-6"
-                 :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-                <h3 class="text-lg font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                    <i data-lucide="info" class="w-5 h-5 text-accent"></i>
-                    معلومات
-                </h3>
-
-                <div class="space-y-3">
-                    <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                        <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">تاريخ الإنشاء</span>
-                        <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $sahabi->created_at?->format('Y/m/d') }}</span>
-                    </div>
-                    <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                        <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">آخر تحديث</span>
-                        <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $sahabi->updated_at?->format('Y/m/d') }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Submit Button -->
-            <div class="rounded-2xl border p-6"
-                 :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-                <button type="submit"
-                        class="w-full px-6 py-3 rounded-xl font-semibold transition-all hover:scale-105 bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-lg flex items-center justify-center gap-2">
-                    <i data-lucide="save" class="w-5 h-5"></i>
-                    {{ __('admin.save') }}
-                </button>
-
-                <div class="flex gap-3 mt-4">
-                    <a href="{{ route('admin.sahaba.show', $sahabi->id) }}"
-                       class="flex-1 px-4 py-2.5 rounded-xl font-semibold text-center transition-all hover:scale-105 border"
-                       :class="darkMode ? 'border-gray-700 bg-gray-800 hover:bg-gray-700 text-white' : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-900'">
-                        {{ __('admin.cancel') }}
-                    </a>
-                    <a href="{{ route('admin.sahaba.index') }}"
-                       class="flex-1 px-4 py-2.5 rounded-xl font-semibold text-center transition-all hover:scale-105 border"
-                       :class="darkMode ? 'border-gray-700 bg-gray-800 hover:bg-gray-700 text-white' : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-900'">
-                        القائمة
-                    </a>
-                </div>
-            </div>
-
+            {{-- Mobile delete, since the rail is desktop-only. --}}
+            <button type="button"
+                    class="lg:hidden mt-4 w-full px-4 py-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2
+                           focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+                    :class="darkMode ? 'bg-red-900/25 text-red-400 hover:bg-red-900/40' : 'bg-red-50 text-red-600 hover:bg-red-100'"
+                    @click="$dispatch('show-confirm', {
+                        title: '{{ __('admin.confirm_delete') }}',
+                        message: '{{ __('admin.delete_warning') }}',
+                        type: 'danger',
+                        onConfirm: () => document.getElementById('delete-muslim-form').submit(),
+                    })">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                <span>{{ __('admin.delete') }}</span>
+            </button>
         </div>
     </div>
+</div>
+
+<form id="delete-muslim-form" action="{{ route('admin.sahaba.destroy', $muslim) }}" method="POST" class="hidden">
+    @csrf
+    @method('DELETE')
 </form>
+
+{{-- Outside the form: a picker inside it would submit its own search input. --}}
+<x-admin.muslim-picker-modal :roles="$roles" />
 @endsection
 
 @push('scripts')
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        lucide.createIcons();
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('muslimEditor', () => ({
+            submitting: false,
+            dirty: false,
+            active: '{{ $rail->first()['id'] }}',
+
+            init() {
+                lucide.createIcons();
+                this.watchChanges();
+                this.watchScroll();
+                this.warnOnLeave();
+            },
+
+            /** Any input touching the form marks it dirty. */
+            watchChanges() {
+                const form = document.getElementById('muslim-form');
+                if (! form) return;
+
+                ['input', 'change'].forEach((event) => {
+                    form.addEventListener(event, () => { this.dirty = true; }, { passive: true });
+                });
+            },
+
+            /**
+             * Keep the rail in step with what is on screen.
+             *
+             * A scroll listener on the real scroll container, not an
+             * IntersectionObserver: the admin layout scrolls an inner <main>,
+             * and an observer rooted on the viewport did not track it here.
+             * Picking the last section past the marker line is also easier to
+             * reason about than intersection ratios.
+             */
+            watchScroll() {
+                const sections = [...document.querySelectorAll('.form-section[id]')];
+                if (sections.length < 2) return;
+
+                const scroller = document.querySelector('main') ?? window;
+                let queued = false;
+
+                const update = () => {
+                    queued = false;
+                    // A quarter down the viewport reads as "the section I am on".
+                    const marker = window.innerHeight * 0.25;
+                    let current = sections[0].id;
+
+                    for (const section of sections) {
+                        if (section.getBoundingClientRect().top <= marker) {
+                            current = section.id;
+                        }
+                    }
+
+                    // At the bottom the marker can never reach the final
+                    // section, so it would never light up. Treat "scrolled to
+                    // the end" as being on the last one.
+                    const atEnd = scroller === window
+                        ? window.innerHeight + window.scrollY >= document.body.scrollHeight - 4
+                        : scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 4;
+
+                    this.active = atEnd ? sections[sections.length - 1].id : current;
+                };
+
+                scroller.addEventListener('scroll', () => {
+                    // rAF-throttled: scroll fires far more often than a frame.
+                    if (queued) return;
+                    queued = true;
+                    requestAnimationFrame(update);
+                }, { passive: true });
+
+                update();
+            },
+
+            /**
+             * Guard against losing edits to a stray back/close. Cleared on
+             * submit, otherwise saving would trip the warning on its own
+             * navigation.
+             */
+            warnOnLeave() {
+                const form = document.getElementById('muslim-form');
+                form?.addEventListener('submit', () => { this.dirty = false; });
+
+                window.addEventListener('beforeunload', (event) => {
+                    if (! this.dirty) return;
+                    event.preventDefault();
+                    event.returnValue = '';
+                });
+            },
+        }));
     });
 </script>
 @endpush

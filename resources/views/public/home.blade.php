@@ -34,6 +34,23 @@
     $stats = $stats ?? [];
     $homeSections = $homeSections ?? [];
     $homeSectionsByKey = collect($homeSections)->keyBy('key');
+
+    // The Prophet ﷺ card now reads from his record. `pv()` returns the stored
+    // extended-profile value for the current locale, falling back to the old
+    // translation string so the card still renders on an install that has not
+    // run the People seeders.
+    $prophet = $prophet ?? null;
+    $prophetProfile = $prophet?->profile;
+    $pv = function (string $key, string $fallbackTranslation) use ($prophetProfile): string {
+        $stored = $prophetProfile?->localized($key, app()->getLocale());
+
+        return $stored !== null && $stored !== '' ? $stored : __($fallbackTranslation);
+    };
+    $pn = function (string $key, string $fallback) use ($prophetProfile): string {
+        $stored = $prophetProfile?->get($key);
+
+        return $stored !== null ? (string) $stored : $fallback;
+    };
     $homeSectionMarkup = [];
 
     $cardStyles = [
@@ -504,8 +521,8 @@
                             </div>
                             <p class="text-gray-400 text-sm font-bold uppercase tracking-wide">{{ __('site.full_name') }}</p>
                         </div>
-                        <p class="text-white font-black text-xl leading-relaxed">{{ __('site.prophet_full_name') }}</p>
-                        <p class="text-gray-400 text-xs mt-2">{{ __('site.prophet_tribe') }}</p>
+                        <p class="text-white font-black text-xl leading-relaxed">{{ $pv('full_name', 'site.prophet_full_name') }}</p>
+                        <p class="text-gray-400 text-xs mt-2">{{ $pv('tribe', 'site.prophet_tribe') }}</p>
                     </div>
 
                     {{-- Birth Date --}}
@@ -516,11 +533,11 @@
                             </div>
                             <p class="text-gray-400 text-sm font-bold uppercase tracking-wide">{{ __('site.birth_date') }}</p>
                         </div>
-                        <p class="text-white font-black text-xl">{{ __('site.prophet_birth_hijri') }}</p>
+                        <p class="text-white font-black text-xl">{{ $pv('birth_day', 'site.prophet_birth_hijri') }}</p>
                         <div class="flex items-center gap-2 mt-2">
                             <span class="text-yellow-400 text-sm font-semibold">{{ __('site.year_of_elephant') }}</span>
                             <span class="text-gray-400">•</span>
-                            <span class="text-gray-400 text-sm">571 {{ __('site.ce') }}</span>
+                            <span class="text-gray-400 text-sm">{{ $pn('birth_year_ce', '571') }} {{ __('site.ce') }}</span>
                         </div>
                     </div>
 
@@ -532,8 +549,8 @@
                             </div>
                             <p class="text-gray-400 text-sm font-bold uppercase tracking-wide">{{ __('site.birth_place') }}</p>
                         </div>
-                        <p class="text-white font-black text-xl">{{ __('site.makkah') }}</p>
-                        <p class="text-gray-400 text-sm mt-2">{{ __('site.hejaz_region') }}</p>
+                        <p class="text-white font-black text-xl">{{ $prophet?->getTranslation('birth_place', app()->getLocale()) ?: __('site.makkah') }}</p>
+                        <p class="text-gray-400 text-sm mt-2">{{ $pv('birth_region', 'site.hejaz_region') }}</p>
                     </div>
 
                     {{-- Prophetic Mission --}}
@@ -544,11 +561,11 @@
                             </div>
                             <p class="text-yellow-300 text-sm font-bold uppercase tracking-wide">{{ __('site.mission_start') }}</p>
                         </div>
-                        <p class="text-white font-black text-xl">{{ __('site.hira_cave') }}</p>
+                        <p class="text-white font-black text-xl">{{ $pv('mission_place', 'site.hira_cave') }}</p>
                         <div class="flex items-center gap-2 mt-2">
-                            <span class="text-yellow-300 text-sm font-semibold">{{ __('site.age_40') }}</span>
+                            <span class="text-yellow-300 text-sm font-semibold">{{ __('site.age_at', ['age' => $pn('mission_age', '40')]) }}</span>
                             <span class="text-white/40">•</span>
-                            <span class="text-gray-300 text-sm">610 {{ __('site.ce') }}</span>
+                            <span class="text-gray-300 text-sm">{{ $pn('mission_year_ce', '610') }} {{ __('site.ce') }}</span>
                         </div>
                     </div>
 
@@ -560,9 +577,9 @@
                             </div>
                             <p class="text-gray-400 text-sm font-bold uppercase tracking-wide">{{ __('site.death_date') }}</p>
                         </div>
-                        <p class="text-white font-black text-xl">{{ __('site.prophet_death_hijri') }}</p>
+                        <p class="text-white font-black text-xl">{{ $pv('death_day', 'site.prophet_death_hijri') }}</p>
                         <div class="flex items-center gap-2 mt-2">
-                            <span class="text-gray-400 text-sm">632 {{ __('site.ce') }}</span>
+                            <span class="text-gray-400 text-sm">{{ $pn('death_year_ce', '632') }} {{ __('site.ce') }}</span>
                             <span class="text-gray-400">•</span>
                             <span class="text-gray-400 text-sm">{{ __('site.monday') }}</span>
                         </div>
@@ -576,8 +593,8 @@
                             </div>
                             <p class="text-gray-400 text-sm font-bold uppercase tracking-wide">{{ __('site.death_place') }}</p>
                         </div>
-                        <p class="text-white font-black text-xl">{{ __('site.madinah') }}</p>
-                        <p class="text-gray-400 text-sm mt-2">{{ __('site.aisha_house') }}</p>
+                        <p class="text-white font-black text-xl">{{ $pv('death_place', 'site.madinah') }}</p>
+                        <p class="text-gray-400 text-sm mt-2">{{ $pv('death_detail', 'site.aisha_house') }}</p>
                     </div>
                 </div>
 

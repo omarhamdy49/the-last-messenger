@@ -6,7 +6,9 @@
     'icon' => null,
 ])
 
-<div class="form-section rounded-xl overflow-hidden glass"
+{{-- Attributes are merged so a caller can give the section an `id` to anchor a
+     jump link at. `scroll-mt` keeps the heading clear of sticky page chrome. --}}
+<div {{ $attributes->merge(['class' => 'form-section rounded-xl overflow-hidden glass scroll-mt-24']) }}
      :class="darkMode ? 'glass-dark' : 'glass-light'"
      x-data="{
          isCollapsed: {{ $collapsed ? 'true' : 'false' }},

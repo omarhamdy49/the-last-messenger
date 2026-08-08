@@ -121,6 +121,7 @@ return [
     'mission_start' => 'Peygamberliğin Başlangıcı',
     'hira_cave' => 'Hira Mağarası',
     'age_40' => '40 yaşında',
+    'age_at' => ':age yaşında',
     'death_date' => 'Vefat Tarihi',
     'prophet_death_hijri' => '12 Rebîülevel – 11 H.',
     'monday' => 'Pazartesi',

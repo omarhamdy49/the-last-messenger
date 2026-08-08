@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Requests\Admin;
 
 use App\Domain\People\Enums\Gender;
+use App\Domain\People\Enums\Generation;
+use App\Domain\People\Models\IslamicRole;
+use App\Domain\People\Models\Muslim;
+use App\Domain\People\ValueObjects\MuslimProfile;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -24,7 +28,10 @@ class StoreMuslimRequest extends FormRequest
     {
         $id = $this->route('muslim')?->id;
 
-        return [
+        // Profile rules are generated from the field registry and scoped to the
+        // roles being saved, so a new field needs no change here and a
+        // role-restricted field is not an accepted key for the wrong person.
+        return MuslimProfile::rulesFor($this->submittedRoleSlugs()) + [
             'slug' => ['required', 'string', 'max:200', 'regex:/^[a-z0-9-]+$/',
                 Rule::unique('muslims', 'slug')->ignore($id)],
             'thumb' => ['nullable', 'string', 'max:255'],
@@ -53,7 +60,9 @@ class StoreMuslimRequest extends FormRequest
             // Signed range: pre-Hijra years are negative.
             'birth_year_hijri' => ['nullable', 'integer', 'min:-200', 'max:1500'],
             'death_year_hijri' => ['nullable', 'integer', 'min:-200', 'max:1500'],
-            'generation' => ['nullable', 'string', 'max:50'],
+            // A fixed set now, not free text: the طبقة is a closed taxonomy, and
+            // free text produced values nothing could group or filter on.
+            'generation' => ['nullable', Rule::enum(Generation::class)],
 
             'father_id' => ['nullable', 'integer', 'exists:muslims,id'],
             'mother_id' => ['nullable', 'integer', 'exists:muslims,id'],
@@ -66,6 +75,35 @@ class StoreMuslimRequest extends FormRequest
             'roles.*.is_featured' => ['boolean'],
             'roles.*.sort_order' => ['integer', 'min:0'],
         ];
+    }
+
+    /**
+     * The role slugs this save will result in.
+     *
+     * Read from the submitted `roles[]` rather than the persisted record: if an
+     * editor ticks "نبي" and fills the mission fields in the same submit, those
+     * fields have to be accepted. Falls back to the stored roles when the form
+     * did not post any (a partial update).
+     *
+     * @return list<string>
+     */
+    public function submittedRoleSlugs(): array
+    {
+        $roleIds = collect($this->input('roles', []))
+            ->filter(fn ($row): bool => is_array($row) && isset($row['role_id']))
+            ->pluck('role_id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+
+        if ($roleIds === []) {
+            $muslim = $this->route('muslim');
+
+            return $muslim instanceof Muslim
+                ? $muslim->roles()->pluck('islamic_roles.slug')->all()
+                : [];
+        }
+
+        return IslamicRole::query()->whereKey($roleIds)->pluck('slug')->all();
     }
 
     public function withValidator(Validator $validator): void

@@ -1,23 +1,31 @@
-                <li>
-                    <a href="{{ route('admin.sahaba.index') }}"
-                       @click="activeMenu = 'muslims'"
-                       :class="isActive('muslims') ? 'text-accent font-semibold' : ''"
-                       class="flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all">
-                        <i data-lucide="users" class="w-5 h-5"></i>
-                        <span class="font-semibold">{{ __('sahaba.title') }}</span>
-                    </a>
-                </li>
-
 @php
     // Derive the active page segment from the URL path
     $adminPrefix   = 'su/portal/v1/admin/';
     $currentPath   = request()->path();
     $activeSegment = 'dashboard';
+    $parts         = [];
 
     if (str_starts_with($currentPath, $adminPrefix)) {
         $afterAdmin    = ltrim(substr($currentPath, strlen($adminPrefix)), '/');
         $parts         = explode('/', $afterAdmin);
         $activeSegment = $parts[0] ?? 'dashboard';
+    }
+
+    // The Muslims group all lives under one URL segment — `sahaba`, the
+    // public-facing word for the internal `muslims` identity — but splits into
+    // role-scoped lists. The nav key therefore has to be finer than the URL
+    // segment, or every sub-item would light up at once.
+    if ($activeSegment === 'sahaba') {
+        $roleQuery = request()->query('role');
+        $roleQuery = is_string($roleQuery) ? $roleQuery : null;
+
+        $activeSegment = ($parts[1] ?? null) === 'roles'
+            ? 'islamic-roles'
+            : ([
+                'sahabi' => 'muslims-sahaba',
+                'narrator' => 'muslims-narrators',
+                'scholar' => 'muslims-scholars',
+            ][$roleQuery] ?? 'muslims');
     }
 
     // Map segments to which parent submenu should be open
@@ -29,7 +37,12 @@
         'seerah-events'   => 'seerah',
         'seerah-event-types' => 'seerah',
         'seerah-milestones' => 'seerah',
-        'muslims'         => 'muslims',
+        'muslims'           => 'muslims',
+        'muslims-sahaba'    => 'muslims',
+        'muslims-narrators' => 'muslims',
+        'muslims-scholars'  => 'muslims',
+        'islamic-roles'     => 'muslims',
+        'genealogy'         => 'muslims',
         'quran'           => 'quran',
         'surahs'          => 'quran',
         'verses'          => 'quran',
@@ -92,6 +105,17 @@
         </button>
     </div>
 
+{{--
+    Submenus use plain x-show, not x-collapse.
+
+    This page loads Tailwind from cdn.tailwindcss.com, which generates utility
+    CSS at runtime. x-collapse measures the panel to animate its height, and if
+    it measures before the JIT has applied `px-4 py-2` to the links inside, it
+    captures height 0 and locks the panel there: the group opens, but stays
+    empty, and every page inside it becomes unreachable. Navigation must not
+    depend on a measurement race.
+--}}
+
     <!-- Navigation Menu -->
     <nav class="flex-1 overflow-y-auto custom-scrollbar px-4 py-6"
          x-data="{
@@ -138,7 +162,6 @@
                 </button>
 
                 <div x-show="openSubmenu === 'content'"
-                     x-collapse
                      class="mt-2 ms-6 space-y-1">
 
                     <a href="{{ route('admin.articles.index') }}"
@@ -201,7 +224,6 @@
                 </button>
 
                 <div x-show="openSubmenu === 'media'"
-                     x-collapse
                      class="mt-2 ms-6 space-y-1">
                     <a href="{{ route('admin.media-library.index') }}"
                        @click="activeMenu = 'media-library'"
@@ -269,7 +291,6 @@
                 </button>
 
                 <div x-show="openSubmenu === 'seerah'"
-                     x-collapse
                      class="mt-2 ms-6 space-y-1">
                     <a href="{{ route('admin.seerah-events.index') }}"
                        @click="activeMenu = 'seerah-events'"
@@ -301,17 +322,90 @@
                 </div>
             </div>
 
-            <!-- Muslims (unified person identity: companions, narrators, scholars, family tree) -->
+            <!-- Islamic Figures (one `muslims` identity, several Islamic roles) -->
             <div>
-                <a href="{{ route('admin.sahaba.index') }}"
-                   @click="activeMenu = 'muslims'"
-                   :class="activeMenu === 'muslims' ?
-                       'bg-gradient-primary text-white shadow-lg' :
-                       (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
-                   class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group">
-                    <i data-lucide="users" class="w-5 h-5"></i>
-                    <span class="font-semibold">{{ __('sahaba.title') }}</span>
-                </a>
+                <button @click="toggleSubmenu('muslims')"
+                        :class="openSubmenu === 'muslims' ||
+                                ['muslims','muslims-sahaba','muslims-narrators','muslims-scholars','islamic-roles','genealogy'].includes(activeMenu) ?
+                            'bg-gradient-primary text-white shadow-lg' :
+                            (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+                        class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="users" class="w-5 h-5"></i>
+                        <span class="font-semibold">{{ __('admin.nav.muslims') }}</span>
+                    </div>
+                    <i data-lucide="chevron-down"
+                       class="w-4 h-4 transition-transform duration-200"
+                       :class="openSubmenu === 'muslims' ? 'rotate-180' : ''"></i>
+                </button>
+
+                <div x-show="openSubmenu === 'muslims'"
+                     class="mt-2 ms-6 space-y-1">
+
+                    <!-- Every figure, whatever role they carry -->
+                    <a href="{{ route('admin.sahaba.index') }}"
+                       @click="activeMenu = 'muslims'"
+                       :class="isActive('muslims') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="users-round" class="w-4 h-4"></i>
+                        <span>{{ __('admin.nav.muslims_all') }}</span>
+                    </a>
+
+                    <!-- Role-scoped lists. `?role=` is the same filter the
+                         controller already honours, so these are real views of
+                         the one list, not separate screens to keep in step. -->
+                    <a href="{{ route('admin.sahaba.index', ['role' => 'sahabi']) }}"
+                       @click="activeMenu = 'muslims-sahaba'"
+                       :class="isActive('muslims-sahaba') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="star" class="w-4 h-4"></i>
+                        <span>{{ __('admin.nav.muslims_sahaba') }}</span>
+                    </a>
+
+                    <a href="{{ route('admin.sahaba.index', ['role' => 'narrator']) }}"
+                       @click="activeMenu = 'muslims-narrators'"
+                       :class="isActive('muslims-narrators') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="quote" class="w-4 h-4"></i>
+                        <span>{{ __('admin.nav.muslims_narrators') }}</span>
+                    </a>
+
+                    <a href="{{ route('admin.sahaba.index', ['role' => 'scholar']) }}"
+                       @click="activeMenu = 'muslims-scholars'"
+                       :class="isActive('muslims-scholars') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="graduation-cap" class="w-4 h-4"></i>
+                        <span>{{ __('admin.nav.muslims_scholars') }}</span>
+                    </a>
+
+                    <a href="{{ route('admin.sahaba.roles') }}"
+                       @click="activeMenu = 'islamic-roles'"
+                       :class="isActive('islamic-roles') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="shield-check" class="w-4 h-4"></i>
+                        <span>{{ __('admin.nav.islamic_roles') }}</span>
+                    </a>
+
+                    <a href="{{ route('admin.genealogy.index') }}"
+                       @click="activeMenu = 'genealogy'"
+                       :class="isActive('genealogy') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="git-fork" class="w-4 h-4"></i>
+                        <span>{{ __('sahaba.tree') }}</span>
+                    </a>
+                </div>
             </div>
 
 
@@ -333,7 +427,6 @@
                 </button>
 
                 <div x-show="openSubmenu === 'quran'"
-                     x-collapse
                      class="mt-2 ms-6 space-y-1">
                     <a href="{{ route('admin.surahs.index') }}"
                        @click="activeMenu = 'surahs'"
@@ -422,7 +515,6 @@
                 </button>
 
                 <div x-show="openSubmenu === 'site-content'"
-                     x-collapse
                      class="mt-2 ms-6 space-y-1">
 
                     <a href="{{ route('admin.content.settings.index') }}"

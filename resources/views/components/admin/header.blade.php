@@ -125,8 +125,14 @@
                         <!-- Search Input Row -->
                         <div class="flex items-center gap-3 px-4 py-3 border-b"
                              :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
-                            <i data-lucide="search" class="w-5 h-5 flex-shrink-0"
-                               :class="darkMode ? 'text-gray-400' : 'text-gray-500'"></i>
+                            {{-- Theme class on the wrapper, not the <i>: Lucide replaces
+                                 each <i data-lucide> with a generated <svg>, copying the
+                                 attributes onto a fresh node that Alpine then re-evaluates
+                                 outside this scope — which threw a ReferenceError on every
+                                 page load. --}}
+                            <span class="flex-shrink-0" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                                <i data-lucide="search" class="w-5 h-5"></i>
+                            </span>
                             <input type="text"
                                    x-model="mobileQuery"
                                    x-ref="mobileSearchInput"

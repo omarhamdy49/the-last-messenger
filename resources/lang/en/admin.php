@@ -36,6 +36,13 @@ return [
         'settings' => 'Settings',
         'hadith' => 'Hadith',
         'sahaba' => 'Companions & Genealogy',
+        // Muslims group: one person identity, several Islamic capacities.
+        'muslims' => 'Islamic Figures',
+        'muslims_all' => 'All Figures',
+        'muslims_sahaba' => 'Companions',
+        'muslims_narrators' => 'Narrators',
+        'muslims_scholars' => 'Scholars',
+        'islamic_roles' => 'Islamic Roles',
     ],
 
     // Dashboard

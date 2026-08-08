@@ -42,10 +42,15 @@ final readonly class AdminSahabaFilters
         return $this->search !== null || $this->gender !== null || $this->isFeatured !== null;
     }
 
-    /** Retired filters mean the advanced panel has nothing left to show. */
+    /**
+     * Whether the advanced panel should open on load. `tribe` and `isVerified`
+     * are retired, so what remains there is gender and featured — and if either
+     * is applied the panel has to be open, or the list is filtered by a control
+     * the editor cannot see.
+     */
     public function hasAdvanced(): bool
     {
-        return false;
+        return $this->gender !== null || $this->isFeatured !== null;
     }
 
     public function activeCount(): int

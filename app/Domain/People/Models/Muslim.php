@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\People\Models;
 
 use App\Domain\People\Enums\Gender;
+use App\Domain\People\ValueObjects\MuslimProfile;
 use App\Domain\Shared\Contracts\PersonReference;
 use App\Domain\Shared\Support\ArabicNormalizer;
 use Database\Factories\MuslimFactory;
@@ -65,6 +66,7 @@ class Muslim extends Model
         'birth_year_hijri',
         'death_year_hijri',
         'generation',
+        'profile',
         'father_id',
         'mother_id',
         'tree_display_order',
@@ -79,6 +81,9 @@ class Muslim extends Model
     {
         return [
             'gender' => Gender::class,
+            // Cast to the value object, so `$muslim->profile` is never a raw
+            // array and the field registry is the only way in or out.
+            'profile' => MuslimProfile::class,
             'birth_year_hijri' => 'integer',
             'death_year_hijri' => 'integer',
             'tree_display_order' => 'integer',
@@ -157,6 +162,12 @@ class Muslim extends Model
     public function inverseRelationships(): HasMany
     {
         return $this->hasMany(MuslimRelationship::class, 'related_muslim_id');
+    }
+
+    /** External catalogue records that establish this person's provenance. */
+    public function sources(): HasMany
+    {
+        return $this->hasMany(MuslimSource::class, 'muslim_id');
     }
 
     // ---------------------------------------------------------------------

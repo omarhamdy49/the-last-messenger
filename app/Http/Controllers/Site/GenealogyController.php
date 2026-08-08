@@ -121,10 +121,24 @@ final class GenealogyController extends Controller
     }
 
     /**
-     * The person with the most descendants makes the most useful landing tree.
+     * The tree roots at the Prophet ﷺ.
+     *
+     * Resolved through the `prophet` role, not a hardcoded slug, so it survives
+     * the record being renamed. Falling back to "most recorded children" makes
+     * the landing tree depend on import order, so that is a last resort only.
      */
     private function resolveDefaultRoot(): ?Muslim
     {
+        $prophetId = Muslim::query()
+            ->published()
+            ->whereHas('roles', fn ($roles) => $roles->where('islamic_roles.slug', 'prophet'))
+            ->orderBy('id')
+            ->value('id');
+
+        if ($prophetId !== null) {
+            return $this->muslims->findById((int) $prophetId);
+        }
+
         $id = Muslim::query()
             ->published()
             ->whereNull('father_id')

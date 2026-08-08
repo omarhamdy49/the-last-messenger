@@ -121,6 +121,7 @@ return [
     'mission_start' => 'نبوت کا آغاز',
     'hira_cave' => 'غار حرا',
     'age_40' => '40 سال کی عمر میں',
+    'age_at' => ':age سال کی عمر میں',
     'death_date' => 'تاریخِ وفات',
     'prophet_death_hijri' => '12 ربیع الاول - 11 ہجری',
     'monday' => 'پیر کا دن',

@@ -48,6 +48,13 @@ return [
         'settings' => 'الإعدادات',
         'hadith' => 'الحديث الشريف',
         'sahaba' => 'الصحابة والأنساب',
+        // Muslims group: one person identity, several Islamic capacities.
+        'muslims' => 'الشخصيات الإسلامية',
+        'muslims_all' => 'كل الشخصيات',
+        'muslims_sahaba' => 'الصحابة',
+        'muslims_narrators' => 'الرواة',
+        'muslims_scholars' => 'العلماء',
+        'islamic_roles' => 'الأدوار الإسلامية',
     ],
 
     // Dashboard

@@ -121,6 +121,7 @@ return [
     'mission_start' => 'Début de la Prophétie',
     'hira_cave' => 'Grotte de Hira',
     'age_40' => 'À l\'âge de 40 ans',
+    'age_at' => 'À l\'âge de :age ans',
     'death_date' => 'Date de décès',
     'prophet_death_hijri' => '12 Rabi\' al-Awwal – 11 H',
     'monday' => 'Lundi',

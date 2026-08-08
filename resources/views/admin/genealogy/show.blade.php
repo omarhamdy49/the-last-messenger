@@ -1,349 +1,488 @@
 @extends('layouts.admin')
 
+@php
+    $locale = app()->getLocale();
+    $personName = $muslim->name($locale);
+    $backArrow = in_array($locale, ['ar', 'ur']) ? 'right' : 'left';
+
+    $inputClasses = 'w-full px-4 py-2.5 rounded-xl border text-base sm:text-sm transition-all focus:ring-2 focus:ring-accent/50';
+@endphp
+
 @section('page-header')
 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-    <!-- Page Title -->
-    <div>
-        <div class="flex items-center gap-2 text-sm mb-2" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-            <a href="{{ route('admin.genealogy.index') }}" class="hover:text-accent transition-colors">شجرة النسب</a>
-            <i data-lucide="chevron-left" class="w-4 h-4"></i>
-            <span>{{ $person->getTranslation('name', 'ar') }}</span>
-        </div>
+    <div class="min-w-0">
         <h1 class="text-3xl font-bold gradient-text flex items-center gap-3">
-            <div class="p-3 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] shadow-lg">
-                <i data-lucide="user" class="w-7 h-7 text-white"></i>
+            <div class="p-3 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] shadow-lg flex-shrink-0">
+                <i data-lucide="git-fork" class="w-7 h-7 text-white"></i>
             </div>
-            {{ $person->getTranslation('name', 'ar') }}
+            <span class="truncate">{{ __('sahaba.genealogy.person_title', ['name' => $personName]) }}</span>
         </h1>
+        <p class="mt-2 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+            {{ __('sahaba.genealogy.person_subtitle') }}
+        </p>
     </div>
 
-    <!-- Action Buttons -->
     <div class="flex flex-wrap items-center gap-3">
-        <a href="{{ route('admin.genealogy.edit', $person->id) }}"
-           class="px-6 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 shadow-lg
+        <a href="{{ route('admin.sahaba.edit', $muslim) }}"
+           class="px-5 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 border-2"
+           :class="darkMode ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'">
+            <i data-lucide="user" class="w-5 h-5"></i>
+            <span>{{ __('sahaba.genealogy.open_profile') }}</span>
+        </a>
+        <a href="{{ route('admin.genealogy.index', ['root' => $muslim->slug]) }}"
+           class="px-5 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 shadow-lg
                   bg-gradient-to-r from-[#0056b3] to-[#218838] text-white">
-            <i data-lucide="edit-2" class="w-5 h-5"></i>
-            <span>{{ __('admin.edit') }}</span>
+            <i data-lucide="git-fork" class="w-5 h-5"></i>
+            <span>{{ __('sahaba.genealogy.explorer') }}</span>
         </a>
         <a href="{{ route('admin.genealogy.index') }}"
-           class="px-4 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 border-2"
-           :class="darkMode ? 'border-gray-700 bg-gray-800 text-white hover:bg-gray-700' : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'">
-            <i data-lucide="arrow-right" class="w-5 h-5"></i>
-            <span>رجوع</span>
+           class="px-5 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 border-2"
+           :class="darkMode ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'">
+            <i data-lucide="arrow-{{ $backArrow }}" class="w-5 h-5"></i>
+            <span>{{ __('sahaba.back_to_list') }}</span>
         </a>
     </div>
 </div>
 @endsection
 
 @section('content')
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="space-y-6">
 
-    <!-- Main Content -->
-    <div class="lg:col-span-2 space-y-6">
-
-        <!-- Profile Card -->
-        <div class="rounded-2xl border overflow-hidden"
-             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            <div class="relative h-48 bg-gradient-to-br from-[#0056b3] to-[#218838]">
-                @if($person->is_featured)
-                <div class="absolute top-4 start-4">
-                    <span class="inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-semibold bg-amber-500 text-white shadow-lg">
-                        <i data-lucide="star" class="w-4 h-4"></i>
-                        مميز
-                    </span>
-                </div>
-                @endif
-
-                @if($person->person_type)
-                <div class="absolute top-4 end-4">
-                    <span class="inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-semibold bg-white/20 backdrop-blur-sm text-white">
-                        {{ $person->person_type->label()['ar'] }}
-                    </span>
-                </div>
-                @endif
-            </div>
-
-            <div class="relative px-6 pb-6">
-                <!-- Profile Image -->
-                <div class="absolute -top-16 start-6">
-                    <div class="w-32 h-32 rounded-2xl overflow-hidden border-4 shadow-xl"
-                         :class="darkMode ? 'border-gray-900' : 'border-white'">
-                        @if($person->getFirstMediaUrl('profile_image'))
-                            <img src="{{ $person->getFirstMediaUrl('profile_image') }}"
-                                 alt="{{ $person->getTranslation('name', 'ar') }}"
-                                 class="w-full h-full object-cover">
-                        @else
-                            <div class="w-full h-full bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center">
-                                <i data-lucide="user" class="w-12 h-12 text-white/50"></i>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-
-                <!-- Info -->
-                <div class="pt-20">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <h2 class="text-2xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                                {{ $person->getFullName('ar') }}
-                            </h2>
-                            <p class="text-lg" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                                {{ $person->getTranslation('name', 'en') }}
-                            </p>
-                        </div>
-
-                        <div class="flex items-center gap-2">
-                            <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold {{ $person->gender === 'male' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400' }}">
-                                {{ $person->gender === 'male' ? 'ذكر' : 'أنثى' }}
-                            </span>
-                            @if($person->is_verified)
-                            <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                                <i data-lucide="check" class="w-4 h-4"></i>
-                                موثّق
-                            </span>
-                            @endif
-                        </div>
-                    </div>
-
-                    <div class="flex flex-wrap gap-3 mt-4">
-                        @if($person->tribe)
-                        <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl"
-                              :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
-                            <i data-lucide="flag" class="w-4 h-4 text-accent"></i>
-                            {{ $person->tribe }}
-                        </span>
-                        @endif
-                        @if($person->father)
-                        <a href="{{ route('admin.genealogy.show', $person->father_id) }}"
-                           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl transition-colors hover:opacity-80"
-                           :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
-                            <i data-lucide="user" class="w-4 h-4 text-accent"></i>
-                            الأب: {{ $person->father->getTranslation('name', 'ar') }}
-                        </a>
-                        @endif
-                        @if($person->mother)
-                        <a href="{{ route('admin.genealogy.show', $person->mother_id) }}"
-                           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl transition-colors hover:opacity-80"
-                           :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
-                            <i data-lucide="user" class="w-4 h-4 text-accent"></i>
-                            الأم: {{ $person->mother->getTranslation('name', 'ar') }}
-                        </a>
-                        @endif
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Biography -->
-        @if($person->getTranslation('biography', 'ar') || $person->getTranslation('biography', 'en'))
-        <div class="rounded-2xl border p-6"
-             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            <h2 class="text-xl font-bold mb-6 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                <i data-lucide="file-text" class="w-5 h-5 text-accent"></i>
-                السيرة الذاتية
-            </h2>
-
-            <div x-data="{ activeTab: 'ar' }" class="space-y-4">
-                <div class="flex flex-wrap gap-2 border-b pb-4" :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
-                    @foreach(['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'] as $lang => $label)
-                        @if($person->getTranslation('biography', $lang))
-                        <button @click="activeTab = '{{ $lang }}'"
-                                class="px-4 py-2 rounded-lg font-medium transition-all"
-                                :class="activeTab === '{{ $lang }}' ?
-                                    'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white' :
-                                    (darkMode ? 'bg-gray-800 text-gray-400 hover:text-white' : 'bg-gray-100 text-gray-600 hover:text-gray-900')">
-                            {{ $label }}
-                        </button>
-                        @endif
-                    @endforeach
-                </div>
-
-                @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $lang)
-                    @if($person->getTranslation('biography', $lang))
-                    <div x-show="activeTab === '{{ $lang }}'"
-                         class="p-4 rounded-xl"
-                         :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                        <p class="leading-relaxed {{ in_array($lang, ['ar', 'ur']) ? 'text-right' : 'text-left' }}"
-                           :class="darkMode ? 'text-gray-300' : 'text-gray-700'"
-                           dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">
-                            {{ $person->getTranslation('biography', $lang) }}
-                        </p>
-                    </div>
-                    @endif
+    @if($errors->any())
+        <div class="px-5 py-4 rounded-xl border flex items-start gap-3"
+             :class="darkMode ? 'bg-red-900/20 border-red-800 text-red-300' : 'bg-red-50 border-red-200 text-red-800'"
+             role="alert" data-testid="genealogy-form-errors">
+            <i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0 mt-0.5"></i>
+            <ul class="space-y-1 text-sm">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
                 @endforeach
-            </div>
+            </ul>
         </div>
-        @endif
+    @endif
 
-        <!-- Names in Different Languages -->
-        <div class="rounded-2xl border p-6"
-             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            <h2 class="text-xl font-bold mb-6 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                <i data-lucide="languages" class="w-5 h-5 text-accent"></i>
-                الاسم بلغات مختلفة
-            </h2>
+    <!-- Descent: parents + placement -->
+    <form method="POST" action="{{ route('admin.genealogy.update', $muslim) }}"
+          x-data="{ submitting: false }" @submit="submitting = true">
+        @csrf
+        @method('PUT')
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                @foreach(['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'] as $lang => $label)
-                    @if($person->getTranslation('name', $lang))
-                    <div class="p-4 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                        <label class="text-xs font-medium" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
-                            {{ $label }}
+        <x-admin.form-section :title="__('sahaba.genealogy.parents')"
+                              :description="__('sahaba.genealogy.parents_hint')"
+                              icon="users">
+            <div class="grid gap-5 sm:grid-cols-2">
+                @foreach([
+                    'father_id' => ['label' => __('sahaba.father'), 'relation' => 'father'],
+                    'mother_id' => ['label' => __('sahaba.mother'), 'relation' => 'mother'],
+                ] as $field => $meta)
+                    @php
+                        $current = $muslim->{$meta['relation']};
+                        // old() wins on a rejected submit so the editor does not
+                        // lose the pick that failed the cycle check.
+                        $currentId = old($field, $muslim->{$field});
+                        $currentLabel = (int) $currentId === (int) ($muslim->{$field} ?? 0)
+                            ? $current?->name($locale)
+                            : null;
+                    @endphp
+                    <div x-data="genealogyPicker('{{ $field }}', {{ $muslim->id }}, @js((string) ($currentId ?? '')), @js($currentLabel ?? ''))">
+                        <label for="picker-{{ $field }}" class="block text-sm font-semibold mb-1.5"
+                               :class="darkMode ? 'text-gray-200' : 'text-gray-700'">
+                            {{ $meta['label'] }}
                         </label>
-                        <p class="text-lg font-semibold mt-1" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                            {{ $person->getTranslation('name', $lang) }}
-                        </p>
+
+                        <div class="relative">
+                            <input id="picker-{{ $field }}" type="text" x-model="term"
+                                   @input.debounce.300ms="search()" autocomplete="off"
+                                   placeholder="{{ __('sahaba.picker_placeholder') }}"
+                                   class="{{ $inputClasses }}"
+                                   :class="darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
+                                   data-testid="picker-{{ $field }}">
+                            <ul class="absolute z-20 inset-x-0 mt-1 rounded-xl border shadow-xl overflow-hidden max-h-64 overflow-y-auto custom-scrollbar"
+                                :class="darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'"
+                                x-show="results.length" @click.away="results = []" style="display:none" x-cloak>
+                                <template x-for="r in results" :key="r.id">
+                                    <li>
+                                        <button type="button" @click="select(r)"
+                                                class="w-full text-start px-3 py-2 text-sm transition-colors"
+                                                :class="darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-800'">
+                                            <span x-text="r.name_ar || r.name_en"></span>
+                                            <span class="text-xs opacity-60" x-show="!r.is_published">({{ __('sahaba.unpublished') }})</span>
+                                        </button>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
+
+                        {{-- Always submitted, so an emptied picker clears the
+                             column instead of leaving the old parent in place. --}}
+                        <input type="hidden" name="{{ $field }}" :value="selectedId"
+                               value="{{ old($field, $muslim->{$field} ?? '') }}"
+                               data-testid="picker-value-{{ $field }}">
+
+                        <div class="mt-1.5 flex items-center gap-2 text-sm" x-show="selectedLabel"
+                             data-testid="picker-selected-{{ $field }}">
+                            <i data-lucide="link" class="w-3.5 h-3.5 shrink-0"
+                               :class="darkMode ? 'text-gray-500' : 'text-gray-400'"></i>
+                            <span class="truncate" :class="darkMode ? 'text-gray-300' : 'text-gray-700'"
+                                  x-text="selectedLabel"></span>
+                            <button type="button" @click="clear()"
+                                    class="shrink-0 text-xs font-semibold text-red-500 hover:underline"
+                                    data-testid="picker-clear-{{ $field }}">
+                                {{ __('sahaba.genealogy.clear_parent') }}
+                            </button>
+                        </div>
+
+                        @error($field) <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
                     </div>
-                    @endif
                 @endforeach
             </div>
-        </div>
+        </x-admin.form-section>
 
-        <!-- Children -->
-        @if($person->childrenAsFather->count() > 0 || $person->childrenAsMother->count() > 0)
-        <div class="rounded-2xl border p-6"
-             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            <h2 class="text-xl font-bold mb-6 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                <i data-lucide="users" class="w-5 h-5 text-accent"></i>
-                الأبناء
-            </h2>
-
-            <div class="space-y-3">
-                @foreach($person->childrenAsFather->merge($person->childrenAsMother) as $child)
-                <a href="{{ route('admin.genealogy.show', $child->id) }}"
-                   class="flex items-center gap-3 p-3 rounded-xl transition-all hover:scale-102"
-                   :class="darkMode ? 'bg-gray-800/50 hover:bg-gray-800' : 'bg-gray-50 hover:bg-gray-100'">
-                    <div class="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
-                        @if($child->getFirstMediaUrl('profile_image', 'avatar'))
-                            <img src="{{ $child->getFirstMediaUrl('profile_image', 'avatar') }}" class="w-full h-full object-cover">
-                        @else
-                            <div class="w-full h-full bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center">
-                                <i data-lucide="user" class="w-5 h-5 text-white/50"></i>
-                            </div>
-                        @endif
-                    </div>
+        <div class="mt-6">
+            <x-admin.form-section :title="__('sahaba.genealogy.placement')" icon="list-ordered">
+                <div class="grid gap-4 sm:grid-cols-2">
                     <div>
-                        <h4 class="font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                            {{ $child->getTranslation('name', 'ar') }}
-                        </h4>
-                        <p class="text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
-                            {{ $child->gender === 'male' ? 'ذكر' : 'أنثى' }}
-                        </p>
+                        <label for="tree_display_order" class="block text-sm font-semibold mb-1.5"
+                               :class="darkMode ? 'text-gray-200' : 'text-gray-700'">
+                            {{ __('sahaba.tree_display_order') }}
+                        </label>
+                        <input id="tree_display_order" name="tree_display_order" type="number" min="0" dir="ltr"
+                               value="{{ old('tree_display_order', $muslim->tree_display_order ?? '') }}"
+                               class="{{ $inputClasses }}"
+                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                               data-testid="field-tree-order">
+                        @error('tree_display_order') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
                     </div>
-                </a>
-                @endforeach
-            </div>
+
+                    <label class="flex items-center justify-between gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all border self-end"
+                           :class="darkMode ? 'bg-gray-800/40 border-gray-700 hover:bg-gray-800' : 'bg-white border-gray-300 hover:bg-gray-50'">
+                        <span class="text-sm font-semibold flex items-center gap-2"
+                              :class="darkMode ? 'text-gray-200' : 'text-gray-700'">
+                            <i data-lucide="eye-off" class="w-4 h-4"></i>
+                            {{ __('sahaba.hide_from_tree') }}
+                        </span>
+                        <input type="checkbox" name="hide_from_tree" value="1"
+                               @checked(old('hide_from_tree', $muslim->hide_from_tree))
+                               class="w-4 h-4 rounded text-accent focus:ring-accent"
+                               data-testid="field-hide-from-tree">
+                    </label>
+                </div>
+            </x-admin.form-section>
         </div>
-        @endif
+
+        <div class="mt-6">
+            <button type="submit" :disabled="submitting"
+                    class="px-6 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 shadow-lg flex items-center gap-2
+                           disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100
+                           bg-gradient-to-r from-[#0056b3] to-[#218838] text-white">
+                <i x-show="submitting" data-lucide="loader-2" class="w-5 h-5 animate-spin" style="display:none"></i>
+                <i x-show="! submitting" data-lucide="save" class="w-5 h-5"></i>
+                <span>{{ __('sahaba.save') }}</span>
+            </button>
+        </div>
+    </form>
+
+    <!-- Children. Read-only on purpose: the link lives on the child's row, so
+         it is edited there rather than in two places. -->
+    <div class="rounded-2xl border overflow-hidden"
+         :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
+        <div class="px-6 py-4 border-b" :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
+            <h2 class="font-bold flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                <i data-lucide="baby" class="w-5 h-5 text-accent"></i>
+                {{ __('sahaba.genealogy.children') }}
+                <span class="text-sm font-normal tabular-nums"
+                      :class="darkMode ? 'text-gray-500' : 'text-gray-500'">({{ $children->count() }})</span>
+            </h2>
+            <p class="mt-1 text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
+                {{ __('sahaba.genealogy.children_hint') }}
+            </p>
+        </div>
+
+        <div class="p-4">
+            @if($children->isEmpty())
+                <p class="px-2 py-6 text-sm text-center" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
+                    {{ __('sahaba.genealogy.no_children') }}
+                </p>
+            @else
+                <ul class="grid gap-2 sm:grid-cols-2">
+                    @foreach($children as $child)
+                        <li>
+                            <a href="{{ route('admin.genealogy.show', $child) }}"
+                               class="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                               :class="darkMode ? 'bg-gray-800/40 hover:bg-gray-800 text-gray-200' : 'bg-gray-50 hover:bg-gray-100 text-gray-800'">
+                                <span class="font-semibold truncate flex-1">{{ $child->name($locale) ?: '—' }}</span>
+                                @if($child->tree_display_order !== null)
+                                    <span class="shrink-0 px-1.5 py-0.5 rounded text-[11px] font-semibold tabular-nums"
+                                          :class="darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'">
+                                        #{{ $child->tree_display_order }}
+                                    </span>
+                                @endif
+                                @unless($child->is_published)
+                                    <span class="shrink-0 px-1.5 py-0.5 rounded text-[11px] font-semibold"
+                                          :class="darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'">
+                                        {{ __('sahaba.unpublished') }}
+                                    </span>
+                                @endunless
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </div>
     </div>
 
-    <!-- Sidebar -->
-    <div class="space-y-6">
+    <!-- Non-descent relationships: full CRUD -->
+    <div id="relationships" class="rounded-2xl border overflow-hidden scroll-mt-24"
+         :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'"
+         x-data="{ adding: {{ $errors->hasAny(['related_muslim_id', 'relationship_type', 'notes']) ? 'true' : 'false' }}, editing: null }">
 
-        <!-- Person Info -->
-        <div class="rounded-2xl border p-6"
-             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            <h3 class="text-lg font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                <i data-lucide="info" class="w-5 h-5 text-accent"></i>
-                معلومات
-            </h3>
-
-            <div class="space-y-4">
-                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">الرابط المختصر</span>
-                    <span class="font-mono text-sm" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $person->slug }}</span>
-                </div>
-                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">النوع</span>
-                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $person->person_type?->label()['ar'] ?? '-' }}</span>
-                </div>
-                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">الجنس</span>
-                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $person->gender === 'male' ? 'ذكر' : 'أنثى' }}</span>
-                </div>
-                @if($person->tribe)
-                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">القبيلة</span>
-                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $person->tribe }}</span>
-                </div>
-                @endif
-                @if($person->birth_date_gregorian)
-                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">تاريخ الولادة</span>
-                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $person->birth_date_gregorian->format('Y/m/d') }}</span>
-                </div>
-                @endif
-                @if($person->death_date_gregorian)
-                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">تاريخ الوفاة</span>
-                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $person->death_date_gregorian->format('Y/m/d') }}</span>
-                </div>
-                @endif
-                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">تاريخ الإضافة</span>
-                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $person->created_at?->format('Y/m/d') }}</span>
-                </div>
+        <div class="px-6 py-4 border-b flex flex-wrap items-center justify-between gap-3"
+             :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
+            <div>
+                <h2 class="font-bold flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                    <i data-lucide="heart-handshake" class="w-5 h-5 text-accent"></i>
+                    {{ __('sahaba.genealogy.relationships') }}
+                    <span class="text-sm font-normal tabular-nums"
+                          :class="darkMode ? 'text-gray-500' : 'text-gray-500'">({{ count($relationships) }})</span>
+                </h2>
+                <p class="mt-1 text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
+                    {{ __('sahaba.genealogy.relationships_hint') }}
+                </p>
             </div>
+
+            <button type="button" @click="adding = ! adding; editing = null"
+                    class="px-4 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105 flex items-center gap-2 shadow-lg
+                           bg-gradient-to-r from-[#0056b3] to-[#218838] text-white"
+                    data-testid="toggle-add-relationship">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                {{ __('sahaba.genealogy.add_relationship') }}
+            </button>
         </div>
 
-        <!-- Quick Actions -->
-        <div class="rounded-2xl border p-6"
-             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            <h3 class="text-lg font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                <i data-lucide="zap" class="w-5 h-5 text-accent"></i>
-                إجراءات سريعة
-            </h3>
-
-            <div class="space-y-3">
-                <a href="{{ route('admin.genealogy.edit', $person->id) }}"
-                   class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:scale-102"
-                   :class="darkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-50 hover:bg-gray-100 text-gray-900'">
-                    <i data-lucide="edit-2" class="w-5 h-5 text-accent"></i>
-                    <span>تعديل الشخص</span>
-                </a>
-
-                <a href="{{ route('admin.genealogy.create') }}"
-                   class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:scale-102"
-                   :class="darkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-50 hover:bg-gray-100 text-gray-900'">
-                    <i data-lucide="plus" class="w-5 h-5 text-accent"></i>
-                    <span>إضافة شخص جديد</span>
-                </a>
-            </div>
-        </div>
-
-        <!-- Delete -->
-        <div class="rounded-2xl border p-6"
-             :class="darkMode ? 'bg-gray-900/50 border-red-800/50' : 'bg-white border-red-200'">
-            <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-red-500">
-                <i data-lucide="trash-2" class="w-5 h-5"></i>
-                حذف الشخص
-            </h3>
-
-            <p class="text-sm mb-4" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                سيتم حذف هذا الشخص نهائياً ولا يمكن استرجاعه.
-            </p>
-
-            <form action="{{ route('admin.genealogy.destroy', $person->id) }}"
-                  method="POST"
-                  @submit.prevent="$dispatch('show-confirm', { title: '{{ __("admin.confirm_delete") }}', message: '{{ __("admin.delete_warning") }}', type: 'danger', onConfirm: () => $el.submit() })">
+        <!-- Add form -->
+        {{-- Plain x-show. x-collapse measures the content height at init, so a
+             panel that starts hidden measures 0 and never opens; and Alpine's
+             class-swap transitions were observed sticking at `enter-start`
+             (opacity-0) here. A disclosure that reliably appears beats an
+             animated one that sometimes does not. --}}
+        <div x-show="adding">
+            <form method="POST" action="{{ route('admin.genealogy.relationships.store', $muslim) }}"
+                  class="p-5 border-b" :class="darkMode ? 'border-gray-800 bg-gray-800/20' : 'border-gray-200 bg-gray-50'">
                 @csrf
-                @method('DELETE')
-                <button type="submit"
-                        class="w-full px-4 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-2">
-                    <i data-lucide="trash-2" class="w-5 h-5"></i>
-                    <span>حذف الشخص</span>
-                </button>
+                @include('admin.genealogy._relationship_fields', [
+                    'muslim' => $muslim,
+                    'relationshipTypes' => $relationshipTypes,
+                    'relationship' => null,
+                    'idPrefix' => 'new',
+                ])
+
+                <div class="mt-4 flex flex-wrap items-center gap-3">
+                    <button type="submit"
+                            class="px-5 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105 shadow-lg flex items-center gap-2
+                                   bg-gradient-to-r from-[#0056b3] to-[#218838] text-white">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        {{ __('sahaba.genealogy.add_relationship') }}
+                    </button>
+                    <button type="button" @click="adding = false"
+                            class="px-5 py-2 rounded-xl text-sm font-semibold transition-colors"
+                            :class="darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'">
+                        {{ __('admin.cancel') }}
+                    </button>
+                </div>
             </form>
         </div>
 
+        <!-- Existing rows -->
+        <div class="p-4">
+            @if($relationships === [])
+                <p class="px-2 py-6 text-sm text-center" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
+                    {{ __('sahaba.genealogy.no_relationships') }}
+                </p>
+            @else
+                <ul class="space-y-2">
+                    @foreach($relationships as $row)
+                        @php $rel = $row['model']; @endphp
+                        <li class="rounded-xl border" :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
+                            <div class="flex flex-wrap items-center gap-3 px-4 py-3">
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        @if($row['counterpart'])
+                                            <a href="{{ route('admin.genealogy.show', $row['counterpart']) }}"
+                                               class="font-semibold text-sm truncate hover:text-accent transition-colors"
+                                               :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                                {{ $row['counterpart_name'] }}
+                                            </a>
+                                        @else
+                                            <span class="font-semibold text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                                                {{ $row['counterpart_name'] }}
+                                            </span>
+                                        @endif
+
+                                        <span class="px-2 py-0.5 rounded-full text-xs font-semibold"
+                                              :class="darkMode ? 'bg-accent/15 text-accent' : 'bg-[#0056b3]/10 text-[#0056b3]'">
+                                            {{ $row['label'] }}
+                                        </span>
+
+                                        @if($rel->hide_from_tree)
+                                            <span class="px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1"
+                                                  :class="darkMode ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-700'">
+                                                <i data-lucide="eye-off" class="w-3 h-3"></i>
+                                                {{ __('sahaba.genealogy.hidden_from_tree') }}
+                                            </span>
+                                        @endif
+
+                                        {{-- The row may be stored from the other
+                                             end; saying so explains why the type
+                                             in the edit form reads differently. --}}
+                                        @if($row['is_reversed'])
+                                            {{-- gray-400, not gray-500: on a gray-800
+                                                 surface gray-500 sits right on the 3:1
+                                                 floor for secondary text. --}}
+                                            <span class="px-2 py-0.5 rounded-full text-xs"
+                                                  :class="darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'">
+                                                {{ __('sahaba.genealogy.reversed_hint') }}:
+                                                {{ $rel->relationship_type->label($locale) }}
+                                            </span>
+                                        @endif
+                                    </div>
+
+                                    @if($rel->notes)
+                                        <p class="mt-1 text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">{{ $rel->notes }}</p>
+                                    @endif
+                                </div>
+
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <button type="button" @click="editing = editing === {{ $rel->id }} ? null : {{ $rel->id }}; adding = false"
+                                            class="p-2 rounded-lg transition-colors"
+                                            :class="darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'"
+                                            :aria-expanded="editing === {{ $rel->id }} ? 'true' : 'false'"
+                                            aria-label="{{ __('sahaba.genealogy.edit_relationship') }}"
+                                            data-testid="edit-relationship-{{ $rel->id }}">
+                                        <i data-lucide="edit-2" class="w-4 h-4"></i>
+                                    </button>
+
+                                    <form method="POST" action="{{ route('admin.genealogy.relationships.destroy', [$muslim, $rel]) }}"
+                                          @submit.prevent="$dispatch('show-confirm', {
+                                              title: '{{ __('admin.confirm_delete') }}',
+                                              message: '{{ __('admin.delete_warning') }}',
+                                              type: 'danger',
+                                              onConfirm: () => $el.submit(),
+                                          })">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="p-2 rounded-lg transition-colors"
+                                                :class="darkMode ? 'hover:bg-red-900/40 text-gray-400 hover:text-red-400' : 'hover:bg-red-50 text-gray-500 hover:text-red-600'"
+                                                aria-label="{{ __('admin.delete') }}"
+                                                data-testid="delete-relationship-{{ $rel->id }}">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <!-- Inline edit -->
+                            <div x-show="editing === {{ $rel->id }}">
+                                <form method="POST" action="{{ route('admin.genealogy.relationships.update', [$muslim, $rel]) }}"
+                                      class="px-4 pb-4 pt-1 border-t" :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
+                                    @csrf
+                                    @method('PUT')
+                                    @include('admin.genealogy._relationship_fields', [
+                                        'muslim' => $muslim,
+                                        'relationshipTypes' => $relationshipTypes,
+                                        'relationship' => $row,
+                                        'idPrefix' => 'rel-'.$rel->id,
+                                    ])
+
+                                    <div class="mt-4 flex flex-wrap items-center gap-3">
+                                        <button type="submit"
+                                                class="px-5 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105 shadow-lg flex items-center gap-2
+                                                       bg-gradient-to-r from-[#0056b3] to-[#218838] text-white">
+                                            <i data-lucide="save" class="w-4 h-4"></i>
+                                            {{ __('sahaba.save') }}
+                                        </button>
+                                        <button type="button" @click="editing = null"
+                                                class="px-5 py-2 rounded-xl text-sm font-semibold transition-colors"
+                                                :class="darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'">
+                                            {{ __('admin.cancel') }}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </div>
     </div>
 </div>
 @endsection
 
 @push('scripts')
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        lucide.createIcons();
-    });
+    // Initial id and label are passed in rather than read back out of the DOM:
+    // Alpine initialises this component before the hidden input below it is
+    // guaranteed to be queryable.
+    // The add-relationship picker. Separate from genealogyPicker because it
+    // starts empty and needs no clear affordance.
+    function relationshipPicker(prefix, excludeId) {
+        return {
+            term: '',
+            results: [],
+            selectedId: '',
+            selectedLabel: '',
+
+            async search() {
+                if (this.term.length < 2) { this.results = []; return; }
+                const url = new URL('{{ route('admin.sahaba.picker') }}', window.location.origin);
+                url.searchParams.set('q', this.term);
+                if (excludeId) url.searchParams.set('exclude', excludeId);
+                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                this.results = (await res.json()).data;
+            },
+
+            select(person) {
+                this.selectedId = person.id;
+                this.selectedLabel = person.name_ar || person.name_en;
+                this.results = [];
+                this.term = '';
+            },
+        };
+    }
+
+    function genealogyPicker(field, excludeId, initialId, initialLabel) {
+        return {
+            term: '',
+            results: [],
+            selectedId: initialId ?? '',
+            selectedLabel: initialLabel ?? '',
+
+            async search() {
+                if (this.term.length < 2) { this.results = []; return; }
+                const url = new URL('{{ route('admin.sahaba.picker') }}', window.location.origin);
+                url.searchParams.set('q', this.term);
+                if (excludeId) url.searchParams.set('exclude', excludeId);
+                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                this.results = (await res.json()).data;
+            },
+
+            select(person) {
+                this.selectedId = person.id;
+                this.selectedLabel = person.name_ar || person.name_en;
+                this.results = [];
+                this.term = '';
+            },
+
+            // Empty string, not null: the field must still be submitted so the
+            // controller receives an explicit "no parent".
+            clear() {
+                this.selectedId = '';
+                this.selectedLabel = '';
+                this.results = [];
+                this.term = '';
+            },
+        };
+    }
+
+    document.addEventListener('DOMContentLoaded', () => lucide.createIcons());
 </script>
 @endpush
