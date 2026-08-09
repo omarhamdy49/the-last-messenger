@@ -44,6 +44,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             IslamicRoleSeeder::class,
             ProphetLineageSeeder::class,
+            ProphetFamilySeeder::class,
         ]);
 
         // Topics auto-curate from EXISTING Quran/Hadith/Article content, so only

@@ -25,6 +25,11 @@
         "@alpinejs/collapse": "^3.15.12",
         "alpinejs": "^3.15.12",
         "chart.js": "^4.5.1",
+        "d3-hierarchy": "^3.1.2",
+        "d3-selection": "^3.0.0",
+        "d3-shape": "^3.2.0",
+        "d3-transition": "^3.0.1",
+        "d3-zoom": "^3.0.0",
         "lucide": "^1.28.0",
         "quill": "2.0.2"
     }

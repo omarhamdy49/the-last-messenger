@@ -13,6 +13,10 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/css/admin.css',
                 'resources/js/app.js',
+                // Its own entry on purpose: the genealogy page dynamic-imports
+                // it (with its d3 dependencies) only when the tree canvas nears
+                // the viewport. It must never ride along in app.js.
+                'resources/js/genealogy-tree.js',
                 'resources/js/admin/app.js',
                 'resources/js/admin/rich-text.js',
             ],
