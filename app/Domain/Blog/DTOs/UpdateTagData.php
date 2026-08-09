@@ -19,7 +19,9 @@ final class UpdateTagData
 {
     public function __construct(
         public readonly array $name,
+        public readonly array $description,
         public readonly string $type,
+        public readonly ?string $color,
         public readonly ?string $slug,
     ) {}
 
@@ -32,7 +34,9 @@ final class UpdateTagData
 
         return new self(
             name: $validated['name'] ?? [],
+            description: $validated['description'] ?? [],
             type: $validated['type'],
+            color: $validated['color'] ?? null,
             slug: $validated['slug'] ?? null,
         );
     }

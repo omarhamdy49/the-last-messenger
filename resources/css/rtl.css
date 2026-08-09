@@ -156,7 +156,7 @@
 
 /* Arabic font optimization */
 [dir="rtl"] {
-    font-family: 'Cairo', 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
+    font-family: 'Readex Pro', 'Cairo', 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
     font-feature-settings: 'liga' 1, 'calt' 1;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;

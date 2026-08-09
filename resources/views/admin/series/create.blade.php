@@ -67,7 +67,7 @@
                     <div>
                         <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                             العنوان ({{ strtoupper($lang) }})
-                            @if(in_array($lang, ['ar', 'en'])) <span class="text-red-500">*</span> @endif
+                            @if($lang === 'ar') <span class="text-red-500">*</span> @endif
                         </label>
                         <input type="text"
                                name="title[{{ $lang }}]"
@@ -76,7 +76,7 @@
                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
                                dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
                                placeholder="أدخل عنوان السلسلة..."
-                               {{ in_array($lang, ['ar', 'en']) ? 'required' : '' }}>
+                               {{ $lang === 'ar' ? 'required' : '' }}>
                         @error("title.{$lang}")
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror

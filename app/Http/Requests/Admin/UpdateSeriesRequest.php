@@ -33,7 +33,7 @@ class UpdateSeriesRequest extends FormRequest
         return [
             // Multi-language title fields
             'title.ar' => 'required|string|max:255',
-            'title.en' => 'required|string|max:255',
+            'title.en' => 'nullable|string|max:255',
             'title.fr' => 'nullable|string|max:255',
             'title.tr' => 'nullable|string|max:255',
             'title.ur' => 'nullable|string|max:255',

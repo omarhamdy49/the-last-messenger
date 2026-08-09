@@ -20,7 +20,7 @@
 
     <!-- Page Header -->
     <div class="mb-8 text-center">
-        <h1 class="text-3xl font-bold gradient-text mb-2">Edit Tag</h1>
+        <h1 class="text-3xl font-bold gradient-text mb-2">{{ __('admin.edit_tag') }}</h1>
         <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
             Update tag information and settings
         </p>

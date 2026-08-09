@@ -7,11 +7,14 @@ namespace App\Http\Requests\Admin;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 /**
  * StoreTagRequest
  *
- * Validates tag creation data
+ * Validates tag creation data. Names live in the `tag_translations`
+ * table (one row per locale) — uniqueness is checked there, not on the
+ * `tags` table, which only stores the shared slug/type/color.
  */
 class StoreTagRequest extends FormRequest
 {
@@ -31,9 +34,15 @@ class StoreTagRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Multi-language fields (Arabic and English required, others optional)
-            'name.ar' => 'required|string|max:100|unique:tags,name->ar',
-            'name.en' => 'required|string|max:100|unique:tags,name->en',
+            // Multi-language fields (Arabic required, others optional)
+            'name.ar' => [
+                'required', 'string', 'max:100',
+                Rule::unique('tag_translations', 'name')->where('locale', 'ar'),
+            ],
+            'name.en' => [
+                'nullable', 'string', 'max:100',
+                Rule::unique('tag_translations', 'name')->where('locale', 'en'),
+            ],
             'name.fr' => 'nullable|string|max:100',
             'name.tr' => 'nullable|string|max:100',
             'name.ur' => 'nullable|string|max:100',
@@ -47,9 +56,9 @@ class StoreTagRequest extends FormRequest
             'description.ur' => 'nullable|string',
 
             // Other fields
-            'type' => 'required|in:article,hadith,program,event',
+            'type' => 'required|in:article,hadith,program,event,general',
             'color' => 'nullable|string|max:7',
-            'slug' => 'nullable|string|max:150|unique:tags,slug',
+            'slug' => 'required|string|max:150|unique:tags,slug',
         ];
     }
 
@@ -61,13 +70,11 @@ class StoreTagRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.ar.required' => 'Arabic name is required',
-            'name.ar.unique' => 'A tag with this Arabic name already exists',
-            'name.en.required' => 'English name is required',
-            'name.en.unique' => 'A tag with this English name already exists',
-            'type.required' => 'Tag type is required',
-            'type.in' => 'Invalid tag type. Must be: article, hadith, program, or event',
-            'slug.unique' => 'This slug is already in use',
+            'name.ar.required' => __('admin.tag_name_ar_required'),
+            'name.ar.unique' => __('admin.tag_name_exists'),
+            'name.en.unique' => __('admin.tag_name_exists'),
+            'slug.required' => __('admin.slug_required'),
+            'slug.unique' => __('admin.slug_taken'),
         ];
     }
 
@@ -76,11 +83,16 @@ class StoreTagRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        // Auto-generate slug from English name if not provided
-        if (empty($this->slug) && ! empty($this->input('name.en'))) {
-            $this->merge([
-                'slug' => Str::slug($this->input('name.en')),
-            ]);
+        // Auto-generate slug from the English then Arabic name if not provided
+        if (empty($this->input('slug'))) {
+            $source = $this->input('name.en') ?: $this->input('name.ar');
+            $slug = $source ? Str::slug($source) : null;
+            $this->merge(['slug' => $slug ?: null]);
+        }
+
+        // Blog admin creates article tags unless told otherwise
+        if (empty($this->input('type'))) {
+            $this->merge(['type' => 'article']);
         }
 
         // Ensure all language fields are present (set to null if missing)
@@ -104,13 +116,13 @@ class StoreTagRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'name.ar' => 'Arabic name',
-            'name.en' => 'English name',
-            'name.fr' => 'French name',
-            'name.tr' => 'Turkish name',
-            'name.ur' => 'Urdu name',
-            'type' => 'tag type',
-            'slug' => 'URL slug',
+            'name.ar' => __('admin.tag_name').' (AR)',
+            'name.en' => __('admin.tag_name').' (EN)',
+            'name.fr' => __('admin.tag_name').' (FR)',
+            'name.tr' => __('admin.tag_name').' (TR)',
+            'name.ur' => __('admin.tag_name').' (UR)',
+            'type' => __('admin.type'),
+            'slug' => __('admin.slug'),
         ];
     }
 }

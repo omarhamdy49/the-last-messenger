@@ -7,9 +7,9 @@
     <div class="mb-8">
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
             <div>
-                <h1 class="text-3xl font-bold gradient-text mb-2">Tags Management</h1>
+                <h1 class="text-3xl font-bold gradient-text mb-2">{{ __('admin.tags_management') }}</h1>
                 <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Manage content tags and organize your articles
+                    {{ __('admin.tags_management_desc') }}
                 </p>
             </div>
 
@@ -19,20 +19,20 @@
                         class="px-4 py-2.5 rounded-lg font-semibold transition-all hover:scale-105 flex items-center gap-2"
                         :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
                     <i data-lucide="git-merge" class="w-5 h-5"></i>
-                    <span>Merge Selected</span>
+                    <span>{{ __('admin.merge_selected') }}</span>
                 </button>
 
                 <button @click="deleteUnused()"
                         class="px-4 py-2.5 rounded-lg font-semibold transition-all hover:scale-105 flex items-center gap-2"
                         :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
                     <i data-lucide="trash" class="w-5 h-5"></i>
-                    <span>Delete Unused</span>
+                    <span>{{ __('admin.delete_unused') }}</span>
                 </button>
 
                 <a href="{{ route('admin.tags.create') }}"
                    class="px-6 py-2.5 rounded-lg font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white hover:scale-105 transition-all shadow-lg hover:shadow-xl flex items-center gap-2">
                     <i data-lucide="plus" class="w-5 h-5"></i>
-                    <span>New Tag</span>
+                    <span>{{ __('admin.new_tag') }}</span>
                 </a>
             </div>
         </div>
@@ -80,7 +80,7 @@
             <input type="text"
                    x-model="searchQuery"
                    @input.debounce.300ms="filterTags()"
-                   placeholder="Search tags..."
+                   placeholder="{{ __('admin.search_tags') }}"
                    class="w-full pl-10 pr-10 py-3 rounded-xl border-2 transition-all duration-300 focus:ring-2 focus:ring-accent/50"
                    :class="darkMode ?
                        'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-accent' :
@@ -100,10 +100,10 @@
                 :class="darkMode ?
                     'bg-gray-800 border-gray-700 text-white focus:border-accent' :
                     'bg-white border-gray-300 text-gray-900 focus:border-accent'">
-            <option value="all">All Tags</option>
-            <option value="used">Used Tags</option>
-            <option value="unused">Unused Tags</option>
-            <option value="popular">Popular (10+)</option>
+            <option value="all">{{ __('admin.all_tags') }}</option>
+            <option value="used">{{ __('admin.used_tags') }}</option>
+            <option value="unused">{{ __('admin.unused_tags') }}</option>
+            <option value="popular">{{ __('admin.popular_tags') }}</option>
         </select>
 
         <!-- Sort -->
@@ -113,9 +113,9 @@
                 :class="darkMode ?
                     'bg-gray-800 border-gray-700 text-white focus:border-accent' :
                     'bg-white border-gray-300 text-gray-900 focus:border-accent'">
-            <option value="name">Sort by Name</option>
-            <option value="usage">Sort by Usage</option>
-            <option value="created">Sort by Date</option>
+            <option value="name">{{ __('admin.sort_by_name') }}</option>
+            <option value="usage">{{ __('admin.sort_by_usage') }}</option>
+            <option value="created">{{ __('admin.sort_by_date') }}</option>
         </select>
     </div>
 
@@ -140,23 +140,23 @@
                         </th>
                         <th class="px-6 py-4 text-left font-semibold"
                             :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            Tag Name
+                            {{ __('admin.tag_name') }}
                         </th>
                         <th class="px-6 py-4 text-left font-semibold"
                             :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            Color
+                            {{ __('admin.color') }}
                         </th>
                         <th class="px-6 py-4 text-center font-semibold"
                             :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            Usage Count
+                            {{ __('admin.usage_count') }}
                         </th>
                         <th class="px-6 py-4 text-left font-semibold"
                             :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            Created
+                            {{ __('admin.created_at') }}
                         </th>
                         <th class="px-6 py-4 text-center font-semibold"
                             :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            Actions
+                            {{ __('admin.actions') }}
                         </th>
                     </tr>
                 </thead>
@@ -334,7 +334,7 @@
 function tagManagement() {
     return {
         loading: false,
-        tags: @json($tags),
+        tags: @json($tagsForJs ?? []),
         filteredTags: [],
         paginatedTags: [],
         selectedTags: [],

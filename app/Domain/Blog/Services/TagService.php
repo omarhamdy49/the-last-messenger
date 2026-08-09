@@ -11,7 +11,9 @@ use App\Domain\Blog\Models\Tag;
 use App\Domain\Blog\Repositories\TagRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * TagService
@@ -57,7 +59,7 @@ class TagService
 
         // Generate slug if not provided
         $nonTranslatableData['slug'] = $data->slug
-            ?? \Illuminate\Support\Str::slug($data->name['en'] ?? $data->name['ar'] ?? 'tag');
+            ?? Str::slug($data->name['en'] ?? $data->name['ar'] ?? 'tag');
 
         // Create tag with non-translatable data only
         /** @var Tag */
@@ -91,18 +93,25 @@ class TagService
         $tag = $this->repository->findOrFail($id, with: ['translations']);
 
         // Build the non-translatable column payload
-        $nonTranslatableData = ['type' => $data->type];
+        $nonTranslatableData = ['type' => $data->type, 'color' => $data->color];
 
         // Generate slug if not provided
         $nonTranslatableData['slug'] = $data->slug
-            ?? \Illuminate\Support\Str::slug($data->name['en'] ?? $data->name['ar'] ?? 'tag');
+            ?? Str::slug($data->name['en'] ?? $data->name['ar'] ?? 'tag');
 
         // Update non-translatable fields
         $this->repository->update($id, $nonTranslatableData);
 
         // Sync translations
+        $translatableData = [];
         if (! empty($data->name)) {
-            $tag->syncTranslations(['name' => $data->name]);
+            $translatableData['name'] = $data->name;
+        }
+        if (! empty($data->description)) {
+            $translatableData['description'] = $data->description;
+        }
+        if (! empty($translatableData)) {
+            $tag->syncTranslations($translatableData);
         }
 
         return $this->repository->findOrFail($id);
@@ -240,7 +249,7 @@ class TagService
     /**
      * Search tags for autocomplete
      */
-    public function searchForAutocomplete(string $query, ?string $type = null, int $limit = 10): \Illuminate\Support\Collection
+    public function searchForAutocomplete(string $query, ?string $type = null, int $limit = 10): Collection
     {
         return $this->repository->searchForAutocomplete($query, $type, $limit);
     }

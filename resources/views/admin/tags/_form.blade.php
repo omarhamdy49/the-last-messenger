@@ -4,7 +4,14 @@
 --}}
 
 @php
-    $supportedLanguages = ['ar', 'en', 'tr', 'fr', 'ur']; // Hardcoded for testing
+    $supportedLanguages = ['ar', 'en', 'tr', 'fr', 'ur'];
+    $langNames = [
+        'ar' => ['name' => 'العربية', 'flag' => '🇸🇦'],
+        'en' => ['name' => 'English', 'flag' => '🇬🇧'],
+        'tr' => ['name' => 'Türkçe', 'flag' => '🇹🇷'],
+        'fr' => ['name' => 'Français', 'flag' => '🇫🇷'],
+        'ur' => ['name' => 'اردو', 'flag' => '🇵🇰'],
+    ];
     $isEdit = isset($tag) && $tag->exists;
     $defLang = app()->getLocale();
     if (!in_array($defLang, $supportedLanguages)) { $defLang = 'ar'; }
@@ -63,7 +70,7 @@ function tagForm() {
             <h2 class="text-xl font-bold flex items-center gap-2"
                 :class="darkMode ? 'text-white' : 'text-gray-900'">
                 <i data-lucide="languages" class="w-5 h-5 text-accent"></i>
-                <span>Tag Information</span>
+                <span>{{ __('admin.tag_information') }}</span>
             </h2>
         </div>
 
@@ -73,16 +80,7 @@ function tagForm() {
             <div class="flex flex-wrap gap-2 mb-6 pb-6 border-b"
                  :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
                 @foreach($supportedLanguages as $lang)
-                    @php
-                        $langNames = [
-                            'ar' => ['name' => 'العربية', 'flag' => '🇸🇦'],
-                            'en' => ['name' => 'English', 'flag' => '🇬🇧'],
-                            'tr' => ['name' => 'Türkçe', 'flag' => '🇹🇷'],
-                            'fr' => ['name' => 'Français', 'flag' => '🇫🇷'],
-                            'ur' => ['name' => 'اردو', 'flag' => '🇵🇰'],
-                        ];
-                        $langData = $langNames[$lang] ?? ['name' => $lang, 'flag' => '🌐'];
-                    @endphp
+                    @php $langData = $langNames[$lang] ?? ['name' => $lang, 'flag' => '🌐']; @endphp
                     <button type="button"
                             @click="activeLanguage = '{{ $lang }}'"
                             class="px-4 py-2 rounded-lg font-semibold transition-all duration-300 flex items-center gap-2"
@@ -91,7 +89,7 @@ function tagForm() {
                                 : (darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')">
                         <span>{{ $langData['flag'] }}</span>
                         <span>{{ $langData['name'] }}</span>
-                        @if($errors->has("name.{$lang}") || $errors->has("slug.{$lang}"))
+                        @if($errors->has("name.{$lang}") || $errors->has("description.{$lang}"))
                             <span class="inline-block w-2 h-2 bg-red-500 rounded-full"></span>
                         @endif
                     </button>
@@ -100,53 +98,27 @@ function tagForm() {
 
             <!-- Language Panels -->
             @foreach($supportedLanguages as $lang)
+                @php $langData = $langNames[$lang] ?? ['name' => $lang, 'flag' => '🌐']; @endphp
                 <x-admin.language-tab-panel :language="$lang">
 
                     <!-- Name Field -->
                     <div class="mb-6">
                         <label class="block mb-2 font-semibold"
                                :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
-                            {{ __('admin.tag_name') }} <span class="text-red-500">*</span>
+                            {{ __('admin.tag_name') }} ({{ strtoupper($lang) }})
+                            @if($lang === 'ar')<span class="text-red-500">*</span>@endif
                         </label>
                         <input type="text"
                                name="name[{{ $lang }}]"
-                               value="{{ old("name.{$lang}", $isEdit ? $tag->translate($lang)?->name : '') }}"
-                               required
+                               value="{{ old("name.{$lang}", $isEdit ? $tag->translations->firstWhere('locale', $lang)?->name : '') }}"
+                               @if($lang === 'ar') required @endif
                                dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                               placeholder="Enter tag name in {{ $langData['name'] ?? $lang }}"
+                               placeholder="{{ __('admin.tag_name_placeholder', ['language' => $langData['name']]) }}"
                                class="w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 font-cairo focus:ring-2 focus:ring-accent/50"
                                :class="darkMode ?
                                    'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-accent' :
                                    'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'">
                         @error("name.{$lang}")
-                            <div class="mt-2 flex items-start gap-2 text-red-500 text-sm">
-                                <i data-lucide="alert-circle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
-                                <span>{{ $message }}</span>
-                            </div>
-                        @enderror
-                    </div>
-
-                    <!-- Slug Field -->
-                    <div class="mb-6">
-                        <label class="block mb-2 font-semibold"
-                               :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
-                            {{ __('admin.slug') }} <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text"
-                               name="slug[{{ $lang }}]"
-                               value="{{ old("slug.{$lang}", $isEdit ? $tag->translate($lang)?->slug : '') }}"
-                               required
-                               dir="ltr"
-                               placeholder="tag-slug"
-                               class="w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 font-mono focus:ring-2 focus:ring-accent/50"
-                               :class="darkMode ?
-                                   'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-accent' :
-                                   'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'">
-                        <p class="mt-2 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                            <i data-lucide="info" class="w-4 h-4 inline mr-1"></i>
-                            URL-friendly version of the name (lowercase, hyphens only)
-                        </p>
-                        @error("slug.{$lang}")
                             <div class="mt-2 flex items-start gap-2 text-red-500 text-sm">
                                 <i data-lucide="alert-circle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
                                 <span>{{ $message }}</span>
@@ -163,11 +135,11 @@ function tagForm() {
                         <textarea name="description[{{ $lang }}]"
                                   rows="3"
                                   dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                                  placeholder="Brief description of this tag..."
+                                  placeholder="{{ __('admin.tag_description_placeholder') }}"
                                   class="w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 font-cairo focus:ring-2 focus:ring-accent/50"
                                   :class="darkMode ?
                                       'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-accent' :
-                                      'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'">{{ old("description.{$lang}", $isEdit ? $tag->translate($lang)?->description : '') }}</textarea>
+                                      'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'">{{ old("description.{$lang}", $isEdit ? $tag->translations->firstWhere('locale', $lang)?->description : '') }}</textarea>
                         @error("description.{$lang}")
                             <div class="mt-2 flex items-start gap-2 text-red-500 text-sm">
                                 <i data-lucide="alert-circle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
@@ -178,6 +150,34 @@ function tagForm() {
 
                 </x-admin.language-tab-panel>
             @endforeach
+
+            <!-- Slug Field (shared across languages) -->
+            <div class="mt-6 pt-6 border-t"
+                 :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
+                <label class="block mb-2 font-semibold"
+                       :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
+                    {{ __('admin.slug') }}
+                </label>
+                <input type="text"
+                       name="slug"
+                       value="{{ old('slug', $isEdit ? $tag->slug : '') }}"
+                       dir="ltr"
+                       placeholder="tag-slug"
+                       class="w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 font-mono focus:ring-2 focus:ring-accent/50"
+                       :class="darkMode ?
+                           'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-accent' :
+                           'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'">
+                <p class="mt-2 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                    <i data-lucide="info" class="w-4 h-4 inline me-1"></i>
+                    {{ __('admin.tag_slug_hint') }}
+                </p>
+                @error('slug')
+                    <div class="mt-2 flex items-start gap-2 text-red-500 text-sm">
+                        <i data-lucide="alert-circle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+                        <span>{{ $message }}</span>
+                    </div>
+                @enderror
+            </div>
         </div>
     </div>
 
@@ -187,15 +187,15 @@ function tagForm() {
         <div class="p-6">
             <label class="block mb-3 font-semibold"
                    :class="darkMode ? 'text-white' : 'text-gray-900'">
-                <i data-lucide="palette" class="w-5 h-5 inline mr-2 text-accent"></i>
-                Tag Color
+                <i data-lucide="palette" class="w-5 h-5 inline me-2 text-accent"></i>
+                {{ __('admin.tag_color') }}
             </label>
             <x-admin.color-picker
                 name="color"
                 :value="old('color', $isEdit ? $tag->color : '#0056b3')"
             />
             <p class="mt-3 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                Choose a color to distinguish this tag visually
+                {{ __('admin.tag_color_hint') }}
             </p>
         </div>
     </div>
@@ -208,12 +208,12 @@ function tagForm() {
                 <h3 class="font-bold mb-4 flex items-center gap-2"
                     :class="darkMode ? 'text-white' : 'text-gray-900'">
                     <i data-lucide="bar-chart" class="w-5 h-5 text-accent"></i>
-                    Usage Statistics
+                    {{ __('admin.usage_statistics') }}
                 </h3>
                 <div class="flex items-center justify-between p-4 rounded-lg"
                      :class="darkMode ? 'bg-gray-800' : 'bg-gray-50'">
                     <span :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Used in Articles
+                        {{ __('admin.used_in_articles') }}
                     </span>
                     <span class="text-2xl font-bold"
                           :class="darkMode ? 'text-white' : 'text-gray-900'">
@@ -232,7 +232,7 @@ function tagForm() {
                'border-gray-700 text-gray-300 hover:bg-gray-800' :
                'border-gray-300 text-gray-700 hover:bg-gray-50'">
             <i data-lucide="x" class="w-5 h-5"></i>
-            <span>Cancel</span>
+            <span>{{ __('admin.cancel') }}</span>
         </a>
 
         <div class="flex flex-wrap items-center gap-3">
@@ -241,14 +241,14 @@ function tagForm() {
                         @click="deleteTag"
                         class="px-6 py-3 rounded-lg font-semibold bg-red-500 text-white hover:bg-red-600 transition-all hover:scale-105 flex items-center gap-2">
                     <i data-lucide="trash-2" class="w-5 h-5"></i>
-                    <span>Delete</span>
+                    <span>{{ __('admin.delete') }}</span>
                 </button>
             @endif
 
             <button type="submit"
                     class="px-8 py-3 rounded-lg font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white hover:scale-105 transition-all shadow-lg flex items-center gap-2">
                 <i data-lucide="save" class="w-5 h-5"></i>
-                <span>{{ $isEdit ? 'Update Tag' : 'Create Tag' }}</span>
+                <span>{{ $isEdit ? __('admin.update_tag') : __('admin.create_tag') }}</span>
             </button>
         </div>
     </div>

@@ -138,7 +138,7 @@ class ArticleController extends AdminController
 
             return redirect()
                 ->route('admin.articles.index')
-                ->with('success', 'Article created successfully!');
+                ->with('success', __('articles.messages.created'));
 
         } catch (\Throwable $e) {
             Log::error('article.create_failed', [
@@ -230,7 +230,7 @@ class ArticleController extends AdminController
 
             return redirect()
                 ->route('admin.articles.index')
-                ->with('success', 'Article updated successfully!');
+                ->with('success', __('articles.messages.updated'));
 
         } catch (\Throwable $e) {
             Log::error('article.update_failed', [
@@ -298,7 +298,7 @@ class ArticleController extends AdminController
 
             return redirect()
                 ->route('admin.articles.index')
-                ->with('success', 'Article deleted successfully!');
+                ->with('success', __('articles.messages.deleted'));
 
         } catch (\Throwable $e) {
             Log::error('article.delete_failed', [

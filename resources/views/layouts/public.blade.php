@@ -83,8 +83,7 @@
          unicode-range live in app.css; preload the two most-used faces for the
          current script so the first paint swaps fast. --}}
     @php $fontSubset = $isRtl ? 'arabic' : 'latin'; @endphp
-    <link rel="preload" as="font" type="font/woff2" href="{{ asset('fonts/cairo-'.$fontSubset.'-400.woff2') }}" crossorigin>
-    <link rel="preload" as="font" type="font/woff2" href="{{ asset('fonts/cairo-'.$fontSubset.'-700.woff2') }}" crossorigin>
+    <link rel="preload" as="font" type="font/woff2" href="{{ asset('fonts/readex-pro-'.$fontSubset.'.woff2') }}" crossorigin>
 
     {{-- Landing page (homepage = primary entry + PageSpeed target): inline the
          CRITICAL (above-the-fold) CSS so first paint needs no render-blocking CSS

@@ -10,9 +10,11 @@ use App\Domain\Shared\Services\PublicVisibilityRegistry;
 use App\Models\Article;
 use App\Models\ArticleLocale;
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -331,7 +333,7 @@ class ArticleRepository
      *
      * @return array{prev: ?Article, next: ?Article}
      */
-    public function getAdjacentForPublic(int $articleId, ?\Carbon\CarbonInterface $createdAt): array
+    public function getAdjacentForPublic(int $articleId, ?CarbonInterface $createdAt): array
     {
         if ($createdAt === null) {
             return ['prev' => null, 'next' => null];
@@ -692,12 +694,22 @@ class ArticleRepository
      *
      * @return Collection<int, Category>
      */
-    public function getFormCategories(): Collection
+    public function getFormCategories(): \Illuminate\Support\Collection
     {
+        // id => localized name map, ready for select/checkbox option lists
+        $locale = app()->getLocale();
+
         return Category::with(['translations:id,category_id,locale,name'])
             ->select(['id', 'slug', 'type', 'status'])
             ->orderBy('id')
-            ->get();
+            ->get()
+            ->mapWithKeys(function (Category $category) use ($locale) {
+                $name = $category->translations->firstWhere('locale', $locale)?->name
+                    ?? $category->translations->firstWhere('locale', 'ar')?->name
+                    ?? $category->slug;
+
+                return [$category->id => $name];
+            });
     }
 
     /**
@@ -730,7 +742,7 @@ class ArticleRepository
     /**
      * Soft-delete an article by ID.
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function deleteById(int $id): void
     {
@@ -740,7 +752,7 @@ class ArticleRepository
     /**
      * Mark all locales of an article as published (is_ready = true).
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function publishById(int $id): void
     {
@@ -750,7 +762,7 @@ class ArticleRepository
     /**
      * Restore a soft-deleted article.
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function restoreById(int $id): Article
     {
@@ -764,7 +776,7 @@ class ArticleRepository
      * Force-delete an article and return its file paths for cleanup.
      * Returns ['thumb' => string|null, 'gallery' => array<string>].
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function forceDeleteById(int $id): array
     {
@@ -781,7 +793,7 @@ class ArticleRepository
     /**
      * Get paginated trashed articles for the admin trash view.
      */
-    public function getTrashed(int $perPage = 15): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    public function getTrashed(int $perPage = 15): LengthAwarePaginator
     {
         return Article::onlyTrashed()
             ->with([
@@ -798,7 +810,7 @@ class ArticleRepository
      *
      * @param  array<int>  $excludeIds
      */
-    public function searchForSelector(string $search, array $excludeIds = [], int $limit = 20): \Illuminate\Database\Eloquent\Collection
+    public function searchForSelector(string $search, array $excludeIds = [], int $limit = 20): Collection
     {
         return Article::query()
             ->select(['id', 'status', 'created_at'])
@@ -819,7 +831,7 @@ class ArticleRepository
     /**
      * Get articles for form dropdowns (SeerahEvent create/edit).
      */
-    public function getForDropdown(): \Illuminate\Database\Eloquent\Collection
+    public function getForDropdown(): Collection
     {
         return Article::query()
             ->select(['id', 'status', 'created_at'])

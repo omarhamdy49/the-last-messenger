@@ -21,9 +21,9 @@
 
     <!-- Page Header -->
     <div class="mb-8">
-        <h1 class="text-3xl font-bold gradient-text mb-2">Create New Category</h1>
+        <h1 class="text-3xl font-bold gradient-text mb-2">{{ __('admin.create_new_category') }}</h1>
         <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-            Add a new category to organize your content
+            {{ __('admin.create_category_desc') }}
         </p>
     </div>
 

@@ -7,6 +7,14 @@ export default defineConfig({
     build: {
         minify: 'terser',
     },
+    // laravel-vite-plugin disables publicDir, so during HMR the @font-face
+    // urls (/fonts/*.woff2) resolve against the Vite origin and 404. Proxy
+    // them back to the Laravel server so self-hosted fonts load in dev too.
+    server: {
+        proxy: {
+            '/fonts': 'http://localhost:8000',
+        },
+    },
     plugins: [
         laravel({
             input: [

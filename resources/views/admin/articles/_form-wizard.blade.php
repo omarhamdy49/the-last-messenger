@@ -390,10 +390,10 @@
                             class="select2-category w-full px-3 py-2 rounded-lg border text-sm"
                             :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'">
                         <option value="">{{ __('articles.placeholders.select_category') }}</option>
-                        @foreach($categories as $category)
-                            <option value="{{ $category->id }}"
-                                    {{ old('category_id', $article ? $article->category_id : '') == $category->id ? 'selected' : '' }}>
-                                {{ $category->name }}
+                        @foreach($categories as $catId => $catName)
+                            <option value="{{ $catId }}"
+                                    {{ old('category_id', $article ? $article->category_id : '') == $catId ? 'selected' : '' }}>
+                                {{ $catName }}
                             </option>
                         @endforeach
                     </select>
@@ -407,10 +407,10 @@
                     <select name="additional_categories[]" multiple
                             class="select2-categories w-full px-3 py-2 rounded-lg border text-sm"
                             :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                        @foreach($categories as $category)
-                            <option value="{{ $category->id }}"
-                                    {{ in_array($category->id, old('additional_categories', $article && $article->categories ? $article->categories->pluck('id')->toArray() : [])) ? 'selected' : '' }}>
-                                {{ $category->name }}
+                        @foreach($categories as $catId => $catName)
+                            <option value="{{ $catId }}"
+                                    {{ in_array($catId, old('additional_categories', $article && $article->categories ? $article->categories->pluck('id')->toArray() : [])) ? 'selected' : '' }}>
+                                {{ $catName }}
                             </option>
                         @endforeach
                     </select>
@@ -431,7 +431,7 @@
                     @foreach($tags as $tag)
                         <option value="{{ $tag->id }}"
                                 {{ in_array($tag->id, old('tags', $article && $article->tags ? $article->tags->pluck('id')->toArray() : [])) ? 'selected' : '' }}>
-                            {{ $tag->name }}
+                            {{ $tag->getTranslation('name') ?? $tag->slug }}
                         </option>
                     @endforeach
                 </select>
@@ -539,13 +539,13 @@
                                 <label class="block text-sm font-semibold mb-1.5"
                                        :class="darkMode ? 'text-white' : 'text-gray-900'">
                                     {{ __('articles.fields.title') }} ({{ strtoupper($locale) }})
-                                    <span class="text-red-500">*</span>
+                                    @if($locale === 'ar')<span class="text-red-500">*</span>@endif
                                 </label>
                                 <input type="text"
                                        name="title[{{ $locale }}]"
                                        x-model="formData.title.{{ $locale }}"
                                        @input="generateSlug('{{ $locale }}')"
-                                       required
+                                       @if($locale === 'ar') required @endif
                                        placeholder="{{ __('articles.placeholders.title') }}"
                                        class="w-full px-4 py-2.5 rounded-lg border text-base focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent transition-all"
                                        :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"

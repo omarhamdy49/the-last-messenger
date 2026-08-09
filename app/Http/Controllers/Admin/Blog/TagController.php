@@ -6,11 +6,13 @@ namespace App\Http\Controllers\Admin\Blog;
 
 use App\Domain\Blog\DTOs\CreateTagData;
 use App\Domain\Blog\DTOs\UpdateTagData;
+use App\Domain\Blog\Models\Tag;
 use App\Domain\Blog\Services\TagService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreTagRequest;
 use App\Http\Requests\Admin\UpdateTagRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -55,9 +57,10 @@ class TagController extends Controller
         // Get statistics for stats cards
         $mostUsedTag = $this->service->getMostUsedTag();
         $stats = [
-            'total' => $this->service->count(),
-            'total_uses' => $this->service->getTotalUsageCount(),
-            'most_used' => $mostUsedTag ? $mostUsedTag->getTranslation('name', app()->getLocale()) : 'N/A',
+            'count' => $this->service->count(),
+            'total_usage' => $this->service->getTotalUsageCount(),
+            'most_used' => $mostUsedTag ? $mostUsedTag->getTranslation('name', app()->getLocale()) : '—',
+            'unused_count' => Tag::where('usage_count', 0)->count(),
             'recent' => $this->service->getRecentlyAddedCount(7),
         ];
 
@@ -76,7 +79,17 @@ class TagController extends Controller
             ]);
         }
 
-        return view('admin.tags.index', compact('tags', 'stats'));
+        // Plain array for the Alpine-rendered table (names live on translations)
+        $tagsForJs = $tags->getCollection()->map(fn ($tag) => [
+            'id' => $tag->id,
+            'name' => $tag->getTranslation('name') ?? $tag->slug,
+            'translations' => $tag->translations->pluck('name', 'locale')->filter(),
+            'color' => $tag->color,
+            'articles_count' => (int) ($tag->articles_count ?? $tag->usage_count ?? 0),
+            'created_at' => optional($tag->created_at)->toIso8601String(),
+        ])->values();
+
+        return view('admin.tags.index', compact('tags', 'tagsForJs', 'stats'));
     }
 
     /**
@@ -94,12 +107,17 @@ class TagController extends Controller
      *
      * POST /su/portal/v1/admin/tags
      */
-    public function store(StoreTagRequest $request): JsonResponse
+    public function store(StoreTagRequest $request): JsonResponse|RedirectResponse
     {
         try {
             // Check for duplicate tags
             $duplicate = $this->service->findDuplicate($request->validated()['name']);
             if ($duplicate) {
+                if (! $request->expectsJson()) {
+                    return back()->withInput()
+                        ->withErrors(['name.ar' => __('admin.tag_duplicate_exists')]);
+                }
+
                 return response()->json([
                     'success' => false,
                     'message' => __('admin.tag_duplicate_exists'),
@@ -108,6 +126,11 @@ class TagController extends Controller
             }
 
             $tag = $this->service->create(CreateTagData::fromRequest($request));
+
+            if (! $request->expectsJson()) {
+                return redirect()->route('admin.tags.index')
+                    ->with('success', __('admin.tag_created'));
+            }
 
             return response()->json([
                 'success' => true,
@@ -119,6 +142,11 @@ class TagController extends Controller
                 'user_id' => auth()->id(),
                 'error' => $e->getMessage(),
             ]);
+
+            if (! $request->expectsJson()) {
+                return back()->withInput()
+                    ->withErrors(['name.ar' => __('admin.operation_failed')]);
+            }
 
             return response()->json([
                 'success' => false,
@@ -145,10 +173,15 @@ class TagController extends Controller
      *
      * PUT /su/portal/v1/admin/tags/{id}
      */
-    public function update(UpdateTagRequest $request, int $id): JsonResponse
+    public function update(UpdateTagRequest $request, int $id): JsonResponse|RedirectResponse
     {
         try {
             $tag = $this->service->update($id, UpdateTagData::fromRequest($request));
+
+            if (! $request->expectsJson()) {
+                return redirect()->route('admin.tags.index')
+                    ->with('success', __('admin.tag_updated'));
+            }
 
             return response()->json([
                 'success' => true,
@@ -161,6 +194,11 @@ class TagController extends Controller
                 'tag_id' => $id,
                 'error' => $e->getMessage(),
             ]);
+
+            if (! $request->expectsJson()) {
+                return back()->withInput()
+                    ->withErrors(['name.ar' => __('admin.operation_failed')]);
+            }
 
             return response()->json([
                 'success' => false,

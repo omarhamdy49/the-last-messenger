@@ -20,9 +20,9 @@
 
     <!-- Page Header -->
     <div class="mb-8 text-center">
-        <h1 class="text-3xl font-bold gradient-text mb-2">Create New Tag</h1>
+        <h1 class="text-3xl font-bold gradient-text mb-2">{{ __('admin.create_new_tag') }}</h1>
         <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-            Add a new tag to organize your content
+            {{ __('admin.create_tag_desc') }}
         </p>
     </div>
 

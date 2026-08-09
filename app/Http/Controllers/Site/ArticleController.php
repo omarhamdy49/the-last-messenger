@@ -12,6 +12,7 @@ use App\Models\Article;
 use App\Models\ArticleLocale;
 use App\Repositories\ArticleRepository;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Throwable;
@@ -165,7 +166,7 @@ final class ArticleController extends Controller
      * Session-guarded so refreshes within a session don't inflate the counter;
      * returns the fresh count for the client to render.
      */
-    public function registerView(int $id): \Illuminate\Http\JsonResponse
+    public function registerView(int $id): JsonResponse
     {
         $sessionKey = 'article_viewed_'.$id;
 
@@ -228,7 +229,7 @@ final class ArticleController extends Controller
             'id' => $article->id,
             'title' => $articleLocale->title,
             'slug' => $articleLocale->slug,
-            'excerpt' => $articleLocale->excerpt ?: $articleLocale->description,
+            'excerpt' => trim(strip_tags((string) ($articleLocale->excerpt ?: $articleLocale->description))),
             'body' => $body,
             'toc' => $toc,
             'image' => $this->resolveImage($article),

@@ -7,9 +7,9 @@
     <div class="mb-8">
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
             <div>
-                <h1 class="text-3xl font-bold gradient-text mb-2">Categories Management</h1>
+                <h1 class="text-3xl font-bold gradient-text mb-2">{{ __('admin.categories_management') }}</h1>
                 <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Organize your content with hierarchical categories
+                    {{ __('admin.categories_management_desc') }}
                 </p>
             </div>
 
@@ -18,27 +18,27 @@
                         class="px-4 py-2.5 rounded-lg font-semibold transition-all hover:scale-105 flex items-center gap-2"
                         :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
                     <i data-lucide="chevrons-down" class="w-5 h-5"></i>
-                    <span>Expand All</span>
+                    <span>{{ __('admin.expand_all') }}</span>
                 </button>
 
                 <button @click="collapseAll()"
                         class="px-4 py-2.5 rounded-lg font-semibold transition-all hover:scale-105 flex items-center gap-2"
                         :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
                     <i data-lucide="chevrons-up" class="w-5 h-5"></i>
-                    <span>Collapse All</span>
+                    <span>{{ __('admin.collapse_all') }}</span>
                 </button>
 
                 <button @click="loadCategories()"
                         class="px-4 py-2.5 rounded-lg font-semibold transition-all hover:scale-105 flex items-center gap-2"
                         :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
                     <i data-lucide="refresh-cw" class="w-5 h-5" :class="{ 'animate-spin': loading }"></i>
-                    <span>Refresh</span>
+                    <span>{{ __('admin.refresh') }}</span>
                 </button>
 
                 <a href="{{ route('admin.categories.create') }}"
                    class="px-6 py-2.5 rounded-lg font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white hover:scale-105 transition-all shadow-lg hover:shadow-xl flex items-center gap-2">
                     <i data-lucide="plus" class="w-5 h-5"></i>
-                    <span>New Category</span>
+                    <span>{{ __('admin.new_category') }}</span>
                 </a>
             </div>
         </div>
@@ -86,7 +86,7 @@
             <input type="text"
                    x-model="searchQuery"
                    @input.debounce.300ms="filterCategories()"
-                   placeholder="Search categories..."
+                   placeholder="{{ __('admin.search_categories') }}"
                    class="w-full pl-10 pr-10 py-3 rounded-xl border-2 transition-all duration-300 focus:ring-2 focus:ring-accent/50"
                    :class="darkMode ?
                        'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-accent' :
@@ -106,9 +106,9 @@
                 :class="darkMode ?
                     'bg-gray-800 border-gray-700 text-white focus:border-accent' :
                     'bg-white border-gray-300 text-gray-900 focus:border-accent'">
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
+            <option value="all">{{ __('admin.all_statuses') }}</option>
+            <option value="active">{{ __('admin.active') }}</option>
+            <option value="inactive">{{ __('admin.inactive') }}</option>
         </select>
 
         <!-- Depth Filter -->
@@ -118,7 +118,7 @@
                 :class="darkMode ?
                     'bg-gray-800 border-gray-700 text-white focus:border-accent' :
                     'bg-white border-gray-300 text-gray-900 focus:border-accent'">
-            <option value="all">All Levels</option>
+            <option value="all">{{ __('admin.all_levels') }}</option>
             <option value="0">Root Level</option>
             <option value="1">Level 1</option>
             <option value="2">Level 2</option>
@@ -138,7 +138,7 @@
                         <tr :class="darkMode ? 'bg-gray-800' : 'bg-gray-100' ">
                             <th class="px-6 py-4 text-start font-semibold">{{ __('admin.name') }}</th>
                             <th class="px-6 py-4 text-start font-semibold">{{ __('admin.type') }}</th>
-                            <th class="px-6 py-4 text-start font-semibold">{{ __('admin.articles_count') }}</th>
+                            <th class="px-6 py-4 text-start font-semibold">{{ __('admin.articles_count_label') }}</th>
                             <th class="px-6 py-4 text-start font-semibold">{{ __('admin.status') }}</th>
                             <th class="px-6 py-4 text-end font-semibold">{{ __('admin.actions') }}</th>
                         </tr>
@@ -161,7 +161,7 @@
                                           :class="'{{ $category->type->value }}' === 'blog' ? 'bg-blue-100 text-blue-800' :
                                                    '{{ $category->type->value }}' === 'media' ? 'bg-purple-100 text-purple-800' :
                                                    'bg-teal-100 text-teal-800'">
-                                        {{ ucfirst($category->type->value) }}
+                                        {{ __('admin.'.$category->type->value) }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4">
@@ -172,7 +172,7 @@
                                 <td class="px-6 py-4">
                                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold"
                                           :class="'{{ $category->status }}' === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'">
-                                        {{ ucfirst($category->status) }}
+                                        {{ $category->status === 'active' ? __('admin.active') : __('admin.inactive') }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4">
