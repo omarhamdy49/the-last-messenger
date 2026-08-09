@@ -18,32 +18,41 @@
 
 @push('head')
 <style>
-    .series-hero { position: relative; isolation: isolate; overflow: hidden; }
+    /* ── Full-bleed gradient hero (mirrors the series-detail banner) ── */
+    .series-hero {
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        background: linear-gradient(135deg, #0056b3 0%, #136f4b 55%, #218838 100%);
+    }
+    .series-hero::before {
+        content: ''; position: absolute; inset: 0; z-index: -1;
+        background: rgba(0, 0, 0, .25);
+    }
+    /* Dotted lattice fading downward */
     .series-hero-pattern {
-        position: absolute; inset: 0; z-index: -1; pointer-events: none;
-        background-image: radial-gradient(currentColor 1px, transparent 1.5px);
+        position: absolute; inset: 0; pointer-events: none;
+        background-image: radial-gradient(#fff 1px, transparent 1.5px);
         background-size: 26px 26px;
-        color: #218838;
-        opacity: .07;
+        opacity: .12;
         -webkit-mask-image: linear-gradient(to bottom, black, transparent);
         mask-image: linear-gradient(to bottom, black, transparent);
     }
-    .dark .series-hero-pattern { color: #64CCC5; opacity: .08; }
-    .series-hero::before,
-    .series-hero::after {
-        content: ''; position: absolute; z-index: -1; border-radius: 9999px;
-        filter: blur(90px); opacity: .32; pointer-events: none;
+    /* Soft aurora glows on the gradient */
+    .series-hero-glow {
+        position: absolute; border-radius: 9999px; filter: blur(90px);
+        opacity: .45; pointer-events: none;
     }
-    .series-hero::before {
-        width: 32rem; height: 32rem; inset-inline-start: -9rem; top: -12rem;
-        background: radial-gradient(circle, #218838 0%, transparent 70%);
+    .series-hero-glow--a {
+        width: 30rem; height: 30rem; inset-inline-start: -8rem; top: -12rem;
+        background: radial-gradient(circle, #64CCC5 0%, transparent 70%);
     }
-    .series-hero::after {
-        width: 30rem; height: 30rem; inset-inline-end: -7rem; bottom: -14rem;
+    .series-hero-glow--b {
+        width: 26rem; height: 26rem; inset-inline-end: -6rem; bottom: -12rem;
         background: radial-gradient(circle, #0056b3 0%, transparent 70%);
     }
-    .dark .series-hero::before, .dark .series-hero::after { opacity: .22; }
 
+    /* ── Series cards ── */
     .series-card {
         border-radius: 1.25rem; overflow: hidden; background: #fff;
         border: 1px solid rgb(243 244 246);
@@ -59,6 +68,19 @@
     .series-card .series-cue { opacity: 0; transform: translateY(4px); transition: all .25s ease; }
     .series-card:hover .series-cue { opacity: 1; transform: translateY(0); }
 
+    /* Cover band: gradient + its own faint lattice */
+    .series-card-cover {
+        position: relative; overflow: hidden;
+        background: linear-gradient(135deg, #0056b3 0%, #136f4b 55%, #218838 100%);
+    }
+    .series-card-cover::after {
+        content: ''; position: absolute; inset: 0;
+        background-image: radial-gradient(#fff 1px, transparent 1.5px);
+        background-size: 22px 22px;
+        opacity: .14;
+        pointer-events: none;
+    }
+
     @media (prefers-reduced-motion: reduce) {
         .series-card, .series-cue { transition: none !important; transform: none !important; }
     }
@@ -67,44 +89,61 @@
 
 @section('content')
 
-@php $isRtlLocale = in_array(app()->getLocale(), ['ar', 'ur'], true); @endphp
+@php
+    $isRtlLocale = in_array(app()->getLocale(), ['ar', 'ur'], true);
+    $totalArticles = array_sum(array_column($series, 'articlesCount'));
+    $totalMinutes = array_sum(array_column($series, 'totalReadTime'));
+@endphp
 
 <div class="min-h-screen">
 
-    {{-- HERO --}}
-    <section class="series-hero border-b border-gray-100 dark:border-[#0f3460] bg-gradient-to-b from-secondary/[0.04] to-transparent dark:from-transparent">
+    {{-- ============================================================ --}}
+    {{-- HERO — full-bleed brand gradient, matching the detail banner --}}
+    {{-- ============================================================ --}}
+    <section class="series-hero border-b border-gray-100 dark:border-[#0f3460]">
+        <div class="series-hero-glow series-hero-glow--a" aria-hidden="true"></div>
+        <div class="series-hero-glow series-hero-glow--b" aria-hidden="true"></div>
         <div class="series-hero-pattern" aria-hidden="true"></div>
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative py-16 md:py-20">
+
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative py-16 md:py-24 text-white">
             <div class="max-w-3xl mx-auto text-center fade-in-up">
                 <div class="flex justify-center mb-6">
-                    <div class="relative">
-                        <div class="absolute inset-0 rounded-2xl bg-gradient-to-l from-secondary to-primary blur-lg opacity-40" aria-hidden="true"></div>
-                        <div class="relative w-16 h-16 rounded-2xl bg-gradient-to-l from-secondary to-primary flex items-center justify-center text-white shadow-xl">
-                            <i data-lucide="layers" class="w-8 h-8"></i>
-                        </div>
+                    <div class="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center shadow-lg">
+                        <i data-lucide="layers" class="w-8 h-8"></i>
                     </div>
                 </div>
-                <h1 class="text-4xl md:text-5xl font-bold mb-4 text-gray-900 dark:text-white tracking-tight">
+
+                <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold bg-white/15 backdrop-blur mb-5">
+                    <i data-lucide="route" class="w-4 h-4"></i>
+                    {{ __('series.public.reading_path') }}
+                </span>
+
+                <h1 class="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
                     {{ __('series.public.hero_title') }}
                 </h1>
-                <p class="text-base md:text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed">
+                <p class="text-base md:text-lg text-white/85 max-w-2xl mx-auto leading-relaxed">
                     {{ __('series.public.hero_subtitle') }}
                 </p>
 
-                {{-- Quick stats --}}
+                {{-- Stats strip --}}
                 @if (count($series) > 0)
-                    <div class="flex items-center justify-center gap-6 sm:gap-10 mt-9 text-sm">
-                        <div class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                            <i data-lucide="layers" class="w-4 h-4 text-secondary"></i>
-                            <span class="font-bold text-gray-900 dark:text-white tabular-nums">{{ count($series) }}</span>
+                    <div class="flex items-center justify-center gap-4 sm:gap-6 mt-9 flex-wrap">
+                        <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-white/15 backdrop-blur">
+                            <i data-lucide="layers" class="w-4 h-4"></i>
+                            <span class="font-bold tabular-nums">{{ count($series) }}</span>
                             {{ __('series.public.series_unit') }}
-                        </div>
-                        <div class="w-px h-4 bg-gray-300 dark:bg-[#0f3460]" aria-hidden="true"></div>
-                        <div class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                            <i data-lucide="file-text" class="w-4 h-4 text-primary"></i>
-                            <span class="font-bold text-gray-900 dark:text-white tabular-nums">{{ array_sum(array_column($series, 'articlesCount')) }}</span>
+                        </span>
+                        <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-white/15 backdrop-blur">
+                            <i data-lucide="file-text" class="w-4 h-4"></i>
+                            <span class="font-bold tabular-nums">{{ $totalArticles }}</span>
                             {{ __('series.public.article_unit') }}
-                        </div>
+                        </span>
+                        @if ($totalMinutes > 0)
+                            <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-white/15 backdrop-blur">
+                                <i data-lucide="clock" class="w-4 h-4"></i>
+                                <span class="font-bold tabular-nums">{{ $totalMinutes }}</span>{{ __('series.public.min_read') }}
+                            </span>
+                        @endif
                     </div>
                 @endif
             </div>
@@ -125,20 +164,26 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 @foreach ($series as $item)
                     <a href="{{ $item['url'] }}" class="group series-card flex flex-col">
-                        {{-- Visual --}}
-                        <div class="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-primary via-[#136f4b] to-secondary">
+                        {{-- Cover --}}
+                        <div class="series-card-cover aspect-[16/8]">
                             @if ($item['thumbnail'])
                                 <img src="{{ $item['thumbnail'] }}" alt="{{ $item['title'] }}" loading="lazy"
-                                     class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none">
+                                     class="relative z-10 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none">
                             @else
-                                <div class="absolute inset-0 flex items-center justify-center text-white/80">
-                                    <i data-lucide="layers" class="w-14 h-14"></i>
+                                <div class="absolute inset-0 flex items-center justify-center text-white/85">
+                                    <i data-lucide="layers" class="w-12 h-12"></i>
                                 </div>
                             @endif
-                            <span class="absolute top-3 start-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-white/90 dark:bg-[#16213e]/90 text-primary backdrop-blur">
+                            <span class="absolute top-3 start-3 z-20 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-white/90 dark:bg-[#16213e]/90 text-primary backdrop-blur">
                                 <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
                                 {{ $item['articlesCount'] }} {{ __('series.public.article_unit') }}
                             </span>
+                            @if (! empty($item['totalReadTime']))
+                                <span class="absolute top-3 end-3 z-20 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-black/35 text-white backdrop-blur">
+                                    <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                                    {{ $item['totalReadTime'] }}{{ __('series.public.min_read') }}
+                                </span>
+                            @endif
                         </div>
 
                         {{-- Body --}}
@@ -147,8 +192,29 @@
                                 {{ $item['title'] }}
                             </h2>
                             @if ($item['description'])
-                                <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 mb-4 flex-1 leading-relaxed">{{ $item['description'] }}</p>
+                                <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 mb-4 leading-relaxed">{{ $item['description'] }}</p>
                             @endif
+
+                            {{-- Reading-path preview (first parts) --}}
+                            @if (! empty($item['previewTitles']))
+                                <ul class="space-y-1.5 mb-4">
+                                    @foreach ($item['previewTitles'] as $pi => $pTitle)
+                                        <li class="flex items-center gap-2.5 text-sm text-gray-600 dark:text-gray-300 min-w-0">
+                                            <span class="w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-bold flex items-center justify-center shrink-0 tabular-nums">{{ $pi + 1 }}</span>
+                                            <span class="truncate">{{ $pTitle }}</span>
+                                        </li>
+                                    @endforeach
+                                    @if ($item['articlesCount'] > count($item['previewTitles']))
+                                        <li class="flex items-center gap-2.5 text-xs text-gray-400 dark:text-gray-500">
+                                            <span class="w-5 h-5 rounded-full border border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center shrink-0">
+                                                <i data-lucide="plus" class="w-3 h-3"></i>
+                                            </span>
+                                            +{{ $item['articlesCount'] - count($item['previewTitles']) }} {{ __('series.public.article_unit') }}
+                                        </li>
+                                    @endif
+                                </ul>
+                            @endif
+
                             <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-100 dark:border-[#0f3460] mt-auto">
                                 <span class="text-gray-400 dark:text-gray-500">{{ $item['dateLabel'] }}</span>
                                 <span class="series-cue inline-flex items-center gap-1 font-semibold text-primary">

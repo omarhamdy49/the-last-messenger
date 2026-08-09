@@ -29,14 +29,39 @@ final class SeriesController extends Controller
             function () use ($locale): array {
                 try {
                     return Series::query()
-                        ->with('translations')
+                        ->with([
+                            'translations',
+                            // Published+ready articles ride along so cards can
+                            // preview the reading path and total minutes.
+                            'articles' => fn ($q) => $q
+                                ->where('status', 'published')
+                                ->whereHas('locales', fn ($l) => $l->where('is_ready', true))
+                                ->with(['locales' => fn ($l) => $l->whereIn('locale', array_unique([$locale, 'ar']))]),
+                        ])
                         ->withCount(['articles as published_articles_count' => function ($q) {
                             $q->where('status', 'published')
                                 ->whereHas('locales', fn ($l) => $l->where('is_ready', true));
                         }])
                         ->orderByDesc('created_at')
                         ->get()
-                        ->map(fn (Series $s) => $this->mapSeries($s, $locale))
+                        ->map(function (Series $s) use ($locale): ?array {
+                            $data = $this->mapSeries($s, $locale);
+
+                            if ($data === null) {
+                                return null;
+                            }
+
+                            $articles = $s->relationLoaded('articles') ? $s->articles : collect();
+                            $data['previewTitles'] = $articles->take(3)
+                                ->map(fn ($a) => $a->locales->firstWhere('locale', $locale)?->title
+                                    ?? $a->locales->firstWhere('locale', 'ar')?->title)
+                                ->filter()
+                                ->values()
+                                ->all();
+                            $data['totalReadTime'] = (int) $articles->sum('read_time');
+
+                            return $data;
+                        })
                         ->filter()
                         ->values()
                         ->all();

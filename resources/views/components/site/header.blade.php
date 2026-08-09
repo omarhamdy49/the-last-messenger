@@ -20,6 +20,19 @@
         return $item['url'] ?? '#';
     };
     $menuItemIsActive = fn (array $item): bool => !empty($item['route_name']) && request()->routeIs($item['route_name']);
+    // A parent (dropdown) item is active when any of its children matches the route.
+    $menuBranchIsActive = function (array $item) use ($menuItemIsActive): bool {
+        if ($menuItemIsActive($item)) {
+            return true;
+        }
+        foreach ($item['children'] ?? [] as $child) {
+            if (! empty($child['route_name']) && request()->routeIs($child['route_name'].'*')) {
+                return true;
+            }
+        }
+
+        return false;
+    };
 
     // Chips link to a search query, a named route, or an absolute/relative URL.
     $chipUrl = function (array $chip): string {
@@ -67,10 +80,33 @@
                     {{-- 8 items + actions don't fit between lg and xl — the hamburger covers that range --}}
                     <div class="hidden xl:flex items-center space-s-1 2xl:space-s-6">
                         @foreach ($headerMenu as $item)
-                            <a href="{{ $menuItemUrl($item) }}"
-                               class="whitespace-nowrap px-2 2xl:px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 transition-all {{ $menuItemIsActive($item) ? 'bg-[#E9ECEF]/50 dark:bg-[#0f3460]/50' : '' }}">
-                                {{ $item['label'] }}
-                            </a>
+                            @if (! empty($item['children']))
+                                {{-- Dropdown parent (e.g. Library = articles + series) --}}
+                                <div class="relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false" @click.away="open = false">
+                                    <button @click="open = true"
+                                            :aria-expanded="open"
+                                            class="whitespace-nowrap flex items-center gap-1 px-2 2xl:px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 transition-all cursor-pointer {{ $menuBranchIsActive($item) ? 'bg-[#E9ECEF]/50 dark:bg-[#0f3460]/50' : '' }}">
+                                        {{ $item['label'] }}
+                                        <i class="w-3.5 h-3.5 transition-transform" :class="open ? 'rotate-180' : ''" data-lucide="chevron-down"></i>
+                                    </button>
+                                    <div x-show="open" x-cloak x-transition.origin.top
+                                         class="absolute top-full start-0 pt-2 z-50 min-w-44">
+                                        <div class="rounded-xl border border-gray-100 dark:border-[#0f3460] bg-white dark:bg-[#16213e] shadow-xl overflow-hidden py-1.5">
+                                            @foreach ($item['children'] as $child)
+                                                <a href="{{ $menuItemUrl($child) }}"
+                                                   class="block px-4 py-2.5 text-sm font-semibold hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 transition-colors {{ $menuItemIsActive($child) ? 'text-primary bg-primary/5' : 'text-gray-700 dark:text-gray-200' }}">
+                                                    {{ $child['label'] }}
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+                            @else
+                                <a href="{{ $menuItemUrl($item) }}"
+                                   class="whitespace-nowrap px-2 2xl:px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 transition-all {{ $menuItemIsActive($item) ? 'bg-[#E9ECEF]/50 dark:bg-[#0f3460]/50' : '' }}">
+                                    {{ $item['label'] }}
+                                </a>
+                            @endif
                         @endforeach
                     </div>
                 </div>
@@ -213,10 +249,25 @@
                  class="xl:hidden absolute inset-x-0 top-full z-40 glass border-t shadow-2xl rounded-b-2xl px-4 sm:px-6 lg:px-8 pt-3 pb-4 space-y-2 max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain"
                  :class="$store.theme.dark ? 'border-white/15' : 'border-gray-200'">
                 @foreach ($headerMenu as $item)
-                    <a href="{{ $menuItemUrl($item) }}"
-                       class="block px-4 py-3 rounded-lg hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 font-semibold {{ $menuItemIsActive($item) ? 'bg-[#E9ECEF]/50 dark:bg-[#0f3460]/50' : '' }}">
-                        {{ $item['label'] }}
-                    </a>
+                    @if (! empty($item['children']))
+                        {{-- Grouped section: parent as a heading, children indented --}}
+                        <div>
+                            <div class="px-4 pt-2 pb-1 text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                {{ $item['label'] }}
+                            </div>
+                            @foreach ($item['children'] as $child)
+                                <a href="{{ $menuItemUrl($child) }}"
+                                   class="block ps-8 pe-4 py-3 rounded-lg hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 font-semibold {{ $menuItemIsActive($child) ? 'bg-[#E9ECEF]/50 dark:bg-[#0f3460]/50' : '' }}">
+                                    {{ $child['label'] }}
+                                </a>
+                            @endforeach
+                        </div>
+                    @else
+                        <a href="{{ $menuItemUrl($item) }}"
+                           class="block px-4 py-3 rounded-lg hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 font-semibold {{ $menuItemIsActive($item) ? 'bg-[#E9ECEF]/50 dark:bg-[#0f3460]/50' : '' }}">
+                            {{ $item['label'] }}
+                        </a>
+                    @endif
                 @endforeach
                 {{-- Secondary actions hidden from the action bar on phones --}}
                 <a href="{{ route('public.quran.ask') }}"

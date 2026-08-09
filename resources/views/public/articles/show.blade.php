@@ -475,7 +475,7 @@
                                     <i data-lucide="tag" class="w-4 h-4"></i>{{ __('articles.public.tags') }}:
                                 </span>
                                 @foreach ($article['tags'] as $tag)
-                                    <span class="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 dark:bg-[#0f3460] text-gray-700 dark:text-gray-200">{{ $tag }}</span>
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary dark:bg-accent/10 dark:text-accent">{{ $tag }}</span>
                                 @endforeach
                             </div>
                         @endif
@@ -564,11 +564,11 @@
                     @if (! empty($article['tags']))
                         <div class="card-premium p-5 animate-fade-in-up stagger-2">
                             <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-                                <span class="w-7 h-7 rounded-lg bg-secondary/10 text-secondary flex items-center justify-center"><i data-lucide="tag" class="w-4 h-4"></i></span>{{ __('articles.public.tags') }}
+                                <span class="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><i data-lucide="tag" class="w-4 h-4"></i></span>{{ __('articles.public.tags') }}
                             </h3>
                             <div class="flex flex-wrap gap-2">
                                 @foreach ($article['tags'] as $tag)
-                                    <span class="px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-[#0f3460] text-gray-700 dark:text-gray-200">{{ $tag }}</span>
+                                    <span class="px-3 py-1.5 rounded-full text-xs font-semibold bg-primary/10 text-primary dark:bg-accent/10 dark:text-accent">{{ $tag }}</span>
                                 @endforeach
                             </div>
                         </div>

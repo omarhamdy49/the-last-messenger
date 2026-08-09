@@ -37,24 +37,39 @@ class MenuSeeder extends Seeder
     private function seedLocation(string $location, array $items): void
     {
         foreach ($items as $index => $item) {
-            $match = ['location' => $location];
-            if (isset($item['route_name'])) {
-                $match['route_name'] = $item['route_name'];
-            } else {
-                $match['icon'] = $item['icon'];
+            $menuItem = $this->seedItem($location, $item, ($index + 1) * 10, null);
+
+            foreach ($item['children'] ?? [] as $childIndex => $child) {
+                $this->seedItem($location, $child, ($childIndex + 1) * 10, $menuItem->id);
             }
-
-            /** @var MenuItem $menuItem */
-            $menuItem = MenuItem::query()->updateOrCreate($match, [
-                'route_name' => $item['route_name'] ?? null,
-                'url' => $item['url'] ?? null,
-                'icon' => $item['icon'] ?? null,
-                'is_active' => true,
-                'sort_order' => ($index + 1) * 10,
-            ]);
-
-            $menuItem->syncTranslations(['label' => $item['labels']]);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $item
+     */
+    private function seedItem(string $location, array $item, int $sortOrder, ?int $parentId): MenuItem
+    {
+        $match = ['location' => $location];
+        if (isset($item['route_name'])) {
+            $match['route_name'] = $item['route_name'];
+        } else {
+            $match['icon'] = $item['icon'];
+        }
+
+        /** @var MenuItem $menuItem */
+        $menuItem = MenuItem::query()->updateOrCreate($match, [
+            'route_name' => $item['route_name'] ?? null,
+            'url' => $item['url'] ?? null,
+            'icon' => $item['icon'] ?? null,
+            'is_active' => true,
+            'sort_order' => $sortOrder,
+            'parent_id' => $parentId,
+        ]);
+
+        $menuItem->syncTranslations(['label' => $item['labels']]);
+
+        return $menuItem;
     }
 
     /**
@@ -72,12 +87,15 @@ class MenuSeeder extends Seeder
             MenuLocation::HEADER->value => [
                 ['route_name' => 'public.home', 'labels' => ['ar' => 'الرئيسية', 'en' => 'Home', 'fr' => 'Accueil', 'tr' => 'Ana Sayfa', 'ur' => 'ہوم']],
                 ['route_name' => 'public.seerah', 'labels' => $navSeerah],
-                ['route_name' => 'public.series', 'labels' => ['ar' => 'السلاسل', 'en' => 'Series', 'fr' => 'Séries', 'tr' => 'Seriler', 'ur' => 'سلسلے']],
+                // Library dropdown: articles + series grouped under one parent.
+                ['icon' => 'library', 'labels' => ['ar' => 'المكتبة', 'en' => 'Library', 'fr' => 'Bibliothèque', 'tr' => 'Kütüphane', 'ur' => 'کتب خانہ'], 'children' => [
+                    ['route_name' => 'public.articles', 'labels' => ['ar' => 'المقالات', 'en' => 'Articles', 'fr' => 'Articles', 'tr' => 'Makaleler', 'ur' => 'مضامین']],
+                    ['route_name' => 'public.series', 'labels' => ['ar' => 'السلاسل', 'en' => 'Series', 'fr' => 'Séries', 'tr' => 'Seriler', 'ur' => 'سلسلے']],
+                ]],
                 ['route_name' => 'public.hadith', 'labels' => $navHadith],
                 ['route_name' => 'public.media', 'labels' => $navMedia],
                 ['route_name' => 'public.genealogy', 'labels' => $navGenealogy],
                 ['route_name' => 'public.quran', 'labels' => ['ar' => 'القرآن', 'en' => 'Quran', 'fr' => 'Coran', 'tr' => 'Kuran', 'ur' => 'قرآن']],
-                ['route_name' => 'public.articles', 'labels' => ['ar' => 'المقالات', 'en' => 'Articles', 'fr' => 'Articles', 'tr' => 'Makaleler', 'ur' => 'مضامین']],
             ],
 
             // Footer "Quick Links" column — verbatim from footer.blade.php.
