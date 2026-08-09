@@ -19,6 +19,21 @@ class ArticleCrudTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_quran_hadith_and_sahabi_are_only_available_inside_the_wysiwyg(): void
+    {
+        $this->actingAs($this->createAdminUser());
+
+        $this->get(route('admin.articles.create'))
+            ->assertOk()
+            ->assertDontSee("@click=\"openModuleSelector('verse'", false)
+            ->assertDontSee("@click=\"openModuleSelector('hadith'", false)
+            ->assertDontSee("@click=\"openModuleSelector('sahabi'", false)
+            ->assertSee('ql-module-btn--verse', false)
+            ->assertSee('ql-module-btn--hadith', false)
+            ->assertSee('ql-module-btn--sahabi', false)
+            ->assertSee("editor.deleteText(insertionIndex, range.length, 'user')", false);
+    }
+
     public function test_inline_modules_are_saved_inside_wysiwyg_content_and_rendered_publicly(): void
     {
         $admin = $this->createAdminUser();

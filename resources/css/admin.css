@@ -829,3 +829,76 @@
     padding-right: env(safe-area-inset-right);
   }
 }
+
+
+/* ---------------------------------------------------------------------------
+   Cross-module content embeds inside the article editor.
+
+   Mirrors the class contract that ArticleLocale::renderBlocksToHtml() emits for
+   standalone module blocks (module-embed--{type} / __label / __body / __footer)
+   so what the editor shows matches what the public article renders.
+--------------------------------------------------------------------------- */
+.module-embed {
+  --embed-accent: #0056b3;
+  --embed-bg: rgb(248 250 252);
+  position: relative;
+  margin: 1.5rem 0;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid rgb(226 232 240);
+  border-inline-start: 4px solid var(--embed-accent);
+  border-radius: 0.875rem;
+  background: var(--embed-bg);
+}
+
+.module-embed--verse { --embed-accent: #218838; --embed-bg: #f0fdf4; }
+.module-embed--hadith { --embed-accent: #0056b3; --embed-bg: #eff6ff; }
+.module-embed--sahabi { --embed-accent: #0d9488; --embed-bg: #f0fdfa; }
+.module-embed--seerah { --embed-accent: #7c3aed; --embed-bg: #f5f3ff; }
+
+.module-embed__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.6rem;
+  padding: 0.15rem 0.65rem;
+  border-radius: 9999px;
+  background: var(--embed-accent);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.module-embed__body { font-size: 1rem; line-height: 1.85; color: rgb(15 23 42); }
+.module-embed__body p { margin: 0 0 0.35rem; }
+.module-embed__arabic { font-family: 'Amiri', 'Cairo', serif; font-size: 1.35rem; line-height: 2.2; }
+
+.module-embed__footer {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-top: 0.9rem;
+}
+
+.module-embed__link,
+.module-embed__source {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--embed-accent);
+  text-decoration: none;
+}
+
+.module-embed__source { color: #6b7280; }
+.module-embed__link:hover { text-decoration: underline; }
+
+.dark .module-embed {
+  border-color: rgb(51 65 85);
+  background: rgb(255 255 255 / 0.03);
+}
+
+.dark .module-embed__body { color: rgb(226 232 240); }
+
+@media (max-width: 640px) {
+  .module-embed { margin: 1rem 0; padding: 1rem; }
+  .module-embed__arabic { font-size: 1.15rem; line-height: 2; }
+}

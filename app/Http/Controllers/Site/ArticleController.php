@@ -247,6 +247,10 @@ final class ArticleController extends Controller
             'references' => $this->normalizeReferences($article->references),
             'statistics' => $this->normalizeStatistics($article->statistics),
             'gallery' => $this->normalizeGallery($article, $locale),
+            // The wizard collects a per-locale summary and attaches media, but
+            // neither reached the reader: both were stored and then dropped here.
+            'summary' => $this->normalizeSummary($articleLocale),
+            'media' => $this->normalizeMedia($article),
             'url' => $this->localeUrl($articleLocale->slug, $articleLocale->locale),
             'canonical' => $this->localeUrl($articleLocale->slug, $articleLocale->locale),
             'alternates' => $this->buildArticleAlternates($article),
@@ -327,6 +331,45 @@ final class ArticleController extends Controller
             'title' => $title,
             'url' => route('public.series.show', $series->slug),
         ];
+    }
+
+    /**
+     * The editor's per-locale summary, stored inside the locale content JSON.
+     */
+    private function normalizeSummary(ArticleLocale $articleLocale): ?string
+    {
+        $content = $articleLocale->content;
+        $summary = is_array($content) ? ($content['summary'] ?? null) : null;
+
+        return filled($summary) ? trim((string) $summary) : null;
+    }
+
+    /**
+     * Attached media, shaped for the reader.
+     *
+     * Streams through `public.articles.media`, which authorizes on the file
+     * being attached to a published article rather than on an admin session —
+     * the library itself stays encrypted and admin-only.
+     *
+     * @return array<int, array{id:int, title:string, type:string, mime:?string, url:string}>
+     */
+    private function normalizeMedia(Article $article): array
+    {
+        if (! $article->relationLoaded('mediaItems')) {
+            return [];
+        }
+
+        return $article->mediaItems
+            ->filter(fn ($media): bool => filled($media->public_key))
+            ->map(fn ($media): array => [
+                'id' => (int) $media->id,
+                'title' => (string) ($media->alt_text ?: $media->original_filename),
+                'type' => (string) $media->type,
+                'mime' => $media->mime_type,
+                'url' => route('public.articles.media', ['media' => $media->public_key]),
+            ])
+            ->values()
+            ->all();
     }
 
     /**

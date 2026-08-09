@@ -27,21 +27,33 @@ final class ArticleModuleController extends Controller
         ]);
     }
 
-    public function verses(Surah $surah): JsonResponse
+    public function verses(Request $request, Surah $surah): JsonResponse
     {
+        $locale = $this->contentLocale($request);
+        $translationLocales = array_values(array_unique([$locale, 'en', 'ar']));
+
         $verses = Verse::query()
             ->where('surah_id', $surah->id)
             ->with(['translations' => fn ($query) => $query
-                ->where('lang', 'ar')
+                ->whereIn('lang', $translationLocales)
                 ->orderBy('resource_id')])
             ->orderBy('verse_number')
             ->get(['id', 'surah_id', 'verse_number', 'verse_key'])
-            ->map(fn (Verse $verse): array => [
-                'id' => $verse->id,
-                'verse_number' => $verse->verse_number,
-                'verse_key' => $verse->verse_key,
-                'text' => $verse->translations->first()?->text ?? '',
-            ])
+            ->map(function (Verse $verse) use ($locale, $translationLocales): array {
+                $translations = $verse->translations
+                    ->groupBy('lang')
+                    ->map(fn ($items) => $items->first()?->text ?? '');
+                $resolvedLocale = collect($translationLocales)
+                    ->first(fn (string $candidate): bool => filled($translations->get($candidate)));
+
+                return [
+                    'id' => $verse->id,
+                    'verse_number' => $verse->verse_number,
+                    'verse_key' => $verse->verse_key,
+                    'text' => $resolvedLocale ? $translations->get($resolvedLocale, '') : '',
+                    'text_locale' => $resolvedLocale ?? $locale,
+                ];
+            })
             ->values();
 
         return response()->json(['data' => $verses]);
@@ -131,5 +143,15 @@ final class ArticleModuleController extends Controller
                 'last_page' => $hadiths->lastPage(),
             ],
         ]);
+    }
+
+    private function contentLocale(Request $request): string
+    {
+        $requested = strtolower((string) $request->query('locale', app()->getLocale()));
+        $supported = array_keys(config('app.supported_locales', ['ar' => [], 'en' => []]));
+
+        return in_array($requested, $supported, true)
+            ? $requested
+            : (string) app()->getLocale();
     }
 }

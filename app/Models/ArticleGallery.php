@@ -36,6 +36,7 @@ class ArticleGallery extends Model
      */
     protected $fillable = [
         'article_id',
+        'media_id',
         'image',
         'caption',
         'order',

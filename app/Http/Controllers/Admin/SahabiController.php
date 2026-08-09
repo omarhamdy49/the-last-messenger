@@ -228,7 +228,11 @@ class SahabiController extends Controller
             latestFirst: true,
         ));
 
-        $locale = app()->getLocale();
+        $requestedLocale = strtolower((string) $request->query('locale', app()->getLocale()));
+        $supportedLocales = array_keys(config('app.supported_locales', ['ar' => [], 'en' => []]));
+        $locale = in_array($requestedLocale, $supportedLocales, true)
+            ? $requestedLocale
+            : (string) app()->getLocale();
 
         return response()->json([
             'data' => $people->getCollection()
@@ -239,6 +243,8 @@ class SahabiController extends Controller
                     'name_ar' => $m->name_ar,
                     'name_en' => $m->name_en,
                     'kunya' => $m->getTranslation('kunya', $locale) ?: null,
+                    'kunya_ar' => $m->getTranslation('kunya', 'ar', false) ?: null,
+                    'kunya_en' => $m->getTranslation('kunya', 'en', false) ?: null,
                     'lifespan' => $this->lifespan($m),
                     'roles' => $m->roles->map(fn ($role): string => $role->name($locale))->all(),
                     'is_published' => (bool) $m->is_published,

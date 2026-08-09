@@ -40,17 +40,20 @@ class CreateArticleAction
     public function execute(CreateArticleData $data, array $locales): Article
     {
         $thumbPath = null;
+        $galleryPaths = [];
 
         try {
             $thumbPath = $this->storeThumb($data);
+            $galleryPaths = $this->storeGallery($data);
 
-            return DB::transaction(function () use ($data, $locales, $thumbPath): Article {
+            return DB::transaction(function () use ($data, $locales, $thumbPath, $galleryPaths): Article {
                 $article = $this->createArticleRecord($data, $thumbPath);
 
                 $this->createLocales($article, $data, $locales);
                 $this->syncCategories($article, $data);
                 $this->syncTags($article, $data);
                 $this->syncMediaItems($article, $data);
+                $this->syncGallery($article, $galleryPaths);
                 $this->syncSeries($article, $data);
 
                 $this->versionService->createVersion(
@@ -64,6 +67,7 @@ class CreateArticleAction
             });
         } catch (\Throwable $e) {
             $this->cleanupThumb($thumbPath);
+            $this->cleanupGallery($galleryPaths);
             throw $e;
         }
     }
@@ -85,6 +89,52 @@ class CreateArticleAction
     {
         if ($thumbPath !== null) {
             Storage::disk('public')->delete($thumbPath);
+        }
+    }
+
+    /**
+     * Copy the picked library images onto the public disk, in the order the
+     * editor arranged them. The originating media id travels with the path so
+     * the gallery can round-trip back into the picker on edit.
+     *
+     * @return array<int, array{media_id: int, path: string}>
+     */
+    private function storeGallery(CreateArticleData $data): array
+    {
+        $stored = [];
+
+        foreach ($data->galleryFiles as $item) {
+            $path = $item['file']->store('articles/gallery', 'public');
+
+            if ($path !== false) {
+                $stored[] = ['media_id' => $item['media_id'], 'path' => $path];
+            }
+        }
+
+        return $stored;
+    }
+
+    /**
+     * @param  array<int, array{media_id: int, path: string}>  $galleryPaths
+     */
+    private function cleanupGallery(array $galleryPaths): void
+    {
+        foreach ($galleryPaths as $item) {
+            Storage::disk('public')->delete($item['path']);
+        }
+    }
+
+    /**
+     * @param  array<int, array{media_id: int, path: string}>  $galleryPaths
+     */
+    private function syncGallery(Article $article, array $galleryPaths): void
+    {
+        foreach ($galleryPaths as $order => $item) {
+            $article->gallery()->create([
+                'media_id' => $item['media_id'],
+                'image' => $item['path'],
+                'order' => $order,
+            ]);
         }
     }
 

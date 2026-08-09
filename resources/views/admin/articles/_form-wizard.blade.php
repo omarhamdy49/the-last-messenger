@@ -658,6 +658,18 @@
                                             :class="darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-white text-gray-700 hover:bg-gray-100 shadow-sm'">
                                         <i data-lucide="type" class="w-3.5 h-3.5"></i>{{ __('articles.blocks.text') }}
                                     </button>
+                                    <button type="button" @click="openModuleSelector('verse', '{{ $locale }}')"
+                                            class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50">
+                                        <i data-lucide="book-open" class="w-3.5 h-3.5"></i>{{ __('articles.modules.quran') }}
+                                    </button>
+                                    <button type="button" @click="openModuleSelector('hadith', '{{ $locale }}')"
+                                            class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50">
+                                        <i data-lucide="quote" class="w-3.5 h-3.5"></i>{{ __('articles.modules.hadith') }}
+                                    </button>
+                                    <button type="button" @click="openModuleSelector('sahabi', '{{ $locale }}')"
+                                            class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50">
+                                        <i data-lucide="users" class="w-3.5 h-3.5"></i>{{ __('articles.modules.sahabah') }}
+                                    </button>
                                     <button type="button" @click="openModuleSelector('seerah', '{{ $locale }}')"
                                             class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50">
                                         <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>{{ __('articles.modules.seerah') }}
@@ -1118,7 +1130,7 @@
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
                             <span class="px-3 py-1 rounded-lg text-sm font-semibold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
-                                  x-text="selectedSurah.name_ar"></span>
+                                  x-text="surahName(selectedSurah)"></span>
                             <span class="text-xs text-gray-500" x-text="selectedSurah.verses_count + ' {{ __('articles.selector.verses') }}'"></span>
                         </div>
                         <button type="button" @click="selectedSurah = null; verses = []; selectedVerses = []"
@@ -1133,7 +1145,7 @@
                         :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'">
                     <option value="">{{ __('articles.selector.all_collections') }}</option>
                     <template x-for="col in hadithCollections" :key="col.id">
-                        <option :value="col.id" x-text="col.name_ar || col.name_en"></option>
+                        <option :value="col.id" x-text="hadithCollectionLabel(col)"></option>
                     </template>
                 </select>
                 <input type="text" x-model="searchQuery" @input.debounce.400ms="searchHadith()"
@@ -1168,7 +1180,7 @@
                                 <span class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 flex-shrink-0"
                                       x-text="surah.revelation_order || surah.id"></span>
                                 <div class="min-w-0">
-                                    <p class="font-semibold text-sm truncate" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="surah.name_ar"></p>
+                                    <p class="font-semibold text-sm truncate" :dir="contentDirection" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="surahName(surah)"></p>
                                     <p class="text-xs text-gray-500" x-text="surah.verses_count + ' {{ __('articles.selector.ayat') }}'"></p>
                                 </div>
                             </div>
@@ -1189,7 +1201,7 @@
                                    class="w-4 h-4 mt-1 rounded text-green-600 focus:ring-green-500 flex-shrink-0">
                             <div class="flex-1 min-w-0">
                                 <span class="text-xs font-mono text-gray-400 me-2" x-text="verse.verse_key"></span>
-                                <span class="text-sm leading-relaxed" dir="rtl"
+                                <span class="text-sm leading-relaxed" :dir="contentDirection"
                                       :class="darkMode ? 'text-gray-200' : 'text-gray-800'"
                                       x-text="verse.text ? verse.text.substring(0, 120) + (verse.text.length > 120 ? '...' : '') : ''"></span>
                             </div>
@@ -1207,7 +1219,7 @@
                                 :class="selectedItem?.id === item.id
                                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-500'
                                     : (darkMode ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-blue-50')">
-                            <p class="text-sm mb-2 line-clamp-2" :class="darkMode ? 'text-gray-200' : 'text-gray-800'"
+                            <p class="text-sm mb-2 line-clamp-2" :dir="contentDirection" :class="darkMode ? 'text-gray-200' : 'text-gray-800'"
                                x-text="hadithText(item) || '{{ __('articles.selector.no_translation') }}'"></p>
                             <div class="flex flex-wrap gap-2 text-xs">
                                 <span class="px-2 py-0.5 rounded font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
@@ -1241,8 +1253,8 @@
                                 <i data-lucide="user" class="w-5 h-5 text-amber-600"></i>
                             </div>
                             <div>
-                                <p class="font-semibold text-sm" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="personName(item)"></p>
-                                <p class="text-xs text-gray-500" x-text="item.kunya || ''"></p>
+                                <p class="font-semibold text-sm" :dir="contentDirection" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="personName(item)"></p>
+                                <p class="text-xs text-gray-500" :dir="contentDirection" x-text="personKunya(item)"></p>
                             </div>
                         </button>
                     </template>
@@ -1264,7 +1276,7 @@
                                 <i data-lucide="calendar" class="w-5 h-5 text-purple-600"></i>
                             </div>
                             <div>
-                                <p class="font-semibold text-sm" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="item.title?.ar || item.title?.en || item.title || ''"></p>
+                                <p class="font-semibold text-sm" :dir="contentDirection" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="localizedValue(item.title)"></p>
                                 <div class="flex items-center gap-2 mt-0.5">
                                     <span class="text-xs text-gray-500" x-text="item.hijri_year ? (item.hijri_year + ' {{ __('articles.blocks.hijri') }}') : ''"></span>
                                     <span x-show="item.event_type" class="px-1.5 py-0.5 rounded text-xs bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300" x-text="item.event_type"></span>
@@ -1683,10 +1695,21 @@ function articleForm(article, locales) {
         activeInlineLocale: null,
         activeInlineSelection: null,
 
+        getBlockQuill(blockId) {
+            const container = document.getElementById(`block_editor_${blockId}`);
+            const liveEditor = container && window.Quill?.find
+                ? window.Quill.find(container)
+                : null;
+
+            if (liveEditor) return liveEditor;
+
+            const trackedEditor = this.quillEditors[`block_${blockId}`];
+            return window.Alpine?.raw ? window.Alpine.raw(trackedEditor) : trackedEditor;
+        },
+
         insertModuleInline(detail) {
             const { quillBlockId, locale, moduleType, data } = detail;
-            const editorKey = `block_${quillBlockId}`;
-            const editor = this.quillEditors[editorKey];
+            const editor = this.getBlockQuill(quillBlockId);
             if (!editor) return;
 
             const range = this.activeInlineSelection || editor.getSelection() || {
@@ -1702,9 +1725,19 @@ function articleForm(article, locales) {
                     editor.setSelection(range.index, range.length, 'silent');
                 } else {
                     const label = data.name || '';
-                    editor.insertText(range.index, label, { link }, 'user');
-                    editor.insertText(range.index + label.length, ' ', {}, 'user');
-                    editor.setSelection(range.index + label.length + 1, 0, 'silent');
+                    const previousCharacter = range.index > 0
+                        ? editor.getText(range.index - 1, 1)
+                        : '';
+                    const leadingSeparator = previousCharacter && !/\s/.test(previousCharacter) ? ' ' : '';
+                    const labelIndex = range.index + leadingSeparator.length;
+
+                    if (leadingSeparator) {
+                        editor.insertText(range.index, leadingSeparator, { link: false }, 'user');
+                    }
+                    editor.insertText(labelIndex, label, { link }, 'user');
+                    editor.insertText(labelIndex + label.length, ' ', { link: false }, 'user');
+                    editor.setSelection(labelIndex + label.length + 1, 0, 'silent');
+                    editor.format('link', false, 'silent');
                 }
 
                 const block = this.contentBlocks[locale]?.find(item => item.id === quillBlockId);
@@ -1716,36 +1749,65 @@ function articleForm(article, locales) {
                 return;
             }
 
-            let html = '';
+            // Build a structured payload rather than an HTML string: the
+            // moduleEmbed blot (resources/js/admin/rich-text.js) is what keeps
+            // data-module/data-id alive through Quill, so the article stays
+            // linked to the verse/hadith/event it cites.
+            let embed = null;
+            const moduleDirection = ['ar', 'ur', 'fa', 'he'].includes(locale) ? 'rtl' : 'ltr';
+
             if (moduleType === 'verse') {
                 const versesText = data.verses.map(v => v.text).join(' ');
                 const verseRange = data.verses.length > 1
                     ? `${data.verses[0].number}-${data.verses[data.verses.length-1].number}`
                     : String(data.verses[0].number);
-                const link = `/quran/surah/${data.surah_id}#${data.verses[0].number}`;
-                html = `<div class="module-embed" data-module="verse" data-id="${data.surah_id}" contenteditable="false">` +
-                    `<span class="embed-label">{{ __('articles.modules.quran') }}</span>` +
-                    `<span class="embed-text" dir="rtl" style="font-family:'Amiri','Cairo',serif; font-size:18px; line-height:2;">${this.escapeHtml(versesText)}</span>` +
-                    `<a class="embed-link" href="${link}" target="_blank">📖 ${this.escapeHtml(data.surah_name)} — {{ __('articles.blocks.verse') }} ${verseRange}</a>` +
-                    `</div><p><br></p>`;
+                embed = {
+                    module: 'verse',
+                    id: data.surah_id,
+                    label: @js(__('articles.modules.quran')),
+                    text: versesText,
+                    reference: `${data.surah_name} — {{ __('articles.blocks.verse') }} ${verseRange}`,
+                    href: `/quran/surah/${data.surah_id}#${data.verses[0].number}`,
+                    linkLabel: `📖 ${data.surah_name} — {{ __('articles.blocks.verse') }} ${verseRange}`,
+                    dir: 'rtl',
+                };
             } else if (moduleType === 'hadith') {
-                const link = `/hadith/${data.hadith_id}`;
-                html = `<div class="module-embed" data-module="hadith" data-id="${data.hadith_id}" contenteditable="false">` +
-                    `<span class="embed-label">{{ __('articles.modules.hadith') }}</span>` +
-                    `<span class="embed-text">${this.escapeHtml(data.text)}</span>` +
-                    `<a class="embed-link" href="${link}" target="_blank">📜 ${this.escapeHtml(data.collection)} #${data.number}</a>` +
-                    `</div><p><br></p>`;
+                embed = {
+                    module: 'hadith',
+                    id: data.hadith_id,
+                    label: @js(__('articles.modules.hadith')),
+                    text: data.text,
+                    reference: `${data.collection} #${data.number}`,
+                    href: `/hadith/${data.hadith_id}`,
+                    linkLabel: `📜 ${data.collection} #${data.number}`,
+                    dir: moduleDirection,
+                };
             } else if (moduleType === 'seerah') {
-                const link = `/seerah/${data.slug || data.event_id}`;
-                html = `<div class="module-embed" data-module="seerah" data-id="${data.event_id}" contenteditable="false">` +
-                    `<span class="embed-label">{{ __('articles.modules.seerah') }}</span>` +
-                    `<span class="embed-text">${this.escapeHtml(data.title)}${data.hijri_year ? ' — ' + data.hijri_year + ' {{ __("articles.blocks.hijri") }}' : ''}</span>` +
-                    `<a class="embed-link" href="${link}" target="_blank">📍 {{ __('articles.embed.view_event') }}</a>` +
-                    `</div><p><br></p>`;
+                embed = {
+                    module: 'seerah',
+                    id: data.event_id,
+                    label: @js(__('articles.modules.seerah')),
+                    text: `${data.title}${data.hijri_year ? ' — ' + data.hijri_year + ' {{ __("articles.blocks.hijri") }}' : ''}`,
+                    href: `/seerah/${data.slug || data.event_id}`,
+                    linkLabel: `📍 {{ __('articles.embed.view_event') }}`,
+                    dir: moduleDirection,
+                };
             }
+            // 'sahabi' never reaches here — companions read better as an inline
+            // link inside the sentence, handled by the early return above.
 
-            if (html) {
-                editor.clipboard.dangerouslyPasteHTML(range.index, html, 'user');
+            if (embed) {
+                const insertionIndex = range.index;
+                if (range.length > 0) {
+                    editor.deleteText(insertionIndex, range.length, 'user');
+                }
+
+                editor.insertEmbed(insertionIndex, 'moduleEmbed', embed, 'user');
+                // Leave an empty paragraph after the card so the editor can keep
+                // typing below it instead of being trapped against the embed.
+                editor.insertText(insertionIndex + 1, '\n', 'user');
+                editor.setSelection(insertionIndex + 2, 0, 'silent');
+
                 const block = this.contentBlocks[locale]?.find(item => item.id === quillBlockId);
                 if (block) block.content = editor.root.innerHTML;
                 this.syncContentBlocks(locale);
@@ -1766,7 +1828,7 @@ function articleForm(article, locales) {
         syncAllBlockQuills(locale) {
             (this.contentBlocks[locale] || []).forEach(block => {
                 if (block.type === 'wysiwyg') {
-                    const editor = this.quillEditors[`block_${block.id}`];
+                    const editor = this.getBlockQuill(block.id);
                     if (editor) block.content = editor.root.innerHTML;
                 }
             });
@@ -1960,8 +2022,9 @@ function moduleSelector() {
             if (this.moduleType === 'verse' && !this.surahs.length) {
                 this.loadSurahs();
             }
-            if (this.moduleType === 'hadith' && !this.hadithCollections.length) {
-                this.loadHadithCollections();
+            if (this.moduleType === 'hadith') {
+                if (!this.hadithCollections.length) this.loadHadithCollections();
+                this.searchHadith();
             }
             if (this.moduleType === 'sahabi') {
                 this.searchModule();
@@ -1983,10 +2046,16 @@ function moduleSelector() {
             );
         },
 
+        get contentDirection() {
+            return ['ar', 'ur', 'fa', 'he'].includes(this.targetLocale) ? 'rtl' : 'ltr';
+        },
+
         async loadSurahs() {
             this.loading = true;
             try {
-                const res = await fetch(surahBrowseUrl, { headers: { Accept: 'application/json' } });
+                const url = new URL(surahBrowseUrl, window.location.origin);
+                url.searchParams.set('locale', this.targetLocale);
+                const res = await fetch(url, { headers: { Accept: 'application/json' } });
                 if (!res.ok) throw new Error(`Surah lookup failed with status ${res.status}`);
                 const json = await res.json();
                 this.surahs = Array.isArray(json.data) ? json.data : [];
@@ -1999,7 +2068,9 @@ function moduleSelector() {
             this.selectedSurah = surah;
             this.loading = true;
             try {
-                const res = await fetch(`${verseBySurahUrl}/${surah.id}/verses`, { headers: { Accept: 'application/json' } });
+                const url = new URL(`${verseBySurahUrl}/${surah.id}/verses`, window.location.origin);
+                url.searchParams.set('locale', this.targetLocale);
+                const res = await fetch(url, { headers: { Accept: 'application/json' } });
                 if (!res.ok) throw new Error(`Verse lookup failed with status ${res.status}`);
                 const json = await res.json();
                 this.verses = json.data || [];
@@ -2023,6 +2094,7 @@ function moduleSelector() {
                 const url = new URL(hadithSearchUrl, window.location.origin);
                 url.searchParams.set('per_page', '10');
                 url.searchParams.set('page', this.currentPage);
+                url.searchParams.set('locale', this.targetLocale);
                 if (this.searchQuery) url.searchParams.set('q', this.searchQuery);
                 if (this.hadithCollectionFilter) url.searchParams.set('collection_id', this.hadithCollectionFilter);
                 const res = await fetch(url, { headers: { Accept: 'application/json' } });
@@ -2045,6 +2117,7 @@ function moduleSelector() {
             try {
                 const url = new URL(this.moduleType === 'sahabi' ? sahabaBrowseUrl : seerahSearchUrl, window.location.origin);
                 url.searchParams.set('page', this.currentPage);
+                url.searchParams.set('locale', this.targetLocale);
                 if (this.searchQuery) url.searchParams.set('q', this.searchQuery);
                 if (this.moduleType === 'sahabi') url.searchParams.set('role', 'sahabi');
 
@@ -2063,22 +2136,45 @@ function moduleSelector() {
         },
 
         personName(item) {
-            const prefersRtlName = ['ar', 'ur'].includes(this.targetLocale);
-            return prefersRtlName
+            return this.targetLocale === 'ar'
                 ? (item.name_ar || item.name || item.name_en || '')
                 : (item.name_en || item.name || item.name_ar || '');
         },
 
+        personKunya(item) {
+            return this.targetLocale === 'ar'
+                ? (item.kunya_ar || item.kunya || item.kunya_en || '')
+                : (item.kunya_en || item.kunya || item.kunya_ar || '');
+        },
+
+        localizedValue(value) {
+            if (!value) return '';
+            if (typeof value === 'string') return value;
+            return value[this.targetLocale] || value.en || value.ar || Object.values(value)[0] || '';
+        },
+
+        surahName(surah) {
+            return this.targetLocale === 'ar'
+                ? (surah.name_ar || surah.name_en || '')
+                : (surah.name_en || surah.name_ar || '');
+        },
+
         hadithText(item) {
-            return ['ar', 'ur'].includes(this.targetLocale)
+            return this.targetLocale === 'ar'
                 ? (item.text_ar || item.translations?.[0]?.text || item.text_en || '')
                 : (item.text_en || item.translations?.[0]?.text || item.text_ar || '');
         },
 
         hadithCollectionName(item) {
-            return ['ar', 'ur'].includes(this.targetLocale)
+            return this.targetLocale === 'ar'
                 ? (item.collection || item.book?.collection?.name_ar || item.book?.title_ar || '')
                 : (item.collection_en || item.collection || item.book?.collection?.name_en || item.book?.title_en || '');
+        },
+
+        hadithCollectionLabel(collection) {
+            return this.targetLocale === 'ar'
+                ? (collection.name_ar || collection.name_en || '')
+                : (collection.name_en || collection.name_ar || '');
         },
 
         async prevPage() {
@@ -2106,7 +2202,7 @@ function moduleSelector() {
                 block = {
                     type: 'verse',
                     surah_id: this.selectedSurah.id,
-                    surah_name: this.selectedSurah.name_ar,
+                    surah_name: this.surahName(this.selectedSurah),
                     verses: selectedVersesData
                 };
             } else if (this.moduleType === 'hadith' && this.selectedItem) {
@@ -2126,7 +2222,7 @@ function moduleSelector() {
                     type: 'sahabi',
                     sahabi_id: item.id,
                     name: this.personName(item),
-                    kunya: item.kunya || '',
+                    kunya: this.personKunya(item),
                     slug: item.slug || ''
                 };
             } else if (this.moduleType === 'seerah' && this.selectedItem) {
@@ -2134,7 +2230,7 @@ function moduleSelector() {
                 block = {
                     type: 'seerah',
                     event_id: item.id,
-                    title: item.title?.ar || item.title?.en || item.title || '',
+                    title: this.localizedValue(item.title),
                     hijri_year: item.hijri_year || null,
                     event_type: item.event_type || '',
                     slug: item.slug || ''

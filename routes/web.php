@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\Site\ArticleController;
+use App\Http\Controllers\Site\ArticleMediaController;
 use App\Http\Controllers\Site\AuthController;
 use App\Http\Controllers\Site\ContactController;
 use App\Http\Controllers\Site\FaqController;
@@ -86,6 +87,9 @@ Route::get('/robots.txt', function () {
 Route::get('/articles', [ArticleController::class, 'index'])->name('public.articles');
 Route::post('/articles/{id}/view', [ArticleController::class, 'registerView'])
     ->whereNumber('id')->middleware('throttle:30,1')->name('public.articles.view');
+// Registered before /articles/{slug} so "media" is never read as a slug.
+Route::get('/articles/media/{media:public_key}', [ArticleMediaController::class, 'stream'])
+    ->name('public.articles.media');
 Route::get('/articles/{slug}', [ArticleController::class, 'show'])->name('public.articles.show');
 
 // Article series (ordered reading paths; replaces Topics in the header nav)

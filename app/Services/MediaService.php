@@ -391,7 +391,9 @@ class MediaService
             match ($preset->method) {
                 'crop' => $variantImage->cover($preset->width, $preset->height),
                 'resize' => $variantImage->resize($preset->width, $preset->height),
-                default => $variantImage->pad($preset->width, $preset->height),
+                // v4 renamed pad() to contain(): fit inside the box, then pad
+                // out to the exact preset dimensions.
+                default => $variantImage->contain($preset->width, $preset->height),
             };
 
             try {
@@ -420,7 +422,9 @@ class MediaService
 
     protected function prepareSourceImage(Media $media, string $sourcePath)
     {
-        $sourceImage = $this->imageManager->read($sourcePath)->orient();
+        // Intervention Image v4 dropped ImageManager::read() in favour of the
+        // explicit decode* family; decodePath() is the file-path equivalent.
+        $sourceImage = $this->imageManager->decodePath($sourcePath)->orient();
         $crop = data_get($media->metadata, 'crop');
 
         if (! is_array($crop)) {
@@ -593,7 +597,7 @@ class MediaService
 
     protected function optimizeImageFile(string $path, array $options = []): void
     {
-        $image = $this->imageManager->read($path)->orient();
+        $image = $this->imageManager->decodePath($path)->orient();
         $maxWidth = (int) ($options['max_width'] ?? 2200);
         $maxHeight = (int) ($options['max_height'] ?? 2200);
         $quality = (int) ($options['quality'] ?? 85);

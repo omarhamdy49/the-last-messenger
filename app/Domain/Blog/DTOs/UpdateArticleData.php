@@ -57,14 +57,23 @@ final class UpdateArticleData
         public readonly ?array $mediaItems,
         public readonly ?array $additionalCategories,
         public readonly ?array $series = null,
+        /** @var array<int, array{media_id: int, file: UploadedFile}>|null Null means "gallery tab untouched". */
+        public readonly ?array $galleryFiles = null,
     ) {}
 
     /**
      * Construct an UpdateArticleData instance from the validated update request
      * and the current article state (for fallback values).
      */
-    public static function fromRequest(UpdateArticleRequest $request, Article $article, ?UploadedFile $thumbOverride = null): self
-    {
+    /**
+     * @param  array<int, array{media_id: int, file: UploadedFile}>|null  $galleryFiles
+     */
+    public static function fromRequest(
+        UpdateArticleRequest $request,
+        Article $article,
+        ?UploadedFile $thumbOverride = null,
+        ?array $galleryFiles = null,
+    ): self {
         $validated = $request->validated();
         $resolvedStatus = $validated['status'] ?? $article->status ?? 'draft';
 
@@ -96,6 +105,7 @@ final class UpdateArticleData
             mediaItems: isset($validated['media_items']) ? $validated['media_items'] : null,
             additionalCategories: $validated['additional_categories'] ?? null,
             series: $validated['series'] ?? null,
+            galleryFiles: $galleryFiles,
         );
     }
 }

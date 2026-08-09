@@ -42,6 +42,7 @@ class UpdateArticleAction
             $this->syncCategories($article, $data);
             $this->syncTags($article, $data);
             $this->syncMediaItems($article, $data);
+            $this->syncGallery($article, $data);
             $this->syncSeries($article, $data);
 
             $this->versionService->createVersion(
@@ -149,6 +150,58 @@ class UpdateArticleAction
     {
         if ($data->mediaItems !== null) {
             $article->mediaItems()->sync($data->mediaItems);
+        }
+    }
+
+    /**
+     * Gallery is replace-on-submit: the wizard always posts the full, ordered
+     * list. A null galleryFiles means the tab was never touched, so the existing
+     * gallery is left alone. Rows the editor removed have their stored copies
+     * deleted so the public disk does not accumulate orphans.
+     */
+    private function syncGallery(Article $article, UpdateArticleData $data): void
+    {
+        if ($data->galleryFiles === null) {
+            return;
+        }
+
+        $keptMediaIds = array_column($data->galleryFiles, 'media_id');
+        $existing = $article->gallery()->get();
+
+        foreach ($existing as $item) {
+            if ($item->media_id !== null && in_array($item->media_id, $keptMediaIds, true)) {
+                continue;
+            }
+
+            if ($item->image) {
+                Storage::disk('public')->delete($item->image);
+            }
+
+            $item->delete();
+        }
+
+        $existingByMediaId = $article->gallery()->get()->keyBy('media_id');
+
+        foreach ($data->galleryFiles as $order => $entry) {
+            $current = $existingByMediaId->get($entry['media_id']);
+
+            if ($current !== null) {
+                $current->update(['order' => $order]);
+
+                continue;
+            }
+
+            $path = $entry['file']->store('articles/gallery', 'public');
+
+            if ($path === false) {
+                continue;
+            }
+
+            $article->gallery()->create([
+                'media_id' => $entry['media_id'],
+                'image' => $path,
+                'order' => $order,
+            ]);
         }
     }
 

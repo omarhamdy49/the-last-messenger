@@ -112,6 +112,146 @@
     @media (prefers-reduced-motion: reduce) {
         .lib-card, .lib-card *, .lib-read-cue { transition: none !important; transform: none !important; }
     }
+
+    /* ═══════════════════════════════════════════════════════════════
+       FOLIO SYSTEM
+
+       The library reads its own brand palette as manuscript pigment:
+       lapis (#0056b3) and verdigris (#218838) were the actual colours of
+       Islamic illumination, ruled off by a gold jadwal. The hero is an
+       opening folio, not a statistics banner.
+       ═══════════════════════════════════════════════════════════════ */
+    .folio {
+        --lapis: #0056b3;
+        --verdigris: #218838;
+        --rule: #c9bfa8;
+        --folio-paper: #fbf9f4;
+    }
+    .dark .folio { --rule: #3d4f6b; --folio-paper: #16213e; }
+
+    /* Jadwal: the double rule that frames a manuscript text block. */
+    .folio-frame {
+        position: relative;
+        background: var(--folio-paper);
+        border: 1px solid var(--rule);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rule) 35%, transparent);
+    }
+
+    /* Corner illumination — a lozenge at each corner of the frame, the
+       restrained descendant of an illuminated headpiece. */
+    .folio-frame::before,
+    .folio-frame::after {
+        content: '';
+        position: absolute;
+        width: 9px;
+        height: 9px;
+        rotate: 45deg;
+        background: var(--lapis);
+        opacity: .85;
+    }
+    .folio-frame::before { inset-block-start: -5px; inset-inline-start: 28px; }
+    .folio-frame::after  { inset-block-end: -5px;  inset-inline-end: 28px; background: var(--verdigris); }
+
+    .folio-eyebrow {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: .5rem;
+        font-size: .6875rem;
+        font-weight: 700;
+        letter-spacing: .14em;
+        color: var(--verdigris);
+    }
+    .folio-eyebrow .sep { padding-inline: 0; color: var(--rule); }
+
+    /* Amiri is already loaded for Quranic text; promoting it to the display
+       role gives the library a voice native to its own subject. */
+    .folio-title {
+        font-family: 'Amiri', serif;
+        line-height: 1.28;
+        letter-spacing: -.005em;
+    }
+
+    /* Colophon: the closing dateline of a manuscript, hijri first. */
+    .folio-colophon {
+        font-variant-numeric: tabular-nums;
+        font-size: .8125rem;
+        color: #6b7280;
+    }
+    .dark .folio-colophon { color: #9ca3af; }
+    .folio-colophon .sep { color: var(--rule); padding-inline: .55rem; }
+
+    /* Ends of a colophon pushed apart, so no separator can dangle at a wrap. */
+    .folio-colophon--row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: .75rem;
+    }
+
+    .folio-plate { border: 1px solid var(--rule); background: #fff; }
+    .dark .folio-plate { background: #0f3460; }
+
+    /* Card: a folio leaf. The whole leaf is the affordance, so it carries no
+       "read more" cue — the hairline and title shift do that work. */
+    .folio-card {
+        position: relative;
+        background: #fff;
+        border: 1px solid #e9e5db;
+        border-radius: 2px;
+        transition: border-color .3s ease, box-shadow .3s ease, transform .3s ease;
+    }
+    .dark .folio-card { background: #16213e; border-color: #0f3460; }
+    .folio-card:hover {
+        border-color: var(--rule);
+        box-shadow: 0 18px 40px -22px rgba(16, 24, 32, .45);
+        transform: translateY(-3px);
+    }
+    .dark .folio-card:hover { box-shadow: 0 18px 40px -22px rgba(0, 0, 0, .7); }
+
+    /* Verdigris hairline that draws along the leaf's leading edge on hover. */
+    .folio-card::after {
+        content: '';
+        position: absolute;
+        inset-block: 0;
+        inset-inline-start: 0;
+        width: 2px;
+        background: var(--verdigris);
+        transform: scaleY(0);
+        transform-origin: top;
+        transition: transform .35s ease;
+    }
+    .folio-card:hover::after { transform: scaleY(1); }
+
+    .folio-card-media { position: relative; overflow: hidden; background: #f3f4f6; }
+    .dark .folio-card-media { background: #0f3460; }
+    .folio-card-media img { transition: transform .6s cubic-bezier(.22,.61,.36,1); }
+    .folio-card:hover .folio-card-media img { transform: scale(1.04); }
+
+    .folio-card-rule { height: 1px; background: var(--rule); opacity: .55; }
+
+    .folio-kicker {
+        font-size: .6875rem;
+        font-weight: 700;
+        letter-spacing: .12em;
+        color: var(--lapis);
+    }
+    .dark .folio-kicker { color: #64CCC5; }
+
+    .folio-seal {
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+        padding: .2rem .55rem;
+        font-size: .6875rem;
+        font-weight: 700;
+        color: #fff;
+        background: var(--verdigris);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .folio-card, .folio-card *, .folio-card::after { transition: none !important; transform: none !important; }
+    }
 </style>
 @endpush
 
@@ -137,66 +277,107 @@
     {{-- ============================================================ --}}
     {{-- HERO + SEARCH --}}
     {{-- ============================================================ --}}
-    <section class="lib-hero border-b border-gray-100 dark:border-[#0f3460] bg-gradient-to-b from-primary/[0.04] to-transparent dark:from-transparent">
+    @php
+        // The hero opens on a piece of writing, not a counter: prefer a featured
+        // study, else the most recent one. Null when the library is still empty.
+        $opening = collect($articles)->firstWhere('isFeatured', true) ?? ($articles[0] ?? null);
+    @endphp
+
+    <section class="folio lib-hero border-b border-gray-100 dark:border-[#0f3460]">
         <div class="lib-hero-pattern" aria-hidden="true"></div>
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative py-16 md:py-20">
-            <div class="max-w-3xl mx-auto text-center fade-in-up">
-                <div class="flex justify-center mb-6">
-                    <div class="relative">
-                        <div class="absolute inset-0 rounded-2xl bg-gradient-to-l from-primary to-secondary blur-lg opacity-40" aria-hidden="true"></div>
-                        <div class="relative w-16 h-16 rounded-2xl bg-gradient-to-l from-primary to-secondary flex items-center justify-center text-white shadow-xl">
-                            <i data-lucide="library" class="w-8 h-8"></i>
-                        </div>
-                    </div>
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative py-12 md:py-16">
+
+            <div class="max-w-5xl mx-auto">
+                {{-- Masthead: the library names itself once, quietly. --}}
+                <div class="flex items-baseline gap-3 mb-6">
+                    <h1 class="folio-title text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+                        {{ __('articles.public.hero_title') }}
+                    </h1>
+                    <span class="hidden sm:block flex-1 h-px bg-[var(--rule)] opacity-60" aria-hidden="true"></span>
+                    <span class="folio-colophon hidden sm:inline">
+                        <span x-text="articles.length"></span> {{ __('articles.public.article_unit') }}
+                        <span class="sep" aria-hidden="true">·</span>
+                        <span x-text="categories.length"></span> {{ __('articles.public.categories') }}
+                        <span class="sep" aria-hidden="true">·</span>
+                        <span x-text="tags.length"></span> {{ __('articles.public.tags') }}
+                    </span>
                 </div>
 
-                <h1 class="text-4xl md:text-5xl font-bold mb-4 text-gray-900 dark:text-white tracking-tight">
-                    {{ __('articles.public.hero_title') }}
-                </h1>
-                <p class="text-base md:text-lg text-gray-600 dark:text-gray-300 mb-9 max-w-2xl mx-auto leading-relaxed">
-                    {{ __('articles.public.hero_subtitle') }}
-                </p>
+                @if ($opening)
+                    {{-- The opening folio --}}
+                    <a href="{{ $opening['url'] }}"
+                       class="folio-frame group block p-6 md:p-10 fade-in-up focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30">
+                        <div class="grid md:grid-cols-[1.35fr_1fr] gap-7 md:gap-10 items-center">
 
-                {{-- Search --}}
-                <div class="relative max-w-2xl mx-auto lib-glass rounded-full p-1.5 focus-within:ring-4 focus-within:ring-primary/20 transition-shadow">
-                    <i data-lucide="search" class="absolute start-6 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"></i>
+                            <div class="min-w-0">
+                                @php
+                                    // Only say something the masthead has not already said.
+                                    $openingEyebrow = array_values(array_filter([
+                                        ! empty($opening['isFeatured']) ? __('articles.public.featured') : null,
+                                        $opening['category'] ?? null,
+                                    ]));
+                                @endphp
+                                @if ($openingEyebrow)
+                                    <p class="folio-eyebrow mb-3">
+                                        @foreach ($openingEyebrow as $i => $part)
+                                            @if ($i > 0)<span class="sep" aria-hidden="true">·</span>@endif{{ $part }}
+                                        @endforeach
+                                    </p>
+                                @endif
+
+                                <h2 class="folio-title text-3xl md:text-[2.75rem] font-bold text-gray-900 dark:text-white mb-4 group-hover:text-primary transition-colors">
+                                    {{ $opening['title'] }}
+                                </h2>
+
+                                <p class="text-[15px] md:text-base text-gray-600 dark:text-gray-300 leading-relaxed line-clamp-3 mb-7">
+                                    {{ $opening['excerpt'] }}
+                                </p>
+
+                                <div class="h-px bg-[var(--rule)] opacity-50 mb-3.5" aria-hidden="true"></div>
+
+                                {{-- Colophon: hijri first, the calendar this material lives in. --}}
+                                <p class="folio-colophon">
+                                    @if (! empty($opening['hijriDate']))
+                                        <span>{{ $opening['hijriDate'] }}</span>
+                                        <span class="sep" aria-hidden="true">·</span>
+                                    @endif
+                                    <span>{{ $opening['dateLabel'] }}</span>
+                                    <span class="sep" aria-hidden="true">·</span>
+                                    <span>{{ $opening['readTime'] }} {{ __('articles.public.min_read') }}</span>
+                                </p>
+                            </div>
+
+                            {{-- Plate: the illustrated leaf facing the text block. --}}
+                            <div class="folio-plate p-1.5 order-first md:order-none">
+                                <div class="relative aspect-[4/3] overflow-hidden">
+                                    <img src="{{ $opening['image'] }}" alt="{{ $opening['title'] }}"
+                                         onerror="this.style.display='none';this.parentElement.classList.add('img-gradient-fallback')"
+                                         class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03] motion-reduce:transform-none">
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                @endif
+
+                {{-- Search sits beneath the folio: the frame is the subject, this is the tool. --}}
+                <div class="relative mt-8 border border-gray-200 dark:border-[#0f3460] bg-white dark:bg-[#16213e] focus-within:border-primary transition-colors">
+                    <i data-lucide="search" class="absolute start-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-gray-400 pointer-events-none"></i>
                     <input
                         type="search"
                         x-model.debounce.250ms="search"
                         @input="page = 1"
                         placeholder="{{ __('articles.public.search_placeholder') }}"
                         aria-label="{{ __('articles.public.search_placeholder') }}"
-                        class="w-full ps-12 pe-12 py-3.5 text-base sm:text-sm rounded-full bg-transparent text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
+                        class="w-full ps-12 pe-12 py-3.5 text-base sm:text-[15px] bg-transparent text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
                     >
                     <button
                         x-show="search.length > 0" x-cloak
                         @click="search = ''; page = 1"
-                        class="absolute end-4 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-primary transition-colors cursor-pointer"
+                        class="absolute end-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-primary transition-colors cursor-pointer"
                         aria-label="{{ __('articles.public.close') }}"
                     >
                         <i data-lucide="x" class="w-4 h-4"></i>
                     </button>
-                </div>
-
-                {{-- Quick stats --}}
-                <div class="flex items-center justify-center gap-6 sm:gap-10 mt-9 text-sm">
-                    <div class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                        <i data-lucide="file-text" class="w-4 h-4 text-primary"></i>
-                        <span class="font-bold text-gray-900 dark:text-white" x-text="articles.length"></span>
-                        {{ __('articles.public.article_unit') }}
-                    </div>
-                    <div class="w-px h-4 bg-gray-300 dark:bg-[#0f3460]" aria-hidden="true"></div>
-                    <div class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                        <i data-lucide="folder" class="w-4 h-4 text-secondary"></i>
-                        <span class="font-bold text-gray-900 dark:text-white" x-text="categories.length"></span>
-                        {{ __('articles.public.categories') }}
-                    </div>
-                    <div class="w-px h-4 bg-gray-300 dark:bg-[#0f3460]" aria-hidden="true"></div>
-                    <div class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                        <i data-lucide="tag" class="w-4 h-4 text-accent"></i>
-                        <span class="font-bold text-gray-900 dark:text-white" x-text="tags.length"></span>
-                        {{ __('articles.public.tags') }}
-                    </div>
                 </div>
             </div>
         </div>
@@ -383,49 +564,45 @@
                         <a href="{{ $article['url'] }}"
                            x-show="onPage({{ $article['id'] }})"
                            :style="{ order: orderRank({{ $article['id'] }}) }"
-                           class="group lib-card flex flex-col">
-                            {{-- Image --}}
-                            <div class="lib-card-img relative aspect-[16/10] overflow-hidden bg-gray-100 dark:bg-[#0f3460]">
+                           class="group folio folio-card flex flex-col focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30">
+                            {{-- Plate --}}
+                            <div class="folio-card-media aspect-[16/10]">
                                 <img src="{{ $article['image'] }}" alt="{{ $article['title'] }}" loading="lazy"
                                      onerror="this.style.display='none';this.parentElement.classList.add('img-gradient-fallback')"
                                      onload="this.style.display='';this.parentElement.classList.remove('img-gradient-fallback')"
-                                     class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none">
+                                     class="w-full h-full object-cover motion-reduce:transform-none">
                                 @if ($article['isFeatured'])
-                                    <span class="absolute top-3 start-3 z-10 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-l from-primary to-secondary text-white shadow">
-                                        <i data-lucide="star" class="w-3 h-3"></i>
+                                    <span class="folio-seal absolute top-0 start-0 z-10">
                                         {{ __('articles.public.featured') }}
                                     </span>
                                 @endif
-                                @if (! empty($article['category']))
-                                    <span class="absolute bottom-3 start-3 z-10 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/90 dark:bg-[#16213e]/90 text-primary backdrop-blur">{{ $article['category'] }}</span>
-                                @endif
                             </div>
+                            <div class="folio-card-rule" aria-hidden="true"></div>
 
-                            {{-- Body --}}
+                            {{-- Text block --}}
                             <div class="p-5 flex flex-col flex-1">
+                                @if (! empty($article['category']))
+                                    <p class="folio-kicker mb-2">{{ $article['category'] }}</p>
+                                @endif
+
+                                <h3 class="folio-title text-[1.35rem] font-bold text-gray-900 dark:text-white mb-2.5 line-clamp-2 group-hover:text-primary transition-colors">{{ $article['title'] }}</h3>
+
+                                <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 mb-5 flex-1 leading-relaxed">{{ $article['excerpt'] }}</p>
+
                                 @if (! empty($article['tags']))
-                                    <div class="flex flex-wrap gap-1.5 mb-2.5">
+                                    <div class="flex flex-wrap gap-x-3 gap-y-1 mb-4 text-[11px] text-gray-500 dark:text-gray-400">
                                         @foreach (array_slice($article['tags'], 0, 3) as $tag)
-                                            <span class="px-2 py-0.5 rounded-md text-[11px] font-medium bg-gray-100 dark:bg-[#0f3460] text-gray-600 dark:text-gray-300">{{ $tag }}</span>
+                                            <span>{{ $tag }}</span>
                                         @endforeach
                                     </div>
                                 @endif
-                                <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-primary transition-colors leading-snug">{{ $article['title'] }}</h3>
-                                <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 mb-4 flex-1 leading-relaxed">{{ $article['excerpt'] }}</p>
 
-                                {{-- Meta + read cue --}}
-                                <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-100 dark:border-[#0f3460]">
-                                    <span class="inline-flex items-center gap-3">
-                                        <span class="text-gray-400 dark:text-gray-500">{{ $article['dateLabel'] }}</span>
-                                        <span class="inline-flex items-center gap-1">
-                                            <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-                                            {{ $article['readTime'] }}{{ __('articles.public.min_read') }}
-                                        </span>
-                                    </span>
-                                    <span class="lib-read-cue inline-flex items-center gap-1 font-semibold text-primary">
-                                        {{ __('articles.public.read_more') }}
-                                        <i data-lucide="arrow-{{ $isRtlLocale ? 'left' : 'right' }}" class="w-3.5 h-3.5"></i>
-                                    </span>
+                                {{-- Colophon. The card carries the hijri date only:
+                                     it is the calendar this material is dated in,
+                                     and two dates wrap onto a second line. --}}
+                                <div class="folio-colophon folio-colophon--row pt-3 border-t border-gray-100 dark:border-[#0f3460]">
+                                    <span>{{ $article['hijriDate'] ?: $article['dateLabel'] }}</span>
+                                    <span>{{ $article['readTime'] }} {{ __('articles.public.min_read') }}</span>
                                 </div>
                             </div>
                         </a>

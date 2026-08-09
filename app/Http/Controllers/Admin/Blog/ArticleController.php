@@ -119,10 +119,11 @@ class ArticleController extends AdminController
         $this->authorizeAdmin('create articles');
 
         $libraryThumb = $this->resolveLibraryThumb($request);
+        $libraryGallery = $this->resolveLibraryGallery($request);
 
         try {
             $article = $this->createAction->execute(
-                CreateArticleData::fromRequest($request, $libraryThumb),
+                CreateArticleData::fromRequest($request, $libraryThumb, $libraryGallery),
                 $this->locales
             );
 
@@ -154,6 +155,7 @@ class ArticleController extends AdminController
             return back()->withInput()->withErrors(['error' => __('admin.article_create_failed')]);
         } finally {
             $this->cleanupTemporaryThumb($libraryThumb);
+            $this->cleanupTemporaryGallery($libraryGallery);
         }
     }
 
@@ -210,11 +212,12 @@ class ArticleController extends AdminController
         $this->authorizeAdmin('edit articles');
 
         $libraryThumb = $this->resolveLibraryThumb($request);
+        $libraryGallery = $request->has('gallery') ? $this->resolveLibraryGallery($request) : null;
 
         try {
             $this->updateAction->execute(
                 $article,
-                UpdateArticleData::fromRequest($request, $article, $libraryThumb),
+                UpdateArticleData::fromRequest($request, $article, $libraryThumb, $libraryGallery),
                 $this->locales
             );
 
@@ -247,6 +250,7 @@ class ArticleController extends AdminController
             return back()->withInput()->withErrors(['error' => __('admin.article_update_failed')]);
         } finally {
             $this->cleanupTemporaryThumb($libraryThumb);
+            $this->cleanupTemporaryGallery($libraryGallery ?? []);
         }
     }
 
@@ -276,6 +280,52 @@ class ArticleController extends AdminController
         $path = $thumb?->getPathname();
         if ($path !== null && is_file($path)) {
             @unlink($path);
+        }
+    }
+
+    /**
+     * The gallery tab posts media-library ids, not uploads. Decrypt each one to
+     * a disposable temp file so the action can store it like any other upload.
+     * Order is preserved: the editor's arrangement is the gallery order.
+     *
+     * @return array<int, array{media_id: int, file: UploadedFile}>
+     */
+    private function resolveLibraryGallery(StoreArticleRequest|UpdateArticleRequest $request): array
+    {
+        $mediaIds = $request->validated()['gallery'] ?? [];
+
+        if (! is_array($mediaIds) || $mediaIds === []) {
+            return [];
+        }
+
+        $items = [];
+
+        foreach ($mediaIds as $mediaId) {
+            $copy = $this->mediaService->temporaryOriginalCopyById((int) $mediaId);
+
+            if ($copy === null) {
+                continue;
+            }
+
+            $items[] = [
+                'media_id' => (int) $mediaId,
+                'file' => new UploadedFile($copy->path, $copy->filename, null, null, true),
+            ];
+        }
+
+        return $items;
+    }
+
+    /**
+     * @param  array<int, array{media_id: int, file: UploadedFile}>  $items
+     */
+    private function cleanupTemporaryGallery(array $items): void
+    {
+        foreach ($items as $item) {
+            $path = $item['file']->getPathname();
+            if (is_file($path)) {
+                @unlink($path);
+            }
         }
     }
 
@@ -660,12 +710,16 @@ class ArticleController extends AdminController
             'read_time' => $article->read_time,
             'status' => $article->status,
             'scheduled_at' => $article->scheduled_at?->format('Y-m-d\TH:i'),
+            // `id` is the media-library id the picker works in, not the
+            // articles_gallery row id — the form posts these back as gallery[].
             'gallery' => $article->gallery->map(fn ($item) => [
-                'id' => $item->id,
+                'id' => $item->media_id,
+                'gallery_id' => $item->id,
+                'url' => $item->image ? Storage::disk('public')->url($item->image) : null,
                 'image' => $item->image,
                 'caption' => $item->caption,
                 'order' => $item->order,
-            ])->values()->all(),
+            ])->filter(fn (array $item): bool => $item['id'] !== null)->values()->all(),
             'media_items' => $article->mediaItems->map(fn ($media) => [
                 'id' => $media->id,
                 'filename' => $media->filename,

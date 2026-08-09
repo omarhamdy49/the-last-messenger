@@ -65,12 +65,132 @@
 
 @push('head')
 <style>
-    /* Active TOC item (scroll-spy) */
+    /* ═══════════════════════════════════════════════════════════════
+       THE READING INSTRUMENT
+
+       Everything here exists to carry a reader through a long study:
+       a measured column, an opening that marks where reading begins, a
+       rail that reports position, and citations that arrive rather than
+       appear. Motion is one authored idea — approach — not scattered
+       effects, and every part of it is optional at the OS level.
+       ═══════════════════════════════════════════════════════════════ */
+
+    /* ── Measure ──
+       The body fills its container. A capped measure was tried and rejected:
+       it left the reading column visibly narrower than the surrounding card. */
+    .prose-article { max-width: none; }
+
+    /* ── The opening ──
+       Deliberately NOT a drop cap. Arabic is a cursive script: ::first-letter
+       severs the opening letter from the rest of its word and breaks the
+       joining, so "كانت" renders as a stranded "ك" followed by "انت".
+       The opening is marked by weight and size across the whole first
+       paragraph instead, which no script objects to. */
+    .prose-article > p:first-of-type {
+        font-size: 1.125em;
+        line-height: 1.95;
+        color: #111827;
+    }
+    .dark .prose-article > p:first-of-type { color: #f3f4f6; }
+
+    /* ── The rail ──
+       Position reported as a continuous track rather than a list of
+       pills: one hairline, one travelling marker, labels that step
+       forward as they take focus. */
+    .toc-rail { position: relative; }
+    .toc-rail::before {
+        content: '';
+        position: absolute;
+        inset-block: 0;
+        inset-inline-start: 0;
+        width: 1px;
+        background: currentColor;
+        opacity: .14;
+    }
+    .toc-rail__marker {
+        position: absolute;
+        inset-inline-start: -1px;
+        width: 3px;
+        background: #218838;
+        border-radius: 2px;
+        transform: translateY(var(--marker-y, 0));
+        height: var(--marker-h, 0);
+        opacity: 0;
+        transition: transform .42s cubic-bezier(.16,1,.3,1),
+                    height .42s cubic-bezier(.16,1,.3,1),
+                    opacity .25s ease;
+    }
+    .toc-rail[data-ready='true'] .toc-rail__marker { opacity: 1; }
+
+    .toc-link {
+        display: block;
+        padding-block: .5rem;
+        padding-inline: 1rem .5rem;
+        font-size: .875rem;
+        color: #6b7280;
+        transition: color .25s ease, transform .25s cubic-bezier(.16,1,.3,1);
+    }
+    .dark .toc-link { color: #9ca3af; }
+    .toc-link:hover { color: #218838; }
     .toc-link.toc-active {
-        color: #218838;
+        color: #111827;
         font-weight: 600;
-        background: rgba(100, 204, 197, 0.10);
-        border-inline-start-color: #64CCC5;
+        transform: translateX(var(--toc-shift, .25rem));
+    }
+    .dark .toc-link.toc-active { color: #f9fafb; }
+    [dir='rtl'] .toc-link.toc-active { --toc-shift: -.25rem; }
+
+    /* ── Citations arrive ──
+       Verse and hadith cards settle into place as the reader reaches
+       them. Driven by the view timeline where supported, so there is no
+       scroll listener and no JS; everywhere else they are simply
+       already visible, which is the correct fallback. */
+    @supports (animation-timeline: view()) {
+        @media (prefers-reduced-motion: no-preference) {
+            .prose-article .module-embed {
+                animation: embed-arrive linear both;
+                animation-timeline: view();
+                animation-range: entry 5% entry 55%;
+            }
+        }
+    }
+    @keyframes embed-arrive {
+        from { opacity: 0; transform: translateY(1.25rem); clip-path: inset(0 0 12% 0); }
+        to   { opacity: 1; transform: none;                clip-path: inset(0 0 0 0); }
+    }
+
+    /* ── Progress ──
+       Bound to the document's own scroll where the browser can do it
+       without JS; the Alpine width binding stays as the fallback. */
+    @supports (animation-timeline: scroll()) {
+        .reading-progress__fill {
+            width: 100% !important;
+            transform-origin: var(--progress-origin, left);
+            animation: progress-advance linear both;
+            animation-timeline: scroll(root block);
+        }
+        [dir='rtl'] .reading-progress__fill { --progress-origin: right; }
+    }
+    @keyframes progress-advance {
+        from { transform: scaleX(0); }
+        to   { transform: scaleX(1); }
+    }
+
+    /* ── Continuity ──
+       The card image on the library index and the hero here are the same
+       object, so the browser morphs one into the other across the
+       navigation instead of cutting. */
+    .article-hero-media { view-transition-name: article-hero; }
+
+    @media (prefers-reduced-motion: reduce) {
+        .toc-rail__marker, .toc-link { transition: none !important; }
+        .prose-article .module-embed { animation: none !important; opacity: 1 !important; transform: none !important; clip-path: none !important; }
+        .article-hero-media { view-transition-name: none; }
+    }
+
+    @media (max-width: 1023px) {
+    
+        .prose-article > p:first-of-type::first-letter { font-size: 2.9em; }
     }
     /* Horizontal carousel scrollbar */
     .rail-scroll::-webkit-scrollbar { height: 6px; }
@@ -88,7 +208,10 @@
         margin: 1.75rem 0;
         padding: 1.25rem 1.25rem 1rem;
         border-radius: 1rem;
-        border-inline-start: 4px solid var(--embed-accent, #0056b3);
+        /* The kind of citation is carried by its label and tint, not by a
+           slab of colour down one edge. A hairline in the same hue keeps the
+           distinction without the accent-bar tell. */
+        border: 1px solid color-mix(in srgb, var(--embed-accent, #0056b3) 28%, transparent);
         background: var(--embed-bg, #f8fafc);
     }
     .module-embed--verse  { --embed-accent: #218838; --embed-bg: #f0fdf4; }
@@ -155,6 +278,88 @@
     @media print {
         header, footer, aside, .no-print { display: none !important; }
     }
+
+    /* Legacy inline embeds saved before the blot adopted the BEM contract used
+       by ArticleLocale::renderBlocksToHtml(). Without these the older markup
+       collapses into one run-on line inside a correctly framed card. */
+    /* Legacy embeds carry no module-embed--{type} modifier, so the accent
+       variable is unset; without a fallback the label is white on nothing. */
+    .module-embed .embed-label {
+        display: inline-flex;
+        margin-bottom: .6rem;
+        padding: .15rem .65rem;
+        border-radius: 9999px;
+        background: var(--embed-accent, #0056b3);
+        color: #fff;
+        font-size: .6875rem;
+        font-weight: 700;
+    }
+    .module-embed .embed-text {
+        display: block;
+        font-family: 'Amiri', serif;
+        font-size: 1.35rem;
+        line-height: 2.2;
+    }
+    .module-embed .embed-reference { display: block; margin-top: .5rem; font-size: .85rem; font-weight: 600; color: #6b7280; }
+    .module-embed .embed-link { display: inline-block; margin-top: .9rem; font-size: .85rem; font-weight: 600; color: var(--embed-accent, #0056b3); }
+
+    /* ═══════════════════════════════════════════════════════════════
+       FOLIO — carried over from the library index so a study looks like
+       the same object whether it is on a shelf or open on the desk.
+       ═══════════════════════════════════════════════════════════════ */
+    .folio { --lapis: #0056b3; --verdigris: #218838; --rule: #c9bfa8; --folio-paper: #fbf9f4; }
+    .dark .folio { --rule: #3d4f6b; --folio-paper: rgba(255,255,255,.03); }
+
+    .folio-title { font-family: 'Amiri', serif; line-height: 1.24; letter-spacing: -.005em; }
+
+    .folio-colophon {
+        font-variant-numeric: tabular-nums;
+        font-size: .8125rem;
+        color: #6b7280;
+    }
+    .dark .folio-colophon { color: #9ca3af; }
+    .folio-colophon .sep { color: var(--rule); padding-inline: .55rem; }
+
+    .folio-eyebrow {
+        display: flex; align-items: center; flex-wrap: wrap; gap: .5rem;
+        font-size: .6875rem; font-weight: 700; letter-spacing: .14em;
+        color: var(--verdigris);
+    }
+    .folio-eyebrow .sep { color: var(--rule); }
+
+    /* Khulasa: the scribe's précis, set apart from the running text. */
+    .folio-summary {
+        position: relative;
+        margin: 0 0 2.25rem;
+        padding: 1.5rem 1.75rem;
+        background: var(--folio-paper);
+        border: 1px solid var(--rule);
+    }
+    .folio-summary::after {
+        content: '';
+        position: absolute;
+        inset-block-start: -5px; inset-inline-end: 24px;
+        width: 9px; height: 9px; rotate: 45deg;
+        background: var(--verdigris);
+    }
+    .folio-summary__label {
+        display: block;
+        margin-bottom: .6rem;
+        font-size: .6875rem; font-weight: 700; letter-spacing: .14em;
+        color: var(--verdigris);
+    }
+    .folio-summary__body {
+        font-size: 1.0625rem; line-height: 1.9;
+        color: #1f2937;
+    }
+    .dark .folio-summary__body { color: #e5e7eb; }
+    .folio-summary__body p { margin: 0 0 .6rem; }
+    .folio-summary__body p:last-child { margin-bottom: 0; }
+
+    @media (max-width: 640px) {
+        .folio-summary { padding: 1.15rem 1.25rem; }
+        .folio-summary__body { font-size: 1rem; line-height: 1.8; }
+    }
 </style>
 @endpush
 
@@ -166,8 +371,10 @@
     class="min-h-screen"
 >
     {{-- Reading progress bar --}}
-    <div class="fixed top-0 inset-x-0 z-[60] h-1 bg-transparent no-print">
-        <div class="h-full bg-gradient-to-l from-primary via-secondary to-accent transition-[width] duration-150 ease-out"
+    <div class="fixed top-0 inset-x-0 z-[60] h-[3px] bg-transparent no-print"
+         role="progressbar" aria-label="{{ __('articles.public.reading_progress') }}"
+         :aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100">
+        <div class="reading-progress__fill h-full bg-secondary transition-[width] duration-150 ease-out"
              :style="`width: ${progress}%`"></div>
     </div>
 
@@ -202,7 +409,7 @@
                              @mouseenter="hover = true" @mouseleave="hover = false">
 
                             {{-- Main stage --}}
-                            <div class="gallery-stage group relative h-60 md:h-96 overflow-hidden bg-gray-100 dark:bg-[#0f3460] cursor-zoom-in"
+                            <div class="gallery-stage article-hero-media group relative h-60 md:h-96 overflow-hidden bg-gray-100 dark:bg-[#0f3460] cursor-zoom-in"
                                  @click="openLightbox()">
                                 <img :src="current.url" :alt="current.caption || title"
                                      onerror="this.style.display='none';this.parentElement.classList.add('img-gradient-fallback')"
@@ -216,11 +423,14 @@
                                        class="text-white text-sm md:text-base font-medium drop-shadow line-clamp-2"></p>
                                     @if (! empty($article['category']) || ! empty($article['tags']))
                                         <div class="flex flex-wrap gap-2">
+                                            {{-- Both sit on a photograph, so the surface has to be
+                                                 darker than the text, not lighter. The light `glass`
+                                                 utility put white type on a near-white pill. --}}
                                             @if (! empty($article['category']))
-                                                <span class="px-4 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-l from-primary to-secondary text-white shadow-lg">{{ $article['category'] }}</span>
+                                                <span class="px-4 py-1.5 rounded-full text-sm font-semibold bg-secondary text-white shadow-lg">{{ $article['category'] }}</span>
                                             @endif
                                             @foreach (array_slice($article['tags'], 0, 2) as $tag)
-                                                <span class="px-4 py-1.5 rounded-full text-sm font-medium glass text-white">{{ $tag }}</span>
+                                                <span class="px-4 py-1.5 rounded-full text-sm font-medium bg-black/45 backdrop-blur-sm ring-1 ring-white/25 text-white">{{ $tag }}</span>
                                             @endforeach
                                         </div>
                                     @endif
@@ -468,6 +678,80 @@
                             </div>
                         @endif
 
+                        {{-- Khulasa — the editor's per-locale summary. Closes the piece:
+                             a recap lands after the argument, not before it. --}}
+                        {{-- Attached media. Streams through the article-scoped
+                             public route; the library itself stays admin-only. --}}
+                        @if (! empty($article['media']))
+                            <section class="mt-10" aria-labelledby="article-media-label">
+                                <h2 id="article-media-label" class="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
+                                    <i data-lucide="play-circle" class="w-5 h-5 text-accent"></i>{{ __('articles.public.attached_media') }}
+                                </h2>
+                                <div class="space-y-4">
+                                    @foreach ($article['media'] as $item)
+                                        @if ($item['type'] === 'video')
+                                            <figure class="rounded-2xl overflow-hidden bg-black">
+                                                <video controls preload="metadata" playsinline
+                                                       class="w-full h-auto aspect-video bg-black"
+                                                       aria-label="{{ $item['title'] }}">
+                                                    <source src="{{ $item['url'] }}" @if($item['mime']) type="{{ $item['mime'] }}" @endif>
+                                                </video>
+                                            </figure>
+                                        @elseif ($item['type'] === 'audio')
+                                            <figure class="rounded-2xl border border-gray-200 dark:border-[#0f3460] p-4">
+                                                <figcaption class="text-sm font-semibold mb-2 text-gray-900 dark:text-white">{{ $item['title'] }}</figcaption>
+                                                <audio controls preload="metadata" class="w-full" aria-label="{{ $item['title'] }}">
+                                                    <source src="{{ $item['url'] }}" @if($item['mime']) type="{{ $item['mime'] }}" @endif>
+                                                </audio>
+                                            </figure>
+                                        @else
+                                            <a href="{{ $item['url'] }}" target="_blank" rel="noopener"
+                                               class="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-[#0f3460] p-4 hover:border-primary transition-colors">
+                                                <i data-lucide="file" class="w-5 h-5 text-gray-400 shrink-0"></i>
+                                                <span class="font-medium text-gray-900 dark:text-white truncate">{{ $item['title'] }}</span>
+                                            </a>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            </section>
+                        @endif
+
+                        {{-- Gallery as its own section. It also feeds the hero
+                             slider, but a single hero image reads as a cover,
+                             not as a gallery the reader can browse. --}}
+                        @if (count($article['gallery'] ?? []) > 0)
+                            <section class="mt-10" aria-labelledby="article-gallery-label">
+                                <h2 id="article-gallery-label" class="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
+                                    <i data-lucide="images" class="w-5 h-5 text-accent"></i>{{ __('articles.public.gallery') }}
+                                </h2>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    @foreach ($article['gallery'] as $index => $image)
+                                        {{-- A plain link, not the hero's lightbox: that
+                                             component's scope ends with the hero. --}}
+                                        <a href="{{ $image['url'] }}" target="_blank" rel="noopener"
+                                           class="group relative aspect-[4/3] overflow-hidden rounded-xl bg-gray-100 dark:bg-[#0f3460] block focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30">
+                                            <img src="{{ $image['url'] }}" alt="{{ $image['caption'] ?: $article['title'] }}" loading="lazy"
+                                                 class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none">
+                                            @if (! empty($image['caption']))
+                                                <span class="absolute inset-x-0 bottom-0 p-2 text-xs text-white bg-black/55 text-start line-clamp-1">{{ $image['caption'] }}</span>
+                                            @endif
+                                        </a>
+                                    @endforeach
+                                </div>
+                            </section>
+                        @endif
+
+                        @if (! empty($article['summary']))
+                            <aside class="folio folio-summary mt-10" aria-labelledby="article-summary-label">
+                                <span class="folio-summary__label" id="article-summary-label">
+                                    {{ __('articles.public.summary') }}
+                                </span>
+                                <div class="folio-summary__body">
+                                    {!! $article['summary'] !!}
+                                </div>
+                            </aside>
+                        @endif
+
                         {{-- Tags --}}
                         @if (! empty($article['tags']))
                             <div class="flex flex-wrap items-center gap-2 mt-8 pt-6 border-t border-gray-100 dark:border-[#0f3460]">
@@ -481,6 +765,33 @@
                         @endif
                     </div>
                 </article>
+
+                {{-- Continue reading. The controller has always resolved these
+                     neighbours (following the series order where the article
+                     belongs to one) but nothing rendered them. --}}
+                @if ($prev || $next)
+                    <nav class="grid gap-4 sm:grid-cols-2 mt-8 no-print" aria-label="{{ __('articles.public.more_articles') }}">
+                        @foreach ([['item' => $prev, 'dir' => 'prev'], ['item' => $next, 'dir' => 'next']] as $neighbour)
+                            @php $item = $neighbour['item']; @endphp
+                            @if ($item)
+                                <a href="{{ $item['url'] }}"
+                                   class="group card-premium p-5 flex items-center gap-4 hover:border-primary/40 transition-colors {{ $neighbour['dir'] === 'next' ? 'sm:text-end sm:flex-row-reverse' : '' }}">
+                                    <span class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+                                        <i data-lucide="chevron-{{ ($neighbour['dir'] === 'prev') === $isRtl ? 'right' : 'left' }}" class="w-5 h-5"></i>
+                                    </span>
+                                    <span class="min-w-0">
+                                        <span class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                                            {{ $neighbour['dir'] === 'prev' ? __('articles.public.previous_article') : __('articles.public.next_article') }}
+                                        </span>
+                                        <span class="block font-bold text-gray-900 dark:text-white line-clamp-2 group-hover:text-primary transition-colors">{{ $item['title'] }}</span>
+                                    </span>
+                                </a>
+                            @else
+                                <span class="hidden sm:block" aria-hidden="true"></span>
+                            @endif
+                        @endforeach
+                    </nav>
+                @endif
 
                 {{-- ============================================================ --}}
                 {{-- PREVIOUS / NEXT ARTICLE --}}
@@ -524,22 +835,33 @@
 
                     {{-- TOC scroll-spy --}}
                     @if (! empty($article['toc']))
-                        <nav class="card-premium p-5 hidden lg:block animate-fade-in-up" aria-label="{{ __('articles.public.table_of_contents') }}">
-                            <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-                                <span class="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><i data-lucide="list" class="w-4 h-4"></i></span>{{ __('articles.public.table_of_contents') }}
-                            </h3>
-                            <ul class="space-y-1">
-                                @foreach ($article['toc'] as $item)
-                                    <li @class(['ps-2' => ($item['level'] ?? 2) === 3])>
-                                        <a href="#{{ $item['id'] }}"
-                                           @click.prevent="scrollTo('{{ $item['id'] }}')"
-                                           class="toc-link block px-3 py-2 rounded-lg text-sm border-s-2 border-transparent transition-all text-gray-600 dark:text-gray-300 hover:text-primary"
-                                           :class="active === '{{ $item['id'] }}' ? 'toc-active' : ''">
-                                            {{ $item['label'] }}
-                                        </a>
-                                    </li>
-                                @endforeach
-                            </ul>
+                        {{-- The rail. Not a card: a track the reader's position
+                             travels along, so the sidebar reports where they are
+                             instead of restating the article's structure. --}}
+                        <nav class="hidden lg:block" aria-label="{{ __('articles.public.table_of_contents') }}">
+                            <p class="text-[11px] font-bold tracking-[.14em] text-gray-400 dark:text-gray-500 mb-4">
+                                {{ __('articles.public.table_of_contents') }}
+                            </p>
+                            <div class="toc-rail text-gray-900 dark:text-white"
+                                 x-ref="tocRail"
+                                 :data-ready="active ? 'true' : 'false'"
+                                 x-effect="active; $nextTick(() => positionTocMarker())">
+                                <span class="toc-rail__marker" aria-hidden="true"></span>
+                                <ul>
+                                    @foreach ($article['toc'] as $item)
+                                        <li @class(['ps-4' => ($item['level'] ?? 2) === 3])>
+                                            <a href="#{{ $item['id'] }}"
+                                               @click.prevent="scrollTo('{{ $item['id'] }}')"
+                                               data-toc-link="{{ $item['id'] }}"
+                                               class="toc-link"
+                                               :class="active === '{{ $item['id'] }}' ? 'toc-active' : ''"
+                                               :aria-current="active === '{{ $item['id'] }}' ? 'true' : 'false'">
+                                                {{ $item['label'] }}
+                                            </a>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
                         </nav>
                     @endif
 
@@ -714,6 +1036,25 @@
                     if (el && el.getBoundingClientRect().top <= 120) current = id;
                 }
                 if (current) this.active = current;
+            },
+
+            /**
+             * Move the rail marker onto the active entry.
+             *
+             * Measured rather than CSS-only: the marker has to match the real
+             * height of a wrapped label, which no selector can know. Reads
+             * offsets in one pass and writes two custom properties, so the
+             * transition runs on the compositor.
+             */
+            positionTocMarker() {
+                const rail = this.$refs.tocRail;
+                if (!rail || !this.active) return;
+
+                const link = rail.querySelector(`[data-toc-link="${CSS.escape(this.active)}"]`);
+                if (!link) return;
+
+                rail.style.setProperty('--marker-y', `${link.offsetTop}px`);
+                rail.style.setProperty('--marker-h', `${link.offsetHeight}px`);
             },
 
             scrollTo(id) {

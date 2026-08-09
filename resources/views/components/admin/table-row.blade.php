@@ -74,13 +74,18 @@
 
             @if($type === 'image_link')
                 {{-- Combined thumbnail + title link in one cell --}}
-                <div class="flex items-center gap-3 min-w-0">
-                    <template x-if="row.{{ $imageKey }}">
+                <div class="flex items-center gap-3 min-w-0" x-data="{ imageFailed: false }">
+                    {{-- A stored path that 404s (missing file, unlinked storage
+                         disk) must degrade to the same placeholder as "no image"
+                         rather than a broken-image glyph. --}}
+                    <template x-if="row.{{ $imageKey }} && !imageFailed">
                         <img :src="row.{{ $imageKey }}"
                              :alt="row.{{ $key }} || ''"
-                             class="w-10 h-10 rounded-lg object-cover shadow-sm flex-shrink-0">
+                             loading="lazy"
+                             @error="imageFailed = true"
+                             class="w-10 h-10 rounded-lg object-cover shadow-sm flex-shrink-0 bg-gray-100 dark:bg-gray-800">
                     </template>
-                    <template x-if="!row.{{ $imageKey }}">
+                    <template x-if="!row.{{ $imageKey }} || imageFailed">
                         <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
                              :class="darkMode ? 'bg-gray-800' : 'bg-gray-100'">
                             <i data-lucide="image" class="w-5 h-5"

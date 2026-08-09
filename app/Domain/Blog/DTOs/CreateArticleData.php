@@ -31,6 +31,9 @@ final class CreateArticleData
      * @param  array<int>|null  $mediaItems  Media IDs to sync.
      * @param  array<int>|null  $additionalCategories  Additional category IDs to attach.
      * @param  array<int>|null  $series  Series IDs to attach (with positions).
+     * @param  array<int, array{media_id: int, file: UploadedFile}>  $galleryFiles
+     *                                                                              Gallery images, already materialised from the media library by the
+     *                                                                              HTTP layer, paired with the media id they came from.
      */
     public function __construct(
         public readonly ?UploadedFile $thumb,
@@ -58,13 +61,19 @@ final class CreateArticleData
         public readonly ?array $mediaItems,
         public readonly ?array $additionalCategories,
         public readonly ?array $series = null,
+        public readonly array $galleryFiles = [],
     ) {}
 
     /**
      * Construct a CreateArticleData instance from the validated store request.
+     *
+     * @param  array<int, array{media_id: int, file: UploadedFile}>  $galleryFiles
      */
-    public static function fromRequest(StoreArticleRequest $request, ?UploadedFile $thumbOverride = null): self
-    {
+    public static function fromRequest(
+        StoreArticleRequest $request,
+        ?UploadedFile $thumbOverride = null,
+        array $galleryFiles = [],
+    ): self {
         $validated = $request->validated();
 
         return new self(
@@ -95,6 +104,7 @@ final class CreateArticleData
             mediaItems: $validated['media_items'] ?? null,
             additionalCategories: $validated['additional_categories'] ?? null,
             series: $validated['series'] ?? null,
+            galleryFiles: $galleryFiles,
         );
     }
 }
