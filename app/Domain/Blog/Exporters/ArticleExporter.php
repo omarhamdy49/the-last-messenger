@@ -22,7 +22,8 @@ class ArticleExporter extends BaseExporter
             ->select(['id', 'writer_id', 'category_id', 'status', 'views', 'read_time', 'is_featured', 'is_pinned', 'hijri_date', 'created_at'])
             ->with([
                 'writer:id,name',
-                'category:id,name',
+                'category:id,slug',
+                'category.translations:id,category_id,locale,name',
                 'locales:id,article_id,locale,title,slug,is_ready',
             ]);
 
@@ -78,7 +79,11 @@ class ArticleExporter extends BaseExporter
                 'title' => $locale?->title ?? '',
                 'slug' => $locale?->slug ?? '',
                 'status' => $locale?->is_ready ? 'published' : 'draft',
-                'category' => $article->category?->name ?? '',
+                // categories.name was moved to category_translations, so the
+                // old attribute read resolved to null on every row.
+                'category' => $article->category?->getNameInLanguage($this->language)
+                    ?? $article->category?->getNameInLanguage('ar')
+                    ?? '',
                 'author' => $article->writer?->name ?? '',
                 'views' => $article->views ?? 0,
                 'read_time' => $article->read_time ?? 0,

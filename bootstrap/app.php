@@ -34,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(append: [
             \App\Http\Middleware\SetLocale::class,
             \App\Http\Middleware\LogApiRequest::class,
+            \App\Http\Middleware\SecureApiResponseHeaders::class,
         ]);
 
         $middleware->web(append: [

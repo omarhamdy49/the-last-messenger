@@ -125,7 +125,11 @@ class InteractionService extends BaseService
             $this->metricRepository->resetMonthlyMetrics($user->id);
         }
 
-        $this->metricRepository->incrementCounter($user->id, 'monthly_views');
+        // monthly_views counts views only — a like or a share must not bump it.
+        if ($type === InteractionType::VIEW) {
+            $this->metricRepository->incrementCounter($user->id, 'monthly_views');
+        }
+
         $this->metricRepository->incrementCounter($user->id, 'monthly_interactions');
 
         // Update streak
@@ -173,25 +177,27 @@ class InteractionService extends BaseService
             "engagement:content:{$contentType}:{$contentId}",
             1800,
             function () use ($contentType, $contentId) {
-                $interactions = $this->interactionRepository->getByContent($contentType, $contentId);
+                // Aggregated in SQL: the previous version hydrated (and cached)
+                // every interaction row for the item just to derive ~8 counts.
+                $aggregate = $this->interactionRepository->aggregateByContent($contentType, $contentId);
+                $byType = $aggregate['by_type'];
 
                 $stats = [
-                    'total_interactions' => $interactions->count(),
-                    'unique_users' => $interactions->unique('user_id')->count(),
-                    'views' => $interactions->where('interaction_type', InteractionType::VIEW->value)->count(),
-                    'likes' => $interactions->where('interaction_type', InteractionType::LIKE->value)->count(),
-                    'shares' => $interactions->where('interaction_type', InteractionType::SHARE->value)->count(),
-                    'bookmarks' => $interactions->where('interaction_type', InteractionType::BOOKMARK->value)->count(),
-                    'comments' => $interactions->where('interaction_type', InteractionType::COMMENT->value)->count(),
-                    'downloads' => $interactions->where('interaction_type', InteractionType::DOWNLOAD->value)->count(),
-                    'avg_time_spent' => $interactions->whereNotNull('duration_seconds')->avg('duration_seconds'),
+                    'total_interactions' => array_sum($byType),
+                    'unique_users' => $aggregate['unique_users'],
+                    'views' => $byType[InteractionType::VIEW->value] ?? 0,
+                    'likes' => $byType[InteractionType::LIKE->value] ?? 0,
+                    'shares' => $byType[InteractionType::SHARE->value] ?? 0,
+                    'bookmarks' => $byType[InteractionType::BOOKMARK->value] ?? 0,
+                    'comments' => $byType[InteractionType::COMMENT->value] ?? 0,
+                    'downloads' => $byType[InteractionType::DOWNLOAD->value] ?? 0,
+                    'avg_time_spent' => $aggregate['avg_duration'],
                 ];
 
                 // Calculate engagement score
                 $score = 0;
                 foreach (InteractionType::cases() as $type) {
-                    $count = $interactions->where('interaction_type', $type->value)->count();
-                    $score += $count * $type->getPoints();
+                    $score += ($byType[$type->value] ?? 0) * $type->getPoints();
                 }
                 $stats['engagement_score'] = $score;
 
@@ -210,24 +216,23 @@ class InteractionService extends BaseService
         $startDate = now()->subDays($days)->startOfDay();
         $endDate = now()->endOfDay();
 
-        $interactions = $this->interactionRepository->getBetweenDates($startDate, $endDate)
-            ->where('user_id', $user->id);
+        // One grouped query scoped to this user, instead of loading every
+        // user's interactions in the window (eager-loaded) and re-filtering
+        // the whole collection once per day.
+        $counts = $this->interactionRepository->dailyCountsByUser($user->id, $startDate, $endDate);
 
-        // Group by date
         $trendData = [];
         for ($date = $startDate->copy(); $date <= $endDate; $date->addDay()) {
             $dateStr = $date->toDateString();
-            $dayInteractions = $interactions->filter(function ($interaction) use ($dateStr) {
-                return $interaction->created_at->toDateString() === $dateStr;
-            });
+            $day = $counts[$dateStr] ?? [];
 
             $trendData[] = [
                 'date' => $dateStr,
-                'total' => $dayInteractions->count(),
-                'views' => $dayInteractions->where('interaction_type', InteractionType::VIEW->value)->count(),
-                'likes' => $dayInteractions->where('interaction_type', InteractionType::LIKE->value)->count(),
-                'shares' => $dayInteractions->where('interaction_type', InteractionType::SHARE->value)->count(),
-                'bookmarks' => $dayInteractions->where('interaction_type', InteractionType::BOOKMARK->value)->count(),
+                'total' => array_sum($day),
+                'views' => $day[InteractionType::VIEW->value] ?? 0,
+                'likes' => $day[InteractionType::LIKE->value] ?? 0,
+                'shares' => $day[InteractionType::SHARE->value] ?? 0,
+                'bookmarks' => $day[InteractionType::BOOKMARK->value] ?? 0,
             ];
         }
 
@@ -324,10 +329,21 @@ class InteractionService extends BaseService
             }
             $stats['interaction_breakdown'] = $interactionStats;
 
-            // Add time-based stats
-            $stats['today'] = $this->interactionRepository->getToday()->count();
-            $stats['this_week'] = $this->interactionRepository->getThisWeek()->count();
-            $stats['this_month'] = $this->interactionRepository->getThisMonth()->count();
+            // COUNT(*) rather than get()->count(): the getToday/getThisWeek/
+            // getThisMonth collections eager-load user + interactable for every
+            // row and were only ever counted.
+            $stats['today'] = $this->interactionRepository->countBetweenDates(
+                now()->startOfDay(),
+                now()->endOfDay()
+            );
+            $stats['this_week'] = $this->interactionRepository->countBetweenDates(
+                now()->startOfWeek(),
+                now()->endOfWeek()
+            );
+            $stats['this_month'] = $this->interactionRepository->countBetweenDates(
+                now()->startOfMonth(),
+                now()->endOfMonth()
+            );
 
             return $stats;
         });

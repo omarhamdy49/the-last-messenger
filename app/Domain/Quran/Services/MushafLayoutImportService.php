@@ -6,7 +6,6 @@ namespace App\Domain\Quran\Services;
 
 use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Models\Word;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -56,7 +55,7 @@ class MushafLayoutImportService
 
         // Quran data is cached aggressively; drop it so the reader reflects the import.
         if ($totalWords > 0) {
-            Cache::flush();
+            QuranCacheKeys::flushContent();
         }
 
         return ['pages' => count($pages), 'words' => $totalWords];

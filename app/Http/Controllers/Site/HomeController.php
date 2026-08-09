@@ -84,7 +84,11 @@ final class HomeController extends Controller
             function () use ($locale): ?array {
                 // Two steps on purpose: ORDER BY RAND() over id alone sorts 38k
                 // integers, not 38k longtext bodies.
-                $id = Hadith::query()->where('is_published', true)->inRandomOrder()->value('id');
+                // publiclyVisible(), not is_published: a streaming re-import
+                // unpublishes the COLLECTION while its hadith rows stay
+                // published, so the row flag alone would surface — and 24h-cache
+                // — a hadith from a deliberately hidden collection.
+                $id = Hadith::query()->publiclyVisible()->inRandomOrder()->value('id');
 
                 $hadith = $id ? Hadith::with('collection')->find($id) : null;
 
@@ -113,7 +117,7 @@ final class HomeController extends Controller
         $stats = Cache::remember('home_module_stats', 3600, fn (): array => [
             'surahs' => self::SURAH_COUNT,
             'seerah_events' => (int) ($this->seerahEventService->getIndexStats()['total'] ?? 0),
-            'hadiths' => Hadith::query()->where('is_published', true)->count(),
+            'hadiths' => Hadith::query()->publiclyVisible()->count(),
             'sahaba' => Muslim::query()->where('is_published', true)->count(),
         ]);
 

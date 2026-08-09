@@ -93,10 +93,11 @@
                         <label class="block mb-2 font-semibold" :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
                             {{ __('admin.content_body') }}
                         </label>
-                        <x-admin.form.rich-text
+                        <x-admin.form.wysiwyg
                             name="body[{{ $locale }}]"
                             :value="old('body.'.$locale, $bodies[$locale] ?? '')"
                             :locale="$locale"
+                            toolbar="compact"
                             height="320px" />
                         @error("body.{$locale}")<p class="mt-2 text-sm text-red-500">{{ $message }}</p>@enderror
                     </div>

@@ -6,8 +6,8 @@ namespace App\Console\Commands;
 
 use App\Domain\Quran\Models\Reciter;
 use App\Domain\Quran\Models\ReciterTranslation;
+use App\Domain\Quran\Services\QuranCacheKeys;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -168,7 +168,7 @@ class ImportQuranRecitersCommand extends Command
         }
 
         // Reciter lists and the surah audio map are cached on the reader.
-        Cache::flush();
+        QuranCacheKeys::flushReciters();
 
         $total = array_sum($counts);
         $this->info("Imported {$total} reciters — {$counts['recitation']} recitations, {$counts['translation']} translations.");

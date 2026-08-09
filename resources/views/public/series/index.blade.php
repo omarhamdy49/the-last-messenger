@@ -164,25 +164,16 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 @foreach ($series as $item)
                     <a href="{{ $item['url'] }}" class="group series-card flex flex-col">
-                        {{-- Cover --}}
-                        <div class="series-card-cover aspect-[16/8]">
+                        {{-- Cover: kept clean; the meta reads better as text below. --}}
+                        <div class="series-card-cover aspect-[16/9]">
                             @if ($item['thumbnail'])
                                 <img src="{{ $item['thumbnail'] }}" alt="{{ $item['title'] }}" loading="lazy"
-                                     class="relative z-10 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none">
+                                     class="relative z-10 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04] motion-reduce:transform-none">
+                                <div class="absolute inset-0 z-20 bg-gradient-to-t from-black/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                             @else
-                                <div class="absolute inset-0 flex items-center justify-center text-white/85">
+                                <div class="absolute inset-0 flex items-center justify-center text-white/80">
                                     <i data-lucide="layers" class="w-12 h-12"></i>
                                 </div>
-                            @endif
-                            <span class="absolute top-3 start-3 z-20 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-white/90 dark:bg-[#16213e]/90 text-primary backdrop-blur">
-                                <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
-                                {{ $item['articlesCount'] }} {{ __('series.public.article_unit') }}
-                            </span>
-                            @if (! empty($item['totalReadTime']))
-                                <span class="absolute top-3 end-3 z-20 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-black/35 text-white backdrop-blur">
-                                    <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-                                    {{ $item['totalReadTime'] }}{{ __('series.public.min_read') }}
-                                </span>
                             @endif
                         </div>
 
@@ -191,31 +182,28 @@
                             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-primary transition-colors leading-snug">
                                 {{ $item['title'] }}
                             </h2>
+
                             @if ($item['description'])
-                                <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 mb-4 leading-relaxed">{{ $item['description'] }}</p>
+                                <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 leading-relaxed">{{ $item['description'] }}</p>
                             @endif
 
-                            {{-- Reading-path preview (first parts) --}}
-                            @if (! empty($item['previewTitles']))
-                                <ul class="space-y-1.5 mb-4">
-                                    @foreach ($item['previewTitles'] as $pi => $pTitle)
-                                        <li class="flex items-center gap-2.5 text-sm text-gray-600 dark:text-gray-300 min-w-0">
-                                            <span class="w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-bold flex items-center justify-center shrink-0 tabular-nums">{{ $pi + 1 }}</span>
-                                            <span class="truncate">{{ $pTitle }}</span>
-                                        </li>
-                                    @endforeach
-                                    @if ($item['articlesCount'] > count($item['previewTitles']))
-                                        <li class="flex items-center gap-2.5 text-xs text-gray-400 dark:text-gray-500">
-                                            <span class="w-5 h-5 rounded-full border border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center shrink-0">
-                                                <i data-lucide="plus" class="w-3 h-3"></i>
-                                            </span>
-                                            +{{ $item['articlesCount'] - count($item['previewTitles']) }} {{ __('series.public.article_unit') }}
-                                        </li>
-                                    @endif
-                                </ul>
-                            @endif
+                            {{-- Scale of the reading path, without listing it --}}
+                            <div class="flex items-center gap-3 mt-4 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                                <span class="inline-flex items-center gap-1.5">
+                                    <i data-lucide="layers" class="w-3.5 h-3.5 text-primary"></i>
+                                    <span class="tabular-nums">{{ $item['articlesCount'] }}</span>
+                                    {{ __('series.public.article_unit') }}
+                                </span>
+                                @if (! empty($item['totalReadTime']))
+                                    <span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
+                                    <span class="inline-flex items-center gap-1.5">
+                                        <i data-lucide="clock" class="w-3.5 h-3.5 text-primary"></i>
+                                        <span class="tabular-nums">{{ $item['totalReadTime'] }}</span>{{ __('series.public.min_read') }}
+                                    </span>
+                                @endif
+                            </div>
 
-                            <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-100 dark:border-[#0f3460] mt-auto">
+                            <div class="flex items-center justify-between text-xs pt-3 border-t border-gray-100 dark:border-[#0f3460] mt-4">
                                 <span class="text-gray-400 dark:text-gray-500">{{ $item['dateLabel'] }}</span>
                                 <span class="series-cue inline-flex items-center gap-1 font-semibold text-primary">
                                     {{ __('series.public.browse_series') }}

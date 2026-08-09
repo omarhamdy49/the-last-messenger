@@ -164,20 +164,52 @@
             if (q.length < 1) { this.suggest.items = []; this.suggest.open = false; this.suggest.error = false; return; }
             this.suggest.timer = setTimeout(() => this.fetchSuggest(q), 250);
         },
-        async fetchSuggest(q) {
+        fetchSuggest(q) {
             this.suggest.loading = true; this.suggest.error = false; this.suggest.open = true; this.suggest.active = -1;
-            try {
-                const loc = document.documentElement.lang || 'ar';
-                const res = await fetch('/api/v1/quran/search/suggest?q=' + encodeURIComponent(q) + '&limit=8&locale=' + encodeURIComponent(loc), { headers: { Accept: 'application/json' } });
-                if (!res.ok) { throw new Error('status ' + res.status); }
-                const json = await res.json();
-                this.suggest.items = (json.data || []).filter(s => ['surah', 'verse', 'juz', 'hizb', 'page'].includes(s.type));
-            } catch (e) {
-                this.suggest.error = true; this.suggest.items = [];
-            } finally {
-                this.suggest.loading = false;
-                this.$nextTick(() => { if (window.lucide) { window.lucide.createIcons(); } });
+            const normalizeDigits = value => value
+                .replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+                .replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)));
+            const value = normalizeDigits(q.trim());
+            const lower = value.toLocaleLowerCase();
+            const items = [];
+            const add = item => {
+                const key = `${item.type}:${item.verse_key || item.surah_number || item.number}`;
+                if (!items.some(existing => `${existing.type}:${existing.verse_key || existing.surah_number || existing.number}` === key)) {
+                    items.push(item);
+                }
+            };
+
+            const verseMatch = value.match(/^(\d{1,3})\s*:\s*(\d{1,3})$/);
+            if (verseMatch) {
+                const surahNumber = Number(verseMatch[1]);
+                const verseNumber = Number(verseMatch[2]);
+                const surah = this.surahs.find(item => item.number === surahNumber);
+                if (surah && verseNumber >= 1 && verseNumber <= surah.verses) {
+                    add({ type: 'verse', surah_number: surahNumber, verse_key: `${surahNumber}:${verseNumber}`, label: `${surah.nameAr} (${surahNumber}:${verseNumber})` });
+                }
             }
+
+            const navigationPatterns = [
+                { type: 'juz', regex: /^(?:juz|جزء)\s*(\d{1,2})$/i, max: 30, label: @js(__('quran.nav.juz')) },
+                { type: 'hizb', regex: /^(?:hizb|حزب)\s*(\d{1,2})$/i, max: 60, label: @js(__('quran.nav.hizb')) },
+                { type: 'page', regex: /^(?:page|صفحة)\s*(\d{1,3})$/i, max: 604, label: @js(__('quran.nav.page')) },
+            ];
+            navigationPatterns.forEach(pattern => {
+                const match = value.match(pattern.regex);
+                const number = match ? Number(match[1]) : 0;
+                if (number >= 1 && number <= pattern.max) {
+                    add({ type: pattern.type, number, label: `${pattern.label} ${number}` });
+                }
+            });
+
+            this.surahs
+                .filter(surah => String(surah.number) === value || surah.nameAr.includes(value) || surah.nameEn.toLocaleLowerCase().includes(lower))
+                .slice(0, 8)
+                .forEach(surah => add({ type: 'surah', surah_number: surah.number, label: `${surah.nameAr} — ${surah.nameEn}` }));
+
+            this.suggest.items = items.slice(0, 8);
+            this.suggest.loading = false;
+            this.$nextTick(() => { if (window.lucide) { window.lucide.createIcons(); } });
         },
         gotoSuggestion(s) {
             if (!s) { return; }
@@ -295,7 +327,7 @@
                         aria-label="{{ __('quran.public.search_placeholder') }}"
                     >
 
-                    {{-- Navigational autocomplete — powered by /api/v1/quran/search/suggest --}}
+                    {{-- Navigational autocomplete uses the 114 surahs already embedded in this page. --}}
                     <div
                         x-show="suggest.open"
                         x-transition.opacity
@@ -329,7 +361,7 @@
                             </div>
                         </template>
 
-                        <template x-for="(s, i) in suggest.items" :key="s.type + '-' + (s.verse_key || s.surah_number)">
+                        <template x-for="(s, i) in suggest.items" :key="s.type + '-' + (s.verse_key || s.surah_number || s.number)">
                             <button
                                 type="button"
                                 role="option"

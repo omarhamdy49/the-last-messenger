@@ -33,7 +33,13 @@ class MediaProgramResource extends JsonResource
             'display_order' => $this->display_order,
             'poster_url' => $this->poster_url,
             'banner_url' => $this->banner_url,
-            'episodes_count' => $this->whenLoaded('episodes', fn () => $this->episodes->count()),
+            // Repositories use withCount('episodes'), which sets an attribute —
+            // not the relation — so whenHas() is what actually resolves here.
+            'episodes_count' => $this->whenHas(
+                'episodes_count',
+                fn (): int => (int) $this->episodes_count,
+                fn () => $this->whenLoaded('episodes', fn (): int => $this->episodes->count()),
+            ),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

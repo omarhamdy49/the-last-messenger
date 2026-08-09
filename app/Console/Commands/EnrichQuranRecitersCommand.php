@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Domain\Quran\Models\Reciter;
+use App\Domain\Quran\Services\QuranCacheKeys;
 use Illuminate\Console\Command;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Cache;
@@ -156,7 +157,7 @@ class EnrichQuranRecitersCommand extends Command
                 ($entity['country'] ? ' '.$entity['country'] : ''));
         }
 
-        Cache::flush();
+        QuranCacheKeys::flushReciters();
 
         $this->newLine();
         $this->info("Matched {$matched} reciters on Wikidata — set {$images} portraits, {$countries} countries.");

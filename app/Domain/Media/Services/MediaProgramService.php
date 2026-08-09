@@ -116,6 +116,12 @@ class MediaProgramService extends BaseService
             'views_count' => 0,
         ]);
 
+        // The public rows (featured/trending/hero/per-category/stats) live under
+        // literal MediaCacheKeys, which the versioned bump inside create() does
+        // not reach — a new published program would be missing from them for up
+        // to the 30-min TTL. Same invalidation update/delete already perform.
+        $this->repository->clearCacheForModel($program->id);
+
         return $program;
     }
 

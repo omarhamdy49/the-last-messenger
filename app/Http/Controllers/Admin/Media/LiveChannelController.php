@@ -9,12 +9,15 @@ use App\Domain\Media\DTOs\UpdateLiveChannelData;
 use App\Domain\Media\Enums\LiveStatus;
 use App\Domain\Media\Models\LiveChannel;
 use App\Domain\Media\Services\LiveChannelService;
+use App\Domain\Media\Services\MediaAttachmentService;
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\LiveChannel\StoreLiveChannelRequest;
 use App\Http\Requests\Admin\LiveChannel\UpdateLiveChannelRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -25,6 +28,7 @@ class LiveChannelController extends Controller
 {
     public function __construct(
         protected LiveChannelService $channelService,
+        protected MediaAttachmentService $attachments,
         protected AdminLoggerService $logger,
     ) {}
 
@@ -62,14 +66,20 @@ class LiveChannelController extends Controller
     public function store(StoreLiveChannelRequest $request): RedirectResponse
     {
         $dto = CreateLiveChannelData::fromRequest($request);
-        $channel = $this->channelService->createChannel($dto);
 
-        $this->syncThumbnail($channel, $dto->thumbnail, $dto->thumbnailId);
+        // One unit of work — a channel row without translations is unusable.
+        $channel = DB::transaction(function () use ($dto): LiveChannel {
+            $channel = $this->channelService->createChannel($dto);
 
-        $channel->syncTranslations([
-            'title' => $dto->title,
-            'description' => $dto->description,
-        ]);
+            $channel->syncTranslations([
+                'title' => $dto->title,
+                'description' => $dto->description,
+            ]);
+
+            $this->syncThumbnail($channel, $dto->thumbnail, $dto->thumbnailId);
+
+            return $channel;
+        });
 
         $this->logger->logCreate($channel, $request->user());
 
@@ -114,14 +124,19 @@ class LiveChannelController extends Controller
 
         $oldValues = $old->toArray();
         $dto = UpdateLiveChannelData::fromRequest($request);
-        $channel = $this->channelService->updateChannel($id, $dto);
 
-        $this->syncThumbnail($channel, $dto->thumbnail, $dto->thumbnailId);
+        $channel = DB::transaction(function () use ($id, $dto): LiveChannel {
+            $channel = $this->channelService->updateChannel($id, $dto);
 
-        $channel->syncTranslations([
-            'title' => $dto->title,
-            'description' => $dto->description,
-        ]);
+            $channel->syncTranslations([
+                'title' => $dto->title,
+                'description' => $dto->description,
+            ]);
+
+            $this->syncThumbnail($channel, $dto->thumbnail, $dto->thumbnailId);
+
+            return $channel;
+        });
 
         $this->logger->logUpdate($channel, $oldValues, $channel->toArray(), $request->user());
 
@@ -164,27 +179,10 @@ class LiveChannelController extends Controller
 
     /**
      * Attach the thumbnail from a direct upload or a media-library pick.
+     * An upload wins over a library id when the form somehow sends both.
      */
-    private function syncThumbnail(LiveChannel $channel, ?\Illuminate\Http\UploadedFile $file, ?int $libraryMediaId): void
+    private function syncThumbnail(LiveChannel $channel, ?UploadedFile $file, ?int $libraryMediaId): void
     {
-        if ($file === null && $libraryMediaId === null) {
-            return;
-        }
-
-        $channel->clearMediaCollection('thumbnail');
-
-        if ($file !== null) {
-            $channel->addMedia($file)->toMediaCollection('thumbnail');
-
-            return;
-        }
-
-        // Library originals are encrypted at rest — materialize a plaintext copy.
-        $copy = app(\App\Services\MediaService::class)->temporaryOriginalCopyById($libraryMediaId);
-        if ($copy !== null) {
-            $channel->addMedia($copy->path)
-                ->usingFileName($copy->filename)
-                ->toMediaCollection('thumbnail');
-        }
+        $this->attachments->attach($channel, 'thumbnail', $file ?? $libraryMediaId);
     }
 }

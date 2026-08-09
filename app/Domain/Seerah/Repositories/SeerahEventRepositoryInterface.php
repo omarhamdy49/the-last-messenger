@@ -73,4 +73,16 @@ interface SeerahEventRepositoryInterface extends RepositoryInterface
      * @param  array<int>  $ids
      */
     public function bulkUpdateStatus(array $ids, string $status): int;
+
+    /**
+     * Fetch events for export with the relations an export row needs
+     * (translations, type, participants) and optional whitelisted filters
+     * (event_type, start_date, end_date, search).
+     *
+     * Admin path — drafts are included so an export mirrors the admin index.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Collection<int, SeerahEvent>
+     */
+    public function getForExport(array $filters = []): Collection;
 }

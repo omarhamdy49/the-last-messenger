@@ -281,8 +281,8 @@ class ApiRouteSmokeTest extends TestCase
             'v1.auth.register' => [
                 'name' => 'Route Smoke Registration',
                 'email' => 'route-smoke-registration@example.com',
-                'password' => 'password123',
-                'password_confirmation' => 'password123',
+                'password' => 'Strong!Password123',
+                'password_confirmation' => 'Strong!Password123',
             ],
             'v1.filters.store', 'v1.filters.update' => [
                 'name' => 'Route smoke filter',
@@ -301,7 +301,7 @@ class ApiRouteSmokeTest extends TestCase
             ],
             'v1.interactions.store' => [
                 'interactable_type' => 'Article',
-                'interactable_id' => $this->routeParameters['v1.articles.show:slug'],
+                'interactable_id' => Article::query()->where('slug', 'route-smoke-article')->value('id'),
                 'interaction_type' => 'view',
             ],
             'v1.media.progress.store' => [

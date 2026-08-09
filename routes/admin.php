@@ -187,36 +187,57 @@ Route::prefix('su/portal/v1/admin')
         //     'destroy' => 'admin.media-programs.destroy',
         // ]);
 
-        // User Management Routes (Super Admin Only)
-        Route::prefix('users')->group(function (): void {
-            Route::get('/search', [UserController::class, 'search'])->name('admin.users.search');
-            Route::post('/bulk-delete', [UserController::class, 'bulkDelete'])->name('admin.users.bulk-delete');
-            Route::post('/{id}/roles', [UserController::class, 'assignRoles'])->name('admin.users.assign-roles');
+        // User Management (admins and super admins)
+        //
+        // The enclosing group admits editors, so these routes carry their own
+        // gate. Admins run day-to-day user administration; the request classes
+        // add the finer rule that only a super_admin may grant super_admin or
+        // touch an account that already holds it.
+        Route::middleware('role:super_admin|admin,admin')->group(function (): void {
+            Route::prefix('users')->group(function (): void {
+                Route::get('/search', [UserController::class, 'search'])->name('admin.users.search');
+                Route::post('/bulk-delete', [UserController::class, 'bulkDelete'])->name('admin.users.bulk-delete');
+                Route::post('/{id}/roles', [UserController::class, 'assignRoles'])->name('admin.users.assign-roles');
+            });
+            Route::resource('users', UserController::class)->names([
+                'index' => 'admin.users.index',
+                'create' => 'admin.users.create',
+                'store' => 'admin.users.store',
+                'show' => 'admin.users.show',
+                'edit' => 'admin.users.edit',
+                'update' => 'admin.users.update',
+                'destroy' => 'admin.users.destroy',
+            ]);
         });
-        Route::resource('users', UserController::class)->names([
-            'index' => 'admin.users.index',
-            'create' => 'admin.users.create',
-            'store' => 'admin.users.store',
-            'show' => 'admin.users.show',
-            'edit' => 'admin.users.edit',
-            'update' => 'admin.users.update',
-            'destroy' => 'admin.users.destroy',
-        ]);
 
-        // Role & Permission Management Routes (Super Admin Only)
-        Route::prefix('roles')->group(function (): void {
-            Route::post('/{id}/permissions', [RoleController::class, 'assignPermissions'])->name('admin.roles.assign-permissions');
+        // Reading the role catalogue is part of user administration — the edit
+        // form needs it to render the assignable-roles list.
+        Route::middleware('role:super_admin|admin,admin')->group(function (): void {
+            Route::resource('roles', RoleController::class)->only(['index', 'show'])->names([
+                'index' => 'admin.roles.index',
+                'show' => 'admin.roles.show',
+            ]);
         });
-        Route::get('/permissions', [RoleController::class, 'permissions'])->name('admin.permissions.index');
-        Route::resource('roles', RoleController::class)->names([
-            'index' => 'admin.roles.index',
-            'create' => 'admin.roles.create',
-            'store' => 'admin.roles.store',
-            'show' => 'admin.roles.show',
-            'edit' => 'admin.roles.edit',
-            'update' => 'admin.roles.update',
-            'destroy' => 'admin.roles.destroy',
-        ]);
+
+        // Role & Permission Definition (Super Admin Only)
+        //
+        // Editing what a role *can do* is privilege definition, not user
+        // administration: an admin who could add permissions to their own role
+        // would escalate themselves. Assigning existing roles to users is
+        // handled by the user-management group above.
+        Route::middleware('role:super_admin,admin')->group(function (): void {
+            Route::prefix('roles')->group(function (): void {
+                Route::post('/{id}/permissions', [RoleController::class, 'assignPermissions'])->name('admin.roles.assign-permissions');
+            });
+            Route::get('/permissions', [RoleController::class, 'permissions'])->name('admin.permissions.index');
+            Route::resource('roles', RoleController::class)->except(['index', 'show'])->names([
+                'create' => 'admin.roles.create',
+                'store' => 'admin.roles.store',
+                'edit' => 'admin.roles.edit',
+                'update' => 'admin.roles.update',
+                'destroy' => 'admin.roles.destroy',
+            ]);
+        });
 
         // Activity Log Routes
         Route::prefix('activity-logs')->name('admin.activity-logs.')->group(function (): void {

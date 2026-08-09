@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
-use App\Domain\Media\Models\EpisodeWatchProgress;
 use App\Domain\Media\Services\MediaEpisodeService;
 use App\Domain\Media\Services\MediaProgramService;
+use App\Exceptions\Domain\ResourceNotFoundException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreWatchProgressRequest;
 use App\Http\Resources\MediaEpisodeResource;
@@ -16,11 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * Public Media API Controller
- *
- * All public endpoints are unauthenticated except:
- *   POST  /media/progress           — requires auth:sanctum
- *   GET   /media/continue-watching  — requires auth:sanctum
+ * Authenticated media API controller.
  */
 class MediaProgramController extends Controller
 {
@@ -37,11 +33,18 @@ class MediaProgramController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $validated = $request->validate([
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'category' => ['sometimes', 'string', 'in:seerah,quran,hadith,kids,documentary'],
+            'sort' => ['sometimes', 'string', 'in:display_order,views_count,created_at,title'],
+            'dir' => ['sometimes', 'string', 'in:asc,desc'],
+        ]);
+
         try {
-            $perPage = min((int) $request->input('per_page', 15), 100);
-            $category = $request->input('category');
-            $sortBy = $request->input('sort', 'display_order');
-            $sortDir = $request->input('dir', 'asc');
+            $perPage = (int) ($validated['per_page'] ?? 15);
+            $category = $validated['category'] ?? null;
+            $sortBy = $validated['sort'] ?? 'display_order';
+            $sortDir = $validated['dir'] ?? 'asc';
 
             $programs = $this->programService->paginatePrograms($perPage, $category, $sortBy, $sortDir, null, true);
 
@@ -59,8 +62,12 @@ class MediaProgramController extends Controller
      */
     public function popular(Request $request): JsonResponse
     {
+        $validated = $request->validate([
+            'limit' => ['sometimes', 'integer', 'min:1', 'max:50'],
+        ]);
+
         try {
-            $limit = min((int) $request->input('limit', 12), 50);
+            $limit = (int) ($validated['limit'] ?? 12);
             $programs = $this->programService->getPopular($limit);
 
             return $this->success(MediaProgramResource::collection($programs));
@@ -75,8 +82,12 @@ class MediaProgramController extends Controller
      */
     public function recent(Request $request): JsonResponse
     {
+        $validated = $request->validate([
+            'limit' => ['sometimes', 'integer', 'min:1', 'max:50'],
+        ]);
+
         try {
-            $limit = min((int) $request->input('limit', 12), 50);
+            $limit = (int) ($validated['limit'] ?? 12);
             $programs = $this->programService->getRecent($limit);
 
             return $this->success(MediaProgramResource::collection($programs));
@@ -92,15 +103,14 @@ class MediaProgramController extends Controller
      */
     public function search(Request $request): JsonResponse
     {
-        $term = (string) $request->input('q', '');
-
-        if (mb_strlen($term) < 2) {
-            return $this->validationErrorResponse(['q' => 'Search term must be at least 2 characters.']);
-        }
+        $validated = $request->validate([
+            'q' => ['required', 'string', 'min:2', 'max:200'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+        ]);
 
         try {
-            $perPage = min((int) $request->input('per_page', 15), 100);
-            $programs = $this->programService->search($term, $perPage, true);
+            $perPage = (int) ($validated['per_page'] ?? 15);
+            $programs = $this->programService->search($validated['q'], $perPage, true);
 
             return $this->success(
                 MediaProgramResource::collection($programs)->response()->getData(true)
@@ -148,9 +158,13 @@ class MediaProgramController extends Controller
      */
     public function episodes(Request $request, string $slug): JsonResponse
     {
+        $validated = $request->validate([
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+        ]);
+
         try {
             $program = $this->programService->getBySlug($slug);
-            $perPage = min((int) $request->input('per_page', 20), 100);
+            $perPage = (int) ($validated['per_page'] ?? 20);
             $episodes = $this->episodeService->paginateByProgram($program->id, $perPage);
 
             return $this->success(
@@ -167,9 +181,13 @@ class MediaProgramController extends Controller
      */
     public function episode(Request $request, string $slug, int $episodeNumber): JsonResponse
     {
+        $validated = $request->validate([
+            'season' => ['sometimes', 'integer', 'min:1', 'max:1000'],
+        ]);
+
         try {
             $program = $this->programService->getBySlug($slug);
-            $season = (int) $request->input('season', 1);
+            $season = (int) ($validated['season'] ?? 1);
             $episode = $this->episodeService->getEpisode($program->id, $season, $episodeNumber);
             $next = $this->episodeService->findNextEpisode($episode);
 
@@ -189,22 +207,19 @@ class MediaProgramController extends Controller
      */
     public function storeProgress(StoreWatchProgressRequest $request): JsonResponse
     {
-        try {
-            $userId = $request->user()->id;
-            $validated = $request->validated();
+        $validated = $request->validated();
 
-            EpisodeWatchProgress::updateOrCreate(
-                [
-                    'user_id' => $userId,
-                    'episode_id' => (int) $validated['episode_id'],
-                ],
-                [
-                    'seconds' => (int) $validated['seconds'],
-                    'completed' => (bool) ($validated['completed'] ?? false),
-                ]
+        try {
+            $this->episodeService->saveProgress(
+                $request->user()->id,
+                (int) $validated['episode_id'],
+                (int) $validated['seconds'],
+                (bool) ($validated['completed'] ?? false),
             );
 
             return $this->success(null, 'Progress saved');
+        } catch (ResourceNotFoundException $e) {
+            return $this->notFound('Episode not found');
         } catch (\Throwable $e) {
             return $this->error('Failed to save progress', 500);
         }
@@ -217,23 +232,15 @@ class MediaProgramController extends Controller
      */
     public function continueWatching(Request $request): JsonResponse
     {
+        $validated = $request->validate([
+            'limit' => ['sometimes', 'integer', 'min:1', 'max:50'],
+        ]);
+
         try {
             $userId = $request->user()->id;
-            $limit = min((int) $request->input('limit', 10), 50);
+            $limit = (int) ($validated['limit'] ?? 10);
 
-            $progress = EpisodeWatchProgress::query()
-                ->select(['user_id', 'episode_id', 'seconds', 'completed', 'updated_at'])
-                ->with([
-                    'episode:id,program_id,season_number,episode_number,slug,duration_seconds,video_url,is_featured',
-                    'episode.translations:id,media_episode_id,locale,title,is_ready',
-                    'episode.program:id,slug,category',
-                    'episode.program.translations:id,media_program_id,locale,title,is_ready',
-                ])
-                ->where('user_id', $userId)
-                ->where('completed', false)
-                ->orderByDesc('updated_at')
-                ->limit($limit)
-                ->get();
+            $progress = $this->episodeService->getContinueWatching($userId, $limit);
 
             $result = $progress->map(fn ($p) => [
                 'episode' => new MediaEpisodeResource($p->episode),

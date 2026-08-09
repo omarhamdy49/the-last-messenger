@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use App\Http\Requests\Admin\Concerns\ProtectsPrivilegedUsers;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -11,9 +12,11 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class StoreUserRequest extends FormRequest
 {
+    use ProtectsPrivilegedUsers;
+
     public function authorize(): bool
     {
-        return $this->user()->hasRole('super_admin');
+        return $this->authorizeUserManagement();
     }
 
     public function rules(): array

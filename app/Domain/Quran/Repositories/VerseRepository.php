@@ -91,7 +91,7 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
      */
     public function getActiveTranslationResources(): Collection
     {
-        return Cache::remember('quran_translation_resources_active', self::CACHE_TTL, fn () => TranslationResource::query()
+        return Cache::remember(QuranCacheKeys::activeTranslationResources(), self::CACHE_TTL, fn () => TranslationResource::query()
             ->where('is_active', true)
             ->where('language', '!=', 'ar')
             ->orderBy('language')
@@ -110,7 +110,7 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
     public function getSurahTranslationByResource(int $surahNumber, int $resourceId): array
     {
         return Cache::remember(
-            "public_quran_surah_translation_{$surahNumber}_{$resourceId}",
+            QuranCacheKeys::surahTranslationByResource($surahNumber, $resourceId),
             self::CACHE_TTL,
             function () use ($surahNumber, $resourceId): array {
                 $verseIds = Verse::query()

@@ -190,15 +190,15 @@ class VerseService extends BaseService
     }
 
     /**
-     * Calculate verse_key (cumulative verse number across entire Quran)
-     * This is a simplified calculation - actual implementation may need adjustment
+     * Build the canonical "surah:verse" key (e.g. "2:255").
+     *
+     * This previously returned a cumulative verse count as an int, so an
+     * admin-created verse got a key like 262 instead of "2:255" — breaking
+     * lookups, adjacent-verse navigation and every tafsir join keyed on it.
+     * quran_surahs.id is the surah number, so no query is needed.
      */
-    protected function calculateVerseKey(int $surahId, int $verseNumber): int
+    protected function calculateVerseKey(int $surahId, int $verseNumber): string
     {
-        // Get all verses count before this surah
-        $versesBeforeSurah = \App\Domain\Quran\Models\Surah::where('id', '<', $surahId)
-            ->sum('verses_count');
-
-        return (int) $versesBeforeSurah + $verseNumber;
+        return $surahId.':'.$verseNumber;
     }
 }

@@ -47,11 +47,13 @@ class TagController extends Controller
         // Get filters from request
         $filters = $request->only(['type', 'date_from', 'date_to']);
 
-        // Fetch paginated data with filters applied
+        // Fetch paginated data with filters applied. Translations are eager
+        // loaded because every row below resolves its name from them.
         $tags = $this->service->paginate(
             perPage: $perPage,
             search: $search,
-            filters: $filters
+            filters: $filters,
+            with: ['translations:id,tag_id,locale,name']
         );
 
         // Get statistics for stats cards

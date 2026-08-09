@@ -9,6 +9,7 @@ use App\Models\MediaSizePreset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class MediaSettingsController extends AdminController
 {
@@ -82,11 +83,15 @@ class MediaSettingsController extends AdminController
             'items.*.sort_order' => ['required', 'integer', 'min:0'],
         ]);
 
-        foreach ($validated['items'] as $item) {
-            MediaSizePreset::query()
-                ->whereKey($item['id'])
-                ->update(['sort_order' => $item['sort_order']]);
-        }
+        // All-or-nothing: a failure part-way through used to leave the presets
+        // half-reordered, with no way for the caller to tell.
+        DB::transaction(function () use ($validated): void {
+            foreach ($validated['items'] as $item) {
+                MediaSizePreset::query()
+                    ->whereKey($item['id'])
+                    ->update(['sort_order' => $item['sort_order']]);
+            }
+        });
 
         return $this->successResponse(
             MediaSizePreset::query()->ordered()->get(),

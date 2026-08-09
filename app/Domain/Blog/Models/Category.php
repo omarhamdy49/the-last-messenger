@@ -190,10 +190,22 @@ class Category extends Model
     }
 
     /**
-     * Check if category has children
+     * Check if category has children.
+     *
+     * Prefers already-materialised data (an eager-loaded `children` relation or
+     * a `children_exists` column from withExists()) so that rendering a list of
+     * categories does not fire one EXISTS query per row.
      */
     public function hasChildren(): bool
     {
+        if ($this->relationLoaded('children')) {
+            return $this->getRelation('children')->isNotEmpty();
+        }
+
+        if (array_key_exists('children_exists', $this->attributes)) {
+            return (bool) $this->attributes['children_exists'];
+        }
+
         return $this->children()->exists();
     }
 
@@ -203,6 +215,28 @@ class Category extends Model
     public function isRoot(): bool
     {
         return $this->parent_id === null;
+    }
+
+    /**
+     * Resolve `name` in the active locale, falling back to Arabic.
+     *
+     * The column was moved to category_translations, which left every
+     * `$category->name` read in the views resolving to null. This keeps those
+     * reads working; writes go through syncTranslations, so there is no setter.
+     */
+    public function getNameAttribute(): ?string
+    {
+        return $this->getTranslation('name', app()->getLocale())
+            ?? $this->getTranslation('name', 'ar');
+    }
+
+    /**
+     * Resolve `description` in the active locale, falling back to Arabic.
+     */
+    public function getDescriptionAttribute(): ?string
+    {
+        return $this->getTranslation('description', app()->getLocale())
+            ?? $this->getTranslation('description', 'ar');
     }
 
     /**
@@ -312,7 +346,7 @@ class Category extends Model
      */
     public function isLeaf(): bool
     {
-        return ! $this->children()->exists();
+        return ! $this->hasChildren();
     }
 
     /**
@@ -332,28 +366,54 @@ class Category extends Model
     }
 
     /**
-     * Get category tree as nested array
+     * Get category tree as nested array.
+     *
+     * Loads every category (and its translations) in two queries and assembles
+     * the nesting in memory; the previous recursive implementation issued a
+     * query per node plus an EXISTS check and a lazy translation load.
      */
     public static function getTree(?int $parentId = null, string $language = 'ar'): array
     {
-        $categories = static::where('parent_id', $parentId)
+        $categories = static::query()
+            ->with('translations')
             ->orderBy('display_order')
             ->get();
 
-        $tree = [];
+        // Bucket by parent, using 0 for roots (ids are auto-increment, never 0).
+        $byParent = [];
         foreach ($categories as $category) {
-            $tree[] = [
+            $byParent[$category->parent_id ?? 0][] = $category;
+        }
+
+        return static::buildTreeNodes($byParent, $parentId, $language);
+    }
+
+    /**
+     * Build the nested node array for one level of the pre-bucketed tree.
+     *
+     * @param  array<int, array<int, static>>  $byParent
+     * @return array<int, array<string, mixed>>
+     */
+    protected static function buildTreeNodes(array $byParent, ?int $parentId, string $language): array
+    {
+        $nodes = [];
+
+        foreach ($byParent[$parentId ?? 0] ?? [] as $category) {
+            $children = static::buildTreeNodes($byParent, $category->id, $language);
+
+            $nodes[] = [
                 'id' => $category->id,
                 'name' => $category->getNameInLanguage($language),
                 'slug' => $category->slug,
+                'type' => $category->type?->value,
                 'icon' => $category->icon,
                 'color' => $category->color,
                 'depth' => $category->depth,
-                'has_children' => $category->hasChildren(),
-                'children' => static::getTree($category->id, $language),
+                'has_children' => $children !== [],
+                'children' => $children,
             ];
         }
 
-        return $tree;
+        return $nodes;
     }
 }

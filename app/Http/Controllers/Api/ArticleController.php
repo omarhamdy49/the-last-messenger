@@ -10,6 +10,7 @@ use App\Repositories\ArticleRepository;
 use App\Support\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class ArticleController extends Controller
 {
@@ -50,9 +51,7 @@ class ArticleController extends Controller
             $paginator = $this->repository->getArticlesByTag((int) $validated['tag'], $perPage);
 
             return $this->paginatedResponse(
-                ArticleResource::collection($paginator)->response()->getData(true)['data']
-                    ? $paginator
-                    : $paginator,
+                $this->asResources($paginator),
                 'Articles retrieved successfully'
             );
         }
@@ -67,7 +66,7 @@ class ArticleController extends Controller
             order: 'desc'
         );
 
-        return $this->paginatedResponse($paginator, 'Articles retrieved successfully');
+        return $this->paginatedResponse($this->asResources($paginator), 'Articles retrieved successfully');
     }
 
     /**
@@ -136,7 +135,7 @@ class ArticleController extends Controller
             perPage: $perPage
         );
 
-        return $this->paginatedResponse($paginator, 'Search results retrieved successfully');
+        return $this->paginatedResponse($this->asResources($paginator), 'Search results retrieved successfully');
     }
 
     /**
@@ -160,5 +159,18 @@ class ArticleController extends Controller
             new ArticleResource($article),
             'Article retrieved successfully'
         );
+    }
+
+    /**
+     * Replace the paginator's models with ArticleResource instances.
+     *
+     * ApiResponse::paginatedResponse serialises $paginator->items() verbatim, so
+     * the items must already be resources: raw models would emit every column
+     * of every eager-loaded relation — including writer.email — on what is a
+     * public, unauthenticated endpoint.
+     */
+    private function asResources(LengthAwarePaginator $paginator): LengthAwarePaginator
+    {
+        return $paginator->through(static fn ($article): ArticleResource => new ArticleResource($article));
     }
 }

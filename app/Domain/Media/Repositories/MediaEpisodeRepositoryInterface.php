@@ -97,4 +97,14 @@ interface MediaEpisodeRepositoryInterface extends RepositoryInterface
      * Returns EpisodeWatchProgress models with episode + program translations loaded.
      */
     public function getContinueWatching(int $userId, int $limit = 10): Collection;
+
+    /**
+     * Whether the episode exists and passes the public visibility filter.
+     */
+    public function publicEpisodeExists(int $episodeId): bool;
+
+    /**
+     * Upsert a user's watch position for an episode.
+     */
+    public function saveWatchProgress(int $userId, int $episodeId, int $seconds, bool $completed): void;
 }

@@ -17,7 +17,11 @@ class AddRequestId
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $requestId = $request->header('X-Request-Id', (string) Str::uuid());
+        $candidate = $request->header('X-Request-Id');
+        $requestId = is_string($candidate)
+            && preg_match('/\A[A-Za-z0-9][A-Za-z0-9._:-]{7,99}\z/', $candidate) === 1
+                ? $candidate
+                : (string) Str::uuid();
         $request->headers->set('X-Request-Id', $requestId);
 
         $response = $next($request);

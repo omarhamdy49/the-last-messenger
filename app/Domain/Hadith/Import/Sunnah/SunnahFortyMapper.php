@@ -132,13 +132,6 @@ final class SunnahFortyMapper
 
     private function keyPart(string $number): string
     {
-        $part = preg_replace('/[^A-Za-z0-9._-]+/u', '-', trim($number)) ?? '';
-        $part = trim($part, '-');
-
-        if ($part === '') {
-            throw new RuntimeException("Cannot derive reference key from hadith number '{$number}'.");
-        }
-
-        return $part;
+        return ReferenceKey::part($number);
     }
 }

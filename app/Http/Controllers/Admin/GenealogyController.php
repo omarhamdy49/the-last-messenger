@@ -361,16 +361,24 @@ class GenealogyController extends Controller
      */
     private function stats(): array
     {
-        return [
-            'people' => Muslim::query()->count(),
+        // One pass over `muslims` with conditional aggregates instead of four
+        // separate COUNT queries on the same table; `edges` lives elsewhere so
+        // it stays its own query.
+        $row = Muslim::query()->toBase()->selectRaw(
+            'COUNT(*) AS people,'
             // Anyone with at least one recorded parent — the rest are floating
             // and will never appear in a tree that is not rooted at them.
-            'linked' => Muslim::query()
-                ->where(fn ($query) => $query->whereNotNull('father_id')->orWhereNotNull('mother_id'))
-                ->count(),
-            'roots' => Muslim::query()->whereNull('father_id')->whereNull('mother_id')->count(),
+            .' SUM(father_id IS NOT NULL OR mother_id IS NOT NULL) AS linked,'
+            .' SUM(father_id IS NULL AND mother_id IS NULL) AS roots,'
+            .' SUM(hide_from_tree = 1) AS hidden'
+        )->first();
+
+        return [
+            'people' => (int) ($row->people ?? 0),
+            'linked' => (int) ($row->linked ?? 0),
+            'roots' => (int) ($row->roots ?? 0),
             'edges' => MuslimRelationship::query()->count(),
-            'hidden' => Muslim::query()->where('hide_from_tree', true)->count(),
+            'hidden' => (int) ($row->hidden ?? 0),
         ];
     }
 }

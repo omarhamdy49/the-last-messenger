@@ -22,19 +22,20 @@ the-last-messenger-be/
 │   │   │   ├── Models/
 │   │   │   ├── Repositories/
 │   │   │   └── Services/
-│   │   ├── Hadith/                     # Hadith domain (CQRS pattern)
-│   │   │   ├── Application/
-│   │   │   │   ├── Commands/
-│   │   │   │   ├── DTOs/
-│   │   │   │   ├── Handlers/
-│   │   │   │   └── Queries/
-│   │   │   ├── Enums/
-│   │   │   ├── Events/
-│   │   │   ├── Exceptions/
+│   │   ├── Content/                    # Site content (home, menus, pages, FAQs)
 │   │   │   ├── Models/
 │   │   │   ├── Repositories/
-│   │   │   ├── Services/
-│   │   │   └── ValueObjects/
+│   │   │   └── Services/
+│   │   ├── Hadith/                     # Hadith domain (models + Sunnah.com import)
+│   │   │   ├── Enums/                  # Grade
+│   │   │   ├── Import/Sunnah/          # API client, mappers, import services
+│   │   │   ├── Models/                 # Hadith, HadithBook, HadithChapter,
+│   │   │   │                           #   HadithCollection, HadithNarrator
+│   │   │   └── Repositories/
+│   │   ├── Media/                      # Media programs, episodes, live channels
+│   │   │   ├── Models/
+│   │   │   ├── Repositories/
+│   │   │   └── Services/
 │   │   ├── Quran/                      # Quran domain (CQRS pattern)
 │   │   │   ├── Application/
 │   │   │   │   ├── Commands/
@@ -54,17 +55,14 @@ the-last-messenger-be/
 │   │   │   ├── Models/
 │   │   │   ├── Repositories/
 │   │   │   └── Services/
-│   │   ├── Sahaba/                     # Companions domain
-│   │   │   ├── Enums/
-│   │   │   ├── Exporters/
-│   │   │   ├── Models/
+│   │   ├── People/                     # Companions + genealogy (Muslim model)
+│   │   │   ├── Models/                 # Muslim, MuslimRelationship, IslamicRole
 │   │   │   ├── Repositories/
-│   │   │   └── Services/
-│   │   ├── Genealogy/                  # Family tree domain
+│   │   │   └── Services/               # GenealogyTreeService, MuslimDirectory…
+│   │   ├── Topics/                     # Cross-module topic grouping (morph map)
 │   │   │   ├── Enums/
 │   │   │   ├── Models/
-│   │   │   ├── Repositories/
-│   │   │   └── Services/
+│   │   │   └── Repositories/
 │   │   └── Shared/                     # Cross-cutting concerns
 │   │       ├── Application/
 │   │       │   ├── Commands/
@@ -335,42 +333,59 @@ primary: linear-gradient(135deg, #0056b3 0%, #218838 100%)
 - Authentication views (RTL-enabled)
 
 ### 5. Hadith Module
-**Status:** ✅ Implemented (Domain-Driven Design with CQRS)
+**Status:** 🟡 Rebuilt — data layer + import pipeline only, no admin/public UI yet
+
+> The module was rebuilt. There is **no** CQRS `Application/` layer, **no** Hadith
+> admin controllers, **no** `HadithResource`, and **no** `SyncBookJob` /
+> `SyncCollectionJob` / `SyncHadithCommand`. Earlier revisions of this file
+> described that (now deleted) implementation — do not code against it.
 
 **Features:**
-- Full CQRS pattern (Commands, Queries, Handlers in `app/Domain/Hadith/Application/`)
-- Collections, Books, Chapters, Hadiths, Narrators, Scholars, Grading Levels, Themes
-- Value Objects for immutable domain concepts (`app/Domain/Hadith/ValueObjects/`)
-- Domain Events for cross-module communication (`app/Domain/Hadith/Events/`)
-- Sync commands: `SyncHadithCommand`, `SyncHadithFromJsonCommand`
-- Queue jobs: `SyncBookJob`, `SyncCollectionJob`
+- 5 models: `Hadith`, `HadithBook`, `HadithChapter`, `HadithCollection`, `HadithNarrator`
+- `Enums/Grade` — grades are `sahih|hasan|daif|mawdu`, or NULL when the source is
+  ambiguous (`SunnahGradeMapper` refuses to guess and keeps `raw_grade` as evidence)
+- Sunnah.com import pipeline in `app/Domain/Hadith/Import/Sunnah/`: rate-limited API
+  client, mappers, count-parity gates, SHA-256 snapshot drift detection, chunked
+  upserts keyed on `(collection_id, reference_key)` — safely re-runnable
+- Cross-module people references go through the Shared `PersonLookup` contract
+  (never a direct relation to the People domain); enforced by `deptrac.yaml`
 
 **Key Files:**
-- `app/Domain/Hadith/` — full domain structure
-- `app/Http/Controllers/Admin/CollectionController.php`
-- `app/Http/Controllers/Admin/NarratorController.php`
-- `app/Http/Controllers/Admin/ScholarController.php`
-- `app/Http/Controllers/Admin/GradingLevelController.php`
-- `app/Http/Controllers/Admin/ThemeController.php`
-- `app/Http/Resources/HadithResource.php` (+ HadithCollection, HadithBook, HadithNarrator, HadithTheme)
+- `app/Domain/Hadith/` — Enums, Import/Sunnah, Models, Repositories
+- `app/Console/Commands/ImportSunnahHadithCommand.php`
+- `app/Console/Commands/AuditNarratorDataCoverageCommand.php`
+- Tests: `tests/Feature/Hadith/`
+
+**Tables:** `hadiths`, `hadith_books`, `hadith_chapters`, `hadith_collections`,
+`hadith_narrators`. (Pre-rebuild names `hadith_hadiths` / `hadith_scholars` /
+`hadith_texts` no longer exist — code still referencing them will throw.)
+
+**Visibility:** always read through `Hadith::scopePubliclyVisible()`. A streaming
+re-import hides its collection (`is_published = false`) while the hadith rows stay
+published, so a bare `where('is_published', true)` will serve hidden content.
 
 ### 6. Quran Module
 **Status:** ✅ Implemented (Domain-Driven Design with CQRS)
 
 **Features:**
-- Full CQRS pattern matching Hadith module structure
-- Surahs, Verses, Tafseer, Reciters
-- Exporters for data output
-- Domain Events and Exceptions
+- CQRS layer in `app/Domain/Quran/Application/` (Commands, Queries, Handlers, DTOs).
+  Note it is consumed only by `Site\QuranController` / `Site\HomeController`; the
+  admin controllers still go through `QuranService` / `VerseService` directly, so
+  several reads exist in two places. Prefer the query stack for new read paths.
+- Surahs, Verses, Tafseer, Translations, Reciters, Recitations, Revelation contexts
+- `Enums/RevelationPlace` is the single source of truth for `makkah|madinah`; use
+  `RevelationPlace::fromExternal()` when importing (datasets say Meccan/Medina/…)
+- Verse identity is `verse_key` in `"surah:verse"` form (e.g. `"2:255"`)
 
 **Key Files:**
 - `app/Domain/Quran/` — full domain structure
-- `app/Http/Controllers/Admin/QuranController.php`
-- `app/Http/Controllers/Admin/SurahController.php`
-- `app/Http/Controllers/Admin/VerseController.php`
-- `app/Http/Controllers/Admin/TafseerController.php`
-- `app/Http/Controllers/Admin/ReciterController.php`
+- `app/Http/Controllers/Admin/Quran/{SurahController,VerseController,TafseerController,ReciterController,RecitationController,RevelationContextController,AiInquiryController}.php`
 - `app/Http/Resources/SurahResource.php`, `VerseResource.php`, `TafseerResource.php`
+
+> Verse CRUD lives at `admin.verses.*`. The old `admin.quran.*` verse routes and
+> their controller were **removed**: the controller was wired to the Surah
+> repository, so "delete verse" deleted the Surah with that id and cascaded to all
+> of its verses.
 
 ### 7. Seerah Module
 **Status:** ✅ Implemented
@@ -385,34 +400,53 @@ primary: linear-gradient(135deg, #0056b3 0%, #218838 100%)
 - `app/Http/Controllers/Admin/SeerahEventController.php`
 - `app/Http/Resources/SeerahEventResource.php`, `SeerahParticipantResource.php`
 
-### 8. Sahaba (Companions) Module
+### 8. People Module (Companions + Genealogy)
+**Status:** ✅ Implemented
+
+> Replaces the former `Sahaba` and `Genealogy` domains, which no longer exist —
+> companions and genealogy are one bounded context around the `Muslim` model.
+> There is no `Person` model and no `SahabiResource`.
+
+**Features:**
+- `Muslim`, `MuslimRelationship`, `IslamicRole`; profiles are translatable
+- Family tree read via **recursive CTEs** (one query per direction plus one link
+  query, nested in memory) with an explicit depth cap that reports `depth_capped`
+  — deliberately not per-node traversal
+- Write-time cycle detection and pair-order normalisation so the relationship
+  unique index is actually enforceable
+- Exposed to other domains only through the Shared `PersonLookup` contract
+- Idempotent import via `ImportMuslimScholarsSahabaCommand` (chunked transactions,
+  slug-collision pre-check, provenance hashes, dry-run support)
+
+**Key Files:**
+- `app/Domain/People/` — Models, Repositories, Services (`GenealogyTreeService`,
+  `MuslimDirectoryService`, `MuslimRelationshipService`)
+- `app/Http/Controllers/Admin/SahabiController.php`, `GenealogyController.php`
+- `app/Http/Resources/MuslimResource.php`, `IslamicRoleResource.php`
+### 9. Media Module
 **Status:** ✅ Implemented
 
 **Features:**
-- Companion profiles with translatable content
-- Exporters for data output
-- Enums for categorization
+- `MediaProgram`, `MediaEpisode`, `LiveChannel`, watch progress, YouTube playlist sync
+- Two distinct media systems, both intentional: **Spatie Media Library** for model
+  attachments (posters, thumbnails) and `App\Services\MediaService` for the
+  encrypted media library (libsodium secretstream + generated variants)
+- Public visibility filtering is centralised — use the repository/service methods
+  (`publicEpisodes()` scope etc.), never a hand-rolled query in a controller
 
 **Key Files:**
-- `app/Domain/Sahaba/` — domain structure
-- `app/Http/Controllers/Admin/SahabiController.php`
-- `app/Http/Resources/SahabiResource.php`
+- `app/Domain/Media/` — Models, Repositories, Services
+- `app/Http/Controllers/Admin/Media/`, `app/Http/Controllers/Api/MediaProgramController.php`
+- `app/Jobs/SyncYouTubePlaylistJob.php` (idempotent: episodes matched by YouTube video id)
 
-### 9. Genealogy Module
+### 10. Content & Topics Modules
 **Status:** ✅ Implemented
+- `Content` — home sections, menus, static pages, FAQs, site settings (all translatable)
+- `Topics` — groups content across modules via the morph map + `PublicVisibilityRegistry`,
+  without importing any other domain
 
-**Features:**
-- Family tree with Person model
-- Repository and Service layers
-
-**Key Files:**
-- `app/Domain/Genealogy/` — domain structure
-- `app/Http/Controllers/Admin/GenealogyController.php`
-- `app/Http/Resources/GenealogyResource.php`
-
-### 10. Planned / Partial Modules
-- 🟡 Media Programs Module (SeriesController exists; video management incomplete)
-- ❌ Search Module (Elasticsearch integration)
+### 11. Planned / Partial Modules
+- ❌ Search Module (Elasticsearch integration) — current search is MySQL FULLTEXT/LIKE
 - ❌ Notification System (Laravel Echo + Pusher)
 
 ## Architecture Patterns
@@ -423,15 +457,15 @@ The backend uses a DDD-inspired layered architecture with bounded contexts per m
 
 **Module organization** (`app/Domain/{ModuleName}/`):
 - Each domain module is self-contained with its own Models, Repositories, Services, Enums, and DTOs.
-- Hadith and Quran use a full **CQRS pattern**: writes go through Commands dispatched to Handlers; reads go through typed Query objects with dedicated Handlers.
+- **Quran** uses a **CQRS pattern**: writes go through Commands dispatched to Handlers; reads go through typed Query objects with dedicated Handlers. No other module does — Hadith's CQRS layer was deleted in the rebuild.
 - **Repository interfaces** define the contract in `app/Domain/{Module}/Repositories/`. Implementations are registered in the service container.
-- The `Shared` module (`app/Domain/Shared/`) provides cross-cutting concerns (base contracts, shared DTOs, common enums, generic exporters/importers). Domain modules must never import from each other — only from `Shared`.
-- **Value Objects** in Hadith (`app/Domain/Hadith/ValueObjects/`) enforce immutability for domain concepts (e.g. narrator chain, grading).
-- **Domain Events** (`app/Domain/Hadith/Events/`, `app/Domain/Quran/Events/`) decouple cross-module side-effects and are dispatched via Laravel's event system.
+- The `Shared` module (`app/Domain/Shared/`) provides cross-cutting concerns (base contracts, shared DTOs, common enums, generic exporters/importers). Domain modules must never import from each other — only from `Shared`. This holds in practice: there are zero cross-domain imports, and `deptrac.yaml` enforces it for Hadith.
+- Cross-module references use a Shared **contract**, not another module's Eloquent model — e.g. `PersonLookup` for people, and the morph map + `PublicVisibilityRegistry` for Topics.
 
-**Repository locations (dual):**
-- `app/Repositories/` — legacy app-level repositories (ArticleRepository, MediaRepository); kept for backward compatibility.
-- `app/Domain/*/Repositories/` — domain repositories following DDD; these are the authoritative implementations for all domain modules.
+**Repository locations (dual, deliberate):**
+- `app/Repositories/` — `ArticleRepository`, `MediaRepository`, `UserRepository`, `FavoriteRepository`. These are **live and authoritative** for their entities, not deprecated shims: `ArticleRepository` is the article repo used by admin, site and API.
+- `app/Domain/*/Repositories/` — domain repositories for everything else (Categories, Tags, Series, Media programs, Quran, Seerah, People, Content, Topics).
+- Each entity has exactly one repository; there is no duplication between the two locations. The split is a placement inconsistency to migrate eventually, not a source of drift.
 
 ### Repository Pattern
 All data access goes through repositories for better testability and separation of concerns.
@@ -446,20 +480,50 @@ class ArticleRepository {
 }
 ```
 
-### Translatable Models (Spatie)
-Models use Spatie's translatable trait for multi-language support.
+### Translatable Models (translation tables — NOT Spatie JSON columns)
+
+**This is the single most important convention to get right.** Translations live in
+sibling `*_translations` tables (`category_translations`, `tag_translations`,
+`series_translations`, `seerah_event_translations`, `media_program_translations`,
+`reciter_translations`, …). The old Spatie JSON columns — `categories.name`,
+`tags.name`, `series.title/description`, and the Seerah event/participant text
+columns — were **dropped** by the 2026-03-10 migrations.
+
+**Articles are the exception — they are mid-migration and carry both.** The
+`articles` table still has real JSON columns (`title`, `excerpt`, `content`,
+`seo_title`, `seo_description`) and `App\Models\Article` still uses Spatie's
+`HasTranslations` over them; `ArticleFactory` depends on that trait, since those
+columns are not in `casts()`. Meanwhile the authoritative read path is the
+`article_locale` table (`title`, `slug`, `excerpt`, `content`, `seo_metadata`,
+`is_ready`), which is what `ArticleRepository` eager-loads and searches. Read
+articles through `locales`; do **not** strip the trait until the JSON columns are
+actually dropped and the factory is migrated.
+
+Consequences to respect:
+
+- **Never** `select('name')` or `with('category:id,name')` on these tables, and never
+  `JSON_EXTRACT(name, '$.ar')`. Both throw — the column does not exist.
+- Search via the relation: `whereHas('translations', fn ($q) => $q->where('name', 'LIKE', "%{$term}%"))`.
+- Eager-load translations explicitly and constrain columns:
+  `with('translations:id,category_id,locale,name')`.
+- Read through the `HasLocalizedContent` trait (`getTranslation($field, $locale)` /
+  `getTranslations($field)`), or a model accessor where one exists.
+- Write through `syncTranslations()`, not attribute assignment.
 
 ```php
-class Article extends Model {
-    use HasTranslations;
+// Read (locale-aware, falls back to Arabic)
+$category->getTranslation('name', app()->getLocale())
+    ?? $category->getTranslation('name', 'ar');
 
-    public $translatable = ['title', 'content', 'excerpt', 'seo_title', 'seo_description'];
-
-    // Usage:
-    $article->setTranslation('title', 'ar', 'عنوان بالعربي');
-    $article->setTranslation('title', 'en', 'Title in English');
-}
+// Write
+$category->syncTranslations([
+    'ar' => ['name' => 'السيرة النبوية'],
+    'en' => ['name' => 'The Prophetic Biography'],
+]);
 ```
+
+Spatie `HasTranslations` remains installed but must **not** be added to these models;
+declaring `$translatable` for a column the table no longer has fatals on first write.
 
 ### Media Handling (Spatie Media Library)
 Advanced media management with automatic conversions.
@@ -809,17 +873,17 @@ public function test_converts_gregorian_to_hijri()
 
 ### Phase 1 - Backend Core (Current)
 - ✅ Admin panel design system
-- ✅ Multi-language support (Spatie Translatable)
-- ✅ Articles/Blog module (Admin CRUD; public API disabled)
-- ✅ Media management (Spatie Media Library)
+- ✅ Multi-language support (translation tables — see the Translatable Models section)
+- ✅ Articles/Blog module (admin CRUD + public API)
+- ✅ Media management (Spatie Media Library + encrypted MediaService library)
 - ✅ Categories & tags
-- ✅ User authentication & roles
-- ✅ Hadith module (DDD + CQRS, full admin CRUD)
-- ✅ Quran module (DDD + CQRS, full admin CRUD)
+- ✅ User authentication & roles (admin guard separate from the public `web` guard)
+- 🟡 Hadith module (models + Sunnah.com import pipeline; no admin or public UI yet)
+- ✅ Quran module (CQRS read stack, full admin CRUD)
 - ✅ Seerah module (events, timeline, admin CRUD)
-- ✅ Sahaba module (companion profiles, admin CRUD)
-- ✅ Genealogy module (family tree, admin CRUD)
-- 🟡 Media Programs module (SeriesController exists; video management incomplete)
+- ✅ People module (companions + genealogy, admin CRUD)
+- ✅ Media programs module (programs, episodes, live channels, YouTube sync)
+- ✅ Content & Topics modules
 - ❌ API documentation (Swagger/OpenAPI)
 
 ### Phase 2 - Advanced Features
@@ -919,9 +983,34 @@ ray($variable);
 - **Scalability Target:** Support 10M+ users, 1M+ concurrent connections
 - **Security:** OWASP Top 10 compliance, regular security audits
 
+## Gotchas worth knowing before you change anything
+
+- **Translations are in tables, not JSON columns.** See the Translatable Models
+  section. Most historical bugs in this repo trace back to code that was never
+  migrated off the dropped JSON columns.
+- **Verify a class exists before trusting an import.** Several files have imported
+  classes that do not exist (`App\Domain\Blog\Models\Article` — the real one is
+  `App\Models\Article`). PHP does not error on an unused `use`, and `Foo::class`
+  resolves to a string without autoloading, so these hide until the line runs.
+- **Do not swallow `Throwable` into a zeroed/empty fallback without `report()`.**
+  A silent catch is how a renamed table made the entire admin dashboard read 0.
+- **`Cache::flush()` is never the right invalidation.** It wipes other modules'
+  caches and the rate limiter. Use the versioned-key pattern (`BaseRepository::clearCache`,
+  `VersionedCacheKey`) or a targeted forget, and if you override `clearCache()`
+  in a repository, call `parent::clearCache()`.
+- **Route order matters.** Register static segments (`/trash`, `/history`, `/search`)
+  *before* `Route::resource` or `/{param}`, or they resolve as the parameter.
+- **Method spoofing does not work from a JSON body.** `_method: 'PUT'` in JSON is
+  ignored (Symfony reads the form bag), so the request stays POST and 405s. Send a
+  real `method: 'PUT'`.
+- **Admin controllers returning `JsonResponse` to a plain HTML form** render raw JSON
+  in the browser. Content-negotiate with `$request->expectsJson()`.
+- **Verify against the real schema** (`SHOW COLUMNS`) rather than a model's docblock;
+  several docblocks describe columns that were dropped.
+
 ---
 
-**Last Updated:** March 2026
+**Last Updated:** August 2026
 **Laravel Version:** 13.0
 **PHP Version:** 8.5
 - localize all view make it in arabic by default

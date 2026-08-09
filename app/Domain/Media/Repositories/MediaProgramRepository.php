@@ -117,9 +117,14 @@ class MediaProgramRepository extends BaseRepository implements MediaProgramRepos
 
     public function getRecent(int $limit = 12): Collection
     {
+        // Column list and withCount aligned with the sibling row-builders: this
+        // was the only one of the six missing them, so /media/programs/recent
+        // emitted null for maturity_rating/year/is_featured/is_trending and
+        // omitted episodes_count entirely.
         return MediaProgram::query()
-            ->select(['id', 'slug', 'category', 'rating', 'views_count', 'display_order', 'created_at'])
-            ->with(['translations:id,media_program_id,locale,title,is_ready'])
+            ->select(['id', 'slug', 'category', 'maturity_rating', 'year', 'rating', 'is_featured', 'is_trending', 'views_count', 'display_order', 'created_at'])
+            ->with(['translations:id,media_program_id,locale,title,is_ready', 'media'])
+            ->withCount('episodes')
             ->published()
             ->orderByDesc('created_at')
             ->limit($limit)
@@ -230,8 +235,10 @@ class MediaProgramRepository extends BaseRepository implements MediaProgramRepos
     public function search(string $term, int $perPage = 15, bool $publishedOnly = false): LengthAwarePaginator
     {
         return MediaProgram::query()
-            ->select(['id', 'slug', 'category', 'rating', 'is_published', 'publish_at', 'views_count', 'display_order', 'created_at'])
-            ->with(['translations:id,media_program_id,locale,title,description,is_ready'])
+            // Same column set as paginatePrograms() — the public search results
+            // feed the same card component as the index endpoint.
+            ->select(['id', 'slug', 'category', 'maturity_rating', 'year', 'total_seasons', 'total_episodes', 'rating', 'is_featured', 'is_trending', 'is_published', 'publish_at', 'views_count', 'display_order', 'created_at'])
+            ->with(['translations:id,media_program_id,locale,title,description,is_ready', 'media'])
             ->whereHas('translations', function ($q) use ($term) {
                 $q->where('title', 'LIKE', "%{$term}%")
                     ->orWhere('description', 'LIKE', "%{$term}%");

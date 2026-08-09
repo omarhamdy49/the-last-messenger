@@ -94,15 +94,10 @@ class ActivityLogController extends Controller
         ];
 
         // Get unique model types for filter
-        $modelTypes = [
-            'App\Domain\Blog\Models\Article' => 'مقال',
-            'App\Domain\Media\Models\MediaProgram' => 'برنامج إعلامي',
-            'App\Domain\Seerah\Models\SeerahEvent' => 'حدث سيرة',
-            'App\Domain\People\Models\Muslim' => 'صحابي',
-            'App\Domain\Quran\Models\QuranVerse' => 'آية قرآنية',
-            'App\Domain\People\Models\Muslim2' => 'شخصية',
-            'App\Models\User' => 'مستخدم',
-        ];
+        $modelTypes = array_map(
+            static fn (array $entry): string => $entry['label'],
+            $this->modelRegistry()
+        );
 
         return view('admin.activity-logs.index', compact(
             'logs',
@@ -184,29 +179,47 @@ class ActivityLogController extends Controller
     }
 
     /**
+     * Loggable model types, with their label and admin route.
+     *
+     * Keys must equal the get_class() value stored in admin_logs.model_type.
+     * Three former entries named classes that do not exist
+     * (Domain\Blog\Models\Article, Quran\Models\QuranVerse, People\Models\Muslim2)
+     * so those rows rendered as "غير معروف" with no link, while the types that
+     * are actually logged — Category and Series — were missing entirely.
+     *
+     * @return array<class-string, array{label: string, route: string}>
+     */
+    protected function modelRegistry(): array
+    {
+        return [
+            \App\Models\Article::class => ['label' => 'مقال', 'route' => 'admin.articles.show'],
+            \App\Domain\Blog\Models\Category::class => ['label' => 'تصنيف', 'route' => 'admin.categories.show'],
+            \App\Domain\Blog\Models\Series::class => ['label' => 'سلسلة', 'route' => 'admin.series.show'],
+            \App\Domain\Blog\Models\Tag::class => ['label' => 'وسم', 'route' => 'admin.tags.show'],
+            \App\Domain\Media\Models\MediaProgram::class => ['label' => 'برنامج إعلامي', 'route' => 'admin.media-programs.show'],
+            \App\Domain\Seerah\Models\SeerahEvent::class => ['label' => 'حدث سيرة', 'route' => 'admin.seerah-events.show'],
+            \App\Domain\People\Models\Muslim::class => ['label' => 'شخصية', 'route' => 'admin.genealogy.show'],
+            \App\Domain\Quran\Models\Verse::class => ['label' => 'آية قرآنية', 'route' => 'admin.verses.show'],
+            \App\Models\User::class => ['label' => 'مستخدم', 'route' => 'admin.users.show'],
+        ];
+    }
+
+    /**
      * Get model URL for linking
      */
     protected function getModelUrl(string $modelType, int $modelId): ?string
     {
-        $routes = [
-            'App\Domain\Blog\Models\Article' => 'admin.articles.show',
-            'App\Domain\Media\Models\MediaProgram' => 'admin.media-programs.show',
-            'App\Domain\Seerah\Models\SeerahEvent' => 'admin.seerah-events.show',
-            'App\Domain\People\Models\Muslim' => 'admin.muslims.edit',
-            'App\Domain\Quran\Models\QuranVerse' => 'admin.quran.show',
-            'App\Domain\People\Models\Muslim2' => 'admin.genealogy.show',
-            'App\Models\User' => 'admin.users.show',
-        ];
+        $entry = $this->modelRegistry()[$modelType] ?? null;
 
-        if (isset($routes[$modelType])) {
-            try {
-                return route($routes[$modelType], $modelId);
-            } catch (\Throwable $e) {
-                return null;
-            }
+        if ($entry === null) {
+            return null;
         }
 
-        return null;
+        try {
+            return route($entry['route'], $modelId);
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     /**
@@ -214,16 +227,6 @@ class ActivityLogController extends Controller
      */
     protected function getModelName(string $modelType): string
     {
-        $names = [
-            'App\Domain\Blog\Models\Article' => 'مقال',
-            'App\Domain\Media\Models\MediaProgram' => 'برنامج إعلامي',
-            'App\Domain\Seerah\Models\SeerahEvent' => 'حدث سيرة',
-            'App\Domain\People\Models\Muslim' => 'صحابي',
-            'App\Domain\Quran\Models\QuranVerse' => 'آية قرآنية',
-            'App\Domain\People\Models\Muslim2' => 'شخصية',
-            'App\Models\User' => 'مستخدم',
-        ];
-
-        return $names[$modelType] ?? 'غير معروف';
+        return $this->modelRegistry()[$modelType]['label'] ?? 'غير معروف';
     }
 }

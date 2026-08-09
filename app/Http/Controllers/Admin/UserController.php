@@ -6,13 +6,17 @@ namespace App\Http\Controllers\Admin;
 
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\AssignRolesRequest;
+use App\Http\Requests\Admin\BulkDeleteUsersRequest;
 use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
-use App\Http\Resources\UserResource;
+use App\Http\Resources\AdminUserResource;
 use App\Models\User;
 use App\Support\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Spatie\Permission\Models\Role;
 
 /**
  * Admin User Controller
@@ -40,10 +44,15 @@ class UserController extends Controller
         $verified = $request->input('verified');
         $search = $request->input('search');
 
-        $users = User::with('roles')
+        $users = User::with('roles:id,name')
+            ->select(['id', 'name', 'email', 'language', 'email_verified_at', 'created_at'])
+            // Grouped: without the closure the verified filter below would AND
+            // onto the email branch only, silently widening the result set.
             ->when($search, function ($query, $search) {
-                return $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
+                return $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
             })
             ->when($verified !== null, function ($query) use ($verified) {
                 return $verified === 'true'
@@ -53,10 +62,13 @@ class UserController extends Controller
             ->latest()
             ->paginate($perPage);
 
+        $counts = User::selectRaw('COUNT(*) AS total, SUM(email_verified_at IS NOT NULL) AS verified')
+            ->first();
+
         $stats = [
-            'total' => User::count(),
-            'verified' => User::whereNotNull('email_verified_at')->count(),
-            'unverified' => User::whereNull('email_verified_at')->count(),
+            'total' => (int) $counts->total,
+            'verified' => (int) $counts->verified,
+            'unverified' => (int) $counts->total - (int) $counts->verified,
         ];
 
         // Return JSON for AJAX requests
@@ -92,9 +104,27 @@ class UserController extends Controller
      *
      * GET /su/portal/v1/admin/users/{id}/edit
      */
-    public function edit(int $id): \Illuminate\View\View
+    public function edit(Request $request, int $id): \Illuminate\View\View
     {
-        return view('admin.users.edit', ['id' => $id]);
+        $user = User::with('roles:id,name')
+            ->select(['id', 'name', 'email', 'language', 'email_verified_at', 'created_at'])
+            ->findOrFail($id);
+
+        // Refuse here rather than rendering a form whose save would 403: only a
+        // super_admin may edit an account that holds super_admin.
+        abort_if(
+            $user->hasRole('super_admin') && ! $request->user()?->hasRole('super_admin'),
+            403
+        );
+
+        // Rendered server-side rather than fetched: the form previously loaded
+        // itself from two XHRs, so a failure in either left the fields blank.
+        return view('admin.users.edit', [
+            'id' => $id,
+            'user' => (new AdminUserResource($user))->toArray($request),
+            'allRoles' => Role::orderBy('name')->pluck('name')->all(),
+            'canGrantSuperAdmin' => (bool) $request->user()?->hasRole('super_admin'),
+        ]);
     }
 
     /**
@@ -102,7 +132,7 @@ class UserController extends Controller
      *
      * POST /su/portal/v1/admin/users
      */
-    public function store(StoreUserRequest $request): JsonResponse
+    public function store(StoreUserRequest $request): JsonResponse|RedirectResponse
     {
         $data = $request->validated();
         // Note: password hashing is handled by the User model's 'hashed' cast
@@ -116,8 +146,15 @@ class UserController extends Controller
         // Log the creation
         $this->logger->logCreate($user, $request->user());
 
+        // The create page posts a plain HTML form; without this it would render
+        // the JSON body in the browser instead of returning to the list.
+        if (! $request->expectsJson()) {
+            return redirect()->route('admin.users.index')
+                ->with('success', __('admin.user_created'));
+        }
+
         return $this->createdResponse(
-            new UserResource($user->load('roles')),
+            new AdminUserResource($user->load('roles')),
             'User created successfully'
         );
     }
@@ -135,7 +172,7 @@ class UserController extends Controller
             return $this->notFoundResponse('User not found');
         }
 
-        return $this->successResponse(new UserResource($user));
+        return $this->successResponse(new AdminUserResource($user));
     }
 
     /**
@@ -143,12 +180,15 @@ class UserController extends Controller
      *
      * PUT/PATCH /su/portal/v1/admin/users/{id}
      */
-    public function update(UpdateUserRequest $request, int $id): JsonResponse
+    public function update(UpdateUserRequest $request, int $id): JsonResponse|RedirectResponse
     {
         $user = User::find($id);
 
         if (! $user) {
-            return $this->notFoundResponse('User not found');
+            return $request->expectsJson()
+                ? $this->notFoundResponse('User not found')
+                : redirect()->route('admin.users.index')
+                    ->with('error', __('admin.user_not_found'));
         }
 
         // Get old values before update
@@ -171,8 +211,13 @@ class UserController extends Controller
         // Log the update with diff
         $this->logger->logUpdate($user, $oldValues, $user->fresh()->toArray(), $request->user());
 
+        if (! $request->expectsJson()) {
+            return redirect()->route('admin.users.index')
+                ->with('success', __('admin.user_updated'));
+        }
+
         return $this->successResponse(
-            new UserResource($user->load('roles')),
+            new AdminUserResource($user->load('roles')),
             'User updated successfully'
         );
     }
@@ -182,24 +227,37 @@ class UserController extends Controller
      *
      * DELETE /su/portal/v1/admin/users/{id}
      */
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse|RedirectResponse
     {
         $user = User::find($id);
 
         if (! $user) {
-            return $this->notFoundResponse('User not found');
+            return $request->expectsJson()
+                ? $this->notFoundResponse('User not found')
+                : redirect()->route('admin.users.index')
+                    ->with('error', __('admin.user_not_found'));
         }
 
         // Prevent self-deletion
         if ($user->id === auth()->id()) {
-            return $this->errorResponse('You cannot delete your own account', 400);
+            return $request->expectsJson()
+                ? $this->errorResponse('You cannot delete your own account', 400)
+                : redirect()->route('admin.users.index')
+                    ->with('error', __('admin.cannot_delete_own_account'));
         }
 
         // Perform deletion
         $user->delete();
 
         // Log the deletion
-        $this->logger->logDelete($user, request()->user());
+        $this->logger->logDelete($user, $request->user());
+
+        // The index posts a plain HTML form; without this the browser would land
+        // on /users/{id} showing the raw JSON body.
+        if (! $request->expectsJson()) {
+            return redirect()->route('admin.users.index')
+                ->with('success', __('admin.user_deleted'));
+        }
 
         return $this->successResponse(null, 'User deleted successfully');
     }
@@ -209,13 +267,8 @@ class UserController extends Controller
      *
      * POST /su/portal/v1/admin/users/bulk-delete
      */
-    public function bulkDelete(Request $request): JsonResponse
+    public function bulkDelete(BulkDeleteUsersRequest $request): JsonResponse
     {
-        $request->validate([
-            'ids' => ['required', 'array', 'min:1'],
-            'ids.*' => ['integer', 'exists:users,id'],
-        ]);
-
         $currentUserId = auth()->id();
         $ids = array_filter($request->input('ids'), fn ($id) => $id !== $currentUserId);
 
@@ -250,14 +303,17 @@ class UserController extends Controller
         $query = $request->input('q');
         $perPage = $request->integer('per_page', 15);
 
-        $users = User::with('roles')
-            ->where('name', 'like', "%{$query}%")
-            ->orWhere('email', 'like', "%{$query}%")
+        $users = User::with('roles:id,name')
+            ->select(['id', 'name', 'email', 'language', 'email_verified_at', 'created_at'])
+            ->where(function ($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                    ->orWhere('email', 'like', "%{$query}%");
+            })
             ->latest()
             ->paginate($perPage);
 
         return $this->paginatedResponse($users->setCollection(
-            $users->getCollection()->map(fn ($u) => new UserResource($u))
+            $users->getCollection()->map(fn ($u) => new AdminUserResource($u))
         ));
     }
 
@@ -266,18 +322,17 @@ class UserController extends Controller
      *
      * POST /su/portal/v1/admin/users/{id}/roles
      */
-    public function assignRoles(Request $request, int $id): JsonResponse
+    public function assignRoles(AssignRolesRequest $request, int $id): JsonResponse
     {
-        $request->validate([
-            'roles' => ['required', 'array', 'min:1'],
-            'roles.*' => ['string', 'exists:roles,name'],
-        ]);
-
         $user = User::find($id);
 
         if (! $user) {
             return $this->notFoundResponse('User not found');
         }
+
+        // Captured before the sync: syncRoles() refreshes the relation, so
+        // reading role names afterwards would log the new roles as the old ones.
+        $oldRoles = $user->getRoleNames()->toArray();
 
         $user->syncRoles($request->input('roles'));
 
@@ -286,12 +341,12 @@ class UserController extends Controller
             'assign_roles',
             $user,
             $request->user(),
-            ['old_roles' => $user->getRoleNames()->toArray()],
+            ['old_roles' => $oldRoles],
             ['new_roles' => $request->input('roles')]
         );
 
         return $this->successResponse(
-            new UserResource($user->load('roles')),
+            new AdminUserResource($user->load('roles')),
             'Roles assigned successfully'
         );
     }

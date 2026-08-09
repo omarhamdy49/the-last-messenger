@@ -6,6 +6,7 @@ namespace App\Domain\Quran\Repositories;
 
 use App\Domain\Quran\Models\Recitation;
 use App\Domain\Quran\Models\Reciter;
+use App\Domain\Quran\Services\QuranCacheKeys;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
@@ -369,12 +370,12 @@ class ReciterRepository implements ReciterRepositoryInterface
      * Cache::tags() requires Redis/Memcached and is not available with the
      * file or database drivers. We use a version counter instead: bumping
      * the version orphans every previously-cached key without needing tag
-     * support, and works with any cache driver.
+     * support, and works with any cache driver. The counter lives in
+     * QuranCacheKeys so the reciter import commands can bump the same one.
      */
     private function clearCache(): void
     {
-        $versionKey = 'reciters:version';
-        Cache::forever($versionKey, ((int) Cache::get($versionKey, 0)) + 1);
+        QuranCacheKeys::flushReciters();
     }
 
     /**
@@ -383,8 +384,6 @@ class ReciterRepository implements ReciterRepositoryInterface
      */
     private function versionedKey(string $key): string
     {
-        $version = (int) Cache::get('reciters:version', 0);
-
-        return "reciters:v{$version}:{$key}";
+        return QuranCacheKeys::reciterScoped($key);
     }
 }

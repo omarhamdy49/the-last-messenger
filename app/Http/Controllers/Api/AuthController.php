@@ -35,7 +35,11 @@ class AuthController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'confirmed', Password::defaults()],
+            'password' => [
+                'required',
+                'confirmed',
+                Password::min(12)->mixedCase()->letters()->numbers()->symbols(),
+            ],
             'language' => ['nullable', 'string', 'in:ar,en,fr,tr,ur'],
         ]);
 
@@ -47,7 +51,7 @@ class AuthController extends Controller
         ]);
 
         // Create API token
-        $token = $user->createToken('api-token')->plainTextToken;
+        $token = $user->createToken('api-token', ['api:access'])->plainTextToken;
 
         return $this->createdResponse([
             'user' => new UserResource($user),
@@ -85,7 +89,7 @@ class AuthController extends Controller
         $user->tokens()->delete();
 
         // Create API token
-        $token = $user->createToken('api-token')->plainTextToken;
+        $token = $user->createToken('api-token', ['api:access'])->plainTextToken;
 
         return $this->successResponse([
             'user' => new UserResource($user),

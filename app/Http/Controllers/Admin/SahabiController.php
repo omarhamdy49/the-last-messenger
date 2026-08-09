@@ -15,12 +15,12 @@ use App\Domain\People\Services\GenealogyTreeService;
 use App\Domain\People\Services\MuslimDirectoryService;
 use App\Domain\People\ValueObjects\MuslimProfile;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\BulkMuslimActionRequest;
 use App\Http\Requests\Admin\StoreMuslimRequest;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class SahabiController extends Controller
@@ -277,36 +277,23 @@ class SahabiController extends Controller
      * Bulk actions the existing index view posts to. Each validates its ids
      * and writes through the repository.
      */
-    public function bulkDelete(Request $request): RedirectResponse
+    public function bulkDelete(BulkMuslimActionRequest $request): RedirectResponse
     {
-        $ids = array_filter(array_map('intval', (array) $request->input('ids', [])));
-        Muslim::query()->whereIn('id', $ids)->get()
-            ->each(fn ($m) => $this->muslims->delete($m));
+        $this->muslims->bulkDelete($request->ids());
 
         return back()->with('success', __('sahaba.deleted'));
     }
 
-    public function bulkSetFeatured(Request $request): RedirectResponse
+    public function bulkSetFeatured(BulkMuslimActionRequest $request): RedirectResponse
     {
-        $ids = array_filter(array_map('intval', (array) $request->input('ids', [])));
-        $featured = $request->boolean('is_featured');
-
-        DB::table('muslims_roles')
-            ->whereIn('muslim_id', $ids)->update(['is_featured' => $featured]);
+        $this->muslims->bulkSetFeatured($request->ids(), $request->boolean('is_featured'));
 
         return back()->with('success', __('sahaba.saved'));
     }
 
-    public function bulkSetPublished(Request $request): RedirectResponse
+    public function bulkSetPublished(BulkMuslimActionRequest $request): RedirectResponse
     {
-        $ids = array_filter(array_map('intval', (array) $request->input('ids', [])));
-
-        if ($ids === []) {
-            return back();
-        }
-
-        Muslim::query()->whereIn('id', $ids)
-            ->update(['is_published' => $request->boolean('is_published')]);
+        $this->muslims->bulkSetPublished($request->ids(), $request->boolean('is_published'));
 
         return back()->with('success', __('sahaba.saved'));
     }

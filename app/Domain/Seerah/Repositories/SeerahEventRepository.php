@@ -238,6 +238,54 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     }
 
     /**
+     * {@inheritdoc}
+     */
+    public function getForExport(array $filters = []): Collection
+    {
+        $query = $this->model->newQuery()->with($this->exportRelations());
+
+        if (! empty($filters['event_type'])) {
+            $query->byType($filters['event_type']);
+        }
+
+        if (! empty($filters['start_date'])) {
+            $query->whereDate('gregorian_date', '>=', $filters['start_date']);
+        }
+
+        if (! empty($filters['end_date'])) {
+            $query->whereDate('gregorian_date', '<=', $filters['end_date']);
+        }
+
+        if (! empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function (Builder $q) use ($search) {
+                $q->whereHas('translations', fn ($tq) => $tq->where('title', 'LIKE', "%{$search}%"))
+                    ->orWhere('location', 'LIKE', "%{$search}%");
+            });
+        }
+
+        return $query->chronological()->get();
+    }
+
+    /**
+     * Relations needed to render an export row. Mirrors the translation-backed
+     * shape of detailRelations() minus the article sub-tree, which is not
+     * exported.
+     *
+     * @return array<int, string>
+     */
+    private function exportRelations(): array
+    {
+        return [
+            'translations:id,seerah_event_id,locale,title,description',
+            'type:id,slug',
+            'type.translations:id,seerah_event_type_id,locale,name',
+            'participants:id,event_id,role',
+            'participants.translations:id,seerah_participant_id,locale,name',
+        ];
+    }
+
+    /**
      * Find by slug with relations
      */
     public function findBySlug(string $slug, array $columns = ['*'], array $relations = []): ?Model

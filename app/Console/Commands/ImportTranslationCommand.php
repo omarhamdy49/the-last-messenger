@@ -4,18 +4,21 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Domain\Quran\Importers\QuranComPayload;
 use App\Domain\Quran\Models\TranslationResource;
 use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Models\VerseTranslation;
+use App\Domain\Quran\Services\QuranCacheKeys;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
 /**
  * Imports one translation edition from the Quran.com API (v4) into a translation
  * resource, enabling quran.com-style multi-edition translations per language.
- * Idempotent (updateOrCreate keyed by verse + resource); safe to re-run.
+ * Idempotent (upserted on the (verse_id, resource_id) unique index); safe to re-run.
  *
  * Accepts a catalog slug (config/quran-editions.php) or a raw Quran.com numeric
  * resource id. Run after Quran verses are imported.
@@ -32,6 +35,12 @@ class ImportTranslationCommand extends Command
     protected $description = 'Import a Quran translation edition from the Quran.com API into a translation resource';
 
     private const BASE = 'https://api.quran.com/api/v4';
+
+    /**
+     * Rows per upsert statement. Keeps the longest chapter (286 ayahs) well
+     * inside max_allowed_packet even for verbose editions.
+     */
+    private const UPSERT_CHUNK = 200;
 
     public function handle(): int
     {
@@ -98,27 +107,8 @@ class ImportTranslationCommand extends Command
                 continue;
             }
 
-            $rows = $resp->json('translations') ?? [];
-            $ayah = 0;
-            foreach ($rows as $row) {
-                $ayah++;
-                $verseKey = "{$chapter}:{$ayah}";
-                $verseId = $verseMap[$verseKey] ?? null;
-                if ($verseId === null) {
-                    continue;
-                }
-
-                $text = $this->cleanHtml((string) ($row['text'] ?? ''));
-                if ($text === '') {
-                    continue;
-                }
-
-                VerseTranslation::updateOrCreate(
-                    ['verse_id' => $verseId, 'resource_id' => $resource->id],
-                    ['lang' => $lang, 'text' => $text, 'text_notashkeel' => null],
-                );
-                $imported++;
-            }
+            $rows = $this->chapterRows($resp->json('translations') ?? [], $chapter, $verseMap, $resource->id, $lang);
+            $imported += $this->storeChapter($rows);
 
             $bar->advance();
         }
@@ -127,7 +117,7 @@ class ImportTranslationCommand extends Command
         $this->newLine();
 
         // Reader pages cache translation payloads; clear so the new edition shows up.
-        Cache::flush();
+        QuranCacheKeys::flushContent();
 
         $this->info("Imported {$imported} translation entries into '{$slug}' (#{$resource->id}).");
 
@@ -175,7 +165,7 @@ class ImportTranslationCommand extends Command
             }
             foreach (($resp->json('translations') ?? []) as $t) {
                 if ((int) ($t['id'] ?? 0) === $id) {
-                    $lang = $this->mapLang($t['language_name'] ?? 'en');
+                    $lang = QuranComPayload::mapLang($t['language_name'] ?? 'en');
                     $name = (string) ($t['name'] ?? "translation-{$id}");
 
                     return [
@@ -194,24 +184,71 @@ class ImportTranslationCommand extends Command
         return null;
     }
 
-    private function mapLang(string $languageName): string
+    /**
+     * Map one chapter's API rows onto quran_verse_translations rows.
+     *
+     * The endpoint returns text in ayah order without a verse_key, so position
+     * in the response is the ayah number.
+     *
+     * @param  array<int, array<string, mixed>>  $apiRows
+     * @param  Collection<string, int>  $verseMap  verse_key => verse id
+     * @return list<array<string, mixed>>
+     */
+    private function chapterRows(array $apiRows, int $chapter, Collection $verseMap, int $resourceId, string $lang): array
     {
-        return [
-            'arabic' => 'ar', 'english' => 'en', 'french' => 'fr',
-            'turkish' => 'tr', 'urdu' => 'ur',
-        ][mb_strtolower($languageName)] ?? mb_substr($languageName, 0, 2);
+        $rows = [];
+        $ayah = 0;
+
+        foreach ($apiRows as $row) {
+            $ayah++;
+            $verseId = $verseMap["{$chapter}:{$ayah}"] ?? null;
+            if ($verseId === null) {
+                continue;
+            }
+
+            $text = QuranComPayload::cleanHtml((string) ($row['text'] ?? ''));
+            if ($text === '') {
+                continue;
+            }
+
+            // Keyed by verse id so a duplicated ayah in the response collapses.
+            $rows[$verseId] = [
+                'verse_id' => $verseId,
+                'resource_id' => $resourceId,
+                'lang' => $lang,
+                'text' => $text,
+                'text_notashkeel' => null,
+            ];
+        }
+
+        return array_values($rows);
     }
 
     /**
-     * Strip footnote/markup the API embeds (e.g. <sup foot_note>) into clean text.
+     * Upsert one chapter's rows in a transaction.
+     *
+     * Safe as a plain upsert: resource_id is never NULL here, so the
+     * (verse_id, resource_id) unique index actually constrains these rows.
+     *
+     * @param  list<array<string, mixed>>  $rows
+     * @return int rows written
      */
-    private function cleanHtml(string $html): string
+    private function storeChapter(array $rows): int
     {
-        $html = preg_replace('/<\s*(br|\/p|\/h[1-6]|\/div|\/li)\s*\/?>/i', "\n", $html) ?? $html;
-        $text = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $text = preg_replace('/[ \t]+/', ' ', $text) ?? $text;
-        $text = preg_replace("/\n{3,}/", "\n\n", $text) ?? $text;
+        if ($rows === []) {
+            return 0;
+        }
 
-        return trim($text);
+        DB::transaction(function () use ($rows): void {
+            foreach (array_chunk($rows, self::UPSERT_CHUNK) as $chunk) {
+                VerseTranslation::query()->upsert(
+                    $chunk,
+                    ['verse_id', 'resource_id'],
+                    ['lang', 'text', 'text_notashkeel'],
+                );
+            }
+        });
+
+        return count($rows);
     }
 }

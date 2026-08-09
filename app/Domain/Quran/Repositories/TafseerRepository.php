@@ -39,7 +39,7 @@ class TafseerRepository extends BaseRepository implements TafseerRepositoryInter
      */
     public function getActiveResources(): Collection
     {
-        return Cache::remember('quran_tafsir_resources_active', self::CACHE_TTL, fn () => TafsirResource::query()
+        return Cache::remember(QuranCacheKeys::activeTafsirResources(), self::CACHE_TTL, fn () => TafsirResource::query()
             ->where('is_active', true)
             ->orderBy('display_order')
             ->orderBy('id')

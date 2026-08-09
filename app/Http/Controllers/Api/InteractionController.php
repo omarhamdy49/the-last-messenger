@@ -11,6 +11,8 @@ use App\Http\Requests\StoreInteractionRequest;
 use App\Http\Resources\UserEngagementMetricResource;
 use App\Http\Resources\UserInteractionResource;
 use App\Support\Traits\ApiResponse;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -43,9 +45,12 @@ class InteractionController extends Controller
     {
         $user = $request->user();
 
-        // Find the content model
-        $contentClass = $request->input('interactable_type');
-        $content = $contentClass::findOrFail($request->input('interactable_id'));
+        // Resolve through a closed allowlist and publication gate. This avoids
+        // dynamic-class execution and prevents draft existence probing.
+        $content = $this->visibleContent(
+            (string) $request->validated('interactable_type'),
+            (int) $request->validated('interactable_id'),
+        );
 
         // Record interaction
         $interaction = $this->interactionService->recordInteraction(
@@ -80,9 +85,13 @@ class InteractionController extends Controller
      *
      * GET /api/engagement/users/{id}
      */
-    public function getUserEngagement(int $userId): JsonResponse
+    public function getUserEngagement(Request $request, int $id): JsonResponse
     {
-        $user = \App\Models\User::findOrFail($userId);
+        if ((int) $request->user()->id !== $id) {
+            return $this->forbiddenResponse('You may only view your own engagement data.');
+        }
+
+        $user = \App\Models\User::findOrFail($id);
         $history = $this->interactionService->getUserEngagementHistory($user);
 
         return $this->successResponse($history, 'User engagement retrieved successfully');
@@ -96,7 +105,7 @@ class InteractionController extends Controller
     public function getMyActivity(Request $request): JsonResponse
     {
         $user = $request->user();
-        $limit = (int) $request->query('limit', 50);
+        $limit = min(max((int) $request->query('limit', 50), 1), 100);
 
         $interactions = $this->interactionService->getUserActivity($user, $limit);
 
@@ -114,7 +123,7 @@ class InteractionController extends Controller
     public function getMyTrends(Request $request): JsonResponse
     {
         $user = $request->user();
-        $days = (int) $request->query('days', 30);
+        $days = min(max((int) $request->query('days', 30), 1), 365);
 
         $trends = $this->interactionService->getEngagementTrends($user, $days);
 
@@ -129,29 +138,11 @@ class InteractionController extends Controller
      */
     public function getContentEngagement(string $type, int $id): JsonResponse
     {
-        // Map short names to full class names
-        // These were partly wrong before this change: Article lives in
-        // app/Models, and the Quran classes are Verse/Surah, not QuranVerse/
-        // QuranSurah — every one of those returned a 500 rather than a 400.
-        $typeMap = [
-            // String, not ::class: Controllers may not depend on the Models
-            // layer (constitution IV). The path is asserted by ApiRouteSmokeTest.
-            'Article' => 'App\\Models\\Article',
-            'MediaProgram' => \App\Domain\Media\Models\MediaProgram::class,
-            'MediaEpisode' => \App\Domain\Media\Models\MediaEpisode::class,
-            'SeerahEvent' => \App\Domain\Seerah\Models\SeerahEvent::class,
-            // A companion is a `muslims` row carrying the `sahabi` role.
-            'Sahabi' => \App\Domain\People\Models\Muslim::class,
-            'QuranVerse' => \App\Domain\Quran\Models\Verse::class,
-            'QuranSurah' => \App\Domain\Quran\Models\Surah::class,
-        ];
-
-        if (! isset($typeMap[$type])) {
+        if (! isset(StoreInteractionRequest::CONTENT_TYPES[$type])) {
             return $this->errorResponse('Invalid content type', 400);
         }
 
-        $contentClass = $typeMap[$type];
-        $content = $contentClass::findOrFail($id);
+        $content = $this->visibleContent($type, $id);
 
         $engagement = $this->interactionService->getContentEngagement($content);
 
@@ -165,7 +156,7 @@ class InteractionController extends Controller
      */
     public function getLeaderboard(Request $request): JsonResponse
     {
-        $limit = (int) $request->query('limit', 10);
+        $limit = min(max((int) $request->query('limit', 10), 1), 100);
 
         $leaderboard = $this->interactionService->getMostEngagedUsers($limit);
 
@@ -182,9 +173,30 @@ class InteractionController extends Controller
      */
     public function getTopContent(Request $request): JsonResponse
     {
-        $limit = (int) $request->query('limit', 10);
+        $limit = min(max((int) $request->query('limit', 10), 1), 100);
 
-        $topContent = $this->interactionService->getMostEngagedContent($limit);
+        $topContent = collect($this->interactionService->getMostEngagedContent($limit))
+            ->map(function (array $item): ?array {
+                $type = array_search($item['interactable_type'], StoreInteractionRequest::CONTENT_TYPES, true);
+
+                if (! is_string($type)) {
+                    return null;
+                }
+
+                try {
+                    $this->visibleContent($type, (int) $item['interactable_id']);
+                } catch (ModelNotFoundException) {
+                    return null;
+                }
+
+                return [
+                    'type' => $type,
+                    'id' => (int) $item['interactable_id'],
+                    'interaction_count' => (int) $item['interaction_count'],
+                ];
+            })
+            ->filter()
+            ->values();
 
         return $this->successResponse($topContent, 'Top content retrieved successfully');
     }
@@ -212,5 +224,24 @@ class InteractionController extends Controller
         $data = $this->interactionService->exportUserEngagementData($user);
 
         return $this->successResponse($data, 'Engagement data exported successfully');
+    }
+
+    private function visibleContent(string $type, int $id): Model
+    {
+        $class = StoreInteractionRequest::CONTENT_TYPES[$type];
+        $query = $class::query();
+
+        match ($type) {
+            'Article' => $query->where('status', \App\Models\Article::STATUS_PUBLISHED),
+            'Hadith' => $query->publiclyVisible(),
+            'MediaProgram' => $query->published(),
+            'MediaEpisode' => $query->published()
+                ->whereHas('program', fn ($program) => $program->published()),
+            'SeerahEvent' => $query->published(),
+            'Sahabi' => $query->published(),
+            'QuranVerse', 'QuranSurah' => null,
+        };
+
+        return $query->findOrFail($id);
     }
 }

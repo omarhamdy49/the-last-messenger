@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Admin;
 
 use App\Domain\Blog\Enums\ArticleStatus;
-use App\Domain\Blog\Models\Article;
+use App\Models\Article;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;

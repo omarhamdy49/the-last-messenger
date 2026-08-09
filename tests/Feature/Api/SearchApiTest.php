@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
@@ -16,6 +18,12 @@ final class SearchApiTest extends TestCase
     use RefreshDatabase;
 
     private const SEARCH_TERM = 'السيرة';
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Sanctum::actingAs(User::factory()->create());
+    }
 
     /**
      * Seed one Seerah event whose Arabic title matches the search term.

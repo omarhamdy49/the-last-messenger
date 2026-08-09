@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Domain\Quran\Enums\RevelationPlace;
 use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Models\SurahInfo;
 use Illuminate\Database\Seeder;
@@ -80,14 +81,16 @@ class QuranSurahInfoSeeder extends Seeder
 
     private function revelationContextEn(Surah $surah): string
     {
-        $place = $surah->revelation_place === 'Medina' ? 'Medinan' : 'Meccan';
+        // Compared through the enum: the stored value is 'madinah', so the old
+        // `=== 'Medina'` test never matched and labelled all 114 surahs Meccan.
+        $place = RevelationPlace::fromExternal($surah->revelation_place)->labelEn();
 
         return "A {$place} surah of {$surah->verses_count} verses.";
     }
 
     private function revelationContextAr(Surah $surah): string
     {
-        $place = $surah->revelation_place === 'Medina' ? 'مدنية' : 'مكية';
+        $place = RevelationPlace::fromExternal($surah->revelation_place)->label();
 
         return "سورة {$place}، عدد آياتها {$surah->verses_count}.";
     }

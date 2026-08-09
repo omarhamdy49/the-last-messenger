@@ -4,12 +4,20 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class ArticleApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Sanctum::actingAs(User::factory()->create());
+    }
 
     public function test_articles_index_returns_success_envelope(): void
     {
@@ -20,7 +28,7 @@ class ArticleApiTest extends TestCase
         $this->assertTrue($response->json('success'));
     }
 
-    public function test_articles_index_does_not_require_authentication(): void
+    public function test_articles_index_is_available_to_authenticated_clients(): void
     {
         $response = $this->getJson('/api/v1/articles');
 
@@ -62,7 +70,7 @@ class ArticleApiTest extends TestCase
         $this->assertTrue($response->json('success'));
     }
 
-    public function test_articles_featured_does_not_require_authentication(): void
+    public function test_articles_featured_is_available_to_authenticated_clients(): void
     {
         $response = $this->getJson('/api/v1/articles/featured');
 
@@ -108,7 +116,7 @@ class ArticleApiTest extends TestCase
         $this->assertTrue($response->json('success'));
     }
 
-    public function test_articles_popular_does_not_require_authentication(): void
+    public function test_articles_popular_is_available_to_authenticated_clients(): void
     {
         $response = $this->getJson('/api/v1/articles/popular');
 
@@ -124,7 +132,7 @@ class ArticleApiTest extends TestCase
         $this->assertTrue($response->json('success'));
     }
 
-    public function test_articles_recent_does_not_require_authentication(): void
+    public function test_articles_recent_is_available_to_authenticated_clients(): void
     {
         $response = $this->getJson('/api/v1/articles/recent');
 

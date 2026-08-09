@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace App\Domain\Blog\Repositories;
 
-use App\Domain\Blog\Models\Article;
 use App\Domain\Blog\Models\Series;
 use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Series Repository Implementation
@@ -40,14 +38,13 @@ class SeriesRepository extends BaseRepository implements SeriesRepositoryInterfa
         $query = $this->model->withCount('articles')
             ->orderByDesc('created_at');
 
-        // Apply search across JSON title and description fields
+        // Search the translations table: series.title/description were dropped
+        // in favour of series_translations, so the old JSON_EXTRACT raw query
+        // threw for every search.
         if (! empty($search)) {
-            $query->where(function ($q) use ($search) {
-                $languages = ['ar', 'en', 'fr', 'tr', 'ur'];
-                foreach ($languages as $lang) {
-                    $q->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(title, '$.{$lang}')) LIKE ?", ["%{$search}%"])
-                        ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(description, '$.{$lang}')) LIKE ?", ["%{$search}%"]);
-                }
+            $query->whereHas('translations', function ($q) use ($search) {
+                $q->where('title', 'LIKE', "%{$search}%")
+                    ->orWhere('description', 'LIKE', "%{$search}%");
             });
         }
 
@@ -93,37 +90,10 @@ class SeriesRepository extends BaseRepository implements SeriesRepositoryInterfa
         });
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function reorderArticles(int $seriesId, array $articleIds): void
-    {
-        DB::transaction(function () use ($seriesId, $articleIds) {
-            $position = 1;
-            foreach ($articleIds as $articleId) {
-                Article::where('id', $articleId)
-                    ->where('series_id', $seriesId)
-                    ->update([
-                        'published_at' => now()->addSeconds($position),
-                    ]);
-                $position++;
-            }
-        });
-
-        $this->clearCache();
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function updateArticleCount(int $id): void
-    {
-        $series = $this->findOrFail($id);
-        $count = Article::where('series_id', $id)->count();
-
-        $series->update(['total_articles' => $count]);
-        $this->clearCache();
-    }
+    // reorderArticles()/updateArticleCount() were removed: both queried a
+    // phantom articles.series_id column (the real link is the article_series
+    // pivot). The working implementations live in SeriesService::reorderArticles()
+    // and Series::updateArticlesCount().
 
     /**
      * {@inheritdoc}
@@ -131,12 +101,9 @@ class SeriesRepository extends BaseRepository implements SeriesRepositoryInterfa
     public function search(string $query, int $perPage = 50): LengthAwarePaginator
     {
         $searchQuery = $this->model->withCount('articles')
-            ->where(function ($q) use ($query) {
-                $languages = ['ar', 'en', 'fr', 'tr', 'ur'];
-                foreach ($languages as $lang) {
-                    $q->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(title, '$.{$lang}')) LIKE ?", ["%{$query}%"])
-                        ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(description, '$.{$lang}')) LIKE ?", ["%{$query}%"]);
-                }
+            ->whereHas('translations', function ($q) use ($query) {
+                $q->where('title', 'LIKE', "%{$query}%")
+                    ->orWhere('description', 'LIKE', "%{$query}%");
             })
             ->orderByDesc('created_at');
 
@@ -179,6 +146,14 @@ class SeriesRepository extends BaseRepository implements SeriesRepositoryInterfa
      */
     public function clearCache(): void
     {
+        // Must bump the version counter first: every cached read in this class
+        // (countByStatus/getWithArticles/getStats) and in BaseRepository
+        // (find/findBy/all/findAllBy) is stored under a versioned getCacheKey()
+        // hash, which a plain Cache::forget() of a literal key never reaches.
+        parent::clearCache();
+
+        // Legacy literal keys, kept in case anything outside the repository
+        // still writes them.
         Cache::forget('series:all');
         Cache::forget('series:featured');
     }

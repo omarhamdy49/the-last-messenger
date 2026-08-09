@@ -140,6 +140,7 @@ class ArticleRepository
         return Cache::remember('featured_articles', 3600, function () use ($limit) {
             return Article::query()
                 ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,slug,type,status', 'category.translations:id,category_id,locale,name'])
+                ->where('status', 'published')
                 ->where('is_featured', true)
                 ->whereHas('locales', function ($q) {
                     $q->where('is_ready', true);
@@ -644,6 +645,7 @@ class ArticleRepository
     {
         return Article::query()
             ->with(['locales:id,article_id,locale,title,slug,is_ready', 'writer:id,name', 'category:id,slug,type,status', 'category.translations:id,category_id,locale,name'])
+            ->where('status', 'published')
             ->where('created_at', '>=', now()->subDays($days))
             ->whereHas('locales', function ($q) {
                 $q->where('is_ready', true);
@@ -801,7 +803,8 @@ class ArticleRepository
             ->with([
                 'locales:id,article_id,locale,title,slug,is_ready',
                 'writer:id,name',
-                'category:id,name,slug',
+                'category:id,slug',
+                'category.translations:id,category_id,locale,name',
             ])
             ->orderBy('deleted_at', 'desc')
             ->paginate($perPage);

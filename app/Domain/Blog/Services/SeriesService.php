@@ -434,14 +434,17 @@ class SeriesService extends BaseService
     }
 
     /**
-     * Update article count for series
+     * Recalculate the cached total_articles value from the article_series pivot.
      *
      *
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
      */
     public function updateArticleCount(int $id): void
     {
-        $this->repository->updateArticleCount($id);
+        /** @var Series $series */
+        $series = Series::findOrFail($id);
+        $series->updateArticlesCount();
+
         $this->repository->clearCache();
     }
 

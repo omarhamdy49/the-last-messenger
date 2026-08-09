@@ -5,12 +5,20 @@ declare(strict_types=1);
 namespace Tests\Feature\Api;
 
 use App\Domain\Seerah\Models\SeerahEvent;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class SeerahTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Sanctum::actingAs(User::factory()->create());
+    }
 
     /**
      * Create a SeerahEvent with a featured_image URL to prevent Spatie media
@@ -48,7 +56,7 @@ class SeerahTest extends TestCase
             ->assertJsonPath('success', true);
     }
 
-    public function test_seerah_index_does_not_require_authentication(): void
+    public function test_seerah_index_is_available_to_authenticated_clients(): void
     {
         $response = $this->getJson('/api/v1/seerah');
 

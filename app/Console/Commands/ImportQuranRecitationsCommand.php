@@ -6,8 +6,8 @@ namespace App\Console\Commands;
 
 use App\Domain\Quran\Models\Recitation;
 use App\Domain\Quran\Models\Reciter;
+use App\Domain\Quran\Services\QuranCacheKeys;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -136,7 +136,7 @@ class ImportQuranRecitationsCommand extends Command
         }
 
         // The reader caches per-surah audio URL maps; clear so the player picks these up.
-        Cache::flush();
+        QuranCacheKeys::flushReciters();
 
         $this->newLine();
         // Report stored rows, not API entries — a few endpoints list a chapter

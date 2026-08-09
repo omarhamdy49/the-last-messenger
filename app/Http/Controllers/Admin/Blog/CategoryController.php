@@ -369,7 +369,8 @@ class CategoryController extends Controller
         $tree = \App\Domain\Blog\Models\Category::getTree(null, $language);
 
         if ($type) {
-            $tree = array_filter($tree, fn ($cat) => $cat['type'] === $type);
+            // array_values() keeps the payload a JSON array after filtering.
+            $tree = array_values(array_filter($tree, fn ($cat) => $cat['type'] === $type));
         }
 
         return $this->successResponse($tree, 'Category tree retrieved successfully');
@@ -424,8 +425,8 @@ class CategoryController extends Controller
 
             // Create duplicate data
             $duplicateData = [
-                'name' => $originalCategory->getNameTranslations(),
-                'description' => $originalCategory->getDescriptionTranslations(),
+                'name' => $originalCategory->getTranslations('name'),
+                'description' => $originalCategory->getTranslations('description'),
                 'type' => $originalCategory->type->value,
                 'status' => 'inactive', // Set duplicates as inactive by default
                 'parent_id' => $originalCategory->parent_id,

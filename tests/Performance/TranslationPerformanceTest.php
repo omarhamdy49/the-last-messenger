@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Performance;
 
-use App\Domain\Blog\Models\Article;
+use App\Models\Article;
 use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Quran\Models\Surah;
 use App\Domain\Shared\Services\LanguageCacheService;

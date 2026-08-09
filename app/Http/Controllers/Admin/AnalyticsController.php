@@ -12,6 +12,7 @@ use App\Support\Traits\ApiResponse;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
 
 /**
@@ -99,7 +100,7 @@ class AnalyticsController extends Controller
         $chartData = match ($type) {
             'growth' => $this->analyticsService->getGrowthTrends($period, $limit),
             'distribution' => $this->dashboardAnalyticsService->getModuleDistribution(),
-            'engagement' => $this->getEngagementChartData($limit),
+            'engagement' => $this->analyticsService->getViewsChart($limit),
             'activity' => $this->dashboardAnalyticsService->getActivityHeatmap($limit),
             default => null,
         };
@@ -258,14 +259,18 @@ class AnalyticsController extends Controller
             'end_date' => 'nullable|date|after_or_equal:start_date',
         ]);
 
-        // TODO: Implement export using Laravel Excel
-        // This would integrate with the existing ExportController/ExportService
-
-        return $this->successResponse([
-            'message' => 'Export functionality coming soon',
-            'requested_format' => $request->input('format'),
-            'requested_type' => $request->input('type'),
-        ], 'Export request received');
+        // Not implemented: nothing here produces a file, so a 200 "success"
+        // envelope would tell the caller an export exists when none does.
+        // 501 until this is wired to ExportController/ExportService.
+        return $this->errorResponse(
+            'Analytics export is not implemented yet.',
+            Response::HTTP_NOT_IMPLEMENTED,
+            'not_implemented',
+            [
+                'requested_format' => $request->input('format'),
+                'requested_type' => $request->input('type'),
+            ]
+        );
     }
 
     /**
@@ -310,54 +315,6 @@ class AnalyticsController extends Controller
         $this->dashboardAnalyticsService->clearCache();
 
         return $this->successResponse(null, 'Analytics cache cleared successfully');
-    }
-
-    /**
-     * Get engagement chart data helper
-     *
-     * @return array<string, mixed>
-     */
-    private function getEngagementChartData(int $days): array
-    {
-        $labels = [];
-        $articlesViews = [];
-        $hadithViews = [];
-        $mediaViews = [];
-
-        // This is a simplified version - in production you'd query actual view data per day
-        for ($i = $days - 1; $i >= 0; $i--) {
-            $date = now()->subDays($i)->toDateString();
-            $labels[] = $date;
-
-            // Placeholder data - replace with actual queries
-            $articlesViews[] = rand(100, 1000);
-            $hadithViews[] = rand(50, 500);
-            $mediaViews[] = rand(200, 800);
-        }
-
-        return [
-            'labels' => $labels,
-            'datasets' => [
-                [
-                    'label' => 'Articles Views',
-                    'data' => $articlesViews,
-                    'borderColor' => '#0056b3',
-                    'backgroundColor' => 'rgba(0, 86, 179, 0.1)',
-                ],
-                [
-                    'label' => 'Hadith Views',
-                    'data' => $hadithViews,
-                    'borderColor' => '#218838',
-                    'backgroundColor' => 'rgba(33, 136, 56, 0.1)',
-                ],
-                [
-                    'label' => 'Media Views',
-                    'data' => $mediaViews,
-                    'borderColor' => '#64CCC5',
-                    'backgroundColor' => 'rgba(100, 204, 197, 0.1)',
-                ],
-            ],
-        ];
     }
 
     /**

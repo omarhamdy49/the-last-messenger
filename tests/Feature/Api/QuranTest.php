@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature\Api;
 
 use App\Domain\Quran\Models\Surah;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
@@ -22,6 +24,12 @@ class QuranTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Sanctum::actingAs(User::factory()->create());
+    }
+
     public function test_surahs_endpoint_returns_success_when_no_surahs_exist(): void
     {
         // With no records the collection serialization is skipped — response is 200 with empty data.
@@ -35,7 +43,7 @@ class QuranTest extends TestCase
             ->assertJsonPath('success', true);
     }
 
-    public function test_surahs_endpoint_does_not_require_authentication(): void
+    public function test_surahs_endpoint_is_available_to_authenticated_clients(): void
     {
         $response = $this->getJson('/api/v1/quran/surahs');
 

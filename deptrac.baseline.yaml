@@ -108,8 +108,6 @@ deptrac:
       - App\Domain\Blog\Models\Series
       - App\Domain\Blog\Models\Tag
       - App\Domain\Seerah\Models\SeerahEvent
-    App\Models\Tag:
-      - App\Domain\Blog\Models\TagTranslation
     App\Repositories\ArticleRepository:
       - App\Domain\Blog\Models\Category
       - App\Domain\Blog\Models\Tag

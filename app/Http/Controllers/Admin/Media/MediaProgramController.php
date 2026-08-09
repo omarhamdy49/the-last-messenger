@@ -7,8 +7,8 @@ namespace App\Http\Controllers\Admin\Media;
 use App\Domain\Media\DTOs\CreateMediaProgramData;
 use App\Domain\Media\DTOs\UpdateMediaProgramData;
 use App\Domain\Media\Enums\ProgramCategory;
-use App\Domain\Media\Enums\YouTubeSyncStatus;
-use App\Domain\Media\Models\YouTubeSyncRun;
+use App\Domain\Media\Models\MediaProgram;
+use App\Domain\Media\Services\MediaAttachmentService;
 use App\Domain\Media\Services\MediaEpisodeService;
 use App\Domain\Media\Services\MediaProgramService;
 use App\Domain\Media\Services\YouTubeSyncService;
@@ -19,10 +19,11 @@ use App\Http\Requests\Admin\Media\SyncYoutubePlaylistRequest;
 use App\Http\Requests\Admin\MediaProgram\StoreMediaProgramRequest;
 use App\Http\Requests\Admin\MediaProgram\UpdateMediaProgramImagesRequest;
 use App\Http\Requests\Admin\MediaProgram\UpdateMediaProgramRequest;
-use App\Jobs\SyncYouTubePlaylistJob;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -34,6 +35,7 @@ class MediaProgramController extends Controller
 {
     public function __construct(
         protected MediaProgramService $programService,
+        protected MediaAttachmentService $attachments,
         protected AdminLoggerService $logger,
     ) {}
 
@@ -97,18 +99,25 @@ class MediaProgramController extends Controller
     public function store(StoreMediaProgramRequest $request): RedirectResponse
     {
         $dto = CreateMediaProgramData::fromRequest($request);
-        $program = $this->programService->createProgram($dto);
 
-        $this->syncProgramImages($program, $dto->poster, $dto->banner, $dto->posterId, $dto->bannerId);
+        // One unit of work: a program without its translations is invisible
+        // in every listing, so the row must never outlive a failed sync.
+        $program = DB::transaction(function () use ($dto): MediaProgram {
+            $program = $this->programService->createProgram($dto);
 
-        $program->syncTranslations([
-            'title' => $dto->title,
-            'description' => $dto->description,
-            'host' => $dto->host,
-            'seo_title' => $dto->seoTitle,
-            'seo_description' => $dto->seoDescription,
-            'seo_keywords' => $dto->seoKeywords,
-        ]);
+            $program->syncTranslations([
+                'title' => $dto->title,
+                'description' => $dto->description,
+                'host' => $dto->host,
+                'seo_title' => $dto->seoTitle,
+                'seo_description' => $dto->seoDescription,
+                'seo_keywords' => $dto->seoKeywords,
+            ]);
+
+            $this->syncProgramImages($program, $dto->poster, $dto->banner, $dto->posterId, $dto->bannerId);
+
+            return $program;
+        });
 
         $this->logger->logCreate($program, $request->user());
 
@@ -162,18 +171,23 @@ class MediaProgramController extends Controller
 
         $oldValues = $old->toArray();
         $dto = UpdateMediaProgramData::fromRequest($request);
-        $program = $this->programService->updateProgram($id, $dto);
 
-        $this->syncProgramImages($program, $dto->poster, $dto->banner, $dto->posterId, $dto->bannerId);
+        $program = DB::transaction(function () use ($id, $dto): MediaProgram {
+            $program = $this->programService->updateProgram($id, $dto);
 
-        $program->syncTranslations([
-            'title' => $dto->title,
-            'description' => $dto->description,
-            'host' => $dto->host,
-            'seo_title' => $dto->seoTitle,
-            'seo_description' => $dto->seoDescription,
-            'seo_keywords' => $dto->seoKeywords,
-        ]);
+            $program->syncTranslations([
+                'title' => $dto->title,
+                'description' => $dto->description,
+                'host' => $dto->host,
+                'seo_title' => $dto->seoTitle,
+                'seo_description' => $dto->seoDescription,
+                'seo_keywords' => $dto->seoKeywords,
+            ]);
+
+            $this->syncProgramImages($program, $dto->poster, $dto->banner, $dto->posterId, $dto->bannerId);
+
+            return $program;
+        });
 
         $this->logger->logUpdate($program, $oldValues, $program->toArray(), $request->user());
 
@@ -321,7 +335,7 @@ class MediaProgramController extends Controller
      * POST /su/portal/v1/admin/media-programs/{id}/youtube/sync
      * Create a sync run + dispatch the background import job.
      */
-    public function syncYoutube(SyncYoutubePlaylistRequest $request, int $id): JsonResponse
+    public function syncYoutube(SyncYoutubePlaylistRequest $request, YouTubeSyncService $service, int $id): JsonResponse
     {
         $program = $this->programService->find($id);
 
@@ -329,14 +343,11 @@ class MediaProgramController extends Controller
             return response()->json(['success' => false, 'message' => __('admin.not_found')], 404);
         }
 
-        $run = YouTubeSyncRun::create([
-            'program_id' => $program->id,
-            'playlist_url' => $request->validated()['playlist_url'],
-            'status' => YouTubeSyncStatus::Pending,
-            'created_by' => $request->user()?->id,
-        ]);
-
-        SyncYouTubePlaylistJob::dispatch($run->id);
+        $run = $service->startRun(
+            $program->id,
+            $request->validated()['playlist_url'],
+            $request->user()?->id,
+        );
 
         return response()->json([
             'success' => true,
@@ -349,69 +360,30 @@ class MediaProgramController extends Controller
      * GET /su/portal/v1/admin/media/youtube/sync-status/{run}
      * Progress poll target for the import modal.
      */
-    public function youtubeSyncStatus(int $runId): JsonResponse
+    public function youtubeSyncStatus(YouTubeSyncService $service, int $runId): JsonResponse
     {
-        $run = YouTubeSyncRun::find($runId);
+        $status = $service->getRunStatus($runId);
 
-        if (! $run) {
+        if ($status === null) {
             return response()->json(['success' => false, 'message' => __('admin.not_found')], 404);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'status' => $run->status->value,
-                'is_terminal' => $run->status->isTerminal(),
-                'total' => $run->total,
-                'processed' => $run->processed,
-                'created' => $run->created_count,
-                'updated' => $run->updated_count,
-                'percent' => $run->progressPercent(),
-                'message' => $run->message,
-                'error' => $run->error,
-            ],
-        ]);
+        return response()->json(['success' => true, 'data' => $status]);
     }
 
     /**
      * Attach poster/banner from a direct upload or a media-library pick.
-     * Library files are copied (preservingOriginal) into the program's collection
-     * so deleting the library item never breaks the program image.
+     * An upload wins over a library id when the form somehow sends both.
      */
     private function syncProgramImages(
-        \App\Domain\Media\Models\MediaProgram $program,
-        ?\Illuminate\Http\UploadedFile $posterFile,
-        ?\Illuminate\Http\UploadedFile $bannerFile,
+        MediaProgram $program,
+        ?UploadedFile $posterFile,
+        ?UploadedFile $bannerFile,
         ?int $posterId,
         ?int $bannerId
     ): void {
-        $sources = [
-            'poster' => [$posterFile, $posterId],
-            'banner' => [$bannerFile, $bannerId],
-        ];
-
-        foreach ($sources as $collection => [$file, $libraryMediaId]) {
-            if ($file === null && $libraryMediaId === null) {
-                continue;
-            }
-
-            $program->clearMediaCollection($collection);
-
-            if ($file !== null) {
-                $program->addMedia($file)->toMediaCollection($collection);
-
-                continue;
-            }
-
-            // Library originals are encrypted at rest — materialize a plaintext
-            // temp copy; addMedia() moves it into the program's collection.
-            $copy = app(\App\Services\MediaService::class)->temporaryOriginalCopyById($libraryMediaId);
-            if ($copy !== null) {
-                $program->addMedia($copy->path)
-                    ->usingFileName($copy->filename)
-                    ->toMediaCollection($collection);
-            }
-        }
+        $this->attachments->attach($program, 'poster', $posterFile ?? $posterId);
+        $this->attachments->attach($program, 'banner', $bannerFile ?? $bannerId);
     }
 
     /**

@@ -8,6 +8,7 @@ use App\Domain\Shared\Models\BulkOperation;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Bulk Operation Repository
@@ -134,6 +135,25 @@ class BulkOperationRepository extends BaseRepository implements BulkOperationRep
         }
 
         return $query->orderBy('created_at', 'desc')->paginate($perPage);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function countByStatus(?int $userId = null): array
+    {
+        $query = $this->model->newQuery();
+
+        if ($userId !== null) {
+            $query->where('created_by', $userId);
+        }
+
+        return $query
+            ->select('status', DB::raw('COUNT(*) as aggregate'))
+            ->groupBy('status')
+            ->pluck('aggregate', 'status')
+            ->map(fn ($count): int => (int) $count)
+            ->all();
     }
 
     /**

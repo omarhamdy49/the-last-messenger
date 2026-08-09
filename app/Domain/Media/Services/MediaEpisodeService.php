@@ -117,6 +117,22 @@ class MediaEpisodeService extends BaseService
         return $this->repository->getContinueWatching($userId, $limit);
     }
 
+    /**
+     * Upsert the authenticated user's watch position for an episode.
+     * $userId always comes from auth — never from request input.
+     *
+     * @throws ResourceNotFoundException when the episode is not publicly visible,
+     *                                   so drafts stay invisible to API clients.
+     */
+    public function saveProgress(int $userId, int $episodeId, int $seconds, bool $completed = false): void
+    {
+        if (! $this->repository->publicEpisodeExists($episodeId)) {
+            throw new ResourceNotFoundException("Episode not found: {$episodeId}");
+        }
+
+        $this->repository->saveWatchProgress($userId, $episodeId, $seconds, $completed);
+    }
+
     public function createEpisode(CreateMediaEpisodeData $data): MediaEpisode
     {
         /** @var MediaEpisode $episode */

@@ -26,6 +26,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -90,16 +91,21 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiters(): void
     {
-        RateLimiter::for('auth', static function (Request $request): Limit {
-            return Limit::perMinute(10)->by($request->ip());
+        RateLimiter::for('auth', static function (Request $request): array {
+            $email = Str::lower(trim((string) $request->input('email', 'unknown')));
+
+            return [
+                Limit::perMinute(10)->by('auth-ip:'.$request->ip()),
+                Limit::perMinute(5)->by('auth-credential:'.$email.'|'.$request->ip()),
+            ];
         });
 
         RateLimiter::for('search', static function (Request $request): Limit {
-            return Limit::perMinute(30)->by($request->ip());
+            return Limit::perMinute(30)->by('search:'.($request->user()?->id ?? $request->ip()));
         });
 
         RateLimiter::for('api', static function (Request $request): Limit {
-            return Limit::perMinute(60)->by($request->ip());
+            return Limit::perMinute(60)->by('api:'.($request->user()?->id ?? $request->ip()));
         });
 
         // ai_inquiry: 5 requests/minute per authenticated user — burst protection

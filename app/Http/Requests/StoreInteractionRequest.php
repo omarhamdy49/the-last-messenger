@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Domain\Shared\Enums\InteractionType;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -14,6 +15,23 @@ use Illuminate\Validation\Rule;
  */
 class StoreInteractionRequest extends FormRequest
 {
+    /**
+     * Stable wire names mapped to trusted model classes. Clients never supply
+     * an executable PHP class name.
+     *
+     * @var array<string, class-string<Model>>
+     */
+    public const CONTENT_TYPES = [
+        'Article' => \App\Models\Article::class,
+        'Hadith' => \App\Domain\Hadith\Models\Hadith::class,
+        'MediaProgram' => \App\Domain\Media\Models\MediaProgram::class,
+        'MediaEpisode' => \App\Domain\Media\Models\MediaEpisode::class,
+        'SeerahEvent' => \App\Domain\Seerah\Models\SeerahEvent::class,
+        'Sahabi' => \App\Domain\People\Models\Muslim::class,
+        'QuranVerse' => \App\Domain\Quran\Models\Verse::class,
+        'QuranSurah' => \App\Domain\Quran\Models\Surah::class,
+    ];
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -30,19 +48,11 @@ class StoreInteractionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'interactable_type' => ['required', 'string', Rule::in([
-                'App\\Domain\\Blog\\Models\\Article',
-                'App\\Domain\\Hadith\\Models\\Hadith',
-                'App\\Domain\\Media\\Models\\MediaProgram',
-                'App\\Domain\\Media\\Models\\MediaEpisode',
-                'App\\Domain\\Seerah\\Models\\SeerahEvent',
-                'App\\Domain\\Sahaba\\Models\\Sahabi',
-                'App\\Domain\\Quran\\Models\\QuranVerse',
-                'App\\Domain\\Quran\\Models\\QuranSurah',
-            ])],
+            'interactable_type' => ['required', 'string', Rule::in(array_keys(self::CONTENT_TYPES))],
             'interactable_id' => ['required', 'integer', 'min:1'],
             'interaction_type' => ['required', 'string', Rule::enum(InteractionType::class)],
-            'metadata' => ['nullable', 'array'],
+            'metadata' => ['nullable', 'array', 'max:20'],
+            'metadata.*' => ['nullable', 'string', 'max:500'],
             'duration_seconds' => ['nullable', 'integer', 'min:0', 'max:86400'], // Max 24 hours
         ];
     }
@@ -66,28 +76,9 @@ class StoreInteractionRequest extends FormRequest
         ];
     }
 
-    /**
-     * Prepare the data for validation.
-     */
-    protected function prepareForValidation(): void
+    /** @return class-string<Model> */
+    public function interactableClass(): string
     {
-        // Allow short class names and convert to full class name
-        if ($this->has('interactable_type')) {
-            $shortToFull = [
-                'Article' => 'App\\Domain\\Blog\\Models\\Article',
-                'Hadith' => 'App\\Domain\\Hadith\\Models\\Hadith',
-                'MediaProgram' => 'App\\Domain\\Media\\Models\\MediaProgram',
-                'MediaEpisode' => 'App\\Domain\\Media\\Models\\MediaEpisode',
-                'SeerahEvent' => 'App\\Domain\\Seerah\\Models\\SeerahEvent',
-                'Sahabi' => 'App\\Domain\\Sahaba\\Models\\Sahabi',
-                'QuranVerse' => 'App\\Domain\\Quran\\Models\\QuranVerse',
-                'QuranSurah' => 'App\\Domain\\Quran\\Models\\QuranSurah',
-            ];
-
-            $type = $this->input('interactable_type');
-            if (isset($shortToFull[$type])) {
-                $this->merge(['interactable_type' => $shortToFull[$type]]);
-            }
-        }
+        return self::CONTENT_TYPES[(string) $this->validated('interactable_type')];
     }
 }

@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Admin\Quran\AiInquiryController;
-use App\Http\Controllers\Admin\Quran\QuranController;
 use App\Http\Controllers\Admin\Quran\RecitationController;
 use App\Http\Controllers\Admin\Quran\ReciterController;
 use App\Http\Controllers\Admin\Quran\RevelationContextController;
@@ -24,20 +23,10 @@ Route::prefix('ai-inquiries')->name('admin.quran.ai-inquiries.')->group(function
     Route::delete('/{inquiry}', [AiInquiryController::class, 'destroy'])->whereNumber('inquiry')->name('destroy');
 });
 
-// Quran Routes (main entry point for Quran management)
-Route::prefix('quran')->group(function (): void {
-    Route::get('/search', [QuranController::class, 'search'])->name('admin.quran.search');
-    Route::post('/bulk-delete', [QuranController::class, 'bulkDelete'])->name('admin.quran.bulk-delete');
-});
-Route::resource('quran', QuranController::class)->names([
-    'index' => 'admin.quran.index',
-    'create' => 'admin.quran.create',
-    'store' => 'admin.quran.store',
-    'show' => 'admin.quran.show',
-    'edit' => 'admin.quran.edit',
-    'update' => 'admin.quran.update',
-    'destroy' => 'admin.quran.destroy',
-]);
+// The former `quran` verse-CRUD surface was removed: it was a duplicate of the
+// `verses` routes below (the only ones linked from the sidebar) and it was wired
+// to the Surah repository, so "delete verse" deleted the Surah of that id and
+// cascaded to all of its verses. Use admin.verses.* for verse management.
 
 // Quran Surah Routes (no create/store - 114 surahs are fixed)
 Route::prefix('surahs')->group(function (): void {

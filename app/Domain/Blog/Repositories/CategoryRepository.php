@@ -137,13 +137,14 @@ class CategoryRepository extends BaseRepository implements CategoryRepositoryInt
     {
         $searchQuery = $this->model->query();
 
-        // Search across all language fields
+        // Search the translations table: categories.name/description were
+        // dropped in favour of category_translations, so the old JSON_EXTRACT
+        // raw query threw on every admin category search.
         $searchQuery->where(function ($q) use ($query) {
-            foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $lang) {
-                $q->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.{$lang}')) LIKE ?", ["%{$query}%"])
-                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(description, '$.{$lang}')) LIKE ?", ["%{$query}%"]);
-            }
-            $q->orWhere('slug', 'LIKE', "%{$query}%");
+            $q->whereHas('translations', function ($t) use ($query) {
+                $t->where('name', 'LIKE', "%{$query}%")
+                    ->orWhere('description', 'LIKE', "%{$query}%");
+            })->orWhere('slug', 'LIKE', "%{$query}%");
         });
 
         // Filter by type if provided
@@ -200,9 +201,13 @@ class CategoryRepository extends BaseRepository implements CategoryRepositoryInt
             ->select($columns)
             ->with([
                 'translations:id,category_id,locale,name,description',
-                "children:{$relationColumns}",
+                'children' => fn ($query) => $query
+                    ->select($columns)
+                    ->where('status', 'active')
+                    ->orderBy('display_order'),
                 'children.translations:id,category_id,locale,name,description',
             ])
+            ->where('status', 'active')
             ->whereNull('parent_id')
             ->orderBy('display_order')
             ->get();
@@ -223,11 +228,15 @@ class CategoryRepository extends BaseRepository implements CategoryRepositoryInt
             ->select($columns)
             ->with([
                 'translations:id,category_id,locale,name,description',
-                "children:{$relationColumns}",
+                'children' => fn ($query) => $query
+                    ->select($columns)
+                    ->where('status', 'active')
+                    ->orderBy('display_order'),
                 'children.translations:id,category_id,locale,name,description',
                 "parent:{$relationColumns}",
                 'parent.translations:id,category_id,locale,name,description',
             ])
+            ->where('status', 'active')
             ->where('slug', $slug)
             ->first();
     }
@@ -237,6 +246,12 @@ class CategoryRepository extends BaseRepository implements CategoryRepositoryInt
      */
     public function clearCache(): void
     {
+        // Bump the version counter first: the real cache keys are versioned
+        // hashes from getCacheKey(), so forgetting these five literals alone
+        // left cached find/findBy/countByType/getRootCategories results stale
+        // for up to 15 minutes after a write.
+        parent::clearCache();
+
         Cache::forget('categories:all');
         Cache::forget('categories:published');
         Cache::forget('categories:by_type');

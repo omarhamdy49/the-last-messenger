@@ -4,19 +4,24 @@ declare(strict_types=1);
 
 namespace App\Domain\Seerah\DTOs;
 
-use App\Http\Requests\Admin\UpdateSeerahEventRequest;
 use Illuminate\Http\UploadedFile;
 
 /**
  * Update Seerah Event DTO
  *
  * Carries the validated, type-safe payload needed to update an existing Seerah event.
- * Built from the incoming UpdateSeerahEventRequest so that service classes never
- * touch the HTTP layer directly.
+ * Built from an already-validated attribute array so that neither this DTO nor
+ * the service classes touch the HTTP layer; the controller unpacks the request.
+ *
+ * A null property is ambiguous on its own — it can mean "not submitted" or
+ * "submitted empty, clear it". $presentKeys resolves that: it lists the input
+ * keys that were actually part of the validated payload, so the service can
+ * tell an omitted field from an explicitly emptied one.
  *
  * @param  array<string, string|null>  $title  Locale-keyed titles.
  * @param  array<string, string|null>  $description  Locale-keyed descriptions.
  * @param  array<string, string|null>  $content  Locale-keyed body content.
+ * @param  array<int, string>  $presentKeys  Input keys present in the validated payload.
  */
 final class UpdateSeerahEventData
 {
@@ -42,15 +47,25 @@ final class UpdateSeerahEventData
         public readonly ?UploadedFile $featuredImage,
         public readonly ?int $displayOrder,
         public readonly bool $isFeatured,
+        public readonly array $presentKeys,
     ) {}
 
     /**
-     * Construct an UpdateSeerahEventData instance from the validated update request.
+     * Whether the given input key was part of the submitted (validated) payload.
      */
-    public static function fromRequest(UpdateSeerahEventRequest $request): self
+    public function hasInput(string $key): bool
     {
-        $validated = $request->validated();
+        return in_array($key, $this->presentKeys, true);
+    }
 
+    /**
+     * Construct an UpdateSeerahEventData instance from validated request data.
+     *
+     * @param  array<string, mixed>  $validated  Output of UpdateSeerahEventRequest::validated()
+     * @param  UploadedFile|null  $image  The uploaded featured image, if any
+     */
+    public static function fromArray(array $validated, ?UploadedFile $image = null): self
+    {
         return new self(
             slug: $validated['slug'] ?? null,
             title: $validated['title'] ?? [],
@@ -70,9 +85,11 @@ final class UpdateSeerahEventData
             latitude: isset($validated['latitude']) ? (float) $validated['latitude'] : null,
             longitude: isset($validated['longitude']) ? (float) $validated['longitude'] : null,
             relatedArticleId: isset($validated['related_article_id']) ? (int) $validated['related_article_id'] : null,
-            featuredImage: $request->hasFile('featured_image') ? $request->file('featured_image') : null,
+            featuredImage: $image,
             displayOrder: isset($validated['display_order']) ? (int) $validated['display_order'] : null,
-            isFeatured: $request->boolean('is_featured'),
+            // Unchecked checkboxes are simply absent from the payload.
+            isFeatured: filter_var($validated['is_featured'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            presentKeys: array_keys($validated),
         );
     }
 }

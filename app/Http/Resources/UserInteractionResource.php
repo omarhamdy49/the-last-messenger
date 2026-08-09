@@ -27,12 +27,10 @@ class UserInteractionResource extends JsonResource
                 return [
                     'id' => $this->user->id,
                     'name' => $this->user->name,
-                    'email' => $this->user->email,
                 ];
             }),
             'interactable_type' => class_basename($this->interactable_type),
             'interactable_id' => $this->interactable_id,
-            'interactable' => $this->whenLoaded('interactable'),
             'interaction_type' => $this->interaction_type->value,
             'interaction_label' => $this->interaction_type->label(),
             'points' => $this->interaction_type->getPoints(),

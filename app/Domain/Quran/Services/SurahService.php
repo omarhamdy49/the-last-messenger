@@ -10,6 +10,7 @@ use App\Domain\Quran\Repositories\SurahRepositoryInterface;
 use App\Domain\Shared\Services\BaseService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Surah Service
@@ -119,6 +120,25 @@ class SurahService extends BaseService
     public function getAll(): Collection
     {
         return $this->repository->all();
+    }
+
+    /**
+     * The surah list behind admin dropdowns, ordered by revelation order.
+     *
+     * Previously copy-pasted verbatim into three admin controllers
+     * (VerseController, TafseerController, RevelationContextController), each
+     * querying the model directly.
+     */
+    public function getForSelector(): Collection
+    {
+        return Cache::remember(
+            QuranCacheKeys::surahSelector(),
+            now()->addMinutes(30),
+            fn (): Collection => Surah::query()
+                ->select(['id', 'revelation_order', 'name_ar'])
+                ->orderBy('revelation_order')
+                ->get()
+        );
     }
 
     /**

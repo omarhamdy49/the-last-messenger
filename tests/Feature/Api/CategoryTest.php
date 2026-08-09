@@ -5,12 +5,20 @@ declare(strict_types=1);
 namespace Tests\Feature\Api;
 
 use App\Domain\Blog\Models\Category;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class CategoryTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Sanctum::actingAs(User::factory()->create());
+    }
 
     public function test_categories_index_returns_paginated_list_with_correct_json_structure(): void
     {
@@ -36,7 +44,7 @@ class CategoryTest extends TestCase
             ->assertJsonPath('success', true);
     }
 
-    public function test_categories_index_does_not_require_authentication(): void
+    public function test_categories_index_is_available_to_authenticated_clients(): void
     {
         $response = $this->getJson('/api/v1/categories');
 

@@ -6,12 +6,27 @@ namespace App\Domain\Quran\Importers;
 
 use App\Domain\Quran\Enums\RevelationPlace;
 use App\Domain\Quran\Models\Surah;
+use App\Domain\Quran\Models\SurahInfo;
 use App\Domain\Shared\Importers\BaseImporter;
 
 /**
  * Quran Surah Importer
  *
- * Imports Quran surahs (chapters) from CSV/Excel files
+ * Imports Quran surahs (chapters) from CSV/Excel files.
+ *
+ * Schema mapping (the CSV contract is unchanged; only persistence was rewritten):
+ *
+ *  - `quran_surahs` has no `number` column — the primary key IS the surah
+ *    number — and no JSON `name`; it stores `name_ar` / `name_en` directly.
+ *  - Per-language prose goes to `quran_surah_info` (desc/content), one row per
+ *    language, written only when the CSV supplies it.
+ *  - Columns the schema has no home for (name_fr/tr/ur, meaning_*, words_count,
+ *    letters_count, juz, page_number) are accepted by validation for backwards
+ *    compatibility but not persisted.
+ *
+ * The previous version wrote `number`, a JSON `name`, `meaning`, `description`
+ * and `theme` — none of which exist on the table — and matched surahs on the
+ * absent `number` column, so every surah import fatalled.
  */
 class QuranSurahImporter extends BaseImporter
 {
@@ -94,7 +109,7 @@ class QuranSurahImporter extends BaseImporter
      */
     protected function isDuplicate(array $row): bool
     {
-        return Surah::where('number', $row['number'])->exists();
+        return Surah::query()->whereKey((int) $row['number'])->exists();
     }
 
     /**
@@ -102,21 +117,25 @@ class QuranSurahImporter extends BaseImporter
      */
     protected function importRow(array $row): Surah
     {
-        // Check for update existing option
-        if ($this->options['update_existing'] ?? false) {
-            $surah = Surah::where('number', $row['number'])->first();
-            if ($surah) {
-                $surah->update($this->buildSurahData($row));
+        $number = (int) $row['number'];
+        $existing = Surah::find($number);
 
-                return $surah;
-            }
+        if ($existing !== null && ! ($this->options['update_existing'] ?? false)) {
+            return $existing;
         }
 
-        return Surah::create($this->buildSurahData($row));
+        // The id is the surah number but is not mass-assignable, so it is set
+        // explicitly rather than passed through fill().
+        $surah = $existing ?? tap(new Surah, static fn (Surah $new) => $new->id = $number);
+        $surah->fill($this->buildSurahData($row))->save();
+
+        $this->syncSurahInfo($surah, $row);
+
+        return $surah;
     }
 
     /**
-     * Build surah data array from row
+     * Attributes that map onto real `quran_surahs` columns.
      *
      * @param  array<string, mixed>  $row
      * @return array<string, mixed>
@@ -124,47 +143,41 @@ class QuranSurahImporter extends BaseImporter
     private function buildSurahData(array $row): array
     {
         $data = [
-            'number' => (int) $row['number'],
-            'name' => $this->buildMultiLanguageField($row, 'name'),
-            'revelation_place' => RevelationPlace::tryFrom(strtolower($row['revelation_place'])) ?? RevelationPlace::MAKKAH,
+            'name_ar' => (string) ($row['name_ar'] ?? ''),
+            'name_en' => (string) ($row['name_en'] ?? ''),
+            // ->value: the column is a plain string (no enum cast on Surah, whose
+            // scopes compare against the raw value).
+            'revelation_place' => RevelationPlace::fromExternal($row['revelation_place'] ?? null)->value,
             'verses_count' => (int) $row['verses_count'],
+            'revelation_order' => (int) ($row['revelation_order'] ?? $row['number']),
         ];
 
-        // Optional fields
-        if (! empty($row['meaning_ar']) || ! empty($row['meaning_en'])) {
-            $data['meaning'] = $this->buildMultiLanguageField($row, 'meaning');
-        }
-
-        if (! empty($row['description_ar']) || ! empty($row['description_en'])) {
-            $data['description'] = $this->buildMultiLanguageField($row, 'description');
-        }
-
-        if (! empty($row['theme_ar']) || ! empty($row['theme_en'])) {
-            $data['theme'] = $this->buildMultiLanguageField($row, 'theme');
-        }
-
-        if (isset($row['revelation_order']) && ! empty($row['revelation_order'])) {
-            $data['revelation_order'] = (int) $row['revelation_order'];
-        }
-
-        if (isset($row['words_count']) && ! empty($row['words_count'])) {
-            $data['words_count'] = (int) $row['words_count'];
-        }
-
-        if (isset($row['letters_count']) && ! empty($row['letters_count'])) {
-            $data['letters_count'] = (int) $row['letters_count'];
-        }
-
-        if (isset($row['page_number']) && ! empty($row['page_number'])) {
-            $data['page_number'] = (int) $row['page_number'];
-        }
-
-        // Parse juz field (can be comma-separated for multi-juz surahs)
-        if (! empty($row['juz'])) {
-            $juzNumbers = array_map('trim', explode(',', $row['juz']));
-            $data['juz'] = array_map('intval', $juzNumbers);
+        if (! empty($row['name_en'])) {
+            $data['transliteration'] = (string) $row['name_en'];
         }
 
         return $data;
+    }
+
+    /**
+     * Per-language description/theme rows, written only for supplied languages.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function syncSurahInfo(Surah $surah, array $row): void
+    {
+        foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $language) {
+            $description = trim((string) ($row["description_{$language}"] ?? ''));
+            $theme = trim((string) ($row["theme_{$language}"] ?? ''));
+
+            if ($description === '' && $theme === '') {
+                continue;
+            }
+
+            SurahInfo::updateOrCreate(
+                ['surah_id' => $surah->id, 'lang' => $language],
+                ['desc' => $description, 'content' => $theme, 'active' => true],
+            );
+        }
     }
 }

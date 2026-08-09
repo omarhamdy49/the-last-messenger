@@ -46,21 +46,6 @@ interface SeriesRepositoryInterface extends RepositoryInterface
     public function getWithArticles(int $id): Series;
 
     /**
-     * Reorder articles within series
-     *
-     * @param  int  $seriesId  Series ID
-     * @param  array<int>  $articleIds  Article IDs in desired order
-     */
-    public function reorderArticles(int $seriesId, array $articleIds): void;
-
-    /**
-     * Update article count for series
-     *
-     * @param  int  $id  Series ID
-     */
-    public function updateArticleCount(int $id): void;
-
-    /**
      * Search series across all languages
      *
      * @param  string  $query  Search query

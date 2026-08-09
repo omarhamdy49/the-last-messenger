@@ -224,16 +224,16 @@ class BulkOperationController extends Controller
     public function stats(Request $request): JsonResponse
     {
         try {
-            // TODO: Implement statistics aggregation
-            // For now, return basic stats from user's operations
+            // Scoped like index(): a super admin sees the whole platform,
+            // everyone else only their own operations.
+            $userId = $request->user()->hasRole('super_admin')
+                ? null
+                : $request->user()->id;
 
-            return $this->successResponse([
-                'total_operations' => 0,
-                'pending' => 0,
-                'processing' => 0,
-                'completed' => 0,
-                'failed' => 0,
-            ], 'Statistics retrieved successfully');
+            return $this->successResponse(
+                $this->bulkOperationService->getOperationStatistics($userId),
+                'Statistics retrieved successfully'
+            );
         } catch (\Throwable $e) {
             Log::error('Failed to get operation statistics', [
                 'error' => $e->getMessage(),

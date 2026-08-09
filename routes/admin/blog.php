@@ -3,25 +3,39 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Admin\Blog\ArticleController;
+use App\Http\Controllers\Admin\Blog\ArticleModuleController;
 use App\Http\Controllers\Admin\Blog\CategoryController;
 use App\Http\Controllers\Admin\Blog\SeriesController;
 use App\Http\Controllers\Admin\Blog\TagController;
 use Illuminate\Support\Facades\Route;
 
 // Article Routes
+// Every literal-segment route lives in this group so it is registered before
+// Route::resource('articles'), otherwise `articles/{article}` swallows it.
 Route::prefix('articles')->group(function (): void {
-    // API endpoints (must be before resource routes to avoid conflicts)
-    Route::get('/api', [ArticleController::class, 'api'])->name('admin.articles.api');
-    Route::get('/stats', [ArticleController::class, 'stats'])->name('admin.articles.stats');
+    // Authenticated module lookups used by the article WYSIWYG/block editor.
+    Route::get('/module-options/surahs', [ArticleModuleController::class, 'surahs'])
+        ->name('admin.articles.modules.surahs');
+    Route::get('/module-options/surahs/{surah}/verses', [ArticleModuleController::class, 'verses'])
+        ->whereNumber('surah')
+        ->name('admin.articles.modules.verses');
+    Route::get('/module-options/hadith-collections', [ArticleModuleController::class, 'hadithCollections'])
+        ->name('admin.articles.modules.hadith-collections');
+    Route::get('/module-options/hadiths', [ArticleModuleController::class, 'hadiths'])
+        ->name('admin.articles.modules.hadiths');
+
+    // Statistics
+    Route::get('/statistics', [ArticleController::class, 'statistics'])->name('admin.articles.statistics');
 
     // Bulk actions
-    Route::post('/bulk-action', [ArticleController::class, 'bulkAction'])->name('admin.articles.bulk-action');
-    Route::post('/bulk-delete', [ArticleController::class, 'bulkDelete'])->name('admin.articles.bulk-delete');
+    Route::post('/bulk-delete', [ArticleController::class, 'bulkDestroy'])->name('admin.articles.bulk-delete');
     Route::post('/bulk-publish', [ArticleController::class, 'bulkPublish'])->name('admin.articles.bulk-publish');
-    Route::post('/bulk-archive', [ArticleController::class, 'bulkArchive'])->name('admin.articles.bulk-archive');
 
     // Search
     Route::get('/search', [ArticleController::class, 'search'])->name('admin.articles.search');
+
+    // Trash listing
+    Route::get('/trash', [ArticleController::class, 'trash'])->name('admin.articles.trash');
 });
 
 // Article resource routes
@@ -39,9 +53,12 @@ Route::get('articles/{article}/preview', [ArticleController::class, 'preview'])-
 // Article toggle routes (must be after resource to avoid route conflicts)
 Route::post('articles/{article}/toggle-feature', [ArticleController::class, 'toggleFeature'])->name('admin.articles.toggle-feature');
 Route::post('articles/{article}/toggle-pin', [ArticleController::class, 'togglePin'])->name('admin.articles.toggle-pin');
+Route::post('articles/{article}/duplicate', [ArticleController::class, 'duplicate'])->name('admin.articles.duplicate');
+Route::post('articles/{article}/views', [ArticleController::class, 'incrementViews'])->name('admin.articles.increment-views');
 
-// Article trash route
-Route::get('articles/trash', [ArticleController::class, 'trash'])->name('admin.articles.trash');
+// Trashed-article actions (linked from admin.articles.trash)
+Route::post('articles/{id}/restore', [ArticleController::class, 'restore'])->name('admin.articles.restore');
+Route::delete('articles/{id}/force-delete', [ArticleController::class, 'forceDelete'])->name('admin.articles.force-delete');
 
 // Category Routes
 Route::prefix('categories')->group(function (): void {
@@ -85,7 +102,8 @@ Route::resource('tags', TagController::class)->names([
 // Series Routes
 Route::prefix('series')->group(function (): void {
     Route::post('/bulk-delete', [SeriesController::class, 'bulkDelete'])->name('admin.series.bulk-delete');
-    Route::post('/reorder-articles', [SeriesController::class, 'reorderArticles'])->name('admin.series.reorder-articles');
+    // reorderArticles() takes the series id as its second argument.
+    Route::post('/{id}/reorder-articles', [SeriesController::class, 'reorderArticles'])->name('admin.series.reorder-articles');
 });
 Route::resource('series', SeriesController::class)->names([
     'index' => 'admin.series.index',

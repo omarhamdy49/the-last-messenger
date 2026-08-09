@@ -22,8 +22,7 @@ class SearchController extends Controller
 
     public function __construct(protected SearchService $searchService)
     {
-        // Most search endpoints are public, only history requires auth
-        $this->middleware('auth:sanctum')->only(['history', 'clearHistory']);
+        $this->middleware('auth:sanctum');
     }
 
     /**
@@ -91,7 +90,7 @@ class SearchController extends Controller
     {
         $request->validate([
             'q' => 'required|string|min:1|max:100',
-            'module' => 'nullable|string',
+            'module' => 'nullable|string|in:article,media,seerah,sahaba,quran',
         ]);
 
         $suggestions = $this->searchService->getSuggestions(
@@ -113,7 +112,7 @@ class SearchController extends Controller
     public function history(Request $request): JsonResponse
     {
         $request->validate([
-            'module' => 'nullable|string',
+            'module' => 'nullable|string|in:article,media,seerah,sahaba,quran',
         ]);
 
         $history = $this->searchService->getSearchHistory(
@@ -135,7 +134,7 @@ class SearchController extends Controller
     public function clearHistory(Request $request): JsonResponse
     {
         $request->validate([
-            'module' => 'nullable|string',
+            'module' => 'nullable|string|in:article,media,seerah,sahaba,quran',
         ]);
 
         $deleted = $this->searchService->clearSearchHistory(
@@ -157,7 +156,7 @@ class SearchController extends Controller
     public function trending(Request $request): JsonResponse
     {
         $request->validate([
-            'module' => 'nullable|string',
+            'module' => 'nullable|string|in:article,media,seerah,sahaba,quran',
             'days' => 'nullable|integer|min:1|max:30',
         ]);
 

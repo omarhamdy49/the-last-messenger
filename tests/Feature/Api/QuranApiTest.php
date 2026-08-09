@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
@@ -29,6 +31,7 @@ class QuranApiTest extends TestCase
         // Surah lookups are cached and the 'search' rate limiter is cache-backed;
         // flushing per test keeps cross-test state out of navigational search.
         Cache::flush();
+        Sanctum::actingAs(User::factory()->create());
     }
 
     // ===================== SURAH ENDPOINTS =====================
@@ -42,7 +45,7 @@ class QuranApiTest extends TestCase
         $this->assertTrue($response->json('success'));
     }
 
-    public function test_surahs_index_does_not_require_authentication(): void
+    public function test_surahs_index_is_available_to_authenticated_clients(): void
     {
         $response = $this->getJson('/api/v1/quran/surahs');
 
@@ -95,7 +98,7 @@ class QuranApiTest extends TestCase
             ->assertJson(['success' => false]);
     }
 
-    public function test_random_verse_route_is_public_not_protected(): void
+    public function test_random_verse_is_available_to_authenticated_clients(): void
     {
         // The route must never return 401; on an empty DB it 404s, but
         // authorization must not be the cause of failure.
@@ -141,7 +144,7 @@ class QuranApiTest extends TestCase
         $response->assertOk();
     }
 
-    public function test_quran_search_does_not_require_authentication(): void
+    public function test_quran_search_is_available_to_authenticated_clients(): void
     {
         $response = $this->getJson('/api/v1/quran/search?q=test');
 
@@ -201,7 +204,7 @@ class QuranApiTest extends TestCase
             ->assertJson(['success' => false]);
     }
 
-    public function test_suggest_does_not_require_authentication(): void
+    public function test_suggest_is_available_to_authenticated_clients(): void
     {
         $this->getJson('/api/v1/quran/search/suggest?q=2:255')->assertOk();
     }

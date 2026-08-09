@@ -51,6 +51,13 @@ interface BulkOperationRepositoryInterface extends RepositoryInterface
     public function getWithFilters(array $filters, int $perPage = 15): LengthAwarePaginator;
 
     /**
+     * Count operations grouped by status, optionally scoped to one creator.
+     *
+     * @return array<string, int> status => count (only statuses present)
+     */
+    public function countByStatus(?int $userId = null): array;
+
+    /**
      * Clean up old completed operations
      */
     public function cleanupOld(int $daysOld = 30): int;

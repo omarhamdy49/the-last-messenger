@@ -9,6 +9,7 @@ use App\Domain\Blog\DTOs\UpdateTagData;
 use App\Domain\Blog\Exceptions\CannotMergeTagException;
 use App\Domain\Blog\Models\Tag;
 use App\Domain\Blog\Repositories\TagRepositoryInterface;
+use App\Models\Article;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -222,24 +223,43 @@ class TagService
             throw CannotMergeTagException::selfMerge();
         }
 
-        $sourceTag = $this->findOrFail($sourceId);
-        $destinationTag = $this->findOrFail($destinationId);
+        $this->findOrFail($sourceId);
+        $this->findOrFail($destinationId);
 
-        return DB::transaction(function () use ($sourceId, $destinationId, $sourceTag): int {
-            // Get all articles from source tag
-            $articles = $sourceTag->articles;
-            $count = $articles->count();
+        return DB::transaction(function () use ($sourceId, $destinationId): int {
+            $morphType = (new Article)->getMorphClass();
 
-            // Attach articles to destination tag (if not already attached)
-            foreach ($articles as $article) {
-                if (! $article->tags->contains($destinationId)) {
-                    $article->tags()->attach($destinationId);
-                }
-                // Detach from source tag
-                $article->tags()->detach($sourceId);
+            $sourceArticleIds = DB::table('taggables')
+                ->where('tag_id', $sourceId)
+                ->where('taggable_type', $morphType)
+                ->pluck('taggable_id');
+
+            $count = $sourceArticleIds->count();
+
+            // Skip articles already carrying the destination tag: taggables has
+            // a unique (tag_id, taggable_id, taggable_type) index.
+            $alreadyTagged = DB::table('taggables')
+                ->where('tag_id', $destinationId)
+                ->where('taggable_type', $morphType)
+                ->whereIn('taggable_id', $sourceArticleIds)
+                ->pluck('taggable_id');
+
+            $toMove = $sourceArticleIds->diff($alreadyTagged);
+
+            if ($toMove->isNotEmpty()) {
+                $now = now();
+                DB::table('taggables')->insert(
+                    $toMove->map(fn ($articleId) => [
+                        'tag_id' => $destinationId,
+                        'taggable_type' => $morphType,
+                        'taggable_id' => $articleId,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ])->all()
+                );
             }
 
-            // Delete source tag
+            // Delete source tag (the repository detaches its pivot rows first)
             $this->delete($sourceId);
 
             return $count;

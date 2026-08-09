@@ -14,8 +14,7 @@ use App\Domain\Quran\Application\Handlers\ListRevelationContextsHandler;
 use App\Domain\Quran\Application\Handlers\UpdateRevelationContextHandler;
 use App\Domain\Quran\Application\Queries\GetRevelationContextByIdQuery;
 use App\Domain\Quran\Application\Queries\ListRevelationContextsQuery;
-use App\Domain\Quran\Models\Surah;
-use App\Domain\Quran\Services\QuranCacheKeys;
+use App\Domain\Quran\Services\SurahService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreRevelationContextRequest;
 use App\Http\Requests\Admin\UpdateRevelationContextRequest;
@@ -34,6 +33,7 @@ class RevelationContextController extends Controller
         protected CreateRevelationContextHandler $createHandler,
         protected UpdateRevelationContextHandler $updateHandler,
         protected DeleteRevelationContextHandler $deleteHandler,
+        protected SurahService $surahService,
     ) {}
 
     /**
@@ -57,7 +57,7 @@ class RevelationContextController extends Controller
 
         return view('admin.quran.revelation-contexts.index', [
             'contexts' => $contexts,
-            'surahs' => $this->getSurahsForSelector(),
+            'surahs' => $this->surahService->getForSelector(),
         ]);
     }
 
@@ -69,7 +69,7 @@ class RevelationContextController extends Controller
     public function create(): View
     {
         return view('admin.quran.revelation-contexts.create', [
-            'surahs' => $this->getSurahsForSelector(),
+            'surahs' => $this->surahService->getForSelector(),
         ]);
     }
 
@@ -127,7 +127,7 @@ class RevelationContextController extends Controller
 
         return view('admin.quran.revelation-contexts.edit', [
             'context' => $context,
-            'surahs' => $this->getSurahsForSelector(),
+            'surahs' => $this->surahService->getForSelector(),
         ]);
     }
 
@@ -182,12 +182,4 @@ class RevelationContextController extends Controller
      *
      * @return \Illuminate\Support\Collection
      */
-    private function getSurahsForSelector()
-    {
-        return cache()->remember(QuranCacheKeys::surahSelector(), now()->addMinutes(30), function () {
-            return Surah::select(['id', 'revelation_order', 'name_ar'])
-                ->orderBy('revelation_order')
-                ->get();
-        });
-    }
 }

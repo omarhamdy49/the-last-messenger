@@ -6,8 +6,8 @@ namespace App\Console\Commands;
 
 use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Models\VerseTranslation;
+use App\Domain\Quran\Services\QuranCacheKeys;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -78,7 +78,7 @@ class SyncQuranArabicCommand extends Command
 
         $bar->finish();
         $this->newLine();
-        Cache::flush();
+        QuranCacheKeys::flushContent();
         $this->info("Synced Arabic text for {$updated} verses from quran.com.");
 
         return self::SUCCESS;

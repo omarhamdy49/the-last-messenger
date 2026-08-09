@@ -14,6 +14,7 @@ use App\Domain\Quran\Repositories\AiInquiryQuotaRepositoryInterface;
 use App\Domain\Quran\Repositories\AiInquiryRepositoryInterface;
 use App\Domain\Quran\Services\AnswerHtmlRenderer;
 use App\Domain\Quran\Services\AnswerVerseLinker;
+use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Quran\Services\QuranInquirySearchService;
 use App\Domain\Quran\Services\QuranQueryService;
 use App\Domain\Quran\Services\QuranReaderService;
@@ -305,7 +306,7 @@ final class QuranController extends Controller
     private function cachedSurahList(string $locale): array
     {
         return Cache::remember(
-            "public_quran_index_{$locale}",
+            QuranCacheKeys::publicSurahList($locale),
             3600,
             fn () => $this->quranQueryService->listSurahs(locale: $locale)
                 ->map(fn ($s) => [
@@ -336,7 +337,7 @@ final class QuranController extends Controller
 
         // Full surah, no pagination — verses carry their mushaf page so the
         // reader can separate them by Quran page (like a printed mushaf).
-        $cacheKey = "public_quran_surah_full_{$surahNumber}_{$locale}";
+        $cacheKey = QuranCacheKeys::publicSurahFull($surahNumber, $locale);
 
         $payload = Cache::remember($cacheKey, 3600, function () use ($surahNumber, $locale) {
             try {
@@ -409,7 +410,7 @@ final class QuranController extends Controller
         }
 
         // Load reciters for the audio player dropdown (not cached per-verse)
-        $reciters = Cache::remember('public_quran_reciters_audio_list', 3600, function () {
+        $reciters = Cache::remember(QuranCacheKeys::publicRecitersAudioList(), 3600, function () {
             try {
                 $all = $this->quranQueryService->listReciters(
                     // Must exceed the catalogue size — a short page silently drops
@@ -507,7 +508,7 @@ final class QuranController extends Controller
         $perPage = (int) $request->query('per_page', 20);
         $perPage = in_array($perPage, [10, 20, 50], true) ? $perPage : 20;
 
-        $cacheKey = "public_quran_juz_{$juz}_{$locale}_{$page}_{$perPage}";
+        $cacheKey = QuranCacheKeys::publicJuz($juz, $locale, $page, $perPage);
 
         $payload = Cache::remember($cacheKey, 3600, function () use ($juz, $locale, $perPage) {
             try {
@@ -558,7 +559,7 @@ final class QuranController extends Controller
         $perPage = (int) $request->query('per_page', 20);
         $perPage = in_array($perPage, [10, 20, 50], true) ? $perPage : 20;
 
-        $cacheKey = "public_quran_hizb_{$hizb}_{$locale}_{$page}_{$perPage}";
+        $cacheKey = QuranCacheKeys::publicHizb($hizb, $locale, $page, $perPage);
 
         $payload = Cache::remember($cacheKey, 3600, function () use ($hizb, $locale, $perPage) {
             try {
@@ -605,7 +606,7 @@ final class QuranController extends Controller
         }
 
         $locale = app()->getLocale();
-        $cacheKey = "public_quran_mushaf_page_{$page}_{$locale}";
+        $cacheKey = QuranCacheKeys::publicMushafPage($page, $locale);
 
         $payload = Cache::remember($cacheKey, 3600, function () use ($page, $locale) {
             try {
@@ -641,7 +642,7 @@ final class QuranController extends Controller
     {
         $locale = app()->getLocale();
 
-        $recitersData = Cache::remember("public_quran_reciters_{$locale}", 3600, function () use ($locale): array {
+        $recitersData = Cache::remember(QuranCacheKeys::publicReciters($locale), 3600, function () use ($locale): array {
             try {
                 $all = $this->reciterService->getFeatured();
                 $featured = collect($all)->take(3);
@@ -742,7 +743,7 @@ final class QuranController extends Controller
         ));
 
         // Surah list for the filter dropdown (cached, shared shape with the index page)
-        $surahOptions = Cache::remember("public_quran_asbab_surahs_{$locale}", 3600, function () use ($locale) {
+        $surahOptions = Cache::remember(QuranCacheKeys::publicAsbabSurahs($locale), 3600, function () use ($locale) {
             try {
                 return $this->quranQueryService->listSurahs(locale: $locale)
                     ->map(fn ($s) => ['number' => $s->number, 'nameAr' => $s->nameAr])

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Blog\Repositories;
 
 use App\Domain\Blog\Models\Tag;
+use App\Models\Article;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
@@ -127,13 +128,24 @@ class TagRepository implements TagRepositoryInterface
     }
 
     /**
+     * The value stored in taggables.taggable_type for articles.
+     *
+     * Articles are registered in the morph map (see TopicsServiceProvider), so
+     * the column holds the short alias "article", never the FQCN.
+     */
+    protected function articleMorphType(): string
+    {
+        return (new Article)->getMorphClass();
+    }
+
+    /**
      * Bulk delete tags
      */
     public function bulkDelete(array $ids): int
     {
         // Detach all articles from these tags first
         DB::table('taggables')
-            ->where('taggable_type', 'App\\Domain\\Blog\\Models\\Article')
+            ->where('taggable_type', $this->articleMorphType())
             ->whereIn('tag_id', $ids)
             ->delete();
 
@@ -174,7 +186,7 @@ class TagRepository implements TagRepositoryInterface
             'tags:total_usage',
             now()->addMinutes(15),
             fn () => DB::table('taggables')
-                ->where('taggable_type', 'App\\Domain\\Blog\\Models\\Article')
+                ->where('taggable_type', $this->articleMorphType())
                 ->distinct('taggable_id')
                 ->count('taggable_id')
         );
@@ -230,7 +242,11 @@ class TagRepository implements TagRepositoryInterface
         $tag = $this->findOrFail($tagId);
 
         return $tag->articles()
-            ->with(['writer:id,name', 'category:id,name,slug'])
+            ->with([
+                'writer:id,name',
+                'category:id,slug',
+                'category.translations:id,category_id,locale,name',
+            ])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
@@ -296,54 +312,9 @@ class TagRepository implements TagRepositoryInterface
             ->paginate($perPage);
     }
 
-    /**
-     * Get paginated tags filtered by type, with locale-aware JSON name search
-     *
-     * Uses JSON_EXTRACT so each locale column of the JSON `name` field is
-     * searched independently — identical to the original controller logic.
-     */
-    public function paginateByType(
-        string $type,
-        int $perPage = 15,
-        string $search = '',
-        array $locales = ['ar', 'en'],
-        string $sortBy = 'created_at',
-        string $sortOrder = 'desc'
-    ): LengthAwarePaginator {
-        $query = $this->model::where('type', $type);
-
-        if (! empty($search)) {
-            $query->where(function ($q) use ($search, $locales) {
-                foreach ($locales as $locale) {
-                    $q->orWhereRaw("JSON_EXTRACT(name, '$.{$locale}') LIKE ?", ["%{$search}%"]);
-                }
-            });
-        }
-
-        $query->orderBy($sortBy, $sortOrder);
-
-        return $query->paginate($perPage);
-    }
-
-    /**
-     * Search tags by type for autocomplete
-     */
-    public function searchByType(
-        string $type,
-        string $search,
-        int $limit = 10,
-        array $columns = ['id', 'slug', 'name', 'color']
-    ): \Illuminate\Support\Collection {
-        return $this->model::where('type', $type)
-            ->where(function ($q) use ($search) {
-                // Reuse the JSON extract approach for consistency across all locales
-                foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $locale) {
-                    $q->orWhereRaw("JSON_EXTRACT(name, '$.{$locale}') LIKE ?", ["%{$search}%"]);
-                }
-            })
-            ->limit($limit)
-            ->get($columns);
-    }
+    // paginateByType()/searchByType() were removed: they had no callers and
+    // queried the dropped tags.name JSON column, so they could only ever throw.
+    // Use paginate(), which searches tag_translations.
 
     /**
      * Recalculate usage count for all tags

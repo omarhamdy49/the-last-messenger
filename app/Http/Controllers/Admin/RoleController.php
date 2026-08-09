@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\AssignPermissionsRequest;
 use App\Http\Requests\Admin\StoreRoleRequest;
 use App\Http\Requests\Admin\UpdateRoleRequest;
 use App\Services\RoleService;
@@ -180,13 +181,8 @@ class RoleController extends Controller
      *
      * POST /su/portal/v1/admin/roles/{id}/permissions
      */
-    public function assignPermissions(Request $request, int $id): JsonResponse
+    public function assignPermissions(AssignPermissionsRequest $request, int $id): JsonResponse
     {
-        $request->validate([
-            'permissions' => ['required', 'array', 'min:1'],
-            'permissions.*' => ['string', 'exists:permissions,name'],
-        ]);
-
         $role = $this->roleService->getRoleWithPermissions($id);
 
         if (! $role) {

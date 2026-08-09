@@ -65,10 +65,11 @@
                             @foreach ($locales as $locale)
                                 <div x-show="activeLanguage === '{{ $locale }}'" x-cloak>
                                     @if ($setting->type === SiteSettingType::RICHTEXT)
-                                        <x-admin.form.rich-text
+                                        <x-admin.form.wysiwyg
                                             name="settings[{{ $setting->key }}][{{ $locale }}]"
                                             :value="old('settings.'.$setting->key.'.'.$locale, $values[$locale] ?? '')"
-                                            :locale="$locale" />
+                                            :locale="$locale"
+                                            toolbar="compact" />
                                     @elseif ($setting->type === SiteSettingType::TEXTAREA)
                                         <textarea name="settings[{{ $setting->key }}][{{ $locale }}]"
                                                   rows="3"

@@ -52,7 +52,7 @@ class SahabiController extends Controller
     {
         $term = trim((string) $request->query('q', ''));
 
-        if (mb_strlen($term) < 2) {
+        if (mb_strlen($term) < 2 || mb_strlen($term) > 200) {
             return response()->json([
                 'success' => false,
                 'message' => __('sahaba.errors.query_too_short'),

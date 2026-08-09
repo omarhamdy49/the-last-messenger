@@ -235,4 +235,38 @@ final class EloquentMuslimRepository implements MuslimRepositoryInterface
     {
         $muslim->delete();
     }
+
+    public function bulkDelete(array $ids): int
+    {
+        if ($ids === []) {
+            return 0;
+        }
+
+        return DB::transaction(fn (): int => Muslim::query()->whereIn('id', $ids)->delete());
+    }
+
+    public function bulkSetPublished(array $ids, bool $published): int
+    {
+        if ($ids === []) {
+            return 0;
+        }
+
+        return Muslim::query()->whereIn('id', $ids)->update(['is_published' => $published]);
+    }
+
+    /**
+     * Featured status lives on the muslims_roles pivot, and the admin list has no
+     * role in scope — so this flips the flag for every role a selected person
+     * holds, which is what the bulk action on that screen means.
+     */
+    public function bulkSetFeatured(array $ids, bool $featured): int
+    {
+        if ($ids === []) {
+            return 0;
+        }
+
+        return DB::table('muslims_roles')
+            ->whereIn('muslim_id', $ids)
+            ->update(['is_featured' => $featured]);
+    }
 }

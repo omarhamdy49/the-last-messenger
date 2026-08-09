@@ -32,18 +32,12 @@ class AdminUserSeeder extends Seeder
         $this->ensureRolesExist();
 
         $this->createAdminUser(
-            email: (string) env('SUPER_ADMIN_EMAIL', 'supm@dwit.com'),
+            email: (string) env('SUPER_ADMIN_EMAIL', 'suyol@rasoolallah.com'),
             name: 'Super Admin',
             role: 'super_admin',
             passwordEnv: 'ADMIN_PASSWORD',
         );
 
-        $this->createAdminUser(
-            email: (string) env('ADMIN_EMAIL', 'su@dwit.com'),
-            name: 'Admin User',
-            role: 'admin',
-            passwordEnv: 'ADMIN_PASSWORD',
-        );
 
         $this->command->newLine();
         $this->command->info('✅ Admin users ready.');

@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Quran;
 
 use App\Domain\Quran\Models\TranslationResource;
+use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -46,7 +46,7 @@ class TranslationResourceController extends Controller
             $resource = TranslationResource::create($data);
             $this->syncDefault($resource);
         });
-        Cache::flush();
+        QuranCacheKeys::flushContent();
 
         return redirect()->route('admin.translation-resources.index')
             ->with('success', __('quran.admin.translation_resource_saved'));
@@ -66,7 +66,7 @@ class TranslationResourceController extends Controller
             $resource->update($this->validatedData($request, $id));
             $this->syncDefault($resource);
         });
-        Cache::flush();
+        QuranCacheKeys::flushContent();
 
         return redirect()->route('admin.translation-resources.index')
             ->with('success', __('quran.admin.translation_resource_saved'));
@@ -76,7 +76,7 @@ class TranslationResourceController extends Controller
     {
         // Translation rows keep their text but lose the resource link (nullOnDelete).
         TranslationResource::findOrFail($id)->delete();
-        Cache::flush();
+        QuranCacheKeys::flushContent();
 
         return redirect()->route('admin.translation-resources.index')
             ->with('success', __('quran.admin.translation_resource_deleted'));

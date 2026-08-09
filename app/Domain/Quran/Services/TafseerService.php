@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Services;
 
-use App\Domain\Quran\Models\Tafseer;
+use App\Domain\Quran\Models\VerseTafsir;
 use App\Domain\Quran\Repositories\TafseerRepositoryInterface;
 use App\Domain\Shared\Services\BaseService;
 use App\Exceptions\Domain\DuplicateResourceException;
@@ -109,7 +109,7 @@ class TafseerService extends BaseService
      * @throws ResourceNotFoundException
      * @throws DuplicateResourceException
      */
-    public function updateTafseer(Tafseer $tafseer, array $data): Model
+    public function updateTafseer(VerseTafsir $tafseer, array $data): Model
     {
         // Check for duplicates (excluding current record)
         if (isset($data['verse_key']) && isset($data['lang'])) {
@@ -130,7 +130,7 @@ class TafseerService extends BaseService
      *
      * @throws ResourceNotFoundException
      */
-    public function deleteTafseer(Tafseer $tafseer): bool
+    public function deleteTafseer(VerseTafsir $tafseer): bool
     {
         return $this->repository->delete($tafseer->id);
     }

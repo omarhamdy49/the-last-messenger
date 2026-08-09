@@ -7,6 +7,7 @@ namespace App\Domain\Media\Services;
 use App\Domain\Media\DTOs\CreateMediaEpisodeData;
 use App\Domain\Media\DTOs\YouTubePlaylistData;
 use App\Domain\Media\DTOs\YouTubeVideoData;
+use App\Domain\Media\Enums\YouTubeSyncStatus;
 use App\Domain\Media\Exceptions\YouTubeException;
 use App\Domain\Media\Models\MediaEpisode;
 use App\Domain\Media\Models\MediaProgram;
@@ -15,6 +16,7 @@ use App\Domain\Media\Repositories\MediaEpisodeRepositoryInterface;
 use App\Domain\Media\Repositories\MediaProgramRepositoryInterface;
 use App\Domain\Media\Support\YouTubeClient;
 use App\Domain\Media\Support\YouTubeUrl;
+use App\Jobs\SyncYouTubePlaylistJob;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -60,6 +62,50 @@ class YouTubeSyncService
                 'title' => $e->title,
                 'position' => $e->position,
             ], $playlist->entries),
+        ];
+    }
+
+    /**
+     * Register a playlist import and queue the job that performs it.
+     * The returned run is the handle the admin modal polls for progress.
+     */
+    public function startRun(int $programId, string $playlistUrl, ?int $userId = null): YouTubeSyncRun
+    {
+        $run = YouTubeSyncRun::create([
+            'program_id' => $programId,
+            'playlist_url' => $playlistUrl,
+            'status' => YouTubeSyncStatus::Pending,
+            'created_by' => $userId,
+        ]);
+
+        SyncYouTubePlaylistJob::dispatch($run->id);
+
+        return $run;
+    }
+
+    /**
+     * Progress snapshot for a run, or null when the run does not exist.
+     *
+     * @return array{status:string,is_terminal:bool,total:int,processed:int,created:int,updated:int,percent:int,message:?string,error:?string}|null
+     */
+    public function getRunStatus(int $runId): ?array
+    {
+        $run = YouTubeSyncRun::find($runId);
+
+        if (! $run instanceof YouTubeSyncRun) {
+            return null;
+        }
+
+        return [
+            'status' => $run->status->value,
+            'is_terminal' => $run->status->isTerminal(),
+            'total' => $run->total,
+            'processed' => $run->processed,
+            'created' => $run->created_count,
+            'updated' => $run->updated_count,
+            'percent' => $run->progressPercent(),
+            'message' => $run->message,
+            'error' => $run->error,
         ];
     }
 

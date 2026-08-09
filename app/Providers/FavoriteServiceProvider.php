@@ -29,7 +29,11 @@ final class FavoriteServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->bind(FavoriteRepositoryInterface::class, FavoriteRepository::class);
+        // Singleton, not bind: boot() configures the per-morph eager loads on the
+        // resolved instance. A transient binding would hand every later consumer
+        // a fresh repository with an empty morph map, so morphWith([]) would
+        // reintroduce the translations N+1 this wiring exists to prevent.
+        $this->app->singleton(FavoriteRepositoryInterface::class, FavoriteRepository::class);
 
         $this->app->singleton(FavorableRegistryInterface::class, function (): FavorableRegistry {
             $registry = new FavorableRegistry;

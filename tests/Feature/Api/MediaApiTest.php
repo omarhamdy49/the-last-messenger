@@ -12,11 +12,18 @@ use App\Domain\Media\Models\MediaProgram;
 use App\Domain\Media\Models\MediaProgramTranslation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class MediaApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Sanctum::actingAs(User::factory()->create());
+    }
 
     // ===================== HELPERS =====================
 
@@ -106,7 +113,7 @@ class MediaApiTest extends TestCase
         $this->assertTrue($response->json('success'));
     }
 
-    public function test_programs_index_does_not_require_authentication(): void
+    public function test_programs_index_is_available_to_authenticated_clients(): void
     {
         $response = $this->getJson('/api/v1/media/programs');
 
@@ -124,12 +131,11 @@ class MediaApiTest extends TestCase
         $this->assertTrue($response->json('success'));
     }
 
-    public function test_programs_index_respects_per_page_cap(): void
+    public function test_programs_index_rejects_per_page_above_cap(): void
     {
-        // per_page above 100 should be capped to 100 — no 422
         $response = $this->getJson('/api/v1/media/programs?per_page=9999');
 
-        $response->assertOk();
+        $response->assertUnprocessable();
     }
 
     public function test_programs_index_filters_by_category(): void
@@ -154,7 +160,7 @@ class MediaApiTest extends TestCase
         $this->assertTrue($response->json('success'));
     }
 
-    public function test_popular_does_not_require_authentication(): void
+    public function test_popular_is_available_to_authenticated_clients(): void
     {
         $response = $this->getJson('/api/v1/media/programs/popular');
 
@@ -193,7 +199,7 @@ class MediaApiTest extends TestCase
         $this->assertTrue($response->json('success'));
     }
 
-    public function test_search_does_not_require_authentication(): void
+    public function test_search_is_available_to_authenticated_clients(): void
     {
         $response = $this->getJson('/api/v1/media/programs/search?q=test');
 
@@ -229,7 +235,7 @@ class MediaApiTest extends TestCase
             ->assertJsonStructure(['success', 'error' => ['message']]);
     }
 
-    public function test_show_does_not_require_authentication(): void
+    public function test_show_is_available_to_authenticated_clients(): void
     {
         $program = $this->createProgram(['slug' => 'show-no-auth']);
 
@@ -261,7 +267,7 @@ class MediaApiTest extends TestCase
             ->assertJson(['success' => false]);
     }
 
-    public function test_episodes_list_does_not_require_authentication(): void
+    public function test_episodes_list_is_available_to_authenticated_clients(): void
     {
         $program = $this->createProgram(['slug' => 'episodes-noauth']);
 
@@ -303,7 +309,7 @@ class MediaApiTest extends TestCase
             ->assertJson(['success' => false]);
     }
 
-    public function test_single_episode_does_not_require_authentication(): void
+    public function test_single_episode_is_available_to_authenticated_clients(): void
     {
         $program = $this->createProgram(['slug' => 'ep-noauth']);
         $this->createEpisode($program, 1);
@@ -317,6 +323,8 @@ class MediaApiTest extends TestCase
 
     public function test_store_progress_requires_authentication(): void
     {
+        auth('sanctum')->forgetUser();
+
         $program = $this->createProgram(['slug' => 'progress-auth-program']);
         $episode = $this->createEpisode($program, 1);
 
@@ -417,6 +425,8 @@ class MediaApiTest extends TestCase
 
     public function test_continue_watching_requires_authentication(): void
     {
+        auth('sanctum')->forgetUser();
+
         $response = $this->getJson('/api/v1/media/continue-watching');
 
         $response->assertUnauthorized();

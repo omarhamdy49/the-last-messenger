@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Shared\Services;
 
-use App\Domain\Blog\Models\Article;
+use App\Models\Article;
 use App\Domain\Quran\Models\Reciter;
 use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Models\Verse;
@@ -13,9 +13,11 @@ use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Shared\Models\AdminLog;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Analytics Service
@@ -74,16 +76,19 @@ class AnalyticsService
                                 'archived' => (int) ($row->archived ?? 0),
                             ];
                         })(),
+                        // Table is `hadiths` with a `grade` column since the
+                        // Hadith rebuild; the old hadith_hadiths/display_grade
+                        // names threw, and the catch below zeroed every module.
                         'hadith' => (function () use ($startDate, $endDate): array {
-                            $q = DB::table('hadith_hadiths');
+                            $q = DB::table('hadiths');
                             if ($startDate && $endDate) {
                                 $q->whereBetween('created_at', [$startDate, $endDate]);
                             }
                             $row = (clone $q)->selectRaw("
                                 COUNT(*) as total,
-                                SUM(display_grade = 'sahih') as sahih,
-                                SUM(display_grade = 'hasan') as hasan,
-                                SUM(display_grade = 'daif') as daif
+                                SUM(grade = 'sahih') as sahih,
+                                SUM(grade = 'hasan') as hasan,
+                                SUM(grade = 'daif') as daif
                             ")->first();
 
                             return [
@@ -93,21 +98,12 @@ class AnalyticsService
                                 'daif' => (int) ($row->daif ?? 0),
                             ];
                         })(),
-                        'hadith_scholars' => (function () use ($startDate, $endDate): array {
-                            $q = DB::table('hadith_scholars');
-                            if ($startDate && $endDate) {
-                                $q->whereBetween('created_at', [$startDate, $endDate]);
-                            }
-                            $row = (clone $q)->selectRaw('
-                                COUNT(*) as total,
-                                SUM(is_companion = 1) as sahaba
-                            ')->first();
-
-                            return [
-                                'total' => (int) ($row->total ?? 0),
-                                'sahaba' => (int) ($row->sahaba ?? 0),
-                            ];
-                        })(),
+                        // The rebuild replaced hadith_scholars with the
+                        // hadith_narrators link table; companion status now
+                        // lives in the People domain, not on the narrator row.
+                        'hadith_narrators' => [
+                            'total' => (int) DB::table('hadith_narrators')->distinct()->count('narrator_id'),
+                        ],
                         'seerah' => [
                             'events' => $query(SeerahEvent::class)->count(),
                         ],
@@ -124,7 +120,11 @@ class AnalyticsService
                         ],
                     ],
                 ];
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
+                // Reported, not swallowed: a zeroed dashboard used to be the
+                // only symptom of a renamed table, which hid the breakage.
+                report($e);
+
                 return $this->getEmptyContentStats();
             }
         });
@@ -139,23 +139,43 @@ class AnalyticsService
     {
         $cacheKey = $this->getCacheKey('engagement_metrics', compact('startDate', 'endDate'));
 
-        return Cache::remember($cacheKey, self::CACHE_TTL, function (): array {
+        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($startDate, $endDate): array {
             try {
-                // Single aggregate per table replaces repeated sum/count queries
-                $articleAgg = DB::table('articles')
-                    ->whereNull('deleted_at')
+                // Single aggregate per table replaces repeated sum/count queries.
+                // The range predicate has to be applied here: the cache key is
+                // built from the dates, so without it every range would be
+                // served the same all-time totals under a range-specific key.
+                $articleQuery = DB::table('articles')->whereNull('deleted_at');
+
+                if ($startDate && $endDate) {
+                    $articleQuery->whereBetween('created_at', [$startDate, $endDate]);
+                }
+
+                // The counter column on `articles` is `views`; there is no
+                // favorites_count column at all — favorites are rows in the
+                // polymorphic `favorites` table, counted separately below.
+                $articleAgg = (clone $articleQuery)
                     ->selectRaw("
                         COUNT(*) as total,
                         SUM(status = 'published') as published_count,
-                        SUM(views_count) as total_views,
-                        SUM(favorites_count) as total_favorites
+                        SUM(views) as total_views
                     ")
                     ->first();
 
                 $articleTotalViews = (int) ($articleAgg->total_views ?? 0);
-                $articleTotalFavs = (int) ($articleAgg->total_favorites ?? 0);
                 $articleTotal = (int) ($articleAgg->total ?? 0);
                 $articlePublished = (int) ($articleAgg->published_count ?? 0);
+
+                $favouritesQuery = DB::table('favorites')
+                    ->join('articles', 'favorites.favorable_id', '=', 'articles.id')
+                    ->where('favorites.favorable_type', (new Article)->getMorphClass())
+                    ->whereNull('articles.deleted_at');
+
+                if ($startDate && $endDate) {
+                    $favouritesQuery->whereBetween('articles.created_at', [$startDate, $endDate]);
+                }
+
+                $articleTotalFavs = (int) $favouritesQuery->count();
 
                 // Hadiths carry no view counter: the rebuilt schema stores identity
                 // and structure only, so there is no engagement metric to report.
@@ -178,7 +198,9 @@ class AnalyticsService
                     ],
                     'engagement_rate' => $this->calculateEngagementRate($totalViews, $articleTotal),
                 ];
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
+                report($e);
+
                 return $this->getEmptyEngagementMetrics();
             }
         });
@@ -227,9 +249,72 @@ class AnalyticsService
                     'limit' => $limit,
                     'trends' => $trends,
                 ];
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
+                report($e);
+
                 return ['period' => $period, 'limit' => $limit, 'trends' => []];
             }
+        });
+    }
+
+    /**
+     * Get daily view counts per content type, as chart.js-shaped datasets.
+     *
+     * `user_interactions` is the only per-day view record in the schema — the
+     * `views`/`views_count` columns on content tables are all-time counters
+     * with no time dimension, so they cannot produce a time series. When no
+     * views were recorded the datasets array is empty; callers must render
+     * "no data" rather than substitute numbers.
+     *
+     * @return array<string, mixed>
+     */
+    public function getViewsChart(int $days = 30): array
+    {
+        $cacheKey = $this->getCacheKey('views_chart', compact('days'));
+
+        return Cache::remember($cacheKey, self::CHART_CACHE_TTL, function () use ($days): array {
+            $labels = [];
+            for ($i = $days - 1; $i >= 0; $i--) {
+                $labels[] = now()->subDays($i)->toDateString();
+            }
+
+            try {
+                // Single grouped query: range predicate on created_at keeps the
+                // index usable, GROUP BY yields every series in one pass.
+                $rows = DB::table('user_interactions')
+                    ->selectRaw('DATE(created_at) as day, interactable_type, COUNT(*) as count')
+                    ->where('interaction_type', 'view')
+                    ->where('created_at', '>=', now()->subDays($days - 1)->startOfDay())
+                    ->where('created_at', '<=', now()->endOfDay())
+                    ->groupBy(DB::raw('DATE(created_at)'), 'interactable_type')
+                    ->get();
+            } catch (\Throwable $e) {
+                report($e);
+
+                return ['labels' => $labels, 'datasets' => []];
+            }
+
+            $palette = ['#0056b3', '#218838', '#64CCC5', '#F59E0B', '#8B5CF6', '#EF4444'];
+            $datasets = [];
+            $index = 0;
+
+            foreach ($rows->groupBy('interactable_type') as $morphType => $typeRows) {
+                $byDay = $typeRows->keyBy('day');
+                $color = $palette[$index % count($palette)];
+                $index++;
+
+                $datasets[] = [
+                    'label' => $this->humanizeMorphType((string) $morphType),
+                    'data' => array_map(
+                        fn (string $day): int => (int) ($byDay[$day]->count ?? 0),
+                        $labels
+                    ),
+                    'borderColor' => $color,
+                    'backgroundColor' => $color.'1A', // 10% alpha fill
+                ];
+            }
+
+            return ['labels' => $labels, 'datasets' => $datasets];
         });
     }
 
@@ -245,28 +330,50 @@ class AnalyticsService
         return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($limit): array {
             try {
                 return [
-                    'articles' => Article::where('status', 'published')
-                        ->orderByDesc('views_count')
+                    // `views` is the real counter column; favorites are rows in
+                    // the polymorphic `favorites` table, so they come from a
+                    // correlated subquery rather than a (nonexistent) column.
+                    'articles' => Article::query()
+                        ->where('status', 'published')
+                        ->select(['id', 'title', 'views', 'created_at'])
+                        ->selectSub(
+                            DB::table('favorites')
+                                ->selectRaw('COUNT(*)')
+                                ->whereColumn('favorites.favorable_id', 'articles.id')
+                                ->where('favorites.favorable_type', (new Article)->getMorphClass()),
+                            'favorites_count'
+                        )
+                        ->orderByDesc('views')
                         ->take($limit)
-                        ->get(['id', 'title', 'views_count', 'favorites_count', 'created_at'])
+                        ->get()
                         ->map(fn ($item) => [
                             'id' => $item->id,
                             'title' => $item->title['ar'] ?? $item->title['en'] ?? 'Untitled',
-                            'views' => $item->views_count ?? 0,
-                            'favorites' => $item->favorites_count ?? 0,
+                            'views' => (int) ($item->views ?? 0),
+                            'favorites' => (int) ($item->favorites_count ?? 0),
                             'created_at' => $item->created_at->format('Y-m-d'),
                         ]),
-                    'reciters' => Reciter::orderByDesc('order')
+                    // Reciter names live in reciter_translations (there is no
+                    // `name` column) and the sort column is `display_order`;
+                    // the previous `name`/`order` references threw and the
+                    // catch below emptied the whole payload.
+                    'reciters' => Reciter::query()
+                        ->with('translations')
+                        ->orderByDesc('display_order')
                         ->take($limit)
-                        ->get(['id', 'name', 'style', 'is_featured'])
+                        ->get(['id', 'slug', 'style', 'is_featured'])
                         ->map(fn ($item) => [
                             'id' => $item->id,
-                            'name' => $item->name['ar'] ?? $item->name['en'] ?? 'Unknown',
+                            'name' => $item->getTranslation('name', 'ar')
+                                ?? $item->getTranslation('name', 'en')
+                                ?? 'Unknown',
                             'style' => $item->style,
                             'is_featured' => $item->is_featured,
                         ]),
                 ];
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
+                report($e);
+
                 return [
                     'articles' => collect(),
                     'reciters' => collect(),
@@ -314,7 +421,9 @@ class AnalyticsService
                         ? round(($verifiedUsers / $totalUsers) * 100, 2)
                         : 0,
                 ];
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
+                report($e);
+
                 return [
                     'total' => 0,
                     'verified' => 0,
@@ -386,7 +495,9 @@ class AnalyticsService
                             'last_activity' => $lastActivity?->format('Y-m-d H:i:s'),
                             'growth_rate' => $this->calculateGrowthRate($count, $recentCount),
                         ];
-                    } catch (\Exception $e) {
+                    } catch (\Throwable $e) {
+                        report($e);
+
                         return [
                             'name' => $module['name'],
                             'slug' => $module['slug'],
@@ -399,7 +510,9 @@ class AnalyticsService
                         ];
                     }
                 })->toArray();
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
+                report($e);
+
                 return [];
             }
         });
@@ -443,7 +556,9 @@ class AnalyticsService
                     ],
                     'changes' => $changes,
                 ];
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
+                report($e);
+
                 return [
                     'current_period' => ['start' => $startDate->format('Y-m-d'), 'end' => $endDate->format('Y-m-d'), 'stats' => []],
                     'previous_period' => ['start' => '', 'end' => '', 'stats' => []],
@@ -489,7 +604,9 @@ class AnalyticsService
                 }
 
                 $count += $query->count();
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
+                report($e);
+
                 continue;
             }
         }
@@ -511,9 +628,21 @@ class AnalyticsService
             }
 
             return $query->distinct('tokenable_id')->count('tokenable_id');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            report($e);
+
             return 0;
         }
+    }
+
+    /**
+     * Turn a stored morph value (short alias or FQCN) into a chart label.
+     */
+    private function humanizeMorphType(string $morphType): string
+    {
+        $class = Relation::getMorphedModel($morphType) ?? $morphType;
+
+        return Str::headline(class_basename($class));
     }
 
     /**
@@ -551,7 +680,9 @@ class AnalyticsService
                     'count' => $row->count,
                 ])
                 ->toArray();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            report($e);
+
             return [];
         }
     }
@@ -639,8 +770,7 @@ class AnalyticsService
             'by_module' => [
                 'articles' => ['total' => 0, 'published' => 0, 'draft' => 0, 'archived' => 0],
                 'hadith' => ['total' => 0, 'sahih' => 0, 'hasan' => 0, 'daif' => 0],
-                'hadith_scholars' => ['total' => 0, 'sahaba' => 0],
-                'hadith_books' => ['total' => 0],
+                'hadith_narrators' => ['total' => 0],
                 'seerah' => ['events' => 0],
                 'sahaba' => ['total' => 0],
                 'quran' => ['surahs' => 0, 'verses' => 0, 'reciters' => 0],

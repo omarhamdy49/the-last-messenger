@@ -18,6 +18,7 @@ use App\Repositories\ArticleRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -102,27 +103,16 @@ class SeerahEventController extends Controller
      */
     public function store(StoreSeerahEventRequest $request): RedirectResponse
     {
-        $dto = CreateSeerahEventData::fromRequest($request);
+        $dto = CreateSeerahEventData::fromArray($request->validated(), $this->uploadedFeaturedImage($request));
 
         // Store featured image to disk before passing path to service
         $storedImagePath = null;
         if ($dto->featuredImage !== null) {
-            $storedImagePath = $dto->featuredImage->store('seerah-events/featured-images', 'public');
+            $storedImagePath = $dto->featuredImage->store('seerah-events/featured-images', 'public') ?: null;
         }
 
-        $event = $this->seerahEventService->createEvent($dto);
-
-        // Persist stored image path if a file was uploaded
-        if ($storedImagePath !== null) {
-            $event->update(['featured_image' => $storedImagePath]);
-        }
-
-        // Sync translations
-        $event->syncTranslations([
-            'title' => $dto->title,
-            'description' => $dto->description,
-            'content' => $dto->content,
-        ]);
+        // Row + image path + translations are written in a single transaction
+        $event = $this->seerahEventService->createEvent($dto, $storedImagePath);
 
         // Log the creation
         $this->logger->logCreate($event, $request->user());
@@ -186,30 +176,23 @@ class SeerahEventController extends Controller
         }
 
         $oldValues = $oldEvent->toArray();
+        $oldImagePath = $oldEvent->featured_image;
 
-        $dto = UpdateSeerahEventData::fromRequest($request);
+        $dto = UpdateSeerahEventData::fromArray($request->validated(), $this->uploadedFeaturedImage($request));
 
         // Store featured image to disk before passing path to service
         $storedImagePath = null;
         if ($dto->featuredImage !== null) {
-            $this->deleteFeaturedImage($oldEvent->featured_image);
-            $storedImagePath = $dto->featuredImage->store('seerah-events/featured-images', 'public');
+            $storedImagePath = $dto->featuredImage->store('seerah-events/featured-images', 'public') ?: null;
         }
 
-        // Perform update via DTO-typed service method
-        $event = $this->seerahEventService->updateEvent($id, $dto);
+        // Row + image path + translations are written in a single transaction
+        $event = $this->seerahEventService->updateEvent($id, $dto, $storedImagePath);
 
-        // Persist stored image path if a file was uploaded
+        // Drop the superseded file only once the new path is committed
         if ($storedImagePath !== null) {
-            $event->update(['featured_image' => $storedImagePath]);
+            $this->deleteFeaturedImage($oldImagePath);
         }
-
-        // Sync translations
-        $event->syncTranslations([
-            'title' => $dto->title,
-            'description' => $dto->description,
-            'content' => $dto->content,
-        ]);
 
         // Log the update with diff
         $this->logger->logUpdate($event, $oldValues, $event->toArray(), $request->user());
@@ -329,6 +312,14 @@ class SeerahEventController extends Controller
                 'total' => $events->total(),
             ],
         ]);
+    }
+
+    /**
+     * Pull the uploaded featured image off the request, if one was sent.
+     */
+    private function uploadedFeaturedImage(Request $request): ?UploadedFile
+    {
+        return $request->hasFile('featured_image') ? $request->file('featured_image') : null;
     }
 
     private function deleteFeaturedImage(?string $path): void

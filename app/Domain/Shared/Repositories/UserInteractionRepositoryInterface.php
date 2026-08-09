@@ -67,6 +67,25 @@ interface UserInteractionRepositoryInterface extends RepositoryInterface
     public function getThisMonth(): Collection;
 
     /**
+     * Aggregate a single content item's interactions without loading rows.
+     *
+     * @return array{by_type: array<string, int>, unique_users: int, avg_duration: ?float}
+     */
+    public function aggregateByContent(string $contentType, int $contentId): array;
+
+    /**
+     * Per-day, per-type interaction counts for one user over a date range.
+     *
+     * @return array<string, array<string, int>> 'Y-m-d' => (type => count)
+     */
+    public function dailyCountsByUser(int $userId, Carbon $startDate, Carbon $endDate): array;
+
+    /**
+     * Count interactions created between two timestamps.
+     */
+    public function countBetweenDates(Carbon $startDate, Carbon $endDate): int;
+
+    /**
      * Count interactions by type
      */
     public function countByType(InteractionType|string $type): int;

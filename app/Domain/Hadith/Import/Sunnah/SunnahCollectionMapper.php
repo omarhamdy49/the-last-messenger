@@ -231,13 +231,7 @@ final class SunnahCollectionMapper
 
     private function keyPart(string $value): string
     {
-        $part = preg_replace('/[^A-Za-z0-9._-]+/u', '-', trim($value)) ?? '';
-        $part = trim($part, '-');
-        if ($part === '') {
-            throw new RuntimeException("Cannot derive a reference key from '{$value}'.");
-        }
-
-        return mb_strtolower($part, 'UTF-8');
+        return ReferenceKey::part($value);
     }
 
     private function reference(string $template, string $bookNumber, string $hadithNumber): string

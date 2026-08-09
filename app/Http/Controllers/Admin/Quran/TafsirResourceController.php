@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Quran;
 
 use App\Domain\Quran\Models\TafsirResource;
+use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -38,7 +38,7 @@ class TafsirResourceController extends Controller
     public function store(Request $request): RedirectResponse
     {
         TafsirResource::create($this->validatedData($request));
-        Cache::flush();
+        QuranCacheKeys::flushContent();
 
         return redirect()->route('admin.tafsir-resources.index')
             ->with('success', __('quran.admin.tafsir_resource_saved'));
@@ -55,7 +55,7 @@ class TafsirResourceController extends Controller
     {
         $resource = TafsirResource::findOrFail($id);
         $resource->update($this->validatedData($request, $id));
-        Cache::flush();
+        QuranCacheKeys::flushContent();
 
         return redirect()->route('admin.tafsir-resources.index')
             ->with('success', __('quran.admin.tafsir_resource_saved'));
@@ -65,7 +65,7 @@ class TafsirResourceController extends Controller
     {
         // Tafsir rows keep their text but lose the resource link (nullOnDelete).
         TafsirResource::findOrFail($id)->delete();
-        Cache::flush();
+        QuranCacheKeys::flushContent();
 
         return redirect()->route('admin.tafsir-resources.index')
             ->with('success', __('quran.admin.tafsir_resource_deleted'));

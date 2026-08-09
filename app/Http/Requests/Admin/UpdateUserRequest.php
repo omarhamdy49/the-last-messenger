@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use App\Http\Requests\Admin\Concerns\ProtectsPrivilegedUsers;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -12,14 +13,16 @@ use Illuminate\Validation\Rule;
  */
 class UpdateUserRequest extends FormRequest
 {
+    use ProtectsPrivilegedUsers;
+
     public function authorize(): bool
     {
-        return $this->user()->hasRole('super_admin');
+        return $this->authorizeUserManagement();
     }
 
     public function rules(): array
     {
-        $userId = $this->route('id');
+        $userId = $this->targetUserId();
 
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255'],

@@ -19,6 +19,83 @@ class ArticleCrudTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_module_blocks_are_saved_as_article_content_and_rendered_publicly(): void
+    {
+        $admin = $this->createAdminUser();
+        $this->actingAs($admin);
+
+        $blocks = [
+            ['type' => 'wysiwyg', 'content' => '<h2>مقدمة الاختبار</h2>'],
+            [
+                'type' => 'verse',
+                'surah_id' => 1,
+                'surah_name' => 'الفاتحة',
+                'verses' => [[
+                    'number' => 1,
+                    'key' => '1:1',
+                    'text' => 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ',
+                ]],
+            ],
+            [
+                'type' => 'hadith',
+                'hadith_id' => 42,
+                'text' => 'إنما الأعمال بالنيات',
+                'collection' => 'صحيح الاختبار',
+                'number' => '42',
+                'grade' => 'sahih',
+            ],
+            [
+                'type' => 'sahabi',
+                'sahabi_id' => 7,
+                'name' => 'أبو بكر الصديق',
+                'kunya' => 'أبو بكر',
+                'slug' => 'abu-bakr-al-siddiq',
+            ],
+        ];
+
+        $this->post(route('admin.articles.store'), [
+            'title' => ['ar' => 'اختبار كتل المحتوى'],
+            'slug' => ['ar' => 'module-block-persistence'],
+            'content' => ['ar' => '<p>قيمة احتياطية يجب استبدالها.</p>'],
+            'content_blocks' => ['ar' => json_encode($blocks, JSON_UNESCAPED_UNICODE)],
+            'writer_id' => $admin->id,
+            'status' => 'published',
+            'is_ready' => ['ar' => true],
+        ])->assertRedirect(route('admin.articles.index'));
+
+        $locale = ArticleLocale::query()
+            ->where('locale', 'ar')
+            ->where('slug', 'module-block-persistence')
+            ->firstOrFail();
+
+        $this->assertSame($blocks, $locale->content['body']);
+
+        $updatedBlocks = $blocks;
+        $updatedBlocks[2]['text'] = 'الدين النصيحة';
+
+        $this->put(route('admin.articles.update', $locale->article_id), [
+            'title' => ['ar' => 'اختبار تعديل كتل المحتوى'],
+            'slug' => ['ar' => 'module-block-persistence'],
+            'content' => ['ar' => '<p>قيمة احتياطية ثانية.</p>'],
+            'content_blocks' => ['ar' => json_encode($updatedBlocks, JSON_UNESCAPED_UNICODE)],
+            'writer_id' => $admin->id,
+            'status' => 'published',
+            'is_ready' => ['ar' => true],
+        ])->assertRedirect(route('admin.articles.index'));
+
+        $locale->refresh();
+        $this->assertSame($updatedBlocks, $locale->content['body']);
+
+        $this->get(route('public.articles.show', 'module-block-persistence'))
+            ->assertOk()
+            ->assertSee('module-embed--verse', false)
+            ->assertSee('module-embed--hadith', false)
+            ->assertSee('module-embed--sahabi', false)
+            ->assertSee('بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ')
+            ->assertSee('الدين النصيحة')
+            ->assertSee('أبو بكر الصديق');
+    }
+
     public function test_admin_can_create_update_view_and_delete_articles_with_multilingual_media_relations(): void
     {
         Storage::fake('public');

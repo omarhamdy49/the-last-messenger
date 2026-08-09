@@ -38,7 +38,7 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
 
         return $query
             ->select(['id', 'program_id', 'season_number', 'episode_number', 'slug', 'video_url', 'duration_seconds', 'views_count', 'is_featured', 'created_at'])
-            ->with(['translations:id,media_episode_id,locale,title,description,is_ready'])
+            ->with(['translations:id,media_episode_id,locale,title,description,is_ready', 'media'])
             ->where('program_id', $programId)
             ->orderBy('season_number')
             ->orderBy('episode_number')
@@ -333,11 +333,13 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
         return EpisodeWatchProgress::query()
             ->select(['id', 'user_id', 'episode_id', 'seconds', 'completed', 'updated_at'])
             ->with([
-                'episode:id,program_id,season_number,episode_number,slug,video_url,duration_seconds',
+                'episode:id,program_id,season_number,episode_number,slug,video_url,duration_seconds,is_featured',
                 'episode.translations:id,media_episode_id,locale,title,is_ready',
                 'episode.media',
                 'episode.program:id,slug,category',
                 'episode.program.translations:id,media_program_id,locale,title,is_ready',
+                // The nested program resource renders poster/banner URLs.
+                'episode.program.media',
             ])
             ->where('user_id', $userId)
             ->where('completed', false)
@@ -345,6 +347,22 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
             ->orderByDesc('updated_at')
             ->limit($limit)
             ->get();
+    }
+
+    public function publicEpisodeExists(int $episodeId): bool
+    {
+        $query = MediaEpisode::query()->whereKey($episodeId);
+
+        return $this->publicEpisodes($query)->exists();
+    }
+
+    public function saveWatchProgress(int $userId, int $episodeId, int $seconds, bool $completed): void
+    {
+        // (user_id, episode_id) is unique — upsert is safe.
+        EpisodeWatchProgress::query()->updateOrCreate(
+            ['user_id' => $userId, 'episode_id' => $episodeId],
+            ['seconds' => $seconds, 'completed' => $completed],
+        );
     }
 
     private function publicEpisodes(Builder $query): Builder

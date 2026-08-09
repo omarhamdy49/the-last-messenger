@@ -28,20 +28,17 @@ final class SeriesController extends Controller
             3600,
             function () use ($locale): array {
                 try {
+                    // The card shows a count and a total, never the articles
+                    // themselves — so both come back as SQL aggregates rather
+                    // than hydrating every published article and its locales.
+                    $publishedAndReady = fn ($q) => $q
+                        ->where('status', 'published')
+                        ->whereHas('locales', fn ($l) => $l->where('is_ready', true));
+
                     return Series::query()
-                        ->with([
-                            'translations',
-                            // Published+ready articles ride along so cards can
-                            // preview the reading path and total minutes.
-                            'articles' => fn ($q) => $q
-                                ->where('status', 'published')
-                                ->whereHas('locales', fn ($l) => $l->where('is_ready', true))
-                                ->with(['locales' => fn ($l) => $l->whereIn('locale', array_unique([$locale, 'ar']))]),
-                        ])
-                        ->withCount(['articles as published_articles_count' => function ($q) {
-                            $q->where('status', 'published')
-                                ->whereHas('locales', fn ($l) => $l->where('is_ready', true));
-                        }])
+                        ->with('translations')
+                        ->withCount(['articles as published_articles_count' => $publishedAndReady])
+                        ->withSum(['articles as total_read_time' => $publishedAndReady], 'read_time')
                         ->orderByDesc('created_at')
                         ->get()
                         ->map(function (Series $s) use ($locale): ?array {
@@ -51,14 +48,7 @@ final class SeriesController extends Controller
                                 return null;
                             }
 
-                            $articles = $s->relationLoaded('articles') ? $s->articles : collect();
-                            $data['previewTitles'] = $articles->take(3)
-                                ->map(fn ($a) => $a->locales->firstWhere('locale', $locale)?->title
-                                    ?? $a->locales->firstWhere('locale', 'ar')?->title)
-                                ->filter()
-                                ->values()
-                                ->all();
-                            $data['totalReadTime'] = (int) $articles->sum('read_time');
+                            $data['totalReadTime'] = (int) $s->total_read_time;
 
                             return $data;
                         })

@@ -173,6 +173,31 @@ class BulkOperationService extends BaseService
         return $this->repository->getByUser($userId, $perPage);
     }
 
+    /**
+     * Return operation counts per status, plus the total.
+     *
+     * Every status the enum defines is present in the result (zero-filled) so
+     * callers get a stable shape; $userId scopes to one creator, null is
+     * platform-wide.
+     *
+     * @return array<string, int>
+     */
+    public function getOperationStatistics(?int $userId = null): array
+    {
+        $counts = $this->repository->countByStatus($userId);
+
+        $stats = [];
+        foreach (BulkOperationStatusEnum::values() as $status) {
+            $stats[$status] = $counts[$status] ?? 0;
+        }
+
+        // Sum the raw counts, not $stats: a status row that is no longer in the
+        // enum must still be counted in the total rather than silently dropped.
+        $stats['total_operations'] = array_sum($counts);
+
+        return $stats;
+    }
+
     // -------------------------------------------------------------------------
     // Private orchestration
     // -------------------------------------------------------------------------

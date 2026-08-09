@@ -89,25 +89,4 @@ interface TagRepositoryInterface
      */
     public function findDuplicate(array $name): ?Model;
 
-    /**
-     * Get paginated tags filtered by type, with locale-aware JSON name search
-     */
-    public function paginateByType(
-        string $type,
-        int $perPage = 15,
-        string $search = '',
-        array $locales = ['ar', 'en'],
-        string $sortBy = 'created_at',
-        string $sortOrder = 'desc'
-    ): LengthAwarePaginator;
-
-    /**
-     * Search tags by type for autocomplete — returns a plain collection
-     */
-    public function searchByType(
-        string $type,
-        string $search,
-        int $limit = 10,
-        array $columns = ['id', 'slug', 'name', 'color']
-    ): \Illuminate\Support\Collection;
 }

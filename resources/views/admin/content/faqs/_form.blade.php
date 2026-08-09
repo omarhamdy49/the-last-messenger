@@ -81,10 +81,11 @@
                         <label class="block mb-2 font-semibold" :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
                             {{ __('admin.content_answer') }} @if ($locale === 'ar')<span class="text-red-500">*</span>@endif
                         </label>
-                        <x-admin.form.rich-text
+                        <x-admin.form.wysiwyg
                             name="answer[{{ $locale }}]"
                             :value="old('answer.'.$locale, $answers[$locale] ?? '')"
-                            :locale="$locale" />
+                            :locale="$locale"
+                            toolbar="compact" />
                         @error("answer.{$locale}")<p class="mt-2 text-sm text-red-500">{{ $message }}</p>@enderror
                     </div>
                 </div>

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin\Quran;
 
-use App\Domain\Quran\Models\Surah;
-use App\Domain\Quran\Models\Tafseer;
+use App\Domain\Quran\Models\VerseTafsir;
 use App\Domain\Quran\Services\QuranCacheKeys;
+use App\Domain\Quran\Services\SurahService;
 use App\Domain\Quran\Services\TafseerService;
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
@@ -29,6 +29,7 @@ class TafseerController extends Controller
      */
     public function __construct(
         protected TafseerService $tafseerService,
+        protected SurahService $surahService,
         protected AdminLoggerService $logger
     ) {}
 
@@ -75,7 +76,7 @@ class TafseerController extends Controller
         }
 
         // Get surahs for filter dropdown
-        $surahs = $this->getSurahsForSelector();
+        $surahs = $this->surahService->getForSelector();
         $sources = $this->tafseerService->getSourceNames();
 
         return view('admin.tafseer.index', compact('tafseer', 'stats', 'surahs', 'sources'));
@@ -88,7 +89,7 @@ class TafseerController extends Controller
      */
     public function create(): View
     {
-        $surahs = $this->getSurahsForSelector();
+        $surahs = $this->surahService->getForSelector();
         $sources = $this->tafseerService->getSourceNames();
 
         return view('admin.tafseer.create', compact('surahs', 'sources'));
@@ -176,7 +177,7 @@ class TafseerController extends Controller
             abort(404, 'Tafseer not found');
         }
 
-        $surahs = $this->getSurahsForSelector();
+        $surahs = $this->surahService->getForSelector();
         $sources = $this->tafseerService->getSourceNames();
 
         return view('admin.tafseer.edit', compact('tafseer', 'surahs', 'sources'));
@@ -305,7 +306,7 @@ class TafseerController extends Controller
     {
         $request->validate([
             'ids' => ['required', 'array', 'min:1'],
-            'ids.*' => ['integer', 'exists:quran_tafseer,id'],
+            'ids.*' => ['integer', 'exists:quran_verse_tafsirs,id'],
         ]);
 
         try {
@@ -315,7 +316,7 @@ class TafseerController extends Controller
             // Log bulk action
             $this->logger->logBulkAction(
                 'bulk_delete',
-                Tafseer::class,
+                VerseTafsir::class,
                 $ids,
                 $request->user()
             );
@@ -377,12 +378,4 @@ class TafseerController extends Controller
      *
      * @return \Illuminate\Support\Collection
      */
-    private function getSurahsForSelector()
-    {
-        return cache()->remember(QuranCacheKeys::surahSelector(), now()->addMinutes(30), function () {
-            return Surah::select(['id', 'revelation_order', 'name_ar'])
-                ->orderBy('revelation_order')
-                ->get();
-        });
-    }
 }

@@ -188,6 +188,8 @@ class SearchService
                 ->select('query')
                 ->where('query', 'LIKE', "{$query}%")
                 ->groupBy('query')
+                // Do not turn a single user's private search into a suggestion.
+                ->havingRaw('COUNT(*) >= 3')
                 ->orderByRaw('COUNT(*) DESC')
                 ->limit($this->suggestionLimit);
 
@@ -268,6 +270,8 @@ class SearchService
                 ->select('query', 'module', DB::raw('COUNT(*) as search_count'))
                 ->where('searched_at', '>=', now()->subDays($days))
                 ->groupBy('query', 'module')
+                // Small-cohort suppression protects uncommon/private queries.
+                ->havingRaw('COUNT(*) >= 3')
                 ->orderByDesc('search_count')
                 ->limit(20);
 

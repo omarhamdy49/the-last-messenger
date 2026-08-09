@@ -17,6 +17,8 @@ class ArticleResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $isAdminRequest = $request->routeIs('admin.*');
+
         return [
             'id' => $this->id,
             'thumb' => $this->thumb ? asset('storage/'.$this->thumb) : null,
@@ -31,12 +33,12 @@ class ArticleResource extends JsonResource
             'updated_at' => $this->updated_at?->toIso8601String(),
 
             // Writer/Author
-            'writer' => $this->when($this->relationLoaded('writer'), function () {
-                return [
+            'writer' => $this->when($this->relationLoaded('writer'), function () use ($isAdminRequest) {
+                return array_filter([
                     'id' => $this->writer->id,
                     'name' => $this->writer->name,
-                    'email' => $this->writer->email,
-                ];
+                    'email' => $isAdminRequest ? $this->writer->email : null,
+                ], static fn (mixed $value): bool => $value !== null);
             }),
 
             // Primary Category
@@ -71,8 +73,12 @@ class ArticleResource extends JsonResource
             }),
 
             // Locales (translations)
-            'locales' => $this->when($this->relationLoaded('locales'), function () {
-                return $this->locales->mapWithKeys(function ($locale) {
+            'locales' => $this->when($this->relationLoaded('locales'), function () use ($isAdminRequest) {
+                $locales = $isAdminRequest
+                    ? $this->locales
+                    : $this->locales->where('is_ready', true);
+
+                return $locales->mapWithKeys(function ($locale) {
                     return [
                         $locale->locale => [
                             'title' => $locale->title,
@@ -127,7 +133,7 @@ class ArticleResource extends JsonResource
             }),
 
             // Version History
-            'versions' => $this->when($this->relationLoaded('versions'), function () {
+            'versions' => $this->when($isAdminRequest && $this->relationLoaded('versions'), function () {
                 return $this->versions->map(function ($version) {
                     return [
                         'id' => $version->id,
@@ -144,18 +150,20 @@ class ArticleResource extends JsonResource
             }),
 
             // Computed properties
-            'current_version' => $this->when($this->relationLoaded('versions'), function () {
+            'current_version' => $this->when($isAdminRequest && $this->relationLoaded('versions'), function () {
                 return $this->getCurrentVersionNumber();
             }),
 
             // URLs
-            'urls' => [
-                'admin_edit' => route('admin.articles.edit', $this->id),
-                'admin_show' => route('admin.articles.show', $this->id),
-                'preview' => Route::has('admin.articles.preview')
-                    ? route('admin.articles.preview', $this->id)
-                    : null,
-            ],
+            'urls' => $this->when($isAdminRequest, function () {
+                return [
+                    'admin_edit' => route('admin.articles.edit', $this->id),
+                    'admin_show' => route('admin.articles.show', $this->id),
+                    'preview' => Route::has('admin.articles.preview')
+                        ? route('admin.articles.preview', $this->id)
+                        : null,
+                ];
+            }),
         ];
     }
 

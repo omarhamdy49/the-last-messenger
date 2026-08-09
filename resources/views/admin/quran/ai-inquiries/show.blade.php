@@ -68,7 +68,7 @@
         @error('question')<p class="text-red-500 text-sm -mt-3 mb-3">{{ $message }}</p>@enderror
 
         <label class="block text-xs font-semibold uppercase tracking-wider mb-2" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ __('admin.quran_ai_answer') }}</label>
-        <x-admin.form.rich-text name="answer" :value="old('answer', $seedAnswer)" :locale="$inquiry->locale" height="260px" />
+        <x-admin.form.wysiwyg name="answer" :value="old('answer', $seedAnswer)" :locale="$inquiry->locale" toolbar="compact" height="260px" />
         @error('answer')<p class="text-red-500 text-sm mt-1">{{ $message }}</p>@enderror
 
         <div class="mt-4 flex justify-end">

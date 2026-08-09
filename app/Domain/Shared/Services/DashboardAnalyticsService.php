@@ -63,13 +63,11 @@ class DashboardAnalyticsService
             self::CACHE_TTL,
             function () use ($days): array {
                 $labels = [];
-                $usersData = [];
-
                 for ($i = $days - 1; $i >= 0; $i--) {
-                    $date = now()->subDays($i)->toDateString();
-                    $labels[] = $date;
-                    $usersData[] = DB::table('users')->whereDate('created_at', $date)->count();
+                    $labels[] = now()->subDays($i)->toDateString();
                 }
+
+                $usersData = $this->getDailyCountsForTable('users', $days);
 
                 return [
                     'labels' => $labels,
@@ -127,20 +125,14 @@ class DashboardAnalyticsService
             self::CACHE_PREFIX.".activity_heatmap.{$days}",
             self::CACHE_TTL,
             function () use ($days): array {
-                $heatmap = [];
+                $counts = $this->getDailyCountsForTable((new AdminLog)->getTable(), $days);
 
-                try {
-                    for ($i = $days - 1; $i >= 0; $i--) {
-                        $date = now()->subDays($i)->toDateString();
-                        $heatmap[] = [
-                            'date' => $date,
-                            'count' => AdminLog::whereDate('created_at', $date)->count(),
-                        ];
-                    }
-                } catch (\Throwable) {
-                    for ($i = $days - 1; $i >= 0; $i--) {
-                        $heatmap[] = ['date' => now()->subDays($i)->toDateString(), 'count' => 0];
-                    }
+                $heatmap = [];
+                for ($i = $days - 1; $i >= 0; $i--) {
+                    $heatmap[] = [
+                        'date' => now()->subDays($i)->toDateString(),
+                        'count' => $counts[$days - 1 - $i],
+                    ];
                 }
 
                 return $heatmap;
@@ -171,18 +163,31 @@ class DashboardAnalyticsService
                         ->where('last_used_at', '>=', now()->subMinutes(30))
                         ->count();
 
+                    // api_response_time and cache_hit_rate have no source in
+                    // this stack (no APM, and the database cache store exposes
+                    // no hit counters). They stay null so the UI renders
+                    // "unavailable" instead of a made-up number.
                     return [
-                        'api_response_time' => 145,
+                        'api_response_time' => null,
                         'database_size' => $dbSize[0]->size ?? 0,
-                        'cache_hit_rate' => 85.0,
+                        'cache_hit_rate' => null,
                         'active_sessions' => $activeSessions,
+                        'unavailable_metrics' => ['api_response_time', 'cache_hit_rate'],
                     ];
-                } catch (\Throwable) {
+                } catch (\Throwable $e) {
+                    report($e);
+
                     return [
-                        'api_response_time' => 0,
-                        'database_size' => 0,
-                        'cache_hit_rate' => 0,
-                        'active_sessions' => 0,
+                        'api_response_time' => null,
+                        'database_size' => null,
+                        'cache_hit_rate' => null,
+                        'active_sessions' => null,
+                        'unavailable_metrics' => [
+                            'api_response_time',
+                            'database_size',
+                            'cache_hit_rate',
+                            'active_sessions',
+                        ],
                     ];
                 }
             }
@@ -229,6 +234,43 @@ class DashboardAnalyticsService
     // ============================================================================
     // PRIVATE HELPERS
     // ============================================================================
+
+    /**
+     * Get per-day row counts for the last N days, oldest first.
+     *
+     * Mirrors DashboardService::getSparklineDataForTable: one aggregated query
+     * with a range predicate on created_at (so the index is usable) instead of
+     * N whereDate() counts that wrap created_at in DATE() and force a scan.
+     * Days with no rows are back-filled with 0 to keep the fixed-length array.
+     *
+     * Before: N queries (30-365), each a full scan. After: 1 index-range query.
+     *
+     * @return array<int, int>
+     */
+    private function getDailyCountsForTable(string $table, int $days): array
+    {
+        try {
+            $results = DB::table($table)
+                ->selectRaw('DATE(created_at) as day, COUNT(*) as count')
+                ->where('created_at', '>=', now()->subDays($days - 1)->startOfDay())
+                ->where('created_at', '<=', now()->endOfDay())
+                ->groupBy(DB::raw('DATE(created_at)'))
+                ->orderBy('day')
+                ->get()
+                ->keyBy('day');
+
+            $data = [];
+            for ($i = $days - 1; $i >= 0; $i--) {
+                $data[] = (int) ($results[now()->subDays($i)->toDateString()]->count ?? 0);
+            }
+
+            return $data;
+        } catch (\Throwable $e) {
+            report($e);
+
+            return array_fill(0, $days, 0);
+        }
+    }
 
     /**
      * Get monthly growth for a database table by table name

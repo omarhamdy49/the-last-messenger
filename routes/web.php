@@ -129,7 +129,10 @@ Route::get('/topics', [TopicController::class, 'index'])->name('public.topics');
 Route::get('/topics/{slug}', [TopicController::class, 'show'])->name('public.topics.show');
 
 // Unified Search
-Route::get('/search', [SearchController::class, 'index'])->name('public.search');
+// Throttled like the other search surfaces: this one fans out LIKE/fulltext
+// queries across every public module on an anonymous request.
+Route::get('/search', [SearchController::class, 'index'])
+    ->middleware('throttle:search')->name('public.search');
 
 // Static pages / Contact / FAQ (Content domain).
 // `public.about|privacy|terms` aliases match MenuSeeder's footer targets so the

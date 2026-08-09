@@ -6,6 +6,7 @@ namespace App\Domain\Quran\Repositories;
 
 use App\Domain\Quran\Models\Recitation;
 use App\Domain\Quran\Models\Surah;
+use App\Domain\Quran\Services\QuranCacheKeys;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 
@@ -71,7 +72,7 @@ class RecitationRepository implements RecitationRepositoryInterface
      */
     public function getSurahAudioUrls(int $surahNumber): array
     {
-        return Cache::remember("public_quran_surah_audio_urls_{$surahNumber}", 86400, fn (): array => Recitation::query()
+        return Cache::remember(QuranCacheKeys::publicSurahAudioUrls($surahNumber), 86400, fn (): array => Recitation::query()
             ->where('surah_id', $surahNumber)
             ->select(['reciter_id', 'audio_url'])
             ->get()

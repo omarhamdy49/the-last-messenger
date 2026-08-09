@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace App\Domain\Seerah\DTOs;
 
-use App\Http\Requests\Admin\StoreSeerahEventRequest;
 use Illuminate\Http\UploadedFile;
 
 /**
  * Create Seerah Event DTO
  *
  * Carries the validated, type-safe payload needed to create a new Seerah event.
- * Built from the incoming StoreSeerahEventRequest so that service classes never
- * touch the HTTP layer directly.
+ * Built from an already-validated attribute array so that neither this DTO nor
+ * the service classes touch the HTTP layer; the controller unpacks the request.
  *
  * @param  array<string, string|null>  $title  Locale-keyed titles.
  * @param  array<string, string|null>  $description  Locale-keyed descriptions.
@@ -45,12 +44,13 @@ final class CreateSeerahEventData
     ) {}
 
     /**
-     * Construct a CreateSeerahEventData instance from the validated store request.
+     * Construct a CreateSeerahEventData instance from validated request data.
+     *
+     * @param  array<string, mixed>  $validated  Output of StoreSeerahEventRequest::validated()
+     * @param  UploadedFile|null  $image  The uploaded featured image, if any
      */
-    public static function fromRequest(StoreSeerahEventRequest $request): self
+    public static function fromArray(array $validated, ?UploadedFile $image = null): self
     {
-        $validated = $request->validated();
-
         return new self(
             slug: $validated['slug'],
             title: $validated['title'] ?? [],
@@ -70,9 +70,10 @@ final class CreateSeerahEventData
             latitude: isset($validated['latitude']) ? (float) $validated['latitude'] : null,
             longitude: isset($validated['longitude']) ? (float) $validated['longitude'] : null,
             relatedArticleId: isset($validated['related_article_id']) ? (int) $validated['related_article_id'] : null,
-            featuredImage: $request->hasFile('featured_image') ? $request->file('featured_image') : null,
+            featuredImage: $image,
             displayOrder: (int) ($validated['display_order'] ?? 0),
-            isFeatured: $request->boolean('is_featured'),
+            // Unchecked checkboxes are simply absent from the payload.
+            isFeatured: filter_var($validated['is_featured'] ?? false, FILTER_VALIDATE_BOOLEAN),
         );
     }
 }

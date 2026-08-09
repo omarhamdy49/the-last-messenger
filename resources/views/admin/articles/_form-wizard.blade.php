@@ -20,6 +20,7 @@
 @endphp
 
 @push('styles')
+@vite('resources/js/admin/rich-text.js')
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <style>
     /* Select2 Dark Mode */
@@ -1219,18 +1220,18 @@
                                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-500'
                                     : (darkMode ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-blue-50')">
                             <p class="text-sm mb-2 line-clamp-2" :class="darkMode ? 'text-gray-200' : 'text-gray-800'"
-                               x-text="item.translations?.[0]?.text || '{{ __('articles.selector.no_translation') }}'"></p>
+                               x-text="hadithText(item) || '{{ __('articles.selector.no_translation') }}'"></p>
                             <div class="flex flex-wrap gap-2 text-xs">
                                 <span class="px-2 py-0.5 rounded font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
-                                      x-text="item.book?.collection?.name_ar || item.book?.title_ar || ''"></span>
-                                <span class="text-gray-500" x-text="'#' + item.hadith_number"></span>
+                                      x-text="hadithCollectionName(item)"></span>
+                                <span class="text-gray-500" x-text="'#' + (item.number || item.hadith_number || '')"></span>
                                 <span class="px-2 py-0.5 rounded font-medium"
                                       :class="{
-                                        'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300': item.grading_status === 'sahih',
-                                        'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300': item.grading_status === 'hasan',
-                                        'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300': item.grading_status === 'daif' || item.grading_status === 'mawdu'
+                                        'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300': (item.grade || item.grading_status) === 'sahih',
+                                        'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300': (item.grade || item.grading_status) === 'hasan',
+                                        'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300': (item.grade || item.grading_status) === 'daif' || (item.grade || item.grading_status) === 'mawdu'
                                       }"
-                                      x-text="item.grading_status"></span>
+                                      x-text="item.grade || item.grading_status || ''"></span>
                             </div>
                         </button>
                     </template>
@@ -1252,8 +1253,8 @@
                                 <i data-lucide="user" class="w-5 h-5 text-amber-600"></i>
                             </div>
                             <div>
-                                <p class="font-semibold text-sm" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="item.name?.ar || item.name?.en || item.name || ''"></p>
-                                <p class="text-xs text-gray-500" x-text="item.kunya?.ar || item.kunya || ''"></p>
+                                <p class="font-semibold text-sm" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="personName(item)"></p>
+                                <p class="text-xs text-gray-500" x-text="item.kunya || ''"></p>
                             </div>
                         </button>
                     </template>
@@ -1328,8 +1329,6 @@
 @push('scripts')
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<link href="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.snow.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.js"></script>
 <script>
 // TOC Manager Component
 window.tocManager = function(config) {
@@ -1524,8 +1523,9 @@ function articleForm(article, locales) {
 
             this.$nextTick(() => {
                 this.initializeSelect2();
-                this.initializeQuill();
+                this.initializeRichText();
                 this.setupUnsavedChangesWarning();
+                locales.forEach(locale => this.syncContentBlocks(locale));
                 lucide.createIcons();
             });
         },
@@ -1537,7 +1537,7 @@ function articleForm(article, locales) {
 
         getTotalBlockCount() {
             let total = 0;
-            for (const locale of this.locales) {
+            for (const locale of locales) {
                 total += (this.contentBlocks[locale] || []).length;
             }
             return total;
@@ -1547,6 +1547,7 @@ function articleForm(article, locales) {
             if (type === 'wysiwyg') {
                 if (!this.contentBlocks[locale]) this.contentBlocks[locale] = [];
                 this.contentBlocks[locale].push({ id: 'b_' + (++this.blockIdCounter), type: 'wysiwyg', content: '' });
+                this.syncContentBlocks(locale);
                 this.hasUnsavedChanges = true;
                 this.$nextTick(() => lucide.createIcons());
             }
@@ -1561,6 +1562,7 @@ function articleForm(article, locales) {
             if (!this.contentBlocks[locale]) this.contentBlocks[locale] = [];
             block.id = 'b_' + (++this.blockIdCounter);
             this.contentBlocks[locale].push(block);
+            this.syncContentBlocks(locale);
             this.hasUnsavedChanges = true;
             this.$nextTick(() => lucide.createIcons());
         },
@@ -1574,6 +1576,7 @@ function articleForm(article, locales) {
                 }
             }
             this.contentBlocks[locale].splice(index, 1);
+            this.syncContentBlocks(locale);
             this.hasUnsavedChanges = true;
             this.$nextTick(() => lucide.createIcons());
         },
@@ -1589,6 +1592,7 @@ function articleForm(article, locales) {
             blocks[newIndex] = temp;
             // Force reactivity
             this.contentBlocks[locale] = [...blocks];
+            this.syncContentBlocks(locale);
             this.hasUnsavedChanges = true;
             this.$nextTick(() => {
                 // Re-init quill editors for WYSIWYG blocks
@@ -1606,36 +1610,32 @@ function articleForm(article, locales) {
             const el = document.getElementById(`block_editor_${blockId}`);
             if (!el || this.quillEditors[editorKey]) return;
 
-            const isRtl = ['ar', 'ur'].includes(locale);
-            const editor = new Quill(`#block_editor_${blockId}`, {
-                theme: 'snow',
-                placeholder: '{{ __("articles.placeholders.content") }}',
-                modules: {
-                    toolbar: [
-                        [{ header: [1, 2, 3, 4, 5, 6, false] }],
-                        ['bold', 'italic', 'underline', 'strike'],
-                        [{ color: [] }, { background: [] }],
-                        [{ align: [] }],
-                        [{ list: 'ordered' }, { list: 'bullet' }],
-                        [{ indent: '-1' }, { indent: '+1' }],
-                        ['blockquote', 'code-block'],
-                        ['link', 'image'],
-                        ['clean']
-                    ]
+            if (!window.AdminWysiwyg) {
+                if (!el.dataset.wysiwygWaiting) {
+                    el.dataset.wysiwygWaiting = '1';
+                    window.addEventListener('rich-text:ready', () => {
+                        delete el.dataset.wysiwygWaiting;
+                        this.initBlockQuill(blockId, locale);
+                    }, { once: true });
                 }
+                return;
+            }
+
+            const block = this.contentBlocks[locale]?.find(b => b.id === blockId);
+            const editor = window.AdminWysiwyg.create(el, {
+                value: block?.content || '',
+                locale,
+                placeholder: '{{ __("articles.placeholders.content") }}',
+                toolbar: 'full',
             });
-            if (isRtl) { editor.format('direction', 'rtl'); editor.format('align', 'right'); }
 
             // Add custom module insert buttons to toolbar
             this.addModuleToolbarButtons(editor, blockId, locale);
 
-            // Load existing content
-            const block = this.contentBlocks[locale]?.find(b => b.id === blockId);
-            if (block?.content) editor.root.innerHTML = block.content;
-
             editor.on('text-change', () => {
                 const b = this.contentBlocks[locale]?.find(b => b.id === blockId);
                 if (b) b.content = editor.root.innerHTML;
+                this.syncContentBlocks(locale);
                 this.hasUnsavedChanges = true;
             });
 
@@ -1747,6 +1747,15 @@ function articleForm(article, locales) {
             });
         },
 
+        syncContentBlocks(locale) {
+            const blocks = (this.contentBlocks[locale] || []).map(block => {
+                const { id, _collapsed, ...contentBlock } = block;
+                return contentBlock;
+            });
+            const textarea = document.getElementById(`content_blocks_${locale}`);
+            if (textarea) textarea.value = JSON.stringify(blocks);
+        },
+
         // === Standard Methods ===
         initializeSelect2() {
             const dir = document.documentElement.dir || 'rtl';
@@ -1758,35 +1767,37 @@ function articleForm(article, locales) {
             });
         },
 
+        initializeRichText() {
+            const boot = () => this.$nextTick(() => this.initializeQuill());
+
+            if (window.AdminWysiwyg) {
+                boot();
+            } else {
+                window.addEventListener('rich-text:ready', boot, { once: true });
+            }
+        },
+
         initializeQuill() {
             const self = this;
             locales.forEach(locale => {
-                const isRtl = ['ar', 'ur'].includes(locale);
-
                 // Description editor
-                const descEditor = new Quill(`#description_${locale}_editor`, {
-                    theme: 'snow',
-                    placeholder: '{{ __("articles.placeholders.content") }}',
-                    modules: {
-                        toolbar: [['bold', 'italic', 'underline'], [{ list: 'ordered' }, { list: 'bullet' }], ['link'], ['clean']]
-                    }
-                });
-                if (isRtl) { descEditor.format('direction', 'rtl'); descEditor.format('align', 'right'); }
                 const descTa = document.getElementById(`description_${locale}`);
-                if (descTa && descTa.value) descEditor.root.innerHTML = descTa.value;
+                const descEditor = window.AdminWysiwyg.create(document.getElementById(`description_${locale}_editor`), {
+                    value: descTa?.value || '',
+                    locale,
+                    placeholder: '{{ __("articles.placeholders.content") }}',
+                    toolbar: 'compact',
+                });
                 descEditor.on('text-change', () => { if (descTa) descTa.value = descEditor.root.innerHTML; self.hasUnsavedChanges = true; });
 
                 // Summary editor
-                const summaryEditor = new Quill(`#summary_${locale}_editor`, {
-                    theme: 'snow',
-                    placeholder: '{{ __("articles.placeholders.excerpt") }}',
-                    modules: {
-                        toolbar: [['bold', 'italic'], [{ list: 'ordered' }, { list: 'bullet' }], ['link']]
-                    }
-                });
-                if (isRtl) { summaryEditor.format('direction', 'rtl'); summaryEditor.format('align', 'right'); }
                 const summaryTa = document.getElementById(`summary_${locale}`);
-                if (summaryTa && summaryTa.value) summaryEditor.root.innerHTML = summaryTa.value;
+                const summaryEditor = window.AdminWysiwyg.create(document.getElementById(`summary_${locale}_editor`), {
+                    value: summaryTa?.value || '',
+                    locale,
+                    placeholder: '{{ __("articles.placeholders.excerpt") }}',
+                    toolbar: 'minimal',
+                });
                 summaryEditor.on('text-change', () => { if (summaryTa) summaryTa.value = summaryEditor.root.innerHTML; self.hasUnsavedChanges = true; });
             });
         },
@@ -1864,12 +1875,7 @@ function articleForm(article, locales) {
             // Serialize content blocks to hidden textareas
             locales.forEach(locale => {
                 this.syncAllBlockQuills(locale);
-                const blocks = (this.contentBlocks[locale] || []).map(b => {
-                    const { id, ...rest } = b;
-                    return rest;
-                });
-                const ta = document.getElementById(`content_blocks_${locale}`);
-                if (ta) ta.value = JSON.stringify(blocks);
+                this.syncContentBlocks(locale);
             });
             this.hasUnsavedChanges = false;
             this.$el.submit();
@@ -1879,8 +1885,12 @@ function articleForm(article, locales) {
 
 // Module Selector Alpine Component
 function moduleSelector() {
-    const adminPrefix = '{{ url("su/portal/v1/admin") }}';
-    const apiPrefix = '/api/v1';
+    const surahBrowseUrl = @js(route('admin.articles.modules.surahs'));
+    const verseBySurahUrl = @js(url('su/portal/v1/admin/articles/module-options/surahs'));
+    const hadithCollectionsUrl = @js(route('admin.articles.modules.hadith-collections'));
+    const hadithSearchUrl = @js(route('admin.articles.modules.hadiths'));
+    const sahabaBrowseUrl = @js(route('admin.sahaba.browse'));
+    const seerahSearchUrl = @js(route('admin.seerah-events.search'));
     return {
         show: false,
         darkMode: localStorage.getItem('darkMode') === 'true',
@@ -1928,6 +1938,9 @@ function moduleSelector() {
             if (this.moduleType === 'hadith' && !this.hadithCollections.length) {
                 this.loadHadithCollections();
             }
+            if (this.moduleType === 'sahabi') {
+                this.searchModule();
+            }
             this.$nextTick(() => lucide.createIcons());
         },
 
@@ -1948,9 +1961,10 @@ function moduleSelector() {
         async loadSurahs() {
             this.loading = true;
             try {
-                const res = await fetch(`${apiPrefix}/quran/surahs`);
+                const res = await fetch(surahBrowseUrl, { headers: { Accept: 'application/json' } });
+                if (!res.ok) throw new Error(`Surah lookup failed with status ${res.status}`);
                 const json = await res.json();
-                this.surahs = json.data || json || [];
+                this.surahs = Array.isArray(json.data) ? json.data : [];
             } catch (e) { console.error('Failed to load surahs', e); }
             this.loading = false;
             this.$nextTick(() => lucide.createIcons());
@@ -1960,7 +1974,8 @@ function moduleSelector() {
             this.selectedSurah = surah;
             this.loading = true;
             try {
-                const res = await fetch(`${adminPrefix}/verses/by-surah/${surah.id}`);
+                const res = await fetch(`${verseBySurahUrl}/${surah.id}/verses`, { headers: { Accept: 'application/json' } });
+                if (!res.ok) throw new Error(`Verse lookup failed with status ${res.status}`);
                 const json = await res.json();
                 this.verses = json.data || [];
             } catch (e) { console.error('Failed to load verses', e); }
@@ -1969,20 +1984,24 @@ function moduleSelector() {
 
         async loadHadithCollections() {
             try {
-                const res = await fetch(`${apiPrefix}/hadith/collections`);
+                const res = await fetch(hadithCollectionsUrl, { headers: { Accept: 'application/json' } });
+                if (!res.ok) throw new Error(`Hadith collection lookup failed with status ${res.status}`);
                 const json = await res.json();
-                this.hadithCollections = json.data || json || [];
+                this.hadithCollections = Array.isArray(json.data) ? json.data : [];
             } catch (e) { console.error('Failed to load collections', e); }
         },
 
-        async searchHadith() {
+        async searchHadith(resetPage = true) {
             this.loading = true;
-            this.currentPage = 1;
+            if (resetPage) this.currentPage = 1;
             try {
-                let url = `${adminPrefix}/hadith/search?per_page=10&page=${this.currentPage}`;
-                if (this.searchQuery) url += `&q=${encodeURIComponent(this.searchQuery)}`;
-                if (this.hadithCollectionFilter) url += `&collection_id=${this.hadithCollectionFilter}`;
-                const res = await fetch(url);
+                const url = new URL(hadithSearchUrl, window.location.origin);
+                url.searchParams.set('per_page', '10');
+                url.searchParams.set('page', this.currentPage);
+                if (this.searchQuery) url.searchParams.set('q', this.searchQuery);
+                if (this.hadithCollectionFilter) url.searchParams.set('collection_id', this.hadithCollectionFilter);
+                const res = await fetch(url, { headers: { Accept: 'application/json' } });
+                if (!res.ok) throw new Error(`Hadith lookup failed with status ${res.status}`);
                 const json = await res.json();
                 this.results = json.data || [];
                 this.totalPages = json.meta?.last_page || 1;
@@ -1991,13 +2010,21 @@ function moduleSelector() {
             this.$nextTick(() => lucide.createIcons());
         },
 
-        async searchModule() {
-            if (!this.searchQuery || this.searchQuery.length < 2) { this.results = []; return; }
+        async searchModule(resetPage = true) {
+            if (this.moduleType !== 'sahabi' && (!this.searchQuery || this.searchQuery.length < 2)) {
+                this.results = [];
+                return;
+            }
             this.loading = true;
-            this.currentPage = 1;
-            const endpoint = this.moduleType === 'sahabi' ? 'sahaba' : 'seerah-events';
+            if (resetPage) this.currentPage = 1;
             try {
-                const res = await fetch(`${adminPrefix}/${endpoint}/search?q=${encodeURIComponent(this.searchQuery)}&per_page=15&page=${this.currentPage}`);
+                const url = new URL(this.moduleType === 'sahabi' ? sahabaBrowseUrl : seerahSearchUrl, window.location.origin);
+                url.searchParams.set('page', this.currentPage);
+                if (this.searchQuery) url.searchParams.set('q', this.searchQuery);
+                if (this.moduleType === 'sahabi') url.searchParams.set('role', 'sahabi');
+
+                const res = await fetch(url);
+                if (!res.ok) throw new Error(`Module search failed with status ${res.status}`);
                 const json = await res.json();
                 this.results = json.data || [];
                 this.totalPages = json.meta?.last_page || 1;
@@ -2010,18 +2037,37 @@ function moduleSelector() {
             this.selectedItem = this.selectedItem?.id === item.id ? null : item;
         },
 
+        personName(item) {
+            const prefersRtlName = ['ar', 'ur'].includes(this.targetLocale);
+            return prefersRtlName
+                ? (item.name_ar || item.name || item.name_en || '')
+                : (item.name_en || item.name || item.name_ar || '');
+        },
+
+        hadithText(item) {
+            return ['ar', 'ur'].includes(this.targetLocale)
+                ? (item.text_ar || item.translations?.[0]?.text || item.text_en || '')
+                : (item.text_en || item.translations?.[0]?.text || item.text_ar || '');
+        },
+
+        hadithCollectionName(item) {
+            return ['ar', 'ur'].includes(this.targetLocale)
+                ? (item.collection || item.book?.collection?.name_ar || item.book?.title_ar || '')
+                : (item.collection_en || item.collection || item.book?.collection?.name_en || item.book?.title_en || '');
+        },
+
         async prevPage() {
             if (this.currentPage <= 1) return;
             this.currentPage--;
-            if (this.moduleType === 'hadith') await this.searchHadith();
-            else await this.searchModule();
+            if (this.moduleType === 'hadith') await this.searchHadith(false);
+            else await this.searchModule(false);
         },
 
         async nextPage() {
             if (this.currentPage >= this.totalPages) return;
             this.currentPage++;
-            if (this.moduleType === 'hadith') await this.searchHadith();
-            else await this.searchModule();
+            if (this.moduleType === 'hadith') await this.searchHadith(false);
+            else await this.searchModule(false);
         },
 
         confirmSelection() {
@@ -2043,18 +2089,19 @@ function moduleSelector() {
                 block = {
                     type: 'hadith',
                     hadith_id: item.id,
-                    text: item.translations?.[0]?.text || '',
-                    collection: item.book?.collection?.name_ar || item.book?.title_ar || '',
-                    number: item.hadith_number,
-                    grade: item.grading_status || ''
+                    text: this.hadithText(item),
+                    collection: this.hadithCollectionName(item),
+                    number: item.number || item.hadith_number || '',
+                    reference_key: item.reference_key || '',
+                    grade: item.grade || item.grading_status || ''
                 };
             } else if (this.moduleType === 'sahabi' && this.selectedItem) {
                 const item = this.selectedItem;
                 block = {
                     type: 'sahabi',
                     sahabi_id: item.id,
-                    name: item.name?.ar || item.name?.en || item.name || '',
-                    kunya: item.kunya?.ar || item.kunya || '',
+                    name: this.personName(item),
+                    kunya: item.kunya || '',
                     slug: item.slug || ''
                 };
             } else if (this.moduleType === 'seerah' && this.selectedItem) {

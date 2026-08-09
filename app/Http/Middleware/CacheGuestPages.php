@@ -33,7 +33,8 @@ final class CacheGuestPages
         $isGuestCacheable = $request->isMethod('GET')
             && auth()->guest()
             && $request->routeIs(self::CACHEABLE_ROUTES)
-            && $response->getStatusCode() === 200;
+            && $response->getStatusCode() === 200
+            && $this->rendersDefaultLocale($request);
 
         if ($isGuestCacheable) {
             // 30-min edge TTL (s-maxage) + serve-stale-while-revalidating. The CF
@@ -49,5 +50,31 @@ final class CacheGuestPages
         }
 
         return $response;
+    }
+
+    /**
+     * The rendered HTML varies by locale, but for a guest the locale comes from
+     * ?lang= and from the SESSION that SetLocale persists it into — neither of
+     * which is part of the edge cache key, and neither of which Vary can express
+     * (we strip the very cookie that carries it). Sharing an English render under
+     * the plain "/" key would serve English to every subsequent visitor.
+     *
+     * So only the render a cookie-less first-time visitor would get is marked
+     * shareable. For a guest on a non-API route SetLocale's priority list is
+     * exactly ?lang= -> session -> default, so the absence of both signals means
+     * the response is in the default locale. A visitor who switched language
+     * still gets their language, just from the origin rather than the edge.
+     *
+     * Comparing app()->getLocale() against config('app.locale') would NOT work:
+     * App::setLocale() overwrites that config key with the request's locale, so
+     * the two are always equal by the time this response middleware runs.
+     */
+    private function rendersDefaultLocale(Request $request): bool
+    {
+        if ($request->has('lang')) {
+            return false;
+        }
+
+        return ! $request->hasSession() || ! $request->session()->has('locale');
     }
 }

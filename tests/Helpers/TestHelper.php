@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Helpers;
 
-use App\Domain\Blog\Models\Article;
+use App\Models\Article;
 use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Models\Series;
 use App\Domain\Blog\Models\Tag;

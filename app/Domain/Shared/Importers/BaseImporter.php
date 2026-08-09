@@ -169,8 +169,30 @@ abstract class BaseImporter
      */
     public function validate(): array
     {
-        $this->import->update(['status' => 'validating']);
         $this->errors = [];
+
+        // $rows only lives for the lifetime of the request that parsed the
+        // file. Validation arrives in a *later* request against a freshly
+        // constructed importer, so without re-parsing (exactly as preview()
+        // and import() already do) this loops an empty array and always
+        // reports "valid, 0 errors".
+        if (empty($this->rows)) {
+            $parseResult = $this->parseFile();
+
+            if (! $parseResult['success']) {
+                $this->errors[] = new ImportError(
+                    rowNumber: 0,
+                    fieldName: null,
+                    errorMessage: $parseResult['message'],
+                    severity: 'error',
+                    rowData: null
+                );
+
+                return $this->errors;
+            }
+        }
+
+        $this->import->update(['status' => 'validating']);
 
         foreach ($this->rows as $index => $row) {
             $rowNumber = $index + 2; // +2 for header row and 1-based indexing

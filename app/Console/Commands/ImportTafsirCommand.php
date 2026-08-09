@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Domain\Quran\Importers\QuranComPayload;
 use App\Domain\Quran\Models\TafsirResource;
 use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Models\VerseTafsir;
+use App\Domain\Quran\Services\QuranCacheKeys;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
 /**
  * Imports a tafsir from the Quran.com API (v4) into a tafsir resource, enabling
- * quran.com-style multi-source tafsir. Idempotent (updateOrCreate keyed by
- * verse + resource); safe to re-run. Run after Quran verses are imported.
+ * quran.com-style multi-source tafsir. Idempotent (upserted on the
+ * (verse_id, resource_id) unique index); safe to re-run. Run after Quran
+ * verses are imported.
  *
  * Examples:
  *   php artisan quran:import-tafsir 169   # Ibn Kathir (Abridged), English
@@ -30,13 +34,19 @@ class ImportTafsirCommand extends Command
 
     private const BASE = 'https://api.quran.com/api/v4';
 
+    /**
+     * Rows per upsert statement. Tafsir entries can run to several KB each, so
+     * this stays conservative to keep statements inside max_allowed_packet.
+     */
+    private const UPSERT_CHUNK = 100;
+
     public function handle(): int
     {
         $tafsirId = (int) $this->argument('tafsirId');
         $meta = $this->fetchTafsirMeta($tafsirId);
 
         $slug = (string) ($this->option('slug') ?: ($meta['slug'] ?? "tafsir-{$tafsirId}"));
-        $lang = (string) ($this->option('lang') ?: $this->mapLang($meta['language_name'] ?? 'ar'));
+        $lang = (string) ($this->option('lang') ?: QuranComPayload::mapLang($meta['language_name'] ?? 'ar'));
         $nameEn = (string) ($this->option('name-en') ?: ($meta['name'] ?? $slug));
         $nameAr = (string) ($this->option('name-ar') ?: $nameEn);
         $author = $this->option('author') ?: ($meta['author_name'] ?? null);
@@ -66,6 +76,7 @@ class ImportTafsirCommand extends Command
 
         for ($chapter = 1; $chapter <= 114; $chapter++) {
             $page = 1;
+            $rows = [];
             do {
                 try {
                     $resp = Http::timeout(30)->retry(3, 600)->get(
@@ -82,28 +93,14 @@ class ImportTafsirCommand extends Command
                 }
 
                 $data = $resp->json();
-                foreach (($data['tafsirs'] ?? []) as $row) {
-                    $verseKey = $row['verse_key'] ?? null;
-                    $verseId = $verseKey ? ($verseMap[$verseKey] ?? null) : null;
-                    if ($verseId === null) {
-                        continue;
-                    }
-
-                    $text = $this->cleanHtml((string) ($row['text'] ?? ''));
-                    if ($text === '') {
-                        continue;
-                    }
-
-                    VerseTafsir::updateOrCreate(
-                        ['verse_id' => $verseId, 'resource_id' => $resource->id],
-                        ['verse_key' => $verseKey, 'lang' => $lang, 'text' => $text, 'active' => true],
-                    );
-                    $imported++;
-                }
+                // Accumulate every page of the chapter, then write it in one go.
+                $rows += $this->chapterRows($data['tafsirs'] ?? [], $verseMap, $resource->id, $lang);
 
                 $totalPages = (int) ($data['pagination']['total_pages'] ?? 1);
                 $page++;
             } while ($page <= $totalPages);
+
+            $imported += $this->storeChapter(array_values($rows));
 
             $bar->advance();
         }
@@ -112,7 +109,7 @@ class ImportTafsirCommand extends Command
         $this->newLine();
 
         // Reader pages cache tafsir payloads; clear so the new source shows up.
-        Cache::flush();
+        QuranCacheKeys::flushContent();
 
         $this->info("Imported {$imported} tafsir entries into '{$slug}' (#{$resource->id}).");
 
@@ -141,26 +138,68 @@ class ImportTafsirCommand extends Command
         return null;
     }
 
-    private function mapLang(string $languageName): string
+    /**
+     * Map one API page onto quran_verse_tafsirs rows, keyed by verse id so
+     * repeated verse_keys across pages collapse to one row.
+     *
+     * @param  array<int, array<string, mixed>>  $apiRows
+     * @param  Collection<string, int>  $verseMap  verse_key => verse id
+     * @return array<int, array<string, mixed>>
+     */
+    private function chapterRows(array $apiRows, Collection $verseMap, int $resourceId, string $lang): array
     {
-        return [
-            'arabic' => 'ar', 'english' => 'en', 'french' => 'fr',
-            'turkish' => 'tr', 'urdu' => 'ur',
-        ][mb_strtolower($languageName)] ?? mb_substr($languageName, 0, 2);
+        $rows = [];
+
+        foreach ($apiRows as $row) {
+            $verseKey = $row['verse_key'] ?? null;
+            $verseId = $verseKey ? ($verseMap[$verseKey] ?? null) : null;
+            if ($verseId === null) {
+                continue;
+            }
+
+            $text = QuranComPayload::cleanHtml((string) ($row['text'] ?? ''));
+            if ($text === '') {
+                continue;
+            }
+
+            $rows[$verseId] = [
+                'verse_id' => $verseId,
+                'resource_id' => $resourceId,
+                'verse_key' => $verseKey,
+                'lang' => $lang,
+                'text' => $text,
+                'active' => true,
+            ];
+        }
+
+        return $rows;
     }
 
     /**
-     * Convert the API's HTML tafsir into clean, readable plain text (the reader
-     * escapes output, so storing plain text keeps it safe and consistent with the
-     * existing Muyassar tafsir).
+     * Upsert one chapter's rows in a transaction.
+     *
+     * Safe as a plain upsert: resource_id is never NULL here, so the
+     * (verse_id, resource_id) unique index actually constrains these rows.
+     *
+     * @param  list<array<string, mixed>>  $rows
+     * @return int rows written
      */
-    private function cleanHtml(string $html): string
+    private function storeChapter(array $rows): int
     {
-        $html = preg_replace('/<\s*(br|\/p|\/h[1-6]|\/div|\/li)\s*\/?>/i', "\n", $html) ?? $html;
-        $text = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $text = preg_replace('/[ \t]+/', ' ', $text) ?? $text;
-        $text = preg_replace("/\n{3,}/", "\n\n", $text) ?? $text;
+        if ($rows === []) {
+            return 0;
+        }
 
-        return trim($text);
+        DB::transaction(function () use ($rows): void {
+            foreach (array_chunk($rows, self::UPSERT_CHUNK) as $chunk) {
+                VerseTafsir::query()->upsert(
+                    $chunk,
+                    ['verse_id', 'resource_id'],
+                    ['verse_key', 'lang', 'text', 'active'],
+                );
+            }
+        });
+
+        return count($rows);
     }
 }

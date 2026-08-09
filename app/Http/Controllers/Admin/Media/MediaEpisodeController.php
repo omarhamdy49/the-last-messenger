@@ -6,6 +6,8 @@ namespace App\Http\Controllers\Admin\Media;
 
 use App\Domain\Media\DTOs\CreateMediaEpisodeData;
 use App\Domain\Media\DTOs\UpdateMediaEpisodeData;
+use App\Domain\Media\Models\MediaEpisode;
+use App\Domain\Media\Services\MediaAttachmentService;
 use App\Domain\Media\Services\MediaEpisodeService;
 use App\Domain\Media\Services\MediaProgramService;
 use App\Domain\Media\Services\YouTubeSyncService;
@@ -16,6 +18,8 @@ use App\Http\Requests\Admin\MediaProgram\UpdateMediaEpisodeRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -26,6 +30,7 @@ class MediaEpisodeController extends Controller
     public function __construct(
         protected MediaEpisodeService $episodeService,
         protected MediaProgramService $programService,
+        protected MediaAttachmentService $attachments,
         protected AdminLoggerService $logger,
     ) {}
 
@@ -95,18 +100,24 @@ class MediaEpisodeController extends Controller
     public function store(StoreMediaEpisodeRequest $request): RedirectResponse
     {
         $dto = CreateMediaEpisodeData::fromRequest($request);
-        $episode = $this->episodeService->createEpisode($dto);
 
-        $this->syncEpisodeThumbnail($episode, $dto->thumbnail, $dto->thumbnailId);
+        // One unit of work — an episode row without translations is unusable.
+        $episode = DB::transaction(function () use ($dto): MediaEpisode {
+            $episode = $this->episodeService->createEpisode($dto);
 
-        $episode->syncTranslations([
-            'title' => $dto->title,
-            'description' => $dto->description,
-            'transcript' => $dto->transcript,
-            'seo_title' => $dto->seoTitle,
-            'seo_description' => $dto->seoDescription,
-            'seo_keywords' => $dto->seoKeywords,
-        ]);
+            $episode->syncTranslations([
+                'title' => $dto->title,
+                'description' => $dto->description,
+                'transcript' => $dto->transcript,
+                'seo_title' => $dto->seoTitle,
+                'seo_description' => $dto->seoDescription,
+                'seo_keywords' => $dto->seoKeywords,
+            ]);
+
+            $this->syncEpisodeThumbnail($episode, $dto->thumbnail, $dto->thumbnailId);
+
+            return $episode;
+        });
 
         $this->logger->logCreate($episode, $request->user());
 
@@ -160,18 +171,23 @@ class MediaEpisodeController extends Controller
 
         $oldValues = $old->toArray();
         $dto = UpdateMediaEpisodeData::fromRequest($request);
-        $episode = $this->episodeService->updateEpisode($id, $dto);
 
-        $this->syncEpisodeThumbnail($episode, $dto->thumbnail, $dto->thumbnailId);
+        $episode = DB::transaction(function () use ($id, $dto): MediaEpisode {
+            $episode = $this->episodeService->updateEpisode($id, $dto);
 
-        $episode->syncTranslations([
-            'title' => $dto->title,
-            'description' => $dto->description,
-            'transcript' => $dto->transcript,
-            'seo_title' => $dto->seoTitle,
-            'seo_description' => $dto->seoDescription,
-            'seo_keywords' => $dto->seoKeywords,
-        ]);
+            $episode->syncTranslations([
+                'title' => $dto->title,
+                'description' => $dto->description,
+                'transcript' => $dto->transcript,
+                'seo_title' => $dto->seoTitle,
+                'seo_description' => $dto->seoDescription,
+                'seo_keywords' => $dto->seoKeywords,
+            ]);
+
+            $this->syncEpisodeThumbnail($episode, $dto->thumbnail, $dto->thumbnailId);
+
+            return $episode;
+        });
 
         $this->logger->logUpdate($episode, $oldValues, $episode->toArray(), $request->user());
 
@@ -257,32 +273,14 @@ class MediaEpisodeController extends Controller
 
     /**
      * Attach the thumbnail from a direct upload or a media-library pick.
-     * Library originals are encrypted at rest — materialize a plaintext
-     * temp copy; addMedia() moves it into the episode's collection.
+     * An upload wins over a library id when the form somehow sends both.
      */
     private function syncEpisodeThumbnail(
-        \App\Domain\Media\Models\MediaEpisode $episode,
-        ?\Illuminate\Http\UploadedFile $file,
+        MediaEpisode $episode,
+        ?UploadedFile $file,
         ?int $libraryMediaId
     ): void {
-        if ($file === null && $libraryMediaId === null) {
-            return;
-        }
-
-        $episode->clearMediaCollection('thumbnail');
-
-        if ($file !== null) {
-            $episode->addMedia($file)->toMediaCollection('thumbnail');
-
-            return;
-        }
-
-        $copy = app(\App\Services\MediaService::class)->temporaryOriginalCopyById($libraryMediaId);
-        if ($copy !== null) {
-            $episode->addMedia($copy->path)
-                ->usingFileName($copy->filename)
-                ->toMediaCollection('thumbnail');
-        }
+        $this->attachments->attach($episode, 'thumbnail', $file ?? $libraryMediaId);
     }
 
     /**

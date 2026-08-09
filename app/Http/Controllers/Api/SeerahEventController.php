@@ -27,7 +27,7 @@ class SeerahEventController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $perPage = $request->integer('per_page', 15);
+        $perPage = $this->perPage($request);
         $events = $this->timelineEventService->getAllEvents($perPage);
 
         return $this->successResponse(
@@ -56,7 +56,7 @@ class SeerahEventController extends Controller
      */
     public function byType(Request $request, string $type): JsonResponse
     {
-        $perPage = $request->integer('per_page', 15);
+        $perPage = $this->perPage($request);
         $events = $this->timelineEventService->getEventsByType($type, $perPage);
 
         return $this->successResponse(
@@ -69,7 +69,7 @@ class SeerahEventController extends Controller
      */
     public function byHijriYear(Request $request, int $year): JsonResponse
     {
-        $perPage = $request->integer('per_page', 15);
+        $perPage = $this->perPage($request);
         $events = $this->timelineEventService->getEventsByHijriYear($year, $perPage);
 
         return $this->successResponse(
@@ -82,7 +82,7 @@ class SeerahEventController extends Controller
      */
     public function byGregorianYear(Request $request, int $year): JsonResponse
     {
-        $perPage = $request->integer('per_page', 15);
+        $perPage = $this->perPage($request);
         $events = $this->timelineEventService->getEventsByGregorianYear($year, $perPage);
 
         return $this->successResponse(
@@ -95,7 +95,10 @@ class SeerahEventController extends Controller
      */
     public function featured(Request $request): JsonResponse
     {
-        $limit = $request->integer('limit', 10);
+        $validated = $request->validate([
+            'limit' => ['sometimes', 'integer', 'min:1', 'max:50'],
+        ]);
+        $limit = (int) ($validated['limit'] ?? 10);
         $events = $this->timelineEventService->getFeaturedEvents($limit);
 
         return $this->successResponse(
@@ -120,17 +123,26 @@ class SeerahEventController extends Controller
      */
     public function search(Request $request): JsonResponse
     {
-        $query = $request->input('q', '');
-        $perPage = $request->integer('per_page', 15);
-
-        if (empty($query)) {
-            return $this->errorResponse('Search query is required', 400);
-        }
+        $validated = $request->validate([
+            'q' => ['required', 'string', 'min:2', 'max:200'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+        ]);
+        $query = $validated['q'];
+        $perPage = (int) ($validated['per_page'] ?? 15);
 
         $events = $this->timelineEventService->searchEvents($query, $perPage);
 
         return $this->successResponse(
             SeerahEventResource::collection($events)->response()->getData(true)
         );
+    }
+
+    private function perPage(Request $request): int
+    {
+        $validated = $request->validate([
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        return (int) ($validated['per_page'] ?? 15);
     }
 }

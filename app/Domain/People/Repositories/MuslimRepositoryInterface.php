@@ -49,4 +49,19 @@ interface MuslimRepositoryInterface
     public function update(Muslim $muslim, array $attributes, ?array $roles = null): Muslim;
 
     public function delete(Muslim $muslim): void;
+
+    /**
+     * @param  array<int, int>  $ids
+     */
+    public function bulkDelete(array $ids): int;
+
+    /**
+     * @param  array<int, int>  $ids
+     */
+    public function bulkSetPublished(array $ids, bool $published): int;
+
+    /**
+     * @param  array<int, int>  $ids
+     */
+    public function bulkSetFeatured(array $ids, bool $featured): int;
 }

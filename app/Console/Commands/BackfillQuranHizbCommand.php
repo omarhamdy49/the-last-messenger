@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Domain\Quran\Services\QuranCacheKeys;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -42,7 +42,7 @@ class BackfillQuranHizbCommand extends Command
         });
 
         // Public reader pages cache verse payloads; clear so the fix is visible.
-        Cache::flush();
+        QuranCacheKeys::flushContent();
 
         $this->info("Backfilled hizb_number for {$updated} verses across {$hizbCount} ahzab.");
 

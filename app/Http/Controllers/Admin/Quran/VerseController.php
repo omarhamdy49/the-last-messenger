@@ -79,7 +79,7 @@ class VerseController extends Controller
         }
 
         // Get surahs for filter dropdown
-        $surahs = $this->getSurahsForSelector();
+        $surahs = $this->surahService->getForSelector();
 
         return view('admin.verses.index', compact('verses', 'stats', 'surahs'));
     }
@@ -91,7 +91,7 @@ class VerseController extends Controller
      */
     public function create(): View
     {
-        $surahs = $this->getSurahsForSelector();
+        $surahs = $this->surahService->getForSelector();
 
         return view('admin.verses.create', compact('surahs'));
     }
@@ -155,7 +155,7 @@ class VerseController extends Controller
     public function edit(int $id): View
     {
         $verse = $this->verseService->findOrFail($id);
-        $surahs = $this->getSurahsForSelector();
+        $surahs = $this->surahService->getForSelector();
 
         return view('admin.verses.edit', compact('verse', 'surahs'));
     }
@@ -343,12 +343,4 @@ class VerseController extends Controller
      *
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    protected function getSurahsForSelector()
-    {
-        return cache()->remember(QuranCacheKeys::surahSelector(), now()->addMinutes(30), function () {
-            return \App\Domain\Quran\Models\Surah::select(['id', 'revelation_order', 'name_ar'])
-                ->orderBy('revelation_order')
-                ->get();
-        });
-    }
 }

@@ -265,12 +265,12 @@ class VersionController extends Controller
     protected function resolveModel(string $type, int $id)
     {
         $modelClass = match ($type) {
-            'articles' => \App\Domain\Blog\Models\Article::class,
+            'articles' => \App\Models\Article::class,
             'seerah' => \App\Domain\Seerah\Models\SeerahEvent::class,
             'muslims' => \App\Domain\People\Models\Muslim::class,
             'media-programs' => \App\Domain\Media\Models\MediaProgram::class,
             'media-episodes' => \App\Domain\Media\Models\MediaEpisode::class,
-            'quran-verses' => \App\Domain\Quran\Models\QuranVerse::class,
+            'quran-verses' => \App\Domain\Quran\Models\Verse::class,
             default => throw new \InvalidArgumentException("Invalid model type: {$type}"),
         };
 

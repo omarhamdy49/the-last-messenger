@@ -189,6 +189,76 @@ class UserInteractionRepository extends BaseRepository implements UserInteractio
 
     /**
      * {@inheritdoc}
+     *
+     * Two aggregates instead of hydrating every interaction row for the item:
+     * COUNT(DISTINCT user_id) cannot be derived from a per-type GROUP BY, so
+     * it needs its own pass.
+     */
+    public function aggregateByContent(string $contentType, int $contentId): array
+    {
+        $scope = fn () => $this->model->newQuery()
+            ->where('interactable_type', $contentType)
+            ->where('interactable_id', $contentId);
+
+        $byType = $scope()
+            ->select('interaction_type', DB::raw('COUNT(*) as aggregate'))
+            ->groupBy('interaction_type')
+            ->pluck('aggregate', 'interaction_type')
+            ->mapWithKeys(fn ($count, $type): array => [
+                // interaction_type is enum-cast on the model, so the grouped
+                // key comes back as an InteractionType, not a string.
+                ($type instanceof InteractionType ? $type->value : (string) $type) => (int) $count,
+            ])
+            ->all();
+
+        $totals = $scope()
+            ->selectRaw('COUNT(DISTINCT user_id) as unique_users, AVG(duration_seconds) as avg_duration')
+            ->first();
+
+        return [
+            'by_type' => $byType,
+            'unique_users' => (int) ($totals->unique_users ?? 0),
+            'avg_duration' => $totals?->avg_duration !== null ? (float) $totals->avg_duration : null,
+        ];
+    }
+
+    /**
+     * {@inheritdoc}
+     *
+     * One grouped query for the whole window; the caller back-fills the days
+     * that produced no rows.
+     */
+    public function dailyCountsByUser(int $userId, Carbon $startDate, Carbon $endDate): array
+    {
+        $rows = $this->model->newQuery()
+            ->where('user_id', $userId)
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->selectRaw('DATE(created_at) as day, interaction_type, COUNT(*) as aggregate')
+            ->groupBy(DB::raw('DATE(created_at)'), 'interaction_type')
+            ->get();
+
+        $counts = [];
+        foreach ($rows as $row) {
+            $type = $row->interaction_type;
+            $counts[(string) $row->day][$type instanceof InteractionType ? $type->value : (string) $type]
+                = (int) $row->aggregate;
+        }
+
+        return $counts;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function countBetweenDates(Carbon $startDate, Carbon $endDate): int
+    {
+        return $this->model->newQuery()
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->count();
+    }
+
+    /**
+     * {@inheritdoc}
      */
     public function countByType(InteractionType|string $type): int
     {
