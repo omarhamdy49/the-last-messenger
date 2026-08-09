@@ -326,9 +326,29 @@
                     {{-- Body wrapper (font-size scalable) --}}
                     <div class="p-6 md:p-10" :style="`font-size: ${fontSize}%`">
 
-                        {{-- Meta row: dates + views on one side, share + font controls on the left --}}
-                        <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 mb-6">
-                            <div class="flex flex-wrap items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                        {{-- Title --}}
+                        <h1 class="text-3xl md:text-4xl xl:text-5xl font-bold mb-5 leading-tight tracking-tight text-gray-900 dark:text-white break-words">
+                            {{ $article['title'] }}
+                        </h1>
+
+                        {{-- Lede --}}
+                        @if (! empty($article['excerpt']))
+                            <p class="text-lg md:text-xl text-gray-600 dark:text-gray-300 leading-relaxed mb-7 break-words ps-4 border-s-4 border-accent/60">
+                                {{ $article['excerpt'] }}
+                            </p>
+                        @endif
+
+                        {{-- Meta bar: author + dates + reading stats | share + font controls --}}
+                        <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 mb-6 py-4 border-y border-gray-100 dark:border-[#0f3460]">
+                            <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-gray-500 dark:text-gray-400">
+                                @if (! empty($article['author']))
+                                    <span class="inline-flex items-center gap-2">
+                                        <span class="w-8 h-8 rounded-full bg-gradient-to-l from-primary to-secondary text-white flex items-center justify-center">
+                                            <i data-lucide="user" class="w-4 h-4"></i>
+                                        </span>
+                                        <span class="font-semibold text-gray-800 dark:text-gray-100">{{ $article['author'] }}</span>
+                                    </span>
+                                @endif
                                 <span class="inline-flex items-center gap-1.5">
                                     <i data-lucide="calendar" class="w-4 h-4 text-accent"></i>{{ $article['dateLabel'] }}
                                 </span>
@@ -345,33 +365,40 @@
                                 </span>
                             </div>
 
-                            {{-- Share + font size (left of the counts/dates) --}}
+                            {{-- Share + font size --}}
                             <div class="flex items-center gap-2 no-print">
                                 <button @click="showShare = true"
-                                        class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-gray-100 dark:bg-[#0f3460] text-gray-700 dark:text-gray-200 transition-all hover:scale-105 hover:text-primary">
+                                        class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-gradient-to-l from-primary to-secondary text-white shadow hover:shadow-lg hover:scale-105 transition-all cursor-pointer">
                                     <i data-lucide="share-2" class="w-4 h-4"></i>{{ __('articles.public.share') }}
                                 </button>
                                 <div class="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-[#0f3460] p-1">
-                                    <button @click="decreaseFont()" aria-label="A-" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-[#16213e] transition-colors">
+                                    <button @click="decreaseFont()" aria-label="A-" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-[#16213e] transition-colors cursor-pointer">
                                         <i data-lucide="minus" class="w-4 h-4"></i>
                                     </button>
-                                    <span class="px-1 text-xs font-semibold text-gray-700 dark:text-gray-200 w-10 text-center" x-text="fontSize + '%'"></span>
-                                    <button @click="increaseFont()" aria-label="A+" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-[#16213e] transition-colors">
+                                    <span class="px-1 text-xs font-semibold text-gray-700 dark:text-gray-200 w-10 text-center tabular-nums" x-text="fontSize + '%'"></span>
+                                    <button @click="increaseFont()" aria-label="A+" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-[#16213e] transition-colors cursor-pointer">
                                         <i data-lucide="plus" class="w-4 h-4"></i>
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        {{-- Title --}}
-                        <h1 class="text-3xl md:text-4xl xl:text-5xl font-bold mb-6 leading-tight text-gray-900 dark:text-white break-words">
-                            {{ $article['title'] }}
-                        </h1>
-
-                        @if (! empty($article['excerpt']))
-                            <p class="text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-8 break-words">
-                                {{ $article['excerpt'] }}
-                            </p>
+                        {{-- Series membership banner --}}
+                        @if (! empty($article['series']))
+                            <a href="{{ $article['series']['url'] }}"
+                               class="group flex items-center gap-4 rounded-2xl p-4 mb-8 no-print border border-primary/15 bg-gradient-to-l from-primary/[0.06] to-secondary/[0.06] hover:from-primary/[0.12] hover:to-secondary/[0.12] transition-colors">
+                                <span class="w-11 h-11 rounded-xl bg-gradient-to-l from-primary to-secondary text-white flex items-center justify-center shrink-0 shadow-md">
+                                    <i data-lucide="layers" class="w-5 h-5"></i>
+                                </span>
+                                <span class="min-w-0 flex-1">
+                                    <span class="block text-xs font-semibold text-gray-500 dark:text-gray-400">{{ __('series.public.part_of_series') }}</span>
+                                    <span class="block font-bold text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">{{ $article['series']['title'] }}</span>
+                                </span>
+                                <span class="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-primary shrink-0">
+                                    {{ __('series.public.view_series') }}
+                                    <i data-lucide="arrow-{{ $isRtl ? 'left' : 'right' }}" class="w-4 h-4 group-hover:scale-110 transition-transform"></i>
+                                </span>
+                            </a>
                         @endif
 
                         {{-- Mobile TOC (collapsible) --}}
@@ -405,7 +432,7 @@
                             </div>
                             <div x-show="bodyOverflow" x-cloak class="mt-5 flex justify-center no-print">
                                 <button @click="toggleBody()"
-                                        class="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold bg-gray-100 dark:bg-[#0f3460] text-gray-700 dark:text-gray-200 hover:bg-primary/10 hover:text-primary transition-all">
+                                        class="inline-flex items-center gap-2 px-7 py-3 rounded-full text-sm font-bold bg-gradient-to-l from-primary to-secondary text-white shadow-md hover:shadow-lg hover:scale-105 transition-all cursor-pointer">
                                     <i data-lucide="chevron-down" class="w-4 h-4 transition-transform" :class="bodyExpanded ? 'rotate-180' : ''"></i>
                                     <span x-text="bodyExpanded ? '{{ __('articles.public.read_less') }}' : '{{ __('articles.public.read_more') }}'"></span>
                                 </button>
@@ -418,7 +445,7 @@
                         @if (! empty($article['references']))
                             <div class="mt-12 pt-8 border-t border-gray-100 dark:border-[#0f3460]">
                                 <h3 class="text-xl font-bold mb-4 flex items-center gap-3 text-gray-900 dark:text-white">
-                                    <i data-lucide="book-open" class="w-5 h-5 text-accent"></i>{{ __('articles.public.sources') }}
+                                    <span class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><i data-lucide="book-open" class="w-4 h-4"></i></span>{{ __('articles.public.sources') }}
                                 </h3>
                                 <ul class="space-y-3">
                                     @foreach ($article['references'] as $ref)
@@ -499,7 +526,7 @@
                     @if (! empty($article['toc']))
                         <nav class="card-premium p-5 hidden lg:block animate-fade-in-up" aria-label="{{ __('articles.public.table_of_contents') }}">
                             <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-                                <i data-lucide="list" class="w-5 h-5 text-accent"></i>{{ __('articles.public.table_of_contents') }}
+                                <span class="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><i data-lucide="list" class="w-4 h-4"></i></span>{{ __('articles.public.table_of_contents') }}
                             </h3>
                             <ul class="space-y-1">
                                 @foreach ($article['toc'] as $item)
@@ -520,7 +547,7 @@
                     @if (! empty($article['statistics']))
                         <div class="card-premium p-5 animate-fade-in-up stagger-1">
                             <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-                                <i data-lucide="bar-chart-2" class="w-5 h-5 text-accent"></i>{{ __('articles.public.quick_stats') }}
+                                <span class="w-7 h-7 rounded-lg bg-secondary/10 text-secondary flex items-center justify-center"><i data-lucide="bar-chart-2" class="w-4 h-4"></i></span>{{ __('articles.public.quick_stats') }}
                             </h3>
                             <div class="space-y-3">
                                 @foreach ($article['statistics'] as $stat)
@@ -537,7 +564,7 @@
                     @if (! empty($article['tags']))
                         <div class="card-premium p-5 animate-fade-in-up stagger-2">
                             <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-                                <i data-lucide="tag" class="w-5 h-5 text-accent"></i>{{ __('articles.public.tags') }}
+                                <span class="w-7 h-7 rounded-lg bg-secondary/10 text-secondary flex items-center justify-center"><i data-lucide="tag" class="w-4 h-4"></i></span>{{ __('articles.public.tags') }}
                             </h3>
                             <div class="flex flex-wrap gap-2">
                                 @foreach ($article['tags'] as $tag)
@@ -551,7 +578,7 @@
                     @if (! empty($related))
                         <div class="card-premium p-5 animate-fade-in-up stagger-3">
                             <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-                                <i data-lucide="layers" class="w-5 h-5 text-accent"></i>{{ __('articles.public.related_articles') }}
+                                <span class="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><i data-lucide="layers" class="w-4 h-4"></i></span>{{ __('articles.public.related_articles') }}
                             </h3>
                             <ul class="space-y-4">
                                 @foreach (array_slice($related, 0, 5) as $item)

@@ -129,13 +129,13 @@ final class ArticleController extends Controller
                         ->values()
                         ->all();
 
-                    $adjacent = $this->articles->getAdjacentForPublic($article->id, $article->created_at);
+                    $adjacent = $this->resolveAdjacent($article, $locale);
 
                     return [
                         'article' => $this->mapDetail($article, $articleLocale, $locale),
                         'related' => $related,
-                        'prev' => $adjacent['prev'] ? $this->mapCard($adjacent['prev'], $locale) : null,
-                        'next' => $adjacent['next'] ? $this->mapCard($adjacent['next'], $locale) : null,
+                        'prev' => $adjacent['prev'],
+                        'next' => $adjacent['next'],
                     ];
                 } catch (Throwable $e) {
                     report($e);
@@ -250,6 +250,82 @@ final class ArticleController extends Controller
             'url' => $this->localeUrl($articleLocale->slug, $articleLocale->locale),
             'canonical' => $this->localeUrl($articleLocale->slug, $articleLocale->locale),
             'alternates' => $this->buildArticleAlternates($article),
+            'series' => $this->resolveSeries($article, $locale),
+        ];
+    }
+
+    /**
+     * Prev/next navigation for the reader. Articles that belong to a series
+     * navigate along the series reading order (pivot position); standalone
+     * articles fall back to date-adjacent published articles.
+     *
+     * @return array{prev: ?array, next: ?array}
+     */
+    private function resolveAdjacent(Article $article, string $locale): array
+    {
+        $series = $article->relationLoaded('series') ? $article->series->first() : null;
+
+        if ($series !== null) {
+            $ordered = $series->articles()
+                ->where('status', 'published')
+                ->whereHas('locales', fn ($q) => $q->where('is_ready', true))
+                ->with([
+                    'locales:id,article_id,locale,title,slug,excerpt,description,is_ready',
+                    'writer:id,name',
+                    'category:id,slug,type,status',
+                    'category.translations:id,category_id,locale,name',
+                ])
+                ->get()
+                ->values();
+
+            $index = $ordered->search(fn (Article $a) => $a->id === $article->id);
+
+            if ($index !== false) {
+                $prev = $index > 0 ? $ordered[$index - 1] : null;
+                $next = $index < $ordered->count() - 1 ? $ordered[$index + 1] : null;
+
+                return [
+                    'prev' => $prev ? $this->mapCard($prev, $locale) : null,
+                    'next' => $next ? $this->mapCard($next, $locale) : null,
+                ];
+            }
+        }
+
+        $adjacent = $this->articles->getAdjacentForPublic($article->id, $article->created_at);
+
+        return [
+            'prev' => $adjacent['prev'] ? $this->mapCard($adjacent['prev'], $locale) : null,
+            'next' => $adjacent['next'] ? $this->mapCard($adjacent['next'], $locale) : null,
+        ];
+    }
+
+    /**
+     * First series this article belongs to (reading-path banner on the reader).
+     *
+     * @return array{title: string, url: string}|null
+     */
+    private function resolveSeries(Article $article, string $locale): ?array
+    {
+        if (! $article->relationLoaded('series')) {
+            return null;
+        }
+
+        $series = $article->series->first();
+
+        if ($series === null) {
+            return null;
+        }
+
+        $title = $series->translations->firstWhere('locale', $locale)?->title
+            ?? $series->translations->firstWhere('locale', 'ar')?->title;
+
+        if ($title === null) {
+            return null;
+        }
+
+        return [
+            'title' => $title,
+            'url' => route('public.series.show', $series->slug),
         ];
     }
 

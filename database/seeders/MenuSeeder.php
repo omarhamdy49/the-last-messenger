@@ -72,7 +72,7 @@ class MenuSeeder extends Seeder
             MenuLocation::HEADER->value => [
                 ['route_name' => 'public.home', 'labels' => ['ar' => 'الرئيسية', 'en' => 'Home', 'fr' => 'Accueil', 'tr' => 'Ana Sayfa', 'ur' => 'ہوم']],
                 ['route_name' => 'public.seerah', 'labels' => $navSeerah],
-                ['route_name' => 'public.topics', 'labels' => ['ar' => 'المواضيع', 'en' => 'Topics', 'fr' => 'Thèmes', 'tr' => 'Konular', 'ur' => 'موضوعات']],
+                ['route_name' => 'public.series', 'labels' => ['ar' => 'السلاسل', 'en' => 'Series', 'fr' => 'Séries', 'tr' => 'Seriler', 'ur' => 'سلسلے']],
                 ['route_name' => 'public.hadith', 'labels' => $navHadith],
                 ['route_name' => 'public.media', 'labels' => $navMedia],
                 ['route_name' => 'public.genealogy', 'labels' => $navGenealogy],

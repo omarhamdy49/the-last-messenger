@@ -6,6 +6,7 @@ use App\Http\Controllers\Site\AuthController;
 use App\Http\Controllers\Site\ContactController;
 use App\Http\Controllers\Site\FaqController;
 use App\Http\Controllers\Site\FavoriteController;
+use App\Http\Controllers\Site\GenealogyController;
 use App\Http\Controllers\Site\HomeController;
 use App\Http\Controllers\Site\HomeModuleCardImageController;
 use App\Http\Controllers\Site\MediaController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\Site\QuranController;
 use App\Http\Controllers\Site\SahabaController;
 use App\Http\Controllers\Site\SearchController;
 use App\Http\Controllers\Site\SeerahController;
+use App\Http\Controllers\Site\SeriesController;
 use App\Http\Controllers\Site\SitemapController;
 use App\Http\Controllers\Site\SocialAuthController;
 use App\Http\Controllers\Site\TopicController;
@@ -86,6 +88,10 @@ Route::post('/articles/{id}/view', [ArticleController::class, 'registerView'])
     ->whereNumber('id')->middleware('throttle:30,1')->name('public.articles.view');
 Route::get('/articles/{slug}', [ArticleController::class, 'show'])->name('public.articles.show');
 
+// Article series (ordered reading paths; replaces Topics in the header nav)
+Route::get('/series', [SeriesController::class, 'index'])->name('public.series');
+Route::get('/series/{slug}', [SeriesController::class, 'show'])->name('public.series.show');
+
 // Seerah
 Route::get('/seerah', [SeerahController::class, 'index'])->name('public.seerah');
 Route::get('/seerah/events', [SeerahController::class, 'events'])->name('public.seerah.events');
@@ -103,9 +109,9 @@ Route::get('/sahaba/{slug}', [SahabaController::class, 'show'])
 
 // Genealogy — the family-tree explorer, rebuilt on `muslims`. `?root=` picks
 // the person the tree is drawn from; any muslim is a valid root.
-Route::get('/genealogy', [\App\Http\Controllers\Site\GenealogyController::class, 'index'])
+Route::get('/genealogy', [GenealogyController::class, 'index'])
     ->name('public.genealogy');
-Route::get('/genealogy/people', [\App\Http\Controllers\Site\GenealogyController::class, 'people'])
+Route::get('/genealogy/people', [GenealogyController::class, 'people'])
     ->middleware('throttle:search')->name('public.genealogy.people');
 
 // Genealogy

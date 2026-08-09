@@ -632,6 +632,8 @@ class ArticleRepository
                 'tags.translations:id,tag_id,locale,name',
                 'mediaItems',
                 'gallery:id,article_id,image,caption,order',
+                'series:id,slug',
+                'series.translations:id,series_id,locale,title',
             ])->find($articleLocale->article_id);
     }
 
