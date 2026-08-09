@@ -9,12 +9,12 @@ use App\Domain\Blog\DTOs\UpdateTagData;
 use App\Domain\Blog\Exceptions\CannotMergeTagException;
 use App\Domain\Blog\Models\Tag;
 use App\Domain\Blog\Repositories\TagRepositoryInterface;
+use App\Domain\Shared\Services\SlugGenerator;
 use App\Models\Article;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 /**
  * TagService
@@ -27,7 +27,8 @@ class TagService
      * Constructor with repository injection
      */
     public function __construct(
-        protected TagRepositoryInterface $repository
+        protected TagRepositoryInterface $repository,
+        protected SlugGenerator $slugs = new SlugGenerator,
     ) {}
 
     /**
@@ -58,9 +59,12 @@ class TagService
             'color' => $data->color,
         ];
 
-        // Generate slug if not provided
+        // Generate slug if not provided.
+        // No uniqueness check here — `tags.slug` has never been disambiguated
+        // and adding a `-N` suffix would change the slug of every duplicate
+        // name currently produced.
         $nonTranslatableData['slug'] = $data->slug
-            ?? Str::slug($data->name['en'] ?? $data->name['ar'] ?? 'tag');
+            ?? $this->slugs->fromLocalized($data->name, 'tag');
 
         // Create tag with non-translatable data only
         /** @var Tag */
@@ -96,9 +100,9 @@ class TagService
         // Build the non-translatable column payload
         $nonTranslatableData = ['type' => $data->type, 'color' => $data->color];
 
-        // Generate slug if not provided
+        // Generate slug if not provided (see create() — deliberately not unique)
         $nonTranslatableData['slug'] = $data->slug
-            ?? Str::slug($data->name['en'] ?? $data->name['ar'] ?? 'tag');
+            ?? $this->slugs->fromLocalized($data->name, 'tag');
 
         // Update non-translatable fields
         $this->repository->update($id, $nonTranslatableData);

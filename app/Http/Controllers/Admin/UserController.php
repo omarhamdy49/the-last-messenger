@@ -40,7 +40,9 @@ class UserController extends Controller
      */
     public function index(Request $request): \Illuminate\View\View|JsonResponse
     {
-        $perPage = $request->integer('per_page', 15);
+        // Clamped like search() below: an unbounded per_page would let one
+        // request page the whole users table.
+        $perPage = min(max($request->integer('per_page', 15), 1), 100);
         $verified = $request->input('verified');
         $search = $request->input('search');
 

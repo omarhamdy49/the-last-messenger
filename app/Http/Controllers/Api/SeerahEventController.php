@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Domain\Seerah\Services\SeerahEventService;
+use App\Exceptions\Domain\ResourceNotFoundException;
 use App\Http\Resources\SeerahEventResource;
 use App\Support\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -46,8 +47,14 @@ class SeerahEventController extends Controller
             return $this->successResponse(
                 new SeerahEventResource($event)
             );
+        } catch (ResourceNotFoundException) {
+            return $this->notFoundResponse('Event not found');
         } catch (\Throwable $e) {
-            return $this->notFoundResponse($e->getMessage());
+            // Only a domain 404 becomes a 404; everything else is an internal
+            // fault and must not surface its message to the client.
+            report($e);
+
+            return $this->serverErrorResponse();
         }
     }
 

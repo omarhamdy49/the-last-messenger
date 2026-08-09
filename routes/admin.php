@@ -35,7 +35,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 |
 | All admin routes are prefixed with /su/portal/v1/admin
-| Protected by auth:sanctum and admin middleware
+| Protected by the dedicated admin session guard and admin middleware
 | Rate limited to 60 requests per minute
 |
 */
@@ -45,6 +45,7 @@ use Illuminate\Support\Facades\Route;
 // session for admin-tier users so a public account can never reach the portal.
 Route::middleware(['web'])->group(function () {
     Route::get('su/portal/v1/admin/login', [AdminAuthController::class, 'showLogin'])
+        ->middleware('throttle:60,1')
         ->name('login'); // Named 'login' for auth middleware redirect
 
     Route::post('su/portal/v1/admin/login', [AdminAuthController::class, 'login'])
@@ -52,6 +53,7 @@ Route::middleware(['web'])->group(function () {
         ->name('admin.web.login.submit');
 
     Route::post('su/portal/v1/admin/logout', [AdminAuthController::class, 'logout'])
+        ->middleware(['auth:admin', 'throttle:10,1'])
         ->name('admin.logout');
 });
 

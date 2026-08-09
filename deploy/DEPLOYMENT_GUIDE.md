@@ -438,7 +438,7 @@ Dashboard toggles (need a token with *Zone Settings: Edit*, or do them in the UI
 ```bash
 curl -s -D - -o /dev/null https://rasoolallah.com/                | grep -i cf-cache-status  # HIT + s-maxage=1800
 curl -s -D - -o /dev/null https://rasoolallah.com/su/portal/v1/admin| grep -i cf-cache-status # DYNAMIC (never HIT)
-curl -s -D - -o /dev/null https://rasoolallah.com/api/v1/hadith    | grep -i cf-cache-status  # DYNAMIC
+curl -s -D - -o /dev/null https://rasoolallah.com/api/v1/articles  | grep -i cf-cache-status  # DYNAMIC + HTTP 401 without a bearer token
 curl -s -D - -o /dev/null https://rasoolallah.com/ -H "Cookie: the-last-messenger-session=x" | grep -i cf-cache-status  # DYNAMIC
 ```
 

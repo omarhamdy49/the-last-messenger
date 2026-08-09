@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Domain\People\DTOs\MuslimListFilters;
+use App\Domain\People\Models\Muslim;
 use App\Domain\People\Services\GenealogyTreeService;
 use App\Domain\People\Services\MuslimDirectoryService;
 use App\Http\Controllers\Controller;
@@ -112,9 +113,9 @@ class SahabiController extends Controller
         return array_values(array_map(
             static fn (array $n): array => [
                 'slug' => $n['slug'],
-                'name' => $locale === 'ar'
-                    ? ($n['name_ar'] ?? $n['name_en'] ?? '')
-                    : ($n['name_en'] ?? $n['name_ar'] ?? ''),
+                // CTE rows, not models — so the shared fallback is reached
+                // through Muslim's static form rather than name().
+                'name' => Muslim::preferredName($n['name_ar'] ?? null, $n['name_en'] ?? null, $locale),
                 'depth' => (int) $n['depth'],
                 'relation' => $n['relation'] ?? null,
             ],

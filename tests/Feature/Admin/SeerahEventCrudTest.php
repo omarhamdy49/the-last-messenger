@@ -12,6 +12,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class SeerahEventCrudTest extends TestCase
@@ -120,6 +121,7 @@ class SeerahEventCrudTest extends TestCase
         Storage::disk('public')->assertMissing($oldImagePath);
         Storage::disk('public')->assertExists($event->featured_image);
 
+        Sanctum::actingAs($admin, ['api:access']);
         $response = $this->getJson('/api/v1/seerah/battle-of-badr');
 
         $response->assertOk()

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Domain\Shared\Enums\SearchModule;
 use App\Domain\Shared\Services\SearchService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SearchRequest;
 use App\Http\Resources\SearchHistoryResource;
+use App\Http\Resources\SearchResultResource;
 use App\Support\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -47,6 +49,13 @@ class SearchController extends Controller
             ]
         );
 
+        foreach ($results['results'] as &$moduleResults) {
+            $moduleResults['data'] = collect($moduleResults['data'])
+                ->map(fn ($result): array => (new SearchResultResource($result))->resolve($request))
+                ->all();
+        }
+        unset($moduleResults);
+
         return $this->successResponse($results, 'Search completed successfully');
     }
 
@@ -73,6 +82,11 @@ class SearchController extends Controller
                     'per_page' => $validated['per_page'] ?? 15,
                     'user' => $request->user(),
                 ]
+            );
+
+            $results->setCollection(
+                $results->getCollection()
+                    ->map(fn ($result): array => (new SearchResultResource($result))->resolve($request))
             );
 
             return $this->paginatedResponse($results, "Search in {$module} completed successfully");
@@ -179,10 +193,10 @@ class SearchController extends Controller
      */
     public function modules(): JsonResponse
     {
-        $modules = \App\Domain\Shared\Enums\SearchModule::cases();
+        $modules = SearchModule::cases();
 
         $modulesData = array_map(function ($module) {
-            if ($module === \App\Domain\Shared\Enums\SearchModule::ALL) {
+            if ($module === SearchModule::ALL) {
                 return null;
             }
 

@@ -155,6 +155,23 @@ class TafseerRepository extends BaseRepository implements TafseerRepositoryInter
     }
 
     /**
+     * Active tafseer for one surah, paginated, carrying only what a listing row
+     * shows.
+     */
+    public function paginateActiveBySurah(int $surahId, int $perPage): LengthAwarePaginator
+    {
+        return $this->model
+            ->select(['id', 'verse_id', 'verse_key', 'lang', 'text', 'active'])
+            ->whereHas('verse', function ($q) use ($surahId) {
+                $q->where('surah_id', $surahId);
+            })
+            ->with(['verse:id,surah_id,verse_key'])
+            ->where('active', true)
+            ->orderBy('verse_key')
+            ->paginate($perPage);
+    }
+
+    /**
      * Get tafseer by verse and source (language)
      */
     public function getByVerseAndSource(string $verseReference, string $source): ?Model

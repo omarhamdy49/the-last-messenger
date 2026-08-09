@@ -9,6 +9,7 @@ use App\Domain\Blog\DTOs\UpdateSeriesData;
 use App\Domain\Blog\Models\Series;
 use App\Domain\Blog\Repositories\SeriesRepositoryInterface;
 use App\Domain\Shared\Services\BaseService;
+use App\Domain\Shared\Services\SlugGenerator;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -33,7 +34,8 @@ class SeriesService extends BaseService
      * Constructor
      */
     public function __construct(
-        SeriesRepositoryInterface $repository
+        SeriesRepositoryInterface $repository,
+        private readonly SlugGenerator $slugs = new SlugGenerator,
     ) {
         $this->repository = $repository;
     }
@@ -108,10 +110,11 @@ class SeriesService extends BaseService
 
         try {
             $series = DB::transaction(function () use ($data, $thumbnailPath): Series {
-                // Resolve slug
+                // Resolve slug. Not disambiguated: `series.slug` has never had a
+                // `-N` suffix applied and adding one would change existing output.
                 $slug = ! empty($data->slug)
                     ? $data->slug
-                    : Str::slug($data->title['en'] ?? $data->title['ar'] ?? 'series');
+                    : $this->slugs->fromLocalized($data->title, 'series');
 
                 // Create the non-translatable row
                 /** @var Series $series */
@@ -185,7 +188,11 @@ class SeriesService extends BaseService
                     $nonTranslatable['thumbnail'] = $newThumbnailPath;
                 }
 
-                // Regenerate slug when the active-locale title changes
+                // Regenerate slug when the active-locale title changes.
+                // Deliberately NOT SlugGenerator::fromLocalized(): the update
+                // path prefers the *request* locale over English and falls back
+                // to whatever title was supplied first, which is a different
+                // preference order from every other slug call site.
                 if (! empty($data->title)) {
                     $locale = app()->getLocale();
                     $currentTitle = $series->getTranslation('title', $locale);

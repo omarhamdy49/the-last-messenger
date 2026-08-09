@@ -313,7 +313,7 @@ class ImportController extends Controller
     public function history(Request $request): JsonResponse
     {
         try {
-            $perPage = (int) $request->input('per_page', 15);
+            $perPage = $this->resolvePerPage($request, 15);
             $userId = $request->user()->hasRole('super_admin')
                 ? $request->input('user_id')
                 : $request->user()->id;
@@ -342,7 +342,7 @@ class ImportController extends Controller
                 return $this->errorResponse('Import not found', 404);
             }
 
-            $perPage = (int) $request->input('per_page', 50);
+            $perPage = $this->resolvePerPage($request, 50);
             $errors = $import->errors()->paginate($perPage);
 
             return $this->paginatedResponse($errors);
@@ -381,6 +381,15 @@ class ImportController extends Controller
         } catch (Throwable $e) {
             return $this->errorResponse('Failed to delete import: '.$e->getMessage(), 500);
         }
+    }
+
+    /**
+     * Clamp a raw per_page input to [1, 100] so a caller cannot force an
+     * unbounded page size (mirrors SearchQueryBuilder::resolvePerPage).
+     */
+    private function resolvePerPage(Request $request, int $default): int
+    {
+        return min(max((int) $request->input('per_page', $default), 1), 100);
     }
 
     /**

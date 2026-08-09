@@ -164,6 +164,17 @@ class VerseService extends BaseService
     }
 
     /**
+     * Get one surah's verses, paginated for a listing
+     */
+    public function paginateBySurah(int $surahId, int $perPage = 10): LengthAwarePaginator
+    {
+        /** @var VerseRepositoryInterface */
+        $repo = $this->repository;
+
+        return $repo->paginateBySurah($surahId, $perPage);
+    }
+
+    /**
      * Get verse by surah and verse number
      */
     public function getBySurahAndVerse(int $surahNumber, int $verseNumber): ?Verse

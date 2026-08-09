@@ -13,10 +13,10 @@ use App\Domain\Blog\Exceptions\CircularCategoryException;
 use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Repositories\CategoryRepositoryInterface;
 use App\Domain\Shared\Services\BaseService;
+use App\Domain\Shared\Services\SlugGenerator;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 
 /**
  * Category Service
@@ -24,12 +24,18 @@ use Illuminate\Support\Str;
  */
 class CategoryService extends BaseService
 {
+    private readonly SlugGenerator $slugs;
+
     /**
      * Constructor
+     *
+     * $slugs is optional so the container's existing single-argument
+     * resolution of this service keeps working.
      */
-    public function __construct(CategoryRepositoryInterface $repository)
+    public function __construct(CategoryRepositoryInterface $repository, ?SlugGenerator $slugs = null)
     {
         $this->repository = $repository;
+        $this->slugs = $slugs ?? new SlugGenerator;
     }
 
     /**
@@ -99,7 +105,7 @@ class CategoryService extends BaseService
 
         // Generate slug if not provided
         if (empty($nonTranslatableData['slug'])) {
-            $titleForSlug = $data->name['en'] ?? $data->name['ar'] ?? 'category';
+            $titleForSlug = $this->slugs->preferredText($data->name, 'category');
             $nonTranslatableData['slug'] = $this->generateUniqueSlug($titleForSlug);
         }
 
@@ -403,23 +409,12 @@ class CategoryService extends BaseService
      */
     protected function generateUniqueSlug(string $text, ?int $excludeId = null): string
     {
-        $slug = Str::slug($text);
-        $originalSlug = $slug;
-        $counter = 1;
+        return $this->slugs->unique($text, function (string $slug) use ($excludeId): bool {
+            $existing = $this->repository->findBy('slug', $slug);
 
-        while (true) {
-            $query = $this->repository->findBy('slug', $slug);
-
-            // If no conflict or conflict is with the same record being updated
-            if ($query === null || ($excludeId !== null && $query->id === $excludeId)) {
-                break;
-            }
-
-            $slug = $originalSlug.'-'.$counter;
-            $counter++;
-        }
-
-        return $slug;
+            // A hit on the record currently being updated is not a conflict.
+            return $existing !== null && ($excludeId === null || $existing->id !== $excludeId);
+        });
     }
 
     /**

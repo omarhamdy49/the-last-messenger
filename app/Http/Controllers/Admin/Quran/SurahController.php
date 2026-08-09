@@ -6,6 +6,8 @@ namespace App\Http\Controllers\Admin\Quran;
 
 use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Quran\Services\SurahService;
+use App\Domain\Quran\Services\TafseerService;
+use App\Domain\Quran\Services\VerseService;
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateSurahRequest;
@@ -22,11 +24,16 @@ use Illuminate\View\View;
  */
 class SurahController extends Controller
 {
+    /** Rows per page in the verses and tafseer tabs of the detail page. */
+    private const TAB_PER_PAGE = 10;
+
     /**
      * Constructor with dependency injection
      */
     public function __construct(
         protected SurahService $surahService,
+        protected VerseService $verseService,
+        protected TafseerService $tafseerService,
         protected AdminLoggerService $logger
     ) {}
 
@@ -96,21 +103,10 @@ class SurahController extends Controller
         ];
 
         // Get verses for this surah (paginated for performance)
-        $verses = \App\Domain\Quran\Models\Verse::select(['id', 'surah_id', 'verse_number', 'verse_key'])
-            ->where('surah_id', $id)
-            ->with(['translations:id,verse_id,lang,text'])
-            ->orderBy('verse_number')
-            ->paginate(10);
+        $verses = $this->verseService->paginateBySurah($id, self::TAB_PER_PAGE);
 
         // Get tafseer entries for this surah (active only)
-        $tafseer = \App\Domain\Quran\Models\VerseTafsir::select(['id', 'verse_id', 'verse_key', 'lang', 'text', 'active'])
-            ->whereHas('verse', function ($q) use ($id) {
-                $q->where('surah_id', $id);
-            })
-            ->with(['verse:id,surah_id,verse_key'])
-            ->where('active', true)
-            ->orderBy('verse_key')
-            ->paginate(10);
+        $tafseer = $this->tafseerService->paginateActiveBySurah($id, self::TAB_PER_PAGE);
 
         return view('admin.surahs.show', compact('surah', 'stats', 'verses', 'tafseer'));
     }

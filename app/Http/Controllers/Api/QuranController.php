@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Domain\Quran\Services\QuranNavigationService;
 use App\Domain\Quran\Services\QuranService;
+use App\Exceptions\Domain\ResourceNotFoundException;
 use App\Http\Resources\SurahResource;
 use App\Http\Resources\VerseResource;
 use App\Support\Traits\ApiResponse;
@@ -51,8 +52,14 @@ class QuranController extends Controller
             return $this->success(
                 new SurahResource($surah)
             );
+        } catch (ResourceNotFoundException) {
+            return $this->notFound('Surah not found');
         } catch (\Throwable $e) {
-            return $this->notFound($e->getMessage());
+            // Anything that is not a domain 404 is an internal fault: log it and
+            // return a generic 500 rather than echoing the exception text.
+            report($e);
+
+            return $this->serverErrorResponse();
         }
     }
 
@@ -67,8 +74,12 @@ class QuranController extends Controller
             return $this->success(
                 SurahResource::collection($surahs)
             );
+        } catch (ResourceNotFoundException) {
+            return $this->notFound('Surahs not found');
         } catch (\Throwable $e) {
-            return $this->error($e->getMessage(), 400);
+            report($e);
+
+            return $this->serverErrorResponse();
         }
     }
 
@@ -85,8 +96,12 @@ class QuranController extends Controller
             return $this->success(
                 VerseResource::collection($verses)
             );
+        } catch (ResourceNotFoundException) {
+            return $this->notFound('Surah not found');
         } catch (\Throwable $e) {
-            return $this->notFound($e->getMessage());
+            report($e);
+
+            return $this->serverErrorResponse();
         }
     }
 
@@ -101,8 +116,12 @@ class QuranController extends Controller
             return $this->success(
                 new VerseResource($verse)
             );
+        } catch (ResourceNotFoundException) {
+            return $this->notFound('Verse not found');
         } catch (\Throwable $e) {
-            return $this->notFound($e->getMessage());
+            report($e);
+
+            return $this->serverErrorResponse();
         }
     }
 
@@ -119,8 +138,12 @@ class QuranController extends Controller
             $paginator->through(fn ($verse) => new VerseResource($verse));
 
             return $this->paginatedResponse($paginator);
+        } catch (ResourceNotFoundException) {
+            return $this->notFound('Juz not found');
         } catch (\Throwable $e) {
-            return $this->notFound($e->getMessage());
+            report($e);
+
+            return $this->serverErrorResponse();
         }
     }
 
@@ -135,8 +158,12 @@ class QuranController extends Controller
             return $this->success(
                 VerseResource::collection($verses)
             );
+        } catch (ResourceNotFoundException) {
+            return $this->notFound('Page not found');
         } catch (\Throwable $e) {
-            return $this->notFound($e->getMessage());
+            report($e);
+
+            return $this->serverErrorResponse();
         }
     }
 
@@ -209,6 +236,8 @@ class QuranController extends Controller
 
             return $this->paginatedResponse($verses);
         } catch (\Throwable $e) {
+            report($e);
+
             return $this->serverErrorResponse('Search failed. Please try again.');
         }
     }

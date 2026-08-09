@@ -53,6 +53,13 @@ interface TafseerRepositoryInterface extends RepositoryInterface
     public function getBySurah(int $surahId, int $perPage): LengthAwarePaginator;
 
     /**
+     * Active tafseer for one surah, paginated, carrying only what a listing row
+     * shows. Narrower than getBySurah(): the verse is loaded for its key alone,
+     * with no surah behind it.
+     */
+    public function paginateActiveBySurah(int $surahId, int $perPage): LengthAwarePaginator;
+
+    /**
      * Get tafseer by source
      */
     public function getBySource(string $source, int $perPage): LengthAwarePaginator;

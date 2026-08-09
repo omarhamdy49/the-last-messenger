@@ -40,6 +40,17 @@ class QuranServiceProvider extends ServiceProvider
             \App\Domain\Quran\Repositories\RevelationContextRepository::class
         );
 
+        // Edition/source metadata (the works), distinct from the verse text
+        // that VerseRepository and TafseerRepository serve.
+        $this->app->bind(
+            \App\Domain\Quran\Repositories\TranslationResourceRepositoryInterface::class,
+            \App\Domain\Quran\Repositories\TranslationResourceRepository::class
+        );
+        $this->app->bind(
+            \App\Domain\Quran\Repositories\TafsirResourceRepositoryInterface::class,
+            \App\Domain\Quran\Repositories\TafsirResourceRepository::class
+        );
+
         // Ask Quran AI (DeepSeek + quran.ai MCP)
         $this->app->bind(
             \App\Domain\Quran\Repositories\AiInquiryRepositoryInterface::class,

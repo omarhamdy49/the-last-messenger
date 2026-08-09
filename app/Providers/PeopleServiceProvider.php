@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\People\Repositories\EloquentMuslimRelationshipRepository;
 use App\Domain\People\Repositories\EloquentMuslimRepository;
+use App\Domain\People\Repositories\MuslimRelationshipRepositoryInterface;
 use App\Domain\People\Repositories\MuslimRepositoryInterface;
 use App\Domain\People\Services\MuslimPersonLookup;
 use App\Domain\People\Services\MuslimPublicVisibility;
@@ -24,6 +26,7 @@ class PeopleServiceProvider extends ServiceProvider
         $this->app->singleton(ArabicNormalizer::class);
 
         $this->app->bind(MuslimRepositoryInterface::class, EloquentMuslimRepository::class);
+        $this->app->bind(MuslimRelationshipRepositoryInterface::class, EloquentMuslimRelationshipRepository::class);
 
         // How Hadith (and any other module) reaches a person without importing
         // this one — constitution IV.

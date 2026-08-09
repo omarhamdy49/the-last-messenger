@@ -17,7 +17,7 @@ class CategoryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs(User::factory()->create(), ['api:access']);
     }
 
     public function test_categories_index_returns_paginated_list_with_correct_json_structure(): void

@@ -4,17 +4,30 @@ declare(strict_types=1);
 
 namespace App\Domain\Blog\Services;
 
+use App\Domain\Shared\Services\SlugGenerator;
 use App\Models\ArticleLocale;
-use Illuminate\Support\Str;
 
 /**
  * Slug Generator Service
  *
  * Generates unique, locale-aware slugs for article locales.
  * Extracted from ArticleController to keep business logic in the domain layer.
+ *
+ * The base-slug + `-N` disambiguation loop lives in the shared SlugGenerator;
+ * what stays here is the article-locale uniqueness scope, which is unique to
+ * this table: slugs collide only within the same locale, and an update
+ * excludes every locale row belonging to the article being saved.
  */
 class SlugGeneratorService
 {
+    /**
+     * Defaulted rather than required so `new SlugGeneratorService` keeps
+     * working for callers that construct it outside the container.
+     */
+    public function __construct(
+        private readonly SlugGenerator $slugs = new SlugGenerator,
+    ) {}
+
     /**
      * Generate a unique slug for the given title and locale.
      *
@@ -28,25 +41,18 @@ class SlugGeneratorService
      */
     public function generate(string $title, string $locale, ?int $excludeArticleId = null): string
     {
-        $slug = Str::slug($title);
-        $originalSlug = $slug;
-        $counter = 1;
+        return $this->slugs->unique(
+            $title,
+            static function (string $slug) use ($locale, $excludeArticleId): bool {
+                $query = ArticleLocale::where('slug', $slug)
+                    ->where('locale', $locale);
 
-        while (true) {
-            $query = ArticleLocale::where('slug', $slug)
-                ->where('locale', $locale);
+                if ($excludeArticleId !== null) {
+                    $query->where('article_id', '!=', $excludeArticleId);
+                }
 
-            if ($excludeArticleId !== null) {
-                $query->where('article_id', '!=', $excludeArticleId);
+                return $query->exists();
             }
-
-            if (! $query->exists()) {
-                break;
-            }
-
-            $slug = $originalSlug.'-'.$counter++;
-        }
-
-        return $slug;
+        );
     }
 }

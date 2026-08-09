@@ -19,6 +19,15 @@ interface VerseRepositoryInterface extends RepositoryInterface
     public function getBySurah(int $surahId): Collection;
 
     /**
+     * One surah's verses, paginated, carrying only what a listing row shows.
+     *
+     * Deliberately narrower than getBySurah(): no translation-resource
+     * eager-load and no cache, because the admin surah page renders a page of
+     * ten rows at a time and must show a verse the moment it is edited.
+     */
+    public function paginateBySurah(int $surahId, int $perPage): LengthAwarePaginator;
+
+    /**
      * Active translation editions (resources), excluding the Arabic source text.
      *
      * @return Collection<int, TranslationResource>

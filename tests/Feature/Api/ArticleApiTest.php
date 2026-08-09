@@ -16,7 +16,7 @@ class ArticleApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs(User::factory()->create(), ['api:access']);
     }
 
     public function test_articles_index_returns_success_envelope(): void

@@ -66,7 +66,12 @@ class SearchService
                 $module = SearchModule::from($module);
             }
 
-            $moduleResults = $this->searchWithin($module->value, $query, $filters, $options);
+            // A global search is one user event, not one event per module.
+            // Removing the user here prevents duplicate history rows from one
+            // request defeating the distinct-user privacy threshold below.
+            $moduleOptions = $options;
+            unset($moduleOptions['user']);
+            $moduleResults = $this->searchWithin($module->value, $query, $filters, $moduleOptions);
             $results[$module->value] = [
                 'total' => $moduleResults->total(),
                 'data' => $moduleResults->items(),
@@ -189,7 +194,7 @@ class SearchService
                 ->where('query', 'LIKE', "{$query}%")
                 ->groupBy('query')
                 // Do not turn a single user's private search into a suggestion.
-                ->havingRaw('COUNT(*) >= 3')
+                ->havingRaw('COUNT(DISTINCT user_id) >= 3')
                 ->orderByRaw('COUNT(*) DESC')
                 ->limit($this->suggestionLimit);
 
@@ -271,7 +276,7 @@ class SearchService
                 ->where('searched_at', '>=', now()->subDays($days))
                 ->groupBy('query', 'module')
                 // Small-cohort suppression protects uncommon/private queries.
-                ->havingRaw('COUNT(*) >= 3')
+                ->havingRaw('COUNT(DISTINCT user_id) >= 3')
                 ->orderByDesc('search_count')
                 ->limit(20);
 

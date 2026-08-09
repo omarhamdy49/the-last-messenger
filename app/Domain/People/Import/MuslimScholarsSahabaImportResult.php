@@ -8,7 +8,7 @@ final readonly class MuslimScholarsSahabaImportResult
 {
     public function __construct(
         public int $created,
-        public int $alreadyImported,
-        public int $reviewSkipped,
+        public int $mergedExisting,
+        public int $refreshedImported,
     ) {}
 }

@@ -195,9 +195,21 @@ class Muslim extends Model
      */
     public function name(?string $locale = null): string
     {
+        return self::preferredName($this->name_ar, $this->name_en, $locale);
+    }
+
+    /**
+     * The same fallback applied to a raw name pair.
+     *
+     * Exists because the genealogy tree is built by a recursive CTE that
+     * returns plain rows, never models — without this the fallback would have
+     * to be written a second time at the render site and could drift.
+     */
+    public static function preferredName(?string $nameAr, ?string $nameEn, ?string $locale = null): string
+    {
         return ($locale ?? app()->getLocale()) === 'ar'
-            ? ($this->name_ar ?? $this->name_en ?? '')
-            : ($this->name_en ?? $this->name_ar ?? '');
+            ? ($nameAr ?? $nameEn ?? '')
+            : ($nameEn ?? $nameAr ?? '');
     }
 
     /** How other domain modules receive this person (constitution IV). */

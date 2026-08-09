@@ -7,7 +7,9 @@ namespace App\Domain\People\Services;
 use App\Domain\People\Exceptions\GenealogyCycleException;
 use App\Domain\People\Models\Muslim;
 use App\Domain\People\Models\MuslimRelationship;
+use App\Domain\People\Repositories\MuslimRelationshipRepositoryInterface;
 use App\Domain\People\Repositories\MuslimRepositoryInterface;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -33,7 +35,10 @@ final class GenealogyTreeService
      */
     public const MAX_DEPTH = 60;
 
-    public function __construct(private readonly MuslimRepositoryInterface $muslims) {}
+    public function __construct(
+        private readonly MuslimRepositoryInterface $muslims,
+        private readonly MuslimRelationshipRepositoryInterface $relationships,
+    ) {}
 
     /**
      * Assign a father or mother, refusing anything that would create a cycle.
@@ -136,24 +141,14 @@ final class GenealogyTreeService
      */
     public function relations(Muslim $root, string $locale = 'ar', bool $publishedOnly = true): array
     {
-        $rows = MuslimRelationship::query()
-            ->where('muslim_id', $root->id)
-            ->orWhere('related_muslim_id', $root->id)
-            ->with([
-                'muslim:id,slug,name_ar,name_en,is_published',
-                'relatedMuslim:id,slug,name_ar,name_en,is_published',
-            ])
-            ->orderBy('sort_order')
-            ->get();
-
         $relations = [];
 
-        foreach ($rows as $row) {
+        foreach ($this->relationships->forMuslim($root->id) as $row) {
             if ($publishedOnly && $row->hide_from_tree) {
                 continue;
             }
 
-            $counterpart = $row->muslim_id === $root->id ? $row->relatedMuslim : $row->muslim;
+            $counterpart = $this->counterpartOf($row, $root->id);
 
             if ($counterpart === null || ($publishedOnly && ! $counterpart->is_published)) {
                 continue;
@@ -169,6 +164,167 @@ final class GenealogyTreeService
         }
 
         return $relations;
+    }
+
+    /**
+     * The same edges as relations(), but shaped for the admin table: the row
+     * model itself (the edit and delete forms post against it), the counterpart
+     * model, and how the row reads from THIS person's side.
+     *
+     * Drafts and tree-hidden edges are always included — an editor who cannot
+     * see them cannot tell an incomplete tree from a finished one.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function relationshipRows(Muslim $muslim, string $locale = 'ar'): array
+    {
+        $rows = [];
+
+        foreach ($this->relationships->forMuslim($muslim->id) as $row) {
+            $counterpart = $this->counterpartOf($row, $muslim->id);
+
+            $rows[] = [
+                'model' => $row,
+                'counterpart' => $counterpart,
+                'counterpart_name' => $counterpart?->name($locale) ?? '—',
+                // The stored type reads differently from each side, so the
+                // label shown must be the one for the person being edited.
+                'label' => $row->labelFor($muslim->id, $locale),
+                'is_reversed' => $row->muslim_id !== $muslim->id,
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Direct children of one person through either parent link, drafts included.
+     *
+     * @return Collection<int, Muslim>
+     */
+    public function children(Muslim $muslim): Collection
+    {
+        return $this->muslims->childrenOf($muslim->id);
+    }
+
+    /**
+     * The person a tree should root at.
+     *
+     * A slug wins when it resolves. Otherwise the root is whoever carries the
+     * `prophet` role — the role rather than a hardcoded slug, so it stays
+     * correct if the record is renamed or re-slugged. Only if nobody carries
+     * that role does it fall back to the parentless person with the most
+     * recorded children, which makes the landing tree depend on import order
+     * and is therefore a last resort, not the intent.
+     */
+    public function resolveRoot(?string $slug): ?Muslim
+    {
+        if (is_string($slug) && $slug !== '') {
+            $root = $this->muslims->findBySlug($slug, publishedOnly: false);
+
+            if ($root !== null) {
+                return $root;
+            }
+        }
+
+        $prophetId = $this->muslims->findIdByRoleSlug('prophet');
+
+        if ($prophetId !== null) {
+            return $this->muslims->findById($prophetId);
+        }
+
+        $id = $this->muslims->findMostConnectedRootId();
+
+        return $id === null
+            ? $this->muslims->firstById()
+            : $this->muslims->findById($id);
+    }
+
+    /**
+     * Turn the flat depth-ordered list from descendants() into a nested
+     * structure a tree view can indent. One extra query for the whole subtree,
+     * not one per node, and the depth-ordered sort is preserved because rows
+     * are appended in the order they arrive.
+     *
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return array<int, array<string, mixed>>
+     */
+    public function nestDescendants(Muslim $root, array $rows): array
+    {
+        if ($rows === []) {
+            return [];
+        }
+
+        $ids = array_map(static fn (array $row): int => (int) $row['id'], $rows);
+        $inSubtree = array_fill_keys([...$ids, $root->id], true);
+
+        $links = $this->muslims->parentLinksFor($ids);
+
+        $childrenByParent = [];
+
+        foreach ($rows as $row) {
+            $link = $links->get((int) $row['id']);
+
+            // A node can hang off either parent. Attach it to whichever one is
+            // inside this subtree — otherwise a person whose father is outside
+            // the rendered depth would be dropped instead of shown.
+            $parentId = match (true) {
+                isset($inSubtree[(int) $link?->father_id]) => (int) $link->father_id,
+                isset($inSubtree[(int) $link?->mother_id]) => (int) $link->mother_id,
+                default => $root->id,
+            };
+
+            $childrenByParent[$parentId][] = $row;
+        }
+
+        return $this->buildBranch($root->id, $childrenByParent);
+    }
+
+    /**
+     * Corpus-wide tree health, for the explorer's header.
+     *
+     * @return array{people:int,linked:int,roots:int,edges:int,hidden:int}
+     */
+    public function stats(): array
+    {
+        $counts = $this->muslims->treeCounts();
+
+        // `edges` lives in another table, so it stays its own query.
+        return [
+            'people' => $counts['people'],
+            'linked' => $counts['linked'],
+            'roots' => $counts['roots'],
+            'edges' => $this->relationships->count(),
+            'hidden' => $counts['hidden'],
+        ];
+    }
+
+    /**
+     * @param  array<int, array<int, array<string, mixed>>>  $childrenByParent
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildBranch(int $parentId, array $childrenByParent): array
+    {
+        $branch = [];
+
+        foreach ($childrenByParent[$parentId] ?? [] as $row) {
+            $row['children'] = $this->buildBranch((int) $row['id'], $childrenByParent);
+            $branch[] = $row;
+        }
+
+        return $branch;
+    }
+
+    /**
+     * The counterpart MODEL, from the id the row itself resolves. Rows are read
+     * with `muslim_id = ? OR related_muslim_id = ?`, so either column may hold
+     * the person asked about.
+     */
+    private function counterpartOf(MuslimRelationship $row, int $muslimId): ?Muslim
+    {
+        return $row->counterpartIdFor($muslimId) === $row->related_muslim_id
+            ? $row->relatedMuslim
+            : $row->muslim;
     }
 
     /**

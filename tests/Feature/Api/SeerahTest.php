@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Api;
 
 use App\Domain\Seerah\Models\SeerahEvent;
+use App\Domain\Seerah\Models\SeerahEventType;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -17,7 +18,7 @@ class SeerahTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs(User::factory()->create(), ['api:access']);
     }
 
     /**
@@ -28,7 +29,7 @@ class SeerahTest extends TestCase
     {
         $defaults = [
             'slug' => 'birth-of-the-prophet',
-            'seerah_event_type_id' => \App\Domain\Seerah\Models\SeerahEventType::query()->where('slug', 'birth')->value('id'),
+            'seerah_event_type_id' => SeerahEventType::query()->where('slug', 'birth')->value('id'),
             'status' => 'published',
             'importance' => 'high',
             'hijri_year' => -53,

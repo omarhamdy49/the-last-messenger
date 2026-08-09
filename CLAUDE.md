@@ -654,11 +654,14 @@ php artisan make:seeder HadithSeeder
 ## API Development
 
 ### RESTful API Structure
-All public APIs follow REST conventions and return JSON.
+All versioned APIs follow REST conventions and return JSON. The API is private
+by default; only registration, login, and health are anonymous.
 
 **Base URL:** `/api/v1/`
 
-**Authentication:** Laravel Sanctum (Bearer tokens)
+**Authentication:** Laravel Sanctum bearer tokens with the `api:access` ability.
+Send `Authorization: Bearer <token>` on every route except
+`POST /auth/register`, `POST /auth/login`, and `GET /health`.
 
 **Response Format:**
 ```json
@@ -687,14 +690,15 @@ All public APIs follow REST conventions and return JSON.
 ### Example API Endpoints
 ```php
 // Articles API
-Route::prefix('articles')->group(function () {
+Route::middleware(['auth:sanctum', 'abilities:api:access', 'throttle:api'])
+    ->prefix('articles')->group(function () {
     Route::get('/', [ArticleController::class, 'index']);        // List
     Route::get('/{slug}', [ArticleController::class, 'show']);   // Single
-    Route::post('/', [ArticleController::class, 'store']);       // Create (auth)
-    Route::put('/{id}', [ArticleController::class, 'update']);   // Update (auth)
-    Route::delete('/{id}', [ArticleController::class, 'destroy']); // Delete (auth)
 });
 ```
+
+The public website uses separate session/CSRF-protected `web` routes; do not
+make a bearer-token API anonymous to support a browser page.
 
 ## Admin Panel Development
 

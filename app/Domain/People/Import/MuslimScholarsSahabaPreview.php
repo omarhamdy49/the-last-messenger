@@ -16,7 +16,6 @@ final readonly class MuslimScholarsSahabaPreview
         public ?string $sourceSnapshotHash,
         public array $rows,
         public array $reviewRows,
-        public int $alreadyImported,
         public int $arabicNames,
     ) {}
 
@@ -25,13 +24,9 @@ final readonly class MuslimScholarsSahabaPreview
         return count($this->rows) + count($this->reviewRows);
     }
 
-    public function importable(): int
+    /** @return list<array<string, string|null>> */
+    public function allRows(): array
     {
-        return count($this->rows);
-    }
-
-    public function toCreate(): int
-    {
-        return $this->importable() - $this->alreadyImported;
+        return [...$this->rows, ...$this->reviewRows];
     }
 }

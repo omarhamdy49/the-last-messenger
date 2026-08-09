@@ -6,8 +6,8 @@ namespace Tests\Feature\Api;
 
 use App\Domain\Blog\Models\Category;
 use App\Domain\Media\Models\MediaEpisode;
-use App\Domain\People\Models\Muslim;
 use App\Domain\Media\Models\MediaEpisodeTranslation;
+use App\Domain\People\Models\Muslim;
 use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Models\Verse;
 use App\Domain\Seerah\Models\SeerahEventType;
@@ -101,7 +101,7 @@ class ApiRouteSmokeTest extends TestCase
                 }
 
                 if ($authenticated) {
-                    Sanctum::actingAs($this->user);
+                    Sanctum::actingAs($this->user, ['api:access']);
                 }
 
                 try {
@@ -158,7 +158,6 @@ class ApiRouteSmokeTest extends TestCase
             'name' => ['ar' => 'تصنيف اختبار', 'en' => 'Smoke category'],
             'description' => ['ar' => 'وصف', 'en' => 'Description'],
         ]);
-
 
         $surah = Surah::query()->create([
             'revelation_place' => 'makkah',

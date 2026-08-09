@@ -6,13 +6,22 @@ namespace Tests\Feature;
 
 use App\Domain\Quran\Models\Surah;
 use App\Domain\Seerah\Models\SeerahEvent;
+use App\Domain\Seerah\Models\SeerahEventType;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class NoNPlusOneQueriesTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Sanctum::actingAs(User::factory()->create(), ['api:access']);
+    }
 
     public function test_seerah_index_does_not_cause_n_plus_one(): void
     {
@@ -22,7 +31,7 @@ class NoNPlusOneQueriesTest extends TestCase
         for ($i = 1; $i <= 5; $i++) {
             SeerahEvent::query()->create([
                 'slug' => "event-{$i}",
-                'seerah_event_type_id' => \App\Domain\Seerah\Models\SeerahEventType::query()->where('slug', 'other')->value('id'),
+                'seerah_event_type_id' => SeerahEventType::query()->where('slug', 'other')->value('id'),
                 'importance' => 'medium',
                 'is_featured' => false,
                 'display_order' => $i,

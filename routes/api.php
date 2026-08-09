@@ -33,7 +33,7 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
         Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:auth')->name('auth.register');
         Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:auth')->name('auth.login');
 
-        Route::middleware(['auth:sanctum', 'throttle:api'])->group(function (): void {
+        Route::middleware(['auth:sanctum', 'abilities:api:access', 'throttle:api'])->group(function (): void {
             Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
             Route::post('/logout-all', [AuthController::class, 'logoutAll'])->name('auth.logout-all');
             Route::get('/user', [AuthController::class, 'user'])->name('auth.user');
@@ -55,7 +55,7 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
     // automatically requires a valid Sanctum token and receives the global API
     // request budget. Tests enforce that only the bootstrap allowlist above may
     // live outside this group.
-    Route::middleware(['auth:sanctum', 'throttle:api'])->group(function (): void {
+    Route::middleware(['auth:sanctum', 'abilities:api:access', 'throttle:api'])->group(function (): void {
         Route::prefix('categories')->group(function (): void {
             Route::get('/', [CategoryController::class, 'index'])->name('categories.index');
             Route::get('/{slug}', [CategoryController::class, 'show'])

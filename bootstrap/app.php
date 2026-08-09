@@ -1,11 +1,28 @@
 <?php
 
+use App\Domain\Blog\Exceptions\ArticleNotFoundException;
+use App\Domain\Blog\Exceptions\CategoryNotFoundException;
+use App\Domain\Sahaba\Exceptions\SahabiNotFoundException;
+use App\Domain\Seerah\Exceptions\SeerahEventNotFoundException;
+use App\Domain\Shared\Exceptions\DomainException;
+use App\Domain\Shared\Exceptions\EntityNotFoundException;
+use App\Http\Middleware\AddRequestId;
 use App\Http\Middleware\AdminAuthMiddleware;
 use App\Http\Middleware\AuthenticateApi;
+use App\Http\Middleware\CacheGuestPages;
+use App\Http\Middleware\LogApiRequest;
+use App\Http\Middleware\SecureApiResponseHeaders;
+use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Middleware\HandleCors;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Laravel\Sanctum\Http\Middleware\CheckAbilities;
+use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
+use Spatie\Permission\Middleware\PermissionMiddleware;
+use Spatie\Permission\Middleware\RoleMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -22,36 +39,38 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => AdminAuthMiddleware::class,
             'auth.api' => AuthenticateApi::class,
-            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
-            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission' => PermissionMiddleware::class,
+            'role' => RoleMiddleware::class,
+            'abilities' => CheckAbilities::class,
+            'ability' => CheckForAnyAbility::class,
         ]);
 
         $middleware->api(prepend: [
-            \Illuminate\Http\Middleware\HandleCors::class,
-            \App\Http\Middleware\AddRequestId::class,
+            HandleCors::class,
+            AddRequestId::class,
         ]);
 
         $middleware->api(append: [
-            \App\Http\Middleware\SetLocale::class,
-            \App\Http\Middleware\LogApiRequest::class,
-            \App\Http\Middleware\SecureApiResponseHeaders::class,
+            SetLocale::class,
+            LogApiRequest::class,
+            SecureApiResponseHeaders::class,
         ]);
 
         $middleware->web(append: [
-            \App\Http\Middleware\SetLocale::class,
+            SetLocale::class,
         ]);
 
         // Prepended so its response phase runs OUTERMOST (after StartSession adds
         // the session cookie) — lets it edge-cache the guest homepage and strip
         // per-user cookies, while forcing authenticated/admin responses to no-store.
         $middleware->web(prepend: [
-            \App\Http\Middleware\CacheGuestPages::class,
+            CacheGuestPages::class,
         ]);
 
         // Unauthenticated visitors: send admin-area requests to the admin login, but
         // public-site requests (e.g. /profile, /favorites) to the public login — not the
         // admin portal. JSON requests fall through to a 401 (return null).
-        $middleware->redirectGuestsTo(function (\Illuminate\Http\Request $request): ?string {
+        $middleware->redirectGuestsTo(function (Request $request): ?string {
             if ($request->expectsJson()) {
                 return null;
             }
@@ -66,8 +85,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         // Map EntityNotFoundException (404 not-found domain errors) to a 404 JSON response.
         $exceptions->render(function (
-            \App\Domain\Shared\Exceptions\EntityNotFoundException $e,
-            \Illuminate\Http\Request $request,
+            EntityNotFoundException $e,
+            Request $request,
         ) {
             if ($request->expectsJson()) {
                 return response()->json([
@@ -82,8 +101,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Map ArticleNotFoundException (a DomainException subtype) to a 404 JSON response.
         $exceptions->render(function (
-            \App\Domain\Blog\Exceptions\ArticleNotFoundException $e,
-            \Illuminate\Http\Request $request,
+            ArticleNotFoundException $e,
+            Request $request,
         ) {
             if ($request->expectsJson()) {
                 return response()->json([
@@ -99,8 +118,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Map CategoryNotFoundException to a 404 JSON response or 404 abort for web.
         $exceptions->render(function (
-            \App\Domain\Blog\Exceptions\CategoryNotFoundException $e,
-            \Illuminate\Http\Request $request,
+            CategoryNotFoundException $e,
+            Request $request,
         ) {
             if ($request->expectsJson()) {
                 return response()->json([
@@ -116,8 +135,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Map SeerahEventNotFoundException to a 404 JSON response or 404 abort for web.
         $exceptions->render(function (
-            \App\Domain\Seerah\Exceptions\SeerahEventNotFoundException $e,
-            \Illuminate\Http\Request $request,
+            SeerahEventNotFoundException $e,
+            Request $request,
         ) {
             if ($request->expectsJson()) {
                 return response()->json([
@@ -133,8 +152,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Map SahabiNotFoundException to a 404 JSON response or 404 abort for web.
         $exceptions->render(function (
-            \App\Domain\Sahaba\Exceptions\SahabiNotFoundException $e,
-            \Illuminate\Http\Request $request,
+            SahabiNotFoundException $e,
+            Request $request,
         ) {
             if ($request->expectsJson()) {
                 return response()->json([
@@ -151,8 +170,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Map all remaining DomainException subclasses to a 422 JSON response with a
         // generic user-facing message so that internal domain details are never leaked.
         $exceptions->render(function (
-            \App\Domain\Shared\Exceptions\DomainException $e,
-            \Illuminate\Http\Request $request,
+            DomainException $e,
+            Request $request,
         ) {
             if ($request->expectsJson()) {
                 return response()->json([

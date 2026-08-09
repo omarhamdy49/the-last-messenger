@@ -52,6 +52,8 @@ class MediaProgramController extends Controller
                 MediaProgramResource::collection($programs)->response()->getData(true)
             );
         } catch (\Throwable $e) {
+            report($e);
+
             return $this->error('Failed to retrieve programs', 500);
         }
     }
@@ -72,6 +74,8 @@ class MediaProgramController extends Controller
 
             return $this->success(MediaProgramResource::collection($programs));
         } catch (\Throwable $e) {
+            report($e);
+
             return $this->error('Failed to retrieve popular programs', 500);
         }
     }
@@ -92,6 +96,8 @@ class MediaProgramController extends Controller
 
             return $this->success(MediaProgramResource::collection($programs));
         } catch (\Throwable $e) {
+            report($e);
+
             return $this->error('Failed to retrieve recent programs', 500);
         }
     }
@@ -116,6 +122,8 @@ class MediaProgramController extends Controller
                 MediaProgramResource::collection($programs)->response()->getData(true)
             );
         } catch (\Throwable $e) {
+            report($e);
+
             return $this->error('Search failed', 500);
         }
     }
@@ -133,6 +141,8 @@ class MediaProgramController extends Controller
                 MediaProgramResource::collection($programs)->response()->getData(true)
             );
         } catch (\Throwable $e) {
+            report($e);
+
             return $this->error('Failed to retrieve programs by category', 500);
         }
     }
@@ -147,8 +157,12 @@ class MediaProgramController extends Controller
             $program = $this->programService->getBySlug($slug);
 
             return $this->success(new MediaProgramResource($program));
+        } catch (ResourceNotFoundException) {
+            return $this->notFound('Program not found');
         } catch (\Throwable $e) {
-            return $this->notFound("Program not found: {$slug}");
+            report($e);
+
+            return $this->error('Failed to retrieve program', 500);
         }
     }
 
@@ -170,8 +184,12 @@ class MediaProgramController extends Controller
             return $this->success(
                 MediaEpisodeResource::collection($episodes)->response()->getData(true)
             );
+        } catch (ResourceNotFoundException) {
+            return $this->notFound('Program not found');
         } catch (\Throwable $e) {
-            return $this->notFound("Program not found: {$slug}");
+            report($e);
+
+            return $this->error('Failed to retrieve episodes', 500);
         }
     }
 
@@ -195,8 +213,12 @@ class MediaProgramController extends Controller
                 'episode' => new MediaEpisodeResource($episode),
                 'next_episode' => $next ? new MediaEpisodeResource($next) : null,
             ]);
+        } catch (ResourceNotFoundException) {
+            return $this->notFound('Episode not found');
         } catch (\Throwable $e) {
-            return $this->notFound($e->getMessage());
+            report($e);
+
+            return $this->error('Failed to retrieve episode', 500);
         }
     }
 
@@ -221,6 +243,8 @@ class MediaProgramController extends Controller
         } catch (ResourceNotFoundException $e) {
             return $this->notFound('Episode not found');
         } catch (\Throwable $e) {
+            report($e);
+
             return $this->error('Failed to save progress', 500);
         }
     }
@@ -251,6 +275,8 @@ class MediaProgramController extends Controller
 
             return $this->success($result);
         } catch (\Throwable $e) {
+            report($e);
+
             return $this->error('Failed to retrieve continue-watching list', 500);
         }
     }

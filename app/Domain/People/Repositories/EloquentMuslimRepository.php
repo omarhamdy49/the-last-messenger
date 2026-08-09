@@ -92,6 +92,86 @@ final class EloquentMuslimRepository implements MuslimRepositoryInterface
         return Muslim::query()->whereKey($id)->first();
     }
 
+    public function findIdByRoleSlug(string $roleSlug): ?int
+    {
+        $id = Muslim::query()
+            ->whereHas('roles', fn (Builder $roles) => $roles->where('islamic_roles.slug', $roleSlug))
+            ->orderBy('id')
+            ->value('id');
+
+        return $id === null ? null : (int) $id;
+    }
+
+    public function findMostConnectedRootId(): ?int
+    {
+        $id = Muslim::query()
+            ->whereNull('father_id')
+            ->withCount('childrenByFather')
+            ->orderByDesc('children_by_father_count')
+            ->value('id');
+
+        return $id === null ? null : (int) $id;
+    }
+
+    public function firstById(): ?Muslim
+    {
+        return Muslim::query()->orderBy('id')->first();
+    }
+
+    /**
+     * @return Collection<int, Muslim>
+     */
+    public function childrenOf(int $muslimId): Collection
+    {
+        return Muslim::query()
+            ->select(['id', 'slug', 'name_ar', 'name_en', 'is_published', 'hide_from_tree', 'tree_display_order'])
+            ->where(fn (Builder $query) => $query
+                ->where('father_id', $muslimId)
+                ->orWhere('mother_id', $muslimId))
+            // NULL sorts first in MySQL, which would put unordered children
+            // above deliberately ordered ones; COALESCE pushes them last.
+            ->orderByRaw('COALESCE(tree_display_order, 4294967295), id')
+            ->get();
+    }
+
+    /**
+     * @param  array<int, int>  $ids
+     * @return Collection<int, Muslim>
+     */
+    public function parentLinksFor(array $ids): Collection
+    {
+        if ($ids === []) {
+            return new Collection;
+        }
+
+        return Muslim::query()
+            ->whereIn('id', $ids)
+            ->get(['id', 'father_id', 'mother_id'])
+            ->keyBy('id');
+    }
+
+    /**
+     * @return array{people:int,linked:int,roots:int,hidden:int}
+     */
+    public function treeCounts(): array
+    {
+        $row = Muslim::query()->toBase()->selectRaw(
+            'COUNT(*) AS people,'
+            // Anyone with at least one recorded parent — the rest are floating
+            // and will never appear in a tree that is not rooted at them.
+            .' SUM(father_id IS NOT NULL OR mother_id IS NOT NULL) AS linked,'
+            .' SUM(father_id IS NULL AND mother_id IS NULL) AS roots,'
+            .' SUM(hide_from_tree = 1) AS hidden'
+        )->first();
+
+        return [
+            'people' => (int) ($row->people ?? 0),
+            'linked' => (int) ($row->linked ?? 0),
+            'roots' => (int) ($row->roots ?? 0),
+            'hidden' => (int) ($row->hidden ?? 0),
+        ];
+    }
+
     public function search(string $term, int $limit = 20, bool $publishedOnly = true): Collection
     {
         $query = Muslim::query()->select(self::LIST_COLUMNS);

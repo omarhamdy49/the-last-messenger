@@ -38,7 +38,7 @@ class FilterController extends Controller
     public function index(Request $request): JsonResponse
     {
         $request->validate([
-            'module' => 'nullable|string',
+            'module' => 'nullable|string|in:article,media,seerah,sahaba,quran',
         ]);
 
         $filters = $this->searchService->getSavedFilters(
@@ -160,7 +160,7 @@ class FilterController extends Controller
         } catch (AuthorizationException $e) {
             return $this->forbiddenResponse($e->getMessage());
         } catch (\Throwable $e) {
-            return $this->errorResponse('Failed to apply filter: '.$e->getMessage(), 400);
+            return $this->errorResponse('Failed to apply filter', 400);
         }
     }
 
@@ -196,7 +196,7 @@ class FilterController extends Controller
     public function publicFilters(Request $request): JsonResponse
     {
         $request->validate([
-            'module' => 'nullable|string',
+            'module' => 'nullable|string|in:article,media,seerah,sahaba,quran',
         ]);
 
         $filters = $this->savedFilterService->listPublic($request->input('module'));
@@ -235,8 +235,8 @@ class FilterController extends Controller
     public function savePreferences(string $module, Request $request): JsonResponse
     {
         $request->validate([
-            'default_filters' => 'nullable|array',
-            'default_sort' => 'nullable|string|max:50',
+            'default_filters' => 'nullable|array|max:25',
+            'default_sort' => 'nullable|string|in:relevance,date,newest,oldest,popular,updated',
             'default_order' => 'nullable|string|in:asc,desc',
             'default_per_page' => 'nullable|integer|min:1|max:100',
             'show_facets' => 'nullable|boolean',

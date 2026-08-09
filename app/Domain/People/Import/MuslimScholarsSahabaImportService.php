@@ -9,6 +9,7 @@ use App\Domain\People\Models\IslamicRole;
 use App\Domain\People\Models\Muslim;
 use App\Domain\People\Models\MuslimSource;
 use App\Domain\People\ValueObjects\MuslimProfile;
+use App\Domain\Shared\Support\ArabicNormalizer;
 use Illuminate\Support\Facades\DB;
 use JsonException;
 use RuntimeException;
@@ -16,12 +17,6 @@ use RuntimeException;
 final class MuslimScholarsSahabaImportService
 {
     public const SOURCE = 'muslimscholars.info';
-
-    /** Source rows confirmed to be the same identity as their reviewed match. */
-    private const MERGE_REVIEW_SOURCE_IDS = ['3', '18', '54'];
-
-    /** Prefix matches confirmed not safe to merge; retain as distinct drafts. */
-    private const DISTINCT_REVIEW_SOURCE_IDS = ['4741', '6491', '9372'];
 
     /** @var list<string> */
     private const HEADERS = [
@@ -35,6 +30,11 @@ final class MuslimScholarsSahabaImportService
         'source_birth_raw', 'source_death_raw', 'source_interests',
         'source_tags', 'source_resources',
     ];
+
+    public function __construct(
+        private readonly MuslimScholarsSahabaIdentityMap $identityMap,
+        private readonly ArabicNormalizer $normalizer,
+    ) {}
 
     public function preview(string $path): MuslimScholarsSahabaPreview
     {
@@ -95,151 +95,207 @@ final class MuslimScholarsSahabaImportService
             throw new RuntimeException('Could not hash the import CSV.');
         }
 
-        $importedSourceIds = MuslimSource::query()
-            ->where('source', self::SOURCE)
-            ->pluck('external_id')
-            ->all();
-        $alreadyImported = count(array_intersect(
-            array_column($rows, 'source_id'),
-            $importedSourceIds,
-        ));
-
         return new MuslimScholarsSahabaPreview(
             path: $path,
             datasetHash: $datasetHash,
             sourceSnapshotHash: $this->sourceSnapshotHash($path),
             rows: $rows,
             reviewRows: $reviewRows,
-            alreadyImported: $alreadyImported,
             arabicNames: $arabicNames,
         );
     }
 
-    /** @param null|callable(int, int): void $progress */
-    public function import(MuslimScholarsSahabaPreview $preview, ?callable $progress = null): MuslimScholarsSahabaImportResult
+    public function plan(MuslimScholarsSahabaPreview $preview): MuslimScholarsSahabaImportPlan
     {
-        $role = IslamicRole::query()->where('slug', 'sahabi')->first();
-        if (! $role instanceof IslamicRole) {
-            throw new RuntimeException('The sahabi role is missing. Run IslamicRoleSeeder first.');
-        }
+        $allRows = $preview->allRows();
 
-        /** @var array<string, int> $existing */
-        $existing = MuslimSource::query()
+        /** @var array<string, int> $imported */
+        $imported = MuslimSource::query()
             ->where('source', self::SOURCE)
             ->pluck('muslim_id', 'external_id')
             ->map(static fn (mixed $id): int => (int) $id)
             ->all();
 
-        $newRows = array_values(array_filter(
-            $preview->rows,
-            static fn (array $row): bool => ! isset($existing[$row['source_id']]),
-        ));
-        $this->assertSlugsAvailable($newRows);
+        /** @var array<string, Muslim> $peopleBySlug */
+        $peopleBySlug = Muslim::query()->get()->keyBy('slug')->all();
+        $reviewedTargets = [];
+        $reservedTargetIds = [];
+        foreach ($allRows as $row) {
+            foreach ($this->identityMap->slugsFor($row['source_id']) as $slug) {
+                $target = $peopleBySlug[$slug] ?? null;
+                if ($target instanceof Muslim) {
+                    $reviewedTargets[$row['source_id']] = $target->id;
+                    $reservedTargetIds[$target->id] = true;
 
-        $created = 0;
-        foreach (array_chunk($newRows, 250) as $chunk) {
-            DB::transaction(function () use ($chunk, $role, $preview, &$created, $progress, $newRows): void {
+                    break;
+                }
+            }
+        }
+
+        $eligible = Muslim::query()
+            ->whereDoesntHave('sources', fn ($query) => $query->where('source', self::SOURCE))
+            ->where(function ($query): void {
+                $query->where('generation', Generation::Companion->value)
+                    ->orWhereHas('roles', fn ($roles) => $roles->where('slug', 'sahabi'));
+            })
+            ->get();
+
+        $localArabic = [];
+        $localEnglish = [];
+        foreach ($eligible as $person) {
+            if (isset($reservedTargetIds[$person->id])) {
+                continue;
+            }
+            $arabic = $this->normalizer->normalize($person->name_ar);
+            $english = $this->normalizer->normalize($person->name_en);
+            if ($arabic !== null && $arabic !== '') {
+                $localArabic[$arabic][] = $person->id;
+            }
+            if ($english !== null && $english !== '') {
+                $localEnglish[$english][] = $person->id;
+            }
+        }
+
+        $sourceArabicFrequency = [];
+        $sourceEnglishFrequency = [];
+        foreach ($allRows as $row) {
+            $arabic = $this->normalizer->normalize($row['name_ar']);
+            $english = $this->normalizer->normalize($row['name_en']);
+            if ($arabic !== null && $arabic !== '') {
+                $sourceArabicFrequency[$arabic] = ($sourceArabicFrequency[$arabic] ?? 0) + 1;
+            }
+            if ($english !== null && $english !== '') {
+                $sourceEnglishFrequency[$english] = ($sourceEnglishFrequency[$english] ?? 0) + 1;
+            }
+        }
+
+        $createRows = [];
+        $mergeRows = [];
+        $refreshRows = [];
+        $claimedTargetIds = [];
+
+        foreach ($allRows as $row) {
+            $sourceId = $row['source_id'];
+            if (isset($imported[$sourceId])) {
+                $refreshRows[] = ['row' => $row, 'muslim_id' => $imported[$sourceId]];
+
+                continue;
+            }
+
+            $reviewedTarget = $reviewedTargets[$sourceId] ?? null;
+            if ($reviewedTarget !== null) {
+                $mergeRows[] = [
+                    'row' => $row,
+                    'muslim_id' => $reviewedTarget,
+                    'reason' => 'reviewed_source_to_slug',
+                ];
+                $claimedTargetIds[$reviewedTarget] = true;
+
+                continue;
+            }
+
+            if ($this->identityMap->mustRemainDistinct($sourceId)) {
+                $createRows[] = $row;
+
+                continue;
+            }
+
+            $candidateIds = [];
+            $reasons = [];
+            $arabic = $this->normalizer->normalize($row['name_ar']);
+            if ($arabic !== null
+                && ($sourceArabicFrequency[$arabic] ?? 0) === 1
+                && count($localArabic[$arabic] ?? []) === 1) {
+                $candidateIds[] = $localArabic[$arabic][0];
+                $reasons[] = 'unique_exact_arabic';
+            }
+            $english = $this->normalizer->normalize($row['name_en']);
+            if ($english !== null
+                && ($sourceEnglishFrequency[$english] ?? 0) === 1
+                && count($localEnglish[$english] ?? []) === 1) {
+                $candidateIds[] = $localEnglish[$english][0];
+                $reasons[] = 'unique_exact_english';
+            }
+
+            $candidateIds = array_values(array_unique($candidateIds));
+            if (count($candidateIds) === 1 && ! isset($claimedTargetIds[$candidateIds[0]])) {
+                $mergeRows[] = [
+                    'row' => $row,
+                    'muslim_id' => $candidateIds[0],
+                    'reason' => implode('+', $reasons),
+                ];
+                $claimedTargetIds[$candidateIds[0]] = true;
+            } else {
+                $createRows[] = $row;
+            }
+        }
+
+        return new MuslimScholarsSahabaImportPlan($createRows, $mergeRows, $refreshRows);
+    }
+
+    /** @param null|callable(int, int): void $progress */
+    public function import(
+        MuslimScholarsSahabaPreview $preview,
+        ?callable $progress = null,
+    ): MuslimScholarsSahabaImportResult {
+        $role = IslamicRole::query()->where('slug', 'sahabi')->first();
+        if (! $role instanceof IslamicRole) {
+            throw new RuntimeException('The sahabi role is missing. Run IslamicRoleSeeder first.');
+        }
+
+        $plan = $this->plan($preview);
+        $this->assertSlugsAvailable($plan->createRows);
+        $processed = 0;
+
+        foreach (array_chunk($plan->createRows, 250) as $chunk) {
+            DB::transaction(function () use ($chunk, $role, $preview, $plan, &$processed, $progress): void {
                 foreach ($chunk as $row) {
                     $muslim = Muslim::query()->create($this->muslimAttributes($row));
-                    $muslim->roles()->attach($role->id, [
-                        'is_featured' => false,
-                        'sort_order' => 0,
-                    ]);
-                    $muslim->sources()->create([
-                        'source' => self::SOURCE,
-                        'external_id' => $row['source_id'],
-                        'source_url' => $row['source_url'],
-                        'dataset_hash' => $preview->datasetHash,
-                        'source_snapshot_hash' => $preview->sourceSnapshotHash,
-                        'metadata' => $this->sourceMetadata($row),
-                    ]);
-
-                    $created++;
+                    $this->assignRoleAndSource($muslim, $row, $preview, $role);
+                    $processed++;
                     if ($progress !== null) {
-                        $progress($created, count($newRows));
+                        $progress($processed, $plan->total());
+                    }
+                }
+            });
+        }
+
+        foreach (array_chunk($plan->mergeRows, 100) as $chunk) {
+            DB::transaction(function () use ($chunk, $role, $preview, $plan, &$processed, $progress): void {
+                foreach ($chunk as $item) {
+                    $muslim = Muslim::query()->find($item['muslim_id']);
+                    if (! $muslim instanceof Muslim) {
+                        throw new RuntimeException("Merge target {$item['muslim_id']} no longer exists.");
+                    }
+                    $this->updateExistingMuslim($muslim, $item['row'], $preview, $role);
+                    $processed++;
+                    if ($progress !== null) {
+                        $progress($processed, $plan->total());
+                    }
+                }
+            });
+        }
+
+        foreach (array_chunk($plan->refreshRows, 100) as $chunk) {
+            DB::transaction(function () use ($chunk, $role, $preview, $plan, &$processed, $progress): void {
+                foreach ($chunk as $item) {
+                    $muslim = Muslim::query()->find($item['muslim_id']);
+                    if (! $muslim instanceof Muslim) {
+                        throw new RuntimeException("Imported target {$item['muslim_id']} no longer exists.");
+                    }
+                    $this->updateExistingMuslim($muslim, $item['row'], $preview, $role);
+                    $processed++;
+                    if ($progress !== null) {
+                        $progress($processed, $plan->total());
                     }
                 }
             });
         }
 
         return new MuslimScholarsSahabaImportResult(
-            created: $created,
-            alreadyImported: count($preview->rows) - count($newRows),
-            reviewSkipped: count($preview->reviewRows),
-        );
-    }
-
-    /**
-     * Apply the manual decisions for the six held records, then fill missing
-     * gender on source-owned rows. MuslimScholars explicitly tags women; for
-     * this all-Sahaba dataset, an untagged record is therefore male.
-     */
-    public function resolveReviewsAndFillGender(
-        MuslimScholarsSahabaPreview $preview,
-    ): MuslimScholarsSahabaResolutionResult {
-        $role = IslamicRole::query()->where('slug', 'sahabi')->first();
-        if (! $role instanceof IslamicRole) {
-            throw new RuntimeException('The sahabi role is missing. Run IslamicRoleSeeder first.');
-        }
-
-        $merged = 0;
-        $created = 0;
-        $alreadyResolved = 0;
-
-        DB::transaction(function () use (
-            $preview,
-            $role,
-            &$merged,
-            &$created,
-            &$alreadyResolved,
-        ): void {
-            foreach ($preview->reviewRows as $row) {
-                if (MuslimSource::query()
-                    ->where('source', self::SOURCE)
-                    ->where('external_id', $row['source_id'])
-                    ->exists()) {
-                    $alreadyResolved++;
-
-                    continue;
-                }
-
-                if (in_array($row['source_id'], self::MERGE_REVIEW_SOURCE_IDS, true)) {
-                    $this->mergeReviewedRow($row, $preview, $role);
-                    $merged++;
-
-                    continue;
-                }
-
-                if (in_array($row['source_id'], self::DISTINCT_REVIEW_SOURCE_IDS, true)) {
-                    $this->createDistinctReviewedRow($row, $preview, $role);
-                    $created++;
-
-                    continue;
-                }
-
-                throw new RuntimeException(
-                    "Review row {$row['source_id']} has no explicit identity resolution."
-                );
-            }
-        });
-
-        // Female rows were populated explicitly during mapping. Only null
-        // gender remains here, so the source convention resolves it to male.
-        $genderFilled = DB::table('muslims')
-            ->join('muslim_sources', 'muslim_sources.muslim_id', '=', 'muslims.id')
-            ->where('muslim_sources.source', self::SOURCE)
-            ->whereNull('muslims.gender')
-            ->update(['muslims.gender' => 'male']);
-
-        [$profilesFilled, $metadataSynced] = $this->enrichImportedProfilesAndMetadata($preview);
-
-        return new MuslimScholarsSahabaResolutionResult(
-            mergedIntoExisting: $merged,
-            createdAsDistinct: $created,
-            alreadyResolved: $alreadyResolved,
-            genderFilled: $genderFilled,
-            profilesFilled: $profilesFilled,
-            metadataSynced: $metadataSynced,
+            created: count($plan->createRows),
+            mergedExisting: count($plan->mergeRows),
+            refreshedImported: count($plan->refreshRows),
         );
     }
 
@@ -298,7 +354,7 @@ final class MuslimScholarsSahabaImportService
     /** @param array<string, string|null> $row @return array<string, mixed> */
     private function muslimAttributes(array $row): array
     {
-        return [
+        $attributes = [
             'slug' => $row['slug'],
             'thumb' => $row['thumb'],
             'name_ar' => $row['name_ar'],
@@ -318,6 +374,16 @@ final class MuslimScholarsSahabaImportService
             'hide_from_tree' => false,
             'is_published' => false,
         ];
+
+        // Passing null through Spatie Translatable creates {"ar": null}.
+        // Omit absent translation fields so the database stores a true NULL.
+        foreach (['kunya', 'bio', 'content', 'birth_place'] as $field) {
+            if ($attributes[$field] === null) {
+                unset($attributes[$field]);
+            }
+        }
+
+        return $attributes;
     }
 
     /** @param array<string, string|null> $row @return array<string, mixed> */
@@ -340,17 +406,12 @@ final class MuslimScholarsSahabaImportService
     /**
      * @param  array<string, string|null>  $row
      */
-    private function mergeReviewedRow(
+    private function updateExistingMuslim(
+        Muslim $muslim,
         array $row,
         MuslimScholarsSahabaPreview $preview,
         IslamicRole $role,
     ): void {
-        $targetId = $this->integerOrNull($row['existing_muslim_id']);
-        $muslim = $targetId === null ? null : Muslim::query()->find($targetId);
-        if (! $muslim instanceof Muslim) {
-            throw new RuntimeException("Reviewed target for source {$row['source_id']} no longer exists.");
-        }
-
         $attributes = [
             'name_ar' => $this->preferLonger($muslim->name_ar, $row['name_ar']),
             'name_en' => $muslim->name_en ?? $row['name_en'],
@@ -361,30 +422,31 @@ final class MuslimScholarsSahabaImportService
             'gender' => $muslim->gender?->value ?? $this->inferredGender($row),
             'birth_year_hijri' => $muslim->birth_year_hijri ?? $this->integerOrNull($row['birth_year_hijri']),
             'death_year_hijri' => $muslim->death_year_hijri ?? $this->integerOrNull($row['death_year_hijri']),
-            'generation' => $muslim->generation ?? Generation::Companion->value,
+            'generation' => Generation::Companion->value,
             'profile' => $this->mergedProfileData($muslim, $row),
         ];
 
+        foreach (['kunya', 'bio', 'content', 'birth_place'] as $field) {
+            if ($attributes[$field] === null) {
+                unset($attributes[$field]);
+            }
+        }
+
         $muslim->update($attributes);
-        $muslim->roles()->syncWithoutDetaching([
-            $role->id => ['is_featured' => false, 'sort_order' => 0],
-        ]);
-        $this->attachSource($muslim, $row, $preview);
+        $this->assignRoleAndSource($muslim, $row, $preview, $role);
     }
 
     /**
      * @param  array<string, string|null>  $row
      */
-    private function createDistinctReviewedRow(
+    private function assignRoleAndSource(
+        Muslim $muslim,
         array $row,
         MuslimScholarsSahabaPreview $preview,
         IslamicRole $role,
     ): void {
-        $this->assertSlugsAvailable([$row]);
-        $muslim = Muslim::query()->create($this->muslimAttributes($row));
-        $muslim->roles()->attach($role->id, [
-            'is_featured' => false,
-            'sort_order' => 0,
+        $muslim->roles()->syncWithoutDetaching([
+            $role->id => ['is_featured' => false, 'sort_order' => 0],
         ]);
         $this->attachSource($muslim, $row, $preview);
     }
@@ -397,14 +459,19 @@ final class MuslimScholarsSahabaImportService
         array $row,
         MuslimScholarsSahabaPreview $preview,
     ): void {
-        $muslim->sources()->create([
-            'source' => self::SOURCE,
-            'external_id' => $row['source_id'],
-            'source_url' => $row['source_url'],
-            'dataset_hash' => $preview->datasetHash,
-            'source_snapshot_hash' => $preview->sourceSnapshotHash,
-            'metadata' => $this->sourceMetadata($row),
-        ]);
+        MuslimSource::query()->updateOrCreate(
+            [
+                'source' => self::SOURCE,
+                'external_id' => $row['source_id'],
+            ],
+            [
+                'muslim_id' => $muslim->id,
+                'source_url' => $row['source_url'],
+                'dataset_hash' => $preview->datasetHash,
+                'source_snapshot_hash' => $preview->sourceSnapshotHash,
+                'metadata' => $this->sourceMetadata($row),
+            ],
+        );
     }
 
     private function preferLonger(?string $existing, ?string $incoming): ?string
@@ -471,58 +538,6 @@ final class MuslimScholarsSahabaImportService
         }
 
         return $profile;
-    }
-
-    /**
-     * Fill the structured full-name fields for rows imported before that
-     * mapping was added, and retain the exact reviewed source fields in the
-     * provenance metadata. Existing editorial profile values win.
-     *
-     * @return array{int, int} profiles filled, metadata synced
-     */
-    private function enrichImportedProfilesAndMetadata(
-        MuslimScholarsSahabaPreview $preview,
-    ): array {
-        $rows = [];
-        foreach ([...$preview->rows, ...$preview->reviewRows] as $row) {
-            $rows[$row['source_id']] = $row;
-        }
-
-        $profilesFilled = 0;
-        $metadataSynced = 0;
-        MuslimSource::query()
-            ->with('muslim')
-            ->where('source', self::SOURCE)
-            ->orderBy('id')
-            ->chunkById(250, function ($sources) use (
-                $rows,
-                &$profilesFilled,
-                &$metadataSynced,
-            ): void {
-                foreach ($sources as $source) {
-                    $row = $rows[$source->external_id] ?? null;
-                    if ($row === null || ! $source->muslim instanceof Muslim) {
-                        continue;
-                    }
-
-                    $muslim = $source->muslim;
-                    $profile = $this->mergedProfileData($muslim, $row);
-                    if ($profile !== $muslim->profile->toArray()) {
-                        $muslim->profile = $profile;
-                        $muslim->save();
-                        $profilesFilled++;
-                    }
-
-                    $metadata = $this->sourceMetadata($row);
-                    if ($metadata !== $source->metadata) {
-                        $source->metadata = $metadata;
-                        $source->save();
-                        $metadataSynced++;
-                    }
-                }
-            });
-
-        return [$profilesFilled, $metadataSynced];
     }
 
     private function integerOrNull(?string $value): ?int

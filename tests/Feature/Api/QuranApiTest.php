@@ -31,7 +31,7 @@ class QuranApiTest extends TestCase
         // Surah lookups are cached and the 'search' rate limiter is cache-backed;
         // flushing per test keeps cross-test state out of navigational search.
         Cache::flush();
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs(User::factory()->create(), ['api:access']);
     }
 
     // ===================== SURAH ENDPOINTS =====================

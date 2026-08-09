@@ -8,6 +8,9 @@ use App\Domain\People\Import\MuslimScholarsSahabaImportService;
 use App\Domain\People\Models\IslamicRole;
 use App\Domain\People\Models\Muslim;
 use App\Domain\People\Models\MuslimSource;
+use Database\Seeders\IslamicRoleSeeder;
+use Database\Seeders\ProphetFamilySeeder;
+use Database\Seeders\ProphetLineageSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -28,7 +31,7 @@ final class MuslimScholarsSahabaImportTest extends TestCase
         'source_tags', 'source_resources',
     ];
 
-    public function test_import_is_unpublished_provenanced_and_idempotent_while_review_rows_are_skipped(): void
+    public function test_new_person_is_imported_as_an_unpublished_provenanced_draft_and_rerun_refreshes_it(): void
     {
         IslamicRole::query()->create([
             'slug' => 'sahabi',
@@ -36,22 +39,10 @@ final class MuslimScholarsSahabaImportTest extends TestCase
             'name_en' => 'Companion',
         ]);
 
-        $path = $this->csv([
-            $this->row(),
-            $this->row([
-                'source_id' => '3',
-                'source_url' => 'https://muslimscholars.info/manage.php?submit=scholar&ID=3',
-                'action' => 'review_existing',
-                'existing_muslim_id' => '8',
-                'existing_match_reason' => 'arabic_prefix',
-                'slug' => 'umar-ibn-al-khattab-msi-3',
-                'name_ar' => 'عمر بن الخطاب بن نفيل',
-                'name_en' => "'Umar ibn al-Khattab",
-            ]),
-        ]);
+        $path = $this->csv([$this->row()]);
 
         try {
-            $arguments = ['--path' => $path, '--expected' => 2, '--force' => true];
+            $arguments = ['--path' => $path, '--expected' => 1, '--force' => true];
             $this->artisan('people:import-muslimscholars-sahaba', $arguments)->assertSuccessful();
             $this->artisan('people:import-muslimscholars-sahaba', $arguments)->assertSuccessful();
 
@@ -69,8 +60,6 @@ final class MuslimScholarsSahabaImportTest extends TestCase
                 'source' => MuslimScholarsSahabaImportService::SOURCE,
                 'external_id' => '2',
             ]);
-            $this->assertDatabaseMissing('muslim_sources', ['external_id' => '3']);
-
             $muslim = Muslim::query()->sole();
             $this->assertSame(['sahabi'], $muslim->roles()->pluck('slug')->all());
             $this->assertSame(
@@ -86,7 +75,7 @@ final class MuslimScholarsSahabaImportTest extends TestCase
         }
     }
 
-    public function test_review_resolution_enriches_confirmed_identity_and_creates_lookalike_separately(): void
+    public function test_stable_slug_mapping_updates_existing_and_ignores_stale_numeric_id_while_homonym_stays_distinct(): void
     {
         IslamicRole::query()->create([
             'slug' => 'sahabi',
@@ -106,7 +95,7 @@ final class MuslimScholarsSahabaImportTest extends TestCase
                 'source_id' => '3',
                 'source_url' => 'https://muslimscholars.info/manage.php?submit=scholar&ID=3',
                 'action' => 'review_existing',
-                'existing_muslim_id' => (string) $umar->id,
+                'existing_muslim_id' => '999999',
                 'existing_match_reason' => 'arabic_prefix',
                 'slug' => 'umar-ibn-al-khattab-msi-3',
                 'name_ar' => 'عمر بن الخطاب بن نفيل',
@@ -118,7 +107,7 @@ final class MuslimScholarsSahabaImportTest extends TestCase
                 'source_id' => '4741',
                 'source_url' => 'https://muslimscholars.info/manage.php?submit=scholar&ID=4741',
                 'action' => 'review_existing',
-                'existing_muslim_id' => (string) $umar->id,
+                'existing_muslim_id' => '999999',
                 'existing_match_reason' => 'arabic_prefix',
                 'slug' => 'abdullah-bin-umar-al-jrmy-msi-4741',
                 'name_ar' => 'عبد الله بن عمر الجرمي',
@@ -130,7 +119,6 @@ final class MuslimScholarsSahabaImportTest extends TestCase
             $arguments = [
                 '--path' => $path,
                 '--expected' => 2,
-                '--resolve-reviews' => true,
                 '--force' => true,
             ];
             $this->artisan('people:import-muslimscholars-sahaba', $arguments)->assertSuccessful();
@@ -169,6 +157,68 @@ final class MuslimScholarsSahabaImportTest extends TestCase
         } finally {
             @unlink($path);
         }
+    }
+
+    public function test_unique_exact_name_updates_an_existing_companion_without_an_explicit_map(): void
+    {
+        IslamicRole::query()->create([
+            'slug' => 'sahabi',
+            'name_ar' => 'صحابي',
+            'name_en' => 'Companion',
+        ]);
+        $existing = Muslim::query()->create([
+            'slug' => 'existing-abu-bakr',
+            'name_ar' => 'أبو بكر الصديق',
+            'name_en' => 'Abu Bakr As-Siddique',
+            'generation' => 'companion',
+            'is_published' => true,
+        ]);
+        $path = $this->csv([$this->row()]);
+
+        try {
+            $this->artisan('people:import-muslimscholars-sahaba', [
+                '--path' => $path,
+                '--expected' => 1,
+                '--force' => true,
+            ])->assertSuccessful();
+
+            $this->assertDatabaseCount('muslims', 1);
+            $this->assertDatabaseHas('muslim_sources', [
+                'muslim_id' => $existing->id,
+                'external_id' => '2',
+            ]);
+            $this->assertTrue($existing->fresh()->is_published);
+        } finally {
+            @unlink($path);
+        }
+    }
+
+    public function test_reviewed_map_covers_current_seeded_people_without_merging_known_homonyms(): void
+    {
+        $this->seed([
+            IslamicRoleSeeder::class,
+            ProphetLineageSeeder::class,
+            ProphetFamilySeeder::class,
+        ]);
+
+        $service = app(MuslimScholarsSahabaImportService::class);
+        $preview = $service->preview(base_path(
+            'storage/app/sahaba-import-preview/muslimscholars-sahaba-mapped-preview.csv'
+        ));
+        $plan = $service->plan($preview);
+
+        $this->assertSame(7806, $plan->total());
+        $this->assertSame(49, count($plan->mergeRows));
+        $this->assertSame(7757, count($plan->createRows));
+        $this->assertSame([], $plan->refreshRows);
+
+        $mergedSourceIds = array_column(array_column($plan->mergeRows, 'row'), 'source_id');
+        $createdSourceIds = array_column($plan->createRows, 'source_id');
+        $this->assertContains('54', $mergedSourceIds);
+        $this->assertContains('17', $mergedSourceIds);
+        $this->assertContains('516', $mergedSourceIds);
+        $this->assertContains('6491', $createdSourceIds);
+        $this->assertContains('9372', $createdSourceIds);
     }
 
     public function test_dry_run_validates_without_writing(): void

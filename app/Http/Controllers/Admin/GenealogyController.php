@@ -14,8 +14,6 @@ use App\Domain\People\Services\MuslimRelationshipService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreMuslimRelationshipRequest;
 use App\Http\Requests\Admin\UpdateGenealogyRequest;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -56,7 +54,8 @@ class GenealogyController extends Controller
     public function index(Request $request): View
     {
         $depth = $this->resolveDepth($request);
-        $root = $this->resolveRoot($request);
+        $slug = $request->query('root');
+        $root = $this->tree->resolveRoot(is_string($slug) ? $slug : null);
 
         if ($root === null) {
             return view('admin.genealogy.index', [
@@ -66,7 +65,7 @@ class GenealogyController extends Controller
                 'descendantTree' => [],
                 'descendants' => null,
                 'relations' => [],
-                'stats' => $this->stats(),
+                'stats' => $this->tree->stats(),
             ]);
         }
 
@@ -78,10 +77,10 @@ class GenealogyController extends Controller
             'ancestors' => $this->tree->ancestors($root, $depth),
             // Nested for rendering; the service returns a flat depth-ordered
             // list, which a tree view cannot indent on its own.
-            'descendantTree' => $this->nestDescendants($root, $descendants['nodes']),
+            'descendantTree' => $this->tree->nestDescendants($root, $descendants['nodes']),
             'descendants' => $descendants,
             'relations' => $this->tree->relations($root, app()->getLocale(), publishedOnly: false),
-            'stats' => $this->stats(),
+            'stats' => $this->tree->stats(),
         ]);
     }
 
@@ -95,8 +94,8 @@ class GenealogyController extends Controller
                 'father:id,slug,name_ar,name_en,is_published',
                 'mother:id,slug,name_ar,name_en,is_published',
             ]),
-            'children' => $this->children($muslim),
-            'relationships' => $this->relationshipRows($muslim),
+            'children' => $this->tree->children($muslim),
+            'relationships' => $this->tree->relationshipRows($muslim, app()->getLocale()),
             'relationshipTypes' => RelationshipType::options(app()->getLocale()),
             // Reported so an editor knows when a lineage is deeper than shown.
             'ancestors' => $this->tree->ancestors($muslim, self::DEFAULT_DEPTH),
@@ -199,186 +198,8 @@ class GenealogyController extends Controller
         );
     }
 
-    /**
-     * `?root=` accepts a slug; otherwise the tree roots at the Prophet ﷺ.
-     *
-     * The root is the person carrying the `prophet` role rather than a hardcoded
-     * slug, so it stays correct if the record is renamed or re-slugged. Only if
-     * nobody carries that role does it fall back to the person with the most
-     * recorded children — which makes the landing tree depend on import order,
-     * so it is a last resort, not the intent.
-     */
-    private function resolveRoot(Request $request): ?Muslim
-    {
-        $slug = $request->query('root');
-
-        if (is_string($slug) && $slug !== '') {
-            $root = $this->muslims->findBySlug($slug, publishedOnly: false);
-
-            if ($root !== null) {
-                return $root;
-            }
-        }
-
-        $prophetId = Muslim::query()
-            ->whereHas('roles', fn (Builder $roles) => $roles->where('islamic_roles.slug', 'prophet'))
-            ->orderBy('id')
-            ->value('id');
-
-        if ($prophetId !== null) {
-            return $this->muslims->findById((int) $prophetId);
-        }
-
-        $id = Muslim::query()
-            ->whereNull('father_id')
-            ->withCount('childrenByFather')
-            ->orderByDesc('children_by_father_count')
-            ->value('id');
-
-        return $id === null
-            ? Muslim::query()->orderBy('id')->first()
-            : $this->muslims->findById((int) $id);
-    }
-
     private function resolveDepth(Request $request): int
     {
         return min(max((int) $request->query('depth', self::DEFAULT_DEPTH), 1), self::MAX_DEPTH);
-    }
-
-    /**
-     * Direct children of one person, drafts included.
-     *
-     * @return Collection<int, Muslim>
-     */
-    private function children(Muslim $muslim): Collection
-    {
-        return Muslim::query()
-            ->select(['id', 'slug', 'name_ar', 'name_en', 'is_published', 'hide_from_tree', 'tree_display_order'])
-            ->where(fn ($query) => $query
-                ->where('father_id', $muslim->id)
-                ->orWhere('mother_id', $muslim->id))
-            ->orderByRaw('COALESCE(tree_display_order, 4294967295), id')
-            ->get();
-    }
-
-    /**
-     * The person's edges with everything the table needs: the counterpart, how
-     * the row reads from THIS person's side, and the raw type for the edit form.
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    private function relationshipRows(Muslim $muslim): array
-    {
-        $locale = app()->getLocale();
-
-        return MuslimRelationship::query()
-            ->where('muslim_id', $muslim->id)
-            ->orWhere('related_muslim_id', $muslim->id)
-            ->with([
-                'muslim:id,slug,name_ar,name_en,is_published',
-                'relatedMuslim:id,slug,name_ar,name_en,is_published',
-            ])
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get()
-            ->map(function (MuslimRelationship $row) use ($muslim, $locale): array {
-                $counterpart = $row->muslim_id === $muslim->id ? $row->relatedMuslim : $row->muslim;
-
-                return [
-                    'model' => $row,
-                    'counterpart' => $counterpart,
-                    'counterpart_name' => $counterpart?->name($locale) ?? '—',
-                    // The stored type reads differently from each side, so the
-                    // label shown must be the one for the person being edited.
-                    'label' => $row->labelFor($muslim->id, $locale),
-                    'is_reversed' => $row->muslim_id !== $muslim->id,
-                ];
-            })
-            ->all();
-    }
-
-    /**
-     * Turn the flat depth-ordered descendant list into a nested structure the
-     * tree view can indent. One extra query for the whole subtree, not one per
-     * node, and the service's `tree_display_order` sort is preserved because
-     * rows are appended in the order they arrive.
-     *
-     * @param  array<int, array<string, mixed>>  $rows
-     * @return array<int, array<string, mixed>>
-     */
-    private function nestDescendants(Muslim $root, array $rows): array
-    {
-        if ($rows === []) {
-            return [];
-        }
-
-        $ids = array_map(static fn (array $row): int => (int) $row['id'], $rows);
-        $inSubtree = array_fill_keys([...$ids, $root->id], true);
-
-        $links = Muslim::query()
-            ->whereIn('id', $ids)
-            ->get(['id', 'father_id', 'mother_id'])
-            ->keyBy('id');
-
-        $childrenByParent = [];
-
-        foreach ($rows as $row) {
-            $link = $links->get((int) $row['id']);
-
-            // A node can hang off either parent. Attach it to whichever one is
-            // inside this subtree — otherwise a person whose father is outside
-            // the rendered depth would be dropped instead of shown.
-            $parentId = match (true) {
-                isset($inSubtree[(int) $link?->father_id]) => (int) $link->father_id,
-                isset($inSubtree[(int) $link?->mother_id]) => (int) $link->mother_id,
-                default => $root->id,
-            };
-
-            $childrenByParent[$parentId][] = $row;
-        }
-
-        return $this->buildBranch($root->id, $childrenByParent);
-    }
-
-    /**
-     * @param  array<int, array<int, array<string, mixed>>>  $childrenByParent
-     * @return array<int, array<string, mixed>>
-     */
-    private function buildBranch(int $parentId, array $childrenByParent): array
-    {
-        $branch = [];
-
-        foreach ($childrenByParent[$parentId] ?? [] as $row) {
-            $row['children'] = $this->buildBranch((int) $row['id'], $childrenByParent);
-            $branch[] = $row;
-        }
-
-        return $branch;
-    }
-
-    /**
-     * @return array{people:int,linked:int,roots:int,edges:int,hidden:int}
-     */
-    private function stats(): array
-    {
-        // One pass over `muslims` with conditional aggregates instead of four
-        // separate COUNT queries on the same table; `edges` lives elsewhere so
-        // it stays its own query.
-        $row = Muslim::query()->toBase()->selectRaw(
-            'COUNT(*) AS people,'
-            // Anyone with at least one recorded parent — the rest are floating
-            // and will never appear in a tree that is not rooted at them.
-            .' SUM(father_id IS NOT NULL OR mother_id IS NOT NULL) AS linked,'
-            .' SUM(father_id IS NULL AND mother_id IS NULL) AS roots,'
-            .' SUM(hide_from_tree = 1) AS hidden'
-        )->first();
-
-        return [
-            'people' => (int) ($row->people ?? 0),
-            'linked' => (int) ($row->linked ?? 0),
-            'roots' => (int) ($row->roots ?? 0),
-            'edges' => MuslimRelationship::query()->count(),
-            'hidden' => (int) ($row->hidden ?? 0),
-        ];
     }
 }

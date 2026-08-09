@@ -146,6 +146,19 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
     }
 
     /**
+     * One surah's verses, paginated, carrying only what a listing row shows.
+     */
+    public function paginateBySurah(int $surahId, int $perPage): LengthAwarePaginator
+    {
+        return $this->model
+            ->select(['id', 'surah_id', 'verse_number', 'verse_key'])
+            ->where('surah_id', $surahId)
+            ->with(['translations:id,verse_id,lang,text'])
+            ->orderBy('verse_number')
+            ->paginate($perPage);
+    }
+
+    /**
      * Get verse by surah number and verse number.
      * surahNumber is the mushaf number, i.e. quran_surahs.id.
      */

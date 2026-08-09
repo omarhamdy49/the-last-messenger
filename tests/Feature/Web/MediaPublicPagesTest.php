@@ -13,6 +13,7 @@ use App\Domain\Media\Models\MediaProgram;
 use App\Domain\Media\Models\MediaProgramTranslation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
@@ -269,6 +270,7 @@ final class MediaPublicPagesTest extends TestCase
 
     public function test_unified_search_returns_media_programs(): void
     {
+        Sanctum::actingAs(User::factory()->create(), ['api:access']);
         $this->createProgram(title: 'سلسلة فريدة للبحث الموحد');
 
         $response = $this->postJson('/api/v1/search', [
@@ -282,6 +284,7 @@ final class MediaPublicPagesTest extends TestCase
 
     public function test_unified_search_across_all_modules_includes_media_without_error(): void
     {
+        Sanctum::actingAs(User::factory()->create(), ['api:access']);
         $this->createProgram(title: 'برنامج البحث الشامل المميز');
 
         $response = $this->postJson('/api/v1/search', [

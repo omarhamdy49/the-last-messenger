@@ -18,8 +18,10 @@ use App\Domain\Topics\Models\TopicItem;
 use App\Domain\Topics\Repositories\TopicRepositoryInterface;
 use App\Models\Article;
 use App\Models\ArticleLocale;
+use App\Models\User;
 use Database\Factories\MediaProgramFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 final class PublicVisibilityGatingTest extends TestCase
@@ -31,6 +33,7 @@ final class PublicVisibilityGatingTest extends TestCase
         parent::setUp();
 
         app()->setLocale('ar');
+        Sanctum::actingAs(User::factory()->create(), ['api:access']);
     }
 
     public function test_core_001_unified_search_excludes_draft_articles_from_results_and_counts(): void
@@ -89,8 +92,6 @@ final class PublicVisibilityGatingTest extends TestCase
             ->assertJsonMissing(['video_url' => $draft->video_url]);
     }
 
-
-
     private function createArticle(string $slug, string $status, string $title): Article
     {
         $article = Article::factory()->create(['slug' => $slug, 'status' => $status]);
@@ -105,8 +106,6 @@ final class PublicVisibilityGatingTest extends TestCase
 
         return $article;
     }
-
-
 
     private function createEpisode(
         MediaProgram $program,
@@ -134,6 +133,7 @@ final class PublicVisibilityGatingTest extends TestCase
 
         return $episode;
     }
+
     public function test_ssg_002_public_sahaba_lists_and_search_exclude_unpublished_people(): void
     {
         // A companion is now a `muslims` row carrying the `sahabi` role, and
@@ -172,5 +172,4 @@ final class PublicVisibilityGatingTest extends TestCase
 
         return $muslim;
     }
-
 }

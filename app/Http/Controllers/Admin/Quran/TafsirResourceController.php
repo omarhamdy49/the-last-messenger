@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin\Quran;
 
-use App\Domain\Quran\Models\TafsirResource;
-use App\Domain\Quran\Services\QuranCacheKeys;
+use App\Domain\Quran\Services\TafsirResourceService;
+use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Quran\StoreTafsirResourceRequest;
+use App\Http\Requests\Admin\Quran\UpdateTafsirResourceRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -19,13 +20,19 @@ use Illuminate\View\View;
  */
 class TafsirResourceController extends Controller
 {
+    /**
+     * Sources per page in the admin list.
+     */
+    private const PER_PAGE = 20;
+
+    public function __construct(
+        private readonly TafsirResourceService $resources,
+        private readonly AdminLoggerService $logger,
+    ) {}
+
     public function index(): View
     {
-        $resources = TafsirResource::query()
-            ->withCount('tafsirs')
-            ->orderBy('display_order')
-            ->orderBy('id')
-            ->paginate(20);
+        $resources = $this->resources->paginate(self::PER_PAGE);
 
         return view('admin.quran.tafsir-resources.index', compact('resources'));
     }
@@ -35,10 +42,11 @@ class TafsirResourceController extends Controller
         return view('admin.quran.tafsir-resources.create');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreTafsirResourceRequest $request): RedirectResponse
     {
-        TafsirResource::create($this->validatedData($request));
-        QuranCacheKeys::flushContent();
+        $resource = $this->resources->create($request->toAttributes());
+
+        $this->logger->logCreate($resource, $request->user());
 
         return redirect()->route('admin.tafsir-resources.index')
             ->with('success', __('quran.admin.tafsir_resource_saved'));
@@ -46,54 +54,34 @@ class TafsirResourceController extends Controller
 
     public function edit(int $id): View
     {
-        $resource = TafsirResource::findOrFail($id);
+        $resource = $this->resources->findOrFail($id);
 
         return view('admin.quran.tafsir-resources.edit', compact('resource'));
     }
 
-    public function update(Request $request, int $id): RedirectResponse
+    public function update(UpdateTafsirResourceRequest $request, int $id): RedirectResponse
     {
-        $resource = TafsirResource::findOrFail($id);
-        $resource->update($this->validatedData($request, $id));
-        QuranCacheKeys::flushContent();
+        $resource = $this->resources->findOrFail($id);
+        $oldValues = $resource->toArray();
+
+        $resource = $this->resources->update($resource, $request->toAttributes());
+
+        $this->logger->logUpdate($resource, $oldValues, $resource->toArray(), $request->user());
 
         return redirect()->route('admin.tafsir-resources.index')
             ->with('success', __('quran.admin.tafsir_resource_saved'));
     }
 
-    public function destroy(int $id): RedirectResponse
+    public function destroy(Request $request, int $id): RedirectResponse
     {
         // Tafsir rows keep their text but lose the resource link (nullOnDelete).
-        TafsirResource::findOrFail($id)->delete();
-        QuranCacheKeys::flushContent();
+        $resource = $this->resources->findOrFail($id);
+
+        $this->resources->delete($resource);
+
+        $this->logger->logDelete($resource, $request->user());
 
         return redirect()->route('admin.tafsir-resources.index')
             ->with('success', __('quran.admin.tafsir_resource_deleted'));
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function validatedData(Request $request, ?int $id = null): array
-    {
-        $validated = $request->validate([
-            'name_ar' => ['required', 'string', 'max:255'],
-            'name_en' => ['nullable', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:100', 'alpha_dash', Rule::unique('quran_tafsir_resources', 'slug')->ignore($id)],
-            'author' => ['nullable', 'string', 'max:255'],
-            'language' => ['required', 'string', 'in:ar,en,fr,tr,ur'],
-            'source' => ['nullable', 'string', 'max:255'],
-            'display_order' => ['nullable', 'integer', 'min:0'],
-        ]);
-
-        return [
-            'slug' => $validated['slug'],
-            'name' => ['ar' => $validated['name_ar'], 'en' => $validated['name_en'] ?? $validated['name_ar']],
-            'author' => $validated['author'] ?? null,
-            'language' => $validated['language'],
-            'source' => $validated['source'] ?? null,
-            'is_active' => $request->boolean('is_active'),
-            'display_order' => $validated['display_order'] ?? 0,
-        ];
     }
 }

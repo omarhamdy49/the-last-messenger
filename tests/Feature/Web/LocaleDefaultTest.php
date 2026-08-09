@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Web;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
@@ -43,6 +45,7 @@ final class LocaleDefaultTest extends TestCase
     public function test_api_still_negotiates_via_accept_language(): void
     {
         // API clients legitimately content-negotiate via the header.
+        Sanctum::actingAs(User::factory()->create(), ['api:access']);
         $this->withHeader('Accept-Language', 'en')->getJson('/api/v1/media/programs');
 
         $this->assertSame('en', app()->getLocale());

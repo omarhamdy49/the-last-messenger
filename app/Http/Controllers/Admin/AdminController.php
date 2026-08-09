@@ -90,15 +90,20 @@ abstract class AdminController extends Controller
     /**
      * Get pagination parameters from request
      *
+     * `sort` is returned verbatim: only the repository knows which columns its
+     * table actually has, so the allow-list lives at the point of use (see
+     * ArticleRepository::SORTABLE_COLUMNS). `order` and `per_page` are safe to
+     * constrain here.
+     *
      * @return array{per_page: int, page: int, sort: string, order: string}
      */
     protected function getPaginationParams(Request $request): array
     {
         return [
-            'per_page' => min($request->integer('per_page', $this->perPage), 100),
-            'page' => $request->integer('page', 1),
+            'per_page' => min(max($request->integer('per_page', $this->perPage), 1), 100),
+            'page' => max($request->integer('page', 1), 1),
             'sort' => $request->string('sort', 'created_at')->toString(),
-            'order' => $request->string('order', 'desc')->toString(),
+            'order' => strtolower($request->string('order', 'desc')->toString()) === 'asc' ? 'asc' : 'desc',
         ];
     }
 

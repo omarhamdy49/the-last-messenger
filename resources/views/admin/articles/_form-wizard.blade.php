@@ -658,18 +658,6 @@
                                             :class="darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-white text-gray-700 hover:bg-gray-100 shadow-sm'">
                                         <i data-lucide="type" class="w-3.5 h-3.5"></i>{{ __('articles.blocks.text') }}
                                     </button>
-                                    <button type="button" @click="openModuleSelector('verse', '{{ $locale }}')"
-                                            class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50">
-                                        <i data-lucide="book-open" class="w-3.5 h-3.5"></i>{{ __('articles.modules.quran') }}
-                                    </button>
-                                    <button type="button" @click="openModuleSelector('hadith', '{{ $locale }}')"
-                                            class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50">
-                                        <i data-lucide="quote" class="w-3.5 h-3.5"></i>{{ __('articles.modules.hadith') }}
-                                    </button>
-                                    <button type="button" @click="openModuleSelector('sahabi', '{{ $locale }}')"
-                                            class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50">
-                                        <i data-lucide="users" class="w-3.5 h-3.5"></i>{{ __('articles.modules.sahabah') }}
-                                    </button>
                                     <button type="button" @click="openModuleSelector('seerah', '{{ $locale }}')"
                                             class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50">
                                         <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>{{ __('articles.modules.seerah') }}
@@ -1664,9 +1652,21 @@ function articleForm(article, locales) {
                 btn.className = `ql-module-btn ${mod.cls}`;
                 btn.innerHTML = `${mod.icon}<span>${mod.label}</span>`;
                 btn.title = mod.label;
+                btn.addEventListener('mousedown', () => {
+                    const range = editor.getSelection();
+                    this.activeInlineSelection = range
+                        ? { index: range.index, length: range.length }
+                        : { index: Math.max(0, editor.getLength() - 1), length: 0 };
+                });
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    if (!this.activeInlineSelection) {
+                        const range = editor.getSelection();
+                        this.activeInlineSelection = range
+                            ? { index: range.index, length: range.length }
+                            : { index: Math.max(0, editor.getLength() - 1), length: 0 };
+                    }
                     this.activeInlineQuillId = blockId;
                     this.activeInlineLocale = locale;
                     window.dispatchEvent(new CustomEvent('open-module-selector', {
@@ -1681,12 +1681,40 @@ function articleForm(article, locales) {
 
         activeInlineQuillId: null,
         activeInlineLocale: null,
+        activeInlineSelection: null,
 
         insertModuleInline(detail) {
             const { quillBlockId, locale, moduleType, data } = detail;
             const editorKey = `block_${quillBlockId}`;
             const editor = this.quillEditors[editorKey];
             if (!editor) return;
+
+            const range = this.activeInlineSelection || editor.getSelection() || {
+                index: Math.max(0, editor.getLength() - 1),
+                length: 0
+            };
+
+            if (moduleType === 'sahabi') {
+                const link = `/sahaba/${encodeURIComponent(data.slug || data.sahabi_id)}`;
+
+                if (range.length > 0) {
+                    editor.formatText(range.index, range.length, 'link', link, 'user');
+                    editor.setSelection(range.index, range.length, 'silent');
+                } else {
+                    const label = data.name || '';
+                    editor.insertText(range.index, label, { link }, 'user');
+                    editor.insertText(range.index + label.length, ' ', {}, 'user');
+                    editor.setSelection(range.index + label.length + 1, 0, 'silent');
+                }
+
+                const block = this.contentBlocks[locale]?.find(item => item.id === quillBlockId);
+                if (block) block.content = editor.root.innerHTML;
+                this.syncContentBlocks(locale);
+                this.hasUnsavedChanges = true;
+                this.activeInlineSelection = null;
+                editor.focus();
+                return;
+            }
 
             let html = '';
             if (moduleType === 'verse') {
@@ -1707,13 +1735,6 @@ function articleForm(article, locales) {
                     `<span class="embed-text">${this.escapeHtml(data.text)}</span>` +
                     `<a class="embed-link" href="${link}" target="_blank">📜 ${this.escapeHtml(data.collection)} #${data.number}</a>` +
                     `</div><p><br></p>`;
-            } else if (moduleType === 'sahabi') {
-                const link = `/sahaba/${data.slug || data.sahabi_id}`;
-                html = `<div class="module-embed" data-module="sahabi" data-id="${data.sahabi_id}" contenteditable="false">` +
-                    `<span class="embed-label">{{ __('articles.modules.sahabah') }}</span>` +
-                    `<span class="embed-text">${this.escapeHtml(data.name)}${data.kunya ? ' (' + this.escapeHtml(data.kunya) + ')' : ''}</span>` +
-                    `<a class="embed-link" href="${link}" target="_blank">👤 {{ __('articles.embed.view_profile') }}</a>` +
-                    `</div><p><br></p>`;
             } else if (moduleType === 'seerah') {
                 const link = `/seerah/${data.slug || data.event_id}`;
                 html = `<div class="module-embed" data-module="seerah" data-id="${data.event_id}" contenteditable="false">` +
@@ -1724,11 +1745,15 @@ function articleForm(article, locales) {
             }
 
             if (html) {
-                const range = editor.getSelection();
-                const index = range ? range.index : editor.getLength();
-                editor.clipboard.dangerouslyPasteHTML(index, html);
+                editor.clipboard.dangerouslyPasteHTML(range.index, html, 'user');
+                const block = this.contentBlocks[locale]?.find(item => item.id === quillBlockId);
+                if (block) block.content = editor.root.innerHTML;
+                this.syncContentBlocks(locale);
                 this.hasUnsavedChanges = true;
             }
+
+            this.activeInlineSelection = null;
+            editor.focus();
         },
 
         escapeHtml(str) {

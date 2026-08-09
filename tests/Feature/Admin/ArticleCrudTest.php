@@ -19,39 +19,16 @@ class ArticleCrudTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_module_blocks_are_saved_as_article_content_and_rendered_publicly(): void
+    public function test_inline_modules_are_saved_inside_wysiwyg_content_and_rendered_publicly(): void
     {
         $admin = $this->createAdminUser();
         $this->actingAs($admin);
 
-        $blocks = [
-            ['type' => 'wysiwyg', 'content' => '<h2>مقدمة الاختبار</h2>'],
-            [
-                'type' => 'verse',
-                'surah_id' => 1,
-                'surah_name' => 'الفاتحة',
-                'verses' => [[
-                    'number' => 1,
-                    'key' => '1:1',
-                    'text' => 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ',
-                ]],
-            ],
-            [
-                'type' => 'hadith',
-                'hadith_id' => 42,
-                'text' => 'إنما الأعمال بالنيات',
-                'collection' => 'صحيح الاختبار',
-                'number' => '42',
-                'grade' => 'sahih',
-            ],
-            [
-                'type' => 'sahabi',
-                'sahabi_id' => 7,
-                'name' => 'أبو بكر الصديق',
-                'kunya' => 'أبو بكر',
-                'slug' => 'abu-bakr-al-siddiq',
-            ],
-        ];
+        $inlineContent = '<h2>مقدمة الاختبار</h2>'
+            .'<div class="module-embed" data-module="verse" data-id="1">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</div>'
+            .'<div class="module-embed" data-module="hadith" data-id="42">إنما الأعمال بالنيات</div>'
+            .'<p><a href="/sahaba/abu-bakr-al-siddiq">أبو بكر الصديق</a></p>';
+        $blocks = [['type' => 'wysiwyg', 'content' => $inlineContent]];
 
         $this->post(route('admin.articles.store'), [
             'title' => ['ar' => 'اختبار كتل المحتوى'],
@@ -71,7 +48,7 @@ class ArticleCrudTest extends TestCase
         $this->assertSame($blocks, $locale->content['body']);
 
         $updatedBlocks = $blocks;
-        $updatedBlocks[2]['text'] = 'الدين النصيحة';
+        $updatedBlocks[0]['content'] = str_replace('إنما الأعمال بالنيات', 'الدين النصيحة', $inlineContent);
 
         $this->put(route('admin.articles.update', $locale->article_id), [
             'title' => ['ar' => 'اختبار تعديل كتل المحتوى'],
@@ -88,9 +65,9 @@ class ArticleCrudTest extends TestCase
 
         $this->get(route('public.articles.show', 'module-block-persistence'))
             ->assertOk()
-            ->assertSee('module-embed--verse', false)
-            ->assertSee('module-embed--hadith', false)
-            ->assertSee('module-embed--sahabi', false)
+            ->assertSee('data-module="verse"', false)
+            ->assertSee('data-module="hadith"', false)
+            ->assertSee('href="/sahaba/abu-bakr-al-siddiq"', false)
             ->assertSee('بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ')
             ->assertSee('الدين النصيحة')
             ->assertSee('أبو بكر الصديق');

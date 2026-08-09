@@ -24,6 +24,30 @@ use Illuminate\Database\Eloquent\Builder;
 class SearchQueryBuilder
 {
     /**
+     * The only sort values the search pipeline accepts, mapped to real columns.
+     *
+     * Everything outside this map — a raw column name from a request, or a
+     * legacy `sort_options` blob replayed by SearchService::applySavedFilter —
+     * falls back to self::SORT_FALLBACK, so user input never reaches orderBy().
+     *
+     * @var array<string, string>
+     */
+    private const SORT_ALIASES = [
+        'relevance' => 'id',
+        'date' => 'created_at',
+        'newest' => 'created_at',
+        'oldest' => 'created_at',
+        'popular' => 'views_count',
+        'updated' => 'updated_at',
+    ];
+
+    /**
+     * Column used when the requested sort is not in the allow-list. `id` is the
+     * one column guaranteed to exist on every searchable model.
+     */
+    private const SORT_FALLBACK = 'id';
+
+    /**
      * Apply the appropriate full-text search strategy to an existing Builder.
      *
      * If the model exposes getFullTextColumns(), MySQL MATCH/AGAINST is used;
@@ -86,18 +110,11 @@ class SearchQueryBuilder
      * Translates human-friendly aliases (relevance, date, popular, oldest …)
      * to actual column names, correcting direction for the "oldest" alias.
      *
-     * @param  string  $sort  Sort alias or raw column name
+     * @param  string  $sort  Sort alias; anything unrecognised is discarded
      */
     public function applySorting(FilterBuilder $builder, string $sort, SortDirection $direction): void
     {
-        $sortField = match ($sort) {
-            'relevance' => 'id',
-            'date', 'newest' => 'created_at',
-            'oldest' => 'created_at',
-            'popular' => 'views_count',
-            'updated' => 'updated_at',
-            default => $sort,
-        };
+        $sortField = self::SORT_ALIASES[$sort] ?? self::SORT_FALLBACK;
 
         if ($sort === 'oldest') {
             $direction = SortDirection::ASC;

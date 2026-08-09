@@ -67,6 +67,14 @@ class TafseerService extends BaseService
     }
 
     /**
+     * Get active tafseer for one surah, paginated for a listing
+     */
+    public function paginateActiveBySurah(int $surahId, int $perPage = 10): LengthAwarePaginator
+    {
+        return $this->repository->paginateActiveBySurah($surahId, $perPage);
+    }
+
+    /**
      * Get tafseer by source
      */
     public function getBySource(string $source, int $perPage = 15): LengthAwarePaginator

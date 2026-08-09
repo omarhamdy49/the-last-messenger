@@ -22,7 +22,7 @@ class MediaApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs(User::factory()->create(), ['api:access']);
     }
 
     // ===================== HELPERS =====================
@@ -342,11 +342,11 @@ class MediaApiTest extends TestCase
         $program = $this->createProgram(['slug' => 'progress-ok-program']);
         $episode = $this->createEpisode($program, 1);
 
-        $response = $this->actingAs($user, 'sanctum')
-            ->postJson('/api/v1/media/progress', [
-                'episode_id' => $episode->id,
-                'seconds' => 300,
-            ]);
+        Sanctum::actingAs($user, ['api:access']);
+        $response = $this->postJson('/api/v1/media/progress', [
+            'episode_id' => $episode->id,
+            'seconds' => 300,
+        ]);
 
         $response->assertOk()
             ->assertJson(['success' => true]);
@@ -356,11 +356,11 @@ class MediaApiTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this->actingAs($user, 'sanctum')
-            ->postJson('/api/v1/media/progress', [
-                'episode_id' => 999999, // non-existent
-                'seconds' => -1,     // invalid
-            ]);
+        Sanctum::actingAs($user, ['api:access']);
+        $response = $this->postJson('/api/v1/media/progress', [
+            'episode_id' => 999999, // non-existent
+            'seconds' => -1,     // invalid
+        ]);
 
         $response->assertStatus(422);
     }
@@ -373,12 +373,12 @@ class MediaApiTest extends TestCase
         $episode = $this->createEpisode($program, 1);
 
         // Try to pass another user's ID in body — it must be ignored
-        $this->actingAs($user, 'sanctum')
-            ->postJson('/api/v1/media/progress', [
-                'episode_id' => $episode->id,
-                'seconds' => 500,
-                'user_id' => $other->id, // IDOR attempt — must be silently ignored
-            ]);
+        Sanctum::actingAs($user, ['api:access']);
+        $this->postJson('/api/v1/media/progress', [
+            'episode_id' => $episode->id,
+            'seconds' => 500,
+            'user_id' => $other->id, // IDOR attempt — must be silently ignored
+        ]);
 
         $this->assertDatabaseHas('episode_watch_progress', [
             'user_id' => $user->id,
@@ -398,19 +398,19 @@ class MediaApiTest extends TestCase
         $episode = $this->createEpisode($program, 1);
 
         // First request
-        $this->actingAs($user, 'sanctum')
-            ->postJson('/api/v1/media/progress', [
-                'episode_id' => $episode->id,
-                'seconds' => 100,
-            ]);
+        Sanctum::actingAs($user, ['api:access']);
+        $this->postJson('/api/v1/media/progress', [
+            'episode_id' => $episode->id,
+            'seconds' => 100,
+        ]);
 
         // Second request with updated seconds
-        $this->actingAs($user, 'sanctum')
-            ->postJson('/api/v1/media/progress', [
-                'episode_id' => $episode->id,
-                'seconds' => 500,
-                'completed' => true,
-            ]);
+        Sanctum::actingAs($user, ['api:access']);
+        $this->postJson('/api/v1/media/progress', [
+            'episode_id' => $episode->id,
+            'seconds' => 500,
+            'completed' => true,
+        ]);
 
         $this->assertDatabaseCount('episode_watch_progress', 1);
         $this->assertDatabaseHas('episode_watch_progress', [
@@ -436,8 +436,8 @@ class MediaApiTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this->actingAs($user, 'sanctum')
-            ->getJson('/api/v1/media/continue-watching');
+        Sanctum::actingAs($user, ['api:access']);
+        $response = $this->getJson('/api/v1/media/continue-watching');
 
         $response->assertOk()
             ->assertJsonStructure(['success', 'data'])
@@ -467,8 +467,8 @@ class MediaApiTest extends TestCase
             'completed' => true,
         ]);
 
-        $response = $this->actingAs($user, 'sanctum')
-            ->getJson('/api/v1/media/continue-watching');
+        Sanctum::actingAs($user, ['api:access']);
+        $response = $this->getJson('/api/v1/media/continue-watching');
 
         $response->assertOk();
         $data = $response->json('data');
@@ -489,8 +489,8 @@ class MediaApiTest extends TestCase
             'completed' => false,
         ]);
 
-        $response = $this->actingAs($user1, 'sanctum')
-            ->getJson('/api/v1/media/continue-watching');
+        Sanctum::actingAs($user1, ['api:access']);
+        $response = $this->getJson('/api/v1/media/continue-watching');
 
         $response->assertOk();
         $data = $response->json('data');

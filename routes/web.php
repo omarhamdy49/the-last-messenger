@@ -94,14 +94,20 @@ Route::get('/series/{slug}', [SeriesController::class, 'show'])->name('public.se
 
 // Seerah
 Route::get('/seerah', [SeerahController::class, 'index'])->name('public.seerah');
-Route::get('/seerah/events', [SeerahController::class, 'events'])->name('public.seerah.events');
+// `?q=` runs a leading-wildcard LIKE over the event translations on an
+// anonymous request, and the response cache is keyed by the term — so a varied
+// term always reaches the DB. Rate limited like the other search surfaces.
+Route::get('/seerah/events', [SeerahController::class, 'events'])
+    ->middleware('throttle:search')->name('public.seerah.events');
 Route::get('/seerah/event/{slug}', [SeerahController::class, 'event'])->name('public.seerah.event');
 
 // Sahaba
 // Sahaba — the public companions surface, backed by the internal `muslims`
 // identity. Static segments first so `tree` can never be read as a slug.
+// `?q=` reaches MuslimRepository's LIKE/MATCH branches unauthenticated, so this
+// listing carries the same budget as /search.
 Route::get('/sahaba', [SahabaController::class, 'index'])
-    ->name('public.sahaba');
+    ->middleware('throttle:search')->name('public.sahaba');
 Route::get('/sahaba/{slug}/tree', [SahabaController::class, 'tree'])
     ->where('slug', '[a-z0-9-]+')->name('public.sahaba.tree');
 Route::get('/sahaba/{slug}', [SahabaController::class, 'show'])

@@ -20,6 +20,27 @@ use Illuminate\Support\Facades\DB;
 
 class ArticleRepository
 {
+    /**
+     * Columns getAllWithFilters() may order by. The admin index feeds `sort`
+     * straight from the query string (AdminController::getPaginationParams),
+     * so an unlisted value must never reach orderBy() — an unknown column
+     * 500s the whole listing.
+     *
+     * @var list<string>
+     */
+    private const SORTABLE_COLUMNS = [
+        'id',
+        'created_at',
+        'updated_at',
+        'published_at',
+        'scheduled_at',
+        'views',
+        'read_time',
+        'status',
+        'is_featured',
+        'is_pinned',
+    ];
+
     public function __construct(
         private readonly PublicVisibilityRegistry $publicVisibility,
     ) {}
@@ -45,10 +66,13 @@ class ArticleRepository
             $this->applySearch($query, $search, $filters['locale'] ?? 'ar');
         }
 
-        // Apply sorting
-        $query->orderBy($sort, $order);
+        // Apply sorting — allow-listed column + direction only
+        $sortColumn = in_array($sort, self::SORTABLE_COLUMNS, true) ? $sort : 'created_at';
+        $sortDirection = strtolower($order) === 'asc' ? 'asc' : 'desc';
 
-        return $query->paginate($perPage);
+        $query->orderBy($sortColumn, $sortDirection);
+
+        return $query->paginate(min(max($perPage, 1), 100));
     }
 
     /**
