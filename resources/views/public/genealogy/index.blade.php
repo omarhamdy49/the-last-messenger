@@ -73,9 +73,12 @@
     }
     .gt-link--collateral { stroke: rgba(0, 86, 179, .16); stroke-dasharray: 5 4; }
     .gt-link--focus { stroke: rgba(33, 136, 56, .5); stroke-width: 2.5; }
+    /* Into a marriage node: not descent, so dashed and rose. */
+    .gt-link--spouse { stroke: rgba(233, 30, 99, .35); stroke-dasharray: 4 4; }
     .dark .gt-link { stroke: rgba(100, 204, 197, .3); }
     .dark .gt-link--collateral { stroke: rgba(100, 204, 197, .15); }
     .dark .gt-link--focus { stroke: rgba(100, 204, 197, .55); }
+    .dark .gt-link--spouse { stroke: rgba(244, 114, 182, .4); }
 
     /* ── Cards ── */
     .gt-card {
@@ -109,6 +112,16 @@
 
     /* Uncles, aunts, cousins — present but visually subordinate. */
     .gt-card--collateral { opacity: .88; }
+
+    /* A marriage node: the wife (or mother), holding the children she bore.
+       Rose accents and a dashed inbound edge keep it visually distinct from a
+       step of descent. */
+    .gt-card--spouse { border-inline-start: 3px solid rgba(233, 30, 99, .5); }
+    .dark .gt-card--spouse { border-inline-start-color: rgba(244, 114, 182, .5); }
+    .gt-card--spouse:hover { border-color: rgba(233, 30, 99, .5); box-shadow: 0 16px 30px -14px rgba(233, 30, 99, .45); }
+    .gt-card--spouse .gt-ava { background: linear-gradient(135deg, #c2185b, #e91e63); }
+    .gt-card--spouse .gt-sub { color: #c2185b; }
+    .dark .gt-card--spouse .gt-sub { color: #f9a8d4; }
 
     /* The focus person ﷺ. */
     .gt-card--focus {

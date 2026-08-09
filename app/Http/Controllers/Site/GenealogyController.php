@@ -136,6 +136,10 @@ final class GenealogyController extends Controller
         $kin = $this->buildKin($root, $locale);
         $graph = $this->buildGraph($root, $lineage, $tree, $locale);
 
+        if ($graph !== null) {
+            $this->groupFocusChildrenByMother($graph, $locale);
+        }
+
         // Everyone this page can actually open a detail card for: the ancestry,
         // the descendants, and the spouses. `people` used to be flatten($tree)
         // alone, which on the real corpus was one record — while the counter
@@ -705,6 +709,10 @@ final class GenealogyController extends Controller
             'hasProfile' => true,
             'birthDateHijri' => $this->formatHijriYear($person->birth_year_hijri),
             'deathDateHijri' => $this->formatHijriYear($person->death_year_hijri),
+            // The raw descent edges ride along so the graph can group a
+            // node's children under their other parent (see motherGroups()).
+            'fatherId' => $person->father_id,
+            'motherId' => $person->mother_id,
 
             // Retired with the old `people` table.
             'tribe' => null,
@@ -728,6 +736,90 @@ final class GenealogyController extends Controller
         }
 
         return $flat;
+    }
+
+    /**
+     * Rewrite the focus person's children as marriages: each wife becomes a
+     * `spouse` node in the hierarchy, carrying the children she is the mother
+     * of. The tree then reads محمد ﷺ → خديجة → القاسم…فاطمة rather than seven
+     * children on an undifferentiated rank with no clue who bore whom.
+     *
+     * Wives with no recorded children still appear — their card IS the record.
+     * A mother who is not among the spouses (مارية القبطية is deliberately
+     * carried as أم ولد, not among أمهات المؤمنين) still gets a group node, so
+     * إبراهيم hangs under his mother rather than floating unexplained; her
+     * label stays whatever her own record says. A child whose mother is not
+     * published falls back to hanging directly off the focus person.
+     *
+     * FOCUS ONLY. Doing this to every married node would insert علي as a
+     * spouse node under فاطمة while he already stands as a cousin under
+     * أبو طالب — one person drawn twice at two ranks. The focus person is the
+     * page's subject; everyone else keeps the ♥ line and the modal.
+     */
+    private function groupFocusChildrenByMother(array &$node, string $locale): void
+    {
+        if (($node['kind'] ?? null) === 'focus') {
+            $node['children'] = $this->marriageGroups($node, $locale);
+
+            return;
+        }
+
+        foreach ($node['children'] as &$child) {
+            $this->groupFocusChildrenByMother($child, $locale);
+        }
+        unset($child);
+    }
+
+    /**
+     * @param  array<string, mixed>  $node
+     * @return array<int, array<string, mixed>>
+     */
+    private function marriageGroups(array $node, string $locale): array
+    {
+        $groups = [];
+
+        // The recorded marriages, in their curated order (خديجة first).
+        foreach ($node['spouses'] ?? [] as $spouse) {
+            $spouse['kind'] = 'spouse';
+            $spouse['children'] = [];
+            $groups[$spouse['id']] = $spouse;
+        }
+
+        // Mothers of children who are not among the spouses.
+        $unmatchedMotherIds = collect($node['children'])
+            ->map(fn (array $c): ?int => $c['fatherId'] === $node['id'] ? $c['motherId'] : $c['fatherId'])
+            ->filter(fn (?int $id): bool => $id !== null && ! isset($groups[$id]))
+            ->unique()
+            ->values();
+
+        if ($unmatchedMotherIds->isNotEmpty()) {
+            $mothers = Muslim::query()
+                ->published()
+                ->with('roles')
+                ->whereIn('id', $unmatchedMotherIds)
+                ->get();
+
+            foreach ($mothers as $mother) {
+                $group = $this->mapPerson($mother, $locale);
+                $group['kind'] = 'spouse';
+                $group['children'] = [];
+                $groups[$group['id']] = $group;
+            }
+        }
+
+        $direct = [];
+
+        foreach ($node['children'] as $child) {
+            $otherParent = $child['fatherId'] === $node['id'] ? $child['motherId'] : $child['fatherId'];
+
+            if ($otherParent !== null && isset($groups[$otherParent])) {
+                $groups[$otherParent]['children'][] = $child;
+            } else {
+                $direct[] = $child;
+            }
+        }
+
+        return array_merge(array_values($groups), $direct);
     }
 
     /**
