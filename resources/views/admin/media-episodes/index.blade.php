@@ -142,10 +142,16 @@
                 @endif
             </div>
         @else
+        <div x-data="bulkSelect(@js($episodes->pluck('id')->all()))">
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b" :class="darkMode ? 'border-gray-800 bg-gray-900/80' : 'border-gray-200 bg-gray-50'">
+                        <th class="ps-4 pe-2 py-3 w-10">
+                            <input type="checkbox" :checked="allSelected" @change="toggleAll($event.target.checked)"
+                                   aria-label="{{ __('admin.bulk_select_all') }}"
+                                   class="w-4 h-4 rounded text-[#0056b3] cursor-pointer">
+                        </th>
                         <th class="px-4 py-3 text-start font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                             {{ __('admin.title') }}
                         </th>
@@ -171,7 +177,15 @@
                 </thead>
                 <tbody class="divide-y" :class="darkMode ? 'divide-gray-800' : 'divide-gray-100'">
                     @foreach($episodes as $episode)
-                    <tr class="transition-colors" :class="darkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'">
+                    <tr class="transition-colors"
+                        :class="selected.includes({{ $episode->id }})
+                            ? (darkMode ? 'bg-[#0056b3]/10' : 'bg-blue-50')
+                            : (darkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50')">
+                        <td class="ps-4 pe-2 py-3">
+                            <input type="checkbox" value="{{ $episode->id }}" x-model.number="selected"
+                                   aria-label="{{ __('admin.bulk_select_row') }}"
+                                   class="w-4 h-4 rounded text-[#0056b3] cursor-pointer">
+                        </td>
                         <td class="px-4 py-3">
                             <a href="{{ route('admin.media-episodes.show', $episode->id) }}" class="flex items-center gap-3 group/title">
                                 @if($episode->thumb_url)
@@ -260,6 +274,10 @@
                     @endforeach
                 </tbody>
             </table>
+        </div>
+
+        <x-admin.bulk-delete-bar :action="route('admin.media-episodes.bulk-delete')"
+                                 :confirm="__('admin.bulk_delete_episodes_confirm')" />
         </div>
 
         <!-- Pagination -->

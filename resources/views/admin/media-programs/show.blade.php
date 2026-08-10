@@ -41,155 +41,17 @@
     $ytPrefill = $program->youtube_playlist_id
         ? 'https://www.youtube.com/playlist?list='.$program->youtube_playlist_id
         : '';
+    // Set when we land here straight from the create form, which starts the
+    // import before redirecting — the modal resumes polling that run.
+    $resumeRun = request()->integer('yt_run') ?: null;
 @endphp
 
-{{-- ============================ YouTube import modal ============================ --}}
-<div x-data="youtubeImport({
-        analyzeRoute: '{{ route('admin.media-programs.youtube.analyze', $program->id) }}',
-        syncRoute: '{{ route('admin.media-programs.youtube.sync', $program->id) }}',
-        csrf: '{{ csrf_token() }}',
-        prefill: @js($ytPrefill)
-     })"
-     x-show="open" x-cloak
-     class="fixed inset-0 z-[60] flex items-center justify-center p-4"
-     @keydown.escape.window="if (step !== 'syncing') close()">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="if (step !== 'syncing') close()"></div>
-
-    <div class="relative w-full max-w-xl max-h-[88vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden"
-         :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
-        {{-- Header --}}
-        <div class="px-6 py-4 border-b flex items-center justify-between" :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
-            <h3 class="text-lg font-semibold flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                <i data-lucide="youtube" class="w-5 h-5 text-red-600"></i>
-                {{ __('admin.yt_import_title') }}
-            </h3>
-            <button type="button" @click="close()" :disabled="step === 'syncing'"
-                    class="p-2 rounded-lg disabled:opacity-40"
-                    :class="darkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'">
-                <i data-lucide="x" class="w-5 h-5"></i>
-            </button>
-        </div>
-
-        <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
-            {{-- STEP: input --}}
-            <div x-show="step === 'input'">
-                <p class="text-sm mb-4" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ __('admin.yt_import_hint') }}</p>
-                <label class="block text-sm font-medium mb-1.5" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.yt_playlist_url_label') }}</label>
-                <input type="url" x-model="url" dir="ltr" placeholder="{{ __('admin.yt_playlist_url_placeholder') }}"
-                       @keydown.enter.prevent="analyze()"
-                       class="w-full text-base sm:text-sm rounded-lg border px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#0056b3]"
-                       :class="darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'">
-                <p x-show="error" x-text="error" class="mt-2 text-sm text-red-500"></p>
-            </div>
-
-            {{-- STEP: analyzing --}}
-            <div x-show="step === 'analyzing'" class="py-10 flex flex-col items-center justify-center gap-3 text-center">
-                <svg class="animate-spin w-8 h-8 text-[#0056b3]" viewBox="0 0 24 24" fill="none">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                </svg>
-                <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ __('admin.yt_analyzing') }}</p>
-            </div>
-
-            {{-- STEP: preview --}}
-            <div x-show="step === 'preview'" x-cloak>
-                <div class="mb-3">
-                    <p class="font-semibold break-words" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="analysis?.title"></p>
-                    <p class="text-sm mt-0.5" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
-                        <span x-text="analysis?.channel"></span>
-                        <span> • </span>
-                        <span x-text="@js(__('admin.yt_videos_found')).replace(':count', analysis?.count ?? 0)"></span>
-                    </p>
-                </div>
-                <ul class="rounded-xl border divide-y max-h-64 overflow-y-auto custom-scrollbar"
-                    :class="darkMode ? 'border-gray-800 divide-gray-800' : 'border-gray-200 divide-gray-100'">
-                    <template x-for="item in (analysis?.entries || [])" :key="item.video_id">
-                        <li class="flex items-center gap-2 px-3 py-2">
-                            <span class="text-xs font-mono px-1.5 py-0.5 rounded flex-shrink-0"
-                                  :class="darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500'" x-text="item.position"></span>
-                            <span class="text-sm truncate" :class="darkMode ? 'text-gray-200' : 'text-gray-800'" x-text="item.title"></span>
-                        </li>
-                    </template>
-                </ul>
-            </div>
-
-            {{-- STEP: syncing --}}
-            <div x-show="step === 'syncing'" x-cloak class="py-4">
-                <div class="flex items-center justify-between text-sm mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                    <span class="font-medium">{{ __('admin.yt_importing') }}</span>
-                    <span x-text="progress.processed + ' / ' + progress.total"></span>
-                </div>
-                <div class="w-full h-3 rounded-full overflow-hidden" :class="darkMode ? 'bg-gray-800' : 'bg-gray-200'">
-                    <div class="h-full bg-gradient-to-r from-[#0056b3] to-[#218838] transition-all duration-500"
-                         :style="'width:' + progress.percent + '%'"></div>
-                </div>
-                <p class="mt-2 text-xs truncate" :class="darkMode ? 'text-gray-500' : 'text-gray-400'" x-text="progress.message"></p>
-                <div class="mt-4 flex items-center gap-4 text-sm">
-                    <span class="flex items-center gap-1.5 text-green-500"><i data-lucide="plus-circle" class="w-4 h-4"></i>{{ __('admin.yt_episodes_created') }}: <span x-text="progress.created"></span></span>
-                    <span class="flex items-center gap-1.5 text-blue-500"><i data-lucide="refresh-cw" class="w-4 h-4"></i>{{ __('admin.yt_episodes_updated') }}: <span x-text="progress.updated"></span></span>
-                </div>
-            </div>
-
-            {{-- STEP: done --}}
-            <div x-show="step === 'done'" x-cloak class="py-8 flex flex-col items-center justify-center gap-3 text-center">
-                <div class="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
-                    <i data-lucide="check" class="w-7 h-7 text-green-600"></i>
-                </div>
-                <p class="font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ __('admin.yt_import_done') }}</p>
-                <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                    {{ __('admin.yt_episodes_created') }}: <span x-text="progress.created"></span> •
-                    {{ __('admin.yt_episodes_updated') }}: <span x-text="progress.updated"></span>
-                </p>
-            </div>
-
-            {{-- STEP: error --}}
-            <div x-show="step === 'error'" x-cloak class="py-8 flex flex-col items-center justify-center gap-3 text-center">
-                <div class="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center">
-                    <i data-lucide="alert-triangle" class="w-7 h-7 text-red-600"></i>
-                </div>
-                <p class="font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ __('admin.yt_import_failed') }}</p>
-                <p class="text-sm break-words max-w-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'" x-text="error"></p>
-            </div>
-        </div>
-
-        {{-- Footer --}}
-        <div class="px-6 py-4 border-t flex items-center justify-end gap-3" :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
-            {{-- input --}}
-            <template x-if="step === 'input'">
-                <div class="flex gap-3">
-                    <button type="button" @click="close()" class="px-4 py-2 rounded-xl text-sm font-semibold border"
-                            :class="darkMode ? 'border-gray-700 text-gray-300' : 'border-gray-300 text-gray-700'">{{ __('admin.cancel') }}</button>
-                    <button type="button" @click="analyze()" :disabled="!url"
-                            class="px-5 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-[#0056b3] to-[#218838] hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                        <i data-lucide="search" class="w-4 h-4"></i>{{ __('admin.yt_analyze') }}
-                    </button>
-                </div>
-            </template>
-            {{-- preview --}}
-            <template x-if="step === 'preview'">
-                <div class="flex gap-3">
-                    <button type="button" @click="step = 'input'" class="px-4 py-2 rounded-xl text-sm font-semibold border"
-                            :class="darkMode ? 'border-gray-700 text-gray-300' : 'border-gray-300 text-gray-700'">{{ __('admin.back') }}</button>
-                    <button type="button" @click="confirm()"
-                            class="px-5 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-[#0056b3] to-[#218838] hover:scale-105 transition-all flex items-center gap-2">
-                        <i data-lucide="download" class="w-4 h-4"></i>
-                        <span x-text="@js(__('admin.yt_confirm_import')).replace(':count', analysis?.count ?? 0)"></span>
-                    </button>
-                </div>
-            </template>
-            {{-- done / error --}}
-            <template x-if="step === 'done' || step === 'error'">
-                <div class="flex gap-3">
-                    <button type="button" x-show="step === 'error'" @click="step = 'input'"
-                            class="px-4 py-2 rounded-xl text-sm font-semibold border"
-                            :class="darkMode ? 'border-gray-700 text-gray-300' : 'border-gray-300 text-gray-700'">{{ __('admin.yt_retry') }}</button>
-                    <button type="button" @click="close()"
-                            class="px-5 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-[#0056b3] to-[#218838] hover:scale-105 transition-all">{{ __('admin.yt_close') }}</button>
-                </div>
-            </template>
-        </div>
-    </div>
-</div>
+@include('admin.media-programs._youtube-import', [
+    'mode' => 'import',
+    'syncRoute' => route('admin.media-programs.youtube.sync', $program->id),
+    'prefill' => $ytPrefill,
+    'resumeRun' => $resumeRun,
+])
 
 <!-- Hero: Facebook-style editable cover + square poster -->
 <div class="rounded-2xl border overflow-hidden mb-6" :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
@@ -335,7 +197,8 @@
                     </div>
                     <div class="flex items-center gap-1 flex-shrink-0">
                         <span class="text-xs me-1" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
-                            {{ gmdate('G:i', $episode->duration_seconds ?? 0) }}
+                            {{-- Under an hour, show m:ss — "0:23" reads as 23 seconds, not 23 minutes. --}}
+                            {{ gmdate(($episode->duration_seconds ?? 0) >= 3600 ? 'G:i:s' : 'i:s', $episode->duration_seconds ?? 0) }}
                         </span>
                         <a href="{{ route('admin.media-episodes.edit', $episode->id) }}"
                            class="p-1.5 rounded-lg" title="{{ __('admin.edit') }}"
@@ -699,119 +562,6 @@ function episodesManager() {
                 .then(r => r.json())
                 .then(d => { if (d.success) window.location.reload(); })
                 .finally(() => { this.assigning = false; });
-        },
-    };
-}
-
-function youtubeImport(config) {
-    return {
-        open: false,
-        step: 'input',
-        url: config.prefill || '',
-        analysis: null,
-        error: '',
-        runId: null,
-        statusUrl: null,
-        poll: null,
-        progress: { percent: 0, processed: 0, total: 0, created: 0, updated: 0, message: '' },
-
-        init() {
-            window.addEventListener('open-yt-import', () => this.openModal());
-        },
-
-        openModal() {
-            this.open = true;
-            // Don't reset an in-flight import if the user reopens the modal.
-            if (this.step === 'syncing') return;
-            this.step = 'input';
-            this.error = '';
-        },
-
-        close() {
-            if (this.step === 'syncing') return; // can't close mid-import
-            this.open = false;
-            if (this.poll) { clearInterval(this.poll); this.poll = null; }
-            if (this.step === 'done') { window.location.reload(); }
-        },
-
-        postHeaders() {
-            return {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': config.csrf,
-            };
-        },
-
-        async analyze() {
-            if (!this.url) return;
-            this.step = 'analyzing';
-            this.error = '';
-            try {
-                const r = await fetch(config.analyzeRoute, {
-                    method: 'POST', headers: this.postHeaders(),
-                    body: JSON.stringify({ playlist_url: this.url }),
-                });
-                const d = await r.json();
-                if (!r.ok || !d.success) {
-                    this.error = d.message || 'Error';
-                    this.step = 'input';
-                    return;
-                }
-                this.analysis = d.data;
-                this.step = 'preview';
-                this.$nextTick(() => window.lucide && window.lucide.createIcons());
-            } catch (e) {
-                this.error = String(e);
-                this.step = 'input';
-            }
-        },
-
-        async confirm() {
-            this.step = 'syncing';
-            this.error = '';
-            this.progress = { percent: 0, processed: 0, total: this.analysis?.count || 0, created: 0, updated: 0, message: '' };
-            try {
-                const r = await fetch(config.syncRoute, {
-                    method: 'POST', headers: this.postHeaders(),
-                    body: JSON.stringify({ playlist_url: this.url }),
-                });
-                const d = await r.json();
-                if (!r.ok || !d.success) {
-                    this.error = d.message || 'Error';
-                    this.step = 'error';
-                    return;
-                }
-                this.runId = d.run_id;
-                this.statusUrl = d.status_url;
-                this.poll = setInterval(() => this.tick(), 2000);
-                this.tick();
-            } catch (e) {
-                this.error = String(e);
-                this.step = 'error';
-            }
-        },
-
-        async tick() {
-            try {
-                const r = await fetch(this.statusUrl, { headers: { 'Accept': 'application/json' } });
-                const d = await r.json();
-                if (!d.success) return;
-                const x = d.data;
-                this.progress = {
-                    percent: x.percent, processed: x.processed, total: x.total,
-                    created: x.created, updated: x.updated, message: x.message || '',
-                };
-                if (x.is_terminal) {
-                    clearInterval(this.poll); this.poll = null;
-                    if (x.status === 'completed') {
-                        this.step = 'done';
-                    } else {
-                        this.error = x.error || 'Error';
-                        this.step = 'error';
-                    }
-                    this.$nextTick(() => window.lucide && window.lucide.createIcons());
-                }
-            } catch (e) { /* keep polling */ }
         },
     };
 }

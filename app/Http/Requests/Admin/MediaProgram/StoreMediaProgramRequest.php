@@ -6,6 +6,7 @@ namespace App\Http\Requests\Admin\MediaProgram;
 
 use App\Domain\Media\Enums\MaturityRating;
 use App\Domain\Media\Enums\ProgramCategory;
+use App\Domain\Media\Support\YouTubeUrl;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -59,6 +60,22 @@ class StoreMediaProgramRequest extends FormRequest
             'banner' => ['nullable', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:10240'],
             'poster_id' => ['nullable', 'integer', 'exists:media,id'],
             'banner_id' => ['nullable', 'integer', 'exists:media,id'],
+            // Optional: import episodes from this playlist/video right after
+            // the program is created. Validated against the same host-locked
+            // rule the import endpoints use.
+            'youtube_url' => [
+                'nullable', 'string', 'max:1000',
+                static function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! YouTubeUrl::isSupportedSource(is_string($value) ? $value : null)) {
+                        $fail(__('admin.yt_source_url_invalid'));
+                    }
+                },
+            ],
+            // Per-video mapping confirmed in the import modal before saving.
+            'youtube_items' => ['nullable', 'array', 'max:500'],
+            'youtube_items.*.video_id' => ['required', 'string', 'max:32'],
+            'youtube_items.*.episode_number' => ['required', 'integer', 'min:1', 'max:10000'],
+            'youtube_items.*.title' => ['nullable', 'string', 'max:500'],
         ];
     }
 

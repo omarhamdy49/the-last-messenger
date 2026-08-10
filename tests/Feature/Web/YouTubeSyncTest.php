@@ -31,6 +31,8 @@ final class YouTubeSyncTest extends TestCase
 
     private const PLAYLIST_URL = 'https://www.youtube.com/playlist?list=PLtestPlaylist';
 
+    private const VIDEO_URL = 'https://www.youtube.com/watch?v=vidAAAAAA01';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -97,11 +99,81 @@ final class YouTubeSyncTest extends TestCase
         $program = $this->makeProgram();
 
         $this->actingAs($this->createAdminUser())
-            ->postJson(route('admin.media-programs.youtube.analyze', $program->id), ['playlist_url' => self::PLAYLIST_URL])
+            ->postJson(route('admin.media.youtube.analyze'), ['playlist_url' => self::PLAYLIST_URL])
             ->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.count', 2)
-            ->assertJsonPath('data.entries.0.title', 'الحلقة الأولى');
+            ->assertJsonPath('data.entries.0.title', 'الحلقة الأولى')
+            // Slug suggestion transliterates the Arabic title rather than
+            // falling back to the opaque playlist id.
+            ->assertJsonPath('data.suggested_slug', 'brnamg-tgryby');
+    }
+
+    public function test_admin_can_analyze_a_single_video(): void
+    {
+        $this->actingAs($this->createAdminUser())
+            ->postJson(route('admin.media.youtube.analyze'), ['playlist_url' => self::VIDEO_URL])
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.is_playlist', false)
+            ->assertJsonPath('data.count', 1)
+            ->assertJsonPath('data.entries.0.video_id', 'vidAAAAAA01');
+    }
+
+    public function test_importing_a_single_video_creates_one_episode_and_keeps_the_playlist_id(): void
+    {
+        $program = $this->makeProgram(['youtube_playlist_id' => 'PLexisting']);
+
+        $run = YouTubeSyncRun::create([
+            'program_id' => $program->id,
+            'playlist_url' => self::VIDEO_URL,
+            'status' => YouTubeSyncStatus::Pending,
+        ]);
+
+        app(YouTubeSyncService::class)->processRun($run);
+
+        $this->assertSame(YouTubeSyncStatus::Completed, $run->fresh()->status);
+        $this->assertSame(1, MediaEpisode::where('program_id', $program->id)->count());
+        // A single-video import carries no playlist id — it must not blank the stored one.
+        $this->assertSame('PLexisting', $program->fresh()->youtube_playlist_id);
+    }
+
+    public function test_confirmed_mapping_controls_numbering_titles_and_which_videos_import(): void
+    {
+        $program = $this->makeProgram();
+
+        // Only the second video is included, renumbered to 7 and retitled.
+        $run = YouTubeSyncRun::create([
+            'program_id' => $program->id,
+            'playlist_url' => self::PLAYLIST_URL,
+            'items' => [
+                ['video_id' => 'vidAAAAAA02', 'episode_number' => 7, 'title' => 'عنوان من المسؤول'],
+            ],
+            'status' => YouTubeSyncStatus::Pending,
+        ]);
+
+        app(YouTubeSyncService::class)->processRun($run);
+
+        $episodes = MediaEpisode::where('program_id', $program->id)->get();
+        $this->assertCount(1, $episodes, 'Deselected videos must not be imported.');
+
+        $episode = $episodes->first();
+        $this->assertSame(7, $episode->episode_number);
+        $this->assertSame('vidAAAAAA02', YouTubeUrl::videoId($episode->video_url));
+        $this->assertSame('عنوان من المسؤول', $episode->getTranslation('title', 'ar'));
+    }
+
+    public function test_sync_endpoint_rejects_a_mapping_row_without_an_episode_number(): void
+    {
+        $program = $this->makeProgram();
+
+        $this->actingAs($this->createAdminUser())
+            ->postJson(route('admin.media-programs.youtube.sync', $program->id), [
+                'playlist_url' => self::PLAYLIST_URL,
+                'items' => [['video_id' => 'vidAAAAAA01', 'title' => 'x']],
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('items.0.episode_number');
     }
 
     public function test_analyze_rejects_a_non_youtube_url(): void
@@ -109,7 +181,7 @@ final class YouTubeSyncTest extends TestCase
         $program = $this->makeProgram();
 
         $this->actingAs($this->createAdminUser())
-            ->postJson(route('admin.media-programs.youtube.analyze', $program->id), ['playlist_url' => 'https://vimeo.com/123'])
+            ->postJson(route('admin.media.youtube.analyze'), ['playlist_url' => 'https://vimeo.com/123'])
             ->assertStatus(422)
             ->assertJsonValidationErrors('playlist_url');
     }
@@ -119,7 +191,7 @@ final class YouTubeSyncTest extends TestCase
         $program = $this->makeProgram();
 
         $this->actingAs($this->createUser())
-            ->post(route('admin.media-programs.youtube.analyze', $program->id), ['playlist_url' => self::PLAYLIST_URL])
+            ->post(route('admin.media.youtube.analyze'), ['playlist_url' => self::PLAYLIST_URL])
             ->assertRedirect();
     }
 

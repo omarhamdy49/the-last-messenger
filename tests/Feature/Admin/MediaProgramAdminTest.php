@@ -4,9 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Admin;
 
+use App\Domain\Media\Models\MediaEpisode;
+use App\Domain\Media\Models\MediaEpisodeTranslation;
 use App\Domain\Media\Models\MediaProgram;
 use App\Domain\Media\Models\MediaProgramTranslation;
+use App\Domain\Media\Models\YouTubeSyncRun;
+use App\Jobs\SyncYouTubePlaylistJob;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Testing\File;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -153,6 +161,37 @@ final class MediaProgramAdminTest extends TestCase
         ]);
     }
 
+    public function test_create_form_youtube_source_queues_an_import_and_redirects_to_progress(): void
+    {
+        Queue::fake();
+
+        $response = $this->actingAs($this->createAdminUser())
+            ->post('/su/portal/v1/admin/media-programs', $this->validPayload([
+                'youtube_url' => 'https://www.youtube.com/playlist?list=PLcreateFlow',
+            ]));
+
+        $program = MediaProgram::where('slug', 'test-program')->firstOrFail();
+        $run = YouTubeSyncRun::where('program_id', $program->id)->firstOrFail();
+
+        // Lands on the program page with the run id, so the modal resumes polling.
+        $response->assertRedirect(route('admin.media-programs.show', [
+            'media_program' => $program->id,
+            'yt_run' => $run->id,
+        ]));
+        Queue::assertPushed(SyncYouTubePlaylistJob::class);
+    }
+
+    public function test_create_form_rejects_a_non_youtube_source(): void
+    {
+        $this->actingAs($this->createAdminUser())
+            ->post('/su/portal/v1/admin/media-programs', $this->validPayload([
+                'youtube_url' => 'https://vimeo.com/123456',
+            ]))
+            ->assertSessionHasErrors('youtube_url');
+
+        $this->assertDatabaseMissing('media_programs', ['slug' => 'test-program']);
+    }
+
     public function test_store_requires_arabic_title(): void
     {
         $this->actingAs($this->createAdminUser())
@@ -292,9 +331,9 @@ final class MediaProgramAdminTest extends TestCase
         $this->withoutVite()->get('/media/'.$program->slug)->assertOk();
     }
 
-    private function createEpisode(MediaProgram $program, int $number, string $title = 'حلقة تجريبية'): \App\Domain\Media\Models\MediaEpisode
+    private function createEpisode(MediaProgram $program, int $number, string $title = 'حلقة تجريبية'): MediaEpisode
     {
-        $episode = \App\Domain\Media\Models\MediaEpisode::create([
+        $episode = MediaEpisode::create([
             'program_id' => $program->id,
             'season_number' => 1,
             'episode_number' => $number,
@@ -303,7 +342,7 @@ final class MediaProgramAdminTest extends TestCase
             'duration_seconds' => 600,
         ]);
 
-        \App\Domain\Media\Models\MediaEpisodeTranslation::create([
+        MediaEpisodeTranslation::create([
             'media_episode_id' => $episode->id,
             'locale' => 'ar',
             'title' => $title,
@@ -394,13 +433,13 @@ final class MediaProgramAdminTest extends TestCase
 
     public function test_admin_can_update_images_from_hero(): void
     {
-        \Illuminate\Support\Facades\Storage::fake('public');
+        Storage::fake('public');
         $admin = $this->createAdminUser();
         $program = $this->createProgram();
 
         $response = $this->actingAs($admin)->post(
             "/su/portal/v1/admin/media-programs/{$program->id}/images",
-            ['poster' => \Illuminate\Http\Testing\File::image('poster.jpg', 300, 300)]
+            ['poster' => File::image('poster.jpg', 300, 300)]
         );
 
         $response->assertRedirect(route('admin.media-programs.show', $program->id));
@@ -414,7 +453,7 @@ final class MediaProgramAdminTest extends TestCase
 
         $this->actingAs($admin)->post(
             "/su/portal/v1/admin/media-programs/{$program->id}/images",
-            ['poster' => \Illuminate\Http\Testing\File::create('document.pdf', 100)]
+            ['poster' => File::create('document.pdf', 100)]
         )->assertSessionHasErrors('poster');
     }
 
@@ -480,19 +519,19 @@ final class MediaProgramAdminTest extends TestCase
 
     public function test_deleting_program_removes_its_images_and_cascaded_episode_thumbnails(): void
     {
-        \Illuminate\Support\Facades\Storage::fake('public');
+        Storage::fake('public');
         $admin = $this->createAdminUser();
         $program = $this->createProgram();
-        $program->addMedia(\Illuminate\Http\UploadedFile::fake()->image('poster.jpg', 300, 450))
+        $program->addMedia(UploadedFile::fake()->image('poster.jpg', 300, 450))
             ->toMediaCollection('poster');
-        $program->addMedia(\Illuminate\Http\UploadedFile::fake()->image('banner.jpg', 1200, 675))
+        $program->addMedia(UploadedFile::fake()->image('banner.jpg', 1200, 675))
             ->toMediaCollection('banner');
 
         $episode = $this->createEpisode($program, 1);
-        $episode->addMedia(\Illuminate\Http\UploadedFile::fake()->image('thumb.jpg', 800, 450))
+        $episode->addMedia(UploadedFile::fake()->image('thumb.jpg', 800, 450))
             ->toMediaCollection('thumbnail');
 
-        $this->assertNotEmpty(\Illuminate\Support\Facades\Storage::disk('public')->allFiles());
+        $this->assertNotEmpty(Storage::disk('public')->allFiles());
 
         $this->actingAs($admin)->delete('/su/portal/v1/admin/media-programs/'.$program->id);
 
@@ -500,6 +539,6 @@ final class MediaProgramAdminTest extends TestCase
         // cleaned up explicitly, not just the program's own poster/banner.
         $this->assertDatabaseMissing('spatie_media', ['model_id' => $program->id, 'model_type' => $program->getMorphClass()]);
         $this->assertDatabaseMissing('spatie_media', ['model_id' => $episode->id, 'model_type' => $episode->getMorphClass()]);
-        $this->assertEmpty(\Illuminate\Support\Facades\Storage::disk('public')->allFiles());
+        $this->assertEmpty(Storage::disk('public')->allFiles());
     }
 }

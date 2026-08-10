@@ -38,6 +38,21 @@ final readonly class YouTubeVideoData
         );
     }
 
+    /** Replace the title with the one the admin confirmed in the import modal. */
+    public function withTitle(string $title): self
+    {
+        return new self(
+            id: $this->id,
+            title: $title,
+            description: $this->description,
+            durationSeconds: $this->durationSeconds,
+            channel: $this->channel,
+            uploadDate: $this->uploadDate,
+            thumbnailUrl: $this->thumbnailUrl,
+            transcript: $this->transcript,
+        );
+    }
+
     public function withTranscript(?string $transcript): self
     {
         return new self(

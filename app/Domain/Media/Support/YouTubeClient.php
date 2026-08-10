@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Media\Support;
 
 use App\Domain\Media\DTOs\YouTubePlaylistData;
+use App\Domain\Media\DTOs\YouTubePlaylistEntry;
 use App\Domain\Media\DTOs\YouTubeVideoData;
 use App\Domain\Media\Exceptions\YouTubeException;
 use Illuminate\Support\Facades\File;
@@ -46,6 +47,31 @@ class YouTubeClient
         ]);
 
         return YouTubeVideoData::fromArray($json);
+    }
+
+    /**
+     * Resolve any supported YouTube source to a playlist-shaped result, so
+     * every caller downstream handles one type. A single video comes back as
+     * a one-entry playlist with an empty playlist id.
+     *
+     * @throws YouTubeException
+     */
+    public function fetchSource(string $url): YouTubePlaylistData
+    {
+        if (YouTubeUrl::isPlaylist($url)) {
+            return $this->fetchPlaylist($url);
+        }
+
+        $video = $this->fetchVideo($url);
+
+        return new YouTubePlaylistData(
+            id: '',
+            title: $video->title,
+            description: $video->description,
+            channel: $video->channel,
+            thumbnailUrl: $video->thumbnailUrl,
+            entries: [new YouTubePlaylistEntry(id: $video->id, title: $video->title, position: 1)],
+        );
     }
 
     /**

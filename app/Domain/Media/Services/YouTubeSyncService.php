@@ -18,14 +18,18 @@ use App\Domain\Media\Support\YouTubeClient;
 use App\Domain\Media\Support\YouTubeUrl;
 use App\Jobs\SyncYouTubePlaylistJob;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * Orchestrates importing YouTube data into the Media domain.
  *
- *  - analyzePlaylist(): read-only preview for the admin modal.
+ *  - analyzeSource():   read-only preview for the admin modal.
  *  - syncEpisode():     refresh one existing episode (synchronous).
- *  - processRun():      import a whole playlist (driven by the queued job),
+ *  - processRun():      import a whole source (driven by the queued job),
  *                       advancing a YouTubeSyncRun for live progress.
+ *
+ * A "source" is either a playlist URL or a single video URL; the client
+ * normalises a video to a one-entry playlist so both take the same path.
  *
  * Episodes are matched to playlist items by their YouTube video id (parsed
  * from the stored embed URL), so re-syncing updates in place instead of
@@ -41,18 +45,26 @@ class YouTubeSyncService
     ) {}
 
     /**
-     * Read-only playlist preview for the confirmation modal.
+     * Read-only preview for the confirmation modal. Accepts a playlist URL or
+     * a single video URL — a video previews as a one-entry list.
      *
-     * @return array{playlist_id:string,title:string,channel:?string,thumbnail:?string,count:int,entries:list<array{video_id:string,title:string,position:int}>}
+     * @return array{playlist_id:string,is_playlist:bool,title:string,channel:?string,thumbnail:?string,count:int,entries:list<array{video_id:string,title:string,position:int}>}
      *
      * @throws YouTubeException
      */
-    public function analyzePlaylist(string $url): array
+    public function analyzeSource(string $url): array
     {
-        $playlist = $this->client->fetchPlaylist($url);
+        $playlist = $this->client->fetchSource($url);
+
+        // Slug suggestion for the create form. Str::slug transliterates
+        // Arabic (…الحصن → …alhsn), so the slug reads from the title rather
+        // than falling back to the opaque playlist id.
+        $slug = Str::limit(Str::slug($playlist->title), 80, '');
 
         return [
             'playlist_id' => $playlist->id,
+            'is_playlist' => $playlist->id !== '',
+            'suggested_slug' => $slug !== '' ? $slug : Str::slug($playlist->id ?: ($playlist->entries[0]->id ?? '')),
             'title' => $playlist->title,
             'channel' => $playlist->channel,
             'thumbnail' => $playlist->thumbnailUrl,
@@ -66,14 +78,21 @@ class YouTubeSyncService
     }
 
     /**
-     * Register a playlist import and queue the job that performs it.
-     * The returned run is the handle the admin modal polls for progress.
+     * Register an import and queue the job that performs it. The returned run
+     * is the handle the admin modal polls for progress.
+     *
+     * $items is the mapping the admin confirmed in the modal — one entry per
+     * video with the episode number and title to use. NULL imports every
+     * entry in playlist order with its YouTube title.
+     *
+     * @param  list<array{video_id:string, episode_number:int, title:string}>|null  $items
      */
-    public function startRun(int $programId, string $playlistUrl, ?int $userId = null): YouTubeSyncRun
+    public function startRun(int $programId, string $playlistUrl, ?int $userId = null, ?array $items = null): YouTubeSyncRun
     {
         $run = YouTubeSyncRun::create([
             'program_id' => $programId,
             'playlist_url' => $playlistUrl,
+            'items' => $items ?: null,
             'status' => YouTubeSyncStatus::Pending,
             'created_by' => $userId,
         ]);
@@ -139,10 +158,20 @@ class YouTubeSyncService
                 return;
             }
 
-            $playlist = $this->client->fetchPlaylist($run->playlist_url);
+            $playlist = $this->client->fetchSource($run->playlist_url);
+
+            // The admin-confirmed mapping, keyed by video id. Anything absent
+            // from a non-empty mapping was deselected in the modal.
+            $overrides = $this->overridesFor($run);
+            $entries = $playlist->entries;
+            if ($overrides !== null) {
+                $entries = array_values(array_filter(
+                    $entries,
+                    static fn ($entry): bool => isset($overrides[$entry->id]),
+                ));
+            }
 
             // Safety cap — never process an unbounded playlist in one run.
-            $entries = $playlist->entries;
             $cap = (int) config('youtube.max_playlist_episodes', 100);
             if ($cap > 0 && count($entries) > $cap) {
                 Log::warning('YouTube playlist truncated to cap', [
@@ -170,11 +199,20 @@ class YouTubeSyncService
                     $video = $this->fetchFullVideo($entry->id);
                     $firstVideo ??= $video;
 
+                    // Admin edits win over YouTube's own title/ordering.
+                    $override = $overrides[$entry->id] ?? null;
+                    if (filled($override['title'] ?? null)) {
+                        $video = $video->withTitle((string) $override['title']);
+                    }
+
                     if (isset($byVideoId[$entry->id])) {
-                        $this->applyVideoToEpisode($byVideoId[$entry->id], $video);
+                        $existing = $byVideoId[$entry->id];
+                        $this->applyVideoToEpisode($existing, $video, $override['episode_number'] ?? null);
                         $run->recordItem(created: false, message: $this->itemMessage($entry->position, count($entries), $video->title));
                     } else {
-                        $byVideoId[$entry->id] = $this->createEpisode($program, $video, ++$maxNumber);
+                        $number = $override['episode_number'] ?? ++$maxNumber;
+                        $maxNumber = max($maxNumber, (int) $number);
+                        $byVideoId[$entry->id] = $this->createEpisode($program, $video, (int) $number);
                         $run->recordItem(created: true, message: $this->itemMessage($entry->position, count($entries), $video->title));
                     }
                 } catch (\Throwable $e) {
@@ -189,6 +227,32 @@ class YouTubeSyncService
             Log::error('YouTube playlist sync failed', ['run' => $run->id, 'error' => $e->getMessage()]);
             $run->markFailed($e->getMessage());
         }
+    }
+
+    /**
+     * The admin-confirmed mapping keyed by video id, or null when the run
+     * carries none (import everything, YouTube order and titles).
+     *
+     * @return array<string, array{episode_number:int|null, title:string|null}>|null
+     */
+    private function overridesFor(YouTubeSyncRun $run): ?array
+    {
+        if (blank($run->items)) {
+            return null;
+        }
+
+        $map = [];
+        foreach ($run->items as $item) {
+            if (blank($item['video_id'] ?? null)) {
+                continue;
+            }
+            $map[(string) $item['video_id']] = [
+                'episode_number' => isset($item['episode_number']) ? (int) $item['episode_number'] : null,
+                'title' => $item['title'] ?? null,
+            ];
+        }
+
+        return $map !== [] ? $map : null;
     }
 
     /** Fetch metadata + best-effort transcript for one video. */
@@ -231,11 +295,14 @@ class YouTubeSyncService
         return $episode;
     }
 
-    private function applyVideoToEpisode(MediaEpisode $episode, YouTubeVideoData $video): void
+    private function applyVideoToEpisode(MediaEpisode $episode, YouTubeVideoData $video, ?int $episodeNumber = null): void
     {
         $core = ['video_url' => YouTubeUrl::embedUrl($video->id)];
         if ($video->durationSeconds !== null) {
             $core['duration_seconds'] = $video->durationSeconds;
+        }
+        if ($episodeNumber !== null) {
+            $core['episode_number'] = $episodeNumber;
         }
         $this->episodeRepo->update($episode->id, $core);
 
@@ -268,10 +335,14 @@ class YouTubeSyncService
         $locale = $this->detectLocale($playlist->title.' '.($playlist->channel ?? ''));
 
         $core = [
-            'youtube_playlist_id' => $playlist->id,
             'total_episodes' => $this->episodeRepo->getByProgramForSync($program->id)->count(),
             'total_seasons' => 1,
         ];
+        // A single-video import carries no playlist id — never clear an
+        // existing one by writing the empty placeholder over it.
+        if ($playlist->id !== '') {
+            $core['youtube_playlist_id'] = $playlist->id;
+        }
         if (empty($program->year) && $firstVideo?->year() !== null) {
             $core['year'] = $firstVideo->year();
         }
@@ -340,7 +411,7 @@ class YouTubeSyncService
 
     private function itemMessage(int $position, int $total, string $title): string
     {
-        $title = \Illuminate\Support\Str::limit($title, 80);
+        $title = Str::limit($title, 80);
 
         return "({$position}/{$total}) {$title}";
     }

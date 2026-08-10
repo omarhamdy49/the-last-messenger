@@ -45,6 +45,111 @@
         {{-- ==================== MAIN COLUMN ==================== --}}
         <div class="lg:col-span-2 space-y-6">
 
+            {{-- YouTube source ------------------------------------------------
+                 Create: analyze a playlist/video, prefill the form, and carry
+                 the URL through so store() queues the episode import.
+                 Edit:   the program exists, so the import runs right here. --}}
+            <section class="rounded-2xl border p-6 animate-fadeInUp"
+                     :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'"
+                     x-data="{
+                        source: @js(old('youtube_url', $isEdit && $program->youtube_playlist_id ? 'https://www.youtube.com/playlist?list='.$program->youtube_playlist_id : '')),
+                        picked: null,
+                        items: @js(old('youtube_items', [])),
+                        init() {
+                            window.addEventListener('yt-prefill', (e) => this.applyPrefill(e.detail));
+                        },
+                        applyPrefill({ url, analysis, items }) {
+                            this.source = url;
+                            this.picked = analysis;
+                            this.items = items || [];
+
+                            const locale = /[؀-ۿ]/.test(analysis.title || '') ? 'ar' : 'en';
+                            this.setField(`title[${locale}]`, analysis.title);
+                            this.setField(`host[${locale}]`, analysis.channel);
+                            // Arabic is the required locale. Seed it from the source
+                            // too so saving isn't blocked on a field the admin was
+                            // never shown — they translate it in place afterwards.
+                            if (locale !== 'ar') {
+                                this.setField('title[ar]', analysis.title);
+                                this.setField('host[ar]', analysis.channel);
+                            }
+                            // Confirmed rows, not the raw playlist size.
+                            this.setField('total_episodes', this.items.length || analysis.count);
+                            // Slug is transliterated server-side from the title.
+                            this.setField('slug', analysis.suggested_slug);
+
+                            // Reveal the locale we just filled.
+                            this.$root.closest('form')
+                                .querySelector(`[data-locale-tab='${locale}']`)?.click();
+                        },
+                        // A field counts as empty when blank or at its numeric default.
+                        setField(name, value) {
+                            if (value === undefined || value === null || value === '') return;
+                            const el = this.$root.closest('form').querySelector(`[name='${name}']`);
+                            if (!el) return;
+                            const empty = el.value === '' || (el.type === 'number' && Number(el.value) === 0);
+                            if (!empty) return;
+                            el.value = value;
+                            el.dispatchEvent(new Event('input', { bubbles: true }));
+                        },
+                     }">
+                <div class="flex items-start justify-between gap-4 mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                            <i data-lucide="youtube" class="w-5 h-5 text-red-600"></i>
+                            {{ __('admin.import_from_youtube') }}
+                        </h3>
+                        <p class="text-xs mt-1" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                            {{ $isEdit ? __('admin.yt_import_hint') : __('admin.yt_prefill_hint') }}
+                        </p>
+                    </div>
+                    <button type="button" @click="window.dispatchEvent(new CustomEvent('open-yt-import'))"
+                            class="flex-shrink-0 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all hover:scale-105 flex items-center gap-2"
+                            :class="darkMode ? 'border-gray-700 text-gray-200 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'">
+                        <i data-lucide="{{ $isEdit ? 'download' : 'wand-sparkles' }}" class="w-4 h-4"></i>
+                        {{ $isEdit ? __('admin.yt_import_now') : __('admin.yt_fetch') }}
+                    </button>
+                </div>
+
+                @unless($isEdit)
+                    <input type="hidden" name="youtube_url" :value="source">
+                    {{-- The confirmed mapping travels with the form, so the run
+                         queued on save imports exactly what was reviewed. --}}
+                    <template x-for="(row, i) in items" :key="row.video_id">
+                        <div>
+                            <input type="hidden" :name="`youtube_items[${i}][video_id]`" :value="row.video_id">
+                            <input type="hidden" :name="`youtube_items[${i}][episode_number]`" :value="row.episode_number">
+                            <input type="hidden" :name="`youtube_items[${i}][title]`" :value="row.title">
+                        </div>
+                    </template>
+                @endunless
+
+                {{-- Chosen source summary --}}
+                <template x-if="source">
+                    <div class="flex items-center gap-3 rounded-xl border px-3 py-2.5"
+                         :class="darkMode ? 'border-gray-800 bg-gray-800/50' : 'border-gray-200 bg-gray-50'">
+                        <i data-lucide="link" class="w-4 h-4 flex-shrink-0" :class="darkMode ? 'text-gray-400' : 'text-gray-500'"></i>
+                        <span class="text-xs font-mono truncate flex-1" dir="ltr" :class="darkMode ? 'text-gray-300' : 'text-gray-700'" x-text="source"></span>
+                        <span x-show="picked" class="text-xs px-2 py-0.5 rounded-full flex-shrink-0 bg-green-100 text-green-700"
+                              x-text="@js(__('admin.yt_will_import')).replace(':count', items.length || picked?.count || 0)"></span>
+                        @unless($isEdit)
+                        <button type="button" @click="source = ''; picked = null; items = []"
+                                aria-label="{{ __('admin.remove') }}"
+                                class="p-1 rounded-lg flex-shrink-0" :class="darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-500'">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                        @endunless
+                    </div>
+                </template>
+                <p x-show="!source" class="text-sm" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
+                    {{ __('admin.yt_no_source') }}
+                </p>
+
+                @error('youtube_url')
+                    <p class="mt-2 text-sm text-red-500">{{ $message }}</p>
+                @enderror
+            </section>
+
             {{-- Translations --}}
             <section class="rounded-2xl border p-6 animate-fadeInUp" :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
                 <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
@@ -57,6 +162,7 @@
                         @foreach($locales as $code => $label)
                         @php $hasTitle = filled(old("title.{$code}", $existingTranslations->get($code)?->title)); @endphp
                         <button type="button" @click="activeLocale = '{{ $code }}'"
+                                data-locale-tab="{{ $code }}"
                                 class="flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
                                 :class="activeLocale === '{{ $code }}'
                                     ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white'
@@ -447,6 +553,18 @@
         </aside>
     </div>
 </form>
+
+{{-- YouTube import modal. Kept outside <form> so its buttons can never be
+     mistaken for form controls. On create it only prefills; on edit the
+     program exists, so it queues a real import. --}}
+@include('admin.media-programs._youtube-import', [
+    'mode' => $isEdit ? 'import' : 'prefill',
+    'syncRoute' => $isEdit ? route('admin.media-programs.youtube.sync', $program->id) : null,
+    'prefill' => old('youtube_url', $isEdit && $program->youtube_playlist_id
+        ? 'https://www.youtube.com/playlist?list='.$program->youtube_playlist_id
+        : ''),
+    'resumeRun' => null,
+])
 
 {{-- Media library picker (used by the image-upload components) --}}
 <x-admin.media-picker-modal />

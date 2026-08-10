@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Media\Models;
 
 use App\Domain\Media\Enums\YouTubeSyncStatus;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id
  * @property int $program_id
  * @property string $playlist_url
+ * @property array<int, array{video_id:string, episode_number:int, title:string}>|null $items
  * @property YouTubeSyncStatus $status
  * @property int $total
  * @property int $processed
@@ -24,8 +26,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $message
  * @property string|null $error
  * @property int|null $created_by
- * @property \Carbon\Carbon|null $started_at
- * @property \Carbon\Carbon|null $finished_at
+ * @property Carbon|null $started_at
+ * @property Carbon|null $finished_at
  */
 class YouTubeSyncRun extends Model
 {
@@ -36,6 +38,7 @@ class YouTubeSyncRun extends Model
     protected $fillable = [
         'program_id',
         'playlist_url',
+        'items',
         'status',
         'total',
         'processed',
@@ -50,6 +53,7 @@ class YouTubeSyncRun extends Model
 
     protected $casts = [
         'program_id' => 'integer',
+        'items' => 'array',
         'status' => YouTubeSyncStatus::class,
         'total' => 'integer',
         'processed' => 'integer',

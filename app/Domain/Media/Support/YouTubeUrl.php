@@ -71,6 +71,20 @@ final class YouTubeUrl
         return self::playlistId($value) !== null;
     }
 
+    /**
+     * Whether a value is a YouTube URL we will hand to yt-dlp — a playlist or
+     * a single video. Host-locked on purpose: yt-dlp happily fetches hundreds
+     * of other sites, and this value arrives from an admin form.
+     */
+    public static function isSupportedSource(?string $value): bool
+    {
+        if ($value === null || preg_match('#^https?://(www\.|m\.)?(youtube\.com|youtu\.be)/#i', $value) !== 1) {
+            return false;
+        }
+
+        return self::isPlaylist($value) || self::videoId($value) !== null;
+    }
+
     public static function embedUrl(string $videoId): string
     {
         return "https://www.youtube.com/embed/{$videoId}";

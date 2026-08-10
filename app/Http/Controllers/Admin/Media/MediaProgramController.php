@@ -14,8 +14,7 @@ use App\Domain\Media\Services\MediaProgramService;
 use App\Domain\Media\Services\YouTubeSyncService;
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\Media\AnalyzeYoutubePlaylistRequest;
-use App\Http\Requests\Admin\Media\SyncYoutubePlaylistRequest;
+use App\Http\Requests\Admin\Media\YouTubeSourceRequest;
 use App\Http\Requests\Admin\MediaProgram\StoreMediaProgramRequest;
 use App\Http\Requests\Admin\MediaProgram\UpdateMediaProgramImagesRequest;
 use App\Http\Requests\Admin\MediaProgram\UpdateMediaProgramRequest;
@@ -96,7 +95,7 @@ class MediaProgramController extends Controller
     /**
      * POST /su/portal/v1/admin/media-programs
      */
-    public function store(StoreMediaProgramRequest $request): RedirectResponse
+    public function store(StoreMediaProgramRequest $request, YouTubeSyncService $youtube): RedirectResponse
     {
         $dto = CreateMediaProgramData::fromRequest($request);
 
@@ -120,6 +119,24 @@ class MediaProgramController extends Controller
         });
 
         $this->logger->logCreate($program, $request->user());
+
+        // A source pasted on the create form starts its import immediately;
+        // the show page picks the run up from ?yt_run and shows live progress.
+        // Started outside the transaction so the queued job can never see a
+        // run whose program has not been committed yet.
+        $validated = $request->validated();
+        $source = $validated['youtube_url'] ?? null;
+        if (filled($source)) {
+            $run = $youtube->startRun(
+                $program->id,
+                $source,
+                $request->user()?->id,
+                $validated['youtube_items'] ?? null,
+            );
+
+            return redirect()->route('admin.media-programs.show', ['media_program' => $program->id, 'yt_run' => $run->id])
+                ->with('success', __('admin.program_created'));
+        }
 
         return redirect()->route('admin.media-programs.index')
             ->with('success', __('admin.program_created'));
@@ -230,7 +247,7 @@ class MediaProgramController extends Controller
 
         $this->logger->logBulkAction(
             'bulk_delete',
-            \App\Domain\Media\Models\MediaProgram::class,
+            MediaProgram::class,
             $request->input('ids'),
             $request->user()
         );
@@ -310,21 +327,19 @@ class MediaProgramController extends Controller
     }
 
     /**
-     * POST /su/portal/v1/admin/media-programs/{id}/youtube/analyze
-     * Read-only playlist preview for the import modal (runs yt-dlp inline).
+     * POST /su/portal/v1/admin/media/youtube/analyze
+     * Read-only preview of a playlist or single video (runs yt-dlp inline).
+     * Deliberately program-independent: the create form analyzes a source
+     * before the program row exists.
      */
-    public function analyzeYoutube(AnalyzeYoutubePlaylistRequest $request, YouTubeSyncService $service, int $id): JsonResponse
+    public function analyzeYoutube(YouTubeSourceRequest $request, YouTubeSyncService $service): JsonResponse
     {
-        if (! $this->programService->find($id)) {
-            return response()->json(['success' => false, 'message' => __('admin.not_found')], 404);
-        }
-
         @set_time_limit(0);
 
         try {
             return response()->json([
                 'success' => true,
-                'data' => $service->analyzePlaylist($request->validated()['playlist_url']),
+                'data' => $service->analyzeSource($request->validated()['playlist_url']),
             ]);
         } catch (\Throwable $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
@@ -335,7 +350,7 @@ class MediaProgramController extends Controller
      * POST /su/portal/v1/admin/media-programs/{id}/youtube/sync
      * Create a sync run + dispatch the background import job.
      */
-    public function syncYoutube(SyncYoutubePlaylistRequest $request, YouTubeSyncService $service, int $id): JsonResponse
+    public function syncYoutube(YouTubeSourceRequest $request, YouTubeSyncService $service, int $id): JsonResponse
     {
         $program = $this->programService->find($id);
 
@@ -343,10 +358,13 @@ class MediaProgramController extends Controller
             return response()->json(['success' => false, 'message' => __('admin.not_found')], 404);
         }
 
+        $validated = $request->validated();
+
         $run = $service->startRun(
             $program->id,
-            $request->validated()['playlist_url'],
+            $validated['playlist_url'],
             $request->user()?->id,
+            $validated['items'] ?? null,
         );
 
         return response()->json([
