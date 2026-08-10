@@ -517,6 +517,7 @@
             videoId: @js($episode['video_id'] ?? null),
             yt: null,
             started: false,
+            _autoUnmute: false,
             playing: false,
             buffering: false,
             playerError: false,
@@ -539,9 +540,15 @@
                     this.fullscreen = document.fullscreenElement !== null;
                     this.refreshIcons();
                 });
+                // Warm the YouTube API while the visitor looks at the poster, so
+                // the play click boots the player in one hop instead of first
+                // waiting on the SDK download.
+                if (this.videoId) {
+                    this.loadYouTubeApi().catch(() => { /* retried on click */ });
+                }
             },
 
-            // ---- Playback bootstrap: nothing YouTube loads before this click ----
+            // ---- Playback bootstrap: the player itself loads on this click ----
             async startPlayback() {
                 if (!this.videoId || this.started) return;
                 this.started = true;
@@ -574,7 +581,20 @@
                                 // Belt & braces with autoplay=1: some browsers ignore the
                                 // playerVar even for gesture-initiated embeds.
                                 e.target.playVideo();
-                                this.buffering = false;
+                                // Strict autoplay policies can swallow that play call.
+                                // Fall back to a muted start (always allowed) and
+                                // restore the sound once PLAYING arrives.
+                                setTimeout(() => {
+                                    const st = e.target.getPlayerState();
+                                    if (st !== YT.PlayerState.PLAYING && st !== YT.PlayerState.BUFFERING) {
+                                        this._autoUnmute = true;
+                                        this.muted = true;
+                                        e.target.mute();
+                                        e.target.playVideo();
+                                    }
+                                }, 1500);
+                                // buffering stays true until PLAYING — the spinner,
+                                // not a paused overlay, covers the boot gap.
                                 this.refreshIcons();
                             },
                             onStateChange: (e) => this.onPlayerState(e),
@@ -608,6 +628,13 @@
 
             onPlayerState(e) {
                 if (e.data === YT.PlayerState.PLAYING) {
+                    if (this._autoUnmute) {
+                        // We only muted to get past the autoplay policy — the
+                        // visitor's click asked for sound.
+                        this._autoUnmute = false;
+                        this.yt.unMute();
+                        this.muted = false;
+                    }
                     this.playing = true;
                     this.buffering = false;
                     this.duration = this.yt.getDuration() || this.duration;
