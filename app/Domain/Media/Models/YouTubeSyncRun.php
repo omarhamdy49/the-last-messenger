@@ -80,9 +80,15 @@ class YouTubeSyncRun extends Model
 
     public function markRunning(int $total, ?string $message = null): void
     {
+        // Reset counters: a retried job re-walks the playlist from the start,
+        // so stale progress from the interrupted attempt must not accumulate.
         $this->forceFill([
             'status' => YouTubeSyncStatus::Running,
             'total' => $total,
+            'processed' => 0,
+            'created_count' => 0,
+            'updated_count' => 0,
+            'error' => null,
             'message' => $message,
             'started_at' => $this->started_at ?? now(),
         ])->save();

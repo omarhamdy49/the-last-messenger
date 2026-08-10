@@ -17,8 +17,9 @@ use Illuminate\Support\Facades\Log;
  * Imports a YouTube playlist into a program in the background, advancing the
  * YouTubeSyncRun ledger the admin modal polls.
  *
- * Single attempt: the per-video work is long and idempotent re-running would
- * waste minutes; a crash is surfaced by failed() marking the run failed.
+ * Two attempts: the import is idempotent (episodes matched by video id), so
+ * when the worker dies mid-run the retry resumes instead of leaving the run
+ * stuck in "running" until MaxAttemptsExceeded finally marks it failed.
  */
 class SyncYouTubePlaylistJob implements ShouldQueue
 {
@@ -27,7 +28,7 @@ class SyncYouTubePlaylistJob implements ShouldQueue
     /** Long enough for a large playlist of per-video fetches. */
     public int $timeout = 3600;
 
-    public int $tries = 1;
+    public int $tries = 2;
 
     public bool $deleteWhenMissingModels = true;
 
