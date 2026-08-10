@@ -18,728 +18,767 @@
 
 @push('head')
 <style>
-    /* Page-scoped premium styling for the articles library. */
+    /* ═══════════════════════════════════════════════════════════════
+       ARTICLES LIBRARY — page-scoped chrome.
+
+       The card itself lives in the site.article-card component; everything
+       here is the furniture around it: the opening canvas, the spotlight leaf
+       and the sticky filter rail. Brand pigments read as manuscript colour —
+       lapis #0056b3, verdigris #218838, teal #64CCC5.
+       ═══════════════════════════════════════════════════════════════ */
+
+    /* ── Hero canvas ───────────────────────────────────────────────── */
     .lib-hero {
         position: relative;
         isolation: isolate;
         overflow: hidden;
+        background:
+            radial-gradient(ellipse 70% 60% at 18% 0%, rgba(0, 86, 179, .5), transparent 62%),
+            radial-gradient(ellipse 60% 55% at 82% 8%, rgba(33, 136, 56, .34), transparent 62%),
+            linear-gradient(168deg, #06182f 0%, #0a2242 52%, #0b2838 100%);
     }
-    .lib-hero::before,
-    .lib-hero::after {
-        content: '';
+
+    /* Star lattice drawn in gradients — no image asset, no extra request. */
+    .lib-hero-lattice {
         position: absolute;
+        inset: 0;
         z-index: -1;
-        border-radius: 9999px;
-        filter: blur(90px);
-        opacity: .35;
         pointer-events: none;
-    }
-    .lib-hero::before {
-        width: 34rem; height: 34rem;
-        inset-inline-start: -8rem; top: -12rem;
-        background: radial-gradient(circle, #0056b3 0%, transparent 70%);
-    }
-    .lib-hero::after {
-        width: 30rem; height: 30rem;
-        inset-inline-end: -6rem; bottom: -14rem;
-        background: radial-gradient(circle, #218838 0%, transparent 70%);
-    }
-    .dark .lib-hero::before,
-    .dark .lib-hero::after { opacity: .25; }
-
-    /* Subtle eight-point-star lattice, drawn in CSS gradients (no asset). */
-    .lib-hero-pattern {
-        position: absolute; inset: 0; z-index: -1; pointer-events: none;
-        background-image: radial-gradient(currentColor 1px, transparent 1.5px);
-        background-size: 26px 26px;
-        color: #0056b3;
-        opacity: .07;
-        -webkit-mask-image: linear-gradient(to bottom, black, transparent);
-        mask-image: linear-gradient(to bottom, black, transparent);
-    }
-    .dark .lib-hero-pattern { color: #64CCC5; opacity: .08; }
-
-    .lib-glass {
-        background: rgba(255, 255, 255, .72);
-        -webkit-backdrop-filter: blur(14px);
-        backdrop-filter: blur(14px);
-        border: 1px solid rgba(255, 255, 255, .55);
-        box-shadow: 0 8px 32px rgba(2, 30, 68, .10);
-    }
-    .dark .lib-glass {
-        background: rgba(22, 33, 62, .72);
-        border-color: rgba(100, 204, 197, .14);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, .35);
+        background-image:
+            radial-gradient(rgba(255, 255, 255, .85) 1px, transparent 1.6px),
+            radial-gradient(rgba(100, 204, 197, .75) 1px, transparent 1.6px);
+        background-size: 30px 30px, 60px 60px;
+        background-position: 0 0, 15px 15px;
+        opacity: .09;
+        -webkit-mask-image: radial-gradient(ellipse 75% 90% at 50% 15%, black, transparent 78%);
+        mask-image: radial-gradient(ellipse 75% 90% at 50% 15%, black, transparent 78%);
     }
 
-    .lib-card {
-        border-radius: 1.25rem;
-        overflow: hidden;
-        background: #fff;
-        border: 1px solid rgb(243 244 246);
-        box-shadow: 0 1px 3px rgba(2, 30, 68, .06), 0 8px 24px -12px rgba(2, 30, 68, .10);
-        transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
-    }
-    .dark .lib-card {
-        background: #16213e;
-        border-color: rgba(100, 204, 197, .10);
-        box-shadow: 0 1px 3px rgba(0,0,0,.4);
-    }
-    .lib-card:hover {
-        transform: translateY(-6px);
-        box-shadow: 0 4px 8px rgba(2, 30, 68, .06), 0 24px 48px -16px rgba(0, 86, 179, .25);
-        border-color: rgba(0, 86, 179, .25);
-    }
-    .dark .lib-card:hover { box-shadow: 0 24px 48px -16px rgba(100, 204, 197, .18); }
+    /* Breadcrumb sits on the dark canvas, so it needs the inverse of the
+       component's default greys. Specificity (0,2,0 / 0,2,1) is what beats the
+       Tailwind colour utilities the component merges in — no !important. */
+    .lib-hero .lib-crumb { color: rgba(255, 255, 255, .55); }
+    .lib-hero .lib-crumb a:hover { color: #64CCC5; }
+    .lib-hero .lib-crumb [aria-current] { color: #fff; }
 
-    .lib-card .lib-card-img::after {
-        content: '';
-        position: absolute; inset: 0;
-        background: linear-gradient(to top, rgba(2, 20, 40, .45) 0%, transparent 45%);
-        opacity: .9;
-        transition: opacity .3s ease;
-        pointer-events: none;
-    }
-    .lib-card:hover .lib-card-img::after { opacity: .55; }
-
-    .lib-card .lib-read-cue {
-        transform: translateY(4px);
-        opacity: 0;
-        transition: transform .25s ease, opacity .25s ease;
-    }
-    .lib-card:hover .lib-read-cue { transform: translateY(0); opacity: 1; }
-
-    @media (prefers-reduced-motion: reduce) {
-        .lib-card, .lib-card *, .lib-read-cue { transition: none !important; transform: none !important; }
-    }
-
-    /* ═══════════════════════════════════════════════════════════════
-       FOLIO SYSTEM
-
-       The library reads its own brand palette as manuscript pigment:
-       lapis (#0056b3) and verdigris (#218838) were the actual colours of
-       Islamic illumination, ruled off by a gold jadwal. The hero is an
-       opening folio, not a statistics banner.
-       ═══════════════════════════════════════════════════════════════ */
-    .folio {
-        --lapis: #0056b3;
-        --verdigris: #218838;
-        --rule: #c9bfa8;
-        --folio-paper: #fbf9f4;
-    }
-    .dark .folio { --rule: #3d4f6b; --folio-paper: #16213e; }
-
-    /* Jadwal: the double rule that frames a manuscript text block. */
-    .folio-frame {
-        position: relative;
-        background: var(--folio-paper);
-        border: 1px solid var(--rule);
-        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rule) 35%, transparent);
-    }
-
-    /* Corner illumination — a lozenge at each corner of the frame, the
-       restrained descendant of an illuminated headpiece. */
-    .folio-frame::before,
-    .folio-frame::after {
-        content: '';
-        position: absolute;
-        width: 9px;
-        height: 9px;
-        rotate: 45deg;
-        background: var(--lapis);
-        opacity: .85;
-    }
-    .folio-frame::before { inset-block-start: -5px; inset-inline-start: 28px; }
-    .folio-frame::after  { inset-block-end: -5px;  inset-inline-end: 28px; background: var(--verdigris); }
-
-    .folio-eyebrow {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: .5rem;
-        font-size: .6875rem;
-        font-weight: 700;
-        letter-spacing: .14em;
-        color: var(--verdigris);
-    }
-    .folio-eyebrow .sep { padding-inline: 0; color: var(--rule); }
-
-    /* Amiri is already loaded for Quranic text; promoting it to the display
-       role gives the library a voice native to its own subject. */
-    .folio-title {
-        font-family: 'Amiri', serif;
-        line-height: 1.28;
-        letter-spacing: -.005em;
-    }
-
-    /* Colophon: the closing dateline of a manuscript, hijri first. */
-    .folio-colophon {
-        font-variant-numeric: tabular-nums;
-        font-size: .8125rem;
-        color: #6b7280;
-    }
-    .dark .folio-colophon { color: #9ca3af; }
-    .folio-colophon .sep { color: var(--rule); padding-inline: .55rem; }
-
-    /* Ends of a colophon pushed apart, so no separator can dangle at a wrap. */
-    .folio-colophon--row {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: .75rem;
-    }
-
-    .folio-plate { border: 1px solid var(--rule); background: #fff; }
-    .dark .folio-plate { background: #0f3460; }
-
-    /* Card: a folio leaf. The whole leaf is the affordance, so it carries no
-       "read more" cue — the hairline and title shift do that work. */
-    .folio-card {
-        position: relative;
-        background: #fff;
-        border: 1px solid #e9e5db;
-        border-radius: 2px;
-        transition: border-color .3s ease, box-shadow .3s ease, transform .3s ease;
-    }
-    .dark .folio-card { background: #16213e; border-color: #0f3460; }
-    .folio-card:hover {
-        border-color: var(--rule);
-        box-shadow: 0 18px 40px -22px rgba(16, 24, 32, .45);
-        transform: translateY(-3px);
-    }
-    .dark .folio-card:hover { box-shadow: 0 18px 40px -22px rgba(0, 0, 0, .7); }
-
-    /* Verdigris hairline that draws along the leaf's leading edge on hover. */
-    .folio-card::after {
-        content: '';
-        position: absolute;
-        inset-block: 0;
-        inset-inline-start: 0;
-        width: 2px;
-        background: var(--verdigris);
-        transform: scaleY(0);
-        transform-origin: top;
-        transition: transform .35s ease;
-    }
-    .folio-card:hover::after { transform: scaleY(1); }
-
-    .folio-card-media { position: relative; overflow: hidden; background: #f3f4f6; }
-    .dark .folio-card-media { background: #0f3460; }
-    .folio-card-media img { transition: transform .6s cubic-bezier(.22,.61,.36,1); }
-    .folio-card:hover .folio-card-media img { transform: scale(1.04); }
-
-    .folio-card-rule { height: 1px; background: var(--rule); opacity: .55; }
-
-    .folio-kicker {
-        font-size: .6875rem;
-        font-weight: 700;
-        letter-spacing: .12em;
-        color: var(--lapis);
-    }
-    .dark .folio-kicker { color: #64CCC5; }
-
-    .folio-seal {
+    .lib-eyebrow {
         display: inline-flex;
         align-items: center;
-        gap: .3rem;
-        padding: .2rem .55rem;
-        font-size: .6875rem;
+        gap: .45rem;
+        padding: .3rem .85rem;
+        border-radius: 9999px;
+        font-size: .75rem;
+        font-weight: 700;
+        letter-spacing: .08em;
+        color: #9ceee4;
+        background: rgba(100, 204, 197, .1);
+        border: 1px solid rgba(100, 204, 197, .28);
+    }
+
+    .lib-title {
+        font-family: 'Amiri', serif;
+        line-height: 1.22;
+        background: linear-gradient(115deg, #ffffff 0%, #b9f2ea 55%, #86dca8 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    /* Hero search — glass over the canvas. */
+    .lib-search {
+        position: relative;
+        border-radius: 1rem;
+        background: rgba(255, 255, 255, .09);
+        border: 1px solid rgba(255, 255, 255, .16);
+        -webkit-backdrop-filter: blur(16px);
+        backdrop-filter: blur(16px);
+        box-shadow: 0 16px 44px -20px rgba(0, 0, 0, .6);
+        transition: border-color .25s ease, background .25s ease, box-shadow .25s ease;
+    }
+    .lib-search:focus-within {
+        background: rgba(255, 255, 255, .13);
+        border-color: rgba(100, 204, 197, .55);
+        box-shadow: 0 16px 44px -16px rgba(100, 204, 197, .3);
+    }
+    .lib-search input { color: #fff; }
+    .lib-search input::placeholder { color: rgba(255, 255, 255, .5); }
+
+    /* Inline stat readout — a colophon line, not a row of dashboard tiles. */
+    .lib-colophon {
+        display: inline-flex;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: .55rem;
+        font-size: .8125rem;
+        color: rgba(255, 255, 255, .62);
+        font-variant-numeric: tabular-nums;
+    }
+    .lib-colophon b { color: #fff; font-weight: 700; }
+    .lib-colophon .sep { color: rgba(255, 255, 255, .28); }
+
+    /* ── Spotlight leaf ────────────────────────────────────────────── */
+    .lib-spot {
+        position: relative;
+        display: grid;
+        border-radius: 1.5rem;
+        overflow: hidden;
+        background: #fff;
+        border: 1px solid rgb(233 236 240);
+        box-shadow: 0 28px 64px -34px rgba(2, 30, 68, .45), 0 2px 8px rgba(2, 30, 68, .06);
+        transition: transform .45s cubic-bezier(.22, 1, .36, 1), box-shadow .45s ease;
+    }
+    .dark .lib-spot {
+        background: #16213e;
+        border-color: rgba(100, 204, 197, .14);
+        box-shadow: 0 28px 64px -34px rgba(0, 0, 0, .75);
+    }
+    .lib-spot:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 38px 80px -34px rgba(0, 86, 179, .42), 0 2px 8px rgba(2, 30, 68, .06);
+    }
+    .lib-spot:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(0, 86, 179, .25);
+    }
+
+    @media (min-width: 900px) {
+        /* Text leads, plate follows — and the plate never dictates the height,
+           so a short excerpt can't open a well of dead space beside it. */
+        .lib-spot { grid-template-columns: 1.05fr .95fr; }
+    }
+
+    .lib-spot-media {
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(135deg, #eef2f7, #e3e9f2);
+        aspect-ratio: 16 / 10;
+    }
+    .dark .lib-spot-media { background: linear-gradient(135deg, #0f3460, #16213e); }
+    @media (min-width: 900px) {
+        .lib-spot-media { aspect-ratio: auto; }
+    }
+    /* Absolute, not height:100% — above 900px the plate takes its height from
+       the text column, so a percentage height would resolve to auto and the
+       image would render at its intrinsic size. */
+    .lib-spot-media img {
+        position: absolute;
+        inset: 0;
+        width: 100%; height: 100%;
+        object-fit: cover;
+        transition: transform .8s cubic-bezier(.22, .61, .36, 1);
+    }
+    .lib-spot:hover .lib-spot-media img { transform: scale(1.05); }
+    .lib-spot-media::after {
+        content: '';
+        position: absolute; inset: 0; pointer-events: none;
+        background: linear-gradient(to top, rgba(4, 18, 38, .5), transparent 55%);
+    }
+
+    /* Stacked: plate first, then the text. Ordering is done here rather than
+       with Tailwind `md:` utilities because the two-column rule below turns on
+       at 900px — driving order from a 768px breakpoint opened a band where the
+       text jumped above a full-width plate for no reason. */
+    .lib-spot-media { order: 1; }
+    .lib-spot-body  { order: 2; }
+    @media (min-width: 900px) {
+        .lib-spot-body  { order: 1; }
+        .lib-spot-media { order: 2; }
+    }
+
+    .lib-spot-body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 1.75rem;
+        min-width: 0;
+    }
+    @media (min-width: 900px) {
+        /* The leaf takes its height from this column, so give it enough
+           presence to read as an opening folio without opening a void. */
+        .lib-spot-body {
+            padding: 2.75rem;
+            min-block-size: 21rem;
+        }
+    }
+
+    .lib-spot-title {
+        font-family: 'Amiri', serif;
+        line-height: 1.3;
+        transition: color .25s ease;
+    }
+    .lib-spot:hover .lib-spot-title { color: #0056b3; }
+    .dark .lib-spot:hover .lib-spot-title { color: #64CCC5; }
+
+    .lib-spot-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        align-self: flex-start;
+        padding: .7rem 1.35rem;
+        border-radius: .85rem;
+        font-size: .875rem;
         font-weight: 700;
         color: #fff;
-        background: var(--verdigris);
+        background: linear-gradient(135deg, #0056b3 0%, #218838 100%);
+        box-shadow: 0 12px 26px -12px rgba(0, 86, 179, .7);
+        transition: transform .3s cubic-bezier(.22, 1, .36, 1), box-shadow .3s ease;
+    }
+    .lib-spot:hover .lib-spot-cta {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 34px -12px rgba(0, 86, 179, .8);
+    }
+    .lib-spot-cta svg { transition: transform .3s cubic-bezier(.22, 1, .36, 1); }
+    .lib-spot:hover .lib-spot-cta svg { transform: translateX(3px); }
+    [dir="rtl"] .lib-spot:hover .lib-spot-cta svg { transform: translateX(-3px); }
+
+    /* ── Sticky filter rail ────────────────────────────────────────── */
+    .lib-rail {
+        position: sticky;
+        top: 4.75rem;
+        z-index: 30;
+        border-radius: 1.1rem;
+        background: rgba(255, 255, 255, .88);
+        -webkit-backdrop-filter: blur(18px) saturate(150%);
+        backdrop-filter: blur(18px) saturate(150%);
+        border: 1px solid rgb(233 236 240);
+        box-shadow: 0 10px 30px -20px rgba(2, 30, 68, .35);
+    }
+    .dark .lib-rail {
+        background: rgba(22, 33, 62, .88);
+        border-color: rgba(100, 204, 197, .14);
+        box-shadow: 0 10px 30px -20px rgba(0, 0, 0, .7);
+    }
+
+    /* Pills scroll horizontally instead of wrapping into a tall stack that
+       would push the sticky rail over a third of the viewport on mobile. */
+    .lib-pills {
+        display: flex;
+        gap: .45rem;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+        padding-block: .1rem;
+        -webkit-mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent);
+        mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent);
+    }
+    .lib-pills::-webkit-scrollbar { display: none; }
+
+    .lib-pill {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        padding: .5rem .95rem;
+        border-radius: 9999px;
+        font-size: .8125rem;
+        font-weight: 700;
+        white-space: nowrap;
+        cursor: pointer;
+        border: 1px solid rgb(233 236 240);
+        color: rgb(71 82 99);
+        background: #fff;
+        transition: color .22s ease, border-color .22s ease, background .22s ease, box-shadow .22s ease;
+    }
+    .dark .lib-pill {
+        border-color: rgba(100, 204, 197, .16);
+        color: rgb(213 219 228);
+        background: rgba(15, 52, 96, .55);
+    }
+    .lib-pill:hover { border-color: rgba(0, 86, 179, .45); color: #0056b3; }
+    .dark .lib-pill:hover { color: #64CCC5; border-color: rgba(100, 204, 197, .45); }
+    .lib-pill.is-active {
+        color: #fff;
+        border-color: transparent;
+        background: linear-gradient(135deg, #0056b3 0%, #218838 100%);
+        box-shadow: 0 8px 18px -8px rgba(0, 86, 179, .6);
+    }
+    .lib-pill .n {
+        font-size: .6875rem;
+        padding: .05rem .42rem;
+        border-radius: 9999px;
+        background: rgb(243 245 248);
+        color: rgb(122 132 148);
+        font-variant-numeric: tabular-nums;
+    }
+    .dark .lib-pill .n { background: rgba(255, 255, 255, .08); color: rgb(156 163 175); }
+    .lib-pill.is-active .n { background: rgba(255, 255, 255, .24); color: #fff; }
+
+    .lib-ctrl {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: .75rem;
+        border: 1px solid rgb(233 236 240);
+        background: #fff;
+        color: rgb(107 118 135);
+        cursor: pointer;
+        transition: color .2s ease, border-color .2s ease, background .2s ease;
+    }
+    .dark .lib-ctrl {
+        border-color: rgba(100, 204, 197, .16);
+        background: rgba(15, 52, 96, .55);
+        color: rgb(200 208 219);
+    }
+    .lib-ctrl:hover { color: #0056b3; border-color: rgba(0, 86, 179, .4); }
+    .dark .lib-ctrl:hover { color: #64CCC5; }
+    .lib-ctrl.is-active {
+        color: #fff;
+        border-color: transparent;
+        background: linear-gradient(135deg, #0056b3 0%, #218838 100%);
+    }
+
+    /* List view narrows the cards to a reading measure, so the section head and
+       the active-filter chips have to follow or they overhang the content they
+       label. Matches `.art-list` in the card stylesheet. */
+    @media (min-width: 1024px) {
+        .lib-narrow {
+            max-inline-size: 58rem;
+            margin-inline: auto;
+        }
+    }
+
+    /* Section rule: a hairline that fills the width beside the heading. */
+    .lib-rule {
+        flex: 1 1 auto;
+        height: 1px;
+        min-width: 1.5rem;
+        background: linear-gradient(90deg, rgb(226 230 236), transparent);
+    }
+    .dark .lib-rule { background: linear-gradient(90deg, rgba(100, 204, 197, .22), transparent); }
+    [dir="rtl"] .lib-rule { background: linear-gradient(270deg, rgb(226 230 236), transparent); }
+    [dir="rtl"] .dark .lib-rule { background: linear-gradient(270deg, rgba(100, 204, 197, .22), transparent); }
+
+    /* ── Pagination ────────────────────────────────────────────────── */
+    .lib-pager {
+        background: rgba(255, 255, 255, .82);
+        -webkit-backdrop-filter: blur(14px);
+        backdrop-filter: blur(14px);
+        border: 1px solid rgb(233 236 240);
+        box-shadow: 0 10px 30px -18px rgba(2, 30, 68, .3);
+    }
+    .dark .lib-pager {
+        background: rgba(22, 33, 62, .82);
+        border-color: rgba(100, 204, 197, .14);
     }
 
     @media (prefers-reduced-motion: reduce) {
-        .folio-card, .folio-card *, .folio-card::after { transition: none !important; transform: none !important; }
+        .lib-spot, .lib-spot *, .lib-pill, .lib-ctrl {
+            transition: none !important;
+            transform: none !important;
+        }
     }
 </style>
 @endpush
 
 @section('content')
 
+{{-- Included explicitly, not left to the cards: the spotlight reuses the
+     card's badge and meta classes, and a library holding a single article
+     renders no card at all — which would otherwise strip the spotlight of
+     its styles. `@once` inside makes this free when cards do render. --}}
+<x-site.article-card-styles />
+
 @php
+    $isRtl = in_array(app()->getLocale(), ['ar', 'ur'], true);
+
+    // The library opens on a piece of writing, not a counter: prefer a featured
+    // study, else the most recent one. Null when the library is still empty.
+    $spotlight   = collect($articles)->firstWhere('isFeatured', true) ?? ($articles[0] ?? null);
+    $spotlightId = $spotlight['id'] ?? null;
+
+    // Below two articles there is nothing to search, filter, sort or page
+    // through — the whole browsing apparatus stays off rather than rendering
+    // controls that operate on one row.
+    $hasLibrary = count($articles) > 1;
+
     $articlesJson   = json_encode($articles,   JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT);
     $categoriesJson = json_encode($categories, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT);
     $tagsJson       = json_encode($tags,       JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT);
-    $isRtlLocale    = in_array(app()->getLocale(), ['ar', 'ur'], true);
 @endphp
 
 <div
-    x-data="articlesIndex({
-        articles:   {{ $articlesJson }},
-        categories: {{ $categoriesJson }},
-        tags:       {{ $tagsJson }},
-        perPage:    9,
+    x-data="articlesLibrary({
+        articles:    {{ $articlesJson }},
+        categories:  {{ $categoriesJson }},
+        tags:        {{ $tagsJson }},
+        spotlightId: {{ $spotlightId !== null ? $spotlightId : 'null' }},
+        perPage:     9,
     })"
-    class="min-h-screen"
 >
 
     {{-- ============================================================ --}}
-    {{-- HERO + SEARCH --}}
+    {{-- HERO --}}
     {{-- ============================================================ --}}
-    @php
-        // The hero opens on a piece of writing, not a counter: prefer a featured
-        // study, else the most recent one. Null when the library is still empty.
-        $opening = collect($articles)->firstWhere('isFeatured', true) ?? ($articles[0] ?? null);
-    @endphp
+    <section class="lib-hero">
+        <div class="lib-hero-lattice" aria-hidden="true"></div>
 
-    <section class="folio lib-hero border-b border-gray-100 dark:border-[#0f3460]">
-        <div class="lib-hero-pattern" aria-hidden="true"></div>
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative py-12 md:py-16">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative pt-6 pb-20 md:pb-28">
 
-            <div class="max-w-5xl mx-auto">
-                {{-- Masthead: the library names itself once, quietly. --}}
-                <div class="flex items-baseline gap-3 mb-6">
-                    <h1 class="folio-title text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
-                        {{ __('articles.public.hero_title') }}
-                    </h1>
-                    <span class="hidden sm:block flex-1 h-px bg-[var(--rule)] opacity-60" aria-hidden="true"></span>
-                    <span class="folio-colophon hidden sm:inline">
-                        <span x-text="articles.length"></span> {{ __('articles.public.article_unit') }}
-                        <span class="sep" aria-hidden="true">·</span>
-                        <span x-text="categories.length"></span> {{ __('articles.public.categories') }}
-                        <span class="sep" aria-hidden="true">·</span>
-                        <span x-text="tags.length"></span> {{ __('articles.public.tags') }}
-                    </span>
-                </div>
+            {{-- Breadcrumb leads the page. It previously sat below the
+                 spotlight, orphaned between the opening article and the filter
+                 rail, where it oriented nobody. --}}
+            <x-site.breadcrumb :items="[['label' => __('articles.public.breadcrumb')]]" class="lib-crumb mb-8 md:mb-10" />
 
-                @if ($opening)
-                    {{-- The opening folio --}}
-                    <a href="{{ $opening['url'] }}"
-                       class="folio-frame group block p-6 md:p-10 fade-in-up focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30">
-                        <div class="grid md:grid-cols-[1.35fr_1fr] gap-7 md:gap-10 items-center">
+            <div class="max-w-2xl mx-auto text-center">
 
-                            <div class="min-w-0">
-                                @php
-                                    // Only say something the masthead has not already said.
-                                    $openingEyebrow = array_values(array_filter([
-                                        ! empty($opening['isFeatured']) ? __('articles.public.featured') : null,
-                                        $opening['category'] ?? null,
-                                    ]));
-                                @endphp
-                                @if ($openingEyebrow)
-                                    <p class="folio-eyebrow mb-3">
-                                        @foreach ($openingEyebrow as $i => $part)
-                                            @if ($i > 0)<span class="sep" aria-hidden="true">·</span>@endif{{ $part }}
-                                        @endforeach
-                                    </p>
-                                @endif
+                <span class="lib-eyebrow">
+                    <i data-lucide="book-open" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                    {{ __('articles.public.breadcrumb') }}
+                </span>
 
-                                <h2 class="folio-title text-3xl md:text-[2.75rem] font-bold text-gray-900 dark:text-white mb-4 group-hover:text-primary transition-colors">
-                                    {{ $opening['title'] }}
-                                </h2>
+                <h1 class="lib-title text-[2.25rem] leading-tight md:text-[3.25rem] font-bold mt-5 mb-4">
+                    {{ __('articles.public.hero_title') }}
+                </h1>
 
-                                <p class="text-[15px] md:text-base text-gray-600 dark:text-gray-300 leading-relaxed line-clamp-3 mb-7">
-                                    {{ $opening['excerpt'] }}
-                                </p>
+                <p class="text-[15px] md:text-base text-white/60 leading-relaxed mb-7">
+                    {{ __('articles.public.hero_subtitle') }}
+                </p>
 
-                                <div class="h-px bg-[var(--rule)] opacity-50 mb-3.5" aria-hidden="true"></div>
-
-                                {{-- Colophon: hijri first, the calendar this material lives in. --}}
-                                <p class="folio-colophon">
-                                    @if (! empty($opening['hijriDate']))
-                                        <span>{{ $opening['hijriDate'] }}</span>
-                                        <span class="sep" aria-hidden="true">·</span>
-                                    @endif
-                                    <span>{{ $opening['dateLabel'] }}</span>
-                                    <span class="sep" aria-hidden="true">·</span>
-                                    <span>{{ $opening['readTime'] }} {{ __('articles.public.min_read') }}</span>
-                                </p>
-                            </div>
-
-                            {{-- Plate: the illustrated leaf facing the text block. --}}
-                            <div class="folio-plate p-1.5 order-first md:order-none">
-                                <div class="relative aspect-[4/3] overflow-hidden">
-                                    <img src="{{ $opening['image'] }}" alt="{{ $opening['title'] }}"
-                                         onerror="this.style.display='none';this.parentElement.classList.add('img-gradient-fallback')"
-                                         class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03] motion-reduce:transform-none">
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                @endif
-
-                {{-- Search sits beneath the folio: the frame is the subject, this is the tool. --}}
-                <div class="relative mt-8 border border-gray-200 dark:border-[#0f3460] bg-white dark:bg-[#16213e] focus-within:border-primary transition-colors">
-                    <i data-lucide="search" class="absolute start-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-gray-400 pointer-events-none"></i>
+                {{-- Search and the stat line are apparatus for a library. With
+                     a single study on the shelf they only advertise how little
+                     there is, so they appear with the second article. --}}
+                @if ($hasLibrary)
+                {{-- Search --}}
+                <div class="lib-search">
+                    <i data-lucide="search" class="absolute start-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white/45 pointer-events-none" aria-hidden="true"></i>
                     <input
                         type="search"
                         x-model.debounce.250ms="search"
                         @input="page = 1"
                         placeholder="{{ __('articles.public.search_placeholder') }}"
                         aria-label="{{ __('articles.public.search_placeholder') }}"
-                        class="w-full ps-12 pe-12 py-3.5 text-base sm:text-[15px] bg-transparent text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
+                        class="w-full ps-12 pe-12 py-3.5 text-base sm:text-[15px] bg-transparent focus:outline-none rounded-2xl"
                     >
                     <button
                         x-show="search.length > 0" x-cloak
                         @click="search = ''; page = 1"
-                        class="absolute end-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-primary transition-colors cursor-pointer"
+                        class="absolute end-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center text-white/55 hover:text-white hover:bg-white/15 transition-colors cursor-pointer"
                         aria-label="{{ __('articles.public.close') }}"
                     >
-                        <i data-lucide="x" class="w-4 h-4"></i>
+                        <i data-lucide="x" class="w-4 h-4" aria-hidden="true"></i>
                     </button>
                 </div>
+
+                {{-- Colophon --}}
+                <p class="lib-colophon mt-5">
+                    <span><b x-text="articles.length"></b> {{ __('articles.public.article_unit') }}</span>
+                    <span class="sep" aria-hidden="true">•</span>
+                    <span><b x-text="categories.length"></b> {{ __('articles.public.categories') }}</span>
+                    <span class="sep" aria-hidden="true">•</span>
+                    <span><b x-text="tags.length"></b> {{ __('articles.public.tags') }}</span>
+                </p>
+                @endif
             </div>
         </div>
     </section>
 
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 pb-16">
 
-        <x-site.breadcrumb :items="[['label' => __('articles.public.breadcrumb')]]" class="mb-8" />
+        {{-- ============================================================ --}}
+        {{-- SPOTLIGHT — lifted over the hero seam. Steps aside while a    --}}
+        {{-- filter or search is active: the reader is looking for         --}}
+        {{-- something specific, not for our editorial pick.               --}}
+        {{-- ============================================================ --}}
+        @if ($spotlight)
+            <a href="{{ $spotlight['url'] }}"
+               x-show="!hasFilters"
+               class="lib-spot group -mt-12 md:-mt-16 relative z-10">
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-            {{-- ============================================================ --}}
-            {{-- SIDEBAR --}}
-            {{-- ============================================================ --}}
-            <aside class="lg:col-span-3">
-                <div class="lg:sticky lg:top-24 space-y-6">
-
-                    {{-- Categories --}}
-                    <div class="card-premium p-5">
-                        <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
-                            <span class="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                                <i data-lucide="folder" class="w-4 h-4"></i>
+                <div class="lib-spot-body">
+                    <div class="flex items-center flex-wrap gap-2 mb-4">
+                        @if (! empty($spotlight['isFeatured']))
+                            <span class="art-badge art-badge--featured">
+                                <i data-lucide="star" class="w-3 h-3" aria-hidden="true"></i>
+                                {{ __('articles.public.featured') }}
                             </span>
-                            {{ __('articles.public.categories') }}
-                        </h2>
-                        <div class="space-y-1">
-                            <button
-                                @click="setCategory(null)"
-                                class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer"
-                                :class="activeCategory === null
-                                    ? 'bg-gradient-to-l from-primary to-secondary text-white shadow-md'
-                                    : 'text-gray-700 dark:text-gray-200 hover:bg-primary/5 hover:translate-x-0.5 rtl:hover:-translate-x-0.5'"
-                            >
-                                <span>{{ __('articles.public.all_categories') }}</span>
-                                <span class="text-xs px-2 py-0.5 rounded-full"
-                                      :class="activeCategory === null ? 'bg-white/20' : 'bg-gray-100 dark:bg-[#0f3460]'"
-                                      x-text="articles.length"></span>
-                            </button>
-                            <template x-for="cat in categories" :key="cat.id">
-                                <button
-                                    @click="setCategory(cat.id)"
-                                    class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer"
-                                    :class="activeCategory === cat.id
-                                        ? 'bg-gradient-to-l from-primary to-secondary text-white shadow-md'
-                                        : 'text-gray-700 dark:text-gray-200 hover:bg-primary/5 hover:translate-x-0.5 rtl:hover:-translate-x-0.5'"
-                                >
-                                    <span class="truncate" x-text="cat.name"></span>
-                                    <span class="text-xs px-2 py-0.5 rounded-full shrink-0 ms-2"
-                                          :class="activeCategory === cat.id ? 'bg-white/20' : 'bg-gray-100 dark:bg-[#0f3460]'"
-                                          x-text="cat.count"></span>
-                                </button>
-                            </template>
-                        </div>
-                    </div>
-
-                    {{-- Tag cloud --}}
-                    <div class="card-premium p-5">
-                        <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
-                            <span class="w-7 h-7 rounded-lg bg-secondary/10 text-secondary flex items-center justify-center">
-                                <i data-lucide="tag" class="w-4 h-4"></i>
+                        @endif
+                        @if (! empty($spotlight['category']))
+                            <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-primary/10 text-primary">
+                                {{ $spotlight['category'] }}
                             </span>
-                            {{ __('articles.public.tags') }}
-                        </h2>
-                        <template x-if="tags.length === 0">
-                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('articles.public.no_tags') }}</p>
-                        </template>
-                        <div class="flex flex-wrap gap-2" x-show="tags.length > 0">
-                            <template x-for="tag in tags" :key="tag.name">
-                                <button
-                                    @click="toggleTag(tag.name)"
-                                    class="px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer"
-                                    :class="activeTags.includes(tag.name)
-                                        ? 'bg-gradient-to-l from-primary to-secondary text-white shadow-md scale-105'
-                                        : 'bg-gray-100 dark:bg-[#0f3460] text-gray-700 dark:text-gray-200 hover:bg-primary/10 hover:text-primary'"
-                                >
-                                    <span x-text="tag.name"></span>
-                                    <span class="opacity-70" x-text="'(' + tag.count + ')'"></span>
-                                </button>
-                            </template>
-                        </div>
+                        @endif
                     </div>
 
-                    {{-- Results count --}}
-                    <div class="card-premium p-6 text-center relative overflow-hidden">
-                        <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-l from-primary via-accent to-secondary" aria-hidden="true"></div>
-                        <div class="text-4xl font-bold text-gradient tabular-nums" x-text="filtered.length"></div>
-                        <div class="text-sm mt-1 text-gray-500 dark:text-gray-400">{{ __('articles.public.article_unit') }}</div>
-                    </div>
-                </div>
-            </aside>
+                    <h2 class="lib-spot-title text-[1.6rem] md:text-[2.1rem] font-bold text-gray-900 dark:text-white mb-3.5">
+                        {{ $spotlight['title'] }}
+                    </h2>
 
-            {{-- ============================================================ --}}
-            {{-- MAIN --}}
-            {{-- ============================================================ --}}
-            <main class="lg:col-span-9">
-
-                {{-- Toolbar: count + sort + view toggle --}}
-                <div class="card-premium px-4 py-3 flex items-center justify-between flex-wrap gap-3 mb-6">
-                    <p class="text-sm text-gray-600 dark:text-gray-300">
-                        {{ __('site.showing') }}
-                        <span class="font-bold text-primary tabular-nums" x-text="filtered.length"></span>
-                        {{ __('site.of') }}
-                        <span class="tabular-nums" x-text="articles.length"></span>
-                        {{ __('articles.public.article_unit') }}
+                    <p class="text-[15px] text-gray-600 dark:text-gray-300 leading-[1.85] line-clamp-3 mb-5">
+                        {{ $spotlight['excerpt'] }}
                     </p>
 
-                    <div class="flex items-center gap-2 flex-wrap">
-                        {{-- Sort --}}
-                        <select
-                            x-model="sort"
-                            @change="page = 1"
-                            aria-label="{{ __('articles.public.sort_label') }}"
-                            class="px-4 py-2 text-base sm:text-sm rounded-xl border border-gray-200 dark:border-[#0f3460] bg-white dark:bg-[#16213e] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all cursor-pointer"
-                        >
-                            <option value="latest">{{ __('articles.public.sort_latest') }}</option>
-                            <option value="oldest">{{ __('articles.public.sort_oldest') }}</option>
-                            <option value="popular">{{ __('articles.public.sort_popular') }}</option>
-                            <option value="title">{{ __('articles.public.sort_title') }}</option>
-                        </select>
-
-                        {{-- View toggle --}}
-                        <div class="flex gap-1 rounded-xl p-1 bg-gray-100 dark:bg-[#0f3460]">
-                            <button
-                                @click="setView('grid')"
-                                class="p-2 rounded-lg transition-all cursor-pointer"
-                                :class="view === 'grid' ? 'bg-gradient-to-l from-primary to-secondary text-white shadow' : 'text-gray-500 dark:text-gray-300 hover:text-primary'"
-                                :aria-pressed="view === 'grid'"
-                                aria-label="{{ __('articles.public.view_grid') }}"
-                            >
-                                <i data-lucide="layout-grid" class="w-5 h-5"></i>
-                            </button>
-                            <button
-                                @click="setView('list')"
-                                class="p-2 rounded-lg transition-all cursor-pointer"
-                                :class="view === 'list' ? 'bg-gradient-to-l from-primary to-secondary text-white shadow' : 'text-gray-500 dark:text-gray-300 hover:text-primary'"
-                                :aria-pressed="view === 'list'"
-                                aria-label="{{ __('articles.public.view_list') }}"
-                            >
-                                <i data-lucide="list" class="w-5 h-5"></i>
-                            </button>
-                        </div>
+                    <div class="art-meta !gap-x-5 flex-wrap mb-6">
+                        @if (! empty($spotlight['author']))
+                            <span>
+                                <i data-lucide="pen-line" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                                {{ $spotlight['author'] }}
+                            </span>
+                        @endif
+                        <span>
+                            <i data-lucide="calendar" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                            {{ $spotlight['hijriDate'] ?: $spotlight['dateLabel'] }}
+                        </span>
+                        <span>
+                            <i data-lucide="clock" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                            {{ $spotlight['readTime'] }} {{ __('articles.public.min_read') }}
+                        </span>
                     </div>
+
+                    <span class="lib-spot-cta">
+                        {{ __('articles.public.read_more') }}
+                        <i data-lucide="arrow-{{ $isRtl ? 'left' : 'right' }}" class="w-4 h-4" aria-hidden="true"></i>
+                    </span>
                 </div>
 
-                {{-- Active filters (each chip removable) --}}
-                <div x-show="hasFilters" x-cloak class="flex flex-wrap items-center gap-2 mb-6">
-                    <button
-                        @click="clearFilters()"
-                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-red-500 text-white hover:bg-red-600 transition-colors cursor-pointer"
-                    >
-                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                        {{ __('articles.public.clear_filters') }}
+                <div class="lib-spot-media">
+                    <img src="{{ $spotlight['image'] }}" alt="{{ $spotlight['title'] }}"
+                         fetchpriority="high" decoding="async"
+                         onerror="this.style.display='none';this.parentElement.classList.add('img-gradient-fallback')">
+                </div>
+            </a>
+        @endif
+
+        {{-- Everything below is the browsable library. A catalogue whose only
+             article is already open in the spotlight has nothing to filter,
+             sort or page through, so the whole apparatus stays off until
+             there is a second study to browse. --}}
+        @if (empty($articles))
+            <x-site.empty-state
+                icon="library"
+                :title="__('articles.public.empty_title')"
+                :message="__('articles.public.empty_message')"
+            />
+        @elseif (count($articles) > 1)
+
+        {{-- ============================================================ --}}
+        {{-- FILTER RAIL --}}
+        {{-- ============================================================ --}}
+        <div class="lib-rail px-3.5 py-3">
+            <div class="flex items-center gap-3">
+
+                {{-- Categories --}}
+                <div class="lib-pills flex-1 min-w-0" role="group" aria-label="{{ __('articles.public.categories') }}">
+                    <button @click="setCategory(null)" class="lib-pill" :class="activeCategory === null && 'is-active'">
+                        <span>{{ __('articles.public.all_categories') }}</span>
+                        <span class="n" x-text="articles.length"></span>
                     </button>
-                    <template x-if="activeCategory !== null">
-                        <button
-                            @click="setCategory(activeCategory)"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
-                        >
-                            <i data-lucide="folder" class="w-3.5 h-3.5"></i>
-                            <span x-text="activeCategoryName"></span>
-                            <i data-lucide="x" class="w-3 h-3 opacity-70"></i>
-                        </button>
-                    </template>
-                    <template x-for="tag in activeTags" :key="tag">
-                        <button
-                            @click="toggleTag(tag)"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-secondary/10 text-secondary hover:bg-secondary/20 transition-colors cursor-pointer"
-                        >
-                            <i data-lucide="tag" class="w-3.5 h-3.5"></i>
-                            <span x-text="tag"></span>
-                            <i data-lucide="x" class="w-3 h-3 opacity-70"></i>
+                    <template x-for="cat in categories" :key="cat.id">
+                        <button @click="setCategory(cat.id)" class="lib-pill" :class="activeCategory === cat.id && 'is-active'">
+                            <span x-text="cat.name"></span>
+                            <span class="n" x-text="cat.count"></span>
                         </button>
                     </template>
                 </div>
 
-                {{-- ============================================================ --}}
-                {{-- GRID VIEW — server-rendered so every article is a real,    --}}
-                {{-- crawlable <a href> in the initial HTML (no JS required).    --}}
-                {{-- Alpine progressively enhances: per-card x-show drives the   --}}
-                {{-- active filter/page, CSS `order` applies the active sort.    --}}
-                {{-- ============================================================ --}}
-                <div x-show="view === 'grid'" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                    @foreach ($articles as $article)
-                        <a href="{{ $article['url'] }}"
-                           x-show="onPage({{ $article['id'] }})"
-                           :style="{ order: orderRank({{ $article['id'] }}) }"
-                           class="group folio folio-card flex flex-col focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30">
-                            {{-- Plate --}}
-                            <div class="folio-card-media aspect-[16/10]">
-                                <img src="{{ $article['image'] }}" alt="{{ $article['title'] }}" loading="lazy"
-                                     onerror="this.style.display='none';this.parentElement.classList.add('img-gradient-fallback')"
-                                     onload="this.style.display='';this.parentElement.classList.remove('img-gradient-fallback')"
-                                     class="w-full h-full object-cover motion-reduce:transform-none">
-                                @if ($article['isFeatured'])
-                                    <span class="folio-seal absolute top-0 start-0 z-10">
-                                        {{ __('articles.public.featured') }}
-                                    </span>
-                                @endif
-                            </div>
-                            <div class="folio-card-rule" aria-hidden="true"></div>
+                {{-- Controls --}}
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <select
+                        x-model="sort"
+                        @change="page = 1"
+                        aria-label="{{ __('articles.public.sort_label') }}"
+                        class="lib-ctrl h-9 ps-3 pe-8 text-base sm:text-[13px] font-semibold text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    >
+                        <option value="latest">{{ __('articles.public.sort_latest') }}</option>
+                        <option value="oldest">{{ __('articles.public.sort_oldest') }}</option>
+                        <option value="popular">{{ __('articles.public.sort_popular') }}</option>
+                        <option value="title">{{ __('articles.public.sort_title') }}</option>
+                    </select>
 
-                            {{-- Text block --}}
-                            <div class="p-5 flex flex-col flex-1">
-                                @if (! empty($article['category']))
-                                    <p class="folio-kicker mb-2">{{ $article['category'] }}</p>
-                                @endif
+                    <button
+                        x-show="tags.length > 0"
+                        @click="showTags = !showTags"
+                        class="lib-ctrl w-9 h-9"
+                        :class="(showTags || activeTags.length) && 'is-active'"
+                        :aria-expanded="showTags"
+                        aria-controls="lib-tags"
+                        aria-label="{{ __('articles.public.tags') }}"
+                    >
+                        <i data-lucide="tags" class="w-[18px] h-[18px]" aria-hidden="true"></i>
+                    </button>
 
-                                <h3 class="folio-title text-[1.35rem] font-bold text-gray-900 dark:text-white mb-2.5 line-clamp-2 group-hover:text-primary transition-colors">{{ $article['title'] }}</h3>
-
-                                <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 mb-5 flex-1 leading-relaxed">{{ $article['excerpt'] }}</p>
-
-                                @if (! empty($article['tags']))
-                                    <div class="flex flex-wrap gap-x-3 gap-y-1 mb-4 text-[11px] text-gray-500 dark:text-gray-400">
-                                        @foreach (array_slice($article['tags'], 0, 3) as $tag)
-                                            <span>{{ $tag }}</span>
-                                        @endforeach
-                                    </div>
-                                @endif
-
-                                {{-- Colophon. The card carries the hijri date only:
-                                     it is the calendar this material is dated in,
-                                     and two dates wrap onto a second line. --}}
-                                <div class="folio-colophon folio-colophon--row pt-3 border-t border-gray-100 dark:border-[#0f3460]">
-                                    <span>{{ $article['hijriDate'] ?: $article['dateLabel'] }}</span>
-                                    <span>{{ $article['readTime'] }} {{ __('articles.public.min_read') }}</span>
-                                </div>
-                            </div>
-                        </a>
-                    @endforeach
+                    <span class="hidden sm:flex items-center gap-1.5">
+                        <button @click="setView('grid')" class="lib-ctrl w-9 h-9" :class="view === 'grid' && 'is-active'"
+                                :aria-pressed="view === 'grid'" aria-label="{{ __('articles.public.view_grid') }}">
+                            <i data-lucide="layout-grid" class="w-[18px] h-[18px]" aria-hidden="true"></i>
+                        </button>
+                        <button @click="setView('list')" class="lib-ctrl w-9 h-9" :class="view === 'list' && 'is-active'"
+                                :aria-pressed="view === 'list'" aria-label="{{ __('articles.public.view_list') }}">
+                            <i data-lucide="list" class="w-[18px] h-[18px]" aria-hidden="true"></i>
+                        </button>
+                    </span>
                 </div>
+            </div>
 
-                {{-- ============================================================ --}}
-                {{-- LIST VIEW --}}
-                {{-- ============================================================ --}}
-                <div x-show="view === 'list'" x-cloak class="space-y-4">
-                    <template x-for="article in paginated" :key="article.id">
-                        <a :href="article.url"
-                           class="group lib-card flex flex-col sm:flex-row">
-                            <div class="lib-card-img relative sm:w-56 shrink-0 aspect-[16/10] sm:aspect-auto overflow-hidden bg-gray-100 dark:bg-[#0f3460]">
-                                <img :src="article.image" :alt="article.title" loading="lazy"
-                                     onerror="this.style.display='none';this.parentElement.classList.add('img-gradient-fallback')"
-                                     onload="this.style.display='';this.parentElement.classList.remove('img-gradient-fallback')"
-                                     class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none">
-                                <template x-if="article.isFeatured">
-                                    <span class="absolute top-3 start-3 z-10 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-l from-primary to-secondary text-white shadow">
-                                        <i data-lucide="star" class="w-3 h-3"></i>
-                                        {{ __('articles.public.featured') }}
-                                    </span>
-                                </template>
-                            </div>
-                            <div class="p-5 flex flex-col flex-1 min-w-0">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <template x-if="article.category">
-                                        <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary" x-text="article.category"></span>
-                                    </template>
-                                    <span class="text-xs text-gray-400 dark:text-gray-500" x-text="article.dateLabel"></span>
-                                </div>
-                                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-primary transition-colors leading-snug"
-                                    x-text="article.title"></h3>
-                                <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-4 flex-1 leading-relaxed" x-text="article.excerpt"></p>
-                                <div class="flex items-center justify-between gap-4 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
-                                    <span class="inline-flex items-center gap-4">
-                                        <span class="inline-flex items-center gap-1">
-                                            <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-                                            <span x-text="article.readTime"></span>{{ __('articles.public.min_read') }}
-                                        </span>
-                                        <span class="inline-flex items-center gap-1">
-                                            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-                                            <span x-text="article.views"></span> {{ __('articles.public.views') }}
-                                        </span>
-                                    </span>
-                                    <span class="lib-read-cue inline-flex items-center gap-1 font-semibold text-primary">
-                                        {{ __('articles.public.read_more') }}
-                                        <i data-lucide="arrow-{{ $isRtlLocale ? 'left' : 'right' }}" class="w-3.5 h-3.5"></i>
-                                    </span>
-                                </div>
-                            </div>
-                        </a>
+            {{-- Tag drawer --}}
+            <div id="lib-tags" x-show="showTags" x-collapse x-cloak
+                 class="pt-3 mt-3 border-t border-gray-100 dark:border-white/10">
+                <div class="flex flex-wrap gap-1.5">
+                    <template x-for="tag in tags" :key="tag.name">
+                        <button @click="toggleTag(tag.name)" class="lib-pill"
+                                :class="activeTags.includes(tag.name) && 'is-active'">
+                            <span x-text="tag.name"></span>
+                            <span class="n" x-text="tag.count"></span>
+                        </button>
                     </template>
                 </div>
-
-                {{-- ============================================================ --}}
-                {{-- EMPTY STATE --}}
-                {{-- ============================================================ --}}
-                <div x-show="filtered.length === 0" x-cloak>
-                    <x-site.empty-state
-                        icon="file-search"
-                        :title="__('articles.public.empty_title')"
-                        :message="__('articles.public.empty_message')"
-                        :showReset="true"
-                        @click="clearFilters()"
-                    />
-                </div>
-
-                {{-- ============================================================ --}}
-                {{-- PAGINATION (client-side, numbered) --}}
-                {{-- ============================================================ --}}
-                <nav x-show="totalPages > 1" x-cloak aria-label="{{ __('articles.public.pagination') }}"
-                     class="flex justify-center mt-10">
-                    <div class="lib-glass rounded-full px-2 py-1.5 flex items-center gap-1 flex-wrap justify-center">
-                        <button
-                            @click="goTo(page - 1)"
-                            :disabled="page === 1"
-                            class="w-10 h-10 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-primary/10 hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                            aria-label="{{ __('articles.public.previous') }}"
-                        >
-                            <i data-lucide="chevron-{{ $isRtlLocale ? 'right' : 'left' }}" class="w-4 h-4"></i>
-                        </button>
-
-                        <template x-for="p in pageNumbers" :key="p">
-                            <button
-                                @click="goTo(p)"
-                                class="min-w-10 h-10 px-3 rounded-full font-semibold text-sm transition-all tabular-nums cursor-pointer"
-                                :class="p === page
-                                    ? 'text-white bg-gradient-to-l from-primary to-secondary shadow-md'
-                                    : 'text-gray-700 dark:text-gray-200 hover:bg-primary/10 hover:text-primary'"
-                                :aria-current="p === page ? 'page' : null"
-                                x-text="p"
-                            ></button>
-                        </template>
-
-                        <button
-                            @click="goTo(page + 1)"
-                            :disabled="page === totalPages"
-                            class="w-10 h-10 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-primary/10 hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                            aria-label="{{ __('articles.public.next') }}"
-                        >
-                            <i data-lucide="chevron-{{ $isRtlLocale ? 'left' : 'right' }}" class="w-4 h-4"></i>
-                        </button>
-                    </div>
-                </nav>
-
-            </main>
+            </div>
         </div>
+
+        {{-- ============================================================ --}}
+        {{-- SECTION HEAD: title + rule + live count, then filter chips   --}}
+        {{-- ============================================================ --}}
+        <div class="flex items-center gap-4 mt-9 mb-5" :class="view === 'list' && 'lib-narrow'">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white whitespace-nowrap"
+                x-text="hasFilters ? @js(__('articles.public.breadcrumb')) : @js(__('articles.public.more_articles'))"></h2>
+            <span class="lib-rule" aria-hidden="true"></span>
+            <p class="text-[13px] text-gray-500 dark:text-gray-400 whitespace-nowrap tabular-nums">
+                {{ __('site.showing') }}
+                <b class="text-primary" x-text="filtered.length"></b>
+                {{ __('site.of') }}
+                <span x-text="articles.length"></span>
+                {{ __('articles.public.article_unit') }}
+            </p>
+        </div>
+
+        <div x-show="hasFilters" x-cloak class="flex flex-wrap items-center gap-2 mb-5"
+             :class="view === 'list' && 'lib-narrow'">
+            <button @click="clearFilters()"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-red-500 text-white hover:bg-red-600 transition-colors cursor-pointer">
+                <i data-lucide="x" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                {{ __('articles.public.clear_filters') }}
+            </button>
+            <template x-if="activeCategory !== null">
+                <button @click="setCategory(activeCategory)"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer">
+                    <i data-lucide="folder" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                    <span x-text="activeCategoryName"></span>
+                    <i data-lucide="x" class="w-3 h-3 opacity-70" aria-hidden="true"></i>
+                </button>
+            </template>
+            <template x-for="tag in activeTags" :key="tag">
+                <button @click="toggleTag(tag)"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-secondary/10 text-secondary hover:bg-secondary/20 transition-colors cursor-pointer">
+                    <i data-lucide="tag" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                    <span x-text="tag"></span>
+                    <i data-lucide="x" class="w-3 h-3 opacity-70" aria-hidden="true"></i>
+                </button>
+            </template>
+        </div>
+
+        {{-- ============================================================ --}}
+        {{-- CARDS                                                        --}}
+        {{--                                                              --}}
+        {{-- Server-rendered so every article is a real, crawlable <a> in --}}
+        {{-- the initial HTML and the library works with JS off. Alpine    --}}
+        {{-- only decides which leaves are on the current page (x-show)    --}}
+        {{-- and their visual order (CSS `order`). Grid vs list is a class --}}
+        {{-- swap on this one container — not a second copy of the DOM.    --}}
+        {{-- ============================================================ --}}
+        <div :class="view === 'list'
+                ? 'art-list flex flex-col gap-4'
+                : 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6'">
+            @foreach ($articles as $i => $article)
+                {{-- Computed out here on purpose: a `<` inside a component-tag
+                     attribute derails Blade's tag parser. --}}
+                @php($aboveFold = $i <= 2)
+                <x-site.article-card
+                    :article="$article"
+                    :eager="$aboveFold"
+                    x-show="onPage({{ $article['id'] }})"
+                    ::style="{ order: orderRank({{ $article['id'] }}) }"
+                />
+            @endforeach
+        </div>
+
+        {{-- ============================================================ --}}
+        {{-- NO MATCHES — only when a filter actually excluded everything. --}}
+        {{-- ============================================================ --}}
+        <div x-show="filtered.length === 0" x-cloak>
+            <x-site.empty-state
+                icon="file-search"
+                :title="__('articles.public.empty_title')"
+                :message="__('articles.public.empty_message')"
+                :showReset="true"
+                @click="clearFilters()"
+            />
+        </div>
+
+        {{-- ============================================================ --}}
+        {{-- PAGINATION --}}
+        {{-- ============================================================ --}}
+        <nav x-show="totalPages > 1" x-cloak aria-label="{{ __('articles.public.pagination') }}"
+             class="flex justify-center mt-10">
+            <div class="lib-pager rounded-full px-2 py-1.5 flex items-center gap-1 flex-wrap justify-center">
+                <button @click="goTo(page - 1)" :disabled="page === 1"
+                        class="w-9 h-9 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-primary/10 hover:text-primary transition-colors disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer"
+                        aria-label="{{ __('articles.public.previous') }}">
+                    <i data-lucide="chevron-{{ $isRtl ? 'right' : 'left' }}" class="w-4 h-4" aria-hidden="true"></i>
+                </button>
+
+                <template x-for="p in pageNumbers" :key="p">
+                    <button @click="goTo(p)"
+                            class="min-w-9 h-9 px-3 rounded-full font-bold text-[13px] transition-all tabular-nums cursor-pointer"
+                            :class="p === page
+                                ? 'text-white bg-gradient-to-l from-primary to-secondary shadow-md'
+                                : 'text-gray-700 dark:text-gray-200 hover:bg-primary/10 hover:text-primary'"
+                            :aria-current="p === page ? 'page' : null"
+                            x-text="p"></button>
+                </template>
+
+                <button @click="goTo(page + 1)" :disabled="page === totalPages"
+                        class="w-9 h-9 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-primary/10 hover:text-primary transition-colors disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer"
+                        aria-label="{{ __('articles.public.next') }}">
+                    <i data-lucide="chevron-{{ $isRtl ? 'left' : 'right' }}" class="w-4 h-4" aria-hidden="true"></i>
+                </button>
+            </div>
+        </nav>
+
+        @endif
+
     </div>
 </div>
 
 @push('scripts')
 <script>
-    function articlesIndex(config) {
+    function articlesLibrary(config) {
         return {
-            articles:   config.articles || [],
-            categories: config.categories || [],
-            tags:       config.tags || [],
-            perPage:    config.perPage || 9,
+            articles:    config.articles || [],
+            categories:  config.categories || [],
+            tags:        config.tags || [],
+            spotlightId: config.spotlightId ?? null,
+            perPage:     config.perPage || 9,
 
             search: '',
             activeCategory: null,
             activeTags: [],
             sort: 'latest',
-            view: localStorage.getItem('viewMode') || 'grid',
+            view: localStorage.getItem('articlesView') || 'grid',
+            showTags: false,
             page: 1,
 
             init() {
                 this.$watch('paginated', () => this.refreshIcons());
                 this.$watch('view', () => this.refreshIcons());
                 this.$watch('hasFilters', () => this.refreshIcons());
+                this.$watch('showTags', () => this.refreshIcons());
                 this.refreshIcons();
             },
 
+            /**
+             * While browsing unfiltered, the spotlight article is already
+             * featured above the rail — listing it again would show the same
+             * study twice. As soon as the reader filters or searches, the
+             * spotlight steps aside and the whole library is searchable.
+             */
+            get browseList() {
+                if (this.hasFilters || this.spotlightId === null) return this.articles;
+
+                return this.articles.filter(a => a.id !== this.spotlightId);
+            },
+
             get filtered() {
-                let list = this.articles;
+                let list = this.browseList;
 
                 if (this.activeCategory !== null) {
                     list = list.filter(a => a.categoryId === this.activeCategory);
@@ -778,12 +817,13 @@
 
             get paginated() {
                 const start = (this.page - 1) * this.perPage;
+
                 return this.filtered.slice(start, start + this.perPage);
             },
 
-            // --- Server-rendered grid enhancement -------------------------------
-            // The grid <a> cards are printed by Blade; Alpine only toggles which
-            // ones show (current filtered page) and their visual order (sort).
+            // --- Server-rendered card enhancement -------------------------------
+            // Cards are printed by Blade; Alpine only toggles which ones show
+            // (current filtered page) and their visual order (active sort).
             get pageIds() {
                 return new Set(this.paginated.map(a => a.id));
             },
@@ -791,6 +831,7 @@
             get orderMap() {
                 const map = {};
                 this.filtered.forEach((a, i) => { map[a.id] = i; });
+
                 return map;
             },
 
@@ -805,11 +846,11 @@
 
             get pageNumbers() {
                 const total = this.totalPages;
-                const cur = this.page;
-                const start = Math.max(1, cur - 2);
-                const end = Math.min(total, cur + 2);
+                const start = Math.max(1, this.page - 2);
+                const end = Math.min(total, this.page + 2);
                 const out = [];
                 for (let i = start; i <= end; i++) out.push(i);
+
                 return out;
             },
 
@@ -819,6 +860,7 @@
 
             get activeCategoryName() {
                 const cat = this.categories.find(c => c.id === this.activeCategory);
+
                 return cat ? cat.name : '';
             },
 
@@ -836,7 +878,7 @@
 
             setView(mode) {
                 this.view = mode;
-                localStorage.setItem('viewMode', mode);
+                localStorage.setItem('articlesView', mode);
             },
 
             goTo(p) {

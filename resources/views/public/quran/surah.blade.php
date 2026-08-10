@@ -420,6 +420,12 @@
         selectedTranslationId: parseInt(localStorage.getItem('selectedTranslationId')) || {{ $defaultTranslationId }},
         translationCache: {},   // resourceId -> { verseId: text } (only languages/editions other than the inlined locale default)
 
+        // Arabic locale shows Arabic-Indic digits (٠-٩) for verse/page numbers
+        fmtNum(n) {
+            if (this.currentLocale !== 'ar' || n === null || n === undefined) { return n; }
+            return String(n).replace(/[0-9]/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
+        },
+
         boot() {
             // Keep the persisted edition valid for the active language; otherwise fall
             // back to the default (Saheeh International).
@@ -901,7 +907,7 @@
                     <div class="flex items-center gap-3 pt-2">
                         <div class="flex-1 h-px" :class="$store.theme.dark ? 'bg-gray-800' : 'bg-gray-200'"></div>
                         <span class="px-3 py-1 rounded-full text-xs font-semibold" :class="$store.theme.dark ? 'bg-gray-800 text-gray-300' : 'bg-gray-200 text-gray-600'">
-                            {{ __('quran.nav.page') }} <span x-text="grp.page"></span>
+                            {{ __('quran.nav.page') }} <span x-text="fmtNum(grp.page)"></span>
                         </span>
                         <div class="flex-1 h-px" :class="$store.theme.dark ? 'bg-gray-800' : 'bg-gray-200'"></div>
                     </div>
@@ -917,10 +923,10 @@
                              :class="$store.theme.dark ? 'bg-gray-800/50 border-b border-gray-700' : 'bg-gray-50 border-b border-gray-200'">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 bg-gradient-to-br from-[#0056b3] to-[#218838] rounded-full flex items-center justify-center shadow-lg">
-                                    <span class="text-white font-bold text-sm" x-text="verse.number"></span>
+                                    <span class="text-white font-bold text-sm" x-text="fmtNum(verse.number)"></span>
                                 </div>
                                 <span class="font-semibold" :class="$store.theme.dark ? 'text-white' : 'text-gray-900'">
-                                    {{ __('quran.public.verse_label') }} <span x-text="verse.number"></span>
+                                    {{ __('quran.public.verse_label') }} <span x-text="fmtNum(verse.number)"></span>
                                 </span>
                                 <span x-show="verse.has_sajdah"
                                     class="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">
@@ -1056,14 +1062,14 @@
                     <div class="flex items-center gap-3 mb-3">
                         <div class="flex-1 h-px" :class="$store.theme.dark ? 'bg-gray-800' : 'bg-gray-200'"></div>
                         <span class="px-3 py-1 rounded-full text-xs font-semibold" :class="$store.theme.dark ? 'bg-gray-800 text-gray-300' : 'bg-gray-200 text-gray-600'">
-                            {{ __('quran.nav.page') }} <span x-text="grp.page"></span>
+                            {{ __('quran.nav.page') }} <span x-text="fmtNum(grp.page)"></span>
                         </span>
                         <div class="flex-1 h-px" :class="$store.theme.dark ? 'bg-gray-800' : 'bg-gray-200'"></div>
                     </div>
                     <div class="verse-card rounded-2xl shadow-lg p-6 sm:p-8" :class="$store.theme.dark ? 'bg-gray-900' : 'bg-white'">
                         <p class="font-['Amiri'] leading-loose text-start" dir="rtl"
                            :class="$store.theme.dark ? 'text-white' : 'text-gray-900'"
-                           :style="`font-size: ${fontSize}px`"><template x-for="verse in grp.items" :key="verse.id"><span class="cursor-pointer" @click="tafsirVerse = verse; loadVerseTafsir(verse)"><span x-text="verse.arabic"></span><span class="inline-flex items-center justify-center align-middle mx-1 w-7 h-7 text-xs font-sans font-bold rounded-full" :class="$store.theme.dark ? 'bg-gray-800 text-[#64CCC5]' : 'bg-gray-100 text-[#0056b3]'" x-text="verse.number"></span> </span></template></p>
+                           :style="`font-size: ${fontSize}px`"><template x-for="verse in grp.items" :key="verse.id"><span class="cursor-pointer" @click="tafsirVerse = verse; loadVerseTafsir(verse)"><span x-text="verse.arabic"></span><span class="inline-flex items-center justify-center align-middle mx-1 w-7 h-7 text-xs font-sans font-bold rounded-full" :class="$store.theme.dark ? 'bg-gray-800 text-[#64CCC5]' : 'bg-gray-100 text-[#0056b3]'" x-text="fmtNum(verse.number)"></span> </span></template></p>
                     </div>
                 </div>
                 </template>
@@ -1084,20 +1090,26 @@
             <div class="flex items-center justify-between gap-4 py-8">
                 @if($prevSurah)
                 <a href="{{ route('public.quran.surah', $prevSurah) }}"
-                   class="flex items-center gap-2.5 px-5 py-3 rounded-xl max-w-[48%] bg-gradient-to-r from-[#0056b3] to-[#218838] text-white hover:shadow-lg hover:scale-[1.02] transition-all"
+                   class="flex items-center gap-3 px-5 py-3 rounded-xl max-w-[48%] bg-gradient-to-r from-[#0056b3] to-[#218838] text-white hover:shadow-lg hover:scale-[1.02] transition-all"
                    aria-label="{{ __('quran.public.previous_surah') }}: {{ $prevSurahName }}"
                    title="{{ __('quran.public.previous_surah') }}: {{ $prevSurahName }}">
                     <svg class="w-5 h-5 rtl:rotate-180 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-                    <span class="font-['Amiri'] text-lg truncate">{{ $prevSurahName }}</span>
+                    <span class="flex flex-col text-start min-w-0">
+                        <span class="text-xs opacity-80">{{ __('quran.public.previous_surah') }}</span>
+                        <span class="font-['Amiri'] text-lg truncate">{{ $prevSurahName }}</span>
+                    </span>
                 </a>
                 @else <span></span> @endif
 
                 @if($nextSurah)
                 <a href="{{ route('public.quran.surah', $nextSurah) }}"
-                   class="flex items-center gap-2.5 px-5 py-3 rounded-xl max-w-[48%] bg-gradient-to-r from-[#0056b3] to-[#218838] text-white hover:shadow-lg hover:scale-[1.02] transition-all"
+                   class="flex items-center gap-3 px-5 py-3 rounded-xl max-w-[48%] bg-gradient-to-r from-[#0056b3] to-[#218838] text-white hover:shadow-lg hover:scale-[1.02] transition-all"
                    aria-label="{{ __('quran.public.next_surah') }}: {{ $nextSurahName }}"
                    title="{{ __('quran.public.next_surah') }}: {{ $nextSurahName }}">
-                    <span class="font-['Amiri'] text-lg truncate">{{ $nextSurahName }}</span>
+                    <span class="flex flex-col text-end min-w-0">
+                        <span class="text-xs opacity-80">{{ __('quran.public.next_surah') }}</span>
+                        <span class="font-['Amiri'] text-lg truncate">{{ $nextSurahName }}</span>
+                    </span>
                     <svg class="w-5 h-5 rtl:rotate-180 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                 </a>
                 @endif
@@ -1124,7 +1136,7 @@
             <button @click="tafsirVerse = null" type="button" class="absolute top-3 end-3 p-1.5 rounded-full hover:bg-white/20 transition-colors" aria-label="{{ __('quran.public.close') }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
-            <p class="text-xs text-white/80">{{ $surah['nameAr'] }} · <span x-text="tafsirVerse ? tafsirVerse.verse_key : ''"></span></p>
+            <p class="text-xs text-white/80">{{ $surah['nameAr'] }} · <span x-text="tafsirVerse ? fmtNum(tafsirVerse.verse_key) : ''"></span></p>
             <p class="font-['Amiri'] text-2xl leading-relaxed mt-2 pe-8" dir="rtl" x-text="tafsirVerse ? tafsirVerse.arabic : ''"></p>
         </div>
         <div class="p-5 overflow-y-auto">
@@ -1225,7 +1237,7 @@
                         ? ($store.theme.dark ? 'bg-gray-800 ring-1 ring-[#64CCC5]/40' : 'bg-[#0056b3]/5 ring-1 ring-[#0056b3]/20')
                         : ($store.theme.dark ? 'hover:bg-gray-800' : 'hover:bg-gray-100')">
                     <span class="w-9 h-9 flex-shrink-0 rounded-lg flex items-center justify-center text-sm font-bold tabular-nums"
-                          :class="$store.theme.dark ? 'bg-gray-800 text-[#64CCC5]' : 'bg-gray-100 text-[#0056b3]'" x-text="s.number"></span>
+                          :class="$store.theme.dark ? 'bg-gray-800 text-[#64CCC5]' : 'bg-gray-100 text-[#0056b3]'" x-text="fmtNum(s.number)"></span>
                     <span class="flex-1 min-w-0">
                         <span class="block font-['Amiri'] text-lg truncate" :class="$store.theme.dark ? 'text-white' : 'text-gray-900'" x-text="s.nameAr"></span>
                         <span class="block text-xs truncate" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">
