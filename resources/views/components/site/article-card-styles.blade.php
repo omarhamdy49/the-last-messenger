@@ -135,10 +135,10 @@
         padding: 1.25rem;
     }
 
-    /* Amiri is already loaded for Quranic text; promoting it to the headline
-       role gives the library a voice native to its own subject. */
+    /* Inherits the site family (Cairo) — Amiri is reserved for scripture, and
+       running it in the headline role made the library read as a different
+       product from the rest of the site. */
     .art-card-title {
-        font-family: 'Amiri', serif;
         line-height: 1.45;
         transition: color .25s ease;
     }

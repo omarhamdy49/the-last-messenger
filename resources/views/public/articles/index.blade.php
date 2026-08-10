@@ -27,39 +27,59 @@
        lapis #0056b3, verdigris #218838, teal #64CCC5.
        ═══════════════════════════════════════════════════════════════ */
 
-    /* ── Hero canvas ───────────────────────────────────────────────── */
+    /* ── Hero canvas ───────────────────────────────────────────────────
+       Written light-first, with `.dark` carrying the night canvas. It used to
+       be night-only, which dropped a heavy navy slab onto an otherwise pale
+       page: the masthead fought the library instead of opening it. Light mode
+       now reads as tinted paper — brand pigment bled into the ground rather
+       than painted over it. */
     .lib-hero {
         position: relative;
         isolation: isolate;
         overflow: hidden;
         background:
+            radial-gradient(ellipse 70% 60% at 18% 0%, rgba(0, 86, 179, .13), transparent 62%),
+            radial-gradient(ellipse 60% 55% at 82% 8%, rgba(33, 136, 56, .11), transparent 62%),
+            linear-gradient(168deg, #fbfcfe 0%, #eef4fa 55%, #e8f1f2 100%);
+        border-block-end: 1px solid rgb(226 232 240);
+    }
+    .dark .lib-hero {
+        background:
             radial-gradient(ellipse 70% 60% at 18% 0%, rgba(0, 86, 179, .5), transparent 62%),
             radial-gradient(ellipse 60% 55% at 82% 8%, rgba(33, 136, 56, .34), transparent 62%),
             linear-gradient(168deg, #06182f 0%, #0a2242 52%, #0b2838 100%);
+        border-block-end-color: rgba(100, 204, 197, .14);
     }
 
-    /* Star lattice drawn in gradients — no image asset, no extra request. */
+    /* Star lattice drawn in gradients — no image asset, no extra request.
+       Pigment on paper in light mode, starlight in dark. */
     .lib-hero-lattice {
         position: absolute;
         inset: 0;
         z-index: -1;
         pointer-events: none;
         background-image:
-            radial-gradient(rgba(255, 255, 255, .85) 1px, transparent 1.6px),
-            radial-gradient(rgba(100, 204, 197, .75) 1px, transparent 1.6px);
+            radial-gradient(rgba(0, 86, 179, .9) 1px, transparent 1.6px),
+            radial-gradient(rgba(33, 136, 56, .8) 1px, transparent 1.6px);
         background-size: 30px 30px, 60px 60px;
         background-position: 0 0, 15px 15px;
-        opacity: .09;
+        opacity: .07;
         -webkit-mask-image: radial-gradient(ellipse 75% 90% at 50% 15%, black, transparent 78%);
         mask-image: radial-gradient(ellipse 75% 90% at 50% 15%, black, transparent 78%);
     }
+    .dark .lib-hero-lattice {
+        background-image:
+            radial-gradient(rgba(255, 255, 255, .85) 1px, transparent 1.6px),
+            radial-gradient(rgba(100, 204, 197, .75) 1px, transparent 1.6px);
+        opacity: .09;
+    }
 
-    /* Breadcrumb sits on the dark canvas, so it needs the inverse of the
-       component's default greys. Specificity (0,2,0 / 0,2,1) is what beats the
+    /* On paper the breadcrumb keeps the component's own greys; only the night
+       canvas needs them inverted. Specificity (0,3,0 / 0,3,1) is what beats the
        Tailwind colour utilities the component merges in — no !important. */
-    .lib-hero .lib-crumb { color: rgba(255, 255, 255, .55); }
-    .lib-hero .lib-crumb a:hover { color: #64CCC5; }
-    .lib-hero .lib-crumb [aria-current] { color: #fff; }
+    .dark .lib-hero .lib-crumb { color: rgba(255, 255, 255, .55); }
+    .dark .lib-hero .lib-crumb a:hover { color: #64CCC5; }
+    .dark .lib-hero .lib-crumb [aria-current] { color: #fff; }
 
     .lib-eyebrow {
         display: inline-flex;
@@ -70,38 +90,100 @@
         font-size: .75rem;
         font-weight: 700;
         letter-spacing: .08em;
+        color: #0d6b61;
+        background: rgba(100, 204, 197, .16);
+        border: 1px solid rgba(100, 204, 197, .5);
+    }
+    .dark .lib-eyebrow {
         color: #9ceee4;
         background: rgba(100, 204, 197, .1);
-        border: 1px solid rgba(100, 204, 197, .28);
+        border-color: rgba(100, 204, 197, .28);
     }
 
+    /* Site family (Cairo) throughout — Amiri stays reserved for scripture. */
     .lib-title {
-        font-family: 'Amiri', serif;
         line-height: 1.22;
-        background: linear-gradient(115deg, #ffffff 0%, #b9f2ea 55%, #86dca8 100%);
+        background: linear-gradient(115deg, #062f5c 0%, #0056b3 48%, #1d7a33 100%);
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
     }
+    .dark .lib-title {
+        background: linear-gradient(115deg, #ffffff 0%, #b9f2ea 55%, #86dca8 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+    }
 
-    /* Hero search — glass over the canvas. */
+    .lib-sub { color: rgb(71 85 105); }
+    .dark .lib-sub { color: rgba(255, 255, 255, .6); }
+
+    /* Manuscript ornament between the title and the standfirst — a hairline
+       pair around a lozenge, the divider an illuminated page would use. Drawn
+       in CSS: no asset, no request, and it inherits the brand gradient. */
+    .lib-orn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .85rem;
+        inline-size: min(18rem, 72%);
+        margin: 1.15rem auto 1.35rem;
+    }
+    .lib-orn::before,
+    .lib-orn::after {
+        content: '';
+        flex: 1 1 auto;
+        block-size: 1px;
+    }
+    .lib-orn::before { background: linear-gradient(90deg, transparent, rgba(0, 86, 179, .38)); }
+    .lib-orn::after  { background: linear-gradient(90deg, rgba(33, 136, 56, .38), transparent); }
+    .lib-orn i {
+        flex: none;
+        inline-size: .5rem;
+        block-size: .5rem;
+        rotate: 45deg;
+        border-radius: 1px;
+        background: linear-gradient(135deg, #0056b3, #218838);
+    }
+    .dark .lib-orn::before { background: linear-gradient(90deg, transparent, rgba(100, 204, 197, .4)); }
+    .dark .lib-orn::after  { background: linear-gradient(90deg, rgba(134, 220, 168, .4), transparent); }
+    .dark .lib-orn i { background: linear-gradient(135deg, #64CCC5, #86dca8); }
+
+    /* Hero search — a raised card on paper, glass over the night canvas. */
     .lib-search {
         position: relative;
         border-radius: 1rem;
-        background: rgba(255, 255, 255, .09);
-        border: 1px solid rgba(255, 255, 255, .16);
-        -webkit-backdrop-filter: blur(16px);
-        backdrop-filter: blur(16px);
-        box-shadow: 0 16px 44px -20px rgba(0, 0, 0, .6);
+        background: #fff;
+        border: 1px solid rgb(226 232 240);
+        box-shadow: 0 14px 40px -22px rgba(2, 30, 68, .45);
         transition: border-color .25s ease, background .25s ease, box-shadow .25s ease;
     }
     .lib-search:focus-within {
+        border-color: rgba(0, 86, 179, .5);
+        box-shadow: 0 14px 40px -18px rgba(0, 86, 179, .4);
+    }
+    .lib-search input { color: rgb(30 41 59); }
+    .lib-search input::placeholder { color: rgb(148 163 184); }
+    .lib-search-icon { color: rgb(148 163 184); }
+    .lib-search-clear { color: rgb(100 116 139); }
+    .lib-search-clear:hover { color: rgb(30 41 59); background: rgb(241 245 249); }
+
+    .dark .lib-search {
+        background: rgba(255, 255, 255, .09);
+        border-color: rgba(255, 255, 255, .16);
+        -webkit-backdrop-filter: blur(16px);
+        backdrop-filter: blur(16px);
+        box-shadow: 0 16px 44px -20px rgba(0, 0, 0, .6);
+    }
+    .dark .lib-search:focus-within {
         background: rgba(255, 255, 255, .13);
         border-color: rgba(100, 204, 197, .55);
         box-shadow: 0 16px 44px -16px rgba(100, 204, 197, .3);
     }
-    .lib-search input { color: #fff; }
-    .lib-search input::placeholder { color: rgba(255, 255, 255, .5); }
+    .dark .lib-search input { color: #fff; }
+    .dark .lib-search input::placeholder { color: rgba(255, 255, 255, .5); }
+    .dark .lib-search-icon { color: rgba(255, 255, 255, .45); }
+    .dark .lib-search-clear { color: rgba(255, 255, 255, .55); }
+    .dark .lib-search-clear:hover { color: #fff; background: rgba(255, 255, 255, .15); }
 
     /* Inline stat readout — a colophon line, not a row of dashboard tiles. */
     .lib-colophon {
@@ -111,11 +193,14 @@
         justify-content: center;
         gap: .55rem;
         font-size: .8125rem;
-        color: rgba(255, 255, 255, .62);
+        color: rgb(100 116 139);
         font-variant-numeric: tabular-nums;
     }
-    .lib-colophon b { color: #fff; font-weight: 700; }
-    .lib-colophon .sep { color: rgba(255, 255, 255, .28); }
+    .lib-colophon b { color: rgb(15 23 42); font-weight: 700; }
+    .lib-colophon .sep { color: rgb(203 213 225); }
+    .dark .lib-colophon { color: rgba(255, 255, 255, .62); }
+    .dark .lib-colophon b { color: #fff; }
+    .dark .lib-colophon .sep { color: rgba(255, 255, 255, .28); }
 
     /* ── Spotlight leaf ────────────────────────────────────────────── */
     .lib-spot {
@@ -195,18 +280,23 @@
     }
     @media (min-width: 900px) {
         /* The leaf takes its height from this column, so give it enough
-           presence to read as an opening folio without opening a void. */
+           presence to read as an opening folio without opening a void.
+
+           The floor also fits the tallest slide (two-line title + three-line
+           excerpt), so advancing the slider never resizes the leaf. Content is
+           centred rather than reserved line by line, so a one-line title sits
+           balanced instead of hanging over a gap. */
         .lib-spot-body {
             padding: 2.75rem;
-            min-block-size: 21rem;
+            min-block-size: 25rem;
         }
     }
 
     .lib-spot-title {
-        font-family: 'Amiri', serif;
         line-height: 1.3;
         transition: color .25s ease;
     }
+
     .lib-spot:hover .lib-spot-title { color: #0056b3; }
     .dark .lib-spot:hover .lib-spot-title { color: #64CCC5; }
 
@@ -231,6 +321,69 @@
     .lib-spot-cta svg { transition: transform .3s cubic-bezier(.22, 1, .36, 1); }
     .lib-spot:hover .lib-spot-cta svg { transform: translateX(3px); }
     [dir="rtl"] .lib-spot:hover .lib-spot-cta svg { transform: translateX(-3px); }
+
+    /* ── Spotlight slider controls ─────────────────────────────────── */
+    .lib-spot-nav {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .75rem;
+        margin-block-start: .9rem;
+    }
+
+    .lib-spot-arrow {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        /* 44px hit area on touch; the visual disc stays 2.25rem via the icon. */
+        inline-size: 2.75rem;
+        block-size: 2.75rem;
+        border-radius: 9999px;
+        cursor: pointer;
+        color: rgb(71 85 105);
+        background: #fff;
+        border: 1px solid rgb(226 232 240);
+        box-shadow: 0 6px 18px -12px rgba(2, 30, 68, .5);
+        transition: color .22s ease, border-color .22s ease, background .22s ease;
+    }
+    .lib-spot-arrow:hover { color: #0056b3; border-color: rgba(0, 86, 179, .45); }
+    .dark .lib-spot-arrow {
+        color: rgb(203 213 225);
+        background: rgba(15, 52, 96, .7);
+        border-color: rgba(100, 204, 197, .18);
+    }
+    .dark .lib-spot-arrow:hover { color: #64CCC5; border-color: rgba(100, 204, 197, .5); }
+
+    .lib-spot-dots { display: flex; align-items: center; gap: .45rem; }
+
+    /* The dot is the mark; the button around it carries the 44px target. */
+    .lib-spot-dot {
+        position: relative;
+        inline-size: 1.5rem;
+        block-size: 2.75rem;
+        border: 0;
+        background: none;
+        cursor: pointer;
+    }
+    .lib-spot-dot::after {
+        content: '';
+        position: absolute;
+        inset-block-start: 50%;
+        inset-inline-start: 50%;
+        translate: -50% -50%;
+        inline-size: .5rem;
+        block-size: .5rem;
+        border-radius: 9999px;
+        background: rgb(203 213 225);
+        transition: inline-size .28s cubic-bezier(.22, 1, .36, 1), background .28s ease;
+    }
+    [dir="rtl"] .lib-spot-dot::after { translate: 50% -50%; }
+    .dark .lib-spot-dot::after { background: rgba(255, 255, 255, .28); }
+    .lib-spot-dot:hover::after { background: rgb(148 163 184); }
+    .lib-spot-dot.is-active::after {
+        inline-size: 1.4rem;
+        background: linear-gradient(135deg, #0056b3 0%, #218838 100%);
+    }
 
     /* ── Sticky filter rail ────────────────────────────────────────── */
     .lib-rail {
@@ -384,8 +537,19 @@
 
     // The library opens on a piece of writing, not a counter: prefer a featured
     // study, else the most recent one. Null when the library is still empty.
-    $spotlight   = collect($articles)->firstWhere('isFeatured', true) ?? ($articles[0] ?? null);
-    $spotlightId = $spotlight['id'] ?? null;
+    // A library can have any number of featured studies, and they all share
+    // the one spotlight leaf as slides. Capped at five: past that the dot row
+    // stops being a usable control and nobody pages to slide nine.
+    $featured = collect($articles)->where('isFeatured', true)->values();
+
+    // With nothing promoted the library still opens on a piece of writing —
+    // the newest one — rather than on the filter rail.
+    $spotlights = ($featured->isNotEmpty() ? $featured->take(5) : collect([$articles[0] ?? null])->filter())
+        ->values();
+
+    // What the slider shows is withheld from the catalogue below, so no study
+    // is printed twice while browsing unfiltered.
+    $spotlightIds = $spotlights->pluck('id')->all();
 
     // Below two articles there is nothing to search, filter, sort or page
     // through — the whole browsing apparatus stays off rather than rendering
@@ -402,7 +566,7 @@
         articles:    {{ $articlesJson }},
         categories:  {{ $categoriesJson }},
         tags:        {{ $tagsJson }},
-        spotlightId: {{ $spotlightId !== null ? $spotlightId : 'null' }},
+        spotlightIds: {{ json_encode($spotlightIds) }},
         perPage:     9,
     })"
 >
@@ -427,11 +591,13 @@
                     {{ __('articles.public.breadcrumb') }}
                 </span>
 
-                <h1 class="lib-title text-[2.25rem] leading-tight md:text-[3.25rem] font-bold mt-5 mb-4">
+                <h1 class="lib-title text-[2.4rem] leading-tight md:text-[3.5rem] font-bold mt-5">
                     {{ __('articles.public.hero_title') }}
                 </h1>
 
-                <p class="text-[15px] md:text-base text-white/60 leading-relaxed mb-7">
+                <span class="lib-orn" aria-hidden="true"><i></i></span>
+
+                <p class="lib-sub text-[15px] md:text-[17px] leading-relaxed mb-7">
                     {{ __('articles.public.hero_subtitle') }}
                 </p>
 
@@ -441,7 +607,7 @@
                 @if ($hasLibrary)
                 {{-- Search --}}
                 <div class="lib-search">
-                    <i data-lucide="search" class="absolute start-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white/45 pointer-events-none" aria-hidden="true"></i>
+                    <i data-lucide="search" class="lib-search-icon absolute start-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] pointer-events-none" aria-hidden="true"></i>
                     <input
                         type="search"
                         x-model.debounce.250ms="search"
@@ -453,7 +619,7 @@
                     <button
                         x-show="search.length > 0" x-cloak
                         @click="search = ''; page = 1"
-                        class="absolute end-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center text-white/55 hover:text-white hover:bg-white/15 transition-colors cursor-pointer"
+                        class="lib-search-clear absolute end-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center transition-colors cursor-pointer"
                         aria-label="{{ __('articles.public.close') }}"
                     >
                         <i data-lucide="x" class="w-4 h-4" aria-hidden="true"></i>
@@ -476,67 +642,121 @@
     <div class="container mx-auto px-4 sm:px-6 lg:px-8 pb-16">
 
         {{-- ============================================================ --}}
-        {{-- SPOTLIGHT — lifted over the hero seam. Steps aside while a    --}}
-        {{-- filter or search is active: the reader is looking for         --}}
-        {{-- something specific, not for our editorial pick.               --}}
+        {{-- SPOTLIGHT SLIDER — lifted over the hero seam.                 --}}
+        {{--                                                               --}}
+        {{-- Every promoted study occupies the same one leaf, so featuring --}}
+        {{-- a fifth article costs no page height. Stacking them was the   --}}
+        {{-- alternative and it pushed the catalogue below the fold.       --}}
+        {{--                                                               --}}
+        {{-- Steps aside while a filter or search is active: the reader is --}}
+        {{-- looking for something specific, not for our editorial pick.   --}}
         {{-- ============================================================ --}}
-        @if ($spotlight)
-            <a href="{{ $spotlight['url'] }}"
-               x-show="!hasFilters"
-               class="lib-spot group -mt-12 md:-mt-16 relative z-10">
+        @if ($spotlights->isNotEmpty())
+            <section x-show="!hasFilters"
+                     class="-mt-12 md:-mt-16 mb-9 md:mb-11 relative z-10"
+                     aria-roledescription="carousel"
+                     aria-label="{{ __('articles.public.featured') }}">
 
-                <div class="lib-spot-body">
-                    <div class="flex items-center flex-wrap gap-2 mb-4">
-                        @if (! empty($spotlight['isFeatured']))
-                            <span class="art-badge art-badge--featured">
-                                <i data-lucide="star" class="w-3 h-3" aria-hidden="true"></i>
-                                {{ __('articles.public.featured') }}
+                @foreach ($spotlights as $i => $item)
+                    {{-- Slide 0 renders without Alpine so the leaf is in the
+                         initial HTML; the rest stay cloaked until it boots,
+                         which is also the no-JS fallback. --}}
+                    <a href="{{ $item['url'] }}"
+                       class="lib-spot group"
+                       x-show="spotIndex === {{ $i }}"
+                       x-transition:enter="transition ease-out duration-300"
+                       x-transition:enter-start="opacity-0"
+                       @if ($i > 0) x-cloak @endif
+                       role="group"
+                       aria-roledescription="slide"
+                       aria-label="{{ $i + 1 }} / {{ $spotlights->count() }}">
+
+                        <div class="lib-spot-body">
+                            <div class="flex items-center flex-wrap gap-2 mb-4">
+                                @if (! empty($item['isFeatured']))
+                                    <span class="art-badge art-badge--featured">
+                                        <i data-lucide="star" class="w-3 h-3" aria-hidden="true"></i>
+                                        {{ __('articles.public.featured') }}
+                                    </span>
+                                @endif
+                                @if (! empty($item['category']))
+                                    <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-primary/10 text-primary">
+                                        {{ $item['category'] }}
+                                    </span>
+                                @endif
+                            </div>
+
+                            {{-- Clamped so every slide is the same height: an
+                                 unclamped third line resized the leaf on each
+                                 advance and shunted the whole page down. --}}
+                            <h2 class="lib-spot-title text-[1.6rem] md:text-[2.1rem] font-bold text-gray-900 dark:text-white mb-3.5 line-clamp-2">
+                                {{ $item['title'] }}
+                            </h2>
+
+                            <p class="lib-spot-excerpt text-[15px] text-gray-600 dark:text-gray-300 leading-[1.85] line-clamp-3 mb-5">
+                                {{ $item['excerpt'] }}
+                            </p>
+
+                            <div class="art-meta !gap-x-5 flex-wrap mb-6">
+                                @if (! empty($item['author']))
+                                    <span>
+                                        <i data-lucide="pen-line" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                                        {{ $item['author'] }}
+                                    </span>
+                                @endif
+                                <span>
+                                    <i data-lucide="calendar" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                                    {{ $item['hijriDate'] ?: $item['dateLabel'] }}
+                                </span>
+                                <span>
+                                    <i data-lucide="clock" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                                    {{ $item['readTime'] }} {{ __('articles.public.min_read') }}
+                                </span>
+                            </div>
+
+                            <span class="lib-spot-cta">
+                                {{ __('articles.public.read_more') }}
+                                <i data-lucide="arrow-{{ $isRtl ? 'left' : 'right' }}" class="w-4 h-4" aria-hidden="true"></i>
                             </span>
-                        @endif
-                        @if (! empty($spotlight['category']))
-                            <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-primary/10 text-primary">
-                                {{ $spotlight['category'] }}
-                            </span>
-                        @endif
+                        </div>
+
+                        <div class="lib-spot-media">
+                            <img src="{{ $item['image'] }}" alt="{{ $item['title'] }}"
+                                 @if ($i === 0) fetchpriority="high" @else loading="lazy" @endif
+                                 decoding="async"
+                                 onerror="this.style.display='none';this.parentElement.classList.add('img-gradient-fallback')">
+                        </div>
+                    </a>
+                @endforeach
+
+                {{-- Controls only exist when there is somewhere to go. No
+                     auto-advance: it would move the leaf out from under a
+                     reader mid-sentence, and a pause control to fix that costs
+                     more than the effect is worth. --}}
+                @if ($spotlights->count() > 1)
+                    <div class="lib-spot-nav" x-cloak>
+                        <button type="button" @click="prevSpot()" class="lib-spot-arrow"
+                                aria-label="{{ __('articles.public.previous') }}">
+                            <i data-lucide="chevron-{{ $isRtl ? 'right' : 'left' }}" class="w-4 h-4" aria-hidden="true"></i>
+                        </button>
+
+                        <div class="lib-spot-dots">
+                            @foreach ($spotlights as $i => $item)
+                                <button type="button" @click="spotIndex = {{ $i }}"
+                                        class="lib-spot-dot"
+                                        :class="spotIndex === {{ $i }} && 'is-active'"
+                                        :aria-current="spotIndex === {{ $i }} ? 'true' : 'false'"
+                                        aria-label="{{ $item['title'] }}"></button>
+                            @endforeach
+                        </div>
+
+                        <button type="button" @click="nextSpot()" class="lib-spot-arrow"
+                                aria-label="{{ __('articles.public.next') }}">
+                            <i data-lucide="chevron-{{ $isRtl ? 'left' : 'right' }}" class="w-4 h-4" aria-hidden="true"></i>
+                        </button>
                     </div>
-
-                    <h2 class="lib-spot-title text-[1.6rem] md:text-[2.1rem] font-bold text-gray-900 dark:text-white mb-3.5">
-                        {{ $spotlight['title'] }}
-                    </h2>
-
-                    <p class="text-[15px] text-gray-600 dark:text-gray-300 leading-[1.85] line-clamp-3 mb-5">
-                        {{ $spotlight['excerpt'] }}
-                    </p>
-
-                    <div class="art-meta !gap-x-5 flex-wrap mb-6">
-                        @if (! empty($spotlight['author']))
-                            <span>
-                                <i data-lucide="pen-line" class="w-3.5 h-3.5" aria-hidden="true"></i>
-                                {{ $spotlight['author'] }}
-                            </span>
-                        @endif
-                        <span>
-                            <i data-lucide="calendar" class="w-3.5 h-3.5" aria-hidden="true"></i>
-                            {{ $spotlight['hijriDate'] ?: $spotlight['dateLabel'] }}
-                        </span>
-                        <span>
-                            <i data-lucide="clock" class="w-3.5 h-3.5" aria-hidden="true"></i>
-                            {{ $spotlight['readTime'] }} {{ __('articles.public.min_read') }}
-                        </span>
-                    </div>
-
-                    <span class="lib-spot-cta">
-                        {{ __('articles.public.read_more') }}
-                        <i data-lucide="arrow-{{ $isRtl ? 'left' : 'right' }}" class="w-4 h-4" aria-hidden="true"></i>
-                    </span>
-                </div>
-
-                <div class="lib-spot-media">
-                    <img src="{{ $spotlight['image'] }}" alt="{{ $spotlight['title'] }}"
-                         fetchpriority="high" decoding="async"
-                         onerror="this.style.display='none';this.parentElement.classList.add('img-gradient-fallback')">
-                </div>
-            </a>
+                @endif
+            </section>
         @endif
 
         {{-- Everything below is the browsable library. A catalogue whose only
@@ -746,7 +966,8 @@
             articles:    config.articles || [],
             categories:  config.categories || [],
             tags:        config.tags || [],
-            spotlightId: config.spotlightId ?? null,
+            spotlightIds: config.spotlightIds || [],
+            spotIndex: 0,
             perPage:     config.perPage || 9,
 
             search: '',
@@ -762,19 +983,20 @@
                 this.$watch('view', () => this.refreshIcons());
                 this.$watch('hasFilters', () => this.refreshIcons());
                 this.$watch('showTags', () => this.refreshIcons());
+                this.$watch('spotIndex', () => this.refreshIcons());
                 this.refreshIcons();
             },
 
             /**
-             * While browsing unfiltered, the spotlight article is already
-             * featured above the rail — listing it again would show the same
-             * study twice. As soon as the reader filters or searches, the
-             * spotlight steps aside and the whole library is searchable.
+             * While browsing unfiltered, the lead folio and the featured strip
+             * are already shown above the rail — listing them again would print
+             * the same studies twice. As soon as the reader filters or
+             * searches, they step aside and the whole library is searchable.
              */
             get browseList() {
-                if (this.hasFilters || this.spotlightId === null) return this.articles;
+                if (this.hasFilters || this.spotlightIds.length === 0) return this.articles;
 
-                return this.articles.filter(a => a.id !== this.spotlightId);
+                return this.articles.filter(a => !this.spotlightIds.includes(a.id));
             },
 
             get filtered() {
@@ -862,6 +1084,17 @@
                 const cat = this.categories.find(c => c.id === this.activeCategory);
 
                 return cat ? cat.name : '';
+            },
+
+            // Spotlight slider — wraps in both directions so the arrows are
+            // never dead ends.
+            nextSpot() {
+                this.spotIndex = (this.spotIndex + 1) % this.spotlightIds.length;
+            },
+
+            prevSpot() {
+                const n = this.spotlightIds.length;
+                this.spotIndex = (this.spotIndex - 1 + n) % n;
             },
 
             setCategory(id) {
