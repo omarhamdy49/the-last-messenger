@@ -196,7 +196,7 @@ What the stages do (full list in [`README.md`](README.md)):
 | 45/50/52 | Composer, Node 20, **ffmpeg + yt-dlp** |
 | 55/60 | MySQL 8 (secured, app DB + least-priv user, tuned), Redis (localhost, pwd, LRU) |
 | 65 | Nginx global tuning + Cloudflare real-IP + HTTP server block |
-| 75/80/85 | release layout + prod `.env`, Supervisor workers + scheduler, logrotate |
+| 75/80/85 | release layout + prod `.env`, Supervisor workers (`default` + `sync`) + scheduler, logrotate |
 | 90 healthcheck | verifies every service + connectivity |
 
 At the end, `90-healthcheck` should report **all green** (app checks are skipped

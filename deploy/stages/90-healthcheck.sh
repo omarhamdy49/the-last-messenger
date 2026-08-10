@@ -27,9 +27,16 @@ echo "──────── Connectivity ────────"
 check "MySQL query"            bash -c "mysql -e 'SELECT 1' '${DB_NAME}'"
 check "Redis auth ping"        bash -c "redis-cli -a '${REDIS_PASSWORD}' --no-auth-warning ping | grep -q PONG"
 
+echo "──────── Media toolchain ────────"
+# Without these the YouTube import fails inside a queued job, where the admin
+# only ever sees an import that never finishes.
+check "yt-dlp runs"            bash -c "/usr/local/bin/yt-dlp --version"
+check "ffmpeg present"         bash -c "command -v ffmpeg"
+
 echo "──────── Application ────────"
 if [[ -e "${APP_DIR}/current/artisan" ]]; then
   check "supervisor workers up" bash -c "supervisorctl status tlm-worker:* | grep -q RUNNING"
+  check "sync worker up"        bash -c "supervisorctl status tlm-sync-worker:* | grep -q RUNNING"
   check "scheduler up"          bash -c "supervisorctl status tlm-scheduler | grep -q RUNNING"
   # Local HTTPS app probe (resolve domain to loopback to avoid external DNS).
   code=$(curl -kso /dev/null -w '%{http_code}' --resolve "${APP_DOMAIN}:443:127.0.0.1" "https://${APP_DOMAIN}/" 2>/dev/null || echo 000)

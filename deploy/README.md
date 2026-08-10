@@ -54,9 +54,9 @@ deploy/
 | `65-nginx` | Global tuning + rate-limit zones + HTTP server block |
 | `70-ssl` | Let's Encrypt cert + HTTPS server block + auto-renew |
 | `75-app` | Release/shared layout + production `.env` + deploy script |
-| `80-supervisor` | Queue workers + `schedule:work` |
+| `80-supervisor` | Queue workers (`default`) + YouTube import worker (`sync`) + `schedule:work` |
 | `85-logrotate` | Rotate worker/scheduler/php-fpm logs |
-| `90-healthcheck` | Verify every service + app endpoint |
+| `90-healthcheck` | Verify every service, the media toolchain + app endpoint |
 
 ---
 
@@ -160,6 +160,47 @@ in `config.env` if you resize the box.
 
 ---
 
+## Upgrading a server that was provisioned before the YouTube import
+
+A fresh `provision.sh` run picks all of this up. An **existing** server does not:
+`75-app` deliberately never overwrites a live `shared/.env`, and Supervisor only
+learns about the new worker when stage 80 re-runs. Without these three steps a
+deploy succeeds and imports still hang forever, so do them once, in order:
+
+```bash
+# 1. Install yt-dlp + ffmpeg (idempotent; safe to re-run).
+sudo ./provision.sh 52-media-tools
+
+# 2. Add the sync-queue worker to Supervisor (idempotent).
+sudo ./provision.sh 80-supervisor
+sudo supervisorctl status tlm-sync-worker:*      # expect RUNNING
+
+# 3. Append the new keys to the LIVE .env.
+#    Do NOT use `FORCE=1 ./provision.sh 75-app` for this — that re-renders the
+#    whole file and discards any hand edits made on the server.
+sudo tee -a /var/www/rasoolallah/shared/.env >/dev/null <<'EOF'
+
+# Queue: must exceed SyncYouTubePlaylistJob's $timeout (3600) or a running
+# import is released and processed twice.
+DB_QUEUE_RETRY_AFTER=3700
+
+# YouTube import
+YT_DLP_PATH=/usr/local/bin/yt-dlp
+YT_DLP_TIMEOUT=600
+YOUTUBE_MAX_EPISODES=100
+EOF
+
+# 4. Config is cached in production, so .env edits are inert until re-cached.
+cd /var/www/rasoolallah/current
+sudo -u deployer php artisan config:cache
+sudo -u deployer php artisan queue:restart
+```
+
+Verify with `sudo ./provision.sh 90-healthcheck`, which now checks `yt-dlp`,
+`ffmpeg` and `tlm-sync-worker`.
+
+---
+
 ## Troubleshooting
 
 | Symptom | Check |
@@ -168,5 +209,8 @@ in `config.env` if you resize the box.
 | 502 Bad Gateway | No release deployed yet, or `php8.4-fpm` down (`systemctl status php8.4-fpm`) |
 | Workers not running | `sudo supervisorctl status`; they start only after the first deploy |
 | App errors | `tail -f /var/www/rasoolallah/shared/storage/logs/laravel-*.log` |
+| YouTube import never finishes | Almost always the `sync` queue, not the app. `supervisorctl status tlm-sync-worker:*` — the job is dispatched to `sync`, so a worker on `default` alone will leave every run at "pending" forever. Then `tail -f .../logs/sync-worker.log`. |
+| YouTube import fails instantly | `/usr/local/bin/yt-dlp --version`. Missing → re-run `sudo FORCE=1 ./provision.sh 52-media-tools`. Present but failing on every video → YouTube changed its player; `sudo yt-dlp -U` (the weekly `cron.weekly/tlm-yt-dlp-update` normally handles this). |
+| Import ran twice / duplicated work | `DB_QUEUE_RETRY_AFTER` in the prod `.env` must exceed the job's `$timeout` (3600). Below it the queue re-releases a running import. |
 | Locked out of SSH | Use the provider's console; check `/etc/ssh/sshd_config.d/99-tlm-hardening.conf` |
 | Recover secrets | `sudo cat /root/.tlm-credentials` |

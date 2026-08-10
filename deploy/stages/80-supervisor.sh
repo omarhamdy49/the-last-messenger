@@ -7,11 +7,21 @@ is_installed supervisor || apt_quiet install supervisor
 
 PHP_BIN="/usr/bin/php${PHP_VERSION}"
 ARTISAN="${APP_DIR}/current/artisan"
-export PHP_BIN ARTISAN APP_DIR DEPLOY_USER QUEUE_WORKERS QUEUE_CONNECTION
 
-log "Writing Supervisor programs (worker + scheduler)..."
-render_template "${TEMPLATES_DIR}/supervisor-worker.conf"    "/etc/supervisor/conf.d/tlm-worker.conf"
-render_template "${TEMPLATES_DIR}/supervisor-scheduler.conf" "/etc/supervisor/conf.d/tlm-scheduler.conf"
+# YouTube imports run on their own queue with their own timings — see
+# supervisor-sync-worker.conf for why they are not on the default queue.
+SYNC_QUEUE_WORKERS="${SYNC_QUEUE_WORKERS:-1}"
+SYNC_QUEUE_TIMEOUT="${SYNC_QUEUE_TIMEOUT:-3600}"
+# Supervisor must wait longer than the job timeout or it kills imports mid-run.
+SYNC_QUEUE_STOPWAIT="$(( SYNC_QUEUE_TIMEOUT + 60 ))"
+
+export PHP_BIN ARTISAN APP_DIR DEPLOY_USER QUEUE_WORKERS QUEUE_CONNECTION
+export SYNC_QUEUE_WORKERS SYNC_QUEUE_TIMEOUT SYNC_QUEUE_STOPWAIT
+
+log "Writing Supervisor programs (worker + sync worker + scheduler)..."
+render_template "${TEMPLATES_DIR}/supervisor-worker.conf"      "/etc/supervisor/conf.d/tlm-worker.conf"
+render_template "${TEMPLATES_DIR}/supervisor-sync-worker.conf" "/etc/supervisor/conf.d/tlm-sync-worker.conf"
+render_template "${TEMPLATES_DIR}/supervisor-scheduler.conf"   "/etc/supervisor/conf.d/tlm-scheduler.conf"
 
 systemctl enable supervisor >/dev/null 2>&1 || true
 systemctl restart supervisor

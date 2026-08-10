@@ -95,9 +95,23 @@ ${PHP_BIN} artisan storage:link 2>/dev/null || true
 log "Flipping 'current' symlink (atomic)..."
 ln -nfs "${RELEASE}" "${CURRENT}"
 
-log "Reloading PHP-FPM (resets OPcache) and restarting workers..."
+log "Reloading PHP-FPM (resets OPcache) and cycling workers..."
 sudo systemctl reload "php${PHP_VERSION}-fpm"
-sudo supervisorctl restart all
+
+# Workers are cycled gracefully, NOT via `supervisorctl restart all`.
+#
+# A YouTube playlist import holds tlm-sync-worker for minutes, and that program
+# sets stopwaitsecs to match. `restart all` would make every deploy block on the
+# longest-running import (up to an hour) and then SIGKILL it, leaving a half
+# imported program and a run stuck at "running".
+#
+# `queue:restart` flags workers to exit cleanly once their current job finishes;
+# Supervisor's autorestart brings them straight back up on the new release.
+${PHP_BIN} artisan queue:restart
+
+# The scheduler holds no in-flight work, so a hard restart is safe and puts the
+# new release's schedule in effect immediately.
+sudo supervisorctl restart tlm-scheduler
 
 log "Health probe..."
 ${PHP_BIN} artisan about >/dev/null 2>&1 || { echo "artisan about failed"; exit 1; }
