@@ -94,6 +94,9 @@ class UpdateArticleRequest extends FormRequest
         $rules['gallery.*'] = 'exists:media,id';
         $rules['media_items'] = 'nullable|array';
         $rules['media_items.*'] = 'exists:media,id';
+        // Video queue: ids of existing episodes, in the editor's chosen order.
+        $rules['episodes'] = 'nullable|array';
+        $rules['episodes.*'] = 'integer|exists:media_episodes,id';
 
         // References
         $rules['references'] = 'nullable|array';

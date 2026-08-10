@@ -97,48 +97,108 @@
        Position reported as a continuous track rather than a list of
        pills: one hairline, one travelling marker, labels that step
        forward as they take focus. */
-    .toc-rail { position: relative; }
-    .toc-rail::before {
-        content: '';
+    /* The scroll lives on a wrapper, not on .toc-rail itself: the rail is the
+       positioning context for the hairline and the travelling marker, and
+       making it a scroll container would clip both to the visible height. A
+       forty-heading article otherwise ran a 1,500px rail down the sidebar and
+       pushed the tags and related list off the screen entirely. */
+    /* Key-points panel — the prototype's tinted takeaway block. */
+    .summary-panel {
+        padding: 1.5rem;
+        border-radius: .75rem;
+        background: linear-gradient(to left, rgb(239 246 255), rgb(240 253 244));
+    }
+    .dark .summary-panel {
+        background: linear-gradient(to left, rgba(15, 52, 96, .8), rgba(15, 52, 96, .45));
+    }
+    .summary-panel__body :is(p, li) { line-height: 1.9; }
+    .summary-panel__body ul { list-style: none; padding: 0; margin: 0; }
+    .summary-panel__body li { position: relative; padding-inline-start: 1rem; }
+    .summary-panel__body li::before {
+        content: '•';
         position: absolute;
-        inset-block: 0;
         inset-inline-start: 0;
-        width: 1px;
-        background: currentColor;
-        opacity: .14;
+        color: #64CCC5;
     }
-    .toc-rail__marker {
-        position: absolute;
-        inset-inline-start: -1px;
-        width: 3px;
-        background: #218838;
-        border-radius: 2px;
-        transform: translateY(var(--marker-y, 0));
-        height: var(--marker-h, 0);
-        opacity: 0;
-        transition: transform .42s cubic-bezier(.16,1,.3,1),
-                    height .42s cubic-bezier(.16,1,.3,1),
-                    opacity .25s ease;
-    }
-    .toc-rail[data-ready='true'] .toc-rail__marker { opacity: 1; }
 
+    /* The queue matches the stage's height on desktop so the pair reads as one
+       player, and becomes a short scroller on narrow screens rather than a
+       column of thumbnails as tall as the article. */
+    .video-queue { max-block-size: 22rem; }
+    @media (min-width: 1024px) {
+        .video-queue { max-block-size: min(32rem, 56vw); }
+    }
+
+    /* ── Mobile table of contents (disclosure) ─────────────────────── */
+    .toc-summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .75rem;
+        padding: .75rem 1rem;
+        /* Comfortably past the 44px touch minimum for the whole header row. */
+        min-block-size: 3rem;
+        cursor: pointer;
+        list-style: none;
+    }
+    /* Safari draws its own triangle unless both of these are suppressed. */
+    .toc-summary::-webkit-details-marker { display: none; }
+    .toc-summary::marker { content: ''; }
+    .toc-summary:focus-visible {
+        outline: 2px solid rgba(0, 86, 179, .5);
+        outline-offset: -2px;
+    }
+
+    .toc-summary__chevron { transition: transform .25s ease; }
+    .toc-mobile[open] .toc-summary__chevron { transform: rotate(180deg); }
+
+    /* Caps the open list so a long article's contents stay a panel rather than
+       a second page the reader has to scroll past. */
+    .toc-mobile__list {
+        max-block-size: 60vh;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .toc-summary__chevron { transition: none; }
+    }
+
+    .toc-scroll {
+        max-block-size: min(26rem, calc(100vh - 20rem));
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+    }
+
+    /* Pill links, filled when active — the prototype's treatment. Replaces the
+       hairline rail and its travelling marker. */
     .toc-link {
         display: block;
-        padding-block: .5rem;
-        padding-inline: 1rem .5rem;
+        padding: .5rem .75rem;
+        border-radius: .5rem;
         font-size: .875rem;
-        color: #6b7280;
-        transition: color .25s ease, transform .25s cubic-bezier(.16,1,.3,1);
+        line-height: 1.6;
+        color: #4b5563;
+        transition: color .2s ease, background-color .2s ease;
     }
     .dark .toc-link { color: #9ca3af; }
-    .toc-link:hover { color: #218838; }
-    .toc-link.toc-active {
-        color: #111827;
-        font-weight: 600;
-        transform: translateX(var(--toc-shift, .25rem));
+    .toc-link:hover { color: #111827; background: #f3f4f6; }
+    .dark .toc-link:hover { color: #e5e7eb; background: rgba(255, 255, 255, .06); }
+
+    /* Sub-headings read as subordinate: indented and a step down. */
+    .toc-link--sub {
+        font-size: .8125rem;
+        margin-inline-start: .75rem;
     }
-    .dark .toc-link.toc-active { color: #f9fafb; }
-    [dir='rtl'] .toc-link.toc-active { --toc-shift: -.25rem; }
+
+    .toc-link.toc-active {
+        color: #0d6b61;
+        font-weight: 600;
+        background: rgba(100, 204, 197, .12);
+        border-inline-start: 3px solid #64CCC5;
+    }
+    .dark .toc-link.toc-active { color: #64CCC5; }
 
     /* ── Citations arrive ──
        Verse and hadith cards settle into place as the reader reaches
@@ -427,7 +487,7 @@
                                                  darker than the text, not lighter. The light `glass`
                                                  utility put white type on a near-white pill. --}}
                                             @if (! empty($article['category']))
-                                                <span class="px-4 py-1.5 rounded-full text-sm font-semibold bg-secondary text-white shadow-lg">{{ $article['category'] }}</span>
+                                                <span class="px-4 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-l from-primary to-secondary text-white shadow-lg">{{ $article['category'] }}</span>
                                             @endif
                                             @foreach (array_slice($article['tags'], 0, 2) as $tag)
                                                 <span class="px-4 py-1.5 rounded-full text-sm font-medium bg-black/45 backdrop-blur-sm ring-1 ring-white/25 text-white">{{ $tag }}</span>
@@ -439,9 +499,14 @@
                                 {{-- Multi-image controls --}}
                                 <template x-if="imgs.length > 1">
                                     <div>
-                                        {{-- counter --}}
-                                        <span dir="ltr" class="absolute top-4 {{ $isRtl ? 'start-4' : 'end-4' }} px-3 py-1 rounded-full bg-black/50 backdrop-blur text-white text-xs font-medium tabular-nums z-10">
-                                            <span x-text="gi + 1"></span> / <span x-text="imgs.length"></span>
+                                        {{-- Counter. `dir="ltr"` belongs on the numerals,
+                                             not on the positioned box: on the box it made
+                                             the element's own `start-4` resolve to the LEFT
+                                             edge in an RTL page, stacking the counter
+                                             underneath the autoplay button so only the "5"
+                                             of "1 / 5" was legible. --}}
+                                        <span class="absolute top-4 {{ $isRtl ? 'start-4' : 'end-4' }} px-3 py-1 rounded-full bg-black/50 backdrop-blur text-white text-xs font-medium tabular-nums z-10">
+                                            <span dir="ltr" class="inline-block"><span x-text="gi + 1"></span> / <span x-text="imgs.length"></span></span>
                                         </span>
                                         {{-- autoplay toggle --}}
                                         <button type="button" @click.stop="togglePlay()" :aria-label="playing ? 'pause' : 'play'"
@@ -450,13 +515,17 @@
                                             <i x-show="!playing" data-lucide="play" class="w-4 h-4"></i>
                                             <i x-show="playing" x-cloak data-lucide="pause" class="w-4 h-4"></i>
                                         </button>
-                                        {{-- prev / next --}}
+                                        {{-- prev / next. Always visible, as in the
+                                             design prototype: they were gated behind
+                                             group-hover, so on any touch device the
+                                             only way to reach slide 2 was the dot row
+                                             or a swipe nobody was told about. --}}
                                         <button type="button" @click.stop="prev()" aria-label="{{ __('articles.public.previous') }}"
-                                                class="absolute start-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-white opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-white/35 hover:scale-110 transition-all z-10">
+                                                class="absolute start-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-white hover:bg-white/35 hover:scale-110 transition-all z-10">
                                             <i data-lucide="chevron-{{ $isRtl ? 'right' : 'left' }}" class="w-6 h-6"></i>
                                         </button>
                                         <button type="button" @click.stop="next()" aria-label="{{ __('articles.public.next') }}"
-                                                class="absolute end-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-white opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-white/35 hover:scale-110 transition-all z-10">
+                                                class="absolute end-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-white hover:bg-white/35 hover:scale-110 transition-all z-10">
                                             <i data-lucide="chevron-{{ $isRtl ? 'left' : 'right' }}" class="w-6 h-6"></i>
                                         </button>
                                         {{-- dot indicators (desktop) --}}
@@ -536,6 +605,27 @@
                     {{-- Body wrapper (font-size scalable) --}}
                     <div class="p-6 md:p-10" :style="`font-size: ${fontSize}%`">
 
+                        {{-- Dateline above the title, as in the design prototype:
+                             the reader sees when and how long before committing to
+                             the headline, and the byline gets its own card below
+                             instead of being crushed into a stats row. --}}
+                        <div class="flex flex-wrap items-center gap-x-5 gap-y-2 mb-5 text-sm text-gray-600 dark:text-gray-400">
+                            <span class="inline-flex items-center gap-2">
+                                <i data-lucide="calendar" class="w-4 h-4 text-accent" aria-hidden="true"></i>{{ $article['hijriDate'] ?: $article['dateLabel'] }}
+                            </span>
+                            <span class="inline-flex items-center gap-2">
+                                <i data-lucide="clock" class="w-4 h-4 text-accent" aria-hidden="true"></i>{{ $article['readTime'] }} {{ __('articles.public.min_read') }}
+                            </span>
+                            <span class="inline-flex items-center gap-2">
+                                <i data-lucide="eye" class="w-4 h-4 text-accent" aria-hidden="true"></i><span x-text="views.toLocaleString('en-US')">{{ number_format($article['views']) }}</span> {{ __('articles.public.views') }}
+                            </span>
+                            @if (! empty($article['hijriDate']) && ! empty($article['dateLabel']))
+                                <span class="inline-flex items-center gap-2">
+                                    <i data-lucide="sun" class="w-4 h-4 text-accent" aria-hidden="true"></i>{{ $article['dateLabel'] }}
+                                </span>
+                            @endif
+                        </div>
+
                         {{-- Title --}}
                         <h1 class="text-3xl md:text-4xl xl:text-5xl font-bold mb-5 leading-tight tracking-tight text-gray-900 dark:text-white break-words">
                             {{ $article['title'] }}
@@ -548,48 +638,20 @@
                             </p>
                         @endif
 
-                        {{-- Meta bar: author + dates + reading stats | share + font controls --}}
-                        <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 mb-6 py-4 border-y border-gray-100 dark:border-[#0f3460]">
-                            <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-gray-500 dark:text-gray-400">
-                                @if (! empty($article['author']))
-                                    <span class="inline-flex items-center gap-2">
-                                        <span class="w-8 h-8 rounded-full bg-gradient-to-l from-primary to-secondary text-white flex items-center justify-center">
-                                            <i data-lucide="user" class="w-4 h-4"></i>
-                                        </span>
-                                        <span class="font-semibold text-gray-800 dark:text-gray-100">{{ $article['author'] }}</span>
-                                    </span>
-                                @endif
-                                <span class="inline-flex items-center gap-1.5">
-                                    <i data-lucide="calendar" class="w-4 h-4 text-accent"></i>{{ $article['dateLabel'] }}
-                                </span>
-                                @if (! empty($article['hijriDate']))
-                                    <span class="inline-flex items-center gap-1.5">
-                                        <i data-lucide="moon" class="w-4 h-4 text-accent"></i>{{ $article['hijriDate'] }}
-                                    </span>
-                                @endif
-                                <span class="inline-flex items-center gap-1.5">
-                                    <i data-lucide="clock" class="w-4 h-4 text-accent"></i>{{ $article['readTime'] }} {{ __('articles.public.min_read') }}
-                                </span>
-                                <span class="inline-flex items-center gap-1.5">
-                                    <i data-lucide="eye" class="w-4 h-4 text-accent"></i><span x-text="views.toLocaleString('en-US')">{{ number_format($article['views']) }}</span> {{ __('articles.public.views') }}
-                                </span>
-                            </div>
-
-                            {{-- Share + font size --}}
-                            <div class="flex items-center gap-2 no-print">
-                                <button @click="showShare = true"
-                                        class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-gradient-to-l from-primary to-secondary text-white shadow hover:shadow-lg hover:scale-105 transition-all cursor-pointer">
-                                    <i data-lucide="share-2" class="w-4 h-4"></i>{{ __('articles.public.share') }}
+                        {{-- Reader actions --}}
+                        <div class="flex flex-wrap items-center gap-2 mb-6 pb-6 border-b border-gray-100 dark:border-[#0f3460] no-print">
+                            <button @click="showShare = true"
+                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-gradient-to-l from-primary to-secondary text-white shadow hover:shadow-lg hover:scale-105 transition-all cursor-pointer">
+                                <i data-lucide="share-2" class="w-4 h-4"></i>{{ __('articles.public.share') }}
+                            </button>
+                            <div class="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-[#0f3460] p-1 ms-auto">
+                                <button @click="decreaseFont()" aria-label="A-" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-[#16213e] transition-colors cursor-pointer">
+                                    <i data-lucide="minus" class="w-4 h-4"></i>
                                 </button>
-                                <div class="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-[#0f3460] p-1">
-                                    <button @click="decreaseFont()" aria-label="A-" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-[#16213e] transition-colors cursor-pointer">
-                                        <i data-lucide="minus" class="w-4 h-4"></i>
-                                    </button>
-                                    <span class="px-1 text-xs font-semibold text-gray-700 dark:text-gray-200 w-10 text-center tabular-nums" x-text="fontSize + '%'"></span>
-                                    <button @click="increaseFont()" aria-label="A+" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-[#16213e] transition-colors cursor-pointer">
-                                        <i data-lucide="plus" class="w-4 h-4"></i>
-                                    </button>
-                                </div>
+                                <span class="px-1 text-xs font-semibold text-gray-700 dark:text-gray-200 w-10 text-center tabular-nums" x-text="fontSize + '%'"></span>
+                                <button @click="increaseFont()" aria-label="A+" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-[#16213e] transition-colors cursor-pointer">
+                                    <i data-lucide="plus" class="w-4 h-4"></i>
+                                </button>
                             </div>
                         </div>
 
@@ -611,19 +673,38 @@
                             </a>
                         @endif
 
-                        {{-- Mobile TOC (collapsible) --}}
+                        {{-- Mobile table of contents.
+                             The sidebar card is lg-only, so on a phone a fifteen
+                             heading article offered no way to navigate at all.
+                             A native <details> carries the disclosure semantics,
+                             keyboard behaviour and screen-reader state for free —
+                             an Alpine boolean would have to re-implement all
+                             three. Collapsed by default so it never pushes the
+                             opening paragraph below the fold, and it closes on
+                             pick so the list is not left covering the section the
+                             reader just jumped to. --}}
                         @if (! empty($article['toc']))
-                            <details class="lg:hidden rounded-xl border border-gray-100 dark:border-[#0f3460] p-4 mb-8 no-print" open>
-                                <summary class="cursor-pointer font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                    <i data-lucide="list" class="w-4 h-4 text-accent"></i>{{ __('articles.public.table_of_contents') }}
+                            <details class="toc-mobile lg:hidden mb-6 rounded-xl border border-gray-200 dark:border-[#0f3460] overflow-hidden no-print">
+                                <summary class="toc-summary">
+                                    <span class="flex items-center gap-2 font-bold text-gray-900 dark:text-white">
+                                        <i data-lucide="list" class="w-5 h-5 text-accent" aria-hidden="true"></i>
+                                        {{ __('articles.public.table_of_contents') }}
+                                        <span class="text-sm font-medium text-gray-500 dark:text-gray-400 tabular-nums">({{ count($article['toc']) }})</span>
+                                    </span>
+                                    <i data-lucide="chevron-down" class="toc-summary__chevron w-5 h-5 text-gray-400 shrink-0" aria-hidden="true"></i>
                                 </summary>
-                                <ul class="mt-3 space-y-1.5">
+                                <div class="toc-mobile__list p-2 space-y-1 border-t border-gray-100 dark:border-[#0f3460]">
                                     @foreach ($article['toc'] as $item)
-                                        <li @class(['ps-3' => ($item['level'] ?? 2) === 3])>
-                                            <a href="#{{ $item['id'] }}" class="text-sm text-gray-600 dark:text-gray-300 hover:text-primary transition-colors">{{ $item['label'] }}</a>
-                                        </li>
+                                        @php($isSub = ($item['level'] ?? 2) === 3)
+                                        <a href="#{{ $item['id'] }}"
+                                           @click.prevent="scrollTo('{{ $item['id'] }}'); $el.closest('details').open = false"
+                                           @class(['toc-link', 'toc-link--sub' => $isSub])
+                                           :class="active === '{{ $item['id'] }}' ? 'toc-active' : ''"
+                                           :aria-current="active === '{{ $item['id'] }}' ? 'true' : 'false'">
+                                            {{ $item['label'] }}
+                                        </a>
                                     @endforeach
-                                </ul>
+                                </div>
                             </details>
                         @endif
 
@@ -648,14 +729,20 @@
                                 </button>
                             </div>
                         @else
-                            <x-site.empty-state icon="file-text" :message="__('articles.public.empty_message')" class="!py-12" />
+                            {{-- Not `empty_message`: that is the library's
+                                 "no matching articles, adjust your filters"
+                                 copy, which told a reader standing on one
+                                 article to change a search they never ran. --}}
+                            <x-site.empty-state icon="file-text" :message="__('articles.public.no_body')" class="!py-12" />
                         @endif
 
                         {{-- Sources & References --}}
                         @if (! empty($article['references']))
                             <div class="mt-12 pt-8 border-t border-gray-100 dark:border-[#0f3460]">
+                                {{-- Bare accent icon beside the heading, matching the
+                                     prototype — not a tinted square badge. --}}
                                 <h3 class="text-xl font-bold mb-4 flex items-center gap-3 text-gray-900 dark:text-white">
-                                    <span class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><i data-lucide="book-open" class="w-4 h-4"></i></span>{{ __('articles.public.sources') }}
+                                    <i data-lucide="book-open" class="w-5 h-5 text-accent" aria-hidden="true"></i>{{ __('articles.public.sources') }}
                                 </h3>
                                 <ul class="space-y-3">
                                     @foreach ($article['references'] as $ref)
@@ -682,71 +769,140 @@
                              a recap lands after the argument, not before it. --}}
                         {{-- Attached media. Streams through the article-scoped
                              public route; the library itself stays admin-only. --}}
-                        @if (! empty($article['media']))
-                            <section class="mt-10" aria-labelledby="article-media-label">
-                                <h2 id="article-media-label" class="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-                                    <i data-lucide="play-circle" class="w-5 h-5 text-accent"></i>{{ __('articles.public.attached_media') }}
+                        {{-- ── YouTube videos ─────────────────────────────────
+                             One video renders as a single framed player. Two or
+                             more render as a playlist: one stage plus a scrolling
+                             queue, the way YouTube itself presents a series, so
+                             the reader can see what else is there without
+                             scrolling past four stacked 16:9 iframes.
+
+                             Iframes are created only on demand (the thumbnail is
+                             a button): four embeds would otherwise each pull
+                             YouTube's player bundle on page load. --}}
+                        @if (! empty($article['videos']))
+                            @php($videos = $article['videos'])
+                            <section class="mt-10"
+                                     aria-labelledby="article-videos-label"
+                                     x-data="{
+                                         vi: 0,
+                                         started: false,
+                                         videos: @js($videos),
+                                         get current() { return this.videos[this.vi]; },
+                                         play(i) { this.vi = i; this.started = true; },
+                                     }">
+                                <h2 id="article-videos-label" class="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
+                                    <i data-lucide="play-circle" class="w-5 h-5 text-accent" aria-hidden="true"></i>
+                                    {{ count($videos) > 1 ? __('articles.public.video_playlist') : __('articles.public.video') }}
+                                    @if (count($videos) > 1)
+                                        <span class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                                            (<span x-text="vi + 1"></span>/{{ count($videos) }})
+                                        </span>
+                                    @endif
                                 </h2>
-                                <div class="space-y-4">
-                                    @foreach ($article['media'] as $item)
-                                        @if ($item['type'] === 'video')
-                                            <figure class="rounded-2xl overflow-hidden bg-black">
-                                                <video controls preload="metadata" playsinline
-                                                       class="w-full h-auto aspect-video bg-black"
-                                                       aria-label="{{ $item['title'] }}">
-                                                    <source src="{{ $item['url'] }}" @if($item['mime']) type="{{ $item['mime'] }}" @endif>
-                                                </video>
-                                            </figure>
-                                        @elseif ($item['type'] === 'audio')
-                                            <figure class="rounded-2xl border border-gray-200 dark:border-[#0f3460] p-4">
-                                                <figcaption class="text-sm font-semibold mb-2 text-gray-900 dark:text-white">{{ $item['title'] }}</figcaption>
-                                                <audio controls preload="metadata" class="w-full" aria-label="{{ $item['title'] }}">
-                                                    <source src="{{ $item['url'] }}" @if($item['mime']) type="{{ $item['mime'] }}" @endif>
-                                                </audio>
-                                            </figure>
-                                        @else
-                                            <a href="{{ $item['url'] }}" target="_blank" rel="noopener"
-                                               class="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-[#0f3460] p-4 hover:border-primary transition-colors">
-                                                <i data-lucide="file" class="w-5 h-5 text-gray-400 shrink-0"></i>
-                                                <span class="font-medium text-gray-900 dark:text-white truncate">{{ $item['title'] }}</span>
-                                            </a>
-                                        @endif
-                                    @endforeach
+
+                                <div @class(['grid gap-4', 'lg:grid-cols-[1fr_20rem]' => count($videos) > 1])>
+                                    {{-- Stage --}}
+                                    <div>
+                                        <div class="relative aspect-video rounded-2xl overflow-hidden bg-black">
+                                            {{-- Poster until the reader asks for it. --}}
+                                            <template x-if="!started">
+                                                <button type="button" @click="started = true"
+                                                        class="group absolute inset-0 w-full h-full cursor-pointer"
+                                                        :aria-label="current.title">
+                                                    <img :src="current.thumb" :alt="current.title" loading="lazy"
+                                                         class="w-full h-full object-cover">
+                                                    <span class="absolute inset-0 bg-black/25 group-hover:bg-black/10 transition-colors"></span>
+                                                    <span class="absolute inset-0 flex items-center justify-center">
+                                                        <span class="w-16 h-16 rounded-full bg-red-600 text-white flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                                                            <i data-lucide="play" class="w-7 h-7 ms-0.5" aria-hidden="true"></i>
+                                                        </span>
+                                                    </span>
+                                                </button>
+                                            </template>
+
+                                            <template x-if="started">
+                                                {{-- :key forces a fresh iframe per video, so choosing
+                                                     another entry actually swaps the player. --}}
+                                                <iframe :key="current.id"
+                                                        :src="current.embedUrl + '&autoplay=1'"
+                                                        :title="current.title"
+                                                        class="absolute inset-0 w-full h-full"
+                                                        frameborder="0" loading="lazy"
+                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                                        referrerpolicy="strict-origin-when-cross-origin"
+                                                        allowfullscreen></iframe>
+                                            </template>
+                                        </div>
+
+                                        {{-- Title + share, so the embed is shareable without
+                                             opening YouTube first. --}}
+                                        <div class="flex items-start justify-between gap-3 mt-3">
+                                            <p class="font-semibold text-gray-900 dark:text-white min-w-0" x-text="current.title"></p>
+                                            <div class="flex items-center gap-1 shrink-0 no-print">
+                                                <button type="button"
+                                                        @click="navigator.clipboard.writeText(current.watchUrl).then(() => $dispatch('toast', { message: '{{ __('articles.public.link_copied') }}', type: 'success' }))"
+                                                        class="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:text-primary hover:bg-gray-100 dark:hover:bg-[#0f3460] transition-colors cursor-pointer"
+                                                        aria-label="{{ __('articles.public.copy_link') }}">
+                                                    <i data-lucide="link" class="w-4 h-4"></i>
+                                                </button>
+                                                <a :href="current.watchUrl" target="_blank" rel="noopener"
+                                                   class="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:text-primary hover:bg-gray-100 dark:hover:bg-[#0f3460] transition-colors"
+                                                   aria-label="{{ __('articles.public.watch_on_youtube') }}">
+                                                    <i data-lucide="external-link" class="w-4 h-4"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {{-- Queue --}}
+                                    @if (count($videos) > 1)
+                                        <ol class="video-queue rounded-2xl border border-gray-200 dark:border-[#0f3460] divide-y divide-gray-100 dark:divide-[#0f3460] overflow-y-auto"
+                                            aria-label="{{ __('articles.public.video_playlist') }}">
+                                            <template x-for="(v, i) in videos" :key="v.id">
+                                                <li>
+                                                    <button type="button" @click="play(i)"
+                                                            class="w-full flex items-start gap-3 p-3 text-start transition-colors cursor-pointer"
+                                                            :class="vi === i ? 'bg-primary/10' : 'hover:bg-gray-50 dark:hover:bg-[#0f3460]/60'"
+                                                            :aria-current="vi === i ? 'true' : 'false'">
+                                                        <span class="relative w-24 aspect-video rounded-lg overflow-hidden shrink-0 bg-gray-100 dark:bg-[#0f3460]">
+                                                            <img :src="v.thumb" :alt="''" loading="lazy" class="w-full h-full object-cover">
+                                                            <span x-show="vi === i" class="absolute inset-0 bg-black/45 flex items-center justify-center">
+                                                                <i data-lucide="play" class="w-4 h-4 text-white" aria-hidden="true"></i>
+                                                            </span>
+                                                        </span>
+                                                        <span class="min-w-0 flex-1">
+                                                            <span class="block text-xs text-gray-500 dark:text-gray-400 mb-0.5" x-text="i + 1"></span>
+                                                            <span class="block text-sm font-medium line-clamp-2 text-gray-900 dark:text-white" x-text="v.title"></span>
+                                                        </span>
+                                                    </button>
+                                                </li>
+                                            </template>
+                                        </ol>
+                                    @endif
                                 </div>
                             </section>
                         @endif
 
-                        {{-- Gallery as its own section. It also feeds the hero
-                             slider, but a single hero image reads as a cover,
-                             not as a gallery the reader can browse. --}}
-                        @if (count($article['gallery'] ?? []) > 0)
-                            <section class="mt-10" aria-labelledby="article-gallery-label">
-                                <h2 id="article-gallery-label" class="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-                                    <i data-lucide="images" class="w-5 h-5 text-accent"></i>{{ __('articles.public.gallery') }}
-                                </h2>
-                                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                    @foreach ($article['gallery'] as $index => $image)
-                                        {{-- A plain link, not the hero's lightbox: that
-                                             component's scope ends with the hero. --}}
-                                        <a href="{{ $image['url'] }}" target="_blank" rel="noopener"
-                                           class="group relative aspect-[4/3] overflow-hidden rounded-xl bg-gray-100 dark:bg-[#0f3460] block focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30">
-                                            <img src="{{ $image['url'] }}" alt="{{ $image['caption'] ?: $article['title'] }}" loading="lazy"
-                                                 class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none">
-                                            @if (! empty($image['caption']))
-                                                <span class="absolute inset-x-0 bottom-0 p-2 text-xs text-white bg-black/55 text-start line-clamp-1">{{ $image['caption'] }}</span>
-                                            @endif
-                                        </a>
-                                    @endforeach
-                                </div>
-                            </section>
-                        @endif
+                        {{-- No attached-media section: an article's images are the
+                             hero slider's plates and its videos are the YouTube
+                             playlist above. Rendering the same files a third time
+                             under "attached media" was duplication, and the mp4
+                             branch is retired now that video means YouTube. --}}
 
+                        {{-- No separate gallery section: every gallery plate already
+                             feeds the hero slider at the top of the article, with a
+                             thumbnail strip and a lightbox. Repeating the same images
+                             mid-article was the same content twice. --}}
+
+                        {{-- Key points panel, per the design prototype: a tinted
+                             gradient block with a lightbulb, not the folio card. --}}
                         @if (! empty($article['summary']))
-                            <aside class="folio folio-summary mt-10" aria-labelledby="article-summary-label">
-                                <span class="folio-summary__label" id="article-summary-label">
+                            <aside class="summary-panel mt-10" aria-labelledby="article-summary-label">
+                                <h2 id="article-summary-label" class="flex items-center gap-3 text-xl font-bold mb-4 text-gray-900 dark:text-white">
+                                    <i data-lucide="lightbulb" class="w-6 h-6 text-accent" aria-hidden="true"></i>
                                     {{ __('articles.public.summary') }}
-                                </span>
-                                <div class="folio-summary__body">
+                                </h2>
+                                <div class="summary-panel__body text-gray-700 dark:text-gray-300">
                                     {!! $article['summary'] !!}
                                 </div>
                             </aside>
@@ -759,39 +915,12 @@
                                     <i data-lucide="tag" class="w-4 h-4"></i>{{ __('articles.public.tags') }}:
                                 </span>
                                 @foreach ($article['tags'] as $tag)
-                                    <span class="px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary dark:bg-accent/10 dark:text-accent">{{ $tag }}</span>
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300">{{ $tag }}</span>
                                 @endforeach
                             </div>
                         @endif
                     </div>
                 </article>
-
-                {{-- Continue reading. The controller has always resolved these
-                     neighbours (following the series order where the article
-                     belongs to one) but nothing rendered them. --}}
-                @if ($prev || $next)
-                    <nav class="grid gap-4 sm:grid-cols-2 mt-8 no-print" aria-label="{{ __('articles.public.more_articles') }}">
-                        @foreach ([['item' => $prev, 'dir' => 'prev'], ['item' => $next, 'dir' => 'next']] as $neighbour)
-                            @php $item = $neighbour['item']; @endphp
-                            @if ($item)
-                                <a href="{{ $item['url'] }}"
-                                   class="group card-premium p-5 flex items-center gap-4 hover:border-primary/40 transition-colors {{ $neighbour['dir'] === 'next' ? 'sm:text-end sm:flex-row-reverse' : '' }}">
-                                    <span class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
-                                        <i data-lucide="chevron-{{ ($neighbour['dir'] === 'prev') === $isRtl ? 'right' : 'left' }}" class="w-5 h-5"></i>
-                                    </span>
-                                    <span class="min-w-0">
-                                        <span class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-                                            {{ $neighbour['dir'] === 'prev' ? __('articles.public.previous_article') : __('articles.public.next_article') }}
-                                        </span>
-                                        <span class="block font-bold text-gray-900 dark:text-white line-clamp-2 group-hover:text-primary transition-colors">{{ $item['title'] }}</span>
-                                    </span>
-                                </a>
-                            @else
-                                <span class="hidden sm:block" aria-hidden="true"></span>
-                            @endif
-                        @endforeach
-                    </nav>
-                @endif
 
                 {{-- ============================================================ --}}
                 {{-- PREVIOUS / NEXT ARTICLE --}}
@@ -825,6 +954,65 @@
                     @endif
                 </nav>
                 @endif
+
+                {{-- ============================================================ --}}
+                {{-- RELATED ARTICLES — horizontal rail, per the design prototype. --}}
+                {{-- Uses the shared library card so related studies look like     --}}
+                {{-- studies everywhere else on the site.                          --}}
+                {{-- ============================================================ --}}
+                @if (! empty($related))
+                    <section class="mt-12 no-print" aria-labelledby="related-label"
+                             x-data="{
+                                 atStart: true,
+                                 atEnd: false,
+                                 update() {
+                                     const el = this.$refs.rail;
+                                     if (! el) return;
+                                     // scrollLeft runs negative in RTL, so compare on
+                                     // the absolute distance travelled.
+                                     const pos = Math.abs(el.scrollLeft);
+                                     const max = el.scrollWidth - el.clientWidth;
+                                     this.atStart = pos <= 4;
+                                     this.atEnd = pos >= max - 4;
+                                 },
+                                 page(dir) {
+                                     const sign = {{ $isRtl ? -1 : 1 }};
+                                     this.$refs.rail.scrollBy({ left: sign * dir * 340, behavior: 'smooth' });
+                                 },
+                             }"
+                             x-init="$nextTick(() => update())"
+                             @resize.window.debounce.150ms="update()">
+
+                        <h2 id="related-label" class="text-2xl font-bold mb-6 flex items-center gap-3 text-gray-900 dark:text-white">
+                            <i data-lucide="layers" class="w-6 h-6 text-accent" aria-hidden="true"></i>
+                            {{ __('articles.public.related_articles') }}
+                        </h2>
+
+                        <div class="relative">
+                            <div x-ref="rail" @scroll.debounce.60ms="update()"
+                                 class="flex gap-6 overflow-x-auto rail-scroll pb-4 scroll-smooth snap-x snap-mandatory">
+                                @foreach ($related as $item)
+                                    <x-site.article-card :article="$item"
+                                                         class="w-80 shrink-0 snap-start"
+                                                         aspect="aspect-[16/9]" />
+                                @endforeach
+                            </div>
+
+                            {{-- Hidden rather than disabled at the ends: an arrow that
+                                 cannot move is a control that does nothing. --}}
+                            <button type="button" x-show="!atStart" x-cloak @click="page(-1)"
+                                    aria-label="{{ __('articles.public.previous') }}"
+                                    class="hidden sm:flex absolute start-0 top-[38%] -translate-y-1/2 w-11 h-11 rounded-full bg-white dark:bg-[#16213e] border border-gray-200 dark:border-[#0f3460] shadow-xl items-center justify-center text-gray-700 dark:text-gray-200 hover:scale-110 transition-transform z-10">
+                                <i data-lucide="chevron-{{ $isRtl ? 'right' : 'left' }}" class="w-5 h-5"></i>
+                            </button>
+                            <button type="button" x-show="!atEnd" x-cloak @click="page(1)"
+                                    aria-label="{{ __('articles.public.next') }}"
+                                    class="hidden sm:flex absolute end-0 top-[38%] -translate-y-1/2 w-11 h-11 rounded-full bg-white dark:bg-[#16213e] border border-gray-200 dark:border-[#0f3460] shadow-xl items-center justify-center text-gray-700 dark:text-gray-200 hover:scale-110 transition-transform z-10">
+                                <i data-lucide="chevron-{{ $isRtl ? 'left' : 'right' }}" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </section>
+                @endif
             </div>
 
             {{-- ============================================================ --}}
@@ -833,34 +1021,27 @@
             <aside class="lg:col-span-4 xl:col-span-3 mt-8 lg:mt-0 no-print">
                 <div class="lg:sticky lg:top-24 space-y-6">
 
-                    {{-- TOC scroll-spy --}}
+                    {{-- Table of contents — the prototype's card: a titled panel
+                         of pill links, with the active section filled rather than
+                         marked by a travelling rail. --}}
                     @if (! empty($article['toc']))
-                        {{-- The rail. Not a card: a track the reader's position
-                             travels along, so the sidebar reports where they are
-                             instead of restating the article's structure. --}}
-                        <nav class="hidden lg:block" aria-label="{{ __('articles.public.table_of_contents') }}">
-                            <p class="text-[11px] font-bold tracking-[.14em] text-gray-400 dark:text-gray-500 mb-4">
+                        <nav class="card-premium p-6 hidden lg:block animate-fade-in-up" aria-label="{{ __('articles.public.table_of_contents') }}">
+                            <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
+                                <i data-lucide="list" class="w-5 h-5 text-accent" aria-hidden="true"></i>
                                 {{ __('articles.public.table_of_contents') }}
-                            </p>
-                            <div class="toc-rail text-gray-900 dark:text-white"
-                                 x-ref="tocRail"
-                                 :data-ready="active ? 'true' : 'false'"
-                                 x-effect="active; $nextTick(() => positionTocMarker())">
-                                <span class="toc-rail__marker" aria-hidden="true"></span>
-                                <ul>
-                                    @foreach ($article['toc'] as $item)
-                                        <li @class(['ps-4' => ($item['level'] ?? 2) === 3])>
-                                            <a href="#{{ $item['id'] }}"
-                                               @click.prevent="scrollTo('{{ $item['id'] }}')"
-                                               data-toc-link="{{ $item['id'] }}"
-                                               class="toc-link"
-                                               :class="active === '{{ $item['id'] }}' ? 'toc-active' : ''"
-                                               :aria-current="active === '{{ $item['id'] }}' ? 'true' : 'false'">
-                                                {{ $item['label'] }}
-                                            </a>
-                                        </li>
-                                    @endforeach
-                                </ul>
+                            </h3>
+                            <div class="toc-scroll space-y-1">
+                                @foreach ($article['toc'] as $item)
+                                    @php($isSub = ($item['level'] ?? 2) === 3)
+                                    <a href="#{{ $item['id'] }}"
+                                       @click.prevent="scrollTo('{{ $item['id'] }}')"
+                                       data-toc-link="{{ $item['id'] }}"
+                                       @class(['toc-link', 'toc-link--sub' => $isSub])
+                                       :class="active === '{{ $item['id'] }}' ? 'toc-active' : ''"
+                                       :aria-current="active === '{{ $item['id'] }}' ? 'true' : 'false'">
+                                        {{ $item['label'] }}
+                                    </a>
+                                @endforeach
                             </div>
                         </nav>
                     @endif
@@ -869,7 +1050,7 @@
                     @if (! empty($article['statistics']))
                         <div class="card-premium p-5 animate-fade-in-up stagger-1">
                             <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-                                <span class="w-7 h-7 rounded-lg bg-secondary/10 text-secondary flex items-center justify-center"><i data-lucide="bar-chart-2" class="w-4 h-4"></i></span>{{ __('articles.public.quick_stats') }}
+                                <i data-lucide="bar-chart-2" class="w-5 h-5 text-accent" aria-hidden="true"></i>{{ __('articles.public.quick_stats') }}
                             </h3>
                             <div class="space-y-3">
                                 @foreach ($article['statistics'] as $stat)
@@ -886,43 +1067,20 @@
                     @if (! empty($article['tags']))
                         <div class="card-premium p-5 animate-fade-in-up stagger-2">
                             <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-                                <span class="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><i data-lucide="tag" class="w-4 h-4"></i></span>{{ __('articles.public.tags') }}
+                                <i data-lucide="tag" class="w-5 h-5 text-accent" aria-hidden="true"></i>{{ __('articles.public.tags') }}
                             </h3>
                             <div class="flex flex-wrap gap-2">
                                 @foreach ($article['tags'] as $tag)
-                                    <span class="px-3 py-1.5 rounded-full text-xs font-semibold bg-primary/10 text-primary dark:bg-accent/10 dark:text-accent">{{ $tag }}</span>
+                                    <span class="px-4 py-2 rounded-full text-sm font-medium bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 transition-transform hover:scale-105">{{ $tag }}</span>
                                 @endforeach
                             </div>
                         </div>
                     @endif
 
-                    {{-- Related articles (compact cards) --}}
-                    @if (! empty($related))
-                        <div class="card-premium p-5 animate-fade-in-up stagger-3">
-                            <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-                                <span class="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><i data-lucide="layers" class="w-4 h-4"></i></span>{{ __('articles.public.related_articles') }}
-                            </h3>
-                            <ul class="space-y-4">
-                                @foreach (array_slice($related, 0, 5) as $item)
-                                    <li>
-                                        <a href="{{ $item['url'] }}" class="group flex items-start gap-3">
-                                            <span class="w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-gray-100 dark:bg-[#0f3460]">
-                                                <img src="{{ $item['image'] }}" alt="{{ $item['title'] }}" loading="lazy"
-                                                     onerror="this.onerror=null;this.style.display='none';this.parentElement.classList.add('img-gradient-fallback')"
-                                                     class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
-                                            </span>
-                                            <span class="min-w-0 flex-1">
-                                                <span class="block text-sm font-bold text-gray-900 dark:text-white line-clamp-2 leading-snug group-hover:text-primary transition-colors">{{ $item['title'] }}</span>
-                                                <span class="mt-1 inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                                                    <i data-lucide="clock" class="w-3 h-3"></i>{{ $item['readTime'] }} {{ __('articles.public.min_read') }}
-                                                </span>
-                                            </span>
-                                        </a>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
+                    {{-- Related articles moved out of the sidebar into a
+                         full-width carousel below the article, per the design
+                         prototype: at 16rem wide the thumbnails were unreadable
+                         and the list pushed "back to articles" off the fold. --}}
 
                     {{-- Back to articles --}}
                     <a href="{{ route('public.articles') }}"
@@ -1036,25 +1194,6 @@
                     if (el && el.getBoundingClientRect().top <= 120) current = id;
                 }
                 if (current) this.active = current;
-            },
-
-            /**
-             * Move the rail marker onto the active entry.
-             *
-             * Measured rather than CSS-only: the marker has to match the real
-             * height of a wrapped label, which no selector can know. Reads
-             * offsets in one pass and writes two custom properties, so the
-             * transition runs on the compositor.
-             */
-            positionTocMarker() {
-                const rail = this.$refs.tocRail;
-                if (!rail || !this.active) return;
-
-                const link = rail.querySelector(`[data-toc-link="${CSS.escape(this.active)}"]`);
-                if (!link) return;
-
-                rail.style.setProperty('--marker-y', `${link.offsetTop}px`);
-                rail.style.setProperty('--marker-h', `${link.offsetHeight}px`);
             },
 
             scrollTo(id) {

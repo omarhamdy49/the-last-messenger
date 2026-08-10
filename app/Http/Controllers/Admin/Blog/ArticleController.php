@@ -190,6 +190,9 @@ class ArticleController extends AdminController
             'tags.translations:id,tag_id,locale,name',
             'mediaItems:id,filename,original_filename,path,mime_type,size,type',
             'gallery:id,article_id,image,caption,order',
+            'episodes:id,program_id,slug,video_url,season_number,episode_number,is_published',
+            'episodes.translations:id,media_episode_id,locale,title',
+            'episodes.program:id,slug',
         ]);
 
         $categories = $this->repository->getFormCategories();
@@ -623,6 +626,27 @@ class ArticleController extends AdminController
      *
      * @return array<int, string>
      */
+    /**
+     * Poster frame for an episode's YouTube URL, or null when the URL is not a
+     * recognisable YouTube link.
+     */
+    private function episodeThumb(string $url): ?string
+    {
+        $patterns = [
+            '~youtu\\.be/([A-Za-z0-9_-]{11})~',
+            '~youtube(?:-nocookie)?\\.com/(?:embed|v|shorts|live)/([A-Za-z0-9_-]{11})~',
+            '~youtube(?:-nocookie)?\\.com/watch\\?(?:.*&)?v=([A-Za-z0-9_-]{11})~',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $url, $m) === 1) {
+                return 'https://i.ytimg.com/vi/'.$m[1].'/mqdefault.jpg';
+            }
+        }
+
+        return null;
+    }
+
     protected function articleRelations(): array
     {
         return [
@@ -636,6 +660,9 @@ class ArticleController extends AdminController
             'tags.translations:id,tag_id,locale,name',
             'mediaItems:id,filename,original_filename,path,mime_type,size,type',
             'gallery:id,article_id,image,caption,order',
+            'episodes:id,program_id,slug,video_url,season_number,episode_number,is_published',
+            'episodes.translations:id,media_episode_id,locale,title',
+            'episodes.program:id,slug',
             'versions:id,versionable_id,versionable_type,created_at',
             'seerahEvents:id,slug',
         ];
@@ -728,6 +755,18 @@ class ArticleController extends AdminController
                 'mime_type' => $media->mime_type,
                 'size' => $media->size,
                 'type' => $media->type,
+            ])->values()->all(),
+            // Video queue, already in pivot order — the picker renders these
+            // as the current selection and posts them back as episodes[].
+            'episodes' => $article->episodes->map(fn ($episode) => [
+                'id' => $episode->id,
+                'title' => $episode->getTranslation('title', app()->getLocale())
+                    ?: $episode->getTranslation('title', 'ar')
+                    ?: $episode->slug,
+                'program' => $episode->program?->slug,
+                'season' => $episode->season_number,
+                'episode' => $episode->episode_number,
+                'thumb' => $this->episodeThumb((string) $episode->video_url),
             ])->values()->all(),
             'locales' => $article->locales->mapWithKeys(fn (ArticleLocale $locale) => [
                 $locale->locale => [

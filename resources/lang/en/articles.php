@@ -73,6 +73,10 @@ return [
         'table_of_contents' => 'Table of contents',
         'summary' => 'Summary',
         'attached_media' => 'Attached media',
+        'video' => 'Video',
+        'video_playlist' => 'Playlist',
+        'watch_on_youtube' => 'Watch on YouTube',
+        'no_body' => 'The text of this article has not been published yet.',
         'more_articles' => 'More articles',
         'share' => 'Share',
         'share_twitter' => 'Share on X',
@@ -105,6 +109,11 @@ return [
 
     // Actions
     'actions' => [
+        'assign_episodes' => 'Assign episodes',
+        'add_selected' => 'Add selected',
+        'move_up' => 'Move up',
+        'move_down' => 'Move down',
+        'remove' => 'Remove',
         'create_new' => 'New Article',
         'edit' => 'Edit Article',
         'delete' => 'Delete Article',
@@ -129,6 +138,9 @@ return [
 
     // Fields
     'fields' => [
+        'episodes' => 'Linked episodes',
+        'program' => 'Program',
+        'all_programs' => 'All programs',
         'id' => 'ID',
         'image' => 'Image',
         'views' => 'Views',
@@ -221,6 +233,7 @@ return [
 
     // Placeholders
     'placeholders' => [
+        'search_episodes' => 'Search by episode title or slug...',
         'title' => 'Enter article title...',
         'slug' => 'article-slug',
         'excerpt' => 'Enter a brief summary...',
@@ -349,6 +362,8 @@ return [
 
     // Empty States
     'empty' => [
+        'episodes' => 'No episodes assigned yet',
+        'episodes_search' => 'No matching episodes',
         'title' => 'No articles yet',
         'description' => 'Start by creating your first article',
         'no_results' => 'No matching results',
@@ -371,6 +386,7 @@ return [
 
     // Help Text
     'help' => [
+        'episodes' => 'Pick existing episodes to show as a playlist inside the article.',
         'slug' => 'URL-friendly version of the title. Will be auto-generated if left blank.',
         'excerpt' => 'Brief summary of the article. Shows in listings and search results.',
         'featured_image' => 'Main image for the article. Recommended size: 1200×630 pixels.',

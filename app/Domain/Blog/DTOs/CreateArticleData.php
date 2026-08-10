@@ -29,6 +29,7 @@ final class CreateArticleData
      * @param  array<string, bool>  $isReady  Locale-keyed readiness flags.
      * @param  array<int>|null  $tags  Tag IDs to attach.
      * @param  array<int>|null  $mediaItems  Media IDs to sync.
+     * @param  array<int>|null  $episodes  Media episode IDs for the video queue, in order.
      * @param  array<int>|null  $additionalCategories  Additional category IDs to attach.
      * @param  array<int>|null  $series  Series IDs to attach (with positions).
      * @param  array<int, array{media_id: int, file: UploadedFile}>  $galleryFiles
@@ -59,6 +60,7 @@ final class CreateArticleData
         public readonly array $isReady,
         public readonly ?array $tags,
         public readonly ?array $mediaItems,
+        public readonly ?array $episodes,
         public readonly ?array $additionalCategories,
         public readonly ?array $series = null,
         public readonly array $galleryFiles = [],
@@ -102,6 +104,7 @@ final class CreateArticleData
             isReady: $validated['is_ready'] ?? [],
             tags: $validated['tags'] ?? null,
             mediaItems: $validated['media_items'] ?? null,
+            episodes: $validated['episodes'] ?? null,
             additionalCategories: $validated['additional_categories'] ?? null,
             series: $validated['series'] ?? null,
             galleryFiles: $galleryFiles,

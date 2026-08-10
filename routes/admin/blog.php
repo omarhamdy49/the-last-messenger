@@ -14,6 +14,11 @@ use Illuminate\Support\Facades\Route;
 // Route::resource('articles'), otherwise `articles/{article}` swallows it.
 Route::prefix('articles')->group(function (): void {
     // Authenticated module lookups used by the article WYSIWYG/block editor.
+    // Episode picker for the article's video queue (paginated + searchable).
+    Route::get('/module-options/episodes', [ArticleModuleController::class, 'episodes'])
+        ->name('admin.articles.modules.episodes');
+    Route::get('/module-options/episode-programs', [ArticleModuleController::class, 'episodePrograms'])
+        ->name('admin.articles.modules.episode-programs');
     Route::get('/module-options/surahs', [ArticleModuleController::class, 'surahs'])
         ->name('admin.articles.modules.surahs');
     Route::get('/module-options/surahs/{surah}/verses', [ArticleModuleController::class, 'verses'])

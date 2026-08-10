@@ -212,6 +212,17 @@ class CreateArticleAction
         if (! empty($data->mediaItems)) {
             $article->mediaItems()->sync($data->mediaItems);
         }
+
+        // Video queue: the submitted order is the play order, so the array
+        // index becomes the pivot's `position`.
+        if ($data->episodes !== null) {
+            $article->episodes()->sync(
+                collect($data->episodes)
+                    ->values()
+                    ->mapWithKeys(fn (int $id, int $i) => [$id => ['position' => $i]])
+                    ->all()
+            );
+        }
     }
 
     private function syncSeries(Article $article, CreateArticleData $data): void

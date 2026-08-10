@@ -105,6 +105,7 @@ deptrac:
       - App\Models\User
     App\Models\Article:
       - App\Domain\Blog\Models\Category
+      - App\Domain\Media\Models\MediaEpisode
       - App\Domain\Blog\Models\Series
       - App\Domain\Blog\Models\Tag
       - App\Domain\Seerah\Models\SeerahEvent

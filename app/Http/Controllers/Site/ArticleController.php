@@ -251,6 +251,7 @@ final class ArticleController extends Controller
             // neither reached the reader: both were stored and then dropped here.
             'summary' => $this->normalizeSummary($articleLocale),
             'media' => $this->normalizeMedia($article),
+            'videos' => $this->normalizeVideos($article, $locale),
             'url' => $this->localeUrl($articleLocale->slug, $articleLocale->locale),
             'canonical' => $this->localeUrl($articleLocale->slug, $articleLocale->locale),
             'alternates' => $this->buildArticleAlternates($article),
@@ -391,6 +392,77 @@ final class ArticleController extends Controller
             ->filter(fn ($item) => $item['url'] !== asset('storage/'))
             ->values()
             ->all();
+    }
+
+    /**
+     * Shape the article's cited episodes into a render-ready video queue.
+     *
+     * `video_url` on an episode is whatever the YouTube UI produced — a watch
+     * link, a share link, an embed src, a Shorts URL, sometimes with a playlist
+     * or timestamp hanging off it. All carry the same eleven-character id, so
+     * the id is extracted once here and every URL the view needs is built from
+     * it. An episode whose URL yields no id is dropped rather than rendered as
+     * a broken iframe.
+     *
+     * Unpublished episodes never reach the reader, so an article may safely
+     * cite an episode that is still being prepared.
+     *
+     * `youtube-nocookie.com` is deliberate: the reader is not asked to accept
+     * tracking to watch an embedded lecture.
+     *
+     * @return array<int, array{id:string, title:string, embedUrl:string, watchUrl:string, thumb:string}>
+     */
+    private function normalizeVideos(Article $article, string $locale): array
+    {
+        if (! $article->relationLoaded('episodes')) {
+            return [];
+        }
+
+        return $article->episodes
+            ->filter(fn ($episode): bool => (bool) $episode->is_published)
+            ->map(function ($episode) use ($locale): ?array {
+                $id = $this->youTubeId((string) $episode->video_url);
+
+                if ($id === null) {
+                    return null;
+                }
+
+                $title = $episode->getTranslation('title', $locale)
+                    ?: $episode->getTranslation('title', 'ar')
+                    ?: __('articles.public.video');
+
+                return [
+                    'id' => $id,
+                    'title' => (string) $title,
+                    'embedUrl' => 'https://www.youtube-nocookie.com/embed/'.$id.'?rel=0&modestbranding=1&playsinline=1',
+                    'watchUrl' => 'https://www.youtube.com/watch?v='.$id,
+                    'thumb' => 'https://i.ytimg.com/vi/'.$id.'/hqdefault.jpg',
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Pull the 11-character video id out of any YouTube URL form.
+     */
+    private function youTubeId(string $url): ?string
+    {
+        $patterns = [
+            '~youtu\.be/([A-Za-z0-9_-]{11})~',
+            '~youtube(?:-nocookie)?\.com/(?:embed|v|shorts|live)/([A-Za-z0-9_-]{11})~',
+            '~youtube(?:-nocookie)?\.com/watch\?(?:.*&)?v=([A-Za-z0-9_-]{11})~',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $url, $m) === 1) {
+                return $m[1];
+            }
+        }
+
+        // A bare id pasted on its own.
+        return preg_match('~^[A-Za-z0-9_-]{11}$~', trim($url)) === 1 ? trim($url) : null;
     }
 
     /**

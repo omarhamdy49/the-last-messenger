@@ -29,6 +29,7 @@ final class UpdateArticleData
      * @param  array<string, bool>  $isReady
      * @param  array<int>|null  $tags
      * @param  array<int>|null  $mediaItems
+     * @param  array<int>|null  $episodes  Media episode IDs for the video queue, in order.
      * @param  array<int>|null  $additionalCategories
      */
     public function __construct(
@@ -55,6 +56,7 @@ final class UpdateArticleData
         public readonly array $isReady,
         public readonly ?array $tags,
         public readonly ?array $mediaItems,
+        public readonly ?array $episodes,
         public readonly ?array $additionalCategories,
         public readonly ?array $series = null,
         /** @var array<int, array{media_id: int, file: UploadedFile}>|null Null means "gallery tab untouched". */
@@ -103,6 +105,7 @@ final class UpdateArticleData
             isReady: $validated['is_ready'] ?? [],
             tags: $validated['tags'] ?? null,
             mediaItems: isset($validated['media_items']) ? $validated['media_items'] : null,
+            episodes: $validated['episodes'] ?? null,
             additionalCategories: $validated['additional_categories'] ?? null,
             series: $validated['series'] ?? null,
             galleryFiles: $galleryFiles,

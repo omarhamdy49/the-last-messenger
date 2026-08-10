@@ -7,8 +7,10 @@ namespace App\Models;
 use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Models\Series;
 use App\Domain\Blog\Models\Tag;
+use App\Domain\Media\Models\MediaEpisode;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Shared\Traits\HasVersions;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -44,10 +46,10 @@ use Spatie\Translatable\HasTranslations;
  * @property string|null $status
  * @property array|null $statistics
  * @property array|null $references
- * @property \Carbon\Carbon|null $published_at
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
- * @property \Carbon\Carbon|null $deleted_at
+ * @property Carbon|null $published_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property Carbon|null $deleted_at
  */
 class Article extends Model
 {
@@ -227,6 +229,21 @@ class Article extends Model
     /**
      * Get only video/episode media items
      */
+    /**
+     * Media episodes cited by this article, in the editor's chosen order.
+     *
+     * The article points at existing episodes rather than owning video links,
+     * so one lecture has a single canonical record and every article citing it
+     * is discoverable from the episode side.
+     */
+    public function episodes(): BelongsToMany
+    {
+        return $this->belongsToMany(MediaEpisode::class, 'article_media_episode')
+            ->withPivot('position')
+            ->withTimestamps()
+            ->orderBy('article_media_episode.position');
+    }
+
     public function videoEpisodes(): BelongsToMany
     {
         return $this->mediaItems()->whereIn('type', ['video', 'episode']);

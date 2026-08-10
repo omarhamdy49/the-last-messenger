@@ -659,6 +659,10 @@ class ArticleRepository
                 'gallery:id,article_id,image,caption,order',
                 'series:id,slug',
                 'series.translations:id,series_id,locale,title',
+                // Video queue. Loaded here so the reader never lazy-loads an
+                // episode per row; the pivot's `position` drives play order.
+                'episodes:id,slug,video_url,is_published,duration_seconds',
+                'episodes.translations:id,media_episode_id,locale,title',
             ])->find($articleLocale->article_id);
     }
 

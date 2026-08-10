@@ -73,6 +73,10 @@ return [
         'table_of_contents' => 'محتويات المقال',
         'summary' => 'خلاصة',
         'attached_media' => 'وسائط مرفقة',
+        'video' => 'مقطع مرئي',
+        'video_playlist' => 'قائمة تشغيل',
+        'watch_on_youtube' => 'مشاهدة على يوتيوب',
+        'no_body' => 'لم يُنشر نص هذا المقال بعد.',
         'more_articles' => 'مقالات أخرى',
         'share' => 'مشاركة',
         'share_twitter' => 'مشاركة عبر X',
@@ -105,6 +109,11 @@ return [
 
     // Actions
     'actions' => [
+        'assign_episodes' => 'إسناد حلقات',
+        'add_selected' => 'إضافة المحدد',
+        'move_up' => 'تحريك لأعلى',
+        'move_down' => 'تحريك لأسفل',
+        'remove' => 'إزالة',
         'create_new' => 'مقال جديد',
         'edit' => 'تعديل المقال',
         'delete' => 'حذف المقال',
@@ -129,6 +138,9 @@ return [
 
     // Fields
     'fields' => [
+        'episodes' => 'الحلقات المرتبطة',
+        'program' => 'البرنامج',
+        'all_programs' => 'جميع البرامج',
         'id' => 'المعرّف',
         'image' => 'الصورة',
         'views' => 'المشاهدات',
@@ -232,6 +244,7 @@ return [
 
     // Placeholders
     'placeholders' => [
+        'search_episodes' => 'ابحث بعنوان الحلقة أو المعرّف...',
         'title' => 'أدخل عنوان المقال...',
         'slug' => 'الرابط-المختصر-للمقال',
         'excerpt' => 'أدخل ملخصاً مختصراً للمقال...',
@@ -361,6 +374,8 @@ return [
 
     // Empty States
     'empty' => [
+        'episodes' => 'لم تُسند أي حلقات بعد',
+        'episodes_search' => 'لا توجد حلقات مطابقة',
         'title' => 'لا توجد مقالات بعد',
         'description' => 'ابدأ بإنشاء أول مقال لك',
         'no_results' => 'لا توجد نتائج مطابقة',
@@ -381,6 +396,7 @@ return [
 
     // Help Text
     'help' => [
+        'episodes' => 'اختر حلقات موجودة لعرضها كقائمة تشغيل داخل المقال.',
         'slug' => 'الرابط المختصر للمقال. سيتم إنشاؤه تلقائياً من العنوان إذا تُرك فارغاً.',
         'excerpt' => 'ملخص مختصر للمقال. سيظهر في قوائم المقالات ونتائج البحث.',
         'featured_image' => 'الصورة الرئيسية للمقال. الحجم الموصى به: 1200×630 بكسل.',
@@ -495,6 +511,7 @@ return [
 
     // Placeholders & Hints
     'placeholders' => [
+        'search_episodes' => 'ابحث بعنوان الحلقة أو المعرّف...',
         'upload_thumbnail' => 'اضغط لتحميل صورة مميزة',
         'select_writer' => 'اختر المؤلف...',
         'select_category' => 'اختر التصنيف الرئيسي...',
@@ -524,6 +541,8 @@ return [
 
     // Empty states (additional)
     'empty' => [
+        'episodes' => 'لم تُسند أي حلقات بعد',
+        'episodes_search' => 'لا توجد حلقات مطابقة',
         'title' => 'لا توجد مقالات بعد',
         'description' => 'ابدأ بإنشاء أول مقال',
         'no_results' => 'لا توجد نتائج مطابقة',

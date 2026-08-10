@@ -6,6 +6,8 @@ namespace App\Http\Controllers\Admin\Blog;
 
 use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithCollection;
+use App\Domain\Media\Models\MediaEpisode;
+use App\Domain\Media\Models\MediaProgram;
 use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Models\Verse;
 use App\Http\Controllers\Controller;
@@ -18,6 +20,94 @@ use Illuminate\Http\Request;
  */
 final class ArticleModuleController extends Controller
 {
+    /**
+     * Paginated, searchable episode picker for the article's video queue.
+     *
+     * Paginated rather than dumped whole: a synced YouTube channel runs to
+     * hundreds of episodes, which is both a slow response and an unusable
+     * list. Search covers the localized title and the slug; `program` narrows
+     * to one series.
+     */
+    public function episodes(Request $request): JsonResponse
+    {
+        $locale = $this->contentLocale($request);
+        $term = trim((string) $request->query('q', ''));
+        $programId = $request->query('program');
+
+        $episodes = MediaEpisode::query()
+            ->with([
+                'translations:id,media_episode_id,locale,title',
+                'program:id,slug',
+            ])
+            ->when($programId !== null && $programId !== '', fn (Builder $q) => $q->where('program_id', (int) $programId))
+            ->when($term !== '', fn (Builder $q) => $q->where(function (Builder $inner) use ($term): void {
+                $inner->where('slug', 'LIKE', "%{$term}%")
+                    ->orWhereHas('translations', fn (Builder $t) => $t->where('title', 'LIKE', "%{$term}%"));
+            }))
+            ->orderBy('program_id')
+            ->orderBy('season_number')
+            ->orderBy('episode_number')
+            ->paginate(perPage: 12, page: (int) $request->query('page', 1));
+
+        return response()->json([
+            'data' => $episodes->getCollection()->map(fn (MediaEpisode $episode): array => [
+                'id' => $episode->id,
+                'title' => $episode->getTranslation('title', $locale)
+                    ?: $episode->getTranslation('title', 'ar')
+                    ?: $episode->slug,
+                'slug' => $episode->slug,
+                'program' => $episode->program?->slug,
+                'season' => $episode->season_number,
+                'episode' => $episode->episode_number,
+                'is_published' => (bool) $episode->is_published,
+                'thumb' => $this->youTubeThumb((string) $episode->video_url),
+            ])->values(),
+            'meta' => [
+                'current_page' => $episodes->currentPage(),
+                'last_page' => $episodes->lastPage(),
+                'total' => $episodes->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * Programs list for the picker's filter dropdown.
+     */
+    public function episodePrograms(): JsonResponse
+    {
+        return response()->json([
+            'data' => MediaProgram::query()
+                ->orderBy('slug')
+                ->get(['id', 'slug'])
+                ->map(fn (MediaProgram $program): array => [
+                    'id' => $program->id,
+                    'label' => $program->slug,
+                ])
+                ->values(),
+        ]);
+    }
+
+    /**
+     * Poster frame for an episode's YouTube URL, or null when it is not a
+     * recognisable YouTube link (the picker then shows a placeholder).
+     */
+    private function youTubeThumb(string $url): ?string
+    {
+        $patterns = [
+            '~youtu\.be/([A-Za-z0-9_-]{11})~',
+            '~youtube(?:-nocookie)?\.com/(?:embed|v|shorts|live)/([A-Za-z0-9_-]{11})~',
+            '~youtube(?:-nocookie)?\.com/watch\?(?:.*&)?v=([A-Za-z0-9_-]{11})~',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $url, $m) === 1) {
+                return 'https://i.ytimg.com/vi/'.$m[1].'/mqdefault.jpg';
+            }
+        }
+
+        return null;
+    }
+
     public function surahs(): JsonResponse
     {
         return response()->json([
