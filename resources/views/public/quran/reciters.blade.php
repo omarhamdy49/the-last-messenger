@@ -120,7 +120,7 @@
         viewMode: localStorage.getItem('recitersViewMode') || 'grid',
         filterStyle: 'all',
         sortBy: 'popular',
-        perPage: parseInt(localStorage.getItem('recitersPerPage')) || 12,
+        perPage: parseInt(localStorage.getItem('recitersPerPage')) || 20,
         currentPage: 1,
         playingReciterId: null,
         currentAudio: null,
@@ -137,7 +137,8 @@
                 r = r.filter(x =>
                     (x.nameAr && x.nameAr.includes(this.searchQuery)) ||
                     (x.nameEn && x.nameEn.toLowerCase().includes(q)) ||
-                    (x.country && x.country.toLowerCase().includes(q))
+                    (x.country && x.country.toLowerCase().includes(q)) ||
+                    (x.countryName && x.countryName.includes(this.searchQuery))
                 );
             }
             if (this.sortBy === 'popular') {
@@ -307,7 +308,9 @@
                         </div>
                     </div>
 
-                    <h3 class="text-2xl font-bold mb-2 bg-gradient-to-r from-[#0056b3] to-[#218838] bg-clip-text text-transparent font-['Amiri']" x-text="reciter.nameAr || reciter.nameEn"></h3>
+                    <a :href="'{{ url('/quran/reciters') }}/' + reciter.slug" class="hover:underline decoration-[#0056b3]">
+                        <h3 class="text-2xl font-bold mb-2 bg-gradient-to-r from-[#0056b3] to-[#218838] bg-clip-text text-transparent font-['Amiri']" x-text="reciter.nameAr || reciter.nameEn"></h3>
+                    </a>
                     <p class="text-sm mb-4" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'" x-text="reciter.nameEn"></p>
 
                     <div class="flex items-center justify-center gap-3 mb-5 flex-wrap">
@@ -316,7 +319,7 @@
                             <svg class="w-3.5 h-3.5 text-[#0056b3]" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
                             </svg>
-                            <span x-text="reciter.country || '—'"></span>
+                            <span x-text="(((reciter.countryFlag || '') + ' ' + (reciter.countryName || '')).trim()) || '—'"></span>
                         </span>
                         <span class="px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5"
                               :class="$store.theme.dark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
@@ -331,15 +334,10 @@
                        :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'"
                        x-text="reciter.description || ''"></p>
 
-                    <button
-                        @click="playPreview(reciter)"
-                        class="listening-button relative w-full py-3 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-bold text-center hover:shadow-xl transition-all transform hover:scale-105 flex items-center justify-center gap-2 overflow-hidden"
-                    >
-                        <svg class="w-5 h-5 relative z-10" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/>
-                        </svg>
-                        <span class="relative z-10">{{ __('quran.public.listen_now') }}</span>
-                    </button>
+                    {{-- Whole card navigates to the profile (stretched link, no action button) --}}
+                    <a :href="'{{ url('/quran/reciters') }}/' + reciter.slug"
+                       class="absolute inset-0 rounded-3xl z-10"
+                       :aria-label="reciter.nameAr || reciter.nameEn"></a>
                 </div>
             </template>
         </div>
@@ -394,9 +392,9 @@
                     class="px-4 py-2.5 text-base sm:text-sm rounded-xl font-medium transition-all focus:ring-4 focus:ring-[#0056b3]/20 focus:outline-none"
                     :class="$store.theme.dark ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-900 border-gray-200'"
                 >
-                    <option :value="6">6</option>
-                    <option :value="12">12</option>
-                    <option :value="24">24</option>
+                    <option :value="10">10</option>
+                    <option :value="20">20</option>
+                    <option :value="40">40</option>
                     <option :value="allReciters.length">{{ __('site.all') }}</option>
                 </select>
 
@@ -444,128 +442,73 @@
     {{-- GRID --}}
     {{-- ============================================================ --}}
     <div x-show="viewMode === 'grid'"
-         class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
+         class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-12">
         <template x-for="(reciter, index) in paginatedReciters" :key="reciter.id">
-            <div class="reciter-card rounded-2xl p-6 text-center shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 animate-fadeInUp relative"
-                 :class="[$store.theme.dark ? 'bg-gradient-to-br from-gray-900 to-gray-800' : 'bg-gradient-to-br from-white to-gray-50', 'stagger-' + ((index % 4) + 1)]">
-                <div class="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#0056b3] to-[#218838] opacity-0 hover:opacity-5 transition-opacity duration-500 pointer-events-none"></div>
-                <div class="relative">
-                    <div class="relative w-32 h-32 mx-auto mb-4">
-                        <template x-if="profileImageSrc(reciter)">
-                            <img :src="profileImageSrc(reciter)" :alt="reciter.nameAr || reciter.nameEn"
-                                 class="reciter-image relative w-full h-full rounded-full object-cover shadow-lg ring-2 ring-white/10"
-                                 loading="lazy">
-                        </template>
-                        <template x-if="!profileImageSrc(reciter)">
-                            <div class="relative w-full h-full rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] flex items-center justify-center shadow-lg ring-2 ring-white/10">
-                                <span class="text-white text-4xl font-['Amiri']" x-text="initials(reciter)"></span>
-                            </div>
-                        </template>
-                        <div x-show="playingReciterId === reciter.id"
-                             class="audio-waveform absolute -bottom-1 start-0 end-0 h-1 rounded-full"></div>
-                    </div>
-
-                    <div x-show="reciter.isFeatured"
-                         class="absolute top-0 end-0 px-2 py-1 bg-gradient-to-r from-[#0056b3] to-[#218838] text-white text-xs font-bold rounded-full shadow-lg">
+            <a :href="'{{ url('/quran/reciters') }}/' + reciter.slug"
+               class="reciter-card group block rounded-2xl p-4 text-center shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 motion-reduce:transform-none relative"
+               :class="$store.theme.dark ? 'bg-gray-900 ring-1 ring-white/10' : 'bg-white ring-1 ring-gray-100'">
+                <div class="relative w-20 h-20 mx-auto mb-3 rounded-full p-[2.5px] bg-gradient-to-br from-[#0056b3] to-[#218838] group-hover:scale-105 transition-transform duration-300 motion-reduce:transform-none">
+                    <template x-if="profileImageSrc(reciter)">
+                        <img :src="profileImageSrc(reciter)" :alt="reciter.nameAr || reciter.nameEn"
+                             class="w-full h-full rounded-full object-cover" loading="lazy">
+                    </template>
+                    <template x-if="!profileImageSrc(reciter)">
+                        <div class="w-full h-full rounded-full flex items-center justify-center"
+                             :class="$store.theme.dark ? 'bg-gray-800' : 'bg-white'">
+                            <span class="text-2xl font-['Amiri'] bg-gradient-to-r from-[#0056b3] to-[#218838] bg-clip-text text-transparent" x-text="initials(reciter)"></span>
+                        </div>
+                    </template>
+                    <span x-show="reciter.isFeatured"
+                          class="absolute -bottom-0.5 -end-0.5 w-6 h-6 rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] text-white flex items-center justify-center shadow ring-2"
+                          :class="$store.theme.dark ? 'ring-gray-900' : 'ring-white'">
                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                    </div>
-
-                    <h3 class="text-lg font-bold mb-1 transition-colors font-['Amiri']"
-                        :class="$store.theme.dark ? 'text-white' : 'text-gray-900'"
-                        x-text="reciter.nameAr || reciter.nameEn"></h3>
-                    <p class="text-xs mb-3" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'" x-text="reciter.nameEn"></p>
-
-                    <div class="flex items-center justify-center gap-2 mb-4 flex-wrap">
-                        <span class="px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1"
-                              :class="$store.theme.dark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'">
-                            <svg class="w-3 h-3 text-[#0056b3]" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
-                            <span x-text="reciter.country || '—'" class="text-xs"></span>
-                        </span>
-                        <span class="px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1"
-                              :class="$store.theme.dark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'">
-                            <svg class="w-3 h-3 text-[#218838]" fill="currentColor" viewBox="0 0 20 20"><path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z"/></svg>
-                            <span x-text="(reciter.recitationsCount || 114) + ' {{ __('quran.public.recording_unit') }}'" class="text-xs"></span>
-                        </span>
-                    </div>
-
-                    <button @click="playPreview(reciter)"
-                        class="listening-button relative w-full py-2.5 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-semibold text-sm hover:shadow-xl transition-all transform hover:scale-105 overflow-hidden flex items-center justify-center gap-1.5">
-                        <svg class="w-4 h-4 relative z-10" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/></svg>
-                        <span class="relative z-10">{{ __('quran.public.listen') }}</span>
-                    </button>
+                    </span>
                 </div>
-            </div>
+                <h3 class="text-sm font-bold truncate font-['Amiri'] group-hover:text-[#0056b3] dark:group-hover:text-[#64CCC5] transition-colors"
+                    :class="$store.theme.dark ? 'text-white' : 'text-gray-900'"
+                    x-text="reciter.nameAr || reciter.nameEn"></h3>
+                <p class="text-[11px] truncate mb-1.5" :class="$store.theme.dark ? 'text-gray-500' : 'text-gray-400'" x-text="reciter.nameEn"></p>
+                <p class="text-xs" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'"
+                   x-text="(((reciter.countryFlag || '') + ' ' + (reciter.countryName || '')).trim()) || '\u2014'"></p>
+            </a>
         </template>
     </div>
-
     {{-- ============================================================ --}}
     {{-- LIST --}}
     {{-- ============================================================ --}}
-    <div x-show="viewMode === 'list'" class="space-y-4 mb-12">
+    <div x-show="viewMode === 'list'" class="space-y-3 mb-12">
         <template x-for="(reciter, index) in paginatedReciters" :key="reciter.id">
-            <div class="reciter-card flex items-center gap-6 p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-1 animate-fadeInUp relative flex-wrap sm:flex-nowrap"
-                 :class="[$store.theme.dark ? 'bg-gradient-to-r from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700' : 'bg-gradient-to-r from-white to-gray-50 hover:from-gray-50 hover:to-white', 'stagger-' + ((index % 4) + 1)]">
-                <div class="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#0056b3] to-[#218838] opacity-0 hover:opacity-5 transition-opacity duration-500 pointer-events-none"></div>
-
-                <div class="flex-shrink-0">
-                    <div class="relative w-24 h-24">
-                        <template x-if="profileImageSrc(reciter)">
-                            <img :src="profileImageSrc(reciter)" :alt="reciter.nameAr || reciter.nameEn"
-                                 class="reciter-image w-full h-full rounded-full object-cover shadow-lg ring-2 ring-white/10"
-                                 loading="lazy">
-                        </template>
-                        <template x-if="!profileImageSrc(reciter)">
-                            <div class="w-full h-full rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] flex items-center justify-center shadow-lg ring-2 ring-white/10">
-                                <span class="text-white text-3xl font-['Amiri']" x-text="initials(reciter)"></span>
-                            </div>
-                        </template>
-                        <div x-show="playingReciterId === reciter.id"
-                             class="audio-waveform absolute -bottom-1 start-0 end-0 h-1.5 rounded-full"></div>
-                    </div>
+            <a :href="'{{ url('/quran/reciters') }}/' + reciter.slug"
+               class="reciter-card group flex items-center gap-4 p-4 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 motion-reduce:transform-none"
+               :class="$store.theme.dark ? 'bg-gray-900 ring-1 ring-white/10' : 'bg-white ring-1 ring-gray-100'">
+                <div class="shrink-0 relative w-16 h-16 rounded-full p-[2px] bg-gradient-to-br from-[#0056b3] to-[#218838]">
+                    <template x-if="profileImageSrc(reciter)">
+                        <img :src="profileImageSrc(reciter)" :alt="reciter.nameAr || reciter.nameEn" class="w-full h-full rounded-full object-cover" loading="lazy">
+                    </template>
+                    <template x-if="!profileImageSrc(reciter)">
+                        <div class="w-full h-full rounded-full flex items-center justify-center" :class="$store.theme.dark ? 'bg-gray-800' : 'bg-white'">
+                            <span class="text-xl font-['Amiri'] bg-gradient-to-r from-[#0056b3] to-[#218838] bg-clip-text text-transparent" x-text="initials(reciter)"></span>
+                        </div>
+                    </template>
                 </div>
-
-                <div class="flex-grow min-w-0">
-                    <div class="flex items-center gap-3 mb-2 flex-wrap">
-                        <h3 class="text-xl font-bold font-['Amiri'] transition-colors"
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-base font-bold font-['Amiri'] truncate group-hover:text-[#0056b3] dark:group-hover:text-[#64CCC5] transition-colors"
                             :class="$store.theme.dark ? 'text-white' : 'text-gray-900'"
                             x-text="reciter.nameAr || reciter.nameEn"></h3>
-                        <span x-show="reciter.isFeatured"
-                              class="featured-badge px-3 py-1 bg-gradient-to-r from-[#0056b3] to-[#218838] text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1">
+                        <span x-show="reciter.isFeatured" class="shrink-0 w-5 h-5 rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] text-white flex items-center justify-center">
                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                            {{ __('site.featured') }}
-                        </span>
-                        <span x-show="playingReciterId === reciter.id"
-                              class="px-2.5 py-1 bg-gradient-to-r from-[#0056b3] to-[#218838] text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1 animate-pulse">
-                            <span class="w-1.5 h-1.5 bg-white rounded-full"></span>
-                            {{ __('quran.public.now_playing') }}
                         </span>
                     </div>
-                    <p class="text-sm mb-2" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'" x-text="reciter.nameEn"></p>
-                    <p class="text-sm mb-3 line-clamp-2 leading-relaxed"
-                       :class="$store.theme.dark ? 'text-gray-300' : 'text-gray-700'"
-                       x-text="reciter.description || ''"></p>
-                    <div class="flex items-center flex-wrap gap-3">
-                        <span class="px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5"
-                              :class="$store.theme.dark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'">
-                            <svg class="w-3.5 h-3.5 text-[#0056b3]" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
-                            <span x-text="reciter.country || '—'"></span>
-                        </span>
-                        <span class="px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5"
-                              :class="$store.theme.dark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'">
-                            <svg class="w-3.5 h-3.5 text-[#218838]" fill="currentColor" viewBox="0 0 20 20"><path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z"/></svg>
-                            <span x-text="(reciter.recitationsCount || 114) + ' {{ __('quran.public.recording_unit') }}'"></span>
-                        </span>
-                    </div>
+                    <p class="text-xs truncate" :class="$store.theme.dark ? 'text-gray-500' : 'text-gray-400'" x-text="reciter.nameEn"></p>
+                    <p class="text-xs mt-1" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'"
+                       x-text="((((reciter.countryFlag || '') + ' ' + (reciter.countryName || '')).trim()) || '\u2014') + ' \u00b7 ' + (reciter.recitationsCount || 114) + ' {{ __('quran.public.recording_unit') }}'"></p>
                 </div>
-
-                <div class="flex-shrink-0 w-full sm:w-auto">
-                    <button @click="playPreview(reciter)"
-                        class="listening-button w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-bold hover:shadow-2xl transition-all transform hover:scale-110 flex items-center justify-center gap-2 overflow-hidden">
-                        <svg class="w-5 h-5 relative z-10" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/></svg>
-                        <span class="relative z-10">{{ __('quran.public.listen') }}</span>
-                    </button>
-                </div>
-            </div>
+                <span class="shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+                      :class="$store.theme.dark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-500'">
+                    <svg class="w-5 h-5 rtl:rotate-180" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </span>
+            </a>
         </template>
     </div>
 

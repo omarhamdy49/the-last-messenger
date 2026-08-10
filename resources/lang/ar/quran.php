@@ -541,6 +541,12 @@ return [
         'now_playing' => 'يُعزف الآن',
         'listen_now' => 'استمع الآن',
 
+        // Single reciter page
+        'reciter_recitations' => 'التلاوات',
+        'reciter_no_recitations' => 'لا توجد تلاوات متاحة لهذا القارئ بعد.',
+        'back_to_reciters' => 'كل القراء',
+        'reciter_about' => 'عن القارئ',
+
         // Asbab al-Nuzul page
         'asbab_title' => 'أسباب النزول',
         'asbab_page_title' => 'أسباب النزول - القرآن الكريم',

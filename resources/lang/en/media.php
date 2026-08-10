@@ -88,6 +88,7 @@ return [
         'popular_shows' => 'Most Watched',
         'this_week' => 'This Week',
         'view_all' => 'View All',
+        'quran_reciters' => 'Quran Reciters',
         'complete' => 'complete',
         'scroll_down' => 'Scroll Down',
         'featured_programs' => 'Featured Programs',

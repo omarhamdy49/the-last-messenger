@@ -553,7 +553,10 @@
                     this.yt = new YT.Player('episode-player', {
                         videoId: this.videoId,
                         playerVars: {
-                            autoplay: 0, // never start on the visitor's behalf — playback is always an explicit click
+                            // The player only exists because the visitor clicked the
+                            // poster's play button — start immediately, don't make
+                            // them click YouTube's own play button a second time.
+                            autoplay: 1,
                             controls: 0,       // our control bar only
                             rel: 0,
                             fs: 0,
@@ -568,7 +571,9 @@
                                 this.duration = e.target.getDuration() || 0;
                                 this.volume = e.target.getVolume();
                                 this.muted = e.target.isMuted();
-                                // No playVideo() here: the player loads paused and waits for the visitor.
+                                // Belt & braces with autoplay=1: some browsers ignore the
+                                // playerVar even for gesture-initiated embeds.
+                                e.target.playVideo();
                                 this.buffering = false;
                                 this.refreshIcons();
                             },

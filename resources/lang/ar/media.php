@@ -88,6 +88,7 @@ return [
         'popular_shows' => 'الأكثر مشاهدة',
         'this_week' => 'هذا الأسبوع',
         'view_all' => 'عرض الكل',
+        'quran_reciters' => 'قرّاء القرآن الكريم',
         'complete' => 'مكتمل',
         'scroll_down' => 'مرّر للأسفل',
         'featured_programs' => 'البرامج المميزة',

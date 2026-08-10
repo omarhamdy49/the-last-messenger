@@ -265,13 +265,20 @@
 
                 {{-- Premium CTA — AI "Ask the Quran" (replaces the inline search bar) --}}
                 <div class="mb-8">
-                    <a href="{{ route('public.quran.ask') }}"
-                       class="group inline-flex items-center gap-3 px-7 py-4 rounded-2xl bg-white text-[#0056b3] font-bold text-base shadow-xl shadow-black/10 hover:shadow-2xl hover:-translate-y-0.5 active:scale-[0.98] transition-all">
-                        <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-[#0056b3] to-[#218838] text-white">
-                            <i data-lucide="sparkles" class="w-5 h-5"></i>
-                        </span>
-                        <span>{{ __('quran.public.ask_page_title') }}</span>
-                    </a>
+                    <div class="flex flex-wrap items-center justify-center gap-3">
+                        <a href="{{ route('public.quran.ask') }}"
+                           class="group inline-flex items-center gap-3 px-7 py-4 rounded-2xl bg-white text-[#0056b3] font-bold text-base shadow-xl shadow-black/10 hover:shadow-2xl hover:-translate-y-0.5 active:scale-[0.98] transition-all">
+                            <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-[#0056b3] to-[#218838] text-white">
+                                <i data-lucide="sparkles" class="w-5 h-5"></i>
+                            </span>
+                            <span>{{ __('quran.public.ask_page_title') }}</span>
+                        </a>
+                        <a href="{{ route('public.quran.reciters') }}"
+                           class="group inline-flex items-center gap-3 px-7 py-4 rounded-2xl glass text-white font-bold text-base border border-white/25 hover:bg-white/20 hover:-translate-y-0.5 active:scale-[0.98] transition-all">
+                            <i data-lucide="mic" class="w-5 h-5"></i>
+                            <span>{{ __('quran.public.reciters_hero_title') }}</span>
+                        </a>
+                    </div>
                     <p class="mt-3 text-sm text-white/80 max-w-xl mx-auto">{{ __('quran.public.ask_hero_subtitle') }}</p>
                 </div>
 

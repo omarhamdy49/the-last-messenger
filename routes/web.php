@@ -33,6 +33,7 @@ Route::get('/home-card-images/{media}', HomeModuleCardImageController::class)
 Route::get('/quran', [QuranController::class, 'index'])->name('public.quran');
 Route::get('/quran/surahs', [QuranController::class, 'surahsJson'])->name('public.quran.surahs.json');
 Route::get('/quran/reciters', [QuranController::class, 'reciters'])->name('public.quran.reciters');
+Route::get('/quran/reciters/{slug}', [QuranController::class, 'reciter'])->name('public.quran.reciter');
 Route::get('/quran/live', [QuranController::class, 'live'])->name('public.quran.live');
 Route::get('/quran/asbab-al-nuzul', [QuranController::class, 'asbab'])->name('public.quran.asbab');
 // "Ask the Quran" inquiry search (canonical verse retrieval, no LLM).

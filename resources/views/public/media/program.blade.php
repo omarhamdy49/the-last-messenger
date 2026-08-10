@@ -3,6 +3,7 @@
 {{-- SEO: per-locale overrides from the admin SEO tab; fallback "{title} | {app.name}" --}}
 @section('title', $program['seo_title'] ?: $program['title'].' | '.config('app.name'))
 @section('meta_description', $program['seo_description'] ?: \Illuminate\Support\Str::limit(strip_tags((string) $program['description']), 160))
+@section('overlay_header', '1')
 
 @if($program['seo_keywords'])
 @push('head')

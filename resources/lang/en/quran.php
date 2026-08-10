@@ -319,6 +319,12 @@ return [
         'now_playing' => 'Now playing',
         'listen_now' => 'Listen now',
 
+        // Single reciter page
+        'reciter_recitations' => 'Recitations',
+        'reciter_no_recitations' => 'No recitations available for this reciter yet.',
+        'back_to_reciters' => 'All reciters',
+        'reciter_about' => 'About the reciter',
+
         // Asbab al-Nuzul page
         'asbab_title' => 'Asbab al-Nuzul',
         'asbab_page_title' => 'Asbab al-Nuzul – The Holy Quran',

@@ -3,7 +3,9 @@
     12px gaps (8px on the portrait layouts), track bleeds to the viewport
     edges, solid circular arrows that appear on row hover when overflowing.
     Expects: $rowTitle (string), $cards (array of card arrays).
-    Optional: $rowSubtitle (string).
+    Optional: $rowSubtitle (string),
+              $rowViewAllUrl (string — "view all" renders as a link), or
+              $rowViewAllClick (string — Alpine expression, renders as a button).
     Parent scope must provide scrollableRow() (index scripts).
 --}}
 <div class="relative group/row" x-data="scrollableRow()">
@@ -12,6 +14,20 @@
         @isset ($rowSubtitle)
             <span class="text-sm font-normal text-gray-500 dark:text-gray-400 hidden sm:inline border-s border-gray-300 dark:border-white/20 ps-2">{{ $rowSubtitle }}</span>
         @endisset
+        @if (! empty($rowViewAllUrl ?? null) || ! empty($rowViewAllClick ?? null))
+            @php $viewAllClasses = 'ms-auto shrink-0 inline-flex items-center gap-1 text-sm font-semibold text-[#0056b3] dark:text-[#64CCC5] hover:underline cursor-pointer'; @endphp
+            @if (! empty($rowViewAllUrl ?? null))
+                <a href="{{ $rowViewAllUrl }}" class="{{ $viewAllClasses }}">
+                    <span>{{ __('media.public.view_all') }}</span>
+                    <i data-lucide="{{ in_array(app()->getLocale(), ['ar', 'ur'], true) ? 'arrow-left' : 'arrow-right' }}" class="w-4 h-4"></i>
+                </a>
+            @else
+                <button type="button" @click="{{ $rowViewAllClick }}" class="{{ $viewAllClasses }}">
+                    <span>{{ __('media.public.view_all') }}</span>
+                    <i data-lucide="{{ in_array(app()->getLocale(), ['ar', 'ur'], true) ? 'arrow-left' : 'arrow-right' }}" class="w-4 h-4"></i>
+                </button>
+            @endif
+        @endif
     </h2>
 
     <div x-ref="track" @scroll.passive.debounce.150ms="checkScroll()"

@@ -2,6 +2,7 @@
 
 @section('title', __('media.public.page_title'))
 @section('meta_description', __('media.public.page_description'))
+@section('overlay_header', '1')
 
 @section('content')
 @php $isRtl = in_array(app()->getLocale(), ['ar', 'ur'], true); @endphp
@@ -158,8 +159,34 @@
         </section>
     @endif
 
-    {{-- Shahid layout is full-width fluid with ~24px gutters — no max-width
-         container, and no in-page filter bar (Shahid series stacks all rows). --}}
+    {{-- Sticky category pills — filter the per-category rows client-side.
+         "الكل" restores the full stacked (Shahid-style) row list. --}}
+    @if (count($categoryRows) > 1)
+        <div class="sticky top-20 z-40 py-3 mb-2 backdrop-blur-xl bg-[#F8F9FA]/85 dark:bg-gray-950/80 border-b border-gray-200/60 dark:border-white/10">
+            <div class="w-full px-4 sm:px-6">
+                <div class="flex gap-2.5 overflow-x-auto scrollbar-hide">
+                    <button type="button" @click="activeCategory = 'all'"
+                            class="px-5 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer"
+                            :class="activeCategory === 'all'
+                                ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-md'
+                                : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 hover:border-[#0056b3]/40'">
+                        {{ __('media.public.filter_all') }}
+                    </button>
+                    @foreach ($categoryRows as $categoryKey => $row)
+                        <button type="button" @click="activeCategory = '{{ $categoryKey }}'"
+                                class="px-5 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer"
+                                :class="activeCategory === '{{ $categoryKey }}'
+                                    ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-md'
+                                    : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 hover:border-[#0056b3]/40'">
+                            {{ $row['label'] }}
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Shahid layout is full-width fluid with ~24px gutters — no max-width container. --}}
     <div class="w-full px-4 sm:px-6 pt-2">
 
         @if (! $hasAnyContent)
@@ -183,8 +210,9 @@
                 </section>
             @endif
 
-            {{-- Live channels row --}}
-            @if (! empty($liveChannels))
+            {{-- Live channels row — only with 2+ channels; a single channel is
+                 promoted by the CTA banner at the bottom instead. --}}
+            @if (count($liveChannels) > 1)
                 <section class="py-6">
                     <div class="relative group/row" x-data="scrollableRow()">
                         <h2 class="text-xl sm:text-[26px] font-bold leading-snug text-gray-900 dark:text-white mb-4 flex items-center gap-2.5">
@@ -312,12 +340,103 @@
                 </section>
             @endif
 
-            {{-- Per-category rows — always shown and stacked, Shahid-style --}}
+            {{-- Per-category rows — stacked Shahid-style; the pills bar narrows to one.
+                 "View all" mirrors the pill for that category (only useful with 2+ rows). --}}
             @foreach ($categoryRows as $categoryKey => $row)
-                <section class="py-6">
-                    @include('public.media._row', ['rowTitle' => $row['label'], 'cards' => $row['programs']])
+                <section class="py-6" x-show="activeCategory === 'all' || activeCategory === '{{ $categoryKey }}'">
+                    @include('public.media._row', array_filter([
+                        'rowTitle' => $row['label'],
+                        'cards' => $row['programs'],
+                        'rowViewAllClick' => count($categoryRows) > 1 ? "activeCategory = '".$categoryKey."'" : null,
+                    ]))
                 </section>
             @endforeach
+
+            {{-- Quran reciters teaser — latest 10, round avatars, links into
+                 the Quran section (full list + per-reciter profile). --}}
+            @if (! empty($reciters))
+                <section class="py-6">
+                    <div class="relative group/row" x-data="scrollableRow()">
+                        <h2 class="text-xl sm:text-[26px] font-bold leading-snug text-gray-900 dark:text-white mb-4 flex items-baseline gap-2">
+                            <span class="break-words">{{ __('media.public.quran_reciters') }}</span>
+                            <a href="{{ route('public.quran.reciters') }}"
+                               class="ms-auto shrink-0 inline-flex items-center gap-1 text-sm font-semibold text-[#0056b3] dark:text-[#64CCC5] hover:underline">
+                                <span>{{ __('media.public.view_all') }}</span>
+                                <i data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}" class="w-4 h-4"></i>
+                            </a>
+                        </h2>
+
+                        <div x-ref="track" @scroll.passive.debounce.150ms="checkScroll()"
+                             class="flex gap-5 sm:gap-7 overflow-x-auto scrollbar-hide snap-x pb-2 -mx-4 sm:-mx-6 px-4 sm:px-6">
+                            @foreach ($reciters as $reciter)
+                                <a href="{{ $reciter['url'] }}"
+                                   class="group/reciter flex-none snap-start w-36 sm:w-40 text-center rounded-3xl p-4 sm:p-5 border shadow-sm hover:shadow-xl hover:-translate-y-1 motion-reduce:transform-none transition-all duration-300 bg-white dark:bg-gray-900 border-gray-100 dark:border-white/10 hover:border-[#0056b3]/30">
+                                    <div class="relative w-20 h-20 sm:w-24 sm:h-24 mx-auto rounded-full p-[3px] bg-gradient-to-br from-[#0056b3] to-[#218838] shadow-lg group-hover/reciter:shadow-[0_8px_30px_rgba(0,86,179,0.35)] group-hover/reciter:scale-105 motion-reduce:transform-none transition-all duration-300">
+                                        @if ($reciter['image'])
+                                            <img src="{{ $reciter['image'] }}" alt="{{ $reciter['name'] }}"
+                                                 class="w-full h-full rounded-full object-cover bg-white dark:bg-gray-900" loading="lazy">
+                                        @else
+                                            <div class="w-full h-full rounded-full bg-white dark:bg-gray-900 flex items-center justify-center">
+                                                <span class="text-2xl font-bold bg-gradient-to-r from-[#0056b3] to-[#218838] bg-clip-text text-transparent">{{ mb_substr($reciter['name'], 0, 1) }}</span>
+                                            </div>
+                                        @endif
+                                        <span class="absolute -bottom-0.5 -end-0.5 w-7 h-7 rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] text-white flex items-center justify-center shadow ring-2 ring-white dark:ring-gray-900 opacity-0 group-hover/reciter:opacity-100 transition-opacity duration-300">
+                                            <i data-lucide="play" class="w-3.5 h-3.5 {{ $isRtl ? '-scale-x-100' : '' }}"></i>
+                                        </span>
+                                    </div>
+                                    <p class="mt-3 text-sm font-bold text-gray-900 dark:text-white line-clamp-2 group-hover/reciter:text-[#0056b3] dark:group-hover/reciter:text-[#64CCC5] transition-colors">{{ $reciter['name'] }}</p>
+                                    @if ($reciter['country_name'])
+                                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 truncate">
+                                            <span aria-hidden="true">{{ $reciter['country_flag'] }}</span> {{ $reciter['country_name'] }}
+                                        </p>
+                                    @endif
+                                </a>
+                            @endforeach
+                        </div>
+
+                        <button type="button" x-show="canScrollBack" x-cloak @click="scrollRow(-1)"
+                                aria-label="{{ __('media.public.scroll_back') }}"
+                                class="absolute start-0 top-1/3 -ms-3 sm:-ms-4 w-11 h-11 rounded-full bg-white/95 text-gray-900 dark:bg-gray-900/85 dark:text-white backdrop-blur-sm hidden sm:flex items-center justify-center sm:opacity-0 sm:group-hover/row:opacity-100 focus-visible:opacity-100 hover:scale-110 motion-reduce:transform-none transition-all duration-300 shadow-xl z-30">
+                            <i data-lucide="{{ $isRtl ? 'chevron-right' : 'chevron-left' }}" class="w-6 h-6"></i>
+                        </button>
+                        <button type="button" x-show="canScrollForward" x-cloak @click="scrollRow(1)"
+                                aria-label="{{ __('media.public.scroll_forward') }}"
+                                class="absolute end-0 top-1/3 -me-3 sm:-me-4 w-11 h-11 rounded-full bg-white/95 text-gray-900 dark:bg-gray-900/85 dark:text-white backdrop-blur-sm hidden sm:flex items-center justify-center sm:opacity-0 sm:group-hover/row:opacity-100 focus-visible:opacity-100 hover:scale-110 motion-reduce:transform-none transition-all duration-300 shadow-xl z-30">
+                            <i data-lucide="{{ $isRtl ? 'chevron-left' : 'chevron-right' }}" class="w-6 h-6"></i>
+                        </button>
+                    </div>
+                </section>
+            @endif
+
+            {{-- Live stream CTA banner — the primary channel, prototype-style.
+                 The channels *row* above only renders with 2+ channels so a lone
+                 channel is not presented twice on the same page. --}}
+            @if (! empty($liveChannels))
+                <section class="py-8">
+                    <a href="{{ $liveChannels[0]['url'] }}"
+                       class="group relative block overflow-hidden rounded-3xl shadow-2xl">
+                        <div class="absolute inset-0 bg-gradient-to-l from-[#0056b3] via-[#116a53] to-[#218838]"></div>
+                        <div class="absolute inset-0 opacity-[0.12]"
+                             style="background-image: radial-gradient(circle, white 1px, transparent 1px); background-size: 22px 22px;"></div>
+                        <div class="relative z-10 flex flex-col sm:flex-row items-center sm:items-end justify-between gap-6 p-8 sm:p-12 text-center sm:text-start">
+                            <div>
+                                <div class="flex items-center justify-center sm:justify-start gap-3 mb-3">
+                                    <span class="relative flex h-3 w-3" aria-hidden="true">
+                                        <span class="animate-ping motion-reduce:animate-none absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                    </span>
+                                    <span class="text-white/90 text-sm font-bold tracking-wider">{{ __('media.public.live_now') }}</span>
+                                </div>
+                                <h2 class="text-3xl sm:text-4xl font-black text-white">{{ $liveChannels[0]['title'] }}</h2>
+                            </div>
+                            <span class="inline-flex items-center gap-3 bg-white text-gray-900 font-bold text-base sm:text-lg px-6 py-3 sm:px-8 sm:py-4 rounded-full shadow-2xl group-hover:scale-105 motion-reduce:transform-none transition-transform duration-300">
+                                <i data-lucide="radio" class="w-6 h-6"></i>
+                                <span>{{ __('media.public.watch_live') }}</span>
+                            </span>
+                        </div>
+                    </a>
+                </section>
+            @endif
 
             <div class="pb-12"></div>
         @endif
@@ -331,6 +450,7 @@
             isAuthenticated: @json(auth()->check()),
             storeUrl: @js(route('public.favorites.store')),
             destroyUrl: @js(route('public.favorites.destroy')),
+            activeCategory: 'all',
             myList: [],
             pending: [],
             init() {

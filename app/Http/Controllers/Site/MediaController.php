@@ -11,6 +11,7 @@ use App\Domain\Media\Models\MediaProgram;
 use App\Domain\Media\Services\LiveChannelService;
 use App\Domain\Media\Services\MediaEpisodeService;
 use App\Domain\Media\Services\MediaProgramService;
+use App\Domain\Quran\Models\Reciter;
 use App\Domain\Shared\Enums\FavorableType;
 use App\Domain\Shared\Services\FavoriteService;
 use App\Domain\Shared\Services\InteractionService;
@@ -69,9 +70,43 @@ final class MediaController extends Controller
                 ->map(fn (MediaProgram $program): array => $this->mapProgramCard($program))
                 ->values()->all();
 
+            // Dedupe the editorial rows (featured > trending > popular): with a
+            // small catalog every flag matches the same programs and the page
+            // repeats identical rows. A row emptied by the dedupe disappears.
+            // Category rows are exempt — they are the browsing taxonomy.
+            $seenIds = array_column($featured, 'id');
+            $trending = array_values(array_filter(
+                $trending,
+                static fn (array $card): bool => ! in_array($card['id'], $seenIds, true),
+            ));
+            $seenIds = [...$seenIds, ...array_column($trending, 'id')];
+            $popular = array_values(array_filter(
+                $popular,
+                static fn (array $card): bool => ! in_array($card['id'], $seenIds, true),
+            ));
+
             $liveChannels = $this->liveChannelService->getPublishedForRow(12)
                 ->map(fn (LiveChannel $channel): array => $this->mapLiveCard($channel))
                 ->values()->all();
+
+            // Featured Quran reciters teaser row (cross-section discovery).
+            // Portrait-first so the visible row isn't a wall of initial-letter
+            // fallbacks; unique() folds catalogue aliases of the same person.
+            $locale = app()->getLocale();
+            $reciters = Reciter::query()->active()->recitationsOnly()->featured()
+                ->with('translations')
+                ->orderByRaw('(profile_image IS NULL)')
+                ->latest()->get()
+                ->unique(fn (Reciter $reciter): string => $reciter->getDisplayName($locale))
+                ->take(10)
+                ->map(fn (Reciter $reciter): array => [
+                    'name' => $reciter->getDisplayName($locale),
+                    'style' => $reciter->style,
+                    'image' => $reciter->profile_image_url,
+                    'country_flag' => country_flag($reciter->country),
+                    'country_name' => country_name($reciter->country, $locale),
+                    'url' => route('public.quran.reciter', $reciter->slug),
+                ])->values()->all();
 
             // Only categories flagged is_featured (admin-managed) load on the list.
             $featuredCategoryKeys = $this->programService->getFeaturedCategoryKeys();
@@ -104,6 +139,7 @@ final class MediaController extends Controller
             $trending = [];
             $popular = [];
             $liveChannels = [];
+            $reciters = [];
             $categoryRows = [];
         }
 
@@ -113,6 +149,7 @@ final class MediaController extends Controller
             'trending' => $trending,
             'popular' => $popular,
             'liveChannels' => $liveChannels,
+            'reciters' => $reciters,
             'categoryRows' => $categoryRows,
             'continueWatching' => $this->resolveContinueWatching($request),
             'myListIds' => $this->resolveFavoritedProgramIds($request),
@@ -329,13 +366,17 @@ final class MediaController extends Controller
             return null;
         }
 
+        // Muted autoplay: browsers block audible autoplay, so the stream
+        // starts muted and the visitor unmutes in the player.
+        $params = '?autoplay=1&mute=1';
+
         $videoId = $this->youtubeVideoId($url);
         if ($videoId !== null) {
-            return "https://www.youtube.com/embed/{$videoId}";
+            return "https://www.youtube.com/embed/{$videoId}{$params}";
         }
 
         if (preg_match('#(?:youtube\.com/watch\?v=|youtu\.be/)([A-Za-z0-9_-]{11})#', $url, $m) === 1) {
-            return "https://www.youtube.com/embed/{$m[1]}";
+            return "https://www.youtube.com/embed/{$m[1]}{$params}";
         }
 
         return $url;

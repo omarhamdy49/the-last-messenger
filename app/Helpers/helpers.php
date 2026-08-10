@@ -285,3 +285,43 @@ if (! function_exists('get_locale_name')) {
         return $names[$displayLocale][$locale] ?? $locale;
     }
 }
+
+if (! function_exists('country_flag')) {
+    /**
+     * Regional-indicator flag emoji for a 2-letter ISO country code.
+     */
+    function country_flag(?string $iso): ?string
+    {
+        if ($iso === null || strlen($iso) !== 2 || ! ctype_alpha($iso)) {
+            return null;
+        }
+
+        $iso = strtoupper($iso);
+
+        return mb_chr(0x1F1E6 + ord($iso[0]) - 65).mb_chr(0x1F1E6 + ord($iso[1]) - 65);
+    }
+}
+
+if (! function_exists('country_name')) {
+    /**
+     * Localized country name for a 2-letter ISO code (falls back to the code).
+     */
+    function country_name(?string $iso, ?string $locale = null): ?string
+    {
+        if ($iso === null || $iso === '') {
+            return null;
+        }
+
+        $iso = strtoupper($iso);
+        $locale ??= app()->getLocale();
+
+        if (class_exists(Locale::class)) {
+            $name = Locale::getDisplayRegion('-'.$iso, $locale);
+            if ($name !== '' && $name !== $iso) {
+                return $name;
+            }
+        }
+
+        return $iso;
+    }
+}

@@ -46,15 +46,30 @@ final class LiveChannelTest extends TestCase
 
     // ===================== PUBLIC ROW ON /media =====================
 
-    public function test_media_hub_shows_published_live_channels(): void
+    public function test_media_hub_promotes_a_single_live_channel_via_cta_banner(): void
     {
         $this->createChannel(title: 'قناة القرآن المباشرة');
 
         $response = $this->get('/media');
 
         $response->assertStatus(200);
+        // One channel → CTA banner (no row); the row needs 2+ channels.
+        $response->assertSee('قناة القرآن المباشرة');
+        $response->assertSee(trans('media.public.watch_live'));
+        $response->assertDontSee(trans('media.public.live_channels'));
+    }
+
+    public function test_media_hub_shows_live_channels_row_with_multiple_channels(): void
+    {
+        $this->createChannel(['slug' => 'live-a'], 'قناة القرآن المباشرة');
+        $this->createChannel(['slug' => 'live-b'], 'قناة المدينة المباشرة');
+
+        $response = $this->get('/media');
+
+        $response->assertStatus(200);
         $response->assertSee(trans('media.public.live_channels'));
         $response->assertSee('قناة القرآن المباشرة');
+        $response->assertSee('قناة المدينة المباشرة');
     }
 
     public function test_unpublished_live_channel_is_hidden_from_hub(): void

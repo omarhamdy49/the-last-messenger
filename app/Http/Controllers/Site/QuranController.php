@@ -10,6 +10,7 @@ use App\Domain\Quran\Application\Handlers\ListRevelationContextsHandler;
 use App\Domain\Quran\Application\Queries\AskQuranQuery;
 use App\Domain\Quran\Application\Queries\ListRevelationContextsQuery;
 use App\Domain\Quran\Exceptions\MonthlyQuotaExceededException;
+use App\Domain\Quran\Models\Reciter;
 use App\Domain\Quran\Repositories\AiInquiryQuotaRepositoryInterface;
 use App\Domain\Quran\Repositories\AiInquiryRepositoryInterface;
 use App\Domain\Quran\Services\AnswerHtmlRenderer;
@@ -667,6 +668,8 @@ final class QuranController extends Controller
                     'nameAr' => $r->getDisplayName('ar'),
                     'nameEn' => $r->getDisplayName('en'),
                     'country' => $r->country,
+                    'countryFlag' => country_flag($r->country),
+                    'countryName' => country_name($r->country, $locale),
                     'style' => $r->style,
                     'isFeatured' => $r->isFeatured,
                     'followersCount' => $r->recitationsCount, // recitations_count available
@@ -699,6 +702,47 @@ final class QuranController extends Controller
             'featuredReciters' => $recitersData['featured'],
             'reciters' => $recitersData['all'],
             'totalReciters' => $recitersData['total'],
+        ]);
+    }
+
+    /**
+     * Single reciter profile — bio, meta chips, and per-surah recitations.
+     */
+    public function reciter(string $slug): View
+    {
+        $reciter = Reciter::query()->active()->where('slug', $slug)
+            ->with('translations')->first();
+
+        if ($reciter === null) {
+            abort(404);
+        }
+
+        $locale = app()->getLocale();
+
+        $recitations = $reciter->recitations()
+            ->with('surah')
+            ->get()
+            ->sortBy(fn ($recitation) => $recitation->surah?->id ?? PHP_INT_MAX)
+            ->map(fn ($recitation): array => [
+                'surah_number' => $recitation->surah?->id,
+                'surah_name' => $recitation->surah?->getDisplayName($locale) ?? '',
+                'audio_url' => $recitation->audio_url,
+            ])->values()->all();
+
+        return view('public.quran.reciter', [
+            'reciter' => [
+                'name' => $reciter->getDisplayName($locale),
+                'description' => $reciter->getDescriptionText($locale),
+                'image' => $reciter->profile_image_url,
+                'country' => $reciter->country,
+                'country_flag' => country_flag($reciter->country),
+                'country_name' => country_name($reciter->country, $locale),
+                'style' => $reciter->style,
+                'riwayah' => $reciter->riwayah,
+                'is_featured' => (bool) $reciter->is_featured,
+                'followers_count' => (int) $reciter->followers_count,
+            ],
+            'recitations' => $recitations,
         ]);
     }
 

@@ -19,7 +19,10 @@
 
         return $item['url'] ?? '#';
     };
-    $menuItemIsActive = fn (array $item): bool => !empty($item['route_name']) && request()->routeIs($item['route_name']);
+    // Section-aware: "public.media" also matches public.media.program etc.,
+    // so the nav item stays highlighted on detail pages within its section.
+    $menuItemIsActive = fn (array $item): bool => !empty($item['route_name'])
+        && request()->routeIs($item['route_name'], $item['route_name'].'.*');
     // A parent (dropdown) item is active when any of its children matches the route.
     $menuBranchIsActive = function (array $item) use ($menuItemIsActive): bool {
         if ($menuItemIsActive($item)) {
@@ -85,7 +88,7 @@
                                 <div class="relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false" @click.away="open = false">
                                     <button @click="open = true"
                                             :aria-expanded="open"
-                                            class="whitespace-nowrap flex items-center gap-1 px-2 2xl:px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 transition-all cursor-pointer {{ $menuBranchIsActive($item) ? 'bg-[#E9ECEF]/50 dark:bg-[#0f3460]/50' : '' }}">
+                                            class="whitespace-nowrap flex items-center gap-1 px-2 2xl:px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 transition-all cursor-pointer {{ $menuBranchIsActive($item) ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-md' : '' }}">
                                         {{ $item['label'] }}
                                         <i class="w-3.5 h-3.5 transition-transform" :class="open ? 'rotate-180' : ''" data-lucide="chevron-down"></i>
                                     </button>
@@ -103,7 +106,7 @@
                                 </div>
                             @else
                                 <a href="{{ $menuItemUrl($item) }}"
-                                   class="whitespace-nowrap px-2 2xl:px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 transition-all {{ $menuItemIsActive($item) ? 'bg-[#E9ECEF]/50 dark:bg-[#0f3460]/50' : '' }}">
+                                   class="whitespace-nowrap px-2 2xl:px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 transition-all {{ $menuItemIsActive($item) ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-md' : '' }}">
                                     {{ $item['label'] }}
                                 </a>
                             @endif
@@ -257,14 +260,14 @@
                             </div>
                             @foreach ($item['children'] as $child)
                                 <a href="{{ $menuItemUrl($child) }}"
-                                   class="block ps-8 pe-4 py-3 rounded-lg hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 font-semibold {{ $menuItemIsActive($child) ? 'bg-[#E9ECEF]/50 dark:bg-[#0f3460]/50' : '' }}">
+                                   class="block ps-8 pe-4 py-3 rounded-lg hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 font-semibold {{ $menuItemIsActive($child) ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-md' : '' }}">
                                     {{ $child['label'] }}
                                 </a>
                             @endforeach
                         </div>
                     @else
                         <a href="{{ $menuItemUrl($item) }}"
-                           class="block px-4 py-3 rounded-lg hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 font-semibold {{ $menuItemIsActive($item) ? 'bg-[#E9ECEF]/50 dark:bg-[#0f3460]/50' : '' }}">
+                           class="block px-4 py-3 rounded-lg hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 font-semibold {{ $menuItemIsActive($item) ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-md' : '' }}">
                             {{ $item['label'] }}
                         </a>
                     @endif

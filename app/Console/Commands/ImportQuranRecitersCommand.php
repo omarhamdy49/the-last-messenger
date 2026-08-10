@@ -102,6 +102,17 @@ class ImportQuranRecitersCommand extends Command
     /** Catalogue ids surfaced first in the picker, in this order. */
     private const FEATURED = [15, 20, 8, 44, 16, 2, 34, 29, 67, 68];
 
+    /**
+     * Catalogue entries that duplicate another entry — the same person and
+     * style published under a different host or bitrate (verified by
+     * comparing everyayah subfolders and Wikidata identities). Skipped on
+     * import, and deactivated if a previous run already created them.
+     *
+     * 12, 13 → 71 (al-Ajamy via QuranExplorer / ketaballah mirrors)
+     * 31     → 34 (Menshawi 32kbps duplicate of Minshawy murattal)
+     */
+    private const DUPLICATE_IDS = [12, 13, 31];
+
     public function handle(): int
     {
         try {
@@ -133,6 +144,12 @@ class ImportQuranRecitersCommand extends Command
         $counts = ['recitation' => 0, 'translation' => 0];
 
         foreach ($entries as $id => $entry) {
+            if (in_array($id, self::DUPLICATE_IDS, true)) {
+                Reciter::whereKey($id)->update(['is_active' => false]);
+
+                continue;
+            }
+
             $subfolder = (string) $entry['subfolder'];
             $kind = $this->classify($subfolder);
             $name = $this->cleanName((string) $entry['name']);
