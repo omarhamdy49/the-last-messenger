@@ -20,11 +20,18 @@
 
         <div class="relative container mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-14 md:pt-10 md:pb-20">
             <nav aria-label="breadcrumb" class="mb-8">
-                <a href="{{ route('public.media') }}"
-                   class="inline-flex items-center gap-1.5 text-sm font-semibold text-white/70 hover:text-white transition-colors">
-                    <i data-lucide="{{ $isRtl ? 'arrow-right' : 'arrow-left' }}" class="w-4 h-4" aria-hidden="true"></i>
-                    {{ __('media.public.page_title') }}
-                </a>
+                <ol class="inline-flex items-center gap-2 flex-wrap text-sm font-semibold text-white/70">
+                    <li>
+                        <a href="{{ route('public.media') }}" class="inline-flex items-center gap-1.5 hover:text-white transition-colors">
+                            <i data-lucide="{{ $isRtl ? 'arrow-right' : 'arrow-left' }}" class="w-4 h-4" aria-hidden="true"></i>
+                            {{ __('media.public.page_title') }}
+                        </a>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <i data-lucide="{{ $isRtl ? 'chevron-left' : 'chevron-right' }}" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                        <span class="text-white">{{ __('media.public.live_channels') }}</span>
+                    </li>
+                </ol>
             </nav>
 
             <div class="max-w-2xl space-y-4">
