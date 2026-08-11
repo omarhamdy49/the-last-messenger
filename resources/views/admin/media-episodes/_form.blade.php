@@ -421,7 +421,8 @@
                                     title="{{ __('admin.yt_sync_hint') }}"
                                     class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold text-white bg-gradient-to-r from-[#0056b3] to-[#218838] shadow-sm hover:shadow-md hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
                                 <span x-show="! ytLoading" class="flex items-center gap-1">
-                                    <i data-lucide="youtube" class="w-3.5 h-3.5"></i>
+                                    {{-- Inline SVG: the bundled Lucide build has no brand icons, so data-lucide="youtube" never renders --}}
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg>
                                     {{ __('admin.yt_fetch_data_short') }}
                                 </span>
                                 <span x-show="ytLoading" x-cloak class="flex items-center gap-1">
