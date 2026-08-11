@@ -63,10 +63,14 @@
                             <div id="episode-player"></div>
                         </div>
 
-                        {{-- Poster facade (pre-play): episode thumbnail + brand play button --}}
+                        {{-- Poster facade (pre-play): episode thumbnail + brand play button.
+                             thumbnail_hq is maxresdefault (1280px) when the thumbnail is a
+                             CDN fallback; onerror drops back to hqdefault when maxres 404s. --}}
                         <div x-show="!started" class="absolute inset-0 z-20">
                             @if ($episode['thumbnail'])
-                                <img src="{{ $episode['thumbnail'] }}" alt="" class="absolute inset-0 w-full h-full object-cover">
+                                <img src="{{ $episode['thumbnail_hq'] ?? $episode['thumbnail'] }}" alt=""
+                                     @if (! empty($episode['thumbnail_hq'])) onerror="this.onerror=null;this.src='{{ $episode['thumbnail'] }}'" @endif
+                                     class="absolute inset-0 w-full h-full object-cover">
                             @else
                                 <div class="absolute inset-0 bg-gradient-to-br {{ $program['gradient'] }}"></div>
                             @endif
@@ -164,11 +168,13 @@
                                        class="player-range hidden sm:block w-20"
                                        :style="`--progress: ${muted ? 0 : volume}%`">
 
-                                {{-- Time --}}
-                                <span class="text-[11px] sm:text-xs font-medium tabular-nums text-gray-200 select-none">
+                                {{-- Time — total duration hidden on the narrowest screens:
+                                     with hh:mm:ss durations the full "cur / total" readout
+                                     pushes the fullscreen button off a 360-390px viewport --}}
+                                <span class="text-[11px] sm:text-xs font-medium tabular-nums text-gray-200 select-none whitespace-nowrap">
                                     <span x-text="fmt(current)">0:00</span>
-                                    <span class="text-gray-400"> / </span>
-                                    <span x-text="fmt(duration)">0:00</span>
+                                    <span class="text-gray-400 hidden min-[480px]:inline"> / </span>
+                                    <span x-text="fmt(duration)" class="hidden min-[480px]:inline">0:00</span>
                                 </span>
 
                                 {{-- Playback speed --}}

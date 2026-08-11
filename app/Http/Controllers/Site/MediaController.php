@@ -307,7 +307,9 @@ final class MediaController extends Controller
             'maturity_label' => __('media.public.maturity_'.$program->maturity_rating->value),
             'episodes_count' => (int) ($program->episodes_count ?? 0),
             'is_trending' => (bool) $program->is_trending,
-            'poster' => $program->poster_url,
+            // Cards read the small poster conversion; the hero/cover reads the
+            // HQ banner original (both saved at sync time).
+            'poster' => $program->poster_thumb_url,
             'banner' => $program->banner_url ?? $program->poster_url,
             'gradient' => self::CATEGORY_GRADIENTS[$category] ?? self::CATEGORY_GRADIENTS['documentary'],
         ];
@@ -343,7 +345,9 @@ final class MediaController extends Controller
             'season' => (int) $episode->season_number,
             'title' => (string) ($episode->trans('title') ?? ''),
             'duration' => $episode->duration_formatted,
-            'thumbnail' => $episode->getThumbnailUrl() ?? $this->youtubeThumbnail($episode->video_url),
+            // Lists/cards read the 400x225 'thumb' conversion (falls back to
+            // the original, then the YouTube CDN).
+            'thumbnail' => $episode->thumb_url ?? $this->youtubeThumbnail($episode->video_url),
             'has_video' => $episode->video_url !== null,
             'url' => route('public.media.episode', ['slug' => $programSlug, 'episode' => $episode->episode_number])
                 .($episode->season_number > 1 ? '?season='.$episode->season_number : ''),
@@ -360,6 +364,19 @@ final class MediaController extends Controller
         $card['description'] = $episode->trans('description');
         $card['video_url'] = $episode->video_url;
         $card['video_id'] = $this->youtubeVideoId($episode->video_url);
+
+        // The player poster renders near-full-width — use the saved HQ
+        // original, not the card conversion.
+        $card['thumbnail'] = $episode->getThumbnailUrl() ?? $this->youtubeThumbnail($episode->video_url);
+
+        // When the thumbnail is still the 480px CDN fallback (nothing saved
+        // yet), offer maxres (1280px) first — the view falls back via onerror
+        // when maxres 404s.
+        $isCdnThumbnail = $card['thumbnail'] !== null
+            && (str_contains($card['thumbnail'], 'i.ytimg.com') || str_contains($card['thumbnail'], 'img.youtube.com'));
+        $card['thumbnail_hq'] = ($isCdnThumbnail && $card['video_id'] !== null)
+            ? "https://i.ytimg.com/vi/{$card['video_id']}/maxresdefault.jpg"
+            : null;
         $card['views_count'] = (int) $episode->views_count;
         $card['transcript'] = $this->transcriptLines($episode->trans('transcript'));
         $card['seo_title'] = $episode->trans('seo_title');

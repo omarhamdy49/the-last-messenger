@@ -17,7 +17,8 @@
     @if (! empty($heroSlides))
         <section x-data="mediaHeroCarousel({{ count($heroSlides) }})" x-init="start()"
                  @mouseenter="stop()" @mouseleave="start()"
-                 class="relative min-h-[78vh] md:min-h-[calc(100vh-4rem)] flex items-end overflow-hidden bg-gray-950"
+                 {{-- svh: stable small-viewport unit — vh jumps as mobile browser chrome collapses --}}
+                 class="relative min-h-[78svh] md:min-h-[calc(100vh-4rem)] flex items-end overflow-hidden bg-gray-950"
                  aria-roledescription="carousel" aria-label="{{ __('media.public.featured') }}">
             {{-- Slide backgrounds --}}
             @foreach ($heroSlides as $index => $slide)

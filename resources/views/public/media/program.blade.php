@@ -19,7 +19,8 @@
     {{-- ============================================================ --}}
     {{-- HERO — Shahid-style full-bleed backdrop, info + actions      --}}
     {{-- ============================================================ --}}
-    <section class="relative min-h-[65vh] md:min-h-[78vh] flex flex-col justify-end overflow-hidden bg-gray-950">
+    {{-- svh: stable small-viewport unit — vh jumps as mobile browser chrome collapses --}}
+    <section class="relative min-h-[65svh] md:min-h-[78vh] flex flex-col justify-end overflow-hidden bg-gray-950">
         {{-- Backdrop --}}
         @if ($program['banner'])
             <img src="{{ $program['banner'] }}" alt=""

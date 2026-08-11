@@ -97,11 +97,34 @@ final class YouTubeUrl
 
     /**
      * YouTube CDN thumbnail. hqdefault (480x360) exists for every video,
-     * unlike maxresdefault which 404s on many.
+     * unlike maxresdefault which 404s on many — fine for cards, but too
+     * low-res for full-bleed heroes (see thumbnailCandidates()).
      */
     public static function thumbnailUrl(string $videoId): string
     {
         return "https://i.ytimg.com/vi/{$videoId}/hqdefault.jpg";
+    }
+
+    /** Highest-resolution CDN thumbnail (1280x720) — 404s on videos without an HD upload. */
+    public static function maxResThumbnailUrl(string $videoId): string
+    {
+        return "https://i.ytimg.com/vi/{$videoId}/maxresdefault.jpg";
+    }
+
+    /**
+     * CDN thumbnail candidates, best resolution first. maxresdefault
+     * (1280x720) and sddefault (640x480) 404 on videos that never had an
+     * HD upload, so consumers must fall through; hqdefault always exists.
+     *
+     * @return list<string>
+     */
+    public static function thumbnailCandidates(string $videoId): array
+    {
+        return [
+            self::maxResThumbnailUrl($videoId),
+            "https://i.ytimg.com/vi/{$videoId}/sddefault.jpg",
+            self::thumbnailUrl($videoId),
+        ];
     }
 
     public static function playlistUrl(string $playlistId): string
