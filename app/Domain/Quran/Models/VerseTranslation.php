@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Models;
 
+use App\Domain\Quran\Importers\QuranComPayload;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,8 +21,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $lang
  * @property string $text
  * @property string|null $text_notashkeel
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class VerseTranslation extends Model
 {
@@ -53,6 +57,29 @@ class VerseTranslation extends Model
     ];
 
     /**
+     * Stored text is plain text: the Quran.com API embeds footnote markup
+     * (<sup foot_note=…>) that Blade would otherwise render literally.
+     * Cleaning here covers every writer (API sync, CSV import, admin CRUD).
+     */
+    protected function text(): Attribute
+    {
+        return Attribute::set(
+            fn (?string $value) => $value !== null && str_contains($value, '<')
+                ? QuranComPayload::cleanHtml($value)
+                : $value
+        );
+    }
+
+    protected function textNotashkeel(): Attribute
+    {
+        return Attribute::set(
+            fn (?string $value) => $value !== null && str_contains($value, '<')
+                ? QuranComPayload::cleanHtml($value)
+                : $value
+        );
+    }
+
+    /**
      * Get the verse this translation belongs to
      */
     public function verse(): BelongsTo
@@ -71,8 +98,8 @@ class VerseTranslation extends Model
     /**
      * Scope: Filter by translation resource (edition)
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByResource($query, int $resourceId)
     {
@@ -82,8 +109,8 @@ class VerseTranslation extends Model
     /**
      * Scope: Filter by language
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByLang($query, string $lang)
     {
@@ -93,8 +120,8 @@ class VerseTranslation extends Model
     /**
      * Scope: Search in text (with or without tashkeel)
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeSearch($query, string $term)
     {
@@ -113,8 +140,8 @@ class VerseTranslation extends Model
     /**
      * Scope: Arabic translations
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeArabic($query)
     {
@@ -124,8 +151,8 @@ class VerseTranslation extends Model
     /**
      * Scope: English translations
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeEnglish($query)
     {

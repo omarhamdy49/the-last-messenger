@@ -387,7 +387,7 @@
         // A #v<n> deep link forces verse view from the start (no flash of reading
         // view); otherwise honour the saved preference. The forced switch is not
         // persisted, so the user's chosen view is kept for normal visits.
-        viewMode: (/^#v\d+$/.test(window.location.hash) ? 'verses' : (localStorage.getItem('quranSurahView') || 'verses')),
+        viewMode: (/^#v\d+$/.test(window.location.hash) ? 'verses' : (localStorage.getItem('quranSurahView') || 'reading')),
         fontSize: parseInt(localStorage.getItem('fontSize')) || 28,
         showTransliteration: localStorage.getItem('showTransliteration') !== 'false',
         currentLocale: '{{ $currentLocale }}',
@@ -621,6 +621,7 @@
             localStorage.setItem('selectedTafsirId', this.selectedTafsirId);
             // Re-fetch only the verses whose tafsir is currently open, for the new edition.
             this.verses.forEach(v => { if (this.openTafsir[v.id]) { this.loadVerseTafsir(v); } });
+            if (this.tafsirVerse) { this.loadVerseTafsir(this.tafsirVerse); }
         },
 
         getTranslation(verse) {
@@ -897,6 +898,19 @@
                 </div>
             </div>
 
+            {{-- Pre-render skeleton: visible in static HTML, hidden the moment
+                 Alpine boots (x-show="false") and the real verses render. --}}
+            <div x-show="false" class="space-y-6 mb-12" aria-hidden="true">
+                @for($i = 0; $i < 3; $i++)
+                <div class="rounded-2xl p-6 bg-white dark:bg-gray-800 shadow-sm animate-pulse">
+                    <div class="h-4 w-24 rounded bg-gray-200 dark:bg-gray-700 ms-auto mb-6"></div>
+                    <div class="h-6 rounded bg-gray-200 dark:bg-gray-700 mb-3"></div>
+                    <div class="h-6 w-3/4 rounded bg-gray-200 dark:bg-gray-700 mx-auto mb-6"></div>
+                    <div class="h-4 w-2/3 rounded bg-gray-100 dark:bg-gray-700/60 mx-auto"></div>
+                </div>
+                @endfor
+            </div>
+
             {{-- ============================================================ --}}
             {{-- VERSES --}}
             {{-- ============================================================ --}}
@@ -1140,7 +1154,16 @@
             <p class="font-['Amiri'] text-2xl leading-relaxed mt-2 pe-8" dir="rtl" x-text="tafsirVerse ? tafsirVerse.arabic : ''"></p>
         </div>
         <div class="p-5 overflow-y-auto">
-            <p class="mushaf-pop-title mb-2" x-text="currentTafsirName()"></p>
+            {{-- Edition selector — same source list as the rail; text lazy-loads per verse/edition on change --}}
+            <template x-if="tafsirResources.length > 1">
+                <select x-model.number="selectedTafsirId" @change="setTafsirSource(selectedTafsirId)"
+                        class="mushaf-pop-select mb-2" aria-label="{{ __('quran.public.tafsir_source') }}">
+                    @foreach($tafsirResources as $tr)
+                    <option value="{{ $tr['id'] }}">{{ $tr['name'] }}</option>
+                    @endforeach
+                </select>
+            </template>
+            <p x-show="tafsirResources.length <= 1" class="mushaf-pop-title mb-2" x-text="currentTafsirName()"></p>
             {{-- Loading --}}
             <p x-show="tafsirVerse && tafsirLoadingVerse === tafsirVerse.id" class="text-sm animate-pulse"
                :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">{{ __('quran.public.tafsir_loading') }}</p>

@@ -41,6 +41,9 @@ final class QuranComPayload
      */
     public static function cleanHtml(string $html): string
     {
+        // Drop footnote references entirely — their content is just the marker
+        // digit ("Allāh,<sup foot_note=1>1</sup>" must not become "Allāh,1").
+        $html = preg_replace('/<sup[^>]*>.*?<\/sup>/is', '', $html) ?? $html;
         $html = preg_replace('/<\s*(br|\/p|\/h[1-6]|\/div|\/li)\s*\/?>/i', "\n", $html) ?? $html;
         $text = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $text = preg_replace('/[ \t]+/', ' ', $text) ?? $text;
