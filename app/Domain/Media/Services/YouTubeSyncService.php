@@ -78,6 +78,35 @@ class YouTubeSyncService
     }
 
     /**
+     * Read-only fetch of one video's metadata for prefilling the episode
+     * form (title, description, transcript, duration, thumbnail).
+     *
+     * @return array{video_id:string,embed_url:string,locale:string,title:string,description:string,transcript:?string,duration_seconds:?int,thumbnail_url:?string}
+     *
+     * @throws YouTubeException
+     */
+    public function previewVideo(string $url): array
+    {
+        $videoId = YouTubeUrl::videoId($url);
+        if ($videoId === null) {
+            throw new YouTubeException(__('admin.yt_video_url_invalid'));
+        }
+
+        $video = $this->fetchFullVideo($videoId);
+
+        return [
+            'video_id' => $video->id,
+            'embed_url' => YouTubeUrl::embedUrl($video->id),
+            'locale' => $this->detectLocale($video->title.' '.$video->description),
+            'title' => $video->title,
+            'description' => $video->description,
+            'transcript' => $video->transcript,
+            'duration_seconds' => $video->durationSeconds,
+            'thumbnail_url' => $video->thumbnailUrl ?: 'https://i.ytimg.com/vi/'.$video->id.'/hqdefault.jpg',
+        ];
+    }
+
+    /**
      * Register an import and queue the job that performs it. The returned run
      * is the handle the admin modal polls for progress.
      *

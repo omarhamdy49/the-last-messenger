@@ -42,6 +42,7 @@ Route::delete('media-categories/{key}', [MediaCategoryController::class, 'destro
 // Media Episodes
 Route::prefix('media-episodes')->group(function (): void {
     Route::post('/bulk-delete', [MediaEpisodeController::class, 'bulkDelete'])->name('admin.media-episodes.bulk-delete');
+    Route::post('/youtube/preview', [MediaEpisodeController::class, 'youtubePreview'])->name('admin.media-episodes.youtube.preview');
     Route::post('/{media_episode}/thumbnail', [MediaEpisodeController::class, 'updateThumbnail'])->name('admin.media-episodes.thumbnail');
     Route::post('/{media_episode}/youtube/sync', [MediaEpisodeController::class, 'syncYoutube'])->name('admin.media-episodes.youtube.sync');
 });

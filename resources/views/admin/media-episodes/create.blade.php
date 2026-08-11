@@ -19,5 +19,5 @@
 @endsection
 
 @section('content')
-@include('admin.media-episodes._form', ['episode' => null, 'programs' => $programs, 'programId' => $programId])
+@include('admin.media-episodes._form', ['episode' => null, 'programId' => $programId, 'selectedProgram' => $selectedProgram])
 @endsection

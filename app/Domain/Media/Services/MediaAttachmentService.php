@@ -39,6 +39,17 @@ final class MediaAttachmentService
         $model->clearMediaCollection($collection);
 
         if ($source instanceof UploadedFile) {
+            // Register the upload in the media library first — the library
+            // works on its own temp copy, so the original file is still in
+            // place for Spatie's addMedia() (which moves it) afterwards.
+            // Without this, direct uploads were attached to the model but
+            // never appeared in the media library.
+            try {
+                $this->mediaService->upload($source, ['collection_name' => $collection]);
+            } catch (\Throwable $e) {
+                report($e); // library registration is best-effort; the attach below must still happen
+            }
+
             $model->addMedia($source)->toMediaCollection($collection);
 
             return;

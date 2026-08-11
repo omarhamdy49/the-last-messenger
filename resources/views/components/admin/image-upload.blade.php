@@ -66,6 +66,10 @@
         }
      }"
      @media-selected.window="handleMediaSelect($event.detail)"
+     {{-- Preview-only fill (e.g. a fetched YouTube thumbnail): shows the image
+          without sending a file or library id — the server-side fallback is
+          expected to resolve the same URL. --}}
+     @image-preview-set.window="if ($event.detail.name === '{{ $name }}') { preview = $event.detail.url; mediaId = null; if ($refs.fileInput) $refs.fileInput.value = ''; }"
      class="space-y-3">
 
     @if($label)

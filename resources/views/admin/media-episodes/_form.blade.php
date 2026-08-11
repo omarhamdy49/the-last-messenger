@@ -1,12 +1,21 @@
 {{--
     Shared Media Episode form (create + edit).
 
-    @param \App\Domain\Media\Models\MediaEpisode|null $episode   Null on create
-    @param \Illuminate\Support\Collection              $programs  Program options
-    @param int|null                                    $programId Preselected program (create only)
+    @param \App\Domain\Media\Models\MediaEpisode|null  $episode          Null on create
+    @param int|null                                    $programId        Preselected program (create only)
+    @param \App\Domain\Media\Models\MediaProgram|null  $selectedProgram  Preselected program model (create only)
 --}}
 @php
     $isEdit = $episode !== null;
+    // Program selection survives a failed validation round-trip: old() wins,
+    // and the title is only known when it matches the preloaded program.
+    $oldProgramId = (int) old('program_id', $programId ?? 0);
+    $selectedProgramTitle = null;
+    if ($oldProgramId && ($selectedProgram ?? null) && $oldProgramId === $selectedProgram->id) {
+        $selectedProgramTitle = $selectedProgram->getTranslation('title', 'ar') ?? $selectedProgram->slug;
+    } elseif ($oldProgramId) {
+        $selectedProgramTitle = '#'.$oldProgramId;
+    }
     $locales = ['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'];
     $existingTranslations = $isEdit ? $episode->translations->keyBy('locale') : collect();
     $initialPublishStatus = old('is_published') !== null
@@ -53,7 +62,8 @@
                     {{ __('admin.translations') }}
                 </h3>
 
-                <div x-data="{ activeLocale: 'ar' }">
+                <div x-data="{ activeLocale: 'ar' }"
+                     @episode-locale-activate.window="activeLocale = $event.detail.locale">
                     <div class="flex gap-2 mb-4 overflow-x-auto whitespace-nowrap pb-1">
                         @foreach($locales as $code => $label)
                         @php $hasTitle = filled(old("title.{$code}", $existingTranslations->get($code)?->title)); @endphp
@@ -243,19 +253,50 @@
 
                 <div class="space-y-4">
                     @if(! $isEdit)
-                    <div>
+                    <div x-data="{
+                            programId: @js($oldProgramId ? (string) $oldProgramId : ''),
+                            programTitle: @js($selectedProgramTitle),
+                            programPoster: null,
+                         }"
+                         @program-picked.window="programId = String($event.detail.id); programTitle = $event.detail.title; programPoster = $event.detail.poster">
                         <label class="block text-sm font-medium mb-1" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                             {{ __('admin.program') }} *
                         </label>
-                        <select name="program_id" required class="{{ $inputClasses }}"
-                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                            <option value="">{{ __('admin.select_program') }}</option>
-                            @foreach($programs as $prog)
-                            <option value="{{ $prog->id }}" {{ (old('program_id', $programId) == $prog->id) ? 'selected' : '' }}>
-                                {{ $prog->getTranslation('title', 'ar') ?? $prog->slug }}
-                            </option>
-                            @endforeach
-                        </select>
+                        <input type="hidden" name="program_id" :value="programId">
+
+                        {{-- Empty state: prompt to pick --}}
+                        <button type="button" x-show="! programId"
+                                @click="$dispatch('open-program-picker')"
+                                class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed text-sm font-medium transition-colors"
+                                :class="darkMode
+                                    ? 'border-gray-700 text-gray-400 hover:border-[#64CCC5] hover:text-[#64CCC5]'
+                                    : 'border-gray-300 text-gray-500 hover:border-[#0056b3] hover:text-[#0056b3]'">
+                            <i data-lucide="search" class="w-4 h-4"></i>
+                            {{ __('admin.select_program') }}
+                        </button>
+
+                        {{-- Picked state: chosen program card + change action --}}
+                        <div x-show="programId" x-cloak
+                             class="flex items-center gap-3 px-3 py-2.5 rounded-xl border"
+                             :class="darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'">
+                            <template x-if="programPoster">
+                                <img :src="programPoster" alt="" class="w-9 h-9 shrink-0 rounded-lg object-cover">
+                            </template>
+                            <template x-if="! programPoster">
+                                <div class="w-9 h-9 shrink-0 rounded-lg grid place-items-center bg-gradient-to-br from-[#0056b3] to-[#218838]">
+                                    <i data-lucide="clapperboard" class="w-4 h-4 text-white/80"></i>
+                                </div>
+                            </template>
+                            <span class="flex-1 min-w-0 text-sm font-semibold truncate"
+                                  :class="darkMode ? 'text-white' : 'text-gray-900'"
+                                  x-text="programTitle || ('#' + programId)"></span>
+                            <button type="button" @click="$dispatch('open-program-picker')"
+                                    class="text-xs font-semibold shrink-0 text-[#0056b3] hover:underline"
+                                    :class="darkMode ? '!text-[#64CCC5]' : ''">
+                                {{ __('admin.change') }}
+                            </button>
+                        </div>
+
                         @error('program_id')
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
@@ -311,17 +352,100 @@
                         @enderror
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium mb-1" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            {{ __('admin.video_url') }}
-                        </label>
-                        <input type="url" name="video_url" value="{{ old('video_url', $episode?->video_url) }}" dir="ltr"
+                    <div x-data="{
+                            ytLoading: false,
+                            ytError: null,
+                            ytDone: false,
+
+                            escapeHtml(s) {
+                                const div = document.createElement('div');
+                                div.textContent = s;
+                                return div.innerHTML;
+                            },
+                            toParagraphs(s) {
+                                return s.split(/\n{2,}/)
+                                    .map(p => '<p>' + this.escapeHtml(p).replace(/\n/g, '<br>') + '</p>')
+                                    .join('');
+                            },
+
+                            async fetchYt() {
+                                const url = this.$refs.videoUrl.value.trim();
+                                if (! url) { this.ytError = @js(__('admin.yt_video_url_required')); return; }
+
+                                this.ytLoading = true;
+                                this.ytError = null;
+                                this.ytDone = false;
+                                try {
+                                    const res = await fetch(@js(route('admin.media-episodes.youtube.preview')), {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'Accept': 'application/json',
+                                            'X-CSRF-TOKEN': @js(csrf_token()),
+                                        },
+                                        body: JSON.stringify({ video_url: url }),
+                                    });
+                                    const json = await res.json();
+                                    if (! res.ok || ! json.success) {
+                                        throw new Error(json.message || @js(__('admin.yt_sync_failed')));
+                                    }
+                                    this.applyYt(json.data);
+                                    this.ytDone = true;
+                                } catch (e) {
+                                    this.ytError = e.message;
+                                } finally {
+                                    this.ytLoading = false;
+                                }
+                            },
+
+                            applyYt(d) {
+                                const loc = d.locale || 'ar';
+                                this.$refs.videoUrl.value = d.embed_url;
+
+                                const titleInput = document.querySelector('input[name=\'title[' + loc + ']\']');
+                                if (titleInput && d.title) { titleInput.value = d.title; }
+
+                                if (d.description) { this.$dispatch('wysiwyg-set', { name: 'description[' + loc + ']', html: this.toParagraphs(d.description) }); }
+                                if (d.transcript) { this.$dispatch('wysiwyg-set', { name: 'transcript[' + loc + ']', html: this.toParagraphs(d.transcript) }); }
+                                if (d.duration_seconds) { this.$dispatch('episode-duration-set', { seconds: d.duration_seconds }); }
+                                if (d.thumbnail_url) { this.$dispatch('image-preview-set', { name: 'thumbnail', url: d.thumbnail_url }); }
+                                this.$dispatch('episode-locale-activate', { locale: loc });
+                            },
+                         }">
+                        <div class="flex items-center justify-between gap-2 mb-1">
+                            <label class="block text-sm font-medium" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                                {{ __('admin.video_url') }}
+                            </label>
+                            {{-- Fetch title/description/transcript/duration/thumbnail from the video --}}
+                            <button type="button" @click="fetchYt()" :disabled="ytLoading"
+                                    title="{{ __('admin.yt_sync_hint') }}"
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold text-white bg-gradient-to-r from-[#0056b3] to-[#218838] shadow-sm hover:shadow-md hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
+                                <span x-show="! ytLoading" class="flex items-center gap-1">
+                                    <i data-lucide="youtube" class="w-3.5 h-3.5"></i>
+                                    {{ __('admin.yt_fetch_data_short') }}
+                                </span>
+                                <span x-show="ytLoading" x-cloak class="flex items-center gap-1">
+                                    <svg class="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+                                    {{ __('admin.yt_fetching') }}
+                                </span>
+                            </button>
+                        </div>
+                        <input type="url" name="video_url" x-ref="videoUrl" value="{{ old('video_url', $episode?->video_url) }}" dir="ltr"
                                placeholder="https://www.youtube.com/embed/..."
                                class="{{ $inputClasses }}"
                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'">
                         @error('video_url')
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
+                        <p class="mt-1 text-xs" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">{{ __('admin.yt_sync_hint') }}</p>
+                        <p x-show="ytError" x-cloak class="mt-1 text-xs text-red-500 flex items-center gap-1">
+                            <i data-lucide="alert-circle" class="w-3.5 h-3.5 shrink-0"></i>
+                            <span x-text="ytError"></span>
+                        </p>
+                        <p x-show="ytDone" x-cloak class="mt-1 text-xs text-green-600 flex items-center gap-1">
+                            <i data-lucide="check-circle-2" class="w-3.5 h-3.5 shrink-0"></i>
+                            {{ __('admin.yt_fetch_done') }}
+                        </p>
                     </div>
 
                     @php $durationTotal = (int) old('duration_seconds', $episode?->duration_seconds ?? 0); @endphp
@@ -331,7 +455,8 @@
                             s: {{ $durationTotal % 60 }},
                             clamp(v, max) { v = Math.max(0, Math.floor(Number(v) || 0)); return Math.min(v, max); },
                             total() { return this.clamp(this.h, 99) * 3600 + this.clamp(this.m, 59) * 60 + this.clamp(this.s, 59); },
-                         }">
+                         }"
+                         @episode-duration-set.window="const t = Math.max(0, Math.floor($event.detail.seconds || 0)); h = Math.floor(t / 3600); m = Math.floor((t % 3600) / 60); s = t % 60">
                         <label class="block text-sm font-medium mb-1" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                             {{ __('admin.duration') }} ({{ __('admin.duration_hms') }})
                         </label>
@@ -444,3 +569,8 @@
 
 {{-- Media library picker (used by the image-upload component) --}}
 <x-admin.media-picker-modal />
+
+@if(! $isEdit)
+    {{-- Program picker (paginated + searchable, loads on open) --}}
+    <x-admin.program-picker-modal />
+@endif

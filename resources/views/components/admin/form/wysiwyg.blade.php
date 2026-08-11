@@ -55,8 +55,14 @@
      class="wysiwyg-field"
      data-wysiwyg
      data-default-dir="{{ $direction }}"
+     @wysiwyg-set.window="if ($event.detail.name === @js($name)) setHtml($event.detail.html)"
      x-data="{
          editor: null,
+         setHtml(html) {
+             if (! this.editor) { return; }
+             this.editor.setContents(this.editor.clipboard.convert({ html: html }));
+             this.$refs.input.value = this.editor.getText().trim() === '' ? '' : this.editor.root.innerHTML;
+         },
          initEditor() {
              const editorEl = this.$refs.editor;
              const input = this.$refs.input;

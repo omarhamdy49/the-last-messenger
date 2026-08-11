@@ -15,11 +15,13 @@ use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\MediaProgram\StoreMediaEpisodeRequest;
 use App\Http\Requests\Admin\MediaProgram\UpdateMediaEpisodeRequest;
+use App\Http\Requests\Admin\MediaProgram\UpdateMediaEpisodeThumbnailRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -44,9 +46,9 @@ class MediaEpisodeController extends Controller
             'program_id' => ['nullable', 'integer'],
             'exclude_program_id' => ['nullable', 'integer'],
             'q' => ['nullable', 'string', 'max:255'],
-            'sort' => ['nullable', 'string', \Illuminate\Validation\Rule::in(['created_at', 'episode_number', 'views_count', 'duration_seconds'])],
-            'dir' => ['nullable', 'string', \Illuminate\Validation\Rule::in(['asc', 'desc'])],
-            'publish_status' => ['nullable', 'string', \Illuminate\Validation\Rule::in(['published', 'scheduled', 'draft'])],
+            'sort' => ['nullable', 'string', Rule::in(['created_at', 'episode_number', 'views_count', 'duration_seconds'])],
+            'dir' => ['nullable', 'string', Rule::in(['asc', 'desc'])],
+            'publish_status' => ['nullable', 'string', Rule::in(['published', 'scheduled', 'draft'])],
         ]);
 
         $programId = isset($validated['program_id']) ? (int) $validated['program_id'] : null;
@@ -88,10 +90,12 @@ class MediaEpisodeController extends Controller
      */
     public function create(Request $request): View
     {
-        $programs = $this->programService->paginate(100);
-        $programId = $request->integer('program_id');
+        $programId = $request->integer('program_id') ?: null;
+        // The program is chosen through a paginated search modal, so only the
+        // preselected program (if any) is loaded — never the whole list.
+        $selectedProgram = $programId ? $this->programService->find($programId) : null;
 
-        return view('admin.media-episodes.create', compact('programs', 'programId'));
+        return view('admin.media-episodes.create', compact('programId', 'selectedProgram'));
     }
 
     /**
@@ -153,9 +157,8 @@ class MediaEpisodeController extends Controller
         }
 
         $episode->loadMissing(['translations', 'program.translations']);
-        $programs = $this->programService->paginate(100);
 
-        return view('admin.media-episodes.edit', compact('episode', 'programs'));
+        return view('admin.media-episodes.edit', compact('episode'));
     }
 
     /**
@@ -220,7 +223,7 @@ class MediaEpisodeController extends Controller
      * POST /su/portal/v1/admin/media-episodes/{id}/thumbnail
      * Inline thumbnail change/remove from the episode hero.
      */
-    public function updateThumbnail(\App\Http\Requests\Admin\MediaProgram\UpdateMediaEpisodeThumbnailRequest $request, int $id): RedirectResponse
+    public function updateThumbnail(UpdateMediaEpisodeThumbnailRequest $request, int $id): RedirectResponse
     {
         $episode = $this->episodeService->find($id);
 
@@ -268,6 +271,32 @@ class MediaEpisodeController extends Controller
         } catch (\Throwable $e) {
             return redirect()->route('admin.media-episodes.show', $id)
                 ->with('error', __('admin.yt_sync_failed').': '.$e->getMessage());
+        }
+    }
+
+    /**
+     * POST /su/portal/v1/admin/media-episodes/youtube/preview
+     * Fetch one video's metadata (title/description/transcript/duration/
+     * thumbnail) to prefill the create/edit form before any episode exists.
+     */
+    public function youtubePreview(Request $request, YouTubeSyncService $service): JsonResponse
+    {
+        $request->validate([
+            'video_url' => ['required', 'string', 'max:500'],
+        ]);
+
+        @set_time_limit(120);
+
+        try {
+            return response()->json([
+                'success' => true,
+                'data' => $service->previewVideo((string) $request->input('video_url')),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage() ?: __('admin.yt_sync_failed'),
+            ], 422);
         }
     }
 
