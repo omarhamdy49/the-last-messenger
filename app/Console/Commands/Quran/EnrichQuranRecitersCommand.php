@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Quran;
 
 use App\Domain\Quran\Models\Reciter;
 use App\Domain\Quran\Services\QuranCacheKeys;
@@ -32,6 +32,8 @@ use Throwable;
  */
 class EnrichQuranRecitersCommand extends Command
 {
+    protected $hidden = true;
+
     protected $signature = 'quran:enrich-reciters
         {--only= : Comma-separated reciter slugs}
         {--force : Overwrite values that are already set}';

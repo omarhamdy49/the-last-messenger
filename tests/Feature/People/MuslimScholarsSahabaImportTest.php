@@ -43,8 +43,8 @@ final class MuslimScholarsSahabaImportTest extends TestCase
 
         try {
             $arguments = ['--path' => $path, '--expected' => 1, '--force' => true];
-            $this->artisan('people:import-muslimscholars-sahaba', $arguments)->assertSuccessful();
-            $this->artisan('people:import-muslimscholars-sahaba', $arguments)->assertSuccessful();
+            $this->artisan('muslims:import', $arguments)->assertSuccessful();
+            $this->artisan('muslims:import', $arguments)->assertSuccessful();
 
             $this->assertDatabaseCount('muslims', 1);
             $this->assertDatabaseCount('muslims_roles', 1);
@@ -121,8 +121,8 @@ final class MuslimScholarsSahabaImportTest extends TestCase
                 '--expected' => 2,
                 '--force' => true,
             ];
-            $this->artisan('people:import-muslimscholars-sahaba', $arguments)->assertSuccessful();
-            $this->artisan('people:import-muslimscholars-sahaba', $arguments)->assertSuccessful();
+            $this->artisan('muslims:import', $arguments)->assertSuccessful();
+            $this->artisan('muslims:import', $arguments)->assertSuccessful();
 
             $this->assertDatabaseCount('muslims', 2);
             $this->assertDatabaseCount('muslim_sources', 2);
@@ -176,7 +176,7 @@ final class MuslimScholarsSahabaImportTest extends TestCase
         $path = $this->csv([$this->row()]);
 
         try {
-            $this->artisan('people:import-muslimscholars-sahaba', [
+            $this->artisan('muslims:import', [
                 '--path' => $path,
                 '--expected' => 1,
                 '--force' => true,
@@ -226,7 +226,7 @@ final class MuslimScholarsSahabaImportTest extends TestCase
         $path = $this->csv([$this->row()]);
 
         try {
-            $this->artisan('people:import-muslimscholars-sahaba', [
+            $this->artisan('muslims:import', [
                 '--path' => $path,
                 '--expected' => 1,
                 '--dry-run' => true,

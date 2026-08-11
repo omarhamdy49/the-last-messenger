@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Quran;
 
 use App\Domain\Quran\Models\TranslationResource;
 use Illuminate\Console\Command;
@@ -20,6 +20,8 @@ use Illuminate\Console\Command;
  */
 class ImportQuranEditionsCommand extends Command
 {
+    protected $hidden = true;
+
     protected $signature = 'quran:import-editions
         {--translations : Import translation editions only}
         {--tafsirs : Import tafsir editions only}

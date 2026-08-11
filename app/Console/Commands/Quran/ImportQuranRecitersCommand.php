@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Quran;
 
 use App\Domain\Quran\Models\Reciter;
 use App\Domain\Quran\Models\ReciterTranslation;
@@ -31,6 +31,8 @@ use Throwable;
  */
 class ImportQuranRecitersCommand extends Command
 {
+    protected $hidden = true;
+
     protected $signature = 'quran:import-reciters
         {--fresh : Truncate reciters, their translations and quran_recitations before importing}';
 

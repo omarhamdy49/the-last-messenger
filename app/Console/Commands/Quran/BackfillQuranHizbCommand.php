@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Quran;
 
 use App\Domain\Quran\Services\QuranCacheKeys;
 use Illuminate\Console\Command;
@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\DB;
  */
 class BackfillQuranHizbCommand extends Command
 {
+    protected $hidden = true;
+
     protected $signature = 'quran:backfill-hizb';
 
     protected $description = 'Populate quran_verses.hizb_number from rub_el_hizb_number (hizb = ceil(rub/4))';

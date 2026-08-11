@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\People;
 
 use App\Domain\People\Import\MuslimScholarsSahabaImportPlan;
 use App\Domain\People\Import\MuslimScholarsSahabaImportService;
@@ -12,7 +12,7 @@ use Throwable;
 
 final class ImportMuslimScholarsSahabaCommand extends Command
 {
-    protected $signature = 'people:import-muslimscholars-sahaba
+    protected $signature = 'muslims:import
                             {--path=storage/app/sahaba-import-preview/muslimscholars-sahaba-mapped-preview.csv : Reviewed mapped CSV}
                             {--expected=7806 : Required total source record count}
                             {--dry-run : Validate and preview without writing}

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Quran;
 
 use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Models\VerseTranslation;
@@ -19,6 +19,8 @@ use Throwable;
  */
 class SyncQuranArabicCommand extends Command
 {
+    protected $hidden = true;
+
     protected $signature = 'quran:sync-arabic {--chapter= : sync a single chapter only}';
 
     protected $description = 'Sync Arabic verse text from the Quran.com Uthmani API (matches quran.com exactly)';

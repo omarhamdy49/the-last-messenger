@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Quran;
 
 use App\Domain\Quran\Services\MushafLayoutImportService;
 use Illuminate\Console\Command;
@@ -15,6 +15,8 @@ use Throwable;
  */
 class ImportQuranMushafLayoutCommand extends Command
 {
+    protected $hidden = true;
+
     protected $signature = 'quran:import-mushaf-layout
                             {--pages=1-604 : Pages to import — a range "1-604", a CSV "1,2,3", or a single page}';
 

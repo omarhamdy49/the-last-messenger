@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Quran;
 
 use App\Domain\Quran\Importers\QuranComPayload;
 use App\Domain\Quran\Models\TafsirResource;
@@ -27,6 +27,8 @@ use Throwable;
  */
 class ImportTafsirCommand extends Command
 {
+    protected $hidden = true;
+
     protected $signature = 'quran:import-tafsir {tafsirId : Quran.com tafsir resource id}
         {--slug=} {--lang=} {--name-ar=} {--name-en=} {--author=} {--source=quran.com}';
 

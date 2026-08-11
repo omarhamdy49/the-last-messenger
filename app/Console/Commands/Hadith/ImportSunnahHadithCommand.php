@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Hadith;
 
 use App\Domain\Hadith\Import\Sunnah\FortyCollectionWriteResult;
 use App\Domain\Hadith\Import\Sunnah\FortyImportPreview;
@@ -17,7 +17,7 @@ use Throwable;
 
 final class ImportSunnahHadithCommand extends Command
 {
-    protected $signature = 'islamic-data:import-hadith
+    protected $signature = 'hadith:import
                             {--collection=forty : Sunnah API source collection or all}
                             {--dry-run : Fetch, validate, and preview without writing}
                             {--force : Import without an interactive confirmation}';

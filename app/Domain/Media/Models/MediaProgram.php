@@ -6,12 +6,17 @@ namespace App\Domain\Media\Models;
 
 use App\Domain\Media\Enums\MaturityRating;
 use App\Domain\Media\Enums\ProgramCategory;
+use App\Domain\Media\Support\YouTubeUrl;
+use App\Domain\Shared\Models\SpatieMedia;
 use App\Domain\Shared\Traits\HasLocalizedContent;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /**
  * MediaProgram Model
@@ -31,11 +36,11 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property bool $is_featured
  * @property bool $is_trending
  * @property bool $is_published
- * @property \Carbon\Carbon|null $publish_at
+ * @property Carbon|null $publish_at
  * @property int $views_count
  * @property int $display_order
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class MediaProgram extends Model implements HasMedia
 {
@@ -107,7 +112,7 @@ class MediaProgram extends Model implements HasMedia
                 return;
             }
 
-            \App\Domain\Shared\Models\SpatieMedia::query()
+            SpatieMedia::query()
                 ->where('model_type', (new MediaEpisode)->getMorphClass())
                 ->whereIn('model_id', $episodeIds)
                 ->get()
@@ -134,7 +139,7 @@ class MediaProgram extends Model implements HasMedia
     public function getPosterUrlAttribute(): ?string
     {
         try {
-            return $this->getFirstMediaUrl('poster') ?: null;
+            return $this->getFirstMediaUrl('poster') ?: $this->youtubeThumbnailUrl();
         } catch (\Throwable) {
             return null;
         }
@@ -143,7 +148,7 @@ class MediaProgram extends Model implements HasMedia
     public function getBannerUrlAttribute(): ?string
     {
         try {
-            return $this->getFirstMediaUrl('banner') ?: null;
+            return $this->getFirstMediaUrl('banner') ?: $this->youtubeThumbnailUrl();
         } catch (\Throwable) {
             return null;
         }
@@ -154,10 +159,21 @@ class MediaProgram extends Model implements HasMedia
     {
         try {
             return $this->getFirstMediaUrl('poster', 'thumbnail')
-                ?: ($this->getFirstMediaUrl('poster') ?: null);
+                ?: ($this->getFirstMediaUrl('poster') ?: $this->youtubeThumbnailUrl());
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    /** YouTube CDN thumbnail of the first episode; null when no YouTube episodes. */
+    public function youtubeThumbnailUrl(): ?string
+    {
+        $videoUrl = $this->relationLoaded('episodes')
+            ? $this->episodes->first()?->video_url
+            : $this->episodes()->value('video_url');
+        $videoId = YouTubeUrl::videoId($videoUrl);
+
+        return $videoId !== null ? YouTubeUrl::thumbnailUrl($videoId) : null;
     }
 
     // ------------------------------------------------------------------
@@ -230,16 +246,16 @@ class MediaProgram extends Model implements HasMedia
             ->useDisk('public');
     }
 
-    public function registerMediaConversions(?\Spatie\MediaLibrary\MediaCollections\Models\Media $media = null): void
+    public function registerMediaConversions(?Media $media = null): void
     {
         $this->addMediaConversion('thumbnail')
-            ->fit(\Spatie\Image\Enums\Fit::Crop, 300, 450)
+            ->fit(Fit::Crop, 300, 450)
             ->optimize()
             ->performOnCollections('poster')
             ->nonQueued();
 
         $this->addMediaConversion('medium')
-            ->fit(\Spatie\Image\Enums\Fit::Contain, 600, 338)
+            ->fit(Fit::Contain, 600, 338)
             ->optimize()
             ->performOnCollections('banner')
             ->nonQueued();

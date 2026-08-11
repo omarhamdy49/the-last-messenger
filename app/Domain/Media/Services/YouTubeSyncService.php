@@ -287,7 +287,6 @@ class YouTubeSyncService
         ));
 
         $this->writeTranslations($episode, $video);
-        $this->attachImage($episode, 'thumbnail', $video->thumbnailUrl, $video->id);
 
         $this->episodeRepo->clearCacheForProgram($program->id);
         $this->episodeRepo->clearCacheForEpisodeNumber($program->id, 1, $number);
@@ -307,7 +306,6 @@ class YouTubeSyncService
         $this->episodeRepo->update($episode->id, $core);
 
         $this->writeTranslations($episode, $video);
-        $this->attachImage($episode, 'thumbnail', $video->thumbnailUrl, $video->id);
 
         $this->episodeRepo->clearCacheForProgram($episode->program_id);
         $this->episodeRepo->clearCacheForEpisodeNumber($episode->program_id, $episode->season_number, $episode->episode_number);
@@ -364,43 +362,10 @@ class YouTubeSyncService
             $program->syncTranslations($translations);
         }
 
-        // Images — prefer the first episode's high-res thumbnail; only attach
-        // when the program has none yet (non-destructive on re-sync).
-        $thumbUrl = $firstVideo?->thumbnailUrl ?? $playlist->thumbnailUrl;
-        $videoId = $firstVideo?->id;
-        if (! $program->hasMedia('banner')) {
-            $this->attachImage($program, 'banner', $thumbUrl, $videoId);
-        }
-        if (! $program->hasMedia('poster')) {
-            $this->attachImage($program, 'poster', $thumbUrl, $videoId);
-        }
+        // Images are not downloaded: poster/banner/thumbnail accessors fall
+        // back to the YouTube CDN (i.ytimg.com) derived from the video id.
 
         $this->programRepo->clearCacheForModel($program->id);
-    }
-
-    /**
-     * Download a thumbnail and (re)attach it to a media collection. The temp
-     * file is moved into the collection by Spatie; we clean up on failure.
-     *
-     * @param  MediaEpisode|MediaProgram  $model
-     */
-    private function attachImage($model, string $collection, ?string $thumbnailUrl, ?string $videoId): void
-    {
-        $path = $this->client->downloadThumbnail($thumbnailUrl, $videoId);
-        if ($path === null) {
-            return;
-        }
-
-        try {
-            $model->clearMediaCollection($collection);
-            $model->addMedia($path)->toMediaCollection($collection);
-        } catch (\Throwable $e) {
-            Log::warning('YouTube thumbnail attach failed', ['collection' => $collection, 'error' => $e->getMessage()]);
-        } finally {
-            if (is_file($path)) {
-                @unlink($path);
-            }
-        }
     }
 
     /** Arabic content → 'ar', otherwise 'en'. */

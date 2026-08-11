@@ -142,39 +142,6 @@ class YouTubeClient
     }
 
     /**
-     * Download the best thumbnail to a local temp file; returns the path or
-     * null. Tries the provided URL, then maxres, then hq fallbacks.
-     */
-    public function downloadThumbnail(?string $url, ?string $videoId = null): ?string
-    {
-        $candidates = [];
-        if ($url !== null && $url !== '') {
-            $candidates[] = $url;
-        }
-        if ($videoId !== null) {
-            $candidates[] = "https://i.ytimg.com/vi/{$videoId}/maxresdefault.jpg";
-            $candidates[] = "https://i.ytimg.com/vi/{$videoId}/hqdefault.jpg";
-        }
-
-        foreach ($candidates as $candidate) {
-            try {
-                $response = Http::timeout(30)->get($candidate);
-                if ($response->successful() && str_starts_with((string) $response->header('Content-Type'), 'image')) {
-                    $path = storage_path('app/tmp/ytthumb-'.uniqid().'.jpg');
-                    File::ensureDirectoryExists(dirname($path));
-                    File::put($path, $response->body());
-
-                    return $path;
-                }
-            } catch (\Throwable) {
-                // Try the next candidate.
-            }
-        }
-
-        return null;
-    }
-
-    /**
      * @param  list<string>  $args
      * @return array<string, mixed>
      *

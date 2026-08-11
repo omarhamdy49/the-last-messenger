@@ -33,7 +33,7 @@ final class SunnahFortyImportTest extends TestCase
     {
         $this->fakeFortyApi();
 
-        $this->artisan('islamic-data:import-hadith', ['--collection' => 'forty', '--dry-run' => true])
+        $this->artisan('hadith:import', ['--collection' => 'forty', '--dry-run' => true])
             ->expectsOutputToContain('Source rows: 122')
             ->expectsOutputToContain('Dry run — nothing written.')
             ->assertSuccessful();
@@ -46,7 +46,7 @@ final class SunnahFortyImportTest extends TestCase
     {
         $this->fakeFortyApi();
 
-        $this->artisan('islamic-data:import-hadith', ['--collection' => 'forty', '--force' => true])
+        $this->artisan('hadith:import', ['--collection' => 'forty', '--force' => true])
             ->expectsOutputToContain('Import completed; collections and imported rows are published.')
             ->assertSuccessful();
 
@@ -83,13 +83,13 @@ final class SunnahFortyImportTest extends TestCase
         $this->fakeFortyApi();
         $arguments = ['--collection' => 'forty', '--force' => true];
 
-        $this->artisan('islamic-data:import-hadith', $arguments)->assertSuccessful();
+        $this->artisan('hadith:import', $arguments)->assertSuccessful();
         $hadith = Hadith::query()->orderBy('id')->firstOrFail();
         $collection = $hadith->collection;
         $hadith->update(['is_published' => false]);
         $collection->update(['is_published' => false]);
 
-        $this->artisan('islamic-data:import-hadith', $arguments)->assertSuccessful();
+        $this->artisan('hadith:import', $arguments)->assertSuccessful();
 
         $this->assertDatabaseCount('hadith_collections', 3);
         $this->assertDatabaseCount('hadiths', 122);
@@ -101,7 +101,7 @@ final class SunnahFortyImportTest extends TestCase
     {
         $this->fakeFortyApi(bookThreeCount: 39);
 
-        $this->artisan('islamic-data:import-hadith', ['--collection' => 'forty', '--force' => true])
+        $this->artisan('hadith:import', ['--collection' => 'forty', '--force' => true])
             ->expectsOutputToContain('shahwaliullah40 count mismatch')
             ->assertFailed();
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Quran;
 
 use App\Domain\Quran\Application\DTOs\AiAnswerDTO;
 use App\Domain\Quran\Infrastructure\Llm\OpenAiCompatChatClient;

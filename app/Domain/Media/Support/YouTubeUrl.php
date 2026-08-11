@@ -95,6 +95,15 @@ final class YouTubeUrl
         return "https://www.youtube.com/watch?v={$videoId}";
     }
 
+    /**
+     * YouTube CDN thumbnail. hqdefault (480x360) exists for every video,
+     * unlike maxresdefault which 404s on many.
+     */
+    public static function thumbnailUrl(string $videoId): string
+    {
+        return "https://i.ytimg.com/vi/{$videoId}/hqdefault.jpg";
+    }
+
     public static function playlistUrl(string $playlistId): string
     {
         return "https://www.youtube.com/playlist?list={$playlistId}";

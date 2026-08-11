@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Quran;
 
 use App\Domain\Quran\Models\Recitation;
 use App\Domain\Quran\Models\Reciter;
@@ -25,6 +25,8 @@ use Throwable;
  */
 class ImportQuranRecitationsCommand extends Command
 {
+    protected $hidden = true;
+
     protected $signature = 'quran:import-recitations
         {--only= : Comma-separated reciter slugs to import}';
 

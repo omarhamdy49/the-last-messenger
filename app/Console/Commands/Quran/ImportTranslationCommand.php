@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Quran;
 
 use App\Domain\Quran\Importers\QuranComPayload;
 use App\Domain\Quran\Models\TranslationResource;
@@ -29,6 +29,8 @@ use Throwable;
  */
 class ImportTranslationCommand extends Command
 {
+    protected $hidden = true;
+
     protected $signature = 'quran:import-translation {edition : catalog slug or Quran.com translation resource id}
         {--default : Mark this edition as the default for its language}';
 

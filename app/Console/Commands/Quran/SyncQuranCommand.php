@@ -1,12 +1,14 @@
 <?php
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Quran;
 
 use App\Domain\Quran\Services\QuranSyncService;
 use Illuminate\Console\Command;
 
 class SyncQuranCommand extends Command
 {
+    protected $hidden = true;
+
     protected $signature = 'quran:sync
                             {--from=1 : Start from chapter number (1-114)}
                             {--to=114 : End at chapter number (1-114)}';
