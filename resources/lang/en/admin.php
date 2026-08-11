@@ -606,7 +606,7 @@ return [
     // Content module (site settings, menus, home sections, pages, FAQs, inbox, imports)
     'active' => 'Active',
     'inactive' => 'Inactive',
-    'nav_site_content' => 'Site Content',
+    'nav_site_content' => 'Website Settings',
     'content_settings' => 'Site Settings',
     'content_settings_hint' => 'Edit the global site texts, SEO defaults, links and toggles.',
     'content_settings_saved' => 'Settings saved successfully.',

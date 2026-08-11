@@ -618,7 +618,7 @@ return [
     // Content module (site settings, menus, home sections, pages, FAQs, inbox, imports)
     'active' => 'مفعل',
     'inactive' => 'غير مفعل',
-    'nav_site_content' => 'المحتوى',
+    'nav_site_content' => 'إعدادات الموقع',
     'content_settings' => 'إعدادات الموقع',
     'content_settings_hint' => 'تحرير نصوص الموقع العامة وإعدادات SEO والروابط.',
     'content_settings_saved' => 'تم حفظ الإعدادات بنجاح.',

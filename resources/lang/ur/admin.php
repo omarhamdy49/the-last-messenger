@@ -557,7 +557,7 @@ return [
     // Content module (site settings, menus, home sections, pages, FAQs, inbox, imports)
     'active' => 'فعال',
     'inactive' => 'غیر فعال',
-    'nav_site_content' => 'سائٹ کا مواد',
+    'nav_site_content' => 'ویب سائٹ کی ترتیبات',
     'content_settings' => 'سائٹ کی ترتیبات',
     'content_settings_hint' => 'سائٹ کے عمومی متن، SEO اور لنکس میں ترمیم کریں۔',
     'content_settings_saved' => 'ترتیبات کامیابی سے محفوظ ہو گئیں۔',

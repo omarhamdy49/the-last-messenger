@@ -557,7 +557,7 @@ return [
     // Content module (site settings, menus, home sections, pages, FAQs, inbox, imports)
     'active' => 'Etkin',
     'inactive' => 'Pasif',
-    'nav_site_content' => 'Site İçeriği',
+    'nav_site_content' => 'Site Ayarları',
     'content_settings' => 'Site Ayarları',
     'content_settings_hint' => 'Genel site metinlerini, SEO varsayılanlarını ve bağlantıları düzenleyin.',
     'content_settings_saved' => 'Ayarlar başarıyla kaydedildi.',

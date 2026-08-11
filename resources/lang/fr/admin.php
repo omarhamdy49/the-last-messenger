@@ -557,7 +557,7 @@ return [
     // Content module (site settings, menus, home sections, pages, FAQs, inbox, imports)
     'active' => 'Actif',
     'inactive' => 'Inactif',
-    'nav_site_content' => 'Contenu du site',
+    'nav_site_content' => 'Paramètres du site',
     'content_settings' => 'Paramètres du site',
     'content_settings_hint' => 'Modifier les textes globaux, le SEO, les liens et les options.',
     'content_settings_saved' => 'Paramètres enregistrés avec succès.',

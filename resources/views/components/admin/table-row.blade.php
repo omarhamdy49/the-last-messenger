@@ -82,7 +82,8 @@
                         <img :src="row.{{ $imageKey }}"
                              :alt="row.{{ $key }} || ''"
                              loading="lazy"
-                             @error="imageFailed = true"
+                             {{-- x-on: longhand — @error is a Blade directive and breaks compilation --}}
+                             x-on:error="imageFailed = true"
                              class="w-10 h-10 rounded-lg object-cover shadow-sm flex-shrink-0 bg-gray-100 dark:bg-gray-800">
                     </template>
                     <template x-if="!row.{{ $imageKey }} || imageFailed">

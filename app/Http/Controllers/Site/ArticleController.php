@@ -328,9 +328,32 @@ final class ArticleController extends Controller
             return null;
         }
 
+        // Ordered sibling list for the sidebar "series articles" card (same
+        // visibility rules as series prev/next navigation).
+        $articles = $series->articles()
+            ->where('status', 'published')
+            ->whereHas('locales', fn ($q) => $q->where('is_ready', true))
+            ->with('locales:id,article_id,locale,title,slug,is_ready')
+            ->get()
+            ->map(function (Article $a) use ($locale, $article) {
+                $al = $a->locales->firstWhere('locale', $locale)
+                    ?? $a->locales->firstWhere('locale', 'ar')
+                    ?? $a->locales->first();
+
+                return $al === null ? null : [
+                    'title' => $al->title,
+                    'url' => $this->localeUrl($al->slug, $al->locale),
+                    'current' => $a->id === $article->id,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+
         return [
             'title' => $title,
             'url' => route('public.series.show', $series->slug),
+            'articles' => $articles,
         ];
     }
 

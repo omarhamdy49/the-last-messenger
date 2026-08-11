@@ -97,47 +97,113 @@
             </div>
         </div>
 
-        <!-- Articles in Series -->
-        <div class="rounded-2xl border p-6"
+        <!-- Articles in Series (assign / unassign / reorder inline) -->
+        @php
+            $initialArticles = $series->articles->map(fn ($a) => [
+                'id' => $a->id,
+                'title' => $a->locales->where('locale', 'ar')->first()?->title
+                    ?? $a->locales->first()?->title
+                    ?? __('admin.untitled'),
+                'date' => $a->published_at?->format('Y/m/d'),
+                'url' => route('admin.articles.show', $a->id),
+            ])->values();
+        @endphp
+        <div class="rounded-2xl border p-4 sm:p-6"
+             x-data="seriesArticlesManager(@js($initialArticles))"
              :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            <h2 class="text-xl font-bold mb-6 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
                 <i data-lucide="file-text" class="w-5 h-5 text-accent"></i>
                 مقالات السلسلة
-                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white">
-                    {{ $series->articles->count() }}
-                </span>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white"
+                      x-text="articles.length"></span>
+                <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-accent" x-show="saving" x-cloak></i>
             </h2>
 
-            @if($series->articles->count() > 0)
-            <div class="space-y-3">
-                @foreach($series->articles as $index => $article)
-                <div class="flex items-center gap-4 p-4 rounded-xl transition-all"
-                     :class="darkMode ? 'bg-gray-800/50 hover:bg-gray-800' : 'bg-gray-50 hover:bg-gray-100'">
-                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] flex items-center justify-center text-white text-sm font-bold">
-                        {{ $index + 1 }}
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <h3 class="font-medium truncate" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                            {{ $article->locales->where('locale', 'ar')->first()?->title ?? $article->locales->first()?->title ?? __('admin.untitled') }}
-                        </h3>
-                        <p class="text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
-                            {{ $article->published_at?->format('Y/m/d') ?? '-' }}
-                        </p>
-                    </div>
-                    <a href="{{ route('admin.articles.show', $article->id) }}"
-                       class="p-2 rounded-lg transition-colors"
-                       :class="darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-600'">
-                        <i data-lucide="external-link" class="w-4 h-4"></i>
-                    </a>
+            <!-- Search & add -->
+            <div class="relative mb-4">
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2"
+                       :class="darkMode ? 'text-gray-500' : 'text-gray-400'"></i>
+                    <input type="text"
+                           x-model="articleSearch"
+                           @input.debounce.300ms="searchArticles"
+                           @focus="showArticleResults = articleSearchResults.length > 0"
+                           @click.away="showArticleResults = false"
+                           class="w-full ps-10 pe-4 py-3 rounded-xl border text-sm focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                           :class="darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
+                           placeholder="ابحث عن مقال لإضافته...">
                 </div>
-                @endforeach
+
+                <div x-show="showArticleResults && articleSearchResults.length > 0" x-cloak x-transition
+                     class="absolute z-50 w-full mt-1 rounded-xl border shadow-lg max-h-60 overflow-y-auto"
+                     :class="darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'">
+                    <template x-for="result in articleSearchResults" :key="result.id">
+                        <button type="button" @click="addArticle(result)"
+                                class="w-full text-start px-4 py-3 flex items-center gap-3 transition-colors border-b last:border-b-0"
+                                :class="darkMode ? 'hover:bg-gray-700 border-gray-700' : 'hover:bg-gray-50 border-gray-100'">
+                            <i data-lucide="plus-circle" class="w-4 h-4 text-green-500 flex-shrink-0"></i>
+                            <span class="flex-1 text-sm truncate" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="result.title"></span>
+                            <span class="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
+                                  :class="result.status === 'published' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'"
+                                  x-text="result.status === 'published' ? 'منشور' : 'مسودة'"></span>
+                        </button>
+                    </template>
+                </div>
+
+                <div x-show="articleSearchLoading" x-cloak class="absolute z-50 w-full mt-1 rounded-xl border p-4 text-center"
+                     :class="darkMode ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-white border-gray-200 text-gray-500'">
+                    <i data-lucide="loader-2" class="w-5 h-5 animate-spin inline-block"></i>
+                    <span class="ms-2 text-sm">جاري البحث...</span>
+                </div>
             </div>
-            @else
-            <div class="text-center py-8">
-                <i data-lucide="file-text" class="w-12 h-12 mx-auto mb-3" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
-                <p :class="darkMode ? 'text-gray-400' : 'text-gray-600'">لا توجد مقالات في هذه السلسلة</p>
+
+            <!-- List -->
+            <div class="space-y-2" x-show="articles.length > 0">
+                <template x-for="(article, index) in articles" :key="article.id">
+                    <div class="flex items-center gap-2 sm:gap-3 p-3 rounded-xl border transition-all"
+                         :class="darkMode ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                        <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 bg-gradient-to-r from-[#0056b3] to-[#218838] text-white"
+                              x-text="index + 1"></span>
+
+                        <div class="flex-1 min-w-0">
+                            <a :href="article.url" class="font-medium text-sm truncate block hover:text-accent transition-colors"
+                               :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="article.title"></a>
+                            <p class="text-xs" x-show="article.date" :class="darkMode ? 'text-gray-500' : 'text-gray-400'" x-text="article.date"></p>
+                        </div>
+
+                        {{-- Touch-friendly actions: always visible, ≥40px targets on mobile --}}
+                        <div class="flex items-center flex-shrink-0">
+                            <button type="button" @click="moveArticle(index, -1)" :disabled="index === 0"
+                                    class="p-2.5 sm:p-2 rounded-lg transition-all disabled:opacity-25"
+                                    :class="darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-500'"
+                                    aria-label="{{ __('admin.move_up') }}">
+                                <i data-lucide="chevron-up" class="w-5 h-5 sm:w-4 sm:h-4"></i>
+                            </button>
+                            <button type="button" @click="moveArticle(index, 1)" :disabled="index === articles.length - 1"
+                                    class="p-2.5 sm:p-2 rounded-lg transition-all disabled:opacity-25"
+                                    :class="darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-500'"
+                                    aria-label="{{ __('admin.move_down') }}">
+                                <i data-lucide="chevron-down" class="w-5 h-5 sm:w-4 sm:h-4"></i>
+                            </button>
+                            <button type="button" @click="removeArticle(index)"
+                                    class="p-2.5 sm:p-2 rounded-lg transition-all text-red-500"
+                                    :class="darkMode ? 'hover:bg-red-900/30' : 'hover:bg-red-50'"
+                                    aria-label="{{ __('admin.remove') }}">
+                                <i data-lucide="x" class="w-5 h-5 sm:w-4 sm:h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </template>
             </div>
-            @endif
+
+            <!-- Empty state -->
+            <div x-show="articles.length === 0" x-cloak
+                 class="text-center py-8 rounded-xl border-2 border-dashed"
+                 :class="darkMode ? 'border-gray-700 text-gray-500' : 'border-gray-200 text-gray-400'">
+                <i data-lucide="file-text" class="w-10 h-10 mx-auto mb-3 opacity-50"></i>
+                <p class="text-sm">لا توجد مقالات في هذه السلسلة</p>
+                <p class="text-xs mt-1">استخدم البحث أعلاه لإضافة مقالات</p>
+            </div>
         </div>
     </div>
 
@@ -228,6 +294,110 @@
 
 @push('scripts')
 <script>
+    function seriesArticlesManager(initialArticles) {
+        return {
+            articles: initialArticles || [],
+            articleSearch: '',
+            articleSearchResults: [],
+            articleSearchLoading: false,
+            showArticleResults: false,
+            saving: false,
+
+            async searchArticles() {
+                const q = this.articleSearch.trim();
+                if (q.length < 2) {
+                    this.articleSearchResults = [];
+                    this.showArticleResults = false;
+                    return;
+                }
+                this.articleSearchLoading = true;
+                this.showArticleResults = false;
+                try {
+                    const params = new URLSearchParams({ q });
+                    this.articles.forEach(a => params.append('exclude[]', a.id));
+                    const response = await fetch(`{{ route('admin.articles.search') }}?${params}`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const data = await response.json();
+                    this.articleSearchResults = data.data || [];
+                    this.showArticleResults = this.articleSearchResults.length > 0;
+                } catch (e) {
+                    this.articleSearchResults = [];
+                } finally {
+                    this.articleSearchLoading = false;
+                    this.$nextTick(() => lucide.createIcons());
+                }
+            },
+
+            // Persist the whole list (assign + unassign + order) after every change.
+            async persist(previous) {
+                this.saving = true;
+                try {
+                    const response = await fetch(`{{ route('admin.series.reorder-articles', $series->id) }}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: JSON.stringify({
+                            articles: this.articles.map((a, i) => ({ id: a.id, position: i })),
+                        }),
+                    });
+                    const data = await response.json();
+                    if (!response.ok || !data.success) { throw new Error(data.message || ''); }
+                    showToast('{{ __('admin.series_updated') }}', 'success');
+                } catch (e) {
+                    this.articles = previous; // revert on failure
+                    showToast('{{ __('admin.operation_failed') }}', 'error');
+                } finally {
+                    this.saving = false;
+                    this.$nextTick(() => lucide.createIcons());
+                }
+            },
+
+            addArticle(article) {
+                if (this.articles.find(a => a.id === article.id)) return;
+                const previous = [...this.articles];
+                this.articles.push({
+                    id: article.id,
+                    title: article.title,
+                    date: null,
+                    url: '{{ route('admin.articles.show', 9999999) }}'.replace('9999999', article.id),
+                });
+                this.articleSearch = '';
+                this.articleSearchResults = [];
+                this.showArticleResults = false;
+                this.persist(previous);
+            },
+
+            removeArticle(index) {
+                const article = this.articles[index];
+                showConfirm({
+                    title: 'إزالة المقال',
+                    message: `هل تريد إزالة "${article.title}" من السلسلة؟`,
+                    type: 'danger',
+                    confirmText: 'إزالة',
+                    onConfirm: () => {
+                        const previous = [...this.articles];
+                        this.articles.splice(index, 1);
+                        this.persist(previous);
+                    }
+                });
+            },
+
+            moveArticle(index, direction) {
+                const newIndex = index + direction;
+                if (newIndex < 0 || newIndex >= this.articles.length) return;
+                const previous = [...this.articles];
+                [this.articles[index], this.articles[newIndex]] = [this.articles[newIndex], this.articles[index]];
+                this.articles = [...this.articles];
+                this.persist(previous);
+            }
+        };
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         lucide.createIcons();
     });

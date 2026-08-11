@@ -1046,6 +1046,40 @@
                         </nav>
                     @endif
 
+                    {{-- Series reading path — the article's series siblings in
+                         order, with the current article highlighted. --}}
+                    @if (! empty($article['series']['articles']))
+                        <div class="card-premium p-5 animate-fade-in-up">
+                            <h3 class="text-lg font-bold mb-1 flex items-center gap-2 text-gray-900 dark:text-white">
+                                <i data-lucide="layers" class="w-5 h-5 text-accent" aria-hidden="true"></i>
+                                {{ __('series.public.articles_in_series') }}
+                            </h3>
+                            <a href="{{ $article['series']['url'] }}"
+                               class="block text-sm font-semibold text-primary hover:underline mb-4 truncate">
+                                {{ $article['series']['title'] }}
+                            </a>
+                            <ol class="space-y-1">
+                                @foreach ($article['series']['articles'] as $i => $sibling)
+                                    <li>
+                                        @if ($sibling['current'])
+                                            <span class="flex items-start gap-2.5 px-3 py-2 rounded-lg text-sm font-bold bg-primary/10 text-primary"
+                                                  aria-current="page">
+                                                <span class="w-5 h-5 rounded-full bg-primary text-white text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">{{ $i + 1 }}</span>
+                                                <span class="min-w-0">{{ $sibling['title'] }}</span>
+                                            </span>
+                                        @else
+                                            <a href="{{ $sibling['url'] }}"
+                                               class="flex items-start gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white transition-colors">
+                                                <span class="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">{{ $i + 1 }}</span>
+                                                <span class="min-w-0">{{ $sibling['title'] }}</span>
+                                            </a>
+                                        @endif
+                                    </li>
+                                @endforeach
+                            </ol>
+                        </div>
+                    @endif
+
                     {{-- Quick stats (real statistics) --}}
                     @if (! empty($article['statistics']))
                         <div class="card-premium p-5 animate-fade-in-up stagger-1">

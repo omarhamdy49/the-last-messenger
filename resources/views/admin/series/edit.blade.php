@@ -207,7 +207,7 @@
                             <!-- Move Up -->
                             <button type="button" @click="moveArticle(index, -1)"
                                     x-show="index > 0"
-                                    class="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                                    class="p-1.5 rounded-lg opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all"
                                     :class="darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-500'">
                                 <i data-lucide="chevron-up" class="w-4 h-4"></i>
                             </button>
@@ -215,14 +215,14 @@
                             <!-- Move Down -->
                             <button type="button" @click="moveArticle(index, 1)"
                                     x-show="index < articles.length - 1"
-                                    class="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                                    class="p-1.5 rounded-lg opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all"
                                     :class="darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-500'">
                                 <i data-lucide="chevron-down" class="w-4 h-4"></i>
                             </button>
 
                             <!-- Remove -->
                             <button type="button" @click="removeArticle(index)"
-                                    class="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all text-red-500"
+                                    class="p-1.5 rounded-lg opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all text-red-500"
                                     :class="darkMode ? 'hover:bg-red-900/30' : 'hover:bg-red-50'">
                                 <i data-lucide="x" class="w-4 h-4"></i>
                             </button>

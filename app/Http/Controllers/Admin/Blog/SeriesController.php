@@ -96,7 +96,7 @@ class SeriesController extends Controller
             }
 
             return redirect()
-                ->route('admin.series.index')
+                ->route('admin.series.show', $series->id)
                 ->with('success', __('admin.series_created'));
         } catch (\Throwable $e) {
             \Log::error('admin.series.create_failed', [
@@ -169,7 +169,7 @@ class SeriesController extends Controller
             }
 
             return redirect()
-                ->route('admin.series.index')
+                ->route('admin.series.show', $series->id)
                 ->with('success', __('admin.series_updated'));
         } catch (\Throwable $e) {
             \Log::error('admin.series.update_failed', [
@@ -247,8 +247,9 @@ class SeriesController extends Controller
     public function reorderArticles(Request $request, int $id): JsonResponse
     {
         try {
+            // An empty list is valid: it unassigns every article from the series.
             $request->validate([
-                'articles' => 'required|array|min:1',
+                'articles' => 'present|array',
                 'articles.*.id' => 'required|integer|exists:articles,id',
                 'articles.*.position' => 'required|integer|min:0',
             ]);

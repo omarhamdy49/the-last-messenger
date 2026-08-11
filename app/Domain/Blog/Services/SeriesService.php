@@ -323,7 +323,8 @@ class SeriesService extends BaseService
     }
 
     /**
-     * Reorder articles within a series using the pivot table position column.
+     * Sync the series' article set: the given list becomes the full membership
+     * (assign + unassign) with positions taken from the payload.
      *
      * @param  array<int, array{id: int, position: int}>  $articles
      *
@@ -335,12 +336,12 @@ class SeriesService extends BaseService
         $series = Series::findOrFail($seriesId);
 
         DB::transaction(function () use ($series, $articles): void {
+            $syncData = [];
             foreach ($articles as $item) {
-                $series->articles()->updateExistingPivot(
-                    $item['id'],
-                    ['position' => $item['position']]
-                );
+                $syncData[$item['id']] = ['position' => $item['position']];
             }
+            $series->articles()->sync($syncData);
+            $series->updateArticlesCount();
         });
 
         $this->repository->clearCache();
