@@ -478,6 +478,12 @@
                                         <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
                                             <i data-lucide="play-circle" class="w-7 h-7 text-white"></i>
                                         </div>
+                                        {{-- Watch progress (auth visitors with a saved position) --}}
+                                        @if (($other['progress_percent'] ?? 0) > 0)
+                                            <div class="absolute bottom-0 inset-x-0 h-0.5 bg-white/20">
+                                                <div class="h-full bg-gradient-to-r from-[#0056b3] to-[#218838]" style="width: {{ $other['progress_percent'] }}%"></div>
+                                            </div>
+                                        @endif
                                     </div>
                                     <div class="flex-1 min-w-0 py-0.5">
                                         <h4 class="text-xs font-bold text-gray-900 dark:text-white line-clamp-2 mb-1 group-hover:text-[#0056b3] dark:group-hover:text-[#64CCC5] transition-colors">
@@ -500,8 +506,14 @@
     function episodePlayer() {
         return {
             episodeKey: 'media_ep_{{ $episode['id'] }}',
+            episodeId: {{ (int) $episode['id'] }},
             isAuthenticated: @json(auth()->check()),
             loginUrl: @js(route('public.login')),
+            progressUrl: @js(route('public.media.progress')),
+            csrf: @js(csrf_token()),
+            resumeSeconds: {{ (int) ($resumeSeconds ?? 0) }},
+            lastBeat: 0,
+            completedSent: false,
             programId: {{ (int) $program['id'] }},
             storeUrl: @js(route('public.favorites.store')),
             destroyUrl: @js(route('public.favorites.destroy')),
@@ -554,6 +566,8 @@
                 if (this.videoId) {
                     this.loadYouTubeApi().catch(() => { /* retried on click */ });
                 }
+                // Last-chance beat when the visitor leaves mid-episode.
+                window.addEventListener('pagehide', () => this.sendProgress(false, true));
             },
 
             // ---- Playback bootstrap: the player itself loads on this click ----
@@ -586,6 +600,14 @@
                                 this.duration = e.target.getDuration() || 0;
                                 this.volume = e.target.getVolume();
                                 this.muted = e.target.isMuted();
+                                // Resume from the saved position — but not for the
+                                // opening seconds or the closing stretch, where a
+                                // restart is what the visitor actually wants.
+                                if (this.resumeSeconds > 10
+                                    && this.duration > 0
+                                    && this.resumeSeconds < this.duration * 0.95) {
+                                    e.target.seekTo(this.resumeSeconds, true);
+                                }
                                 // Belt & braces with autoplay=1: some browsers ignore the
                                 // playerVar even for gesture-initiated embeds.
                                 e.target.playVideo();
@@ -653,6 +675,7 @@
                     this.buffering = false;
                     this.stopTick();
                     this.controlsVisible = true;
+                    this.sendProgress();
                 } else if (e.data === YT.PlayerState.BUFFERING) {
                     this.buffering = true;
                 } else if (e.data === YT.PlayerState.ENDED) {
@@ -660,6 +683,8 @@
                     this.buffering = false;
                     this.stopTick();
                     this.current = this.duration;
+                    // Beacon so the completed flag survives the auto-advance navigation.
+                    this.sendProgress(true, true);
                     if (this.hasNext && !this.overlayDismissed) {
                         if (this.reducedMotion) {
                             // No auto-advance — the overlay stays for an explicit click.
@@ -680,7 +705,39 @@
                     this.current = this.yt.getCurrentTime() || 0;
                     if (!this.duration) this.duration = this.yt.getDuration() || 0;
                     this.syncUpNextOverlay();
+                    // Progress beat: at most one POST per 15s of active playback;
+                    // the closing 5% counts as watched (Netflix-style completion).
+                    if (this.playing && this.duration && this.current / this.duration >= 0.95) {
+                        this.sendProgress(true);
+                    } else if (this.playing && Date.now() - this.lastBeat > 15000) {
+                        this.sendProgress();
+                    }
                 }, 500);
+            },
+
+            // Persist the watch position (guests: no-op). Once completed has been
+            // sent, plain beats stop — they would flip the row back to in-progress.
+            sendProgress(completed = false, useBeacon = false) {
+                if (!this.isAuthenticated || !this.started || this.playerError) return;
+                if (this.completedSent && !completed) return;
+                if (completed) {
+                    if (this.completedSent) return;
+                    this.completedSent = true;
+                }
+                this.lastBeat = Date.now();
+
+                const body = new URLSearchParams({
+                    _token: this.csrf,
+                    episode_id: this.episodeId,
+                    seconds: Math.max(0, Math.floor(completed ? (this.duration || this.current) : this.current)),
+                    completed: completed ? 1 : 0,
+                });
+                // sendBeacon can't set headers — CSRF travels as the _token field.
+                if (useBeacon && navigator.sendBeacon) {
+                    navigator.sendBeacon(this.progressUrl, body);
+                    return;
+                }
+                fetch(this.progressUrl, { method: 'POST', body, keepalive: true }).catch(() => {});
             },
 
             // Show "up next" during the last seconds of the episode; hide it again

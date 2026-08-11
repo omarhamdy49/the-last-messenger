@@ -91,6 +91,7 @@ return [
         'view_all' => 'عرض الكل',
         'quran_reciters' => 'قرّاء القرآن الكريم',
         'complete' => 'مكتمل',
+        'watched' => 'تمت المشاهدة',
         'scroll_down' => 'مرّر للأسفل',
         'featured_programs' => 'البرامج المميزة',
         'transcript' => 'نص الحلقة',

@@ -219,6 +219,20 @@
                                         <i data-lucide="play" class="w-6 h-6 text-gray-900 ms-0.5"></i>
                                     </span>
                                 </div>
+
+                                @if (! empty($episode['completed']))
+                                    <span class="absolute top-2.5 end-3 w-6 h-6 rounded-full bg-[#218838] text-white flex items-center justify-center shadow"
+                                          role="img" aria-label="{{ __('media.public.watched') }}">
+                                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                    </span>
+                                @endif
+
+                                {{-- Watch progress (auth visitors with a saved position) --}}
+                                @if (($episode['progress_percent'] ?? 0) > 0)
+                                    <div class="absolute bottom-0 inset-x-0 h-1 bg-white/20">
+                                        <div class="h-full bg-gradient-to-r from-[#0056b3] to-[#218838]" style="width: {{ $episode['progress_percent'] }}%"></div>
+                                    </div>
+                                @endif
                             </a>
 
                             @if ($episode['title'])

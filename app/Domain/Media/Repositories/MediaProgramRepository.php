@@ -182,6 +182,23 @@ class MediaProgramRepository extends BaseRepository implements MediaProgramRepos
         );
     }
 
+    public function getTrendingByScore(int $limit = 12): Collection
+    {
+        return Cache::remember(
+            MediaCacheKeys::programsTrendingByScore($limit),
+            self::CACHE_TTL,
+            fn () => MediaProgram::query()
+                ->select(['id', 'slug', 'category', 'maturity_rating', 'year', 'rating', 'trending_score', 'views_count', 'display_order', 'created_at'])
+                ->with(['translations:id,media_program_id,locale,title,is_ready', 'media'])
+                ->withCount('episodes')
+                ->published()
+                ->where('trending_score', '>', 0)
+                ->orderByDesc('trending_score')
+                ->limit($limit)
+                ->get()
+        );
+    }
+
     public function getByCategory(string $category, int $limit = 12): Collection
     {
         return Cache::remember(
@@ -384,7 +401,8 @@ class MediaProgramRepository extends BaseRepository implements MediaProgramRepos
         Cache::forget(MediaCacheKeys::programTrending(12));
         Cache::forget(MediaCacheKeys::programsHero(5));
         Cache::forget(MediaCacheKeys::programsTrendingFlagged(12));
-        foreach (\App\Domain\Media\Enums\ProgramCategory::cases() as $category) {
+        Cache::forget(MediaCacheKeys::programsTrendingByScore(12));
+        foreach (ProgramCategory::cases() as $category) {
             Cache::forget(MediaCacheKeys::programsRow($category->value, 12));
         }
         // Grouped category rows are keyed by the current featured-category set;

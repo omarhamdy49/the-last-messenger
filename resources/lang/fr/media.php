@@ -99,6 +99,7 @@ return [
         'this_week' => 'Cette semaine',
         'view_all' => 'Voir tout',
         'complete' => 'terminé',
+        'watched' => 'Visionné',
         'scroll_down' => 'Défiler vers le bas',
         'featured_programs' => 'Programmes en vedette',
         'transcript' => 'Transcription',

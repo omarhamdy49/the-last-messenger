@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domain\Media\Models\MediaViewEvent;
 use App\Domain\Shared\Services\SchedulerService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -83,6 +84,47 @@ Schedule::command('articles:publish-scheduled')
     ->runInBackground()
     ->onFailure(function () {
         Log::error('Failed to publish scheduled articles');
+    });
+
+/**
+ * Prune media view events older than 90 days (the analytics windows only need
+ * 30). Batched deletes so a large backlog never holds one long transaction.
+ */
+Artisan::command('media:prune-view-events', function () {
+    $cutoff = now()->subDays(90);
+    $total = 0;
+
+    do {
+        $deleted = MediaViewEvent::query()
+            ->where('created_at', '<', $cutoff)
+            ->limit(5000)
+            ->delete();
+        $total += $deleted;
+    } while ($deleted > 0);
+
+    $this->info("Pruned {$total} media view events older than {$cutoff->toDateString()}.");
+
+    return 0;
+})->purpose('Prune media view events older than 90 days');
+
+Schedule::command('media:prune-view-events')
+    ->dailyAt('04:00')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->onFailure(function () {
+        Log::error('Failed to prune media view events');
+    });
+
+/**
+ * Recompute media trending scores from real view events (last 7 days).
+ * Runs every 30 minutes; also drives the /media Trending row cache refresh.
+ */
+Schedule::command('media:compute-trending')
+    ->everyThirtyMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->onFailure(function () {
+        Log::error('Failed to compute media trending scores');
     });
 
 /**

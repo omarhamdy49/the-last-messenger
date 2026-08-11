@@ -6,6 +6,8 @@ namespace App\Domain\Media\Services;
 
 use App\Domain\Media\DTOs\CreateMediaProgramData;
 use App\Domain\Media\DTOs\UpdateMediaProgramData;
+use App\Domain\Media\Enums\MediaViewableType;
+use App\Domain\Media\Models\MediaCategory;
 use App\Domain\Media\Models\MediaProgram;
 use App\Domain\Media\Repositories\MediaProgramRepositoryInterface;
 use App\Domain\Shared\Services\BaseService;
@@ -17,7 +19,8 @@ use Illuminate\Support\Collection as SupportCollection;
 class MediaProgramService extends BaseService
 {
     public function __construct(
-        MediaProgramRepositoryInterface $repository
+        MediaProgramRepositoryInterface $repository,
+        private readonly MediaViewRecorder $viewRecorder,
     ) {
         $this->repository = $repository;
     }
@@ -59,6 +62,17 @@ class MediaProgramService extends BaseService
         return $this->repository->getTrendingFlagged($limit);
     }
 
+    /**
+     * Trending row source: real 7-day view scores when available, otherwise
+     * the manual is_trending flag (cold start / no traffic yet).
+     */
+    public function getTrending(int $limit = 12): Collection
+    {
+        $byScore = $this->repository->getTrendingByScore($limit);
+
+        return $byScore->isNotEmpty() ? $byScore : $this->repository->getTrendingFlagged($limit);
+    }
+
     public function getByCategory(string $category, int $limit = 12): Collection
     {
         return $this->repository->getByCategory($category, $limit);
@@ -92,7 +106,8 @@ class MediaProgramService extends BaseService
             throw new ResourceNotFoundException("Media program not found: {$slug}");
         }
 
-        $program->incrementViews();
+        // Queued + deduplicated; replaces the old synchronous incrementViews().
+        $this->viewRecorder->record(MediaViewableType::Program, (int) $program->id);
 
         return $program;
     }
@@ -208,7 +223,7 @@ class MediaProgramService extends BaseService
     }
 
     /** Single category row with program count and aggregate views. */
-    public function findCategoryByKey(string $key): ?\App\Domain\Media\Models\MediaCategory
+    public function findCategoryByKey(string $key): ?MediaCategory
     {
         return $this->repository->findCategoryByKey($key);
     }

@@ -6,6 +6,7 @@ namespace App\Domain\Media\Services;
 
 use App\Domain\Media\DTOs\CreateMediaEpisodeData;
 use App\Domain\Media\DTOs\UpdateMediaEpisodeData;
+use App\Domain\Media\Enums\MediaViewableType;
 use App\Domain\Media\Models\MediaEpisode;
 use App\Domain\Media\Models\MediaProgram;
 use App\Domain\Media\Repositories\MediaEpisodeRepositoryInterface;
@@ -20,7 +21,8 @@ class MediaEpisodeService extends BaseService
 {
     public function __construct(
         MediaEpisodeRepositoryInterface $repository,
-        private readonly MediaProgramRepositoryInterface $programRepository
+        private readonly MediaProgramRepositoryInterface $programRepository,
+        private readonly MediaViewRecorder $viewRecorder,
     ) {
         $this->repository = $repository;
     }
@@ -99,7 +101,8 @@ class MediaEpisodeService extends BaseService
             );
         }
 
-        $episode->incrementViews();
+        // Queued + deduplicated; replaces the old synchronous incrementViews().
+        $this->viewRecorder->record(MediaViewableType::Episode, (int) $episode->id);
 
         return $episode;
     }
@@ -115,6 +118,17 @@ class MediaEpisodeService extends BaseService
     public function getContinueWatching(int $userId, int $limit = 10): Collection
     {
         return $this->repository->getContinueWatching($userId, $limit);
+    }
+
+    /**
+     * A user's watch positions for a set of episodes, keyed by episode id.
+     *
+     * @param  list<int>  $episodeIds
+     * @return array<int, array{seconds: int, completed: bool}>
+     */
+    public function getProgressForEpisodes(int $userId, array $episodeIds): array
+    {
+        return $this->repository->getProgressForEpisodes($userId, $episodeIds);
     }
 
     /**

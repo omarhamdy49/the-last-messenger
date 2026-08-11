@@ -22,9 +22,13 @@ final class CacheGuestPages
 {
     /**
      * Routes safe to cache for guests (no per-user content, no POST/CSRF need).
-     * Start narrow — just the homepage.
+     *
+     * public.media qualifies since Continue Watching moved to a lazy-loaded
+     * per-user JSON endpoint: the hub HTML is identical for every guest
+     * (guest My-List lives in localStorage; view counting happens on the
+     * detail pages, which stay uncached).
      */
-    private const CACHEABLE_ROUTES = ['public.home'];
+    private const CACHEABLE_ROUTES = ['public.home', 'public.media'];
 
     public function handle(Request $request, Closure $next): Response
     {

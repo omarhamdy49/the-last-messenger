@@ -145,7 +145,7 @@ final class MediaPublicPagesTest extends TestCase
         $response->assertSee('برنامج بدون تهيئة فئات');
     }
 
-    public function test_hub_shows_continue_watching_row_for_authenticated_user(): void
+    public function test_hub_shows_continue_watching_shell_and_lazy_endpoint_serves_the_row(): void
     {
         $program = $this->createProgram();
         $episode = $this->createEpisode($program, 1, null, 'حلقة قيد المشاهدة');
@@ -158,11 +158,21 @@ final class MediaPublicPagesTest extends TestCase
             'completed' => false,
         ]);
 
+        // The hub renders only the lazy-load shell (heading + shimmer) — the
+        // per-user cards arrive via the JSON endpoint so the page markup stays
+        // user-free and cache-safe.
         $response = $this->actingAs($user)->get('/media');
 
         $response->assertStatus(200);
         $response->assertSee(trans('media.public.continue_watching'));
-        $response->assertSee('حلقة قيد المشاهدة');
+        $response->assertDontSee('حلقة قيد المشاهدة');
+
+        $this->actingAs($user)
+            ->getJson(route('public.media.continue-watching'))
+            ->assertOk()
+            ->assertJsonCount(1, 'items')
+            ->assertJsonPath('items.0.id', $episode->id)
+            ->assertJsonPath('items.0.title', 'حلقة قيد المشاهدة');
     }
 
     // ===================== PROGRAM DETAIL =====================

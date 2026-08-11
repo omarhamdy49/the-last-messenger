@@ -249,6 +249,62 @@
         </div>
     </div>
 
+    <!-- Media Trending Views (real deduplicated view events) -->
+    <div class="rounded-2xl border p-6 mt-8"
+         :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <h2 class="text-xl font-bold flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                <i data-lucide="flame" class="w-5 h-5 text-accent"></i>
+                المشاهدات الرائجة (الوسائط)
+                <span class="text-sm font-normal" :class="darkMode ? 'text-gray-400' : 'text-gray-500'"
+                      x-text="'إجمالي النافذة: ' + ((mediaViews[mediaWindow]?.total || 0).toLocaleString())"></span>
+            </h2>
+            <div class="flex items-center gap-2">
+                <template x-for="window in ['24h', '7d', '30d']" :key="window">
+                    <button type="button" @click="mediaWindow = window"
+                            class="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all border"
+                            :class="mediaWindow === window
+                                ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white border-transparent'
+                                : (darkMode ? 'bg-gray-800 border-gray-700 text-gray-300' : 'bg-white border-gray-300 text-gray-700')"
+                            x-text="{'24h': 'آخر ٢٤ ساعة', '7d': 'آخر ٧ أيام', '30d': 'آخر ٣٠ يومًا'}[window]"></button>
+                </template>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <template x-for="section in [
+                { key: 'programs', label: 'أكثر البرامج مشاهدة', icon: 'tv' },
+                { key: 'episodes', label: 'أكثر الحلقات مشاهدة', icon: 'monitor-play' },
+                { key: 'live_channels', label: 'أكثر القنوات المباشرة مشاهدة', icon: 'radio' },
+            ]" :key="section.key">
+                <div>
+                    <h3 class="text-sm font-bold mb-3 flex items-center gap-2" :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
+                        <i :data-lucide="section.icon" class="w-4 h-4 text-accent"></i>
+                        <span x-text="section.label"></span>
+                    </h3>
+                    <div class="space-y-2">
+                        <template x-for="(item, index) in (mediaViews[mediaWindow]?.[section.key] || [])" :key="item.id">
+                            <div class="flex items-center gap-3 p-2.5 rounded-xl"
+                                 :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                                <span class="w-7 h-7 shrink-0 rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] flex items-center justify-center text-white text-xs font-bold"
+                                      x-text="index + 1"></span>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-semibold truncate" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="item.title"></p>
+                                    <p class="text-xs truncate" x-show="item.program_title"
+                                       :class="darkMode ? 'text-gray-400' : 'text-gray-500'" x-text="item.program_title"></p>
+                                </div>
+                                <span class="text-sm font-bold text-accent" x-text="(item.views || 0).toLocaleString()"></span>
+                            </div>
+                        </template>
+                        <div x-show="(mediaViews[mediaWindow]?.[section.key] || []).length === 0" class="text-center py-4">
+                            <p class="text-sm" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">لا توجد مشاهدات في هذه الفترة بعد</p>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
 </div>
 @endsection
 
@@ -259,6 +315,8 @@
             stats: {},
             topContent: [],
             recentActivity: [],
+            mediaViews: {},
+            mediaWindow: '24h',
 
             init() {
                 this.loadAllData();
@@ -269,9 +327,25 @@
                     this.loadStats(),
                     this.loadTopContent(),
                     this.loadRecentActivity(),
+                    this.loadMediaViews(),
                 ]);
 
                 this.loadCharts();
+            },
+
+            async loadMediaViews() {
+                try {
+                    const response = await fetch(`{{ route('admin.analytics.media-views') }}?limit=10`, {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        this.mediaViews = result.data || {};
+                        this.$nextTick(() => lucide.createIcons());
+                    }
+                } catch (error) {
+                    console.error('Failed to load media view stats:', error);
+                }
             },
 
             async loadStats() {

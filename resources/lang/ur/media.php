@@ -99,6 +99,7 @@ return [
         'this_week' => 'اس ہفتے',
         'view_all' => 'سب دیکھیں',
         'complete' => 'مکمل',
+        'watched' => 'دیکھی گئی',
         'scroll_down' => 'نیچے سکرول کریں',
         'featured_programs' => 'نمایاں پروگرام',
         'transcript' => 'متن حلقہ',

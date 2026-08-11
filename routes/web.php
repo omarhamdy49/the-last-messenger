@@ -22,6 +22,7 @@ use App\Http\Controllers\Site\SeriesController;
 use App\Http\Controllers\Site\SitemapController;
 use App\Http\Controllers\Site\SocialAuthController;
 use App\Http\Controllers\Site\TopicController;
+use App\Http\Controllers\Site\WatchProgressController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('public.home');
@@ -130,6 +131,10 @@ Route::get('/genealogy/people', [GenealogyController::class, 'people'])
 Route::get('/media', [MediaController::class, 'index'])->name('public.media');
 // Live channel routes — registered before the {slug} program route so the
 // literal "live" segment is never swallowed as a program slug.
+// Static segment registered before /media/{slug} so it never resolves as a slug.
+// Per-user JSON for the lazy-loaded Continue Watching row on the hub.
+Route::get('/media/continue-watching', [MediaController::class, 'continueWatching'])
+    ->middleware('auth')->name('public.media.continue-watching');
 Route::get('/media/live', [MediaController::class, 'liveIndex'])->name('public.media.live.index');
 Route::get('/media/live/{slug}', [MediaController::class, 'live'])->name('public.media.live');
 Route::get('/media/{slug}', [MediaController::class, 'show'])->name('public.media.program');
@@ -233,6 +238,11 @@ Route::middleware('auth')->group(function () {
         ->middleware('throttle:30,1')->name('public.favorites.store');
     Route::delete('/favorites', [FavoriteController::class, 'destroy'])
         ->middleware('throttle:30,1')->name('public.favorites.destroy');
+
+    // Episode watch-progress beats from the player (~1 per 15s per viewer,
+    // plus pause/unload beacons — 60/min leaves headroom for several tabs).
+    Route::post('/media/progress', [WatchProgressController::class, 'store'])
+        ->middleware('throttle:60,1')->name('public.media.progress');
 });
 
 // Admin portal entry redirects

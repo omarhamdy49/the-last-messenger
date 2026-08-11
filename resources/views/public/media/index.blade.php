@@ -247,32 +247,44 @@
                 </section>
             @endif
 
-            {{-- Continue Watching (auth users with in-progress episodes) --}}
-            @if (! empty($continueWatching))
-                <section class="py-6">
+            {{-- Continue Watching — lazy-loaded per user so the page markup
+                 stays user-free (safe for page/edge caching). Shimmer while
+                 fetching; the whole section disappears when there is nothing
+                 to resume. Guests never render it at all. --}}
+            @auth
+                <section class="py-6" x-data="continueWatchingRow()" x-show="loading || items.length > 0" x-cloak>
                     <div class="relative" x-data="scrollableRow()">
                         <h2 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4">{{ __('media.public.continue_watching') }}</h2>
 
-                        <div x-ref="track" @scroll.passive.debounce.150ms="checkScroll()"
+                        {{-- Shimmer skeleton (structure mirrors the real cards) --}}
+                        <div x-show="loading" aria-hidden="true"
+                             class="flex gap-3 overflow-hidden pb-2 -mx-4 sm:-mx-6 px-4 sm:px-6">
+                            <template x-for="i in 5" :key="i">
+                                <div class="w-[60vw] sm:w-[40vw] md:w-[30vw] lg:w-[24vw] xl:w-[calc((100vw-96px)/5)] shrink-0 animate-pulse">
+                                    <div class="aspect-video rounded-xl bg-gray-200 dark:bg-gray-800"></div>
+                                    <div class="mt-2 h-3.5 w-3/4 rounded bg-gray-200 dark:bg-gray-800"></div>
+                                    <div class="mt-1.5 h-3 w-1/2 rounded bg-gray-200 dark:bg-gray-800"></div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <div x-show="!loading" x-ref="track" @scroll.passive.debounce.150ms="checkScroll()"
                              class="flex gap-3 overflow-x-auto scrollbar-hide snap-x pb-2 -mx-4 sm:-mx-6 px-4 sm:px-6">
-                            @foreach ($continueWatching as $item)
+                            <template x-for="item in items" :key="item.id">
                                 <div class="w-[60vw] sm:w-[40vw] md:w-[30vw] lg:w-[24vw] xl:w-[calc((100vw-96px)/5)] shrink-0 snap-start">
-                                    <a href="{{ $item['url'] }}"
+                                    <a :href="item.url"
                                        class="group relative block aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-gray-800 to-gray-700 shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#64CCC5]">
-                                        @if ($item['thumbnail'])
-                                            <img src="{{ $item['thumbnail'] }}" alt="" loading="lazy"
+                                        <template x-if="item.thumbnail">
+                                            <img :src="item.thumbnail" alt="" loading="lazy"
                                                  class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 motion-reduce:transform-none transition-transform duration-500">
-                                        @endif
+                                        </template>
                                         <div class="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/85 via-black/30 to-transparent" aria-hidden="true"></div>
 
-                                        @if ($item['duration'])
-                                            {{-- dir=ltr must be on an inner element: inset-inline-end resolves
-                                                 against the element's own direction, which would flip end-3 in RTL --}}
-                                            <span class="absolute bottom-3 end-3 text-white/90 text-xs font-medium"><span dir="ltr">{{ $item['duration'] }}</span></span>
-                                        @endif
-                                        <span class="absolute bottom-2.5 start-3 text-white font-bold text-sm sm:text-base">
-                                            {{ __('media.public.episode_label', ['number' => $item['number']]) }}
-                                        </span>
+                                        {{-- dir=ltr must be on an inner element: inset-inline-end resolves
+                                             against the element's own direction, which would flip end-3 in RTL --}}
+                                        <span x-show="item.duration" class="absolute bottom-3 end-3 text-white/90 text-xs font-medium"><span dir="ltr" x-text="item.duration"></span></span>
+                                        <span class="absolute bottom-2.5 start-3 text-white font-bold text-sm sm:text-base"
+                                              x-text="episodeLabel.replace(':number', item.number)"></span>
 
                                         <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center motion-reduce:transition-none">
                                             <span class="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-xl">
@@ -282,15 +294,14 @@
 
                                         {{-- Watch progress --}}
                                         <div class="absolute bottom-0 inset-x-0 h-1 bg-white/20">
-                                            <div class="h-full bg-gradient-to-r from-[#0056b3] to-[#218838]" style="width: {{ $item['progress_percent'] }}%"></div>
+                                            <div class="h-full bg-gradient-to-r from-[#0056b3] to-[#218838]" :style="`width: ${item.progress_percent}%`"></div>
                                         </div>
                                     </a>
-                                    <p class="mt-2 text-start text-xs sm:text-sm font-semibold text-gray-900 dark:text-white line-clamp-1 break-words">{{ $item['title'] }}</p>
-                                    <p class="text-start text-xs text-gray-700 dark:text-gray-200 line-clamp-1 break-words">
-                                        {{ $item['program_title'] }} · {{ $item['progress_percent'] }}% {{ __('media.public.complete') }}
-                                    </p>
+                                    <p class="mt-2 text-start text-xs sm:text-sm font-semibold text-gray-900 dark:text-white line-clamp-1 break-words" x-text="item.title"></p>
+                                    <p class="text-start text-xs text-gray-700 dark:text-gray-200 line-clamp-1 break-words"
+                                       x-text="`${item.program_title} · ${item.progress_percent}% ${completeLabel}`"></p>
                                 </div>
-                            @endforeach
+                            </template>
                         </div>
 
                         <button type="button" x-show="canScrollBack" x-cloak @click="scrollRow(-1)"
@@ -305,7 +316,7 @@
                         </button>
                     </div>
                 </section>
-            @endif
+            @endauth
 
             {{-- Top 10 — Shahid-style ranked posters (real views_count ordering) --}}
             @if (! empty($popular))
@@ -553,6 +564,36 @@
     }
 
     // Smart horizontal row: floating arrows only when the track overflows.
+    // Lazy-loads the signed-in visitor's Continue Watching cards after the
+    // (cacheable, user-free) page renders. Shimmer while fetching; on empty
+    // or error the section collapses entirely.
+    function continueWatchingRow() {
+        return {
+            loading: true,
+            items: [],
+            episodeLabel: @js(__('media.public.episode_label')),
+            completeLabel: @js(__('media.public.complete')),
+            async init() {
+                try {
+                    const response = await fetch(@js(route('public.media.continue-watching')), {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    });
+                    const payload = await response.json().catch(() => ({}));
+                    if (response.ok && payload.success) {
+                        this.items = Array.isArray(payload.items) ? payload.items : [];
+                    }
+                } catch (e) { /* section collapses on failure */ } finally {
+                    this.loading = false;
+                    this.$nextTick(() => {
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                        // scrollableRow recomputes its arrows on resize.
+                        window.dispatchEvent(new Event('resize'));
+                    });
+                }
+            },
+        };
+    }
+
     function scrollableRow() {
         return {
             canScrollBack: false,

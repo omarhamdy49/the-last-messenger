@@ -91,6 +91,7 @@ return [
         'view_all' => 'View All',
         'quran_reciters' => 'Quran Reciters',
         'complete' => 'complete',
+        'watched' => 'Watched',
         'scroll_down' => 'Scroll Down',
         'featured_programs' => 'Featured Programs',
         'transcript' => 'Transcript',

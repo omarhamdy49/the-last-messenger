@@ -40,6 +40,11 @@ final class MediaCacheKeys
         return "media_programs_trending_flagged_{$limit}";
     }
 
+    public static function programsTrendingByScore(int $limit): string
+    {
+        return "media_programs_trending_score_{$limit}";
+    }
+
     public static function programsRow(string $category, int $limit): string
     {
         return "media_programs_row_{$category}_{$limit}";
@@ -84,5 +89,14 @@ final class MediaCacheKeys
     public static function stats(): string
     {
         return 'media_dashboard_stats';
+    }
+
+    /**
+     * Per-visitor view-dedupe flag (TTL-expiring, set via Cache::add).
+     * Not cached content — deliberately absent from clearCacheForModel().
+     */
+    public static function viewDedupe(string $type, int $id, string $visitorHash): string
+    {
+        return "media_view_dedupe_{$type}_{$id}_{$visitorHash}";
     }
 }

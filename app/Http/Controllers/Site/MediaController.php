@@ -17,6 +17,7 @@ use App\Domain\Shared\Services\FavoriteService;
 use App\Domain\Shared\Services\InteractionService;
 use App\Http\Controllers\Controller;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Throwable;
@@ -61,7 +62,8 @@ final class MediaController extends Controller
                 ->map(fn (MediaProgram $program): array => $this->mapProgramCard($program))
                 ->values()->all();
 
-            $trending = $this->programService->getTrendingFlagged(12)
+            // Real 7-day watch data (falls back to the manual flag when cold).
+            $trending = $this->programService->getTrending(12)
                 ->map(fn (MediaProgram $program): array => $this->mapProgramCard($program))
                 ->values()->all();
 
@@ -143,6 +145,9 @@ final class MediaController extends Controller
             $categoryRows = [];
         }
 
+        // Continue Watching is NOT rendered server-side: the hub page stays
+        // per-user-free (safe for page/edge caching) and the section lazy-loads
+        // through continueWatching() below for signed-in visitors.
         return view('public.media.index', [
             'heroSlides' => $heroSlides,
             'featured' => $featured,
@@ -151,8 +156,19 @@ final class MediaController extends Controller
             'liveChannels' => $liveChannels,
             'reciters' => $reciters,
             'categoryRows' => $categoryRows,
-            'continueWatching' => $this->resolveContinueWatching($request),
             'myListIds' => $this->resolveFavoritedProgramIds($request),
+        ]);
+    }
+
+    /**
+     * Continue Watching cards for the signed-in visitor (lazy-loaded by the
+     * hub page after render, so the page itself carries no per-user markup).
+     */
+    public function continueWatching(Request $request): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'items' => $this->resolveContinueWatching($request),
         ]);
     }
 
@@ -169,12 +185,18 @@ final class MediaController extends Controller
 
         $episodes = $this->safeEpisodes($program->id);
 
+        $episodeCards = $episodes
+            ->map(fn (MediaEpisode $episode): array => $this->mapEpisodeCard($episode, $program->slug))
+            ->values()->all();
+        $episodeCards = $this->mergeProgress(
+            $episodeCards,
+            $this->safeProgressMap($request, array_column($episodeCards, 'id')),
+        );
+
         return view('public.media.program', [
             'program' => $this->mapProgramDetail($program, $episodes->count()),
             'programIsSaved' => $this->resolveProgramIsSaved($request, $program->id),
-            'episodes' => $episodes
-                ->map(fn (MediaEpisode $episode): array => $this->mapEpisodeCard($episode, $program->slug))
-                ->values()->all(),
+            'episodes' => $episodeCards,
             'seasons' => $episodes
                 ->pluck('season_number')
                 ->unique()->sort()->values()->all(),
@@ -205,15 +227,27 @@ final class MediaController extends Controller
         $next = $this->episodeService->findNextEpisode($episode);
         $allEpisodes = $this->safeEpisodes($program->id);
 
+        $moreEpisodes = $allEpisodes
+            ->reject(fn (MediaEpisode $other): bool => $other->id === $episode->id)
+            ->map(fn (MediaEpisode $other): array => $this->mapEpisodeCard($other, $program->slug))
+            ->values()->all();
+
+        // One query covers the resume position and the more-episodes bars.
+        $progress = $this->safeProgressMap(
+            $request,
+            [(int) $episode->id, ...array_column($moreEpisodes, 'id')],
+        );
+
+        $current = $progress[(int) $episode->id] ?? null;
+        $resumeSeconds = ($current !== null && ! $current['completed']) ? $current['seconds'] : 0;
+
         return view('public.media.episode', [
             'programIsSaved' => $this->resolveProgramIsSaved($request, $program->id),
             'program' => $this->mapProgramDetail($program, $allEpisodes->count()),
             'episode' => $this->mapEpisodeDetail($episode, $program),
+            'resumeSeconds' => $resumeSeconds,
             'nextEpisode' => $next ? $this->mapEpisodeCard($next, $program->slug) : null,
-            'moreEpisodes' => $allEpisodes
-                ->reject(fn (MediaEpisode $other): bool => $other->id === $episode->id)
-                ->map(fn (MediaEpisode $other): array => $this->mapEpisodeCard($other, $program->slug))
-                ->values()->all(),
+            'moreEpisodes' => $this->mergeProgress($moreEpisodes, $progress),
         ]);
     }
 
@@ -303,6 +337,8 @@ final class MediaController extends Controller
     private function mapEpisodeCard(MediaEpisode $episode, string $programSlug): array
     {
         return [
+            'id' => (int) $episode->id,
+            'duration_seconds' => (int) ($episode->duration_seconds ?? 0),
             'number' => (int) $episode->episode_number,
             'season' => (int) $episode->season_number,
             'title' => (string) ($episode->trans('title') ?? ''),
@@ -439,6 +475,58 @@ final class MediaController extends Controller
 
             return [];
         }
+    }
+
+    /**
+     * The visitor's watch positions for a set of episode ids (empty for guests).
+     *
+     * @param  list<int>  $episodeIds
+     * @return array<int, array{seconds: int, completed: bool}>
+     */
+    private function safeProgressMap(Request $request, array $episodeIds): array
+    {
+        $user = $request->user();
+        if ($user === null || $episodeIds === []) {
+            return [];
+        }
+
+        try {
+            return $this->episodeService->getProgressForEpisodes($user->id, $episodeIds);
+        } catch (Throwable $e) {
+            report($e);
+
+            return [];
+        }
+    }
+
+    /**
+     * Merge watch progress into episode cards; cards without progress are untouched.
+     *
+     * @param  array<int, array<string, mixed>>  $cards
+     * @param  array<int, array{seconds: int, completed: bool}>  $progress
+     * @return array<int, array<string, mixed>>
+     */
+    private function mergeProgress(array $cards, array $progress): array
+    {
+        if ($progress === []) {
+            return $cards;
+        }
+
+        foreach ($cards as &$card) {
+            $entry = $progress[$card['id']] ?? null;
+            if ($entry === null) {
+                continue;
+            }
+
+            $card['completed'] = $entry['completed'];
+            $card['progress_percent'] = match (true) {
+                $entry['completed'] => 100,
+                $card['duration_seconds'] > 0 => min(100, (int) round($entry['seconds'] / $card['duration_seconds'] * 100)),
+                default => 0,
+            };
+        }
+
+        return $cards;
     }
 
     /**

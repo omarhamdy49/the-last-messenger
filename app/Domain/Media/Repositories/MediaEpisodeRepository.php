@@ -356,6 +356,27 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
         return $this->publicEpisodes($query)->exists();
     }
 
+    public function getProgressForEpisodes(int $userId, array $episodeIds): array
+    {
+        if ($episodeIds === []) {
+            return [];
+        }
+
+        // Per-user, freshness-sensitive — intentionally uncached.
+        return EpisodeWatchProgress::query()
+            ->select(['episode_id', 'seconds', 'completed'])
+            ->where('user_id', $userId)
+            ->whereIn('episode_id', $episodeIds)
+            ->get()
+            ->mapWithKeys(fn (EpisodeWatchProgress $progress): array => [
+                (int) $progress->episode_id => [
+                    'seconds' => (int) $progress->seconds,
+                    'completed' => (bool) $progress->completed,
+                ],
+            ])
+            ->all();
+    }
+
     public function saveWatchProgress(int $userId, int $episodeId, int $seconds, bool $completed): void
     {
         // (user_id, episode_id) is unique — upsert is safe.

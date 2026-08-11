@@ -6,6 +6,7 @@ namespace App\Domain\Media\Services;
 
 use App\Domain\Media\DTOs\CreateLiveChannelData;
 use App\Domain\Media\DTOs\UpdateLiveChannelData;
+use App\Domain\Media\Enums\MediaViewableType;
 use App\Domain\Media\Models\LiveChannel;
 use App\Domain\Media\Repositories\LiveChannelRepositoryInterface;
 use App\Domain\Shared\Services\BaseService;
@@ -16,8 +17,10 @@ use Illuminate\Support\Str;
 
 class LiveChannelService extends BaseService
 {
-    public function __construct(LiveChannelRepositoryInterface $repository)
-    {
+    public function __construct(
+        LiveChannelRepositoryInterface $repository,
+        private readonly MediaViewRecorder $viewRecorder,
+    ) {
         $this->repository = $repository;
     }
 
@@ -57,7 +60,8 @@ class LiveChannelService extends BaseService
             throw new ResourceNotFoundException("Live channel not found: {$slug}");
         }
 
-        $channel->incrementViews();
+        // Queued + deduplicated; replaces the old synchronous incrementViews().
+        $this->viewRecorder->record(MediaViewableType::LiveChannel, (int) $channel->id);
 
         return $channel;
     }

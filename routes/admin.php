@@ -119,6 +119,7 @@ Route::prefix('su/portal/v1/admin')
             Route::get('/engagement', [AnalyticsController::class, 'getEngagement'])->name('engagement');
             Route::get('/trends', [AnalyticsController::class, 'getTrends'])->name('trends');
             Route::get('/top-content', [AnalyticsController::class, 'getTopContent'])->name('top-content');
+            Route::get('/media-views', [AnalyticsController::class, 'getMediaViews'])->name('media-views');
             Route::get('/module/{module}', [AnalyticsController::class, 'getModuleAnalytics'])->name('module');
             Route::get('/comparison', [AnalyticsController::class, 'getComparison'])->name('comparison');
             Route::get('/recent-activity', [AnalyticsController::class, 'getRecentActivity'])->name('recent-activity');

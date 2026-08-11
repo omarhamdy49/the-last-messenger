@@ -99,6 +99,7 @@ return [
         'this_week' => 'Bu Hafta',
         'view_all' => 'Tümünü Gör',
         'complete' => 'tamamlandı',
+        'watched' => 'İzlendi',
         'scroll_down' => 'Aşağı Kaydır',
         'featured_programs' => 'Öne Çıkan Programlar',
         'transcript' => 'Döküm',

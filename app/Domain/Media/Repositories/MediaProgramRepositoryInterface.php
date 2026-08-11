@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Media\Repositories;
 
+use App\Domain\Media\Models\MediaCategory;
 use App\Domain\Media\Models\MediaProgram;
 use App\Domain\Shared\Contracts\RepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
@@ -54,6 +55,9 @@ interface MediaProgramRepositoryInterface extends RepositoryInterface
     /** Programs flagged is_trending = true, with episode count. */
     public function getTrendingFlagged(int $limit = 12): Collection;
 
+    /** Programs ordered by computed trending_score (7-day real views), score > 0 only. */
+    public function getTrendingByScore(int $limit = 12): Collection;
+
     /** Programs of one category for a horizontal row, with episode count. */
     public function getByCategory(string $category, int $limit = 12): Collection;
 
@@ -89,7 +93,7 @@ interface MediaProgramRepositoryInterface extends RepositoryInterface
     public function setCategoryFeatured(string $key, bool $isFeatured): void;
 
     /** Single category row with program count and aggregate views. */
-    public function findCategoryByKey(string $key): ?\App\Domain\Media\Models\MediaCategory;
+    public function findCategoryByKey(string $key): ?MediaCategory;
 
     /**
      * Update a category's presentation fields.

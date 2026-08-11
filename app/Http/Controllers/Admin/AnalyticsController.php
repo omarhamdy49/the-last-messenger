@@ -216,6 +216,25 @@ class AnalyticsController extends Controller
     }
 
     /**
+     * Get media view statistics from real view events
+     *
+     * GET /su/portal/v1/admin/analytics/media-views
+     *
+     * Query params:
+     * - limit: number of items per list (default 10)
+     */
+    public function getMediaViews(Request $request): JsonResponse
+    {
+        $request->validate([
+            'limit' => 'nullable|integer|min:5|max:50',
+        ]);
+
+        $stats = $this->analyticsService->getMediaViewStats($request->integer('limit', 10));
+
+        return $this->successResponse($stats, 'Media view statistics retrieved successfully');
+    }
+
+    /**
      * Get date range comparison analytics
      *
      * GET /su/portal/v1/admin/analytics/comparison

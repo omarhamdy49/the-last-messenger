@@ -99,6 +99,14 @@ interface MediaEpisodeRepositoryInterface extends RepositoryInterface
     public function getContinueWatching(int $userId, int $limit = 10): Collection;
 
     /**
+     * A user's watch positions for a set of episodes, keyed by episode id.
+     *
+     * @param  list<int>  $episodeIds
+     * @return array<int, array{seconds: int, completed: bool}>
+     */
+    public function getProgressForEpisodes(int $userId, array $episodeIds): array;
+
+    /**
      * Whether the episode exists and passes the public visibility filter.
      */
     public function publicEpisodeExists(int $episodeId): bool;

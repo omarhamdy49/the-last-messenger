@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Domain\Shared\Services;
 
-use App\Models\Article;
+use App\Domain\Media\Enums\MediaViewableType;
+use App\Domain\Media\Models\LiveChannel;
+use App\Domain\Media\Models\MediaEpisode;
+use App\Domain\Media\Models\MediaProgram;
+use App\Domain\People\Models\Muslim;
 use App\Domain\Quran\Models\Reciter;
 use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Models\Verse;
-use App\Domain\People\Models\Muslim;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Shared\Models\AdminLog;
+use App\Models\Article;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -380,6 +384,164 @@ class AnalyticsService
                 ];
             }
         });
+    }
+
+    /**
+     * Time-windowed media view statistics from real, deduplicated view events
+     * (media_view_events) — unlike the all-time views_count counters, these
+     * have a time dimension. Empty lists mean no traffic yet; callers must
+     * render an honest empty state, never substitute numbers.
+     *
+     * @return array<string, array{total: int, programs: list<array<string, mixed>>, episodes: list<array<string, mixed>>, live_channels: list<array<string, mixed>>}>
+     */
+    public function getMediaViewStats(int $limit = 10): array
+    {
+        $cacheKey = $this->getCacheKey('media_view_stats', compact('limit'));
+
+        return Cache::remember($cacheKey, self::CHART_CACHE_TTL, function () use ($limit): array {
+            $windows = [
+                '24h' => now()->subDay(),
+                '7d' => now()->subDays(7),
+                '30d' => now()->subDays(30),
+            ];
+
+            $stats = [];
+
+            foreach ($windows as $window => $since) {
+                try {
+                    $stats[$window] = [
+                        'total' => (int) DB::table('media_view_events')
+                            ->where('created_at', '>=', $since)
+                            ->count(),
+                        'programs' => $this->topProgramsByViews($since, $limit),
+                        'episodes' => $this->topByViews(MediaViewableType::Episode, $since, $limit),
+                        'live_channels' => $this->topByViews(MediaViewableType::LiveChannel, $since, $limit),
+                    ];
+                } catch (\Throwable $e) {
+                    report($e);
+
+                    $stats[$window] = ['total' => 0, 'programs' => [], 'episodes' => [], 'live_channels' => []];
+                }
+            }
+
+            return $stats;
+        });
+    }
+
+    /**
+     * Top programs by windowed views: direct program views plus episode views
+     * rolled up to their program (same roll-up as media:compute-trending).
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function topProgramsByViews(Carbon $since, int $limit): array
+    {
+        $programViews = DB::table('media_view_events')
+            ->selectRaw('viewable_id AS program_id, COUNT(*) AS views')
+            ->where('viewable_type', MediaViewableType::Program->value)
+            ->where('created_at', '>=', $since)
+            ->groupBy('viewable_id');
+
+        $episodeViews = DB::table('media_view_events')
+            ->join('media_episodes', 'media_episodes.id', '=', 'media_view_events.viewable_id')
+            ->selectRaw('media_episodes.program_id AS program_id, COUNT(*) AS views')
+            ->where('media_view_events.viewable_type', MediaViewableType::Episode->value)
+            ->where('media_view_events.created_at', '>=', $since)
+            ->groupBy('media_episodes.program_id');
+
+        $counts = DB::query()
+            ->fromSub($programViews->unionAll($episodeViews), 'views')
+            ->selectRaw('program_id, SUM(views) AS views')
+            ->groupBy('program_id')
+            ->orderByDesc('views')
+            ->limit($limit)
+            ->pluck('views', 'program_id');
+
+        if ($counts->isEmpty()) {
+            return [];
+        }
+
+        $programs = MediaProgram::query()
+            ->whereIn('id', $counts->keys())
+            ->with('translations:id,media_program_id,locale,title,is_ready')
+            ->get(['id', 'slug']);
+
+        return $counts
+            ->map(function ($views, $programId) use ($programs): ?array {
+                $program = $programs->firstWhere('id', (int) $programId);
+                if ($program === null) {
+                    return null; // deleted since the event was recorded
+                }
+
+                return [
+                    'id' => (int) $programId,
+                    'title' => (string) ($program->trans('title') ?? $program->slug),
+                    'views' => (int) $views,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Top episodes or live channels by windowed view-event count.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function topByViews(MediaViewableType $type, Carbon $since, int $limit): array
+    {
+        $counts = DB::table('media_view_events')
+            ->selectRaw('viewable_id, COUNT(*) AS views')
+            ->where('viewable_type', $type->value)
+            ->where('created_at', '>=', $since)
+            ->groupBy('viewable_id')
+            ->orderByDesc('views')
+            ->limit($limit)
+            ->pluck('views', 'viewable_id');
+
+        if ($counts->isEmpty()) {
+            return [];
+        }
+
+        $items = match ($type) {
+            MediaViewableType::Episode => MediaEpisode::query()
+                ->whereIn('id', $counts->keys())
+                ->with([
+                    'translations:id,media_episode_id,locale,title,is_ready',
+                    'program:id,slug',
+                    'program.translations:id,media_program_id,locale,title,is_ready',
+                ])
+                ->get(['id', 'program_id', 'slug', 'season_number', 'episode_number']),
+            default => LiveChannel::query()
+                ->whereIn('id', $counts->keys())
+                ->with('translations:id,live_channel_id,locale,title,is_ready')
+                ->get(['id', 'slug']),
+        };
+
+        return $counts
+            ->map(function ($views, $id) use ($items, $type): ?array {
+                $item = $items->firstWhere('id', (int) $id);
+                if ($item === null) {
+                    return null; // deleted since the event was recorded
+                }
+
+                $row = [
+                    'id' => (int) $id,
+                    'title' => (string) ($item->trans('title') ?? $item->slug),
+                    'views' => (int) $views,
+                ];
+
+                if ($type === MediaViewableType::Episode) {
+                    $row['program_title'] = (string) ($item->program?->trans('title') ?? '');
+                    $row['episode_number'] = (int) $item->episode_number;
+                }
+
+                return $row;
+            })
+            ->filter()
+            ->values()
+            ->all();
     }
 
     /**
