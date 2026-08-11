@@ -159,6 +159,7 @@ return [
         'view_reading' => 'Reading',
         'tafsir_source' => 'Tafsir source',
         'translation_edition' => 'Translation edition',
+        'reciter' => 'Reciter',
         'tafsir_loading' => 'Loading tafsir…',
         'no_tafsir' => 'No tafsir available for this edition.',
         'filter_display' => 'Display',

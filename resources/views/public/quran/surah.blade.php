@@ -371,6 +371,9 @@
     $tafsirResourcesJson = json_encode($tafsirResources, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
     $translationResourcesJson = json_encode($translationResources ?? [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
     $isMakki = ($surah['type'] ?? '') === 'makki';
+    // Default reciter: Al-Husary (murattal); first in the list as fallback.
+    $defaultReciterId = collect($reciters)->firstWhere('everyayah_folder', 'Husary_128kbps')['id']
+        ?? ($reciters[0]['id'] ?? 0);
 @endphp
 
 @section('content')
@@ -397,7 +400,9 @@
         audioPlaying: false,
         currentVerseId: null,
         currentAudio: null,
-        selectedReciterId: parseInt(localStorage.getItem('selectedReciterId')) || ({{ count($reciters) > 0 ? $reciters[0]['id'] : 0 }}),
+        {{-- Page default only; the shared audioPlayer store owns the live choice
+             (a stored siteReciterId wins over this in configure()). --}}
+        selectedReciterId: {{ $defaultReciterId }},
 
         // Surah info + lazy switcher modals (opened from the floating rail)
         infoOpen: false,
@@ -665,7 +670,9 @@
                 return;
             }
             if (this.currentAudio) { this.currentAudio.pause(); }
-            const reciter = this.reciters.find(r => r.id === this.selectedReciterId);
+            // Same reciter as the shared player / aside picker.
+            const reciter = this.$store.audioPlayer.currentReciter()
+                || this.reciters.find(r => r.id === this.selectedReciterId);
             if (!reciter || !reciter.everyayah_folder) { return; }
             const surahPad = String(this.surah.number).padStart(3, '0');
             const versePad = String(verse.number).padStart(3, '0');
@@ -844,7 +851,7 @@
                     </button>
 
                     {{-- Settings: translation edition + tafsir source (filters, tucked away) --}}
-                    <div class="mushaf-rail-item" x-show="editionsForLang.length > 1 || tafsirResources.length > 1" x-cloak>
+                    <div class="mushaf-rail-item" x-show="editionsForLang.length > 1 || tafsirResources.length > 1 || reciters.length > 1" x-cloak>
                         <button type="button" @click="panel = panel === 'settings' ? null : 'settings'"
                             class="mushaf-rail-btn" :class="panel === 'settings' ? 'is-active' : ''"
                             title="{{ __('quran.public.display_settings') }}" aria-label="{{ __('quran.public.display_settings') }}">
@@ -867,6 +874,16 @@
                                 <select x-model.number="selectedTafsirId" @change="setTafsirSource(selectedTafsirId)" class="mushaf-pop-select">
                                     @foreach($tafsirResources as $tr)
                                     <option value="{{ $tr['id'] }}">{{ $tr['name'] }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div x-show="reciters.length > 1" class="mt-3">
+                                <p class="mushaf-pop-title">{{ __('quran.public.reciter') }}</p>
+                                <select :value="$store.audioPlayer.reciterId"
+                                        @change="$store.audioPlayer.selectReciter(parseInt($event.target.value))"
+                                        class="mushaf-pop-select">
+                                    @foreach($reciters as $r)
+                                    <option value="{{ $r['id'] }}">{{ $r['nameAr'] ?: $r['nameEn'] }}</option>
                                     @endforeach
                                 </select>
                             </div>

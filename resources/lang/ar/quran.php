@@ -381,6 +381,7 @@ return [
         'view_reading' => 'قراءة',
         'tafsir_source' => 'مصدر التفسير',
         'translation_edition' => 'إصدار الترجمة',
+        'reciter' => 'القارئ',
         'tafsir_loading' => 'جارٍ تحميل التفسير…',
         'no_tafsir' => 'لا يوجد تفسير لهذا الإصدار.',
         'filter_display' => 'العرض',
