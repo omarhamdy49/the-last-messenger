@@ -17,6 +17,8 @@ return [
     'delete' => 'Delete',
     'edit' => 'Edit',
     'view' => 'View',
+    'copy' => 'Copy',
+    'copied' => 'Copied',
     'details' => 'Details',
     'create' => 'Create',
     'actions' => 'Actions',

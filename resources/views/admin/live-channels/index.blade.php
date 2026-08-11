@@ -55,7 +55,7 @@
                     @foreach($channels as $channel)
                     <tr class="transition-colors" :class="darkMode ? 'hover:bg-gray-800/40' : 'hover:bg-gray-50'">
                         <td class="px-4 py-3">
-                            <div class="flex items-center gap-3">
+                            <a href="{{ route('admin.live-channels.show', $channel->id) }}" class="flex items-center gap-3 group">
                                 <div class="w-16 aspect-video rounded-lg overflow-hidden flex-shrink-0 bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center">
                                     @if($channel->thumb_url)
                                         <img src="{{ $channel->thumb_url }}" alt="" class="w-full h-full object-cover">
@@ -64,10 +64,10 @@
                                     @endif
                                 </div>
                                 <div class="min-w-0">
-                                    <p class="font-semibold truncate" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $channel->trans('title') ?: $channel->slug }}</p>
+                                    <p class="font-semibold truncate group-hover:text-[#0056b3] dark:group-hover:text-[#64CCC5] transition-colors" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $channel->trans('title') ?: $channel->slug }}</p>
                                     <p class="text-xs truncate" :class="darkMode ? 'text-gray-500' : 'text-gray-500'" dir="ltr">{{ $channel->slug }}</p>
                                 </div>
-                            </div>
+                            </a>
                         </td>
                         <td class="px-4 py-3">
                             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold {{ $statusBadge[$channel->status->value] ?? $statusBadge['offline'] }}">

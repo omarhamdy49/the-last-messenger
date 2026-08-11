@@ -3,7 +3,6 @@
 {{-- SEO: per-locale overrides from the admin SEO tab; fallback "{title} | {app.name}" --}}
 @section('title', $program['seo_title'] ?: $program['title'].' | '.config('app.name'))
 @section('meta_description', $program['seo_description'] ?: \Illuminate\Support\Str::limit(strip_tags((string) $program['description']), 160))
-@section('overlay_header', '1')
 
 @if($program['seo_keywords'])
 @push('head')
@@ -40,6 +39,24 @@
         {{-- Scrim: bottom-heavy like Shahid + side gradient toward the content --}}
         <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/15 dark:from-black/95 dark:via-black/60 dark:to-black/25" aria-hidden="true"></div>
         <div class="absolute inset-0 {{ $isRtl ? 'bg-gradient-to-l' : 'bg-gradient-to-r' }} from-black/55 via-black/15 to-transparent" aria-hidden="true"></div>
+
+        {{-- Breadcrumb --}}
+        <nav aria-label="breadcrumb" class="absolute top-5 inset-x-0 z-10">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <ol class="inline-flex items-center gap-2 flex-wrap text-sm font-semibold text-white/70">
+                    <li>
+                        <a href="{{ route('public.media') }}" class="inline-flex items-center gap-1.5 hover:text-white transition-colors">
+                            <i data-lucide="{{ $isRtl ? 'arrow-right' : 'arrow-left' }}" class="w-4 h-4" aria-hidden="true"></i>
+                            {{ __('media.public.page_title') }}
+                        </a>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <i data-lucide="{{ $isRtl ? 'chevron-left' : 'chevron-right' }}" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                        <span class="text-white line-clamp-1">{{ $program['title'] }}</span>
+                    </li>
+                </ol>
+            </div>
+        </nav>
 
         {{-- Program info --}}
         <div class="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-8 md:pb-10">

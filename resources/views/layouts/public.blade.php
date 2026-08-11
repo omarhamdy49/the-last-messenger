@@ -114,32 +114,7 @@
          Quran inquiry) declare @section('hide_header') to suppress the site header. --}}
     @hasSection('hide_header')
     @else
-        @hasSection('overlay_header')
-            {{-- Media-section chrome: nav floats fully transparent over the
-                 page hero (white text via the forced `dark` wrapper), then
-                 turns into theme-adapted glass on scroll — light glass in
-                 light mode, dark glass in dark mode (the wrapper drops `dark`
-                 and the header follows the html-level theme class). Pages
-                 using this must design their top section full-bleed. --}}
-            <style>
-                .header-overlay header { transition: background-color .3s ease, border-color .3s ease, box-shadow .3s ease; }
-                .header-overlay.at-top .glass {
-                    background: transparent;
-                    backdrop-filter: none;
-                    -webkit-backdrop-filter: none;
-                    border-color: transparent;
-                    box-shadow: none;
-                }
-            </style>
-            <div x-data="{ atTop: window.scrollY < 24 }"
-                 @scroll.window.passive="atTop = window.scrollY < 24"
-                 class="header-overlay fixed top-0 inset-x-0 z-50"
-                 :class="atTop ? 'dark at-top' : ''">
-                <x-site.header />
-            </div>
-        @else
-            <x-site.header />
-        @endif
+        <x-site.header />
     @endif
 
     <main class="flex-1">

@@ -128,8 +128,9 @@ Route::get('/genealogy/people', [GenealogyController::class, 'people'])
 // Genealogy
 // Media / Programs
 Route::get('/media', [MediaController::class, 'index'])->name('public.media');
-// Live channel single page — registered before the {slug} program route so the
+// Live channel routes — registered before the {slug} program route so the
 // literal "live" segment is never swallowed as a program slug.
+Route::get('/media/live', [MediaController::class, 'liveIndex'])->name('public.media.live.index');
 Route::get('/media/live/{slug}', [MediaController::class, 'live'])->name('public.media.live');
 Route::get('/media/{slug}', [MediaController::class, 'show'])->name('public.media.program');
 Route::get('/media/{slug}/episodes/{episode}', [MediaController::class, 'episode'])

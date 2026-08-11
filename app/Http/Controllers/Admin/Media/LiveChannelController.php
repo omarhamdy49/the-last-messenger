@@ -95,7 +95,7 @@ class LiveChannelController extends Controller
             abort(404, 'Live channel not found');
         }
 
-        $channel->loadMissing(['translations']);
+        $channel->loadMissing(['translations', 'media']);
 
         return view('admin.live-channels.show', compact('channel'));
     }
@@ -108,7 +108,7 @@ class LiveChannelController extends Controller
             abort(404, 'Live channel not found');
         }
 
-        $channel->loadMissing(['translations']);
+        $channel->loadMissing(['translations', 'media']);
         $statuses = LiveStatus::cases();
 
         return view('admin.live-channels.edit', compact('channel', 'statuses'));

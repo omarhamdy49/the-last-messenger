@@ -162,13 +162,14 @@
                     <i data-lucide="image" class="w-5 h-5 text-[#64CCC5]"></i>
                     {{ __('admin.thumbnail') }}
                 </h3>
-                @if($isEdit && $channel->thumbnail_url)
-                    <img src="{{ $channel->thumbnail_url }}" alt="" class="w-full aspect-video object-cover rounded-xl mb-3">
-                @endif
-                <input type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp"
-                       class="w-full text-sm"
-                       :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                <p class="mt-1 text-xs" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">{{ __('admin.thumbnail_hint') }}</p>
+                <x-admin.image-upload
+                    name="thumbnail"
+                    idName="thumbnail_id"
+                    :currentImage="$isEdit ? $channel->thumbnail_url : null"
+                    maxSize="10MB"
+                    formats="JPG, PNG, WebP"
+                    accept="image/jpeg,image/jpg,image/png,image/webp" />
+                <p class="mt-2 text-xs" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">{{ __('admin.thumbnail_hint') }}</p>
             </section>
 
             <div class="flex flex-wrap gap-3">
@@ -187,3 +188,6 @@
         </div>
     </div>
 </form>
+
+{{-- Media library picker (used by the image-upload component) --}}
+<x-admin.media-picker-modal />

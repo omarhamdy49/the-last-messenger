@@ -36,6 +36,11 @@ class LiveChannelService extends BaseService
         return $this->repository->getPublishedForRow($limit);
     }
 
+    public function paginatePublished(int $perPage = 24): LengthAwarePaginator
+    {
+        return $this->repository->paginatePublished($perPage);
+    }
+
     public function getRelated(int $excludeId, int $limit = 6): Collection
     {
         return $this->repository->getRelated($excludeId, $limit);

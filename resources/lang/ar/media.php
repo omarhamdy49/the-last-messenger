@@ -7,6 +7,7 @@ return [
     'public' => [
         // Live channels
         'live_channels' => 'القنوات المباشرة',
+        'live_channels_description' => 'تابع البث المباشر على مدار الساعة — تلاوات قرآنية وبرامج إسلامية تصلك لحظة بلحظة.',
         'live_now' => 'مباشر الآن',
         'watch_live' => 'مشاهدة البث',
         'related_channels' => 'قنوات قد تعجبك',

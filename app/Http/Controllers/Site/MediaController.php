@@ -218,6 +218,17 @@ final class MediaController extends Controller
     }
 
     /**
+     * Paginated list of all published live channels ("view all" from the hub row).
+     */
+    public function liveIndex(): View
+    {
+        $channels = $this->liveChannelService->paginatePublished(24);
+        $channels->through(fn (LiveChannel $channel): array => $this->mapLiveCard($channel));
+
+        return view('public.media.live-index', ['channels' => $channels]);
+    }
+
+    /**
      * Live channel page — player + info + related channels (no chat).
      */
     public function live(Request $request, string $slug): View
@@ -351,35 +362,9 @@ final class MediaController extends Controller
         $card = $this->mapLiveCard($channel);
         $card['description'] = $channel->trans('description');
         $card['streaming_url'] = $channel->streaming_url;
-        $card['embed_url'] = $this->liveEmbedUrl($channel->streaming_url);
+        $card['embed_url'] = $channel->embed_url;
 
         return $card;
-    }
-
-    /**
-     * Normalize a stream URL to an embeddable form. A bare YouTube watch/short
-     * link becomes an /embed/ URL; anything already embeddable passes through.
-     */
-    private function liveEmbedUrl(?string $url): ?string
-    {
-        if ($url === null || trim($url) === '') {
-            return null;
-        }
-
-        // Muted autoplay: browsers block audible autoplay, so the stream
-        // starts muted and the visitor unmutes in the player.
-        $params = '?autoplay=1&mute=1';
-
-        $videoId = $this->youtubeVideoId($url);
-        if ($videoId !== null) {
-            return "https://www.youtube.com/embed/{$videoId}{$params}";
-        }
-
-        if (preg_match('#(?:youtube\.com/watch\?v=|youtu\.be/)([A-Za-z0-9_-]{11})#', $url, $m) === 1) {
-            return "https://www.youtube.com/embed/{$m[1]}{$params}";
-        }
-
-        return $url;
     }
 
     /**

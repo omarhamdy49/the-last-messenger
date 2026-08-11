@@ -20,7 +20,7 @@ class StoreLiveChannelRequest extends FormRequest
         return [
             // Slug optional on create — auto-generated from the title when blank.
             'slug' => ['nullable', 'string', 'max:255', 'unique:live_channels,slug'],
-            'streaming_url' => ['nullable', 'url', 'max:1000'],
+            'streaming_url' => ['nullable', 'url:http,https', 'max:1000'],
             'status' => ['nullable', 'string', Rule::in(array_column(LiveStatus::cases(), 'value'))],
             'is_published' => ['nullable', 'boolean'],
             'display_order' => ['nullable', 'integer', 'min:0'],

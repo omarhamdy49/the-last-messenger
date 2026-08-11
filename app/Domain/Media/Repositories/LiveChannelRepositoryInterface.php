@@ -28,6 +28,11 @@ interface LiveChannelRepositoryInterface extends RepositoryInterface
     public function getPublishedForRow(int $limit = 12): Collection;
 
     /**
+     * Paginated public list of published channels (display order).
+     */
+    public function paginatePublished(int $perPage = 24): LengthAwarePaginator;
+
+    /**
      * A single published channel by slug (null when missing/unpublished).
      */
     public function findPublishedBySlug(string $slug): ?LiveChannel;

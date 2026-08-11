@@ -17,6 +17,10 @@
                 <li><a href="{{ route('public.media') }}" class="hover:text-[#0056b3] dark:hover:text-[#64CCC5] transition-colors">{{ __('media.public.page_title') }}</a></li>
                 <li class="flex items-center gap-2">
                     <i data-lucide="{{ $isRtl ? 'chevron-left' : 'chevron-right' }}" class="w-3.5 h-3.5"></i>
+                    <a href="{{ route('public.media.live.index') }}" class="hover:text-[#0056b3] dark:hover:text-[#64CCC5] transition-colors">{{ __('media.public.live_channels') }}</a>
+                </li>
+                <li class="flex items-center gap-2">
+                    <i data-lucide="{{ $isRtl ? 'chevron-left' : 'chevron-right' }}" class="w-3.5 h-3.5"></i>
                     <span class="font-medium text-gray-900 dark:text-white line-clamp-1">{{ $channel['title'] }}</span>
                 </li>
             </ol>

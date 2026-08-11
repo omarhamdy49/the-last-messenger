@@ -63,6 +63,16 @@ class LiveChannelRepository extends BaseRepository implements LiveChannelReposit
         );
     }
 
+    public function paginatePublished(int $perPage = 24): LengthAwarePaginator
+    {
+        return LiveChannel::query()
+            ->select(self::LIST_COLUMNS)
+            ->with(['translations:id,live_channel_id,locale,title,is_ready', 'media'])
+            ->published()
+            ->ordered()
+            ->paginate($perPage);
+    }
+
     public function findPublishedBySlug(string $slug): ?LiveChannel
     {
         return Cache::remember(

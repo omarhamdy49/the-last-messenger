@@ -93,6 +93,27 @@ class LiveChannel extends Model implements HasMedia
         }
     }
 
+    /**
+     * Stream URL normalized to an embeddable form. Bare YouTube watch/short
+     * links become /embed/ URLs (a watch URL inside an iframe is refused by
+     * YouTube); anything else passes through unchanged. Muted autoplay:
+     * browsers block audible autoplay, so the visitor unmutes in the player.
+     */
+    public function getEmbedUrlAttribute(): ?string
+    {
+        $url = $this->streaming_url;
+
+        if ($url === null || trim($url) === '') {
+            return null;
+        }
+
+        if (preg_match('#(?:youtube\.com/(?:embed/|watch\?v=|live/)|youtu\.be/)([A-Za-z0-9_-]{11})#', $url, $m) === 1) {
+            return "https://www.youtube.com/embed/{$m[1]}?autoplay=1&mute=1";
+        }
+
+        return $url;
+    }
+
     public function isLive(): bool
     {
         return $this->status === LiveStatus::Live;

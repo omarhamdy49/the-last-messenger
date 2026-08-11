@@ -7,6 +7,7 @@ return [
     'public' => [
         // Live channels
         'live_channels' => 'Live Channels',
+        'live_channels_description' => 'Follow round-the-clock live streams — Quran recitations and Islamic programs, moment by moment.',
         'live_now' => 'Live now',
         'watch_live' => 'Watch live',
         'related_channels' => 'Channels you may like',

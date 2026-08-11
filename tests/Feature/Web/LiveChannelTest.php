@@ -82,6 +82,58 @@ final class LiveChannelTest extends TestCase
         $response->assertDontSee('قناة مخفية');
     }
 
+    // ===================== LIVE CHANNELS LIST PAGE =====================
+
+    public function test_live_channels_list_page_shows_published_and_hides_unpublished(): void
+    {
+        $this->createChannel(['slug' => 'live-a'], 'قناة القرآن المباشرة');
+        $this->createChannel(['slug' => 'live-b', 'is_published' => false], 'قناة مخفية');
+
+        $response = $this->get(route('public.media.live.index'));
+
+        $response->assertStatus(200);
+        $response->assertSee('قناة القرآن المباشرة');
+        $response->assertDontSee('قناة مخفية');
+    }
+
+    public function test_media_hub_live_row_links_to_the_list_page(): void
+    {
+        $this->createChannel(['slug' => 'live-a'], 'قناة القرآن المباشرة');
+        $this->createChannel(['slug' => 'live-b'], 'قناة المدينة المباشرة');
+
+        $response = $this->get('/media');
+
+        $response->assertStatus(200);
+        $response->assertSee(route('public.media.live.index'), false);
+    }
+
+    // ===================== EMBED URL NORMALIZATION =====================
+
+    public function test_embed_url_normalizes_youtube_variants_and_passes_through_others(): void
+    {
+        $channel = new LiveChannel;
+        $expected = 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1';
+
+        foreach ([
+            'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+            'https://youtu.be/dQw4w9WgXcQ',
+            'https://www.youtube.com/embed/dQw4w9WgXcQ',
+            'https://www.youtube.com/live/dQw4w9WgXcQ',
+        ] as $url) {
+            $channel->streaming_url = $url;
+            $this->assertSame($expected, $channel->embed_url, "for {$url}");
+        }
+
+        $channel->streaming_url = 'https://example.com/stream.m3u8';
+        $this->assertSame('https://example.com/stream.m3u8', $channel->embed_url);
+
+        $channel->streaming_url = null;
+        $this->assertNull($channel->embed_url);
+
+        $channel->streaming_url = '   ';
+        $this->assertNull($channel->embed_url);
+    }
+
     // ===================== SINGLE CHANNEL PAGE =====================
 
     public function test_single_live_channel_page_renders(): void

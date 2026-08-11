@@ -321,11 +321,19 @@
             <div class="lg:col-span-2 min-w-0">
                 {{-- Title & meta --}}
                 <nav class="mb-4" aria-label="breadcrumb">
-                    <a href="{{ $program['url'] }}"
-                       class="inline-flex items-center gap-2 text-sm font-semibold text-[#0056b3] dark:text-[#64CCC5] hover:underline">
-                        <i data-lucide="{{ $isRtl ? 'arrow-right' : 'arrow-left' }}" class="w-4 h-4"></i>
-                        {{ __('media.public.back_to_program') }}
-                    </a>
+                    <ol class="inline-flex items-center gap-2 flex-wrap text-sm text-gray-600 dark:text-gray-400">
+                        <li>
+                            <a href="{{ route('public.media') }}" class="hover:text-[#0056b3] dark:hover:text-[#64CCC5] transition-colors">{{ __('media.public.page_title') }}</a>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i data-lucide="{{ $isRtl ? 'chevron-left' : 'chevron-right' }}" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                            <a href="{{ $program['url'] }}" class="font-semibold text-[#0056b3] dark:text-[#64CCC5] hover:underline line-clamp-1">{{ $program['title'] }}</a>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i data-lucide="{{ $isRtl ? 'chevron-left' : 'chevron-right' }}" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                            <span class="font-medium text-gray-900 dark:text-white">{{ __('media.public.episode_label', ['number' => $episode['number']]) }}</span>
+                        </li>
+                    </ol>
                 </nav>
 
                 {{-- Title (YouTube-style) --}}

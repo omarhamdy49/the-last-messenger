@@ -21,7 +21,7 @@ class UpdateLiveChannelRequest extends FormRequest
 
         return [
             'slug' => ['required', 'string', 'max:255', Rule::unique('live_channels', 'slug')->ignore($id)],
-            'streaming_url' => ['nullable', 'url', 'max:1000'],
+            'streaming_url' => ['nullable', 'url:http,https', 'max:1000'],
             'status' => ['nullable', 'string', Rule::in(array_column(LiveStatus::cases(), 'value'))],
             'is_published' => ['nullable', 'boolean'],
             'display_order' => ['nullable', 'integer', 'min:0'],

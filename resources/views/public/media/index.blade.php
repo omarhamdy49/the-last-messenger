@@ -2,7 +2,6 @@
 
 @section('title', __('media.public.page_title'))
 @section('meta_description', __('media.public.page_description'))
-@section('overlay_header', '1')
 
 @section('content')
 @php $isRtl = in_array(app()->getLocale(), ['ar', 'ur'], true); @endphp
@@ -220,6 +219,11 @@
                                 <i data-lucide="radio" class="w-5 h-5 text-red-600" aria-hidden="true"></i>
                             </span>
                             <span class="break-words">{{ __('media.public.live_channels') }}</span>
+                            <a href="{{ route('public.media.live.index') }}"
+                               class="ms-auto shrink-0 inline-flex items-center gap-1 text-sm font-semibold text-[#0056b3] dark:text-[#64CCC5] hover:underline">
+                                <span>{{ __('media.public.view_all') }}</span>
+                                <i data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}" class="w-4 h-4"></i>
+                            </a>
                         </h2>
 
                         <div x-ref="track" @scroll.passive.debounce.150ms="checkScroll()"
