@@ -49,7 +49,9 @@ return [
                 'quran:import-mushaf-layout' => ['queued' => true],
                 'quran:enrich-reciters' => ['queued' => true],
                 'quran:backfill-hizb' => ['queued' => true],
-                'quran:ai-prune' => [],
+                // Manual-only (no longer scheduled). Queued because a first run
+                // after a long gap deletes in batches until the table is clear.
+                'quran:ai-prune' => ['queued' => true],
             ],
         ],
 
@@ -75,6 +77,9 @@ return [
                 'media:backfill-artwork' => ['queued' => true],
                 'media:compute-trending' => [],
                 'media:publish-scheduled' => [],
+                // Manual-only (no longer scheduled). Queued: the delete loop
+                // runs until the backlog is clear, which can be many batches.
+                'media:prune-view-events' => ['queued' => true],
             ],
         ],
 
@@ -108,6 +113,8 @@ return [
             'commands' => [
                 'about' => [],
                 'storage:link' => [],
+                // Runs nightly on its own; exposed here for an on-demand prune.
+                'admin-logs:prune' => ['queued' => true],
                 'migrate:status' => [],
                 'migrate' => ['danger' => true, 'defaults' => ['--force' => true]],
                 'schedule:list' => [],

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domain\Media\Models\MediaViewEvent;
+use App\Domain\Shared\Models\AdminLog;
 use App\Domain\Shared\Services\SchedulerService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -89,6 +90,9 @@ Schedule::command('articles:publish-scheduled')
 /**
  * Prune media view events older than 90 days (the analytics windows only need
  * 30). Batched deletes so a large backlog never holds one long transaction.
+ *
+ * Deliberately NOT scheduled: run it by hand from Settings → Commands, where
+ * the run is queued and its progress/output are visible.
  */
 Artisan::command('media:prune-view-events', function () {
     $cutoff = now()->subDays(90);
@@ -107,34 +111,52 @@ Artisan::command('media:prune-view-events', function () {
     return 0;
 })->purpose('Prune media view events older than 90 days');
 
-Schedule::command('media:prune-view-events')
-    ->dailyAt('04:00')
+/**
+ * Prune admin activity logs (the `admin_logs` table behind Settings → Activity
+ * Logs). Every admin write appends a row with old/new value snapshots, so the
+ * table grows with editing activity and nothing else trims it.
+ *
+ * Scheduled nightly. Batched like the view-event prune so a large backlog never
+ * holds one long transaction while the admin panel is still writing to it.
+ */
+Artisan::command('admin-logs:prune {--days=7 : Keep logs newer than N days}', function () {
+    $cutoff = now()->subDays(max(1, (int) $this->option('days')));
+    $total = 0;
+
+    do {
+        $deleted = AdminLog::query()
+            ->where('created_at', '<', $cutoff)
+            ->limit(5000)
+            ->delete();
+        $total += $deleted;
+    } while ($deleted > 0);
+
+    $this->info("Pruned {$total} admin activity logs older than {$cutoff->toDateTimeString()}.");
+
+    return 0;
+})->purpose('Prune admin activity logs older than 7 days');
+
+Schedule::command('admin-logs:prune')
+    ->dailyAt('03:30')
     ->withoutOverlapping()
     ->runInBackground()
     ->onFailure(function () {
-        Log::error('Failed to prune media view events');
+        Log::error('Failed to prune admin activity logs');
     });
 
 /**
  * Recompute media trending scores from real view events (last 7 days).
- * Runs every 30 minutes; also drives the /media Trending row cache refresh.
+ * Twice daily (01:00 / 13:00); also drives the /media Trending row cache
+ * refresh. The window is 7 days, so scores barely move inside 12 hours —
+ * recomputing more often just re-reads the same events.
  */
 Schedule::command('media:compute-trending')
-    ->everyThirtyMinutes()
+    ->twiceDaily()
     ->withoutOverlapping()
     ->runInBackground()
     ->onFailure(function () {
         Log::error('Failed to compute media trending scores');
     });
 
-/**
- * Prune old Ask Quran AI inquiries + stale quota rows so saved questions don't
- * grow disk/queries unbounded. Runs daily off-peak; deletes are batched.
- */
-Schedule::command('quran:ai-prune')
-    ->dailyAt('03:30')
-    ->withoutOverlapping()
-    ->runInBackground()
-    ->onFailure(function () {
-        Log::error('Failed to prune Ask Quran AI inquiries');
-    });
+// quran:ai-prune (prunes Ask Quran inquiries + stale quota rows) is manual-only
+// too — see Settings → Commands. It takes --dry-run, so preview before deleting.

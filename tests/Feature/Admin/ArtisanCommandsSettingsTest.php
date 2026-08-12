@@ -7,6 +7,7 @@ namespace Tests\Feature\Admin;
 use App\Domain\Shared\Services\ArtisanCommandService;
 use App\Jobs\RunArtisanCommandJob;
 use App\Models\CommandRun;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Queue;
@@ -196,6 +197,23 @@ final class ArtisanCommandsSettingsTest extends TestCase
         $this->assertSame(CommandRun::STATUS_FAILED, $run->status);
         $this->assertSame(1, $run->exit_code);
         $this->assertNotNull($run->finished_at);
+    }
+
+    public function test_the_retention_commands_are_manual_only(): void
+    {
+        // Both prunes were taken off the scheduler on purpose: they delete rows,
+        // so they run when someone decides to, from the settings tab.
+        $scheduled = collect(app(Schedule::class)->events())
+            ->map(fn ($event): string => (string) $event->command)
+            ->all();
+
+        foreach (['quran:ai-prune', 'media:prune-view-events'] as $command) {
+            $this->assertEmpty(
+                array_filter($scheduled, fn (string $c): bool => str_contains($c, $command)),
+                "{$command} must not be scheduled.",
+            );
+            $this->assertNotNull(app(ArtisanCommandService::class)->find($command));
+        }
     }
 
     public function test_the_status_endpoint_exposes_output_for_polling(): void
