@@ -25,6 +25,7 @@ use App\Http\Controllers\Admin\MediaSettingsController;
 // use App\Http\Controllers\Admin\MediaUsageController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SchedulerController;
+use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VersionController;
 use Illuminate\Support\Facades\Route;
@@ -67,11 +68,21 @@ Route::get('su/portal/v1/admin/analytics', [AnalyticsController::class, 'dashboa
     ->middleware(['web', 'auth:admin', 'admin', 'role:super_admin|admin|editor,admin', 'throttle:60,1'])
     ->name('admin.analytics');
 
-// Settings Route Placeholder (coming soon)
-Route::get('su/portal/v1/admin/settings', function () {
-    return view('admin.coming-soon', ['module' => 'Settings']);
-})->middleware(['web', 'auth:admin', 'admin', 'role:super_admin|admin|editor,admin', 'throttle:60,1'])
+// Settings Hub — tabs for languages, media presets and Artisan commands.
+// Executing commands is deliberately narrower than viewing the page: editors
+// can read the tab, only admins can run anything.
+Route::get('su/portal/v1/admin/settings', [SettingsController::class, 'index'])
+    ->middleware(['web', 'auth:admin', 'admin', 'role:super_admin|admin|editor,admin', 'throttle:60,1'])
     ->name('admin.settings');
+
+Route::prefix('su/portal/v1/admin/settings/commands')
+    ->middleware(['web', 'auth:admin', 'admin', 'role:super_admin|admin,admin', 'throttle:60,1'])
+    ->name('admin.settings.commands.')
+    ->group(function (): void {
+        Route::get('/runs', [SettingsController::class, 'runHistory'])->name('history');
+        Route::get('/runs/{run}', [SettingsController::class, 'runStatus'])->name('status');
+        Route::post('/run', [SettingsController::class, 'runCommand'])->name('run');
+    });
 
 // Programs & Episodes — now handled by full domain routes below
 

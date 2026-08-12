@@ -1046,4 +1046,47 @@ return [
     'popular_tags' => 'الأكثر شيوعاً (10+)',
     'merge_selected' => 'دمج المحدد',
 
+    // ---------------------------------------------------------------
+    // Settings hub + Artisan commands tab
+    // ---------------------------------------------------------------
+    'settings_desc' => 'إعدادات النظام وأوامر الصيانة والاستيراد',
+    'languages' => 'اللغات',
+    'media_settings' => 'إعدادات الوسائط',
+
+    'cmd_tab' => 'أوامر النظام',
+    'cmd_run' => 'تشغيل',
+    'cmd_execute' => 'تنفيذ الأمر',
+    'cmd_close' => 'إغلاق',
+    'cmd_retry' => 'إعادة المحاولة',
+    'cmd_refresh' => 'تحديث',
+    'cmd_output' => 'مخرجات الأمر',
+    'cmd_copy' => 'نسخ',
+    'cmd_copied' => 'تم النسخ',
+    'cmd_recent_runs' => 'آخر عمليات التشغيل',
+    'cmd_no_runs' => 'لم يتم تشغيل أي أمر بعد',
+    'cmd_command_count_suffix' => 'أمر',
+    'cmd_comma_separated' => ' (افصل بين القيم بفاصلة)',
+    'cmd_badge_queued' => 'يعمل في الخلفية',
+    'cmd_badge_danger' => 'أمر حساس',
+    'cmd_queued_hint' => 'سيتم تنفيذ هذا الأمر في الخلفية مع عرض التقدّم لحظياً، ولن يتأثر بمهلة انتهاء الطلب.',
+    'cmd_danger_ack' => 'أدرك أن هذا الأمر قد يعدّل بيانات كثيرة، وأرغب في المتابعة.',
+    'cmd_safe_to_leave' => 'يمكنك إغلاق هذه النافذة؛ سيستمر التنفيذ في الخلفية ويمكنك متابعته من سجل التشغيل.',
+    'cmd_started' => 'تم بدء تنفيذ الأمر',
+    'cmd_not_allowed' => 'هذا الأمر غير مسموح بتشغيله من لوحة التحكم',
+    'cmd_start_failed' => 'تعذّر بدء تنفيذ الأمر',
+    'cmd_argument_required' => 'الحقل :name مطلوب',
+
+    'cmd_status_queued' => 'في الانتظار',
+    'cmd_status_running' => 'قيد التنفيذ',
+    'cmd_status_completed' => 'اكتمل',
+    'cmd_status_failed' => 'فشل',
+
+    'cmd_group_quran' => 'القرآن الكريم',
+    'cmd_group_hadith' => 'الحديث الشريف',
+    'cmd_group_people' => 'الصحابة والأنساب',
+    'cmd_group_media' => 'الوسائط',
+    'cmd_group_content' => 'المحتوى',
+    'cmd_group_cache' => 'الذاكرة المؤقتة والأداء',
+    'cmd_group_system' => 'النظام',
+
 ];

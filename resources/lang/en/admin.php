@@ -1034,4 +1034,47 @@ return [
     'popular_tags' => 'Popular (10+)',
     'merge_selected' => 'Merge Selected',
 
+    // ---------------------------------------------------------------
+    // Settings hub + Artisan commands tab
+    // ---------------------------------------------------------------
+    'settings_desc' => 'System settings, maintenance and import commands',
+    'languages' => 'Languages',
+    'media_settings' => 'Media Settings',
+
+    'cmd_tab' => 'System Commands',
+    'cmd_run' => 'Run',
+    'cmd_execute' => 'Execute',
+    'cmd_close' => 'Close',
+    'cmd_retry' => 'Retry',
+    'cmd_refresh' => 'Refresh',
+    'cmd_output' => 'Output',
+    'cmd_copy' => 'Copy',
+    'cmd_copied' => 'Copied',
+    'cmd_recent_runs' => 'Recent runs',
+    'cmd_no_runs' => 'No command has been run yet',
+    'cmd_command_count_suffix' => 'commands',
+    'cmd_comma_separated' => ' (comma separated)',
+    'cmd_badge_queued' => 'Runs in background',
+    'cmd_badge_danger' => 'Sensitive',
+    'cmd_queued_hint' => 'This command runs in the background with live progress, so it is not bound by the request timeout.',
+    'cmd_danger_ack' => 'I understand this command may modify a large amount of data, and I want to continue.',
+    'cmd_safe_to_leave' => 'You can close this dialog; the command keeps running and stays visible in the run history.',
+    'cmd_started' => 'Command started',
+    'cmd_not_allowed' => 'This command is not allowed to run from the admin panel',
+    'cmd_start_failed' => 'Could not start the command',
+    'cmd_argument_required' => 'The :name field is required',
+
+    'cmd_status_queued' => 'Queued',
+    'cmd_status_running' => 'Running',
+    'cmd_status_completed' => 'Completed',
+    'cmd_status_failed' => 'Failed',
+
+    'cmd_group_quran' => 'Quran',
+    'cmd_group_hadith' => 'Hadith',
+    'cmd_group_people' => 'Companions & Genealogy',
+    'cmd_group_media' => 'Media',
+    'cmd_group_content' => 'Content',
+    'cmd_group_cache' => 'Cache & Performance',
+    'cmd_group_system' => 'System',
+
 ];
