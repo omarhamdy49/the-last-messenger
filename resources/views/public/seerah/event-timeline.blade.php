@@ -18,6 +18,7 @@
 @endpush
 
 @push('head')
+@include('partials.module-embed-styles')
 <style>
     [x-cloak] { display: none !important; }
 
@@ -94,6 +95,10 @@
     $hasCharacters = $characters->isNotEmpty();
     $statistics = collect($event['statistics'] ?? [])->filter(fn ($v) => is_scalar($v))->take(4);
     $hasStatistics = $statistics->isNotEmpty();
+    $lessons = collect($event['lessons'] ?? [])->filter(fn ($l) => ! empty($l['title']));
+    $hasLessons = $lessons->isNotEmpty();
+    $sources = collect($event['sources'] ?? [])->filter(fn ($x) => ! empty($x['title']));
+    $hasSources = $sources->isNotEmpty();
     $articleStyleUrl = route('public.seerah.event', $event['slug']);
     $characterGradients = [
         'from-green-500 to-emerald-600',
@@ -248,13 +253,16 @@
     <main class="pb-12">
         <!-- Parallax Hero -->
         <section id="event-hero" class="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
-            <img src="{{ $event['featuredImage'] ?? asset('assets/event/event-img.png') }}"
+            {{-- See event.blade.php: the fallback asset does not exist. --}}
+            @if (! empty($event['featuredImage']))
+            <img src="{{ $event['featuredImage'] }}"
                  alt="{{ $event['title'] }}"
                  width="1920"
                  height="1080"
                  loading="lazy"
                  class="tl-parallax-img absolute inset-0 w-full h-[120%] object-cover"
                  :style="`transform: translateY(${parallaxOffset}px)`" />
+            @endif
             <div class="absolute inset-0 tl-hero-gradient"></div>
 
             <div class="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center text-white">
@@ -389,7 +397,10 @@
                             <p class="text-lg sm:text-xl leading-relaxed break-words" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{!! nl2br(e($event['description'])) !!}</p>
                         @endif
                         @if ($hasContent)
-                            <p class="text-base sm:text-lg leading-relaxed break-words" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{!! nl2br(e($event['content'])) !!}</p>
+                            {{-- Purified admin HTML (see SanitizesRichText). Not wrapped in <p> —
+                                 the value already contains block tags. --}}
+                            <div class="seerah-content text-base sm:text-lg leading-relaxed break-words"
+                                 :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{!! $event['content'] !!}</div>
                         @endif
                     </div>
                 </div>
@@ -406,6 +417,58 @@
 
         <!-- Key Characters (cards → modal) -->
         @if ($hasCharacters)
+            @if ($hasLessons)
+            <section id="event-lessons" class="py-16 sm:py-20" :class="darkMode ? 'bg-gray-900/40' : 'bg-white'">
+                <div class="max-w-4xl mx-auto px-4 sm:px-6">
+                    <div class="flex items-center gap-4 mb-10">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+                            <i data-lucide="lightbulb" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <h2 class="text-2xl sm:text-3xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ __('seerah.public.section_lessons') }}</h2>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        @foreach ($lessons as $lesson)
+                            <div class="tl-item tl-card-hover rounded-2xl p-6 border-s-4 border-amber-500" data-revealed="false"
+                                 :class="darkMode ? 'bg-gray-800/60' : 'bg-amber-50/70'">
+                                <h3 class="font-bold text-lg mb-2 break-words" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $lesson['title'] }}</h3>
+                                @if (! empty($lesson['description']))
+                                    <p class="leading-relaxed break-words" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ $lesson['description'] }}</p>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </section>
+            @endif
+
+            @if ($hasSources)
+            <section id="event-sources" class="py-16 sm:py-20">
+                <div class="max-w-4xl mx-auto px-4 sm:px-6">
+                    <div class="flex items-center gap-4 mb-10">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-500 to-slate-700 flex items-center justify-center">
+                            <i data-lucide="library" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <h2 class="text-2xl sm:text-3xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ __('seerah.public.section_sources') }}</h2>
+                    </div>
+                    <ul class="space-y-4">
+                        @foreach ($sources as $source)
+                            <li class="tl-item flex items-start gap-3" data-revealed="false">
+                                <i data-lucide="book-marked" class="w-5 h-5 mt-1 flex-shrink-0 text-[#0056b3]"></i>
+                                <div class="min-w-0">
+                                    <p class="font-semibold break-words" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $source['title'] }}</p>
+                                    @if (! empty($source['author']) || ! empty($source['reference']))
+                                        <p class="text-sm break-words" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                            {{ trim(collect([$source['author'] ?? null, $source['reference'] ?? null])->filter()->implode(' — ')) }}
+                                        </p>
+                                    @endif
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            </section>
+            @endif
+
             <section id="event-characters" class="py-16 sm:py-20">
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
                     <h2 class="text-3xl md:text-5xl font-bold text-center mb-12 flex items-center justify-center gap-3" :class="darkMode ? 'text-white' : 'text-gray-900'">

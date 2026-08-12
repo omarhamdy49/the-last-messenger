@@ -428,7 +428,7 @@
 <div
     x-data="articleReader({ tocIds: {{ $tocJson }}, title: @js($article['title']) })"
     x-init="init()"
-    class="min-h-screen"
+    class="min-h-dvh"
 >
     {{-- Reading progress bar --}}
     <div class="fixed top-0 inset-x-0 z-[60] h-[3px] bg-transparent no-print"

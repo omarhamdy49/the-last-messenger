@@ -370,6 +370,8 @@ final class SeerahController extends Controller
             'statistics' => is_array($event->statistics) ? $event->statistics : [],
             'characters' => $characters,
             'timeline' => $timeline,
+            'lessons' => $event->lessonsFor($locale),
+            'sources' => $event->sourcesFor($locale),
             'url' => route('public.seerah.event', $event->slug),
         ];
     }

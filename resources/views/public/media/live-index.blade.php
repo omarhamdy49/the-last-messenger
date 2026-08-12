@@ -6,7 +6,7 @@
 @section('content')
 @php $isRtl = in_array(app()->getLocale(), ['ar', 'ur'], true); @endphp
 
-<div class="min-h-screen font-['Cairo'] bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+<div class="min-h-dvh font-['Cairo'] bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
 
     {{-- ============================================================ --}}
     {{-- HERO — page banner (brand gradient + soft glows)             --}}

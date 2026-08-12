@@ -48,6 +48,17 @@ final class UpdateSeerahEventData
         public readonly ?int $displayOrder,
         public readonly bool $isFeatured,
         public readonly array $presentKeys,
+        public readonly ?string $era,
+        public readonly ?string $phase,
+        public readonly bool $isPivotal,
+        public readonly array $statistics,
+        /** @var array<int, array{title?: string, description?: string}> */
+        public readonly array $lessons,
+        /** @var array<int, array{title?: string, author?: string, reference?: string}> */
+        public readonly array $sources,
+        public readonly array $timelineItems,
+        public readonly array $participants,
+        public readonly array $existingGallery,
     ) {}
 
     /**
@@ -90,6 +101,18 @@ final class UpdateSeerahEventData
             // Unchecked checkboxes are simply absent from the payload.
             isFeatured: filter_var($validated['is_featured'] ?? false, FILTER_VALIDATE_BOOLEAN),
             presentKeys: array_keys($validated),
+            era: $validated['era'] ?? null,
+            phase: $validated['phase'] ?? null,
+            isPivotal: filter_var($validated['is_pivotal'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            statistics: CreateSeerahEventData::normaliseStatistics($validated['statistics'] ?? []),
+            lessons: CreateSeerahEventData::rejectBlankFlatRows($validated['lessons'] ?? []),
+            sources: CreateSeerahEventData::rejectBlankFlatRows($validated['sources'] ?? []),
+            timelineItems: CreateSeerahEventData::rejectBlankRows($validated['timeline_items'] ?? [], 'title'),
+            participants: CreateSeerahEventData::rejectBlankRows($validated['participants'] ?? [], 'name'),
+            existingGallery: array_values(array_filter(
+                (array) ($validated['existing_gallery'] ?? []),
+                static fn ($path): bool => is_string($path) && trim($path) !== '',
+            )),
         );
     }
 }

@@ -167,15 +167,24 @@ function resolveDirection({ direction, locale } = {}) {
     return document.documentElement.dir === 'rtl' ? 'rtl' : 'ltr';
 }
 
+/**
+ * Apply the field's reading direction to every line.
+ *
+ * Quill stores direction/alignment per line, so content that arrives already
+ * built — an edit form loading stored HTML, or a programmatic setHtml — has no
+ * direction classes and renders left-aligned inside an RTL field. Re-applying
+ * after any bulk content change keeps Arabic right-aligned and Latin
+ * left-aligned without touching what the editor typed by hand.
+ */
 function applyDefaultDirection(editor, direction) {
     editor.root.dataset.defaultDirection = direction;
 
-    if (direction === 'rtl') {
-        editor.formatLine(0, Math.max(editor.getLength(), 1), {
-            direction: 'rtl',
-            align: 'right',
-        }, 'silent');
-    }
+    const length = Math.max(editor.getLength(), 1);
+
+    editor.formatLine(0, length, {
+        direction: direction === 'rtl' ? 'rtl' : false,
+        align: direction === 'rtl' ? 'right' : false,
+    }, 'silent');
 }
 
 function create(element, options = {}) {
@@ -205,10 +214,149 @@ function create(element, options = {}) {
     return editor;
 }
 
+/**
+ * Cross-module insert support (Quran verse / hadith / sahabi / seerah event).
+ *
+ * Lives here rather than in a single form so every screen using
+ * <x-admin.form.wysiwyg modules> gets the same buttons and the same embed
+ * payload. The labels are injected once from Blade (see setLabels) because this
+ * file is plain JS with no access to the translator.
+ */
+const MODULE_ICONS = {
+    verse: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+    hadith: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></svg>',
+    sahabi: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    seerah: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
+};
+
+// Overwritten from Blade so the buttons and embed cards read in the admin locale.
+let moduleLabels = {
+    verse: 'Quran', hadith: 'Hadith', sahabi: 'Companion', seerah: 'Seerah',
+    verseWord: 'Verse', hijri: 'AH', viewEvent: 'View event',
+};
+
+const RTL_LOCALES = ['ar', 'ur', 'fa', 'he'];
+
+const AdminWysiwygModules = {
+    setLabels(labels) {
+        moduleLabels = { ...moduleLabels, ...labels };
+    },
+
+    buttons() {
+        return ['verse', 'hadith', 'sahabi', 'seerah'].map((type) => ({
+            type,
+            label: moduleLabels[type],
+            cls: `ql-module-btn--${type}`,
+            icon: MODULE_ICONS[type],
+        }));
+    },
+
+    /**
+     * Build the structured moduleEmbed payload. Returns null for `sahabi`, which
+     * reads better as an inline link inside the sentence than as a card — see
+     * insertInline().
+     */
+    toEmbedValue(moduleType, data, locale = 'ar') {
+        const dir = RTL_LOCALES.includes(locale) ? 'rtl' : 'ltr';
+
+        if (moduleType === 'verse') {
+            const verses = data.verses || [];
+            const range = verses.length > 1
+                ? `${verses[0].number}-${verses[verses.length - 1].number}`
+                : String(verses[0]?.number ?? '');
+            const reference = `${data.surah_name} — ${moduleLabels.verseWord} ${range}`;
+
+            return {
+                module: 'verse',
+                id: data.surah_id,
+                label: moduleLabels.verse,
+                text: verses.map((v) => v.text).join(' '),
+                reference,
+                href: `/quran/surah/${data.surah_id}#${verses[0]?.number ?? ''}`,
+                linkLabel: `📖 ${reference}`,
+                dir: 'rtl',
+            };
+        }
+
+        if (moduleType === 'hadith') {
+            return {
+                module: 'hadith',
+                id: data.hadith_id,
+                label: moduleLabels.hadith,
+                text: data.text,
+                reference: `${data.collection} #${data.number}`,
+                href: `/hadith/${data.hadith_id}`,
+                linkLabel: `📜 ${data.collection} #${data.number}`,
+                dir,
+            };
+        }
+
+        if (moduleType === 'seerah') {
+            return {
+                module: 'seerah',
+                id: data.event_id,
+                label: moduleLabels.seerah,
+                text: `${data.title}${data.hijri_year ? ` — ${data.hijri_year} ${moduleLabels.hijri}` : ''}`,
+                href: `/seerah/event/${data.slug || data.event_id}`,
+                linkLabel: `📍 ${moduleLabels.viewEvent}`,
+                dir,
+            };
+        }
+
+        return null;
+    },
+
+    /**
+     * Insert a picked module at `range` in `editor`.
+     *
+     * Companions become a link on the selected text (or an inserted name), so the
+     * prose keeps reading as a sentence; everything else becomes an atomic card
+     * followed by an empty line so the caret is not trapped against the embed.
+     */
+    insert(editor, range, moduleType, data, locale = 'ar') {
+        if (moduleType === 'sahabi') {
+            const link = `/sahaba/${encodeURIComponent(data.slug || data.sahabi_id)}`;
+
+            if (range.length > 0) {
+                editor.formatText(range.index, range.length, 'link', link, 'user');
+                editor.setSelection(range.index, range.length, 'silent');
+                return;
+            }
+
+            const label = data.name || '';
+            const previousCharacter = range.index > 0 ? editor.getText(range.index - 1, 1) : '';
+            const leadingSeparator = previousCharacter && !/\s/.test(previousCharacter) ? ' ' : '';
+            const labelIndex = range.index + leadingSeparator.length;
+
+            if (leadingSeparator) {
+                editor.insertText(range.index, leadingSeparator, { link: false }, 'user');
+            }
+            editor.insertText(labelIndex, label, { link }, 'user');
+            editor.insertText(labelIndex + label.length, ' ', { link: false }, 'user');
+            editor.setSelection(labelIndex + label.length + 1, 0, 'silent');
+            editor.format('link', false, 'silent');
+            return;
+        }
+
+        const embed = this.toEmbedValue(moduleType, data, locale);
+        if (!embed) { return; }
+
+        if (range.length > 0) {
+            editor.deleteText(range.index, range.length, 'user');
+        }
+
+        editor.insertEmbed(range.index, 'moduleEmbed', embed, 'user');
+        editor.insertText(range.index + 1, '\n', 'user');
+        editor.setSelection(range.index + 2, 0, 'silent');
+    },
+};
+
 window.Quill = Quill;
 window.AdminWysiwyg = {
     create,
     resolveDirection,
+    applyDefaultDirection,
     toolbars,
 };
+window.AdminWysiwygModules = AdminWysiwygModules;
 window.dispatchEvent(new CustomEvent('rich-text:ready'));

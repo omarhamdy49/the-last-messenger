@@ -48,7 +48,7 @@
 </style>
 @endpush
 
-<div class="min-h-screen font-['Cairo'] transition-colors duration-300"
+<div class="min-h-dvh font-['Cairo'] transition-colors duration-300"
      :class="$store.theme.dark ? 'bg-gray-950' : 'bg-gray-50'">
 
     <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">

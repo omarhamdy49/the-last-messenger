@@ -48,7 +48,7 @@
 
 @php $isRtlLocale = in_array(app()->getLocale(), ['ar', 'ur'], true); @endphp
 
-<div class="min-h-screen">
+<div class="min-h-dvh">
 
     {{-- SERIES HEADER --}}
     <section class="relative overflow-hidden border-b border-gray-100 dark:border-[#0f3460]">

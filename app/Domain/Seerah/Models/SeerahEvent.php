@@ -148,6 +148,49 @@ class SeerahEvent extends Model implements HasMedia
     }
 
     /**
+     * Localized lessons (الدروس والعبر) as [{title, description}].
+     *
+     * Not a translatable field: HasLocalizedContent::getTranslation() is typed
+     * `?string` and would fatal returning an array, so these read straight off
+     * the locale row with a fallback to Arabic.
+     *
+     * @return array<int, array<string, string>>
+     */
+    public function lessonsFor(?string $locale = null): array
+    {
+        return $this->localizedArray('lessons', $locale);
+    }
+
+    /**
+     * Localized sources (المصادر والمراجع) as [{title, author, reference}].
+     *
+     * @return array<int, array<string, string>>
+     */
+    public function sourcesFor(?string $locale = null): array
+    {
+        return $this->localizedArray('sources', $locale);
+    }
+
+    /**
+     * @return array<int, array<string, string>>
+     */
+    private function localizedArray(string $field, ?string $locale = null): array
+    {
+        $locale ??= app()->getLocale();
+
+        foreach ([$locale, 'ar'] as $candidate) {
+            $row = $this->translations->firstWhere('locale', $candidate);
+            $value = $row?->{$field};
+
+            if (is_array($value) && $value !== []) {
+                return $value;
+            }
+        }
+
+        return [];
+    }
+
+    /**
      * Get the foreign key name for translations.
      */
     public function getTranslationForeignKey(): string

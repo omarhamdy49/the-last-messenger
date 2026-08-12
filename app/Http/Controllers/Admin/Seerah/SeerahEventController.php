@@ -6,7 +6,11 @@ namespace App\Http\Controllers\Admin\Seerah;
 
 use App\Domain\Seerah\DTOs\CreateSeerahEventData;
 use App\Domain\Seerah\DTOs\UpdateSeerahEventData;
+use App\Domain\Seerah\Enums\EventEra;
+use App\Domain\Seerah\Enums\EventPhase;
+use App\Domain\Seerah\Enums\ParticipantRole;
 use App\Domain\Seerah\Enums\SeerahEventStatus;
+use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Services\SeerahEventService;
 use App\Domain\Seerah\Services\SeerahEventTypeService;
 use App\Domain\Seerah\Services\SeerahMilestoneService;
@@ -14,6 +18,7 @@ use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreSeerahEventRequest;
 use App\Http\Requests\Admin\UpdateSeerahEventRequest;
+use App\Models\Media;
 use App\Repositories\ArticleRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -92,8 +97,13 @@ class SeerahEventController extends Controller
         $eventTypes = $this->eventTypeService->getForDropdown();
         $milestones = $this->milestoneService->getForDropdown();
         $statuses = SeerahEventStatus::cases();
+        $eras = EventEra::cases();
+        $phases = EventPhase::cases();
+        $participantRoles = ParticipantRole::cases();
 
-        return view('admin.seerah-events.create', compact('articles', 'eventTypes', 'milestones', 'statuses'));
+        return view('admin.seerah-events.create', compact(
+            'articles', 'eventTypes', 'milestones', 'statuses', 'eras', 'phases', 'participantRoles'
+        ));
     }
 
     /**
@@ -105,14 +115,11 @@ class SeerahEventController extends Controller
     {
         $dto = CreateSeerahEventData::fromArray($request->validated(), $this->uploadedFeaturedImage($request));
 
-        // Store featured image to disk before passing path to service
-        $storedImagePath = null;
-        if ($dto->featuredImage !== null) {
-            $storedImagePath = $dto->featuredImage->store('seerah-events/featured-images', 'public') ?: null;
-        }
+        // Upload or media-library pick, resolved to a disk path before the service runs
+        $storedImagePath = $this->resolveFeaturedImagePath($request, $dto->featuredImage);
 
         // Row + image path + translations are written in a single transaction
-        $event = $this->seerahEventService->createEvent($dto, $storedImagePath);
+        $event = $this->seerahEventService->createEvent($dto, $storedImagePath, $this->storeGallery($request));
 
         // Log the creation
         $this->logger->logCreate($event, $request->user());
@@ -152,13 +159,23 @@ class SeerahEventController extends Controller
             abort(404, 'Seerah event not found');
         }
 
-        $event->loadMissing(['translations', 'article.locales:id,article_id,locale,title,slug,is_ready']);
+        $event->loadMissing([
+            'translations',
+            'article.locales:id,article_id,locale,title,slug,is_ready',
+            'timelineItems.translations',
+            'participants.translations',
+        ]);
         $articles = $this->articleRepository->getForDropdown();
         $eventTypes = $this->eventTypeService->getForDropdown();
         $milestones = $this->milestoneService->getForDropdown();
         $statuses = SeerahEventStatus::cases();
+        $eras = EventEra::cases();
+        $phases = EventPhase::cases();
+        $participantRoles = ParticipantRole::cases();
 
-        return view('admin.seerah-events.edit', compact('event', 'articles', 'eventTypes', 'milestones', 'statuses'));
+        return view('admin.seerah-events.edit', compact(
+            'event', 'articles', 'eventTypes', 'milestones', 'statuses', 'eras', 'phases', 'participantRoles'
+        ));
     }
 
     /**
@@ -180,14 +197,11 @@ class SeerahEventController extends Controller
 
         $dto = UpdateSeerahEventData::fromArray($request->validated(), $this->uploadedFeaturedImage($request));
 
-        // Store featured image to disk before passing path to service
-        $storedImagePath = null;
-        if ($dto->featuredImage !== null) {
-            $storedImagePath = $dto->featuredImage->store('seerah-events/featured-images', 'public') ?: null;
-        }
+        // Upload or media-library pick, resolved to a disk path before the service runs
+        $storedImagePath = $this->resolveFeaturedImagePath($request, $dto->featuredImage);
 
         // Row + image path + translations are written in a single transaction
-        $event = $this->seerahEventService->updateEvent($id, $dto, $storedImagePath);
+        $event = $this->seerahEventService->updateEvent($id, $dto, $storedImagePath, $this->storeGallery($request));
 
         // Drop the superseded file only once the new path is committed
         if ($storedImagePath !== null) {
@@ -250,7 +264,7 @@ class SeerahEventController extends Controller
         // Log bulk action
         $this->logger->logBulkAction(
             'bulk_delete',
-            \App\Domain\Seerah\Models\SeerahEvent::class,
+            SeerahEvent::class,
             $ids,
             $request->user()
         );
@@ -276,7 +290,7 @@ class SeerahEventController extends Controller
 
         $this->logger->logBulkAction(
             'bulk_status_'.$validated['status'],
-            \App\Domain\Seerah\Models\SeerahEvent::class,
+            SeerahEvent::class,
             $validated['ids'],
             $request->user()
         );
@@ -322,9 +336,79 @@ class SeerahEventController extends Controller
         return $request->hasFile('featured_image') ? $request->file('featured_image') : null;
     }
 
+    /**
+     * Persist newly uploaded gallery images and return their disk paths,
+     * followed by the paths of any images picked from the media library.
+     *
+     * @return array<int, string>
+     */
+    private function storeGallery(Request $request): array
+    {
+        $paths = [];
+
+        foreach ($request->file('gallery', []) as $file) {
+            if ($file instanceof UploadedFile && ($stored = $file->store('seerah-events/gallery', 'public'))) {
+                $paths[] = $stored;
+            }
+        }
+
+        return [...$paths, ...$this->mediaLibraryPaths($request->input('gallery_ids', []))];
+    }
+
+    /**
+     * Resolve media-library ids to the relative disk paths these columns store.
+     *
+     * The picker hands back only an id; `featured_image` / `gallery` hold a path
+     * that the public views turn into a URL via Storage::url(), so the id has to
+     * be translated here rather than persisted as-is.
+     *
+     * @param  mixed  $ids
+     * @return array<int, string>
+     */
+    private function mediaLibraryPaths($ids): array
+    {
+        $ids = array_filter(array_map('intval', (array) $ids));
+
+        if ($ids === []) {
+            return [];
+        }
+
+        return Media::query()
+            ->whereIn('id', $ids)
+            ->pluck('path')
+            ->filter(fn ($path): bool => is_string($path) && trim($path) !== '')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * The featured image is either a fresh upload or a media-library pick.
+     * An upload wins when both are submitted.
+     */
+    private function resolveFeaturedImagePath(Request $request, ?UploadedFile $upload): ?string
+    {
+        if ($upload !== null) {
+            return $upload->store('seerah-events/featured-images', 'public') ?: null;
+        }
+
+        return $this->mediaLibraryPaths($request->input('featured_image_id'))[0] ?? null;
+    }
+
+    /**
+     * Delete a superseded featured image.
+     *
+     * Only files this module uploaded (under seerah-events/) are removed. Once
+     * the media-library picker was wired in, `featured_image` can hold the path
+     * of a shared library asset that other content also points at — deleting
+     * that on replace would break every other reference to it.
+     */
     private function deleteFeaturedImage(?string $path): void
     {
         if (! $path || Str::startsWith($path, ['http://', 'https://'])) {
+            return;
+        }
+
+        if (! Str::startsWith($path, 'seerah-events/')) {
             return;
         }
 

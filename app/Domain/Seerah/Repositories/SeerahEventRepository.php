@@ -190,12 +190,17 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     public function paginateWithFilters(array $filters, int $perPage = 15): LengthAwarePaginator
     {
         $query = $this->model
-            ->with($this->listRelations())
+            // Milestone + point count drive two columns on the admin list; loading
+            // them here keeps it at a constant query count instead of 2 per row.
+            ->with([...$this->listRelations(), 'milestone:id,slug,icon,color,gradient', 'milestone.translations:id,seerah_milestone_id,locale,title'])
             ->select([
-                'id', 'slug', 'seerah_event_type_id', 'importance', 'status',
-                'hijri_year', 'location', 'is_featured', 'display_order',
+                'id', 'slug', 'seerah_event_type_id', 'seerah_milestone_id', 'importance', 'status',
+                'hijri_year', 'hijri_date', 'location', 'is_featured', 'is_pivotal', 'display_order',
                 'hijri_month', 'hijri_day',
-            ]);
+            ])
+            // After select(), not before: select() replaces the column list and would
+            // drop the count subquery, leaving every row reading 0.
+            ->withCount('timelineItems');
 
         if (! empty($filters['type'])) {
             $query->byType($filters['type']);
@@ -277,7 +282,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     private function exportRelations(): array
     {
         return [
-            'translations:id,seerah_event_id,locale,title,description',
+            'translations:id,seerah_event_id,locale,title,description,content,lessons,sources',
             'type:id,slug',
             'type.translations:id,seerah_event_type_id,locale,name',
             'participants:id,event_id,role',
@@ -326,7 +331,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     {
         return [
             'translations' => fn ($relation) => $relation
-                ->select(['id', 'seerah_event_id', 'locale', 'title', 'description', 'content', 'is_ready'])
+                ->select(['id', 'seerah_event_id', 'locale', 'title', 'description', 'content', 'lessons', 'sources', 'is_ready'])
                 ->where('locale', $locale)
                 ->where('is_ready', true),
             'type:id,slug,icon,color,gradient',
@@ -475,7 +480,9 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     private function detailRelations(): array
     {
         return [
-            'translations:id,seerah_event_id,locale,title,description,content,is_ready',
+            // lessons/sources feed the الدروس والعبر and المصادر والمراجع sections;
+            // omitted from this column list they load as null and both sections vanish.
+            'translations:id,seerah_event_id,locale,title,description,content,lessons,sources,is_ready',
             'type:id,slug,icon,color,gradient',
             'type.translations:id,seerah_event_type_id,locale,name',
             'participants:id,event_id,participant_type,participant_id,role',
@@ -518,9 +525,18 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
             ->groupBy('type_slug')
             ->pluck('count', 'type_slug');
 
+        // One extra aggregate rather than a second pass per status — the admin
+        // list header shows published/draft alongside the per-type breakdown.
+        $byStatus = DB::table('seerah_events')
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status');
+
         return [
             'total' => (int) $rows->sum(),
             'categories' => $rows->all(),
+            'published' => (int) ($byStatus['published'] ?? 0),
+            'draft' => (int) ($byStatus['draft'] ?? 0),
         ];
     }
 }

@@ -17,6 +17,8 @@ use HTMLPurifier_Config;
  *   - Lists:  ol, ul, li (+ data-list="ordered|bullet" — Quill 2 encodes the
  *             list style on <li>, so it must survive sanitization to round-trip)
  *   - Links:  a[href] restricted to http / https / mailto schemes
+ *   - Embeds: div[class|data-module|data-id|dir] + span/cite class, so the
+ *             moduleEmbed cards (verse / hadith / seerah) survive round-trips
  */
 trait SanitizesRichText
 {
@@ -72,16 +74,27 @@ trait SanitizesRichText
         $config = HTMLPurifier_Config::createDefault();
         // No filesystem cache: definitions are tiny and admin writes are rare.
         $config->set('Cache.DefinitionImpl', null);
-        $config->set('HTML.Allowed', 'p,br,blockquote,h2,h3,h4,strong,b,em,i,u,s,a[href],ol,ul,li');
+        $config->set(
+            'HTML.Allowed',
+            'p,br,blockquote,h2,h3,h4,strong,b,em,i,u,s,a[href|target|rel],ol,ul,li,'
+            .'div[class|data-module|data-id|dir],span[class],cite[class]'
+        );
         $config->set('URI.AllowedSchemes', ['http' => true, 'https' => true, 'mailto' => true]);
         $config->set('HTML.DefinitionID', 'admin-content-rich-text');
-        $config->set('HTML.DefinitionRev', 1);
+        $config->set('HTML.DefinitionRev', 2);
 
         $definition = $config->maybeGetRawHTMLDefinition();
 
         if ($definition !== null) {
             // Quill 2 marks bullet vs ordered items via data-list on <li>.
             $definition->addAttribute('li', 'data-list', 'Enum#ordered,bullet');
+
+            // Cross-module embeds (Quran verse / hadith / seerah event) are emitted
+            // by the moduleEmbed blot as <div class="module-embed" data-module data-id>.
+            // Without these attributes surviving purification the card is stripped
+            // back to bare text and the citation link to the source is lost.
+            $definition->addAttribute('div', 'data-module', 'Enum#verse,hadith,sahabi,seerah');
+            $definition->addAttribute('div', 'data-id', 'Text');
         }
 
         self::$richTextPurifier = new HTMLPurifier($config);

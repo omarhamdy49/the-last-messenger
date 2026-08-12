@@ -50,15 +50,30 @@
             :gradient="true"
         />
 
-        @foreach(($stats['categories'] ?? []) as $category => $count)
-            @if($loop->index < 3)
+        {{--
+            The stats row used to print the raw type slug ("battle", "death"), which
+            is neither Arabic nor meaningful to an editor. Map the slug back to the
+            localized type name, and lead with the counts an editor actually acts on.
+        --}}
+        @php
+            $typeNames = $eventTypes->mapWithKeys(fn ($t) => [$t->slug => $t->getTranslation('name', 'ar') ?: $t->slug]);
+            $topCategories = collect($stats['categories'] ?? [])->sortDesc()->take(2);
+        @endphp
+
+        <x-admin.stats-card
+            icon="check-circle-2"
+            title="منشور"
+            :value="$stats['published'] ?? 0"
+            delay="delay-100"
+        />
+
+        @foreach($topCategories as $category => $count)
             <x-admin.stats-card
                 icon="tag"
-                :title="$category"
+                :title="$typeNames[$category] ?? $category"
                 :value="$count"
-                :delay="'delay-' . (($loop->index + 1) * 100)"
+                :delay="'delay-' . (($loop->index + 2) * 100)"
             />
-            @endif
         @endforeach
     </div>
 
@@ -165,12 +180,12 @@
                             <input type="checkbox" @change="toggleAll($event)"
                                    class="w-4 h-4 rounded text-accent border-gray-300 focus:ring-accent">
                         </th>
-                        <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">#</th>
-                        <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">العنوان</th>
+                        <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الحدث</th>
+                        <th class="px-6 py-4 text-start text-sm font-semibold hidden xl:table-cell" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الحقبة</th>
                         <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">النوع</th>
+                        <th class="px-6 py-4 text-center text-sm font-semibold hidden lg:table-cell" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">النقاط</th>
                         <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الأهمية</th>
                         <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.status') }}</th>
-                        <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">التاريخ الهجري</th>
                         <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الإجراءات</th>
                     </tr>
                 </thead>
@@ -181,28 +196,53 @@
                             <input type="checkbox" value="{{ $event->id }}" x-model.number="selected"
                                    class="w-4 h-4 rounded text-accent border-gray-300 focus:ring-accent">
                         </td>
-                        <td class="px-6 py-4 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                            {{ $event->id }}
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="flex flex-wrap items-center gap-3">
-                                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center flex-shrink-0">
+                        {{--
+                            The second line used to print title[en]; with no English
+                            translation the locale fallback returned Arabic, so every
+                            row showed its own title twice. Show the place and date
+                            instead — what an editor scans a chronology by.
+                        --}}
+                        <td class="px-6 py-4 max-w-md">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-gradient-to-br {{ $event->type?->gradient ?: 'from-[#0056b3] to-[#218838]' }} flex items-center justify-center flex-shrink-0">
                                     <i data-lucide="{{ $event->type?->icon ?? 'calendar' }}" class="w-5 h-5 text-white"></i>
                                 </div>
                                 <div class="min-w-0">
-                                    <h4 class="font-semibold truncate" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                                        {{ $event->getTranslation('title', 'ar') }}
-                                    </h4>
-                                    <p class="text-xs truncate" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
-                                        {{ $event->getTranslation('title', 'en') }}
+                                    <div class="flex items-center gap-1.5">
+                                        <h4 class="font-semibold truncate" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                            {{ $event->getTranslation('title', 'ar') }}
+                                        </h4>
+                                        @if($event->is_pivotal)
+                                        <span title="حدث مفصلي" class="inline-flex flex-shrink-0 w-5 h-5 items-center justify-center rounded-full bg-amber-500 text-white">
+                                            <i data-lucide="star" class="w-3 h-3"></i>
+                                            <span class="sr-only">حدث مفصلي</span>
+                                        </span>
+                                        @endif
+                                    </div>
+                                    <p class="text-xs truncate flex items-center gap-2 mt-0.5" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
+                                        @if($event->location)
+                                            <span class="inline-flex items-center gap-1">
+                                                <i data-lucide="map-pin" class="w-3 h-3"></i>{{ $event->location }}
+                                            </span>
+                                        @endif
+                                        @if($event->hijri_date)
+                                            <span class="inline-flex items-center gap-1">
+                                                <i data-lucide="calendar" class="w-3 h-3"></i>{{ $event->hijri_date }}
+                                            </span>
+                                        @endif
                                     </p>
                                 </div>
-                                @if($event->is_featured)
-                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-amber-500 text-white">
-                                    <i data-lucide="star" class="w-3 h-3"></i>
-                                </span>
-                                @endif
                             </div>
+                        </td>
+                        <td class="px-6 py-4 hidden xl:table-cell">
+                            @if($event->milestone)
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold max-w-[16rem] bg-gradient-to-r {{ $event->milestone->gradient ?: 'from-[#0056b3] to-[#218838]' }} text-white">
+                                    <i data-lucide="{{ $event->milestone->icon ?: 'milestone' }}" class="w-3 h-3 flex-shrink-0"></i>
+                                    <span class="truncate">{{ $event->milestone->getTranslation('title', 'ar') }}</span>
+                                </span>
+                            @else
+                                <span class="text-xs" :class="darkMode ? 'text-gray-600' : 'text-gray-400'">بدون حقبة</span>
+                            @endif
                         </td>
                         <td class="px-6 py-4">
                             @if($event->type)
@@ -214,6 +254,18 @@
                             @else
                             <span class="text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">—</span>
                             @endif
+                        </td>
+                        {{-- Timeline points: an event with none renders no "الخط الزمني"
+                             section on the public page, so surface it as a warning. --}}
+                        <td class="px-6 py-4 text-center hidden lg:table-cell">
+                            @php $pointCount = $event->timeline_items_count ?? 0; @endphp
+                            <span class="inline-flex items-center justify-center min-w-[2rem] px-2 py-1 rounded-lg text-xs font-bold tabular-nums
+                                {{ $pointCount === 0
+                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                    : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }}"
+                                  title="{{ $pointCount === 0 ? 'لا توجد نقاط — قسم الخط الزمني لن يظهر' : $pointCount.' نقطة' }}">
+                                {{ $pointCount }}
+                            </span>
                         </td>
                         <td class="px-6 py-4">
                             @if($event->importance)
@@ -232,13 +284,6 @@
                                 <i data-lucide="{{ $event->status->icon() }}" class="w-3 h-3"></i>
                                 {{ $event->status->labelArabic() }}
                             </span>
-                            @endif
-                        </td>
-                        <td class="px-6 py-4 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                            @if($event->hijri_year)
-                                {{ $event->hijri_year }} هـ
-                            @else
-                                -
                             @endif
                         </td>
                         <td class="px-6 py-4">

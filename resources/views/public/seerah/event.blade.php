@@ -18,7 +18,35 @@
 @endpush
 
 @push('head')
+@include('partials.module-embed-styles')
 <style>
+    /* Rich-text body authored in the admin Quill editor. Plain CSS rather than
+       `prose` utilities because @tailwindcss/typography is not a dependency of
+       this project — the prose classes that used to be here rendered nothing. */
+    .seerah-content > *:first-child { margin-top: 0; }
+    .seerah-content > *:last-child { margin-bottom: 0; }
+    .seerah-content p { margin: 0 0 1.25em; }
+    .seerah-content h2 { font-size: 1.6em; font-weight: 700; margin: 1.6em 0 .6em; line-height: 1.35; }
+    .seerah-content h3 { font-size: 1.3em; font-weight: 700; margin: 1.4em 0 .5em; line-height: 1.4; }
+    .seerah-content h4 { font-size: 1.1em; font-weight: 600; margin: 1.2em 0 .4em; }
+    .seerah-content ul,
+    .seerah-content ol { margin: 0 0 1.25em; padding-inline-start: 1.5em; }
+    .seerah-content ul { list-style: disc; }
+    .seerah-content ol { list-style: decimal; }
+    .seerah-content li { margin-bottom: .4em; }
+    .seerah-content blockquote {
+        margin: 1.5em 0;
+        padding: .75em 1.25em;
+        border-inline-start: 4px solid #218838;
+        background: rgba(33, 136, 56, .06);
+        border-radius: 0 .75rem .75rem 0;
+        font-style: italic;
+    }
+    .seerah-content a { color: #0056b3; text-decoration: underline; }
+    .seerah-content a:hover { opacity: .8; }
+    .dark .seerah-content blockquote { background: rgba(33, 136, 56, .12); }
+    .dark .seerah-content a { color: #64CCC5; }
+
     /* Was <style type="text/tailwindcss"> with a v4 @theme{} block — inert under this
        project's Tailwind v3 build (the browser never parsed it), so every rule below
        silently failed. Switched to plain CSS and bound the animation utilities the
@@ -275,6 +303,10 @@
     $hasContent = ! empty($event['content']);
     $hasDescription = ! empty($event['description']);
     $hasCharacters = ! empty($event['characters']);
+    $lessons = collect($event['lessons'] ?? [])->filter(fn ($l) => ! empty($l['title']));
+    $hasLessons = $lessons->isNotEmpty();
+    $sources = collect($event['sources'] ?? [])->filter(fn ($s) => ! empty($s['title']));
+    $hasSources = $sources->isNotEmpty();
     $eventTimeline = collect($event['timeline'] ?? []);
     $hasTimeline = $eventTimeline->isNotEmpty();
     $statistics = collect($event['statistics'] ?? [])->filter(fn ($v) => is_scalar($v))->take(4);
@@ -309,7 +341,9 @@
     },
 
     updateActiveSection() {
-        const sections = ['introduction', 'context', 'timeline', 'lessons', 'sources'];
+        // Must match the section ids actually rendered below. 'sources' and a real
+        // 'lessons' section exist in the UI mock-up but have no data behind them yet.
+        const sections = ['introduction', 'context', 'timeline', 'characters', 'lessons', 'sources'];
         for (const section of sections) {
             const element = document.getElementById(section);
             if (element) {
@@ -374,13 +408,18 @@
     <main class="pb-12">
         <!-- Hero Section with Parallax -->
         <section class="hero-parallax h-[60vh] min-h-[500px] flex items-center justify-center">
-            <img src="{{ $event['featuredImage'] ?? asset('assets/event/event-img.png') }}"
+            {{-- Rendered only when there is an image: public/assets/event/event-img.png
+                 does not exist, so the old fallback 404'd on every event without a
+                 featured image. The hero-parallax gradient stands on its own. --}}
+            @if (! empty($event['featuredImage']))
+            <img src="{{ $event['featuredImage'] }}"
                  alt="{{ $event['title'] }}"
                  width="1920"
                  height="1080"
                  loading="lazy"
                  class="absolute inset-0 w-full h-full object-cover"
                  style="filter: brightness(0.7);" />
+            @endif
 
             <div class="hero-content container mx-auto px-4 sm:px-6 lg:px-8 text-center text-white">
                 <!-- Category Badge -->
@@ -497,11 +536,15 @@
                                 <h2 class="text-3xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ __('seerah.public.section_context') }}</h2>
                             </div>
 
-                            <div class="prose prose-lg max-w-none" :class="darkMode ? 'prose-invert' : ''">
-                                <p class="text-lg leading-relaxed" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                                    {!! nl2br(e($event['content'])) !!}
-                                </p>
-                            </div>
+                            {{-- Authored in the admin Quill editor and purified server-side by
+                                 SanitizesRichText (allowlist: p/br/blockquote/h2-h4/inline/
+                                 lists/a[href]), so it renders as HTML. No <p> wrapper: the
+                                 value already contains block-level tags, and nesting them
+                                 inside <p> makes the browser auto-close it and break layout.
+                                 Styled by .seerah-content — @tailwindcss/typography is not
+                                 installed, so `prose` classes are inert in this project. --}}
+                            <div class="seerah-content text-lg leading-relaxed"
+                                 :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{!! $event['content'] !!}</div>
                         </section>
                     @endif
 
@@ -550,9 +593,57 @@
                         <div class="section-divider"></div>
                     @endif
 
+                    @if ($hasLessons)
+                        <section id="lessons" class="rounded-3xl p-8 md:p-12 shadow-2xl mb-8" :class="darkMode ? 'bg-gray-900' : 'bg-white'">
+                            <div class="flex items-center gap-4 mb-8">
+                                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+                                    <i data-lucide="lightbulb" class="w-6 h-6 text-white"></i>
+                                </div>
+                                <h2 class="text-3xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ __('seerah.public.section_lessons') }}</h2>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                @foreach ($lessons as $lesson)
+                                    <div class="rounded-2xl p-6 border-s-4 border-amber-500"
+                                         :class="darkMode ? 'bg-gray-800/60' : 'bg-amber-50/60'">
+                                        <h3 class="font-bold text-lg mb-2 break-words" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $lesson['title'] }}</h3>
+                                        @if (! empty($lesson['description']))
+                                            <p class="leading-relaxed break-words" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ $lesson['description'] }}</p>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        </section>
+                    @endif
+
+                    @if ($hasSources)
+                        <section id="sources" class="rounded-3xl p-8 md:p-12 shadow-2xl mb-8" :class="darkMode ? 'bg-gray-900' : 'bg-white'">
+                            <div class="flex items-center gap-4 mb-8">
+                                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-slate-500 to-slate-700 flex items-center justify-center">
+                                    <i data-lucide="library" class="w-6 h-6 text-white"></i>
+                                </div>
+                                <h2 class="text-3xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ __('seerah.public.section_sources') }}</h2>
+                            </div>
+                            <ul class="space-y-4">
+                                @foreach ($sources as $source)
+                                    <li class="flex items-start gap-3">
+                                        <i data-lucide="book-marked" class="w-5 h-5 mt-1 flex-shrink-0 text-[#0056b3]"></i>
+                                        <div class="min-w-0">
+                                            <p class="font-semibold break-words" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $source['title'] }}</p>
+                                            @if (! empty($source['author']) || ! empty($source['reference']))
+                                                <p class="text-sm break-words" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                                                    {{ trim(collect([$source['author'] ?? null, $source['reference'] ?? null])->filter()->implode(' — ')) }}
+                                                </p>
+                                            @endif
+                                        </div>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </section>
+                    @endif
+
                     <!-- Key Characters Section -->
                     @if ($hasCharacters)
-                        <section id="lessons" class="rounded-3xl p-8 md:p-12 shadow-2xl mb-8" :class="darkMode ? 'bg-gray-900' : 'bg-white'">
+                        <section id="characters" class="rounded-3xl p-8 md:p-12 shadow-2xl mb-8" :class="darkMode ? 'bg-gray-900' : 'bg-white'">
                             <div class="flex items-center gap-4 mb-8">
                                 <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center">
                                     <i data-lucide="users" class="w-6 h-6 text-white"></i>
@@ -651,9 +742,9 @@
                                 @endif
                                 @if ($hasCharacters)
                                     <li>
-                                        <a href="#lessons"
+                                        <a href="#characters"
                                            class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
-                                           :class="activeSection === 'lessons' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white' : (darkMode ? 'hover:bg-gray-800 text-gray-300' : 'hover:bg-gray-50 text-gray-700')">
+                                           :class="activeSection === 'characters' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white' : (darkMode ? 'hover:bg-gray-800 text-gray-300' : 'hover:bg-gray-50 text-gray-700')">
                                             <i data-lucide="circle-dot" class="w-4 h-4"></i>
                                             {{ __('seerah.public.section_characters') }}
                                         </a>

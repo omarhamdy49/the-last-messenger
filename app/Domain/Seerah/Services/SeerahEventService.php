@@ -7,8 +7,11 @@ namespace App\Domain\Seerah\Services;
 use App\Domain\Seerah\DTOs\CreateSeerahEventData;
 use App\Domain\Seerah\DTOs\UpdateSeerahEventData;
 use App\Domain\Seerah\Enums\EventImportance;
+use App\Domain\Seerah\Enums\ParticipantRole;
 use App\Domain\Seerah\Enums\SeerahEventStatus;
 use App\Domain\Seerah\Models\SeerahEvent;
+use App\Domain\Seerah\Models\SeerahEventTimelineItem;
+use App\Domain\Seerah\Models\SeerahParticipant;
 use App\Domain\Seerah\Repositories\SeerahEventRepositoryInterface;
 use App\Domain\Shared\Services\BaseService;
 use App\Exceptions\Domain\ResourceNotFoundException;
@@ -136,9 +139,9 @@ class SeerahEventService extends BaseService
      *
      * @param  string|null  $featuredImagePath  Path of the already-stored upload, if any
      */
-    public function createEvent(CreateSeerahEventData $data, ?string $featuredImagePath = null): SeerahEvent
+    public function createEvent(CreateSeerahEventData $data, ?string $featuredImagePath = null, array $galleryPaths = []): SeerahEvent
     {
-        $event = DB::transaction(function () use ($data, $featuredImagePath): SeerahEvent {
+        $event = DB::transaction(function () use ($data, $featuredImagePath, $galleryPaths): SeerahEvent {
             /** @var SeerahEvent $event */
             $event = $this->repository->create([
                 'slug' => $data->slug,
@@ -160,6 +163,11 @@ class SeerahEventService extends BaseService
                 'display_order' => $data->displayOrder,
                 'is_featured' => $data->isFeatured,
                 'views_count' => 0,
+                'era' => $data->era,
+                'phase' => $data->phase,
+                'is_pivotal' => $data->isPivotal,
+                'statistics' => $data->statistics !== [] ? $data->statistics : null,
+                'gallery' => $galleryPaths !== [] ? $galleryPaths : null,
             ]);
 
             $event->syncTranslations([
@@ -167,6 +175,11 @@ class SeerahEventService extends BaseService
                 'description' => $data->description,
                 'content' => $data->content,
             ]);
+
+            $this->syncLocaleArrays($event, $data->lessons, $data->sources);
+
+            $this->syncTimelineItems($event, $data->timelineItems);
+            $this->syncParticipants($event, $data->participants);
 
             return $event;
         });
@@ -184,10 +197,10 @@ class SeerahEventService extends BaseService
      *
      * @throws ResourceNotFoundException
      */
-    public function updateEvent(int $id, UpdateSeerahEventData $data, ?string $featuredImagePath = null): SeerahEvent
+    public function updateEvent(int $id, UpdateSeerahEventData $data, ?string $featuredImagePath = null, array $galleryPaths = []): SeerahEvent
     {
-        $event = DB::transaction(function () use ($id, $data, $featuredImagePath): SeerahEvent {
-            $payload = $this->buildUpdatePayload($data, $featuredImagePath);
+        $event = DB::transaction(function () use ($id, $data, $featuredImagePath, $galleryPaths): SeerahEvent {
+            $payload = $this->buildUpdatePayload($data, $featuredImagePath, $galleryPaths);
 
             if (! $this->repository->update($id, $payload)) {
                 throw new ResourceNotFoundException("Timeline event not found: {$id}");
@@ -206,6 +219,18 @@ class SeerahEventService extends BaseService
                 'content' => $data->content,
             ]);
 
+            $this->syncLocaleArrays($event, $data->lessons, $data->sources);
+
+            // Both repeaters are all-or-nothing: the form always posts the full
+            // set, so an absent key means "the form had no repeater" (partial
+            // API update) and must not wipe existing rows.
+            if ($data->hasInput('timeline_items')) {
+                $this->syncTimelineItems($event, $data->timelineItems);
+            }
+            if ($data->hasInput('participants')) {
+                $this->syncParticipants($event, $data->participants);
+            }
+
             return $event;
         });
 
@@ -213,6 +238,57 @@ class SeerahEventService extends BaseService
         $this->repository->clearCache();
 
         return $event;
+    }
+
+    /**
+     * Replace the event's inner timeline with the submitted rows.
+     *
+     * Rebuilt wholesale rather than diffed: the rows carry no stable client-side
+     * identity, and a 4–6 row collection makes diffing pure overhead.
+     *
+     * @param  array<int, array<string, mixed>>  $rows
+     */
+    private function syncTimelineItems(SeerahEvent $event, array $rows): void
+    {
+        $event->timelineItems()->delete();
+
+        foreach (array_values($rows) as $index => $row) {
+            $item = SeerahEventTimelineItem::create([
+                'seerah_event_id' => $event->id,
+                'display_order' => $index + 1,
+            ]);
+
+            $item->syncTranslations([
+                'title' => (array) ($row['title'] ?? []),
+                'description' => (array) ($row['description'] ?? []),
+            ]);
+        }
+    }
+
+    /**
+     * Replace the event's participants with the submitted rows.
+     *
+     * @param  array<int, array<string, mixed>>  $rows
+     */
+    private function syncParticipants(SeerahEvent $event, array $rows): void
+    {
+        $event->participants()->delete();
+
+        foreach ($rows as $row) {
+            $participant = SeerahParticipant::create([
+                'event_id' => $event->id,
+                'participant_type' => 'person',
+                'participant_id' => isset($row['participant_id']) && $row['participant_id'] !== ''
+                    ? (int) $row['participant_id']
+                    : null,
+                'role' => $row['role'] ?? ParticipantRole::OTHER->value,
+            ]);
+
+            $participant->syncTranslations([
+                'name' => (array) ($row['name'] ?? []),
+                'description' => (array) ($row['description'] ?? []),
+            ]);
+        }
     }
 
     /**
@@ -224,9 +300,11 @@ class SeerahEventService extends BaseService
      *
      * @return array<string, mixed>
      */
-    private function buildUpdatePayload(UpdateSeerahEventData $data, ?string $featuredImagePath): array
+    private function buildUpdatePayload(UpdateSeerahEventData $data, ?string $featuredImagePath, array $galleryPaths = []): array
     {
         $candidates = [
+            'era' => $data->era,
+            'phase' => $data->phase,
             'slug' => $data->slug,
             'hijri_date' => $data->hijriDate,
             'hijri_year' => $data->hijriYear,
@@ -259,9 +337,22 @@ class SeerahEventService extends BaseService
             $payload[$column] = $value;
         }
 
-        // Checkbox semantics: an absent `is_featured` means "unchecked",
-        // so it is always written rather than keyed off presence.
+        // Checkbox semantics: an absent `is_featured` / `is_pivotal` means
+        // "unchecked", so both are always written rather than keyed off presence.
         $payload['is_featured'] = $data->isFeatured;
+        $payload['is_pivotal'] = $data->isPivotal;
+
+        if ($data->hasInput('statistics')) {
+            $payload['statistics'] = $data->statistics !== [] ? $data->statistics : null;
+        }
+
+        // The form re-posts the surviving old paths in `existing_gallery`, so
+        // removing an image is a submit without it. Only touch the column when
+        // the form actually carried gallery state.
+        if ($data->hasInput('existing_gallery') || $galleryPaths !== []) {
+            $merged = array_values(array_unique([...$data->existingGallery, ...$galleryPaths]));
+            $payload['gallery'] = $merged !== [] ? $merged : null;
+        }
 
         if ($featuredImagePath !== null) {
             $payload['featured_image'] = $featuredImagePath;
@@ -332,5 +423,28 @@ class SeerahEventService extends BaseService
     public function getIndexStats(): array
     {
         return $this->repository->getIndexStats();
+    }
+
+    /**
+     * Persist lessons + sources onto the Arabic locale row.
+     *
+     * These are JSON arrays, not strings, so they cannot ride through
+     * syncTranslations() — HasLocalizedContent only handles scalar fields and
+     * getTranslation() is typed ?string.
+     *
+     * @param  array<int, array<string, string>>  $lessons
+     * @param  array<int, array<string, string>>  $sources
+     */
+    private function syncLocaleArrays(SeerahEvent $event, array $lessons, array $sources): void
+    {
+        $translation = $event->translations()->firstOrCreate(
+            ['locale' => 'ar'],
+            ['is_ready' => true],
+        );
+
+        $translation->forceFill([
+            'lessons' => $lessons !== [] ? array_values($lessons) : null,
+            'sources' => $sources !== [] ? array_values($sources) : null,
+        ])->save();
     }
 }

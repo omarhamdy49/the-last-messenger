@@ -43,6 +43,8 @@ class SeerahEventTranslation extends Model
         'title',
         'description',
         'content',
+        'lessons',
+        'sources',
         'is_ready',
     ];
 
@@ -54,6 +56,9 @@ class SeerahEventTranslation extends Model
     protected $casts = [
         'seerah_event_id' => 'integer',
         'is_ready' => 'boolean',
+        // [{title, description}] and [{title, author, reference}] per locale.
+        'lessons' => 'array',
+        'sources' => 'array',
     ];
 
     /**

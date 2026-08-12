@@ -34,7 +34,7 @@
 
 @section('content')
 <div x-data="seerahQuest({{ count($journey) }})" x-init="init()"
-     class="min-h-screen overflow-x-clip bg-[#f5f7fc] dark:bg-[#0d1226] text-[#1c2238] dark:text-gray-100">
+     class="min-h-dvh overflow-x-clip bg-[#f5f7fc] dark:bg-[#0d1226] text-[#1c2238] dark:text-gray-100">
 
     {{-- ───────────────────────── HERO ───────────────────────── --}}
     <section class="relative overflow-hidden">

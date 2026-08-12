@@ -63,6 +63,15 @@ final class SeerahCacheKeys
     }
 
     /**
+     * Bumping the milestone version also rolls every journey key, since journey()
+     * embeds that version in its parameters.
+     */
+    public static function invalidateMilestones(): void
+    {
+        VersionedCacheKey::bump(self::MILESTONE_PREFIX);
+    }
+
+    /**
      * @param  array<string, mixed>  $parameters
      */
     private static function eventKey(string $name, array $parameters = []): string

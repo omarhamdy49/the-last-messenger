@@ -228,7 +228,7 @@
         },
     }"
     :class="$store.theme.dark ? 'bg-gray-950' : 'bg-gray-50'"
-    class="min-h-screen font-['Cairo'] transition-colors duration-300"
+    class="min-h-dvh font-['Cairo'] transition-colors duration-300"
 >
 
     {{-- ============================================================ --}}

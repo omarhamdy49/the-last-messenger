@@ -41,7 +41,73 @@ final class CreateSeerahEventData
         public readonly ?UploadedFile $featuredImage,
         public readonly int $displayOrder,
         public readonly bool $isFeatured,
+        public readonly ?string $era,
+        public readonly ?string $phase,
+        public readonly bool $isPivotal,
+        public readonly array $statistics,
+        /** @var array<int, array{title?: string, description?: string}> */
+        public readonly array $lessons,
+        /** @var array<int, array{title?: string, author?: string, reference?: string}> */
+        public readonly array $sources,
+        public readonly array $timelineItems,
+        public readonly array $participants,
     ) {}
+
+    /**
+     * Collapse the repeater rows into the label => value map the public event
+     * page renders, dropping rows where either side was left blank.
+     *
+     * @param  mixed  $rows
+     * @return array<string, string>
+     */
+    public static function normaliseStatistics($rows): array
+    {
+        $stats = [];
+
+        foreach (is_array($rows) ? $rows : [] as $row) {
+            $label = trim((string) ($row['label'] ?? ''));
+            $value = trim((string) ($row['value'] ?? ''));
+
+            if ($label !== '' && $value !== '') {
+                $stats[$label] = $value;
+            }
+        }
+
+        return $stats;
+    }
+
+    /**
+     * Drop repeater rows the editor left entirely blank — the browser submits an
+     * empty template row whenever one is added and then not filled in.
+     *
+     * @param  mixed  $rows
+     * @return array<int, array<string, mixed>>
+     */
+    public static function rejectBlankRows($rows, string $requiredField = 'name'): array
+    {
+        return array_values(array_filter(
+            is_array($rows) ? $rows : [],
+            static fn ($row): bool => is_array($row)
+                && trim((string) ($row[$requiredField]['ar'] ?? '')) !== '',
+        ));
+    }
+
+    /**
+     * Same as rejectBlankRows() but for repeaters whose fields are plain strings
+     * rather than locale maps (lessons / sources), where the required value lives
+     * at $row['title'], not $row['title']['ar'].
+     *
+     * @param  mixed  $rows
+     * @return array<int, array<string, string>>
+     */
+    public static function rejectBlankFlatRows($rows, string $requiredField = 'title'): array
+    {
+        return array_values(array_filter(
+            is_array($rows) ? $rows : [],
+            static fn ($row): bool => is_array($row)
+                && trim((string) ($row[$requiredField] ?? '')) !== '',
+        ));
+    }
 
     /**
      * Construct a CreateSeerahEventData instance from validated request data.
@@ -74,6 +140,14 @@ final class CreateSeerahEventData
             displayOrder: (int) ($validated['display_order'] ?? 0),
             // Unchecked checkboxes are simply absent from the payload.
             isFeatured: filter_var($validated['is_featured'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            era: $validated['era'] ?? null,
+            phase: $validated['phase'] ?? null,
+            isPivotal: filter_var($validated['is_pivotal'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            statistics: self::normaliseStatistics($validated['statistics'] ?? []),
+            lessons: self::rejectBlankFlatRows($validated['lessons'] ?? []),
+            sources: self::rejectBlankFlatRows($validated['sources'] ?? []),
+            timelineItems: self::rejectBlankRows($validated['timeline_items'] ?? [], 'title'),
+            participants: self::rejectBlankRows($validated['participants'] ?? [], 'name'),
         );
     }
 }

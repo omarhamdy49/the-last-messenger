@@ -7,7 +7,7 @@
 @php $isRtl = in_array(app()->getLocale(), ['ar', 'ur'], true); @endphp
 
 <div x-data="liveChannelPage()"
-     class="min-h-screen font-['Cairo'] bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+     class="min-h-dvh font-['Cairo'] bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
 
     <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
 

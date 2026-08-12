@@ -7,7 +7,7 @@
 @php $isRtl = in_array(app()->getLocale(), ['ar', 'ur'], true); @endphp
 
 <div x-data="mediaHub()"
-     class="min-h-screen font-['Cairo'] bg-gray-50 dark:bg-gray-950 transition-colors duration-300 overflow-x-clip">
+     class="min-h-dvh font-['Cairo'] bg-gray-50 dark:bg-gray-950 transition-colors duration-300 overflow-x-clip">
 
     @php $hasAnyContent = ! empty($heroSlides) || ! empty($featured) || ! empty($trending) || ! empty($popular) || ! empty($liveChannels) || ! empty($categoryRows); @endphp
 

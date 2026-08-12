@@ -95,7 +95,7 @@
     $totalMinutes = array_sum(array_column($series, 'totalReadTime'));
 @endphp
 
-<div class="min-h-screen">
+<div class="min-h-dvh">
 
     {{-- ============================================================ --}}
     {{-- HERO — full-bleed brand gradient, matching the detail banner --}}

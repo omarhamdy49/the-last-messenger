@@ -307,7 +307,7 @@
 <div
     x-data="genealogyPage({{ $peopleJson }}, {{ $groupIdsJson }})"
     x-init="init()"
-    class="min-h-screen">
+    class="min-h-dvh">
 
     {{-- ═══════════════════ HERO ═══════════════════
          Deliberately shallow: one breadcrumb row, one headline row with the

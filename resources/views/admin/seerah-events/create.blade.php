@@ -103,12 +103,15 @@
                         <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                             المحتوى التفصيلي ({{ strtoupper($lang) }})
                         </label>
-                        <textarea name="content[{{ $lang }}]"
-                                  rows="6"
-                                  class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all resize-none"
-                                  :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                                  dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                                  placeholder="أدخل المحتوى التفصيلي...">{{ old("content.{$lang}") }}</textarea>
+                        <x-admin.form.wysiwyg
+                            :name="'content['.$lang.']'"
+                            :value="old('content.'.$lang, '')"
+                            :locale="$lang"
+                            height="360px"
+                            toolbar="full"
+                            :modules="true"
+                            placeholder="أدخل المحتوى التفصيلي..."
+                        />
                         @error("content.{$lang}")
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
@@ -267,6 +270,8 @@
                     </div>
                 </div>
             </div>
+
+            @include('admin.seerah-events._advanced', ['event' => null])
         </div>
 
         <!-- Sidebar -->
@@ -442,11 +447,11 @@
 
                 <x-admin.image-upload
                     name="featured_image"
+                    idName="featured_image_id"
                     aspectClass="aspect-video"
                     placeholderIcon="calendar"
                     maxSize="10MB"
                     formats="JPG, PNG, WebP"
-                    :mediaLibrary="false"
                 />
             </div>
 
