@@ -378,5 +378,16 @@ return [
         'finish_label' => 'اكتملت الرحلة',
         'finish_hint' => 'من المولد الشريف إلى الرفيق الأعلى',
         'you_are_here' => 'أنت هنا',
+
+        // Breadcrumb + milestone navigator modal
+        'navigator_open' => 'تصفّح المحطات',
+        'navigator_title' => 'التنقل في رحلة السيرة',
+        'navigator_hint' => 'اختر حقبة ثم انتقل إلى أي محطة مباشرة',
+
+        // Viewport lazy loading
+        'loading_events' => 'جارٍ تحميل المحطات…',
+        'load_failed' => 'تعذّر تحميل المحطات',
+        'retry' => 'إعادة المحاولة',
+        'articles_end' => 'وصلت إلى نهاية الرحلة',
     ],
 ];

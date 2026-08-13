@@ -42,6 +42,26 @@ final class SeerahCacheKeys
         ]);
     }
 
+    /**
+     * Lazily-fetched events of one journey milestone (public JSON endpoint).
+     */
+    public static function journeyMilestoneEvents(string $slug, string $locale): string
+    {
+        return self::eventKey('journeyMilestoneEvents', [
+            'slug' => $slug,
+            'locale' => $locale,
+            'milestoneVersion' => VersionedCacheKey::version(self::MILESTONE_PREFIX),
+        ]);
+    }
+
+    /**
+     * Lazily-fetched page of the flat "articles" feed (public JSON endpoint).
+     */
+    public static function articlesFeed(string $locale, int $page): string
+    {
+        return self::eventKey('articlesFeed', compact('locale', 'page'));
+    }
+
     public static function events(string $locale, string $search, string $category, int $page): string
     {
         return self::eventKey('publicEvents', compact('locale', 'search', 'category', 'page'));

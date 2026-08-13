@@ -13,7 +13,9 @@ use App\Domain\Seerah\Services\SeerahEventTypeService;
 use App\Domain\Seerah\Services\SeerahMilestoneService;
 use App\Http\Controllers\Controller;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -29,58 +31,131 @@ final class SeerahController extends Controller
 
     /**
      * Seerah hero-journey — milestones (الحِقَب) as story chapters along a spine
-     * timeline, plus a flat "articles" mode. Fully server-rendered; Alpine handles
-     * the mode toggle and milestone scroll-spy navigation.
+     * timeline, plus a flat "articles" mode. Only the milestone shells are
+     * server-rendered; each milestone's events (and the articles feed) are
+     * lazy-loaded from the JSON endpoints below when they scroll into view.
      */
     public function index(): View
     {
-        $locale = app()->getLocale();
+        $payload = $this->cachedJourneyPayload(app()->getLocale());
 
-        $payload = Cache::remember(
+        return view('public.seerah.index', [
+            'journey' => $payload['journey'],
+            'stats' => $payload['stats'],
+        ]);
+    }
+
+    /**
+     * Journey shells + stats, cached per locale. Shared by the index page and
+     * the event pages' milestone navigator modal.
+     *
+     * @return array{journey: array<int, array<string, mixed>>, stats: array<string, mixed>}
+     */
+    private function cachedJourneyPayload(string $locale): array
+    {
+        return Cache::remember(
             SeerahCacheKeys::journey($locale),
             1800,
             function () use ($locale): array {
                 try {
                     $journey = $this->buildJourney($locale);
 
-                    // Flat chronological list (all published events) for "articles" mode.
-                    $paginator = $this->seerahEventService->getAllEvents(perPage: 500);
-                    $articles = collect($paginator->items())
-                        ->map(fn (SeerahEvent $event) => $this->mapTimelineEvent($event, $locale))
-                        ->values()
-                        ->all();
-
                     return [
                         'journey' => $journey,
-                        'articles' => $articles,
                         'stats' => [
                             'milestones' => count($journey),
                             // Every published event, not just those grouped under an
-                            // era. Summing the journey's per-era counts undercounted
-                            // whenever events were unassigned — the hero advertised 44
-                            // above a page that listed 97.
-                            'events' => count($articles),
-                            'articles' => count($articles),
+                            // era — unassigned events still count.
+                            'events' => SeerahEvent::query()->published()->count(),
                             'span' => $this->journeySpan($journey, $locale),
                         ],
                     ];
                 } catch (Throwable $e) {
                     report($e);
 
-                    return ['journey' => [], 'articles' => [], 'stats' => ['milestones' => 0, 'events' => 0, 'articles' => 0, 'span' => '']];
+                    return ['journey' => [], 'stats' => ['milestones' => 0, 'events' => 0, 'span' => '']];
+                }
+            },
+        );
+    }
+
+    /**
+     * Events of a single journey milestone — JSON for viewport lazy loading.
+     */
+    public function journeyEvents(string $slug): JsonResponse
+    {
+        $locale = app()->getLocale();
+
+        $events = Cache::remember(
+            SeerahCacheKeys::journeyMilestoneEvents($slug, $locale),
+            1800,
+            function () use ($slug, $locale): ?array {
+                try {
+                    /** @var SeerahMilestone|null $milestone */
+                    $milestone = $this->milestoneService->getJourney()->firstWhere('slug', $slug);
+
+                    if ($milestone === null) {
+                        return null;
+                    }
+
+                    return $milestone->events
+                        ->map(fn (SeerahEvent $event) => $this->mapTimelineEvent($event, $locale))
+                        ->values()
+                        ->all();
+                } catch (Throwable $e) {
+                    report($e);
+
+                    return null;
                 }
             },
         );
 
-        return view('public.seerah.index', [
-            'journey' => $payload['journey'],
-            'articles' => $payload['articles'],
-            'stats' => $payload['stats'],
-        ]);
+        if ($events === null) {
+            abort(404);
+        }
+
+        return response()->json(['events' => $events]);
     }
 
     /**
-     * Build the milestone journey: each active milestone with its published events.
+     * Flat chronological events feed — JSON pages for the "articles" mode
+     * infinite scroll.
+     */
+    public function articlesFeed(Request $request): JsonResponse
+    {
+        $locale = app()->getLocale();
+        $page = max(1, (int) $request->query('page', 1));
+
+        $payload = Cache::remember(
+            SeerahCacheKeys::articlesFeed($locale, $page),
+            900,
+            function () use ($locale): array {
+                try {
+                    $paginator = $this->seerahEventService->getAllEvents(perPage: 24);
+
+                    return [
+                        'items' => collect($paginator->items())
+                            ->map(fn (SeerahEvent $event) => $this->mapTimelineEvent($event, $locale))
+                            ->values()
+                            ->all(),
+                        'page' => $paginator->currentPage(),
+                        'lastPage' => $paginator->lastPage(),
+                        'total' => $paginator->total(),
+                    ];
+                } catch (Throwable $e) {
+                    report($e);
+
+                    return ['items' => [], 'page' => 1, 'lastPage' => 1, 'total' => 0];
+                }
+            },
+        );
+
+        return response()->json($payload);
+    }
+
+    /**
+     * Build the milestone journey shells: metadata + event counts only. The
+     * events themselves are served by journeyEvents() on demand.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -88,11 +163,6 @@ final class SeerahController extends Controller
     {
         return $this->milestoneService->getJourney()
             ->map(function (SeerahMilestone $milestone) use ($locale): array {
-                $events = $milestone->events
-                    ->map(fn (SeerahEvent $event) => $this->mapTimelineEvent($event, $locale))
-                    ->values()
-                    ->all();
-
                 return [
                     'slug' => $milestone->slug,
                     'order' => $milestone->order_index,
@@ -104,8 +174,8 @@ final class SeerahController extends Controller
                     'gradient' => $milestone->gradient ?: 'from-[#0056b3] to-[#218838]',
                     'hijriRange' => $milestone->hijriRangeLabel(),
                     'gregorianRange' => $milestone->gregorianRangeLabel(),
-                    'events' => $events,
-                    'eventCount' => count($events),
+                    'eventCount' => $milestone->events->count(),
+                    'eventsUrl' => route('public.seerah.journey.events', $milestone->slug),
                 ];
             })
             ->filter(fn (array $milestone): bool => $milestone['eventCount'] > 0)
@@ -182,7 +252,7 @@ final class SeerahController extends Controller
         });
 
         // Rebuild the paginator instance for the view component (cache stores plain arrays only).
-        $events = new \Illuminate\Pagination\LengthAwarePaginator(
+        $events = new LengthAwarePaginator(
             items: $payload['items'],
             total: $payload['total'],
             perPage: $perPage,
@@ -205,15 +275,15 @@ final class SeerahController extends Controller
     }
 
     /**
-     * Single Seerah event — article-style detail page (default) or the
-     * immersive timeline style when requested via ?view=timeline.
+     * Single Seerah event — immersive timeline style by default, or the
+     * article style when requested via ?view=article.
      */
     public function event(Request $request, string $slug): View
     {
         $locale = app()->getLocale();
 
-        // Whitelist the style variant; anything else falls back to the article style.
-        $viewStyle = $request->query('view') === 'timeline' ? 'timeline' : 'article';
+        // Whitelist the style variant; anything else falls back to the timeline style.
+        $viewStyle = $request->query('view') === 'article' ? 'article' : 'timeline';
 
         $payload = Cache::remember(
             SeerahCacheKeys::event($slug, $locale),
@@ -256,6 +326,8 @@ final class SeerahController extends Controller
             'related' => $related,
             'prev' => $payload['prev'],
             'next' => $payload['next'],
+            // Milestone shells for the breadcrumb navigator modal.
+            'journeyNav' => $this->cachedJourneyPayload($locale)['journey'],
         ]);
     }
 
@@ -280,12 +352,27 @@ final class SeerahController extends Controller
             'phase' => $phase?->value,
             'hijriDate' => $event->hijri_date,
             'hijriYear' => $event->hijri_year,
+            'hijriLabel' => $this->hijriYearLabel($event->hijri_year),
             'gregorianYear' => $event->gregorian_year,
             'location' => $event->location,
             'isPivotal' => (bool) $event->is_pivotal,
             'isFeatured' => (bool) $event->is_featured,
             'url' => route('public.seerah.event', $event->slug),
         ];
+    }
+
+    /**
+     * "3 هـ" / "13 ق.هـ" style label; negative years are before the Hijra.
+     */
+    private function hijriYearLabel(?int $year): ?string
+    {
+        if ($year === null) {
+            return null;
+        }
+
+        return $year < 0
+            ? abs($year).' '.__('seerah.public.before_hijra_suffix')
+            : $year.' '.__('seerah.public.hijri_suffix');
     }
 
     /**
@@ -334,11 +421,18 @@ final class SeerahController extends Controller
             ], '', '&', PHP_QUERY_RFC3986);
         }
 
+        $milestone = $event->milestone;
+
         return [
             'slug' => $event->slug,
             'title' => $event->getTranslation('title', $locale) ?? __('seerah.public.untitled_event'),
             'description' => $event->getTranslation('description', $locale),
             'content' => $event->getTranslation('content', $locale),
+            'milestone' => $milestone ? [
+                'slug' => $milestone->slug,
+                'title' => $milestone->getTranslation('title', $locale) ?? '',
+                'url' => route('public.seerah').'#milestone-'.$milestone->slug,
+            ] : null,
             'type' => $type?->slug,
             'typeLabel' => $type?->getTranslation('name', $locale) ?? '',
             'icon' => $type?->icon ?? 'circle',

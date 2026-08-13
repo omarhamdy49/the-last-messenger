@@ -221,16 +221,26 @@
 <div class="rounded-2xl border p-6"
      :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'"
      x-data="{ rows: {{ Js::from(array_values($oldParticipants ?? [])) }} }">
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h2 class="text-xl font-bold flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
             <i data-lucide="users" class="w-5 h-5 text-accent"></i>
-            الشخصيات
+            الشخصيات والصحابة
         </h2>
-        <button type="button" @click="rows.push({ name: { ar: '' }, description: { ar: '' }, role: 'other' })"
-                class="px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white flex items-center gap-2">
-            <i data-lucide="plus" class="w-4 h-4"></i> إضافة شخصية
-        </button>
+        <div class="flex items-center gap-2">
+            <button type="button" @click="rows.push({ name: { ar: '' }, description: { ar: '' }, role: 'companion' })"
+                    class="px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-[#218838] to-[#64CCC5] text-white flex items-center gap-2">
+                <i data-lucide="user-plus" class="w-4 h-4"></i> إضافة صحابي
+            </button>
+            <button type="button" @click="rows.push({ name: { ar: '' }, description: { ar: '' }, role: 'other' })"
+                    class="px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white flex items-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i> إضافة شخصية
+            </button>
+        </div>
     </div>
+
+    <p class="mb-4 text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
+        أسماء حرة تُكتب كما تريد ظهورها في صفحة الحدث — غير مرتبطة بوحدة الصحابة (المسلمين) ولا تنشئ ملفات شخصية.
+    </p>
 
     <div class="space-y-4">
         <template x-for="(row, index) in rows" :key="index">

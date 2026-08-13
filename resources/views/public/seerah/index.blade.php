@@ -33,7 +33,16 @@
 @endpush
 
 @section('content')
-<div x-data="seerahQuest({{ count($journey) }})" x-init="init()"
+<div x-data="seerahQuest({
+        milestones: {{ Js::from(collect($journey)->map(fn ($m) => [
+            'slug' => $m['slug'],
+            'anchor' => $m['anchor'],
+            'title' => $m['title'],
+            'range' => $m['hijriRange'],
+            'url' => $m['eventsUrl'],
+        ])->values()->all()) }},
+        articlesUrl: {{ Js::from(route('public.seerah.articles.feed')) }},
+     })" x-init="init()"
      class="min-h-dvh overflow-x-clip bg-[#f5f7fc] dark:bg-[#0d1226] text-[#1c2238] dark:text-gray-100">
 
     {{-- ───────────────────────── HERO ───────────────────────── --}}
@@ -89,11 +98,10 @@
         </div>
     </section>
 
-    {{-- The journey groups events under eras. When no eras are configured the
-         journey is empty, but the events themselves still exist and must stay
-         reachable — the articles grid below lists every published event. Only
-         a genuinely empty corpus gets the empty state. --}}
-    @if(empty($journey) && empty($articles))
+    {{-- The journey groups events under eras. Events outside any era stay
+         reachable through the articles feed. Only a genuinely empty corpus
+         gets the empty state. --}}
+    @if(empty($journey) && $stats['events'] === 0)
         <div class="max-w-2xl mx-auto px-4 py-20 text-center">
             <i data-lucide="milestone" class="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600"></i>
             <p class="text-lg text-gray-500 dark:text-gray-400">{{ __('seerah.public.empty_journey') }}</p>
@@ -198,26 +206,33 @@
                         <h2 class="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white leading-snug">{{ $m['title'] }}</h2>
                         @if($m['subtitle'])<p class="mt-1.5 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{{ $m['subtitle'] }}</p>@endif
 
-                        {{-- events --}}
-                        <div class="mt-4 grid sm:grid-cols-2 gap-2.5">
-                            @foreach($m['events'] as $ev)
-                            @php($hijri = $ev['hijriYear'] !== null ? ($ev['hijriYear'] < 0 ? abs($ev['hijriYear']).' '.__('seerah.public.before_hijra_suffix') : $ev['hijriYear'].' '.__('seerah.public.hijri_suffix')) : null)
-                            <a href="{{ $ev['url'] }}"
-                               class="group flex items-center gap-3 rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50/70 dark:bg-white/[.03] p-3 hover:bg-white dark:hover:bg-white/[.07] hover:border-[#64CCC5]/50 hover:shadow-sm transition-all">
-                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br {{ $ev['gradient'] }} flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                                    <i data-lucide="{{ $ev['icon'] }}" class="w-5 h-5 text-white"></i>
+                        {{-- events — lazy-loaded when the era scrolls into view, one station per row --}}
+                        <div class="mt-4 grid gap-2.5" data-events-grid></div>
+
+                        {{-- skeleton placeholders (reserve space, avoid CLS) --}}
+                        <div x-show="sections['{{ $m['slug'] }}'] !== 'loaded' && sections['{{ $m['slug'] }}'] !== 'error'"
+                             class="mt-4 grid gap-2.5" aria-hidden="true">
+                            @for($s = 0; $s < min($m['eventCount'], 4); $s++)
+                            <div class="flex items-center gap-3 rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50/70 dark:bg-white/[.03] p-3 animate-pulse">
+                                <div class="w-10 h-10 rounded-xl bg-gray-200 dark:bg-white/10 flex-shrink-0"></div>
+                                <div class="flex-1 space-y-2">
+                                    <div class="h-3.5 rounded bg-gray-200 dark:bg-white/10 w-3/4"></div>
+                                    <div class="h-2.5 rounded bg-gray-200 dark:bg-white/10 w-1/2"></div>
                                 </div>
-                                <div class="flex-1 min-w-0">
-                                    <h3 class="font-bold text-[14px] text-gray-900 dark:text-white leading-snug line-clamp-1 group-hover:text-[#0056b3] dark:group-hover:text-[#64CCC5] transition-colors">{{ $ev['title'] }}</h3>
-                                    <div class="mt-0.5 flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500 truncate">
-                                        <span class="font-semibold text-[#0056b3]/70 dark:text-[#64CCC5]/80">{{ $ev['typeLabel'] }}</span>
-                                        @if($hijri)<span>· {{ $hijri }}</span>@endif
-                                        @if($ev['location'])<span class="truncate">· {{ $ev['location'] }}</span>@endif
-                                    </div>
-                                </div>
-                                <i data-lucide="chevron-left" class="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-[#64CCC5] ltr:rotate-180 flex-shrink-0 transition-colors"></i>
-                            </a>
-                            @endforeach
+                            </div>
+                            @endfor
+                        </div>
+
+                        {{-- load failure + retry --}}
+                        <div x-show="sections['{{ $m['slug'] }}'] === 'error'" x-cloak
+                             class="mt-4 rounded-2xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                            <p class="text-sm font-semibold text-red-700 dark:text-red-300 flex items-center gap-2">
+                                <i data-lucide="wifi-off" class="w-4 h-4 flex-shrink-0"></i>{{ __('seerah.public.load_failed') }}
+                            </p>
+                            <button type="button" @click="loadMilestone('{{ $m['slug'] }}', true)"
+                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow hover:opacity-90 transition-opacity">
+                                <i data-lucide="rotate-cw" class="w-4 h-4"></i>{{ __('seerah.public.retry') }}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -235,33 +250,46 @@
         </div>
     </div>
 
-    {{-- ───────────────────── ARTICLES MODE ───────────────────── --}}
+    {{-- ───────────────────── ARTICLES MODE (lazy infinite feed) ───────────────────── --}}
     <div x-show="mode==='articles'" x-cloak class="max-w-6xl mx-auto px-4 sm:px-6 py-9 sm:py-12">
         <div class="flex items-center gap-2 mb-6 text-sm text-gray-500 dark:text-gray-400">
             <i data-lucide="clock" class="w-4 h-4"></i>{{ __('seerah.public.articles_mode_hint') }}
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-            @foreach($articles as $ev)
-            @php($hijriA = $ev['hijriYear'] !== null ? ($ev['hijriYear'] < 0 ? abs($ev['hijriYear']).' '.__('seerah.public.before_hijra_suffix') : $ev['hijriYear'].' '.__('seerah.public.hijri_suffix')) : null)
-            <a href="{{ $ev['url'] }}" class="group flex flex-col rounded-2xl overflow-hidden border border-gray-200 dark:border-white/10 bg-white dark:bg-[#161d38] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
-                <div class="h-1.5 bg-gradient-to-r {{ $ev['gradient'] }}"></div>
-                <div class="p-4 sm:p-5 flex flex-col flex-1">
-                    <div class="flex items-center gap-2 mb-2 flex-wrap">
-                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold text-white bg-gradient-to-r {{ $ev['gradient'] }}">
-                            <i data-lucide="{{ $ev['icon'] }}" class="w-3 h-3"></i>{{ $ev['typeLabel'] }}
-                        </span>
-                        @if($hijriA)<span class="text-[11px] font-bold text-gray-400 dark:text-gray-500 tabular-nums">{{ $hijriA }}</span>@endif
-                    </div>
-                    <h3 class="font-bold text-base text-gray-900 dark:text-white group-hover:text-[#0056b3] dark:group-hover:text-[#64CCC5] transition-colors leading-snug line-clamp-2">{{ $ev['title'] }}</h3>
-                    @if($ev['description'])<p class="mt-1.5 text-sm text-gray-600 dark:text-gray-300 leading-relaxed line-clamp-3 flex-1">{{ $ev['description'] }}</p>@endif
-                    <div class="mt-3 pt-3 border-t border-gray-100 dark:border-white/5 flex items-center justify-between gap-2 text-xs">
-                        @if($ev['location'])<span class="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400 truncate"><i data-lucide="map-pin" class="w-3 h-3 flex-shrink-0"></i>{{ $ev['location'] }}</span>@else<span></span>@endif
-                        <span class="inline-flex items-center gap-1 text-[#0056b3] dark:text-[#64CCC5] font-semibold group-hover:gap-2 transition-all flex-shrink-0">{{ __('seerah.public.read_more') }}<i data-lucide="arrow-left" class="w-3.5 h-3.5 ltr:rotate-180"></i></span>
-                    </div>
+        <div id="articles-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5"></div>
+
+        {{-- feed status: skeletons / error+retry / end --}}
+        <div x-show="articles.status === 'loading' || articles.status === 'idle'"
+             class="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5" aria-hidden="true">
+            @for($s = 0; $s < 6; $s++)
+            <div class="rounded-2xl overflow-hidden border border-gray-200 dark:border-white/10 bg-white dark:bg-[#161d38] animate-pulse">
+                <div class="h-1.5 bg-gray-200 dark:bg-white/10"></div>
+                <div class="p-5 space-y-3">
+                    <div class="h-5 rounded-full bg-gray-200 dark:bg-white/10 w-24"></div>
+                    <div class="h-4 rounded bg-gray-200 dark:bg-white/10 w-5/6"></div>
+                    <div class="h-3 rounded bg-gray-200 dark:bg-white/10 w-full"></div>
+                    <div class="h-3 rounded bg-gray-200 dark:bg-white/10 w-2/3"></div>
                 </div>
-            </a>
-            @endforeach
+            </div>
+            @endfor
         </div>
+
+        <div x-show="articles.status === 'error'" x-cloak
+             class="mt-6 rounded-2xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 p-5 flex flex-col sm:flex-row items-center justify-center gap-4 text-center">
+            <p class="text-sm font-semibold text-red-700 dark:text-red-300 flex items-center gap-2">
+                <i data-lucide="wifi-off" class="w-4 h-4 flex-shrink-0"></i>{{ __('seerah.public.load_failed') }}
+            </p>
+            <button type="button" @click="loadArticles(true)"
+                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow hover:opacity-90 transition-opacity">
+                <i data-lucide="rotate-cw" class="w-4 h-4"></i>{{ __('seerah.public.retry') }}
+            </button>
+        </div>
+
+        <p x-show="articles.done" x-cloak class="mt-8 text-center text-sm font-semibold text-gray-400 dark:text-gray-500 flex items-center justify-center gap-2">
+            <i data-lucide="check-circle-2" class="w-4 h-4"></i>{{ __('seerah.public.articles_end') }}
+        </p>
+
+        {{-- sentinel: when visible, the next page loads --}}
+        <div id="articles-sentinel" class="h-px"></div>
     </div>
 
     {{-- CTA --}}
@@ -277,25 +305,65 @@
     </section>
     @endif
 </div>
+
+{{-- Client-side card templates for the lazy feeds. Data is injected via
+     textContent (never innerHTML) so titles/locations stay XSS-safe. --}}
+<template id="seerah-ev-tpl">
+    <a class="group flex items-center gap-3 rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50/70 dark:bg-white/[.03] p-3 hover:bg-white dark:hover:bg-white/[.07] hover:border-[#64CCC5]/50 hover:shadow-sm transition-all">
+        <div data-tpl="iconWrap" class="w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+            <i data-tpl="icon" class="w-5 h-5 text-white"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+            <h3 data-tpl="title" class="font-bold text-[15px] text-gray-900 dark:text-white leading-snug line-clamp-2 group-hover:text-[#0056b3] dark:group-hover:text-[#64CCC5] transition-colors"></h3>
+            <div class="mt-1 flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500 min-w-0">
+                <span data-tpl="type" class="font-semibold text-[#0056b3]/70 dark:text-[#64CCC5]/80 flex-shrink-0"></span>
+                <span data-tpl="hijri" class="flex-shrink-0 tabular-nums"></span>
+                <span data-tpl="location" class="truncate"></span>
+            </div>
+        </div>
+        <i data-lucide="chevron-left" class="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-[#64CCC5] ltr:rotate-180 flex-shrink-0 transition-colors"></i>
+    </a>
+</template>
+
+<template id="seerah-art-tpl">
+    <a class="group flex flex-col rounded-2xl overflow-hidden border border-gray-200 dark:border-white/10 bg-white dark:bg-[#161d38] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
+        <div data-tpl="bar" class="h-1.5 bg-gradient-to-r"></div>
+        <div class="p-4 sm:p-5 flex flex-col flex-1">
+            <div class="flex items-center gap-2 mb-2 flex-wrap">
+                <span data-tpl="badge" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold text-white bg-gradient-to-r">
+                    <i data-tpl="icon" class="w-3 h-3"></i><span data-tpl="type"></span>
+                </span>
+                <span data-tpl="hijri" class="text-[11px] font-bold text-gray-400 dark:text-gray-500 tabular-nums"></span>
+            </div>
+            <h3 data-tpl="title" class="font-bold text-base text-gray-900 dark:text-white group-hover:text-[#0056b3] dark:group-hover:text-[#64CCC5] transition-colors leading-snug line-clamp-2"></h3>
+            <p data-tpl="description" class="mt-1.5 text-sm text-gray-600 dark:text-gray-300 leading-relaxed line-clamp-3 flex-1"></p>
+            <div class="mt-3 pt-3 border-t border-gray-100 dark:border-white/5 flex items-center justify-between gap-2 text-xs">
+                <span data-tpl="locationWrap" class="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400 truncate"><i data-lucide="map-pin" class="w-3 h-3 flex-shrink-0"></i><span data-tpl="location" class="truncate"></span></span>
+                <span class="inline-flex items-center gap-1 text-[#0056b3] dark:text-[#64CCC5] font-semibold group-hover:gap-2 transition-all flex-shrink-0">{{ __('seerah.public.read_more') }}<i data-lucide="arrow-left" class="w-3.5 h-3.5 ltr:rotate-180"></i></span>
+            </div>
+        </div>
+    </a>
+</template>
 @endsection
 
 @push('scripts')
 <script>
-    function seerahQuest(total) {
+    function seerahQuest(config) {
         return {
             // With no eras there is nothing for journey mode to draw, so start
             // in articles mode rather than opening on a blank tab.
-            mode: (total === 0 || localStorage.getItem('seerahMode') === 'articles') ? 'articles' : 'journey',
-            total: total,
+            mode: (config.milestones.length === 0 || localStorage.getItem('seerahMode') === 'articles') ? 'articles' : 'journey',
+            total: config.milestones.length,
             currentIndex: 0,
-            currentTitle: @json($journey[0]['title'] ?? ''),
-            currentRange: @json($journey[0]['hijriRange'] ?? ''),
-            _titles: @json(array_column($journey, 'title')),
-            _ranges: @json(array_column($journey, 'hijriRange')),
+            currentTitle: config.milestones[0]?.title ?? '',
+            currentRange: config.milestones[0]?.range ?? '',
+            // slug -> 'idle' | 'loading' | 'loaded' | 'error'
+            sections: Object.fromEntries(config.milestones.map(m => [m.slug, 'idle'])),
+            articles: { status: 'idle', page: 0, lastPage: null, done: false },
+            _milestones: config.milestones,
             _reduce: false,
+            _artObserver: null,
 
-            progress() { return this.total > 1 ? Math.round((this.currentIndex / (this.total - 1)) * 100) : 100; },
-            // Fill the vertical spine down to the centre of the current era node.
             spineFill() { return this.total > 0 ? Math.min(100, Math.round(((this.currentIndex + 0.5) / this.total) * 100)) : 0; },
 
             init() {
@@ -316,12 +384,114 @@
                         if (en.isIntersecting) {
                             const idx = parseInt(en.target.dataset.index, 10);
                             this.currentIndex = idx;
-                            this.currentTitle = this._titles[idx] || '';
-                            this.currentRange = this._ranges[idx] || '';
+                            this.currentTitle = this._milestones[idx]?.title ?? '';
+                            this.currentRange = this._milestones[idx]?.range ?? '';
                         }
                     });
                 }, { rootMargin: '-25% 0px -65% 0px', threshold: 0 });
                 document.querySelectorAll('[data-milestone]').forEach(el => spy.observe(el));
+
+                // Lazy-load each era's events when it approaches the viewport.
+                const loader = new IntersectionObserver((entries) => {
+                    entries.forEach(en => {
+                        if (en.isIntersecting) {
+                            loader.unobserve(en.target);
+                            this.loadMilestone(en.target.dataset.milestone);
+                        }
+                    });
+                }, { rootMargin: '600px 0px' });
+                document.querySelectorAll('[data-milestone]').forEach(el => loader.observe(el));
+
+                // Articles feed: sentinel-driven infinite scroll.
+                const sentinel = document.getElementById('articles-sentinel');
+                if (sentinel) {
+                    this._artObserver = new IntersectionObserver((entries) => {
+                        if (entries.some(en => en.isIntersecting)) this.loadArticles();
+                    }, { rootMargin: '600px 0px' });
+                    this._artObserver.observe(sentinel);
+                }
+                if (this.mode === 'articles') this.loadArticles();
+            },
+
+            async loadMilestone(slug, isRetry = false) {
+                const state = this.sections[slug];
+                if (state === 'loading' || state === 'loaded' || (state === 'error' && ! isRetry)) return;
+                const milestone = this._milestones.find(m => m.slug === slug);
+                const grid = document.querySelector(`[data-milestone="${slug}"] [data-events-grid]`);
+                if (! milestone || ! grid) return;
+
+                this.sections[slug] = 'loading';
+                try {
+                    const res = await fetch(milestone.url, { headers: { 'Accept': 'application/json' } });
+                    if (! res.ok) throw new Error(`HTTP ${res.status}`);
+                    const data = await res.json();
+                    grid.replaceChildren(...(data.events ?? []).map(ev => this.buildEventCard(ev)));
+                    this.sections[slug] = 'loaded';
+                    if (window.lucide) lucide.createIcons();
+                } catch (e) {
+                    this.sections[slug] = 'error';
+                }
+            },
+
+            async loadArticles(isRetry = false) {
+                const a = this.articles;
+                if (this.mode !== 'articles' || a.done || a.status === 'loading' || (a.status === 'error' && ! isRetry)) return;
+                a.status = 'loading';
+                try {
+                    const url = new URL(config.articlesUrl, window.location.origin);
+                    url.searchParams.set('page', a.page + 1);
+                    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                    if (! res.ok) throw new Error(`HTTP ${res.status}`);
+                    const data = await res.json();
+                    const grid = document.getElementById('articles-grid');
+                    (data.items ?? []).forEach(ev => grid.appendChild(this.buildArticleCard(ev)));
+                    a.page = data.page;
+                    a.lastPage = data.lastPage;
+                    a.done = data.page >= data.lastPage;
+                    a.status = 'loaded';
+                    if (window.lucide) lucide.createIcons();
+                } catch (e) {
+                    a.status = 'error';
+                }
+            },
+
+            _fill(root, sel, text) {
+                const el = root.querySelector(`[data-tpl="${sel}"]`);
+                if (! el) return null;
+                if (text === null || text === undefined || text === '') { el.remove(); return null; }
+                el.textContent = text;
+                return el;
+            },
+
+            buildEventCard(ev) {
+                const node = document.getElementById('seerah-ev-tpl').content.firstElementChild.cloneNode(true);
+                node.href = ev.url;
+                node.querySelector('[data-tpl="iconWrap"]').classList.add(...(ev.gradient || 'from-slate-400 to-slate-500').split(/\s+/));
+                node.querySelector('[data-tpl="icon"]').setAttribute('data-lucide', ev.icon || 'circle');
+                node.querySelector('[data-tpl="title"]').textContent = ev.title;
+                this._fill(node, 'type', ev.typeLabel);
+                this._fill(node, 'hijri', ev.hijriLabel ? `· ${ev.hijriLabel}` : null);
+                this._fill(node, 'location', ev.location ? `· ${ev.location}` : null);
+                return node;
+            },
+
+            buildArticleCard(ev) {
+                const node = document.getElementById('seerah-art-tpl').content.firstElementChild.cloneNode(true);
+                const gradient = (ev.gradient || 'from-slate-400 to-slate-500').split(/\s+/);
+                node.href = ev.url;
+                node.querySelector('[data-tpl="bar"]').classList.add(...gradient);
+                node.querySelector('[data-tpl="badge"]').classList.add(...gradient);
+                node.querySelector('[data-tpl="icon"]').setAttribute('data-lucide', ev.icon || 'circle');
+                node.querySelector('[data-tpl="type"]').textContent = ev.typeLabel || '';
+                node.querySelector('[data-tpl="title"]').textContent = ev.title;
+                this._fill(node, 'hijri', ev.hijriLabel);
+                this._fill(node, 'description', ev.description);
+                if (ev.location) {
+                    node.querySelector('[data-tpl="location"]').textContent = ev.location;
+                } else {
+                    node.querySelector('[data-tpl="locationWrap"]').remove();
+                }
+                return node;
             },
 
             setMode(m) {
@@ -331,10 +501,18 @@
                     document.querySelectorAll('.seerah-reveal').forEach(el => el.classList.add('is-visible'));
                     if (window.lucide) lucide.createIcons();
                 });
+                if (m === 'articles') this.loadArticles();
             },
 
             goTo(anchor, index) {
-                if (typeof index === 'number') { this.currentIndex = index; this.currentTitle = this._titles[index] || ''; this.currentRange = this._ranges[index] || ''; }
+                if (typeof index === 'number') {
+                    this.currentIndex = index;
+                    this.currentTitle = this._milestones[index]?.title ?? '';
+                    this.currentRange = this._milestones[index]?.range ?? '';
+                    // Jumping ahead skips the scroll path — load the target now.
+                    const slug = this._milestones[index]?.slug;
+                    if (slug) this.loadMilestone(slug);
+                }
                 const el = document.getElementById(anchor);
                 if (el) el.scrollIntoView({ behavior: this._reduce ? 'auto' : 'smooth', block: 'start' });
             },

@@ -140,7 +140,7 @@ final class SeerahPublicPagesTest extends TestCase
         $this->attachTimelineItem($event, 2, 'بداية المعركة');
         $this->attachParticipant($event, 'حمزة بن عبد المطلب');
 
-        $response = $this->withSession(['locale' => 'ar'])->get('/seerah/event/battle-of-badr');
+        $response = $this->withSession(['locale' => 'ar'])->get('/seerah/event/battle-of-badr?view=article');
 
         $response->assertOk()
             ->assertSee('خروج الجيش')
@@ -148,30 +148,30 @@ final class SeerahPublicPagesTest extends TestCase
             ->assertSee('حمزة بن عبد المطلب');
     }
 
-    public function test_event_page_timeline_style_returns_200_with_real_data(): void
+    public function test_event_page_timeline_style_is_the_default(): void
     {
         $event = $this->makeEvent('battle-of-uhud');
         $this->attachTimelineItem($event, 1, 'خطة النبي');
         $this->attachParticipant($event, 'مصعب بن عمير');
 
-        $response = $this->withSession(['locale' => 'ar'])->get('/seerah/event/battle-of-uhud?view=timeline');
+        $response = $this->withSession(['locale' => 'ar'])->get('/seerah/event/battle-of-uhud');
 
         $response->assertOk()
-            // Timeline-style hero CTA + style switch back to the article view.
+            // Timeline-style hero CTA + style switch to the article view.
             ->assertSee(__('seerah.public.explore_story'))
             ->assertSee(__('seerah.public.read_as_article'))
             ->assertSee('خطة النبي')
             ->assertSee('مصعب بن عمير');
     }
 
-    public function test_event_page_unknown_view_param_falls_back_to_article_style(): void
+    public function test_event_page_unknown_view_param_falls_back_to_timeline_style(): void
     {
         $this->makeEvent('treaty-of-hudaybiyyah');
 
         $response = $this->get('/seerah/event/treaty-of-hudaybiyyah?view=unknown');
 
         $response->assertOk()
-            ->assertSee(__('seerah.public.read_as_timeline'));
+            ->assertSee(__('seerah.public.read_as_article'));
     }
 
     public function test_event_page_returns_404_for_unknown_slug(): void

@@ -120,6 +120,11 @@ Route::get('/seerah', [SeerahController::class, 'index'])->name('public.seerah')
 Route::get('/seerah/events', [SeerahController::class, 'events'])
     ->middleware('throttle:search')->name('public.seerah.events');
 Route::get('/seerah/event/{slug}', [SeerahController::class, 'event'])->name('public.seerah.event');
+// Viewport lazy-loading feeds for the journey timeline (JSON, cached, anonymous).
+Route::get('/seerah/journey/{slug}/events', [SeerahController::class, 'journeyEvents'])
+    ->middleware('throttle:search')->name('public.seerah.journey.events');
+Route::get('/seerah/articles-feed', [SeerahController::class, 'articlesFeed'])
+    ->middleware('throttle:search')->name('public.seerah.articles.feed');
 
 // Sahaba
 // Sahaba — the public companions surface, backed by the internal `muslims`

@@ -116,5 +116,16 @@ return [
         'finish_label' => 'Journey complete',
         'finish_hint' => 'From the noble birth to the highest companionship',
         'you_are_here' => 'You are here',
+
+        // Breadcrumb + milestone navigator modal
+        'navigator_open' => 'Browse stations',
+        'navigator_title' => 'Navigate the Seerah journey',
+        'navigator_hint' => 'Pick an era, then jump straight to any station',
+
+        // Viewport lazy loading
+        'loading_events' => 'Loading stations…',
+        'load_failed' => 'Failed to load stations',
+        'retry' => 'Retry',
+        'articles_end' => 'You have reached the end of the journey',
     ],
 ];

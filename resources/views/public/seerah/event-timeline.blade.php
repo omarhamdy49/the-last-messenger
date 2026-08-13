@@ -19,6 +19,7 @@
 
 @push('head')
 @include('partials.module-embed-styles')
+@include('partials.seerah-content-styles')
 <style>
     [x-cloak] { display: none !important; }
 
@@ -99,7 +100,8 @@
     $hasLessons = $lessons->isNotEmpty();
     $sources = collect($event['sources'] ?? [])->filter(fn ($x) => ! empty($x['title']));
     $hasSources = $sources->isNotEmpty();
-    $articleStyleUrl = route('public.seerah.event', $event['slug']);
+    // Timeline is the default style now — the switch link opts into the article view.
+    $articleStyleUrl = route('public.seerah.event', ['slug' => $event['slug'], 'view' => 'article']);
     $characterGradients = [
         'from-green-500 to-emerald-600',
         'from-blue-500 to-cyan-600',
@@ -265,7 +267,9 @@
             @endif
             <div class="absolute inset-0 tl-hero-gradient"></div>
 
-            <div class="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center text-white">
+            <div class="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 text-center text-white">
+                @include('public.seerah._event-navigator')
+
                 <!-- Date Badge -->
                 @if ($event['hijriDate'] || $event['gregorianYear'])
                     <div class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mb-8 tl-float">
@@ -393,7 +397,10 @@
                         {{ __('seerah.public.section_context') }}
                     </h2>
                     <div class="prose prose-lg max-w-none" :class="darkMode ? 'prose-invert' : ''">
-                        @if ($hasDescription)
+                        {{-- The hero already shows the description excerpt — repeat the
+                             full description here only when there is no rich content,
+                             otherwise the page opens with the same text twice. --}}
+                        @if ($hasDescription && ! $hasContent)
                             <p class="text-lg sm:text-xl leading-relaxed break-words" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{!! nl2br(e($event['description'])) !!}</p>
                         @endif
                         @if ($hasContent)
@@ -415,9 +422,10 @@
             </section>
         @endif
 
-        <!-- Key Characters (cards → modal) -->
-        @if ($hasCharacters)
-            @if ($hasLessons)
+        {{-- Lessons and sources are independent of characters — they used to be
+             nested inside the characters guard and silently disappeared for any
+             event without a characters list. --}}
+        @if ($hasLessons)
             <section id="event-lessons" class="py-16 sm:py-20" :class="darkMode ? 'bg-gray-900/40' : 'bg-white'">
                 <div class="max-w-4xl mx-auto px-4 sm:px-6">
                     <div class="flex items-center gap-4 mb-10">
@@ -469,6 +477,7 @@
             </section>
             @endif
 
+        @if ($hasCharacters)
             <section id="event-characters" class="py-16 sm:py-20">
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
                     <h2 class="text-3xl md:text-5xl font-bold text-center mb-12 flex items-center justify-center gap-3" :class="darkMode ? 'text-white' : 'text-gray-900'">
@@ -610,6 +619,15 @@
 
     <!-- FABs -->
     <div class="fixed bottom-8 start-8 z-50 flex flex-col gap-3 items-center">
+        <!-- Browse stations (milestone navigator) -->
+        <button type="button"
+                @click="$dispatch('seerah-navigator-open')"
+                class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-2xl hover:scale-110 transition-all flex items-center justify-center"
+                title="{{ __('seerah.public.navigator_open') }}"
+                aria-label="{{ __('seerah.public.navigator_open') }}">
+            <i data-lucide="map" class="w-6 h-6"></i>
+        </button>
+
         <!-- Read as Article -->
         <a href="{{ $articleStyleUrl }}"
            class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-2xl hover:scale-110 transition-all flex items-center justify-center"

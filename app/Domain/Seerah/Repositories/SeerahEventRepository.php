@@ -47,9 +47,10 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
         $query = $this->model->newQuery()
             ->select([
                 'id', 'slug', 'hijri_date', 'hijri_year', 'hijri_month', 'hijri_day',
-                'gregorian_year', 'seerah_event_type_id', 'phase', 'era', 'location',
-                'latitude', 'longitude', 'featured_image', 'gallery', 'related_article_id',
-                'is_pivotal', 'is_featured', 'views_count', 'statistics', 'display_order',
+                'gregorian_year', 'seerah_event_type_id', 'seerah_milestone_id', 'phase',
+                'era', 'location', 'latitude', 'longitude', 'featured_image', 'gallery',
+                'related_article_id', 'is_pivotal', 'is_featured', 'views_count',
+                'statistics', 'display_order',
             ])
             ->with($this->publicDetailRelations($locale))
             ->where('slug', $slug);
@@ -318,7 +319,9 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     private function listRelations(): array
     {
         return [
-            'translations:id,seerah_event_id,locale,title',
+            // description included: public list cards render an excerpt, and
+            // without the column here getTranslation() silently returned null.
+            'translations:id,seerah_event_id,locale,title,description',
             'type:id,slug,icon,color,gradient',
             'type.translations:id,seerah_event_type_id,locale,name',
         ];
@@ -337,6 +340,11 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
             'type:id,slug,icon,color,gradient',
             'type.translations' => fn ($relation) => $relation
                 ->select(['id', 'seerah_event_type_id', 'locale', 'name'])
+                ->where('locale', $locale),
+            // Milestone (الحقبة) — powers the breadcrumb + navigator on the event pages.
+            'milestone:id,slug',
+            'milestone.translations' => fn ($relation) => $relation
+                ->select(['id', 'seerah_milestone_id', 'locale', 'title'])
                 ->where('locale', $locale),
             'participants:id,event_id,participant_type,participant_id,role',
             'participants.translations' => fn ($relation) => $relation
