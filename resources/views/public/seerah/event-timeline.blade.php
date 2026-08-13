@@ -1,7 +1,7 @@
 @extends('layouts.public')
 
 @section('title', $event['title'] . ' — ' . __('seerah.public.page_title'))
-@section('meta_description', \Illuminate\Support\Str::limit(strip_tags((string) ($event['description'] ?? $event['title'])), 155))
+@section('meta_description', excerpt_sentence($event['description'] ?? $event['title'], 155))
 @section('og_type', 'article')
 
 @push('structured_data')
@@ -10,7 +10,7 @@
     "@@context": "https://schema.org",
     "@@type": "Article",
     "headline": @json($event['title']),
-    "description": @json(\Illuminate\Support\Str::limit(strip_tags((string) ($event['description'] ?? '')), 200)),
+    "description": @json(excerpt_sentence($event['description'] ?? '', 200)),
     "url": "{{ $event['url'] }}",
     "inLanguage": "{{ app()->getLocale() }}"
 }
@@ -296,7 +296,7 @@
 
                 @if ($hasDescription)
                     <p class="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-8 line-clamp-3 tl-fade-in-up tl-stagger-1">
-                        {{ \Illuminate\Support\Str::limit(strip_tags((string) $event['description']), 180) }}
+                        {{ excerpt_sentence($event['description'], 180) }}
                     </p>
                 @endif
 

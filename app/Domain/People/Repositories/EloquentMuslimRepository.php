@@ -61,13 +61,46 @@ final class EloquentMuslimRepository implements MuslimRepositoryInterface
 
         return $query
             ->with(['roles:id,slug,name_ar,name_en'])
+            // A search must be ordered by relevance, not recency. Sorting the
+            // matches for "عمر بن الخطاب" by id put "عبد الله بن عمر بن الخطاب"
+            // above عمر himself: a descendant's name contains every term of the
+            // ancestor's, so it always matches too.
+            //
+            // The discriminator is the prefix — a person's record starts with
+            // their own name, a descendant's starts with the descendant's. Then
+            // shortest name, which favours the person over "X مولى Y" and
+            // "خال Y". is_published is deliberately NOT a tiebreak here: only 80
+            // of 7837 rows are published and they are all one family, so it
+            // pushed حفصة above عمر and عائشة above أبي بكر.
             ->when(
-                $filters->latestFirst,
-                fn (Builder $q) => $q->orderByDesc('id'),
-                fn (Builder $q) => $q->orderBy('id'),
+                $this->hasNameSearch($filters),
+                fn (Builder $q) => $q
+                    ->orderByRaw('CASE WHEN search_name_ar LIKE ? THEN 0 ELSE 1 END', [$this->searchPrefix($filters).'%'])
+                    ->orderByRaw('CHAR_LENGTH(COALESCE(name_ar, name_en)) ASC')
+                    ->orderBy('id'),
+                fn (Builder $q) => $filters->latestFirst
+                    ? $q->orderByDesc('id')
+                    : $q->orderBy('id'),
             )
             ->paginate($filters->perPage)
             ->withQueryString();
+    }
+
+    private function hasNameSearch(MuslimListFilters $filters): bool
+    {
+        return is_string($filters->search) && trim($filters->search) !== '';
+    }
+
+    /**
+     * The folded query, for the prefix test that ranks a person above their
+     * descendants. Folded with the same normalizer that wrote search_name_ar —
+     * comparing a raw query against a folded column matches nothing.
+     */
+    private function searchPrefix(MuslimListFilters $filters): string
+    {
+        $normalized = $this->normalizer->normalize((string) $filters->search);
+
+        return $normalized === null ? '' : addcslashes($normalized, '%_\\');
     }
 
     public function findBySlug(string $slug, bool $publishedOnly = true): ?Muslim
@@ -238,10 +271,57 @@ final class EloquentMuslimRepository implements MuslimRepositoryInterface
             return;
         }
 
-        $query->where(function (Builder $q) use ($normalized): void {
-            $q->whereRaw('MATCH(search_name_ar) AGAINST (? IN BOOLEAN MODE)', [$normalized])
-                ->orWhereRaw('MATCH(search_name_en) AGAINST (? IN BOOLEAN MODE)', [$normalized]);
+        $boolean = $this->toBooleanMode($normalized);
+
+        if ($boolean === '') {
+            return;
+        }
+
+        $query->where(function (Builder $q) use ($boolean): void {
+            $q->whereRaw('MATCH(search_name_ar) AGAINST (? IN BOOLEAN MODE)', [$boolean])
+                ->orWhereRaw('MATCH(search_name_en) AGAINST (? IN BOOLEAN MODE)', [$boolean]);
         });
+    }
+
+    /**
+     * Require every meaningful term, instead of handing the raw phrase to
+     * BOOLEAN MODE.
+     *
+     * Without operators, BOOLEAN MODE treats the words as optional, so
+     * "زيد بن الدثنة" matched 6144 of 7837 rows — anything containing "زيد" or
+     * "بن". Callers that also order by recency (MuslimListFilters::latestFirst)
+     * then discard relevance entirely and surface the newest of those 6144,
+     * which is how the module picker returned unrelated people for a name that
+     * exists verbatim in the table.
+     *
+     * Connectors are dropped rather than required: "بن" is indexed (the server's
+     * innodb_ft_min_token_size is 2) but appears in nearly every name, so it
+     * narrows nothing while excluding the records that omit it ("زيد الدثنة").
+     * If a query is only connectors, fall back to requiring what is left.
+     */
+    private function toBooleanMode(string $normalized): string
+    {
+        $connectors = ['بن', 'بنت', 'ابن', 'ابو', 'ام', 'ال', 'عبد'];
+
+        $words = array_values(array_filter(
+            preg_split('/\s+/u', trim($normalized)) ?: [],
+            static fn (string $w): bool => $w !== ''
+        ));
+
+        $escape = static fn (string $w): string => preg_replace('/[+\-><()~*"@]+/u', '', $w) ?? '';
+
+        $meaningful = array_values(array_filter(
+            $words,
+            static fn (string $w): bool => mb_strlen($w) >= 3 && ! in_array($w, $connectors, true)
+        ));
+
+        if ($meaningful === []) {
+            $meaningful = array_values(array_filter($words, static fn (string $w): bool => mb_strlen($w) >= 2));
+        }
+
+        $terms = array_values(array_filter(array_map($escape, $meaningful)));
+
+        return implode(' ', array_map(static fn (string $w): string => '+'.$w.'*', $terms));
     }
 
     /**

@@ -325,3 +325,45 @@ if (! function_exists('country_name')) {
         return $iso;
     }
 }
+
+if (! function_exists('excerpt_sentence')) {
+    /**
+     * Trim to a whole sentence rather than a character count.
+     *
+     * Str::limit() cuts mid-word, which is merely untidy in a meta tag but ugly
+     * in the event hero, where the text is set at 4xl: "…اهتمّوا بشمائل…".
+     * Prefer the last sentence boundary inside the budget; if there is none,
+     * fall back to the last whole word so a word is never sliced.
+     *
+     * Handles the Arabic full stop, question mark and comma-less clause ends,
+     * plus the closing guillemet that ends a quoted sentence in this content.
+     *
+     * @param  int  $max  character budget, not a hard target
+     */
+    function excerpt_sentence(?string $text, int $max = 80, string $end = '…'): string
+    {
+        $text = trim(preg_replace('/\s+/u', ' ', strip_tags((string) $text)));
+
+        if ($text === '' || mb_strlen($text) <= $max) {
+            return $text;
+        }
+
+        $window = mb_substr($text, 0, $max);
+
+        // Last sentence terminator inside the budget. The lookahead keeps the
+        // terminator itself and avoids matching a decimal point mid-number.
+        if (preg_match_all('/[.!?؟](?=\s|$)|[»"](?=\s|$)/u', $window, $m, PREG_OFFSET_CAPTURE)) {
+            $last = end($m[0]);
+            // preg offsets are in bytes; convert before slicing multibyte text.
+            $chars = mb_strlen(substr($window, 0, $last[1] + strlen($last[0])));
+            if ($chars >= (int) ($max * 0.45)) {
+                return mb_substr($text, 0, $chars);
+            }
+        }
+
+        // No usable sentence end — back off to the last whole word.
+        $cut = mb_strrpos($window, ' ');
+
+        return rtrim(mb_substr($window, 0, $cut ?: $max), " ،,;:-–—").$end;
+    }
+}

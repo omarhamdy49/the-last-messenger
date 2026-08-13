@@ -132,7 +132,7 @@
                 <!-- Language Tabs -->
                 <div class="flex flex-wrap gap-2 border-b pb-4" :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
                     @foreach(['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'] as $lang => $label)
-                        @if($reciter->getTranslation('description', $lang))
+                        @if($reciter->getTranslation('description', $lang, false))
                         <button @click="activeTab = '{{ $lang }}'"
                                 class="px-4 py-2 rounded-lg font-medium transition-all"
                                 :class="activeTab === '{{ $lang }}' ?
@@ -146,14 +146,14 @@
 
                 <!-- Content -->
                 @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $lang)
-                    @if($reciter->getTranslation('description', $lang))
+                    @if($reciter->getTranslation('description', $lang, false))
                     <div x-show="activeTab === '{{ $lang }}'"
                          class="p-4 rounded-xl"
                          :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
                         <p class="leading-relaxed {{ in_array($lang, ['ar', 'ur']) ? 'text-right' : 'text-left' }}"
                            :class="darkMode ? 'text-gray-300' : 'text-gray-700'"
                            dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">
-                            {{ $reciter->getTranslation('description', $lang) }}
+                            {{ $reciter->getTranslation('description', $lang, false) }}
                         </p>
                     </div>
                     @endif
@@ -172,13 +172,13 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 @foreach(['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'] as $lang => $label)
-                    @if($reciter->getTranslation('name', $lang))
+                    @if($reciter->getTranslation('name', $lang, false))
                     <div class="p-4 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
                         <label class="text-xs font-medium" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
                             {{ $label }}
                         </label>
                         <p class="text-lg font-semibold mt-1" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                            {{ $reciter->getTranslation('name', $lang) }}
+                            {{ $reciter->getTranslation('name', $lang, false) }}
                         </p>
                     </div>
                     @endif

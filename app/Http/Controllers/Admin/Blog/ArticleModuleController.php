@@ -177,7 +177,7 @@ final class ArticleModuleController extends Controller
 
         $query = Hadith::query()
             ->publiclyVisible()
-            ->with(['collection:id,title_ar,title_en', 'book:id,collection_id,title_ar,title_en'])
+            ->with(['collection:id,slug,title_ar,title_en', 'book:id,collection_id,title_ar,title_en'])
             ->select([
                 'id',
                 'collection_id',
@@ -219,6 +219,9 @@ final class ArticleModuleController extends Controller
                     'text_ar' => $hadith->text_ar ?? '',
                     'text_en' => $hadith->text_en ?? '',
                     'collection' => $hadith->collection?->title_ar ?? '',
+                    // The public hadith route is /hadith/{collection}:{referenceKey};
+                    // without the slug the embed cannot build a working link.
+                    'collection_slug' => $hadith->collection?->slug ?? '',
                     'collection_en' => $hadith->collection?->title_en ?? '',
                     'book' => $hadith->book?->title_ar ?? '',
                     'number' => $hadith->number,

@@ -187,6 +187,43 @@ function applyDefaultDirection(editor, direction) {
     }, 'silent');
 }
 
+/**
+ * Keep pasted and injected content on the field's direction.
+ *
+ * `applyDefaultDirection` only runs at init. Typed text is fine because Quill
+ * carries the previous line's format onto the next one, but a paste (or any
+ * programmatic insert) creates lines with **no** direction format at all, which
+ * render left-aligned inside an `dir="rtl"` editor — Arabic content laid out
+ * LTR. Re-apply whenever a change introduces new lines; single keystrokes never
+ * do, so this costs nothing while typing.
+ *
+ * Only RTL fields are normalised: LTR is the CSS default, so an LTR field needs
+ * no per-line format and re-applying there would strip an editor's deliberate
+ * RTL paragraph inside an English body.
+ */
+function keepDirectionOnPaste(editor, direction) {
+    if (direction !== 'rtl') { return; }
+
+    let queued = false;
+
+    editor.on('text-change', (delta) => {
+        const addsLines = (delta.ops || []).some(
+            (op) => typeof op.insert === 'string' && op.insert.includes('\n')
+        );
+
+        if (! addsLines || queued) { return; }
+
+        // Defer: Quill is mid-update, and formatLine during text-change fights it.
+        queued = true;
+        setTimeout(() => {
+            queued = false;
+            const selection = editor.getSelection();
+            applyDefaultDirection(editor, direction);
+            if (selection) { editor.setSelection(selection, 'silent'); }
+        }, 0);
+    });
+}
+
 function create(element, options = {}) {
     const direction = resolveDirection(options);
     const toolbar = Array.isArray(options.toolbar)
@@ -210,6 +247,7 @@ function create(element, options = {}) {
     }
 
     applyDefaultDirection(editor, direction);
+    keepDirectionOnPaste(editor, direction);
 
     return editor;
 }
@@ -279,13 +317,20 @@ const AdminWysiwygModules = {
         }
 
         if (moduleType === 'hadith') {
+            // The public route is /hadith/{collection}:{referenceKey}, not an id.
+            // `/hadith/123` matches the *collection* route with slug "123" and 404s,
+            // so fall back to the hadith hub rather than emit a dead link.
+            const ref = data.collection_slug && data.reference_key
+                ? `/hadith/${data.collection_slug}:${data.reference_key}`
+                : '/hadith';
+
             return {
                 module: 'hadith',
                 id: data.hadith_id,
                 label: moduleLabels.hadith,
                 text: data.text,
                 reference: `${data.collection} #${data.number}`,
-                href: `/hadith/${data.hadith_id}`,
+                href: ref,
                 linkLabel: `📜 ${data.collection} #${data.number}`,
                 dir,
             };

@@ -1,7 +1,7 @@
 @extends('layouts.public')
 
 @section('title', $event['title'] . ' — ' . __('seerah.public.page_title'))
-@section('meta_description', \Illuminate\Support\Str::limit(strip_tags((string) ($event['description'] ?? $event['title'])), 155))
+@section('meta_description', excerpt_sentence($event['description'] ?? $event['title'], 155))
 @section('og_type', 'article')
 
 @push('structured_data')
@@ -10,7 +10,7 @@
     "@@context": "https://schema.org",
     "@@type": "Article",
     "headline": @json($event['title']),
-    "description": @json(\Illuminate\Support\Str::limit(strip_tags((string) ($event['description'] ?? '')), 200)),
+    "description": @json(excerpt_sentence($event['description'] ?? '', 200)),
     "url": "{{ $event['url'] }}",
     "inLanguage": "{{ app()->getLocale() }}"
 }
@@ -371,7 +371,7 @@
         if (navigator.share) {
             navigator.share({
                 title: @js($event['title']),
-                text: @js(\Illuminate\Support\Str::limit(strip_tags((string) ($event['description'] ?? $event['title'])), 120)),
+                text: @js(excerpt_sentence($event['description'] ?? $event['title'], 120)),
                 url: window.location.href
             });
         } else {
@@ -432,7 +432,7 @@
                 <h1 class="text-4xl md:text-6xl lg:text-7xl font-black mb-6 leading-tight animate-[fade-in-up_0.8s_ease-out_0.1s] opacity-0" style="animation-fill-mode: forwards;">
                     {{ $event['title'] }}
                     @if ($hasDescription)
-                        <div class="text-2xl md:text-4xl font-normal mt-4 text-white/90">{{ \Illuminate\Support\Str::limit(strip_tags((string) $event['description']), 80) }}</div>
+                        <div class="text-2xl md:text-4xl font-normal mt-4 text-white/90">{{ excerpt_sentence($event['description'], 80) }}</div>
                     @endif
                 </h1>
 

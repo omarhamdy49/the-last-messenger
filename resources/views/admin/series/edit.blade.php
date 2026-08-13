@@ -75,7 +75,7 @@
                         </label>
                         <input type="text"
                                name="title[{{ $lang }}]"
-                               value="{{ old("title.{$lang}", $series->getTranslation('title', $lang)) }}"
+                               value="{{ old("title.{$lang}", $series->getTranslation('title', $lang, false)) }}"
                                class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
                                dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
@@ -96,7 +96,7 @@
                                   class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all resize-none"
                                   :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
                                   dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                                  placeholder="أدخل وصف السلسلة...">{{ old("description.{$lang}", $series->getTranslation('description', $lang)) }}</textarea>
+                                  placeholder="أدخل وصف السلسلة...">{{ old("description.{$lang}", $series->getTranslation('description', $lang, false)) }}</textarea>
                         @error("description.{$lang}")
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
