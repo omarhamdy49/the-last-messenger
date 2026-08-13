@@ -83,8 +83,8 @@
         </button>
     </div>
 
-    <!-- Table -->
-    <div class="rounded-2xl border overflow-hidden" :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+    {{-- Table above `md`, card stack below it — see components/admin/list-card. --}}
+    <div class="hidden md:block rounded-2xl border overflow-hidden" :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead>
@@ -196,6 +196,64 @@
         </div>
     </div>
 
+    <!-- Mobile card stack (< md) -->
+    <div class="md:hidden space-y-3">
+        @forelse($types as $type)
+            @php $eventCount = $type->events_count ?? 0; @endphp
+            <x-admin.list-card
+                :value="$type->id"
+                :icon="$type->icon ?: 'tag'"
+                :gradient="$type->gradient ?: 'from-[#0056b3] to-[#218838]'"
+                :title="$type->getTranslation('name', 'ar')"
+                :subtitle="$type->slug">
+
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold tabular-nums"
+                      :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
+                    <i data-lucide="calendar-days" class="w-3 h-3"></i> {{ $eventCount }}
+                </span>
+
+                @if($type->color)
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+                          :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
+                        <span class="w-3 h-3 rounded-full border border-black/10" style="background: {{ $type->color }}"></span>
+                        {{ $type->color }}
+                    </span>
+                @endif
+
+                @if($type->is_active)
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                        <i data-lucide="check-circle" class="w-3 h-3"></i> {{ __('admin.active') }}
+                    </span>
+                @else
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                        <i data-lucide="circle-slash" class="w-3 h-3"></i> {{ __('admin.inactive') }}
+                    </span>
+                @endif
+
+                <x-slot:actions>
+                    <form action="{{ route('admin.seerah-event-types.toggle-active', $type->id) }}" method="POST" class="inline">@csrf
+                        <button type="submit" class="p-2.5 rounded-lg transition-colors" :class="darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'"
+                                title="{{ $type->is_active ? __('admin.deactivate') : __('admin.activate') }}">
+                            <i data-lucide="{{ $type->is_active ? 'toggle-right' : 'toggle-left' }}" class="w-4 h-4"></i>
+                        </button>
+                    </form>
+                    <a href="{{ route('admin.seerah-event-types.show', $type->id) }}" class="p-2.5 rounded-lg transition-colors" :class="darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'" title="{{ __('admin.view') }}"><i data-lucide="eye" class="w-4 h-4"></i></a>
+                    <a href="{{ route('admin.seerah-event-types.edit', $type->id) }}" class="p-2.5 rounded-lg transition-colors" :class="darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'" title="{{ __('admin.edit') }}"><i data-lucide="edit-2" class="w-4 h-4"></i></a>
+                    <form action="{{ route('admin.seerah-event-types.destroy', $type->id) }}" method="POST" class="inline"
+                          @submit.prevent="$dispatch('show-confirm', { title: '{{ __('admin.confirm_delete') }}', message: '{{ __('admin.delete_warning') }}', type: 'danger', onConfirm: () => $el.submit() })">@csrf @method('DELETE')
+                        <button type="submit" class="p-2.5 rounded-lg transition-colors text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" title="{{ __('admin.delete') }}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </form>
+                </x-slot:actions>
+            </x-admin.list-card>
+        @empty
+            <div class="p-8 rounded-2xl border text-center" :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+                <i data-lucide="tags" class="w-12 h-12 mx-auto mb-3" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
+                <p class="text-base font-medium mb-4" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">{{ __('admin.no_event_types') }}</p>
+                <a href="{{ route('admin.seerah-event-types.create') }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-semibold"><i data-lucide="plus" class="w-5 h-5"></i> {{ __('admin.add_event_type') }}</a>
+            </div>
+        @endforelse
+    </div>
+
     @if($types->hasPages())
     <div class="mt-8">{{ $types->withQueryString()->links() }}</div>
     @endif
@@ -207,10 +265,11 @@
     function seerahTypeIndex() {
         return {
             selected: [],
+            // x-model bound rows: set `selected` and let Alpine mirror it. Reading
+            // <tbody> here would miss the mobile card stack rendered outside it.
+            pageIds: {{ Js::from(collect($types)->pluck('id')->all()) }},
             toggleAll(e) {
-                const ids = Array.from(document.querySelectorAll('tbody input[type=checkbox]')).map(c => Number(c.value));
-                this.selected = e.target.checked ? ids : [];
-                document.querySelectorAll('tbody input[type=checkbox]').forEach(c => c.checked = e.target.checked);
+                this.selected = e.target.checked ? [...this.pageIds] : [];
             },
             bulkDelete() {
                 if (this.selected.length === 0) return;

@@ -8,6 +8,7 @@ use App\Http\Controllers\Site\ContactController;
 use App\Http\Controllers\Site\FaqController;
 use App\Http\Controllers\Site\FavoriteController;
 use App\Http\Controllers\Site\GenealogyController;
+use App\Http\Controllers\Site\HadithController;
 use App\Http\Controllers\Site\HomeController;
 use App\Http\Controllers\Site\HomeModuleCardImageController;
 use App\Http\Controllers\Site\MediaController;
@@ -75,6 +76,19 @@ Route::get('/quran/{surahNumber}', [QuranController::class, 'surah'])
 // and `urn` can never be read as a collection code. Every dynamic segment is
 // constrained: `number` allows `1a`, which the source really uses.
 // bookNumber allows `35b`, `introduction` and `letter`, which the source uses.
+Route::get('/hadith', [HadithController::class, 'index'])->name('public.hadith');
+Route::get('/hadith/search', [HadithController::class, 'search'])->name('public.hadith.search');
+// A single hadith is `{collection}:{referenceKey}` — the colon keeps it out of
+// the `/hadith/{slug}/{bookNumber}` namespace, where `/hadith/bukhari/12` would
+// be ambiguous between book 12 and reference key 12. Declared before the
+// one-segment collection route so a colon is never read as a slug.
+Route::get('/hadith/{reference}', [HadithController::class, 'show'])
+    ->where('reference', '[a-z0-9-]+:[A-Za-z0-9._-]+')->name('public.hadith.show');
+Route::get('/hadith/{slug}', [HadithController::class, 'collection'])
+    ->where('slug', '[a-z0-9-]+')->name('public.hadith.collection');
+Route::get('/hadith/{slug}/{bookNumber}', [HadithController::class, 'book'])
+    ->where('slug', '[a-z0-9-]+')->where('bookNumber', '[A-Za-z0-9._-]+')->name('public.hadith.book');
+
 // XML sitemap (articles surface)
 Route::get('/sitemap.xml', [SitemapController::class, 'articles'])->name('sitemap.articles');
 

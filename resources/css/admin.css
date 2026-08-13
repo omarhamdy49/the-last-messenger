@@ -902,3 +902,34 @@
   .module-embed { margin: 1rem 0; padding: 1rem; }
   .module-embed__arabic { font-size: 1.15rem; line-height: 2; }
 }
+
+/* ---------------------------------------------------------------------------
+ * Admin list tables on small screens.
+ *
+ * Four lists (seerah-events, seerah-milestones, seerah-event-types,
+ * media-programs) swap to <x-admin.list-card> below `md`. The rest still scroll
+ * sideways, which is fine — but a table that is silently clipped reads as a
+ * broken layout rather than a scrollable one. These two rules make the scroll
+ * legible without touching each view: an inset shadow that appears only while
+ * there is more content off-screen, and a thin always-visible scrollbar so the
+ * affordance survives on trackpads that hide overlay scrollbars.
+ * ------------------------------------------------------------------------ */
+@media (max-width: 767px) {
+  .overflow-x-auto {
+    /* Two fixed "cover" layers pinned to the edges plus two scrolling shadow
+       layers; the cover hides the shadow when that edge is fully scrolled. */
+    background:
+      linear-gradient(to right, var(--admin-surface, #fff) 30%, rgba(255, 255, 255, 0)) left center / 40px 100% no-repeat local,
+      linear-gradient(to left, var(--admin-surface, #fff) 30%, rgba(255, 255, 255, 0)) right center / 40px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.12), transparent) left center / 14px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.12), transparent) right center / 14px 100% no-repeat scroll;
+  }
+
+  .overflow-x-auto::-webkit-scrollbar { height: 4px; }
+  .overflow-x-auto::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #0056b3, #218838);
+    border-radius: 4px;
+  }
+}
+
+.dark .overflow-x-auto { --admin-surface: #0b1120; }

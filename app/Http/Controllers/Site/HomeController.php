@@ -108,6 +108,10 @@ final class HomeController extends Controller
                     'collection' => $hadith->collection?->slug,
                     'collection_name' => $hadith->collection?->title($locale),
                     'hadith_number' => $hadith->number,
+                    // The public URL keys on reference_key ("1-1"), not number
+                    // ("1") — see Hadith::publicPath(). Linking by number sends
+                    // the reader to a 404 on every collection.
+                    'reference_key' => $hadith->reference_key,
                 ];
             },
         );

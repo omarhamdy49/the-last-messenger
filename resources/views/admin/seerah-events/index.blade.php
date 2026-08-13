@@ -169,8 +169,11 @@
         </button>
     </div>
 
-    <!-- Events Table -->
-    <div class="rounded-2xl border overflow-hidden"
+    {{--
+        Below `md` the seven-column table turns into a sideways scroll to reach
+        the actions, so the card stack below replaces it there.
+    --}}
+    <div class="hidden md:block rounded-2xl border overflow-hidden"
          :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
         <div class="overflow-x-auto">
             <table class="w-full">
@@ -335,6 +338,105 @@
         </div>
     </div>
 
+    <!-- Mobile card stack (< md) -->
+    <div class="md:hidden space-y-3">
+        @forelse($events ?? [] as $event)
+            @php $pointCount = $event->timeline_items_count ?? 0; @endphp
+            <x-admin.list-card
+                :value="$event->id"
+                :icon="$event->type?->icon ?? 'calendar'"
+                :gradient="$event->type?->gradient ?: 'from-[#0056b3] to-[#218838]'"
+                :title="$event->getTranslation('title', 'ar')"
+                :subtitle="collect([$event->location, $event->hijri_date])->filter()->implode(' · ') ?: null">
+
+                @if($event->is_pivotal)
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500 text-white">
+                        <i data-lucide="star" class="w-3 h-3"></i> مفصلي
+                    </span>
+                @endif
+
+                @if($event->milestone)
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold max-w-full bg-gradient-to-r {{ $event->milestone->gradient ?: 'from-[#0056b3] to-[#218838]' }} text-white">
+                        <i data-lucide="{{ $event->milestone->icon ?: 'milestone' }}" class="w-3 h-3 flex-shrink-0"></i>
+                        <span class="truncate">{{ $event->milestone->getTranslation('title', 'ar') }}</span>
+                    </span>
+                @endif
+
+                @if($event->type)
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
+                          :class="darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-800'">
+                        <i data-lucide="{{ $event->type->icon ?? 'tag' }}" class="w-3 h-3"></i>
+                        {{ $event->type->getTranslation('name', 'ar') }}
+                    </span>
+                @endif
+
+                {{-- Same warning the table carries: no points means no public timeline section. --}}
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold tabular-nums
+                    {{ $pointCount === 0
+                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }}"
+                      title="{{ $pointCount === 0 ? 'لا توجد نقاط — قسم الخط الزمني لن يظهر' : $pointCount.' نقطة' }}">
+                    <i data-lucide="list" class="w-3 h-3"></i> {{ $pointCount }}
+                </span>
+
+                @if($event->importance)
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold
+                        {{ $event->importance->value === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : '' }}
+                        {{ $event->importance->value === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : '' }}
+                        {{ $event->importance->value === 'low' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : '' }}">
+                        {{ $event->importance->labelArabic() }}
+                    </span>
+                @endif
+
+                @if($event->status)
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold
+                        {{ $event->status->value === 'published' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400' }}">
+                        <i data-lucide="{{ $event->status->icon() }}" class="w-3 h-3"></i>
+                        {{ $event->status->labelArabic() }}
+                    </span>
+                @endif
+
+                <x-slot:actions>
+                    <a href="{{ route('admin.seerah-events.show', $event->id) }}"
+                       class="p-2.5 rounded-lg transition-colors"
+                       :class="darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'"
+                       title="عرض">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                    </a>
+                    <a href="{{ route('admin.seerah-events.edit', $event->id) }}"
+                       class="p-2.5 rounded-lg transition-colors"
+                       :class="darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'"
+                       title="تعديل">
+                        <i data-lucide="edit-2" class="w-4 h-4"></i>
+                    </a>
+                    <form action="{{ route('admin.seerah-events.destroy', $event->id) }}"
+                          method="POST"
+                          class="inline"
+                          @submit.prevent="$dispatch('show-confirm', { title: '{{ __("admin.confirm_delete") }}', message: '{{ __("admin.delete_warning") }}', type: 'danger', onConfirm: () => $el.submit() })">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit"
+                                class="p-2.5 rounded-lg transition-colors text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                title="حذف">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </form>
+                </x-slot:actions>
+            </x-admin.list-card>
+        @empty
+            <div class="p-8 rounded-2xl border text-center"
+                 :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+                <i data-lucide="calendar" class="w-12 h-12 mx-auto mb-3" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
+                <p class="text-base font-medium mb-4" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">لا توجد أحداث حالياً</p>
+                <a href="{{ route('admin.seerah-events.create') }}"
+                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-semibold">
+                    <i data-lucide="plus" class="w-5 h-5"></i>
+                    إضافة حدث جديد
+                </a>
+            </div>
+        @endforelse
+    </div>
+
     <!-- Pagination -->
     @if(isset($events) && $events->hasPages())
     <div class="mt-8">
@@ -351,10 +453,12 @@
         return {
             filtersOpen: {{ request()->hasAny(['event_type', 'importance', 'status', 'search']) ? 'true' : 'false' }},
             selected: [],
+            // The row checkboxes are x-model bound, so Alpine mirrors `selected`
+            // into them on its own. Reading the DOM here instead would miss the
+            // mobile card stack, which renders the same rows outside <tbody>.
+            pageIds: {{ Js::from(collect($events ?? [])->pluck('id')->all()) }},
             toggleAll(e) {
-                const ids = Array.from(document.querySelectorAll('tbody input[type=checkbox]')).map(c => Number(c.value));
-                this.selected = e.target.checked ? ids : [];
-                document.querySelectorAll('tbody input[type=checkbox]').forEach(c => c.checked = e.target.checked);
+                this.selected = e.target.checked ? [...this.pageIds] : [];
             },
             setStatus(status) {
                 if (this.selected.length === 0) return;

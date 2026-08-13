@@ -68,7 +68,8 @@
         <button type="button" @click="selected = []" class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">{{ __('admin.clear') }}</button>
     </div>
 
-    <div class="rounded-2xl border overflow-hidden" :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+    {{-- Table above `md`, card stack below it — see components/admin/list-card. --}}
+    <div class="hidden md:block rounded-2xl border overflow-hidden" :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead>
@@ -140,6 +141,71 @@
         </div>
     </div>
 
+    <!-- Mobile card stack (< md) -->
+    <div class="md:hidden space-y-3">
+        @forelse($milestones as $milestone)
+            @php $eventCount = $milestone->events_count ?? 0; @endphp
+            <x-admin.list-card
+                :value="$milestone->id"
+                :icon="$milestone->icon ?: 'milestone'"
+                :gradient="$milestone->gradient ?: 'from-[#0056b3] to-[#218838]'"
+                :title="$milestone->getTranslation('title', 'ar')"
+                :subtitle="$milestone->slug">
+
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
+                      :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
+                    <i data-lucide="hash" class="w-3 h-3"></i> {{ $milestone->order_index }}
+                </span>
+
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
+                      :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
+                    <i data-lucide="calendar" class="w-3 h-3"></i>
+                    {{ $milestone->hijriRangeLabel() ?: '—' }}
+                </span>
+
+                {{-- A milestone with no events renders an empty chapter on /seerah. --}}
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold tabular-nums
+                    {{ $eventCount === 0
+                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }}"
+                      title="{{ $eventCount === 0 ? 'لا توجد أحداث — الحقبة ستظهر فارغة' : $eventCount.' حدث' }}">
+                    <i data-lucide="calendar-days" class="w-3 h-3"></i> {{ $eventCount }}
+                </span>
+
+                @if($milestone->is_active)
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                        <i data-lucide="check-circle" class="w-3 h-3"></i> {{ __('admin.active') }}
+                    </span>
+                @else
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                        <i data-lucide="circle-slash" class="w-3 h-3"></i> {{ __('admin.inactive') }}
+                    </span>
+                @endif
+
+                <x-slot:actions>
+                    <form action="{{ route('admin.seerah-milestones.toggle-active', $milestone->id) }}" method="POST" class="inline">@csrf
+                        <button type="submit" class="p-2.5 rounded-lg transition-colors" :class="darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'"
+                                title="{{ $milestone->is_active ? __('admin.deactivate') : __('admin.activate') }}">
+                            <i data-lucide="{{ $milestone->is_active ? 'toggle-right' : 'toggle-left' }}" class="w-4 h-4"></i>
+                        </button>
+                    </form>
+                    <a href="{{ route('admin.seerah-milestones.show', $milestone->id) }}" class="p-2.5 rounded-lg transition-colors" :class="darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'" title="{{ __('admin.view') }}"><i data-lucide="eye" class="w-4 h-4"></i></a>
+                    <a href="{{ route('admin.seerah-milestones.edit', $milestone->id) }}" class="p-2.5 rounded-lg transition-colors" :class="darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'" title="{{ __('admin.edit') }}"><i data-lucide="edit-2" class="w-4 h-4"></i></a>
+                    <form action="{{ route('admin.seerah-milestones.destroy', $milestone->id) }}" method="POST" class="inline"
+                          @submit.prevent="$dispatch('show-confirm', { title: '{{ __('admin.confirm_delete') }}', message: '{{ __('admin.delete_warning') }}', type: 'danger', onConfirm: () => $el.submit() })">@csrf @method('DELETE')
+                        <button type="submit" class="p-2.5 rounded-lg transition-colors text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" title="{{ __('admin.delete') }}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </form>
+                </x-slot:actions>
+            </x-admin.list-card>
+        @empty
+            <div class="p-8 rounded-2xl border text-center" :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+                <i data-lucide="milestone" class="w-12 h-12 mx-auto mb-3" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
+                <p class="text-base font-medium mb-4" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">{{ __('admin.no_milestones') }}</p>
+                <a href="{{ route('admin.seerah-milestones.create') }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-semibold"><i data-lucide="plus" class="w-5 h-5"></i> {{ __('admin.add_milestone') }}</a>
+            </div>
+        @endforelse
+    </div>
+
     @if($milestones->hasPages())
     <div class="mt-8">{{ $milestones->withQueryString()->links() }}</div>
     @endif
@@ -151,10 +217,11 @@
     function seerahMilestoneIndex() {
         return {
             selected: [],
+            // x-model bound rows: set `selected` and let Alpine mirror it. Reading
+            // <tbody> here would miss the mobile card stack rendered outside it.
+            pageIds: {{ Js::from(collect($milestones)->pluck('id')->all()) }},
             toggleAll(e) {
-                const ids = Array.from(document.querySelectorAll('tbody input[type=checkbox]')).map(c => Number(c.value));
-                this.selected = e.target.checked ? ids : [];
-                document.querySelectorAll('tbody input[type=checkbox]').forEach(c => c.checked = e.target.checked);
+                this.selected = e.target.checked ? [...this.pageIds] : [];
             },
             bulkDelete() {
                 if (this.selected.length === 0) return;

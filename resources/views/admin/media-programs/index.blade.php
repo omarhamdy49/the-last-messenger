@@ -124,7 +124,8 @@
             </div>
         @else
         <div x-data="bulkSelect(@js($programs->pluck('id')->all()))">
-        <div class="overflow-x-auto">
+        {{-- Table above `md`, card stack below it — see components/admin/list-card. --}}
+        <div class="hidden md:block overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b" :class="darkMode ? 'border-gray-800 bg-gray-900/80' : 'border-gray-200 bg-gray-50'">
@@ -259,6 +260,58 @@
                     @endforeach
                 </tbody>
             </table>
+        </div>
+
+        <!-- Mobile card stack (< md) -->
+        <div class="md:hidden p-4 space-y-3">
+            @foreach($programs as $program)
+                <x-admin.list-card
+                    :value="$program->id"
+                    icon="tv"
+                    :title="$program->getTranslation('title', 'ar') ?? $program->slug"
+                    :subtitle="collect([$program->category?->labelAr(), $program->year])->filter()->implode(' • ') ?: null">
+
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
+                          :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
+                        <i data-lucide="layers" class="w-3 h-3"></i> S{{ $program->total_seasons }} • E{{ $program->total_episodes }}
+                    </span>
+
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
+                          :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
+                        <i data-lucide="eye" class="w-3 h-3"></i> {{ number_format($program->views_count) }}
+                    </span>
+
+                    @switch($program->publishStatus())
+                        @case('published')
+                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">{{ __('admin.published') }}</span>
+                            @break
+                        @case('scheduled')
+                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                                  title="{{ $program->publish_at?->format('Y-m-d H:i') }}">{{ __('admin.scheduled') }} • {{ $program->publish_at?->format('m-d H:i') }}</span>
+                            @break
+                        @default
+                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-400">{{ __('admin.draft') }}</span>
+                    @endswitch
+
+                    @if($program->is_featured)
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">{{ __('admin.featured_only') }}</span>
+                    @endif
+                    @if($program->is_trending)
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">{{ __('admin.is_trending') }}</span>
+                    @endif
+
+                    <x-slot:actions>
+                        <a href="{{ route('admin.media-programs.show', $program->id) }}" class="p-2.5 rounded-lg transition-colors" :class="darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'" title="{{ __('admin.view') }}"><i data-lucide="eye" class="w-4 h-4"></i></a>
+                        <a href="{{ route('admin.media-programs.edit', $program->id) }}" class="p-2.5 rounded-lg transition-colors" :class="darkMode ? 'hover:bg-gray-700 text-blue-400' : 'hover:bg-blue-50 text-blue-600'" title="{{ __('admin.edit') }}"><i data-lucide="pencil" class="w-4 h-4"></i></a>
+                        <a href="{{ route('admin.media-episodes.index', ['program_id' => $program->id]) }}" class="p-2.5 rounded-lg transition-colors" :class="darkMode ? 'hover:bg-gray-700 text-green-400' : 'hover:bg-green-50 text-green-600'" title="{{ __('admin.media_episodes') }}"><i data-lucide="list" class="w-4 h-4"></i></a>
+                        <form method="POST" action="{{ route('admin.media-programs.destroy', $program->id) }}"
+                              onsubmit="return window.confirmSubmit(this, { message: '{{ __('admin.confirm_delete') }}' })" class="inline">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="p-2.5 rounded-lg transition-colors" :class="darkMode ? 'hover:bg-gray-700 text-red-400' : 'hover:bg-red-50 text-red-600'" title="{{ __('admin.delete') }}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </form>
+                    </x-slot:actions>
+                </x-admin.list-card>
+            @endforeach
         </div>
 
         <x-admin.bulk-delete-bar :action="route('admin.media-programs.bulk-delete')"

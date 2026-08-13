@@ -50,8 +50,12 @@
         ? route('public.hadith.collection', $collectionCode)
         : $hubUrl;
 
-    $readUrl = ($collectionCode && $hadithNumber && Route::has('public.hadith.show'))
-        ? route('public.hadith.show', ['collection' => $collectionCode, 'number' => $hadithNumber])
+    // One param, not two: the route is `/hadith/{collection}:{referenceKey}` and
+    // the key is reference_key ("1-1"), not the display number ("1").
+    $referenceKey = $hadith['reference_key'] ?? null;
+
+    $readUrl = ($collectionCode && $referenceKey && Route::has('public.hadith.show'))
+        ? route('public.hadith.show', ['reference' => $collectionCode.':'.$referenceKey])
         : $hubUrl;
 
     // Only 'sahih' has a guaranteed key; anything else falls back to the raw value
