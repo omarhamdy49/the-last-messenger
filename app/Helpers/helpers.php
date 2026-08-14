@@ -411,7 +411,7 @@ if (! function_exists('enhance_rich_embeds')) {
                 $block = preg_replace_callback(
                     '/\x{06DD}(?!\s*[0-9\x{0660}-\x{0669}])/u',
                     function () use (&$next): string {
-                        return '<span class="verse-number">'.$next++.'</span>';
+                        return '<span class="verse-number">'.arabic_digits($next++).'</span>';
                     },
                     $block
                 ) ?? $block;
@@ -420,7 +420,7 @@ if (! function_exists('enhance_rich_embeds')) {
                 // closing ornament.
                 return preg_replace(
                     '/\s*﴾/u',
-                    ' <span class="verse-number">'.$next.'</span>﴾',
+                    ' <span class="verse-number">'.arabic_digits($next).'</span>﴾',
                     $block,
                     1
                 ) ?? $block;
@@ -429,5 +429,19 @@ if (! function_exists('enhance_rich_embeds')) {
         );
 
         return $numbered ?? $html;
+    }
+}
+
+if (! function_exists('arabic_digits')) {
+    /**
+     * Western digits → Arabic-Indic (٠١٢٣٤٥٦٧٨٩). Quranic verse numbers read
+     * in the script of the verse itself.
+     */
+    function arabic_digits(int|string $number): string
+    {
+        return strtr((string) $number, [
+            '0' => '٠', '1' => '١', '2' => '٢', '3' => '٣', '4' => '٤',
+            '5' => '٥', '6' => '٦', '7' => '٧', '8' => '٨', '9' => '٩',
+        ]);
     }
 }

@@ -190,7 +190,7 @@ class ArticleLocale extends Model
 
         $body = '';
         foreach ($verses as $verse) {
-            $body .= '<p>'.e($verse['text'] ?? '').' <span class="verse-number">'.e($verse['number'] ?? '').'</span></p>';
+            $body .= '<p>'.e($verse['text'] ?? '').' <span class="verse-number">'.e(arabic_digits($verse['number'] ?? '')).'</span></p>';
         }
 
         return '<aside class="module-embed module-embed--verse" dir="rtl">'

@@ -51,6 +51,24 @@
     .module-embed__body { font-size: 1rem; line-height: 1.85; }
     .module-embed__arabic { font-family: 'Amiri', serif; font-size: 1.45rem; line-height: 2.35; }
     .module-embed__arabic p { margin: 0 0 .35rem; }
+
+    /* The verse card reads like a muṣḥaf plate: centred text, a touch
+       larger, under a faint eight-point star in the card's corner. */
+    .module-embed--verse .module-embed__arabic { font-size: 1.5rem; line-height: 2.4; text-align: center; }
+    .module-embed--verse { text-align: center; }
+    .module-embed--verse .module-embed__footer { justify-content: center; }
+    .module-embed--verse::after {
+        content: '';
+        position: absolute;
+        top: -2.25rem; inset-inline-end: -2.25rem;
+        width: 9rem; height: 9rem;
+        pointer-events: none;
+        background: var(--embed-accent, #218838);
+        opacity: .055;
+        -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Crect x='5' y='5' width='14' height='14'/%3E%3Crect x='5' y='5' width='14' height='14' transform='rotate(45 12 12)'/%3E%3C/svg%3E") center / contain no-repeat;
+        mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Crect x='5' y='5' width='14' height='14'/%3E%3Crect x='5' y='5' width='14' height='14' transform='rotate(45 12 12)'/%3E%3C/svg%3E") center / contain no-repeat;
+    }
+    .dark .module-embed--verse::after { opacity: .1; }
     .verse-number {
         display: inline-flex; align-items: center; justify-content: center;
         min-width: 1.7rem; height: 1.7rem; padding: 0 .35rem; margin-inline: .3rem .15rem;
