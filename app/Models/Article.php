@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Models\Series;
 use App\Domain\Blog\Models\Tag;
+use App\Domain\Blog\Services\ArticleThumbService;
 use App\Domain\Media\Models\MediaEpisode;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Shared\Traits\HasVersions;
@@ -18,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Translatable\HasTranslations;
 
 /**
@@ -255,6 +257,23 @@ class Article extends Model
     public function getThumbUrlAttribute(): string
     {
         return $this->thumb ? asset('storage/'.$this->thumb) : asset('images/default-article-thumb.jpg');
+    }
+
+    /**
+     * Thumbnail URL sized for its render context ('card' ~640w, 'hero' ~1280w).
+     * Falls back to the original file for legacy thumbs without derived copies.
+     */
+    public function thumbUrl(string $size): ?string
+    {
+        if (! $this->thumb) {
+            return null;
+        }
+
+        $derived = ArticleThumbService::derivedPath($this->thumb, $size);
+
+        return Storage::disk('public')->exists($derived)
+            ? asset('storage/'.$derived)
+            : asset('storage/'.$this->thumb);
     }
 
     /**

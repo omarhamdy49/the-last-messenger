@@ -161,9 +161,8 @@ final class SeriesController extends Controller
             'id' => $article->id,
             'title' => $l->title,
             'excerpt' => Str::limit(trim(strip_tags((string) ($l->excerpt ?: $l->description))), 180),
-            'image' => $article->thumb
-                ? asset('storage/'.ltrim($article->thumb, '/'))
-                : asset('images/site/article-'.(($article->id % 3) + 1).'.webp'),
+            'image' => $article->thumbUrl('card')
+                ?? asset('images/site/article-'.(($article->id % 3) + 1).'.webp'),
             'url' => route('public.articles.show', $l->slug),
             'category' => $categoryName,
             'readTime' => (int) $article->read_time,

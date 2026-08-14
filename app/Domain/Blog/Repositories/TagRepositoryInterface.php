@@ -88,5 +88,4 @@ interface TagRepositoryInterface
      * Find duplicate tag by name
      */
     public function findDuplicate(array $name): ?Model;
-
 }

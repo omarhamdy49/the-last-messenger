@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Blog\Models;
 
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -21,8 +22,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property string $interactable_type
  * @property string $interaction_type
  * @property array|null $metadata
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class UserInteraction extends Model
 {

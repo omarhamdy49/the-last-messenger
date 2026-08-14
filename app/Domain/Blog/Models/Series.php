@@ -6,6 +6,7 @@ namespace App\Domain\Blog\Models;
 
 use App\Domain\Shared\Traits\HasLocalizedContent;
 use App\Models\Article;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -20,8 +21,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property array|null $description
  * @property string|null $thumbnail
  * @property int $total_articles
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class Series extends Model
 {

@@ -17,6 +17,7 @@ use App\Domain\Shared\Services\SlugGenerator;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 /**
  * Category Service
@@ -483,9 +484,9 @@ class CategoryService extends BaseService
     /**
      * Restore a soft-deleted category.
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
-    public function restoreById(int $id): \App\Domain\Blog\Models\Category
+    public function restoreById(int $id): Category
     {
         return $this->repository->restoreById($id);
     }

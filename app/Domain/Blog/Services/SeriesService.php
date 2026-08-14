@@ -11,6 +11,7 @@ use App\Domain\Blog\Repositories\SeriesRepositoryInterface;
 use App\Domain\Shared\Services\BaseService;
 use App\Domain\Shared\Services\SlugGenerator;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -81,7 +82,7 @@ class SeriesService extends BaseService
      * admin show/edit views.
      *
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function findForAdmin(int $id): Series
     {
@@ -165,7 +166,7 @@ class SeriesService extends BaseService
      * translation sync, and article pivot sync. Returns the refreshed model.
      *
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function updateSeries(int $id, UpdateSeriesData $data): Series
     {
@@ -255,7 +256,7 @@ class SeriesService extends BaseService
      * failures don't leave orphaned pivot rows.
      *
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function destroySeries(int $id): bool
     {
@@ -328,7 +329,7 @@ class SeriesService extends BaseService
      *
      * @param  array<int, array{id: int, position: int}>  $articles
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function reorderArticles(int $seriesId, array $articles): void
     {
@@ -372,7 +373,7 @@ class SeriesService extends BaseService
      * Update series by ID
      *
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      *
      * @deprecated  Use updateSeries() which handles thumbnails, translations, and pivot sync.
      */
@@ -385,7 +386,7 @@ class SeriesService extends BaseService
      * Delete series by ID
      *
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function deleteSeries(int $id): bool
     {
@@ -407,7 +408,7 @@ class SeriesService extends BaseService
      * Find series by ID with articles
      *
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function findById(int $id): Series
     {
@@ -434,7 +435,7 @@ class SeriesService extends BaseService
      * Get series with all articles in order
      *
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function getWithArticles(int $id): Series
     {
@@ -445,7 +446,7 @@ class SeriesService extends BaseService
      * Recalculate the cached total_articles value from the article_series pivot.
      *
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function updateArticleCount(int $id): void
     {

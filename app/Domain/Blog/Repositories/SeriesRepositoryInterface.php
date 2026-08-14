@@ -7,6 +7,7 @@ namespace App\Domain\Blog\Repositories;
 use App\Domain\Blog\Models\Series;
 use App\Domain\Shared\Contracts\RepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 /**
  * Series Repository Interface
@@ -41,7 +42,7 @@ interface SeriesRepositoryInterface extends RepositoryInterface
      *
      * @param  int  $id  Series ID
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function getWithArticles(int $id): Series;
 

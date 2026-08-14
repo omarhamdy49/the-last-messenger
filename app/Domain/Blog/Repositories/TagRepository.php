@@ -7,7 +7,9 @@ namespace App\Domain\Blog\Repositories;
 use App\Domain\Blog\Models\Tag;
 use App\Models\Article;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -26,7 +28,7 @@ class TagRepository implements TagRepositoryInterface
     /**
      * Get base query with eager loaded relationships
      */
-    protected function getBaseQuery(): \Illuminate\Database\Eloquent\Builder
+    protected function getBaseQuery(): Builder
     {
         return $this->model::query()->withCount('articles');
     }
@@ -276,7 +278,7 @@ class TagRepository implements TagRepositoryInterface
     /**
      * Search tags for autocomplete
      */
-    public function searchForAutocomplete(string $query, ?string $type = null, int $limit = 10): \Illuminate\Support\Collection
+    public function searchForAutocomplete(string $query, ?string $type = null, int $limit = 10): Collection
     {
         $searchQuery = $this->model::query();
 

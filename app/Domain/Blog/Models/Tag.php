@@ -6,6 +6,7 @@ namespace App\Domain\Blog\Models;
 
 use App\Domain\Shared\Traits\HasLocalizedContent;
 use App\Models\Article;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -20,8 +21,8 @@ use Illuminate\Support\Str;
  * @property string $slug
  * @property array $name
  * @property string $type
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class Tag extends Model
 {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Blog\Actions;
 
 use App\Domain\Blog\DTOs\CreateArticleData;
+use App\Domain\Blog\Services\ArticleThumbService;
 use App\Domain\Blog\Services\ReadTimeCalculatorService;
 use App\Domain\Blog\Services\SlugGeneratorService;
 use App\Domain\Blog\Services\TocGeneratorService;
@@ -30,6 +31,7 @@ class CreateArticleAction
         private readonly ReadTimeCalculatorService $readTimeCalculator,
         private readonly TocGeneratorService $tocGenerator,
         private readonly VersionService $versionService,
+        private readonly ArticleThumbService $thumbService,
     ) {}
 
     /**
@@ -82,13 +84,13 @@ class CreateArticleAction
             return null;
         }
 
-        return $data->thumb->store('articles/thumbs', 'public');
+        return $this->thumbService->store($data->thumb);
     }
 
     private function cleanupThumb(?string $thumbPath): void
     {
         if ($thumbPath !== null) {
-            Storage::disk('public')->delete($thumbPath);
+            $this->thumbService->delete($thumbPath);
         }
     }
 

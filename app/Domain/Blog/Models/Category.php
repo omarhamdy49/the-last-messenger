@@ -7,7 +7,9 @@ namespace App\Domain\Blog\Models;
 use App\Domain\Blog\Enums\CategoryType;
 use App\Domain\Shared\Traits\HasLocalizedContent;
 use App\Models\Article;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /**
  * Category Model
@@ -32,9 +35,9 @@ use Illuminate\Support\Str;
  * @property string|null $icon
  * @property string|null $color
  * @property int $display_order
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
- * @property \Carbon\Carbon|null $deleted_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property Carbon|null $deleted_at
  */
 class Category extends Model
 {
@@ -260,7 +263,7 @@ class Category extends Model
      */
     public function media(): MorphMany
     {
-        return $this->morphMany(\Spatie\MediaLibrary\MediaCollections\Models\Media::class, 'model');
+        return $this->morphMany(Media::class, 'model');
     }
 
     /**
@@ -294,9 +297,9 @@ class Category extends Model
      * were never populated (no nested-set package was installed).  This
      * implementation walks the parent_id chain instead, which is reliable.
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, static>
+     * @return Collection<int, static>
      */
-    public function ancestors(): \Illuminate\Database\Eloquent\Collection
+    public function ancestors(): Collection
     {
         $ancestors = collect();
         $currentId = $this->parent_id;

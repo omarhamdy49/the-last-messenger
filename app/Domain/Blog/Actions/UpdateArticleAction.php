@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Blog\Actions;
 
 use App\Domain\Blog\DTOs\UpdateArticleData;
+use App\Domain\Blog\Services\ArticleThumbService;
 use App\Domain\Blog\Services\SlugGeneratorService;
 use App\Domain\Blog\Services\TocGeneratorService;
 use App\Domain\Shared\Services\VersionService;
@@ -25,6 +26,7 @@ class UpdateArticleAction
         private readonly SlugGeneratorService $slugGenerator,
         private readonly TocGeneratorService $tocGenerator,
         private readonly VersionService $versionService,
+        private readonly ArticleThumbService $thumbService,
     ) {}
 
     /**
@@ -70,11 +72,13 @@ class UpdateArticleAction
             return null;
         }
 
-        if ($article->thumb) {
-            Storage::disk('public')->delete($article->thumb);
+        // Seeded/duplicated articles can share one thumb file; only delete it
+        // when no other article still points at it.
+        if ($article->thumb && ! Article::where('id', '!=', $article->id)->where('thumb', $article->thumb)->exists()) {
+            $this->thumbService->delete($article->thumb);
         }
 
-        return $data->thumb->store('articles/thumbs', 'public');
+        return $this->thumbService->store($data->thumb);
     }
 
     private function updateArticleRecord(Article $article, UpdateArticleData $data, ?string $newThumbPath): void

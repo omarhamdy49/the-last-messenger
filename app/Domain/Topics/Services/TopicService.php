@@ -198,7 +198,8 @@ final class TopicService
             'excerpt' => $localized->excerpt,
             'slug' => $localized->slug,
             'category' => $categoryName,
-            'thumb' => $article->thumb,
+            // Full card-size URL — the raw storage path was unusable as an <img> src.
+            'thumb' => $article->thumbUrl('card'),
             'url' => route('public.articles.show', $localized->slug),
         ];
     }

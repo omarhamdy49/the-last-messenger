@@ -232,7 +232,7 @@ final class ArticleController extends Controller
             'excerpt' => trim(strip_tags((string) ($articleLocale->excerpt ?: $articleLocale->description))),
             'body' => $body,
             'toc' => $toc,
-            'image' => $this->resolveImage($article),
+            'image' => $this->resolveImage($article, 'hero'),
             'category' => $this->resolveCategoryName($article, $locale),
             'tags' => $this->resolveTagNames($article, $locale),
             'author' => optional($article->writer)->name ?: __('articles.public.unknown_author'),
@@ -579,11 +579,13 @@ final class ArticleController extends Controller
 
     /**
      * Resolve thumbnail URL with a deterministic fallback so cards never break.
+     * $size picks the derived copy matched to the render context ('card' for
+     * listings, 'hero' for the article page / og:image).
      */
-    private function resolveImage(Article $article): string
+    private function resolveImage(Article $article, string $size = 'card'): string
     {
         if (! empty($article->thumb)) {
-            return asset('storage/'.ltrim($article->thumb, '/'));
+            return $article->thumbUrl($size);
         }
 
         $fallbacks = ['site/article-1.webp', 'site/article-2.webp', 'site/article-3.webp'];

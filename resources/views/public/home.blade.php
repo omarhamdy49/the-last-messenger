@@ -783,10 +783,10 @@
             @foreach($featuredArticles as $article)
                 @php
                     $articleLocale = $article->locales->first();
-                    $image = $article->featured_image ?: $article->thumb;
+                    $image = $article->featured_image;
                     $imageUrl = $image
                         ? (filter_var($image, FILTER_VALIDATE_URL) ? $image : asset('storage/'.ltrim($image, '/')))
-                        : asset('images/placeholder.png');
+                        : ($article->thumbUrl('card') ?? asset('images/placeholder.png'));
                 @endphp
                 <article class="bg-white dark:bg-[#16213e] rounded-2xl shadow-xl overflow-hidden hover-lift">
                     <a href="{{ route('public.articles.show', $articleLocale->slug) }}">
