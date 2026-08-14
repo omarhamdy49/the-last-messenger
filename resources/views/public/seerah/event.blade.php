@@ -448,7 +448,8 @@
                             </div>
                             <div class="grid sm:grid-cols-2 gap-4 sm:gap-5">
                                 @foreach ($lessons as $lesson)
-                                    <div class="rounded-2xl p-5 sm:p-6 border-s-4 border-amber-500 bg-amber-50/60 dark:bg-white/[.04]">
+                                    <div class="rounded-2xl p-5 sm:p-6 bg-amber-50/60 dark:bg-white/[.04]">
+                                        <span class="block w-10 h-[3px] rounded-full bg-gradient-to-l from-amber-500 to-orange-600 mb-3" aria-hidden="true"></span>
                                         <h3 class="font-bold text-lg mb-2 break-words text-gray-900 dark:text-white">{{ $lesson['title'] }}</h3>
                                         @if (! empty($lesson['description']))
                                             <p class="leading-relaxed break-words text-gray-700 dark:text-gray-300">{{ $lesson['description'] }}</p>

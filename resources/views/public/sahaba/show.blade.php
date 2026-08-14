@@ -405,7 +405,7 @@
 
               @if ($profile['fullName'] && $profile['fullName'] !== $profile['name'])
                 <!-- Quote Box -->
-                <div class="relative mb-8 p-8 rounded-2xl bg-gradient-to-br from-[#0056b3]/5 to-[#218838]/5 border-s-4 border-[#0056b3]">
+                <div class="relative mb-8 p-8 rounded-2xl bg-gradient-to-br from-[#0056b3]/5 to-[#218838]/5">
                   <div class="quote-mark absolute top-4 start-4 text-[#0056b3]">"</div>
                   <p class="text-lg leading-relaxed relative z-10 break-words" :class="darkMode ? 'text-gray-200' : 'text-gray-700'">
                     {{ $profile['fullName'] }}
@@ -482,7 +482,8 @@
 
               <div class="prose prose-lg max-w-none space-y-6" :class="darkMode ? 'prose-invert' : ''">
                 <!-- Tragedy Highlight -->
-                <div class="relative my-8 p-8 rounded-2xl bg-gradient-to-br from-red-500/10 to-red-600/10 border-r-4 border-red-600">
+                <div class="relative my-8 p-8 rounded-2xl bg-gradient-to-br from-red-500/10 to-red-600/10">
+                  <span class="block w-10 h-[3px] rounded-full bg-gradient-to-l from-red-500 to-red-700 mb-4" aria-hidden="true"></span>
                   <div class="text-lg leading-relaxed whitespace-pre-line break-words" :class="darkMode ? 'text-gray-200' : 'text-gray-700'">
                     {{ $profile['martyrdom'] }}
                   </div>

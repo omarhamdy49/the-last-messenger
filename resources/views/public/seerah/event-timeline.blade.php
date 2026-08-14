@@ -494,8 +494,9 @@
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         @foreach ($lessons as $lesson)
-                            <div class="tl-item tl-card-hover rounded-2xl p-6 border-s-4 border-amber-500" data-revealed="false"
+                            <div class="tl-item tl-card-hover rounded-2xl p-6" data-revealed="false"
                                  :class="darkMode ? 'bg-gray-800/60' : 'bg-amber-50/70'">
+                                <span class="block w-10 h-[3px] rounded-full bg-gradient-to-l from-amber-500 to-orange-600 mb-3" aria-hidden="true"></span>
                                 <h3 class="font-bold text-lg mb-2 break-words" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $lesson['title'] }}</h3>
                                 @if (! empty($lesson['description']))
                                     <p class="leading-relaxed break-words" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ $lesson['description'] }}</p>

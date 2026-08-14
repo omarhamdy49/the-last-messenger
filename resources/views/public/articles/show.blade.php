@@ -168,7 +168,20 @@
         max-block-size: min(26rem, calc(100vh - 20rem));
         overflow-y: auto;
         overscroll-behavior: contain;
+        scroll-behavior: smooth;
+        /* Slim teal thumb on an invisible track — the default scrollbar
+           painted a fat white bar down the dark card. Chrome 121+/Firefox
+           take the standard properties; the -webkit- rules cover Safari. */
         scrollbar-width: thin;
+        scrollbar-color: rgba(100, 204, 197, .35) transparent;
+    }
+    .toc-scroll:hover { scrollbar-color: rgba(100, 204, 197, .6) transparent; }
+    .toc-scroll::-webkit-scrollbar { width: 5px; }
+    .toc-scroll::-webkit-scrollbar-track { background: transparent; }
+    .toc-scroll::-webkit-scrollbar-thumb { background: rgba(100, 204, 197, .35); border-radius: 9999px; }
+    .toc-scroll::-webkit-scrollbar-thumb:hover { background: rgba(100, 204, 197, .6); }
+    @media (prefers-reduced-motion: reduce) {
+        .toc-scroll { scroll-behavior: auto; }
     }
 
     /* Pill links with a lit dot trail — the Path of Light's reading rail.
@@ -673,11 +686,14 @@
                             {{ $article['title'] }}
                         </h1>
 
-                        {{-- Lede --}}
+                        {{-- Lede — marked by a light dash, the site's gradient signature. --}}
                         @if (! empty($article['excerpt']))
-                            <p class="text-lg md:text-xl text-gray-600 dark:text-gray-300 leading-relaxed mb-7 break-words ps-4 border-s-4 border-accent/60">
-                                {{ $article['excerpt'] }}
-                            </p>
+                            <div class="mb-7">
+                                <span class="block w-12 h-[3px] rounded-full bg-gradient-to-l from-primary via-accent to-secondary mb-3" aria-hidden="true"></span>
+                                <p class="text-lg md:text-xl text-gray-600 dark:text-gray-300 leading-relaxed break-words">
+                                    {{ $article['excerpt'] }}
+                                </p>
+                            </div>
                         @endif
 
                         {{-- Reader actions --}}
@@ -1239,7 +1255,23 @@
                     this.measureBody();
                     if (window.lucide) window.lucide.createIcons();
                 });
+                // Keep the active heading softly centred inside the TOC panel as
+                // the reader moves. Scrolls ONLY the panel — scrollIntoView would
+                // also scroll the page and fight the reader's own scrolling.
+                this.$watch('active', (id) => this.followInToc(id));
                 this.recordView();
+            },
+
+            followInToc(id) {
+                if (!id) return;
+                const link = document.querySelector(`.toc-scroll [data-toc-link="${CSS.escape(id)}"]`);
+                const wrap = link?.closest('.toc-scroll');
+                if (!link || !wrap) return;
+                const lr = link.getBoundingClientRect();
+                const wr = wrap.getBoundingClientRect();
+                if (lr.top < wr.top || lr.bottom > wr.bottom) {
+                    wrap.scrollTop = wrap.scrollTop + (lr.top - wr.top) - wr.height / 2 + lr.height / 2;
+                }
             },
 
             // Count this view via an async call so it keeps working while the
