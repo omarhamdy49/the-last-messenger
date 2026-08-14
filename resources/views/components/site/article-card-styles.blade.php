@@ -43,6 +43,24 @@
         border-color: rgba(100, 204, 197, .32);
         box-shadow: 0 28px 56px -24px rgba(100, 204, 197, .22);
     }
+    /* Light hairline: the card's top edge ignites on hover/focus — the
+       library's echo of the seerah light trail. Paint-only. */
+    .art-card::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        inset-inline: 14%;
+        height: 2px;
+        border-radius: 2px;
+        z-index: 2;
+        pointer-events: none;
+        background: linear-gradient(90deg, transparent, #64CCC5, transparent);
+        opacity: 0;
+        transform: scaleX(.35);
+        transition: opacity .45s ease, transform .55s cubic-bezier(.22, 1, .36, 1);
+    }
+    .art-card:hover::after,
+    .art-card:focus-visible::after { opacity: 1; transform: scaleX(1); }
     .art-card:focus-visible {
         outline: none;
         border-color: rgba(0, 86, 179, .5);

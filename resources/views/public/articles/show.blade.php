@@ -171,10 +171,13 @@
         scrollbar-width: thin;
     }
 
-    /* Pill links, filled when active — the prototype's treatment. Replaces the
-       hairline rail and its travelling marker. */
+    /* Pill links with a lit dot trail — the Path of Light's reading rail.
+       A gradient fill climbs the track as the reader moves; passed
+       headings hold a lit dot. */
     .toc-link {
-        display: block;
+        display: flex;
+        align-items: center;
+        gap: .65rem;
         padding: .5rem .75rem;
         border-radius: .5rem;
         font-size: .875rem;
@@ -186,19 +189,47 @@
     .toc-link:hover { color: #111827; background: #f3f4f6; }
     .dark .toc-link:hover { color: #e5e7eb; background: rgba(255, 255, 255, .06); }
 
-    /* Sub-headings read as subordinate: indented and a step down. */
-    .toc-link--sub {
-        font-size: .8125rem;
-        margin-inline-start: .75rem;
-    }
+    /* Sub-headings read as subordinate: a step down, smaller dot — the
+       dot column stays on the rail (no margin indent, it would derail it). */
+    .toc-link--sub { font-size: .8125rem; }
+    .toc-link--sub .toc-dot { width: 7px; height: 7px; margin-inline-start: 1px; }
 
     .toc-link.toc-active {
         color: #0d6b61;
         font-weight: 600;
         background: rgba(100, 204, 197, .12);
-        border-inline-start: 3px solid #64CCC5;
     }
     .dark .toc-link.toc-active { color: #64CCC5; }
+
+    .toc-rail-track,
+    .toc-rail-fill {
+        position: absolute;
+        top: .9rem;
+        bottom: .9rem;
+        inset-inline-start: 15.5px;
+        width: 2px;
+        border-radius: 2px;
+        pointer-events: none;
+    }
+    .toc-rail-track { background: #e5e7eb; }
+    .dark .toc-rail-track { background: rgba(255, 255, 255, .1); }
+    .toc-rail-fill {
+        background: linear-gradient(to bottom, #0056b3, #64CCC5 55%, #218838);
+        clip-path: inset(0 0 calc((1 - var(--tp, 0)) * 100%) 0);
+        transition: clip-path .4s ease-out;
+    }
+    .toc-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        position: relative;
+        z-index: 1;
+        background: #d1d5db;
+        transition: background .35s ease, box-shadow .35s ease;
+    }
+    .dark .toc-dot { background: rgba(255, 255, 255, .22); }
+    .toc-dot.is-on { background: #64CCC5; box-shadow: 0 0 9px rgba(100, 204, 197, .8); }
 
     /* ── Citations arrive ──
        Verse and hadith cards settle into place as the reader reaches
@@ -220,8 +251,15 @@
     }
 
     /* ── Progress ──
+       A light trail rather than a flat bar: the brand gradient with a
+       soft teal glow, matching the seerah journey's language.
        Bound to the document's own scroll where the browser can do it
        without JS; the Alpine width binding stays as the fallback. */
+    .reading-progress__fill {
+        background: linear-gradient(90deg, #0056b3 0%, #64CCC5 60%, #218838 100%);
+        box-shadow: 0 0 10px rgba(100, 204, 197, .65);
+        border-radius: 0 2px 2px 0;
+    }
     @supports (animation-timeline: scroll()) {
         .reading-progress__fill {
             width: 100% !important;
@@ -434,7 +472,7 @@
     <div class="fixed top-0 inset-x-0 z-[60] h-[3px] bg-transparent no-print"
          role="progressbar" aria-label="{{ __('articles.public.reading_progress') }}"
          :aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100">
-        <div class="reading-progress__fill h-full bg-secondary transition-[width] duration-150 ease-out"
+        <div class="reading-progress__fill h-full transition-[width] duration-150 ease-out"
              :style="`width: ${progress}%`"></div>
     </div>
 
@@ -469,7 +507,7 @@
                              @mouseenter="hover = true" @mouseleave="hover = false">
 
                             {{-- Main stage --}}
-                            <div class="gallery-stage article-hero-media group relative h-60 md:h-96 overflow-hidden bg-gray-100 dark:bg-[#0f3460] cursor-zoom-in"
+                            <div class="gallery-stage article-hero-media group relative h-64 sm:h-80 md:h-96 overflow-hidden bg-gray-100 dark:bg-[#0f3460] cursor-zoom-in"
                                  @click="openLightbox()">
                                 <img :src="current.url" :alt="current.caption || title"
                                      onerror="this.style.display='none';this.parentElement.classList.add('img-gradient-fallback')"
@@ -477,20 +515,24 @@
                                      class="gallery-img w-full h-full object-cover">
                                 <div class="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent pointer-events-none"></div>
 
-                                {{-- Per-image caption + article category/tag chips --}}
-                                <div class="absolute bottom-5 start-5 end-5 space-y-2 pointer-events-none z-10">
+                                {{-- Per-image caption + article category/tag chips.
+                                     On phones the stage is short and the arrows sit at its
+                                     vertical centre — so the caption caps at one line, the
+                                     tag chips wait for sm:, and only the category chip
+                                     stays. Otherwise the overlays pile onto each other. --}}
+                                <div class="absolute bottom-4 start-4 end-4 sm:bottom-5 sm:start-5 sm:end-5 space-y-2 pointer-events-none z-10">
                                     <p x-show="current.caption" x-cloak x-text="current.caption"
-                                       class="text-white text-sm md:text-base font-medium drop-shadow line-clamp-2"></p>
+                                       class="text-white text-xs sm:text-sm md:text-base font-medium drop-shadow line-clamp-1 sm:line-clamp-2"></p>
                                     @if (! empty($article['category']) || ! empty($article['tags']))
-                                        <div class="flex flex-wrap gap-2">
+                                        <div class="flex flex-wrap gap-1.5 sm:gap-2">
                                             {{-- Both sit on a photograph, so the surface has to be
                                                  darker than the text, not lighter. The light `glass`
                                                  utility put white type on a near-white pill. --}}
                                             @if (! empty($article['category']))
-                                                <span class="px-4 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-l from-primary to-secondary text-white shadow-lg">{{ $article['category'] }}</span>
+                                                <span class="px-3 py-1 text-xs sm:px-4 sm:py-1.5 sm:text-sm rounded-full font-semibold bg-gradient-to-l from-primary to-secondary text-white shadow-lg">{{ $article['category'] }}</span>
                                             @endif
                                             @foreach (array_slice($article['tags'], 0, 2) as $tag)
-                                                <span class="px-4 py-1.5 rounded-full text-sm font-medium bg-black/45 backdrop-blur-sm ring-1 ring-white/25 text-white">{{ $tag }}</span>
+                                                <span class="hidden sm:inline-flex px-4 py-1.5 rounded-full text-sm font-medium bg-black/45 backdrop-blur-sm ring-1 ring-white/25 text-white">{{ $tag }}</span>
                                             @endforeach
                                         </div>
                                     @endif
@@ -521,12 +563,12 @@
                                              only way to reach slide 2 was the dot row
                                              or a swipe nobody was told about. --}}
                                         <button type="button" @click.stop="prev()" aria-label="{{ __('articles.public.previous') }}"
-                                                class="absolute start-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-white hover:bg-white/35 hover:scale-110 transition-all z-10">
-                                            <i data-lucide="chevron-{{ $isRtl ? 'right' : 'left' }}" class="w-6 h-6"></i>
+                                                class="absolute start-2 sm:start-4 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-white hover:bg-white/35 hover:scale-110 transition-all z-10">
+                                            <i data-lucide="chevron-{{ $isRtl ? 'right' : 'left' }}" class="w-5 h-5 sm:w-6 sm:h-6"></i>
                                         </button>
                                         <button type="button" @click.stop="next()" aria-label="{{ __('articles.public.next') }}"
-                                                class="absolute end-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-white hover:bg-white/35 hover:scale-110 transition-all z-10">
-                                            <i data-lucide="chevron-{{ $isRtl ? 'left' : 'right' }}" class="w-6 h-6"></i>
+                                                class="absolute end-2 sm:end-4 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-white hover:bg-white/35 hover:scale-110 transition-all z-10">
+                                            <i data-lucide="chevron-{{ $isRtl ? 'left' : 'right' }}" class="w-5 h-5 sm:w-6 sm:h-6"></i>
                                         </button>
                                         {{-- dot indicators (desktop) --}}
                                         <div class="absolute bottom-4 left-1/2 -translate-x-1/2 hidden sm:flex items-center gap-1.5 z-10">
@@ -1030,18 +1072,27 @@
                                 <i data-lucide="list" class="w-5 h-5 text-accent" aria-hidden="true"></i>
                                 {{ __('articles.public.table_of_contents') }}
                             </h3>
-                            <div class="toc-scroll space-y-1">
-                                @foreach ($article['toc'] as $item)
-                                    @php($isSub = ($item['level'] ?? 2) === 3)
-                                    <a href="#{{ $item['id'] }}"
-                                       @click.prevent="scrollTo('{{ $item['id'] }}')"
-                                       data-toc-link="{{ $item['id'] }}"
-                                       @class(['toc-link', 'toc-link--sub' => $isSub])
-                                       :class="active === '{{ $item['id'] }}' ? 'toc-active' : ''"
-                                       :aria-current="active === '{{ $item['id'] }}' ? 'true' : 'false'">
-                                        {{ $item['label'] }}
-                                    </a>
-                                @endforeach
+                            <div class="toc-scroll">
+                                <div class="relative space-y-1">
+                                    {{-- lit trail: rail + gradient fill follow the reading position --}}
+                                    <div class="toc-rail-track" aria-hidden="true"></div>
+                                    <div class="toc-rail-fill" aria-hidden="true"
+                                         :style="`--tp: ${active ? Math.min(1, (tocIds.indexOf(active) + 0.5) / tocIds.length) : 0}`"></div>
+                                    @foreach ($article['toc'] as $item)
+                                        @php($isSub = ($item['level'] ?? 2) === 3)
+                                        <a href="#{{ $item['id'] }}"
+                                           @click.prevent="scrollTo('{{ $item['id'] }}')"
+                                           data-toc-link="{{ $item['id'] }}"
+                                           @class(['toc-link', 'toc-link--sub' => $isSub])
+                                           :class="active === '{{ $item['id'] }}' ? 'toc-active' : ''"
+                                           :aria-current="active === '{{ $item['id'] }}' ? 'true' : 'false'">
+                                            <span class="toc-dot"
+                                                  :class="active && tocIds.indexOf('{{ $item['id'] }}') <= tocIds.indexOf(active) ? 'is-on' : ''"
+                                                  aria-hidden="true"></span>
+                                            {{ $item['label'] }}
+                                        </a>
+                                    @endforeach
+                                </div>
                             </div>
                         </nav>
                     @endif

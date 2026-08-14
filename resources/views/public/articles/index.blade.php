@@ -515,11 +515,48 @@
         border-color: rgba(100, 204, 197, .14);
     }
 
+    /* ── Light of Knowledge ────────────────────────────────────────
+       Drifting light orbs behind the hero (the seerah journey's slow
+       breathing), and a staggered reveal for the shelves as they enter
+       the viewport. Both scroll/idle-driven, transform+opacity only. */
+    .lib-orb {
+        position: absolute;
+        z-index: -1;
+        border-radius: 50%;
+        pointer-events: none;
+        filter: blur(56px);
+    }
+    .lib-orb--a {
+        width: 22rem; height: 22rem;
+        top: -7rem; inset-inline-start: 10%;
+        background: rgba(0, 86, 179, .16);
+        animation: lib-drift-a 26s ease-in-out infinite;
+    }
+    .lib-orb--b {
+        width: 18rem; height: 18rem;
+        top: -4rem; inset-inline-end: 8%;
+        background: rgba(33, 136, 56, .13);
+        animation: lib-drift-b 22s ease-in-out infinite;
+    }
+    .dark .lib-orb--a { background: rgba(0, 86, 179, .38); }
+    .dark .lib-orb--b { background: rgba(100, 204, 197, .2); }
+    @keyframes lib-drift-a { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(26px, 16px) scale(1.07); } }
+    @keyframes lib-drift-b { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-24px, 12px) scale(1.05); } }
+
+    .lib-reveal {
+        opacity: 0;
+        transform: translateY(18px);
+        transition: opacity .5s ease-out, transform .55s cubic-bezier(.16, 1, .3, 1);
+    }
+    .lib-reveal.is-visible { opacity: 1; transform: none; }
+
     @media (prefers-reduced-motion: reduce) {
         .lib-spot, .lib-spot *, .lib-pill, .lib-ctrl {
             transition: none !important;
             transform: none !important;
         }
+        .lib-orb { animation: none; }
+        .lib-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
     }
 </style>
 @endpush
@@ -576,6 +613,8 @@
     {{-- ============================================================ --}}
     <section class="lib-hero">
         <div class="lib-hero-lattice" aria-hidden="true"></div>
+        <div class="lib-orb lib-orb--a" aria-hidden="true"></div>
+        <div class="lib-orb lib-orb--b" aria-hidden="true"></div>
 
         <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative pt-6 pb-20 md:pb-28">
 
@@ -905,6 +944,7 @@
                 <x-site.article-card
                     :article="$article"
                     :eager="$aboveFold"
+                    class="lib-reveal"
                     x-show="onPage({{ $article['id'] }})"
                     ::style="{ order: orderRank({{ $article['id'] }}) }"
                 />
@@ -985,6 +1025,28 @@
                 this.$watch('showTags', () => this.refreshIcons());
                 this.$watch('spotIndex', () => this.refreshIcons());
                 this.refreshIcons();
+                this.revealShelves();
+            },
+
+            // Staggered card reveal as the shelves enter the viewport. Filter
+            // and page switches re-display cards instantly (they keep
+            // .is-visible once earned); the safety timer force-reveals
+            // anything the observer missed so no card can stay hidden.
+            revealShelves() {
+                const cards = document.querySelectorAll('.lib-reveal');
+                if (! cards.length) return;
+                if (! ('IntersectionObserver' in window)
+                    || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                    cards.forEach(el => el.classList.add('is-visible'));
+                    return;
+                }
+                const io = new IntersectionObserver((entries) => {
+                    entries.forEach(en => {
+                        if (en.isIntersecting) { en.target.classList.add('is-visible'); io.unobserve(en.target); }
+                    });
+                }, { rootMargin: '80px 0px', threshold: 0.05 });
+                cards.forEach(el => io.observe(el));
+                setTimeout(() => cards.forEach(el => el.classList.add('is-visible')), 2500);
             },
 
             /**
