@@ -49,8 +49,45 @@
     }
     .reading-progress-bar {
         height: 100%;
-        background: linear-gradient(90deg, #0056b3 0%, #218838 100%);
+        border-radius: 0 2px 2px 0;
+        background: linear-gradient(90deg, #0056b3 0%, #64CCC5 60%, #218838 100%);
+        box-shadow: 0 0 10px rgba(100, 204, 197, .65);
         transition: width 0.2s ease-out;
+    }
+
+    /* ── Path of Light II ────────────────────────────────────────────
+       The inner timeline carries a continuous track whose fill follows
+       the reading line (--jp, paint-only clip-path); step chips ignite
+       as they are passed. The TOC mirrors it as a lit dot trail. */
+    #article-path { --jp: 0; }
+    .ev-path-fill {
+        clip-path: inset(0 0 calc((1 - var(--jp, 0)) * 100%) 0);
+        transition: clip-path .18s ease-out;
+    }
+    .ev-step-chip { transition: box-shadow .5s ease, filter .5s ease; }
+    [data-path-step]:not(.is-lit) .ev-step-chip { filter: grayscale(.4) brightness(.92); }
+    [data-path-step].is-lit .ev-step-chip { box-shadow: 0 0 20px -4px rgba(100,204,197,.85); }
+
+    .ev-toc-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        position: relative;
+        z-index: 1;
+        background: #d1d5db;
+        transition: background .35s ease, box-shadow .35s ease;
+    }
+    .dark .ev-toc-dot { background: rgba(255, 255, 255, .22); }
+    .ev-toc-dot.is-on { background: #64CCC5; box-shadow: 0 0 10px rgba(100, 204, 197, .8); }
+    .ev-toc-fill {
+        height: calc(100% - 1.5rem);
+        clip-path: inset(0 0 calc((1 - var(--tp, 0)) * 100%) 0);
+        transition: clip-path .4s ease-out;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .ev-path-fill, .ev-step-chip, .ev-toc-dot, .ev-toc-fill { transition: none; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -108,11 +145,27 @@
 
     init() {
         this.updateReadingProgress();
+        this.updateActiveSection();
+        this.updatePathLight();
         window.addEventListener('scroll', () => {
             this.updateReadingProgress();
             this.showFab = window.scrollY > 500;
             this.updateActiveSection();
+            this.updatePathLight();
         }, { passive: true });
+    },
+
+    // Path of Light II: fill the inner timeline's track to the reading
+    // line and ignite the step chips it has passed.
+    updatePathLight() {
+        const path = document.getElementById('article-path');
+        if (! path) return;
+        const line = window.innerHeight * 0.4;
+        const rect = path.getBoundingClientRect();
+        path.style.setProperty('--jp', Math.min(1, Math.max(0, (line - rect.top) / Math.max(rect.height, 1))).toFixed(4));
+        path.querySelectorAll('[data-path-step]').forEach(step => {
+            step.classList.toggle('is-lit', step.getBoundingClientRect().top < line);
+        });
     },
 
     updateReadingProgress() {
@@ -326,25 +379,27 @@
                                 <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{{ __('seerah.public.event_timeline_heading') }}</h2>
                             </div>
 
-                            <div class="space-y-6 sm:space-y-8">
-                                @foreach ($eventTimeline as $index => $timelineItem)
-                                    <div class="relative flex items-start gap-3 sm:gap-5">
-                                        <div class="relative flex-shrink-0">
-                                            <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center text-white font-bold text-sm shadow-md">
+                            <div id="article-path" class="relative">
+                                {{-- continuous track — replaces per-item connectors that
+                                     never reached the next chip past a tall card --}}
+                                <div class="absolute top-5 bottom-10 start-[17px] sm:start-[19px] w-0.5 rounded-full bg-gray-200 dark:bg-white/10" aria-hidden="true"></div>
+                                <div class="ev-path-fill absolute top-5 bottom-10 start-[17px] sm:start-[19px] w-0.5 rounded-full bg-gradient-to-b from-[#0056b3] via-[#64CCC5] to-[#218838]" aria-hidden="true"></div>
+
+                                <div class="space-y-6 sm:space-y-8">
+                                    @foreach ($eventTimeline as $index => $timelineItem)
+                                        <div class="relative flex items-start gap-3 sm:gap-5" data-path-step>
+                                            <div class="ev-step-chip relative z-10 flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center text-white font-bold text-sm shadow-md">
                                                 {{ $index + 1 }}
                                             </div>
-                                            @unless ($loop->last)
-                                                <div class="absolute left-1/2 top-10 bottom-[-1.75rem] w-0.5 -translate-x-1/2 bg-gradient-to-b from-[#0056b3] to-[#218838] opacity-30"></div>
-                                            @endunless
+                                            <div class="flex-1 min-w-0 rounded-2xl p-4 sm:p-5 bg-gray-50/80 dark:bg-white/[.04] border border-gray-100 dark:border-white/5">
+                                                <h3 class="text-lg sm:text-xl font-bold mb-1.5 break-words text-gray-900 dark:text-white">{{ $timelineItem['title'] }}</h3>
+                                                @if (! empty($timelineItem['description']))
+                                                    <p class="leading-relaxed break-words text-gray-700 dark:text-gray-300">{{ $timelineItem['description'] }}</p>
+                                                @endif
+                                            </div>
                                         </div>
-                                        <div class="flex-1 min-w-0 rounded-2xl p-4 sm:p-5 bg-gray-50/80 dark:bg-white/[.04] border border-gray-100 dark:border-white/5">
-                                            <h3 class="text-lg sm:text-xl font-bold mb-1.5 break-words text-gray-900 dark:text-white">{{ $timelineItem['title'] }}</h3>
-                                            @if (! empty($timelineItem['description']))
-                                                <p class="leading-relaxed break-words text-gray-700 dark:text-gray-300">{{ $timelineItem['description'] }}</p>
-                                            @endif
-                                        </div>
-                                    </div>
-                                @endforeach
+                                    @endforeach
+                                </div>
                             </div>
                         </section>
                     @endif
@@ -468,13 +523,19 @@
                                 </button>
                             </div>
 
-                            <ul x-show="tocOpen" x-transition class="space-y-1.5">
+                            <ul x-show="tocOpen" x-transition class="relative space-y-1.5">
+                                {{-- lit trail: rail + fill track the reading position --}}
+                                <div class="absolute top-3 bottom-3 start-[20px] w-0.5 rounded-full bg-gray-200 dark:bg-white/10" aria-hidden="true"></div>
+                                <div class="ev-toc-fill absolute top-3 start-[20px] w-0.5 rounded-full bg-gradient-to-b from-[#0056b3] via-[#64CCC5] to-[#218838]"
+                                     :style="`--tp: ${activeSection ? Math.min(1, (sections.indexOf(activeSection) + 0.5) / sections.length) : 0}`"
+                                     aria-hidden="true"></div>
                                 @foreach ($toc as $tocItem)
                                     <li>
                                         <a href="#{{ $tocItem['id'] }}"
                                            class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all"
                                            :class="activeSection === '{{ $tocItem['id'] }}' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow' : 'hover:bg-gray-50 text-gray-700 dark:hover:bg-white/5 dark:text-gray-300'">
-                                            <i data-lucide="circle-dot" class="w-4 h-4 flex-shrink-0"></i>
+                                            <span class="ev-toc-dot"
+                                                  :class="activeSection && sections.indexOf('{{ $tocItem['id'] }}') <= sections.indexOf(activeSection) ? 'is-on' : ''"></span>
                                             {{ $tocItem['label'] }}
                                         </a>
                                     </li>

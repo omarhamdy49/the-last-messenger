@@ -58,8 +58,48 @@
 
     .tl-reading-progress-bar {
         height: 100%;
-        background: linear-gradient(90deg, #0056b3 0%, #218838 100%);
+        border-radius: 0 2px 2px 0;
+        background: linear-gradient(90deg, #0056b3 0%, #64CCC5 60%, #218838 100%);
+        box-shadow: 0 0 10px rgba(100, 204, 197, .65);
         transition: width 0.2s ease-out;
+    }
+
+    /* ── Path of Light II: the inner event timeline ──────────────────
+       Continuous track behind the step chips; the fill is a paint-only
+       clip-path reveal driven by --jp, with a traveler light at the tip.
+       Steps ignite (.is-lit) as the reading line passes them. */
+    #event-path { --jp: 0; }
+    .ev-path-fill {
+        clip-path: inset(0 0 calc((1 - var(--jp, 0)) * 100%) 0);
+        transition: clip-path .18s ease-out;
+    }
+    .ev-traveler {
+        position: absolute;
+        top: calc(1.5rem + var(--jp, 0) * (100% - 5rem));
+        inset-inline-start: 24px;
+        width: 22px;
+        height: 22px;
+        margin-top: -11px;
+        margin-inline-start: -11px;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 5;
+        background: radial-gradient(circle, #ffffff 0%, #a8f0ea 25%, #64CCC5 48%, rgba(100,204,197,0) 74%);
+        filter: drop-shadow(0 0 9px rgba(100,204,197,.95)) drop-shadow(0 0 22px rgba(100,204,197,.45));
+        transition: top .18s ease-out;
+        animation: ev-traveler-breathe 2.6s ease-in-out infinite;
+    }
+    @keyframes ev-traveler-breathe {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.25); opacity: .85; }
+    }
+    .ev-step-chip { transition: box-shadow .5s ease, filter .5s ease; }
+    [data-path-step]:not(.is-lit) .ev-step-chip { filter: grayscale(.4) brightness(.92); }
+    [data-path-step].is-lit .ev-step-chip { box-shadow: 0 0 22px -4px rgba(100,204,197,.85); }
+
+    @media (prefers-reduced-motion: reduce) {
+        .ev-traveler { animation: none; }
+        .ev-traveler, .ev-path-fill, .ev-step-chip { transition: none; }
     }
 
     .tl-item { transition: opacity 0.5s ease-out, transform 0.5s ease-out; }
@@ -146,12 +186,27 @@
         const documentHeight = document.documentElement.scrollHeight;
         const scrollTop = window.scrollY;
         this.readingProgress = Math.min((scrollTop / Math.max(documentHeight - windowHeight, 1)) * 100, 100);
+        this.updateEventPath();
 
         if (! this.reducedMotion) {
             this.parallaxOffset = scrollTop * 0.35;
             this.revealTimelineItems();
             this.animateStatsWhenVisible();
         }
+    },
+
+    // Path of Light II: continuous fill + traveler on the inner timeline,
+    // and step chips ignite once the reading line passes them.
+    updateEventPath() {
+        const path = document.getElementById('event-path');
+        if (! path) return;
+        const rect = path.getBoundingClientRect();
+        const line = window.innerHeight * 0.4;
+        const progress = Math.min(1, Math.max(0, (line - rect.top) / Math.max(rect.height, 1)));
+        path.style.setProperty('--jp', progress.toFixed(4));
+        path.querySelectorAll('[data-path-step]').forEach(step => {
+            step.classList.toggle('is-lit', step.getBoundingClientRect().top < line);
+        });
     },
 
     revealTimelineItems() {
@@ -362,27 +417,30 @@
                         {{ __('seerah.public.event_timeline_heading') }}
                     </h2>
 
-                    <div class="max-w-4xl mx-auto space-y-10">
-                        @foreach ($eventTimeline as $index => $timelineItem)
-                            <div class="tl-item relative" data-revealed="false">
-                                <div class="flex items-start gap-4 sm:gap-6">
-                                    <div class="relative flex-shrink-0">
-                                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center text-white font-bold shadow-lg z-10">
+                    <div id="event-path" class="relative max-w-4xl mx-auto">
+                        {{-- continuous track — replaces the old per-item connectors,
+                             which never reached the next chip past a tall card --}}
+                        <div class="absolute top-6 bottom-14 start-[23px] w-0.5 rounded-full bg-gray-200 dark:bg-white/10" aria-hidden="true"></div>
+                        <div class="ev-path-fill absolute top-6 bottom-14 start-[23px] w-0.5 rounded-full bg-gradient-to-b from-[#0056b3] via-[#64CCC5] to-[#218838]" aria-hidden="true"></div>
+                        <div class="ev-traveler" aria-hidden="true"></div>
+
+                        <div class="space-y-10">
+                            @foreach ($eventTimeline as $index => $timelineItem)
+                                <div class="tl-item relative" data-revealed="false" data-path-step>
+                                    <div class="flex items-start gap-4 sm:gap-6">
+                                        <div class="ev-step-chip relative z-10 flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center text-white font-bold shadow-lg">
                                             {{ $index + 1 }}
                                         </div>
-                                        @unless ($loop->last)
-                                            <div class="absolute left-1/2 top-12 h-[calc(100%+2.5rem)] w-0.5 -translate-x-1/2 bg-gradient-to-b from-[#0056b3] to-[#218838] opacity-30"></div>
-                                        @endunless
-                                    </div>
-                                    <div class="flex-1 min-w-0 tl-card-hover p-5 sm:p-6 rounded-2xl shadow-lg" :class="darkMode ? 'bg-gray-800' : 'bg-white'">
-                                        <h3 class="text-xl sm:text-2xl font-bold mb-3 break-words" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $timelineItem['title'] }}</h3>
-                                        @if (! empty($timelineItem['description']))
-                                            <p class="text-base sm:text-lg leading-relaxed break-words" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ $timelineItem['description'] }}</p>
-                                        @endif
+                                        <div class="flex-1 min-w-0 tl-card-hover p-5 sm:p-6 rounded-2xl shadow-lg" :class="darkMode ? 'bg-gray-800' : 'bg-white'">
+                                            <h3 class="text-xl sm:text-2xl font-bold mb-3 break-words" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $timelineItem['title'] }}</h3>
+                                            @if (! empty($timelineItem['description']))
+                                                <p class="text-base sm:text-lg leading-relaxed break-words" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ $timelineItem['description'] }}</p>
+                                            @endif
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        @endforeach
+                            @endforeach
+                        </div>
                     </div>
                 </div>
             </section>

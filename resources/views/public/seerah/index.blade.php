@@ -29,6 +29,69 @@
     }
     @keyframes seerah-soft-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(100,204,197,.45); } 50% { box-shadow: 0 0 0 6px rgba(100,204,197,0); } }
     .seerah-current-chip { animation: seerah-soft-pulse 2.2s ease-in-out infinite; }
+
+    /* ── Path of Light ─────────────────────────────────────────────
+       The journey spine fills continuously with scroll (--jp is set 0→1
+       by a rAF-throttled scroll handler), and a glowing traveler rides
+       the fill tip at the reading line, trailing light back the way it
+       came. Scroll-driven, so the motion is always user-controlled. */
+    #seerah-journey { --jp: 0; }
+    /* Paint-only reveal: the gradient keeps its position, the clip slides. */
+    .seerah-spine-fill {
+        clip-path: inset(0 0 calc((1 - var(--jp, 0)) * 100%) 0);
+        transition: clip-path .18s ease-out;
+    }
+    .seerah-traveler {
+        position: absolute;
+        /* Same track geometry as the spine: starts at top-3, ends at bottom-12. */
+        top: calc(0.75rem + var(--jp, 0) * (100% - 3.75rem));
+        inset-inline-start: 27.5px;
+        width: 26px;
+        height: 26px;
+        margin-top: -13px;
+        margin-inline-start: -13px;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 5;
+        background: radial-gradient(circle, #ffffff 0%, #a8f0ea 22%, #64CCC5 45%, rgba(100,204,197,0) 74%);
+        filter: drop-shadow(0 0 10px rgba(100,204,197,.95)) drop-shadow(0 0 26px rgba(100,204,197,.5));
+        transition: top .18s ease-out;
+        animation: seerah-traveler-breathe 2.6s ease-in-out infinite;
+    }
+    .seerah-traveler::after {
+        content: '';
+        position: absolute;
+        inset-inline-start: 50%;
+        bottom: 50%;
+        width: 5px;
+        height: 96px;
+        margin-inline-start: -2.5px;
+        border-radius: 3px;
+        background: linear-gradient(to top, rgba(100,204,197,.85), rgba(100,204,197,.25) 55%, rgba(100,204,197,0));
+        filter: blur(.5px);
+    }
+    @media (min-width: 640px) { .seerah-traveler { inset-inline-start: 31.5px; } }
+    @keyframes seerah-traveler-breathe {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.28); opacity: .82; }
+    }
+
+    /* Era nodes: passed nodes stay lit, the current card carries an aura. */
+    .seerah-node-lit { box-shadow: 0 0 20px -4px rgba(100,204,197,.65); }
+    .seerah-card-aura { box-shadow: 0 12px 48px -12px rgba(100,204,197,.38), 0 2px 8px rgba(16,24,52,.08); }
+    .dark .seerah-card-aura { box-shadow: 0 12px 56px -10px rgba(100,204,197,.26), 0 4px 24px rgba(0,0,0,.4); }
+
+    /* Hero light orbs drift slowly — barely noticed, felt as alive. */
+    @keyframes seerah-drift-a { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(24px, 18px) scale(1.08); } }
+    @keyframes seerah-drift-b { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-28px, 12px) scale(1.05); } }
+    .seerah-drift-a { animation: seerah-drift-a 26s ease-in-out infinite; }
+    .seerah-drift-b { animation: seerah-drift-b 22s ease-in-out infinite; }
+
+    @media (prefers-reduced-motion: reduce) {
+        .seerah-traveler { animation: none; }
+        .seerah-traveler, .seerah-spine-fill { transition: none; }
+        .seerah-drift-a, .seerah-drift-b { animation: none; }
+    }
 </style>
 @endpush
 
@@ -50,8 +113,8 @@
         {{-- layered premium backdrop — designed for light AND dark --}}
         <div class="absolute inset-0 -z-10 bg-gradient-to-b from-[#e9f1fc] via-[#f1f6fc] to-[#f5f7fc] dark:from-[#0e1533] dark:via-[#0d1226] dark:to-[#0d1226]"></div>
         <div class="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
-            <div class="absolute -top-20 start-[10%] w-80 h-80 rounded-full bg-[#0056b3]/15 dark:bg-[#0056b3]/25 blur-3xl"></div>
-            <div class="absolute -top-10 end-[8%] w-72 h-72 rounded-full bg-[#218838]/12 dark:bg-[#64CCC5]/15 blur-3xl"></div>
+            <div class="seerah-drift-a seerah-anim absolute -top-20 start-[10%] w-80 h-80 rounded-full bg-[#0056b3]/15 dark:bg-[#0056b3]/25 blur-3xl"></div>
+            <div class="seerah-drift-b seerah-anim absolute -top-10 end-[8%] w-72 h-72 rounded-full bg-[#218838]/12 dark:bg-[#64CCC5]/15 blur-3xl"></div>
             <div class="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#0056b3]/25 dark:via-white/15 to-transparent"></div>
         </div>
         <div class="relative max-w-4xl mx-auto px-4 sm:px-6 pt-12 pb-8 sm:pt-16 text-center">
@@ -147,11 +210,13 @@
 
     {{-- ───────── JOURNEY: vertical timeline spine, date-range eras ───────── --}}
     <div x-show="mode==='journey'" x-cloak class="max-w-3xl mx-auto px-4 sm:px-6 pt-8 pb-10">
-        <div class="relative">
+        <div class="relative" id="seerah-journey">
             {{-- spine track --}}
             <div class="absolute top-3 bottom-12 start-[26px] sm:start-[30px] w-[3px] rounded-full bg-gradient-to-b from-gray-200 to-gray-200/40 dark:from-white/15 dark:to-white/[.04]"></div>
-            {{-- spine progress fill --}}
-            <div class="absolute top-3 start-[26px] sm:start-[30px] w-[3px] rounded-full bg-gradient-to-b from-[#0056b3] via-[#64CCC5] to-[#218838] transition-all duration-700 ease-out" :style="`height:${spineFill()}%`"></div>
+            {{-- spine progress fill — clip-path follows --jp (continuous scroll progress) --}}
+            <div class="seerah-spine-fill absolute top-3 bottom-12 start-[26px] sm:start-[30px] w-[3px] rounded-full bg-gradient-to-b from-[#0056b3] via-[#64CCC5] to-[#218838]"></div>
+            {{-- the traveler light riding the fill tip --}}
+            <div class="seerah-traveler" aria-hidden="true"></div>
 
             @foreach($journey as $m)
             @php($i = $loop->index)
@@ -161,7 +226,7 @@
                 {{-- node on the spine --}}
                 <div class="absolute start-0 top-1">
                     <div class="relative w-[54px] h-[54px] sm:w-[62px] sm:h-[62px] rounded-2xl bg-gradient-to-br {{ $m['gradient'] }} flex flex-col items-center justify-center text-white shadow-lg ring-4 ring-[#f5f7fc] dark:ring-[#0d1226] transition-all duration-300"
-                         :class="currentIndex==={{ $i }} ? 'seerah-current-chip seerah-anim scale-[1.07]' : ({{ $i }} > currentIndex ? 'opacity-90' : '')">
+                         :class="currentIndex==={{ $i }} ? 'seerah-current-chip seerah-anim scale-[1.07]' : ({{ $i }} > currentIndex ? 'opacity-80 saturate-[.85]' : 'seerah-node-lit')">
                         <span class="text-lg sm:text-2xl font-black leading-none drop-shadow-sm">{{ $m['order'] }}</span>
                         <i data-lucide="{{ $m['icon'] }}" class="w-3.5 h-3.5 mt-0.5 opacity-90"></i>
                         <div x-show="{{ $i }} < currentIndex" x-cloak class="absolute -top-1.5 -end-1.5 w-5 h-5 rounded-full bg-emerald-500 ring-2 ring-[#f5f7fc] dark:ring-[#0d1226] flex items-center justify-center">
@@ -172,7 +237,7 @@
 
                 {{-- era card --}}
                 <div class="rounded-3xl border border-gray-200/90 dark:border-white/[0.09] bg-white dark:bg-[#171f3c] shadow-[0_1px_3px_rgba(16,24,52,.06)] dark:shadow-[0_4px_24px_rgba(0,0,0,.35)] hover:shadow-lg dark:hover:border-white/20 transition-all overflow-hidden"
-                     :class="currentIndex==={{ $i }} ? 'ring-2 ring-[#64CCC5]/40 dark:ring-[#64CCC5]/35' : ''">
+                     :class="currentIndex==={{ $i }} ? 'ring-2 ring-[#64CCC5]/40 dark:ring-[#64CCC5]/35 seerah-card-aura' : ''">
 
                     {{-- date-range header (subtle era tint, big date) --}}
                     <div class="relative px-5 sm:px-6 pt-4 pb-4 border-b border-gray-100 dark:border-white/[0.06]">
@@ -363,12 +428,27 @@
             _milestones: config.milestones,
             _reduce: false,
             _artObserver: null,
-
-            spineFill() { return this.total > 0 ? Math.min(100, Math.round(((this.currentIndex + 0.5) / this.total) * 100)) : 0; },
+            _journeyEl: null,
+            _pathTicking: false,
 
             init() {
                 this._reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
                 this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+
+                // Path of Light: continuous journey progress (--jp, 0→1) drives
+                // the spine fill and the traveler. One rAF-throttled listener,
+                // one layout read per frame.
+                this._journeyEl = document.getElementById('seerah-journey');
+                const onPathScroll = () => {
+                    if (this._pathTicking) return;
+                    this._pathTicking = true;
+                    requestAnimationFrame(() => { this._pathTicking = false; this.updatePath(); });
+                };
+                if (this._journeyEl) {
+                    window.addEventListener('scroll', onPathScroll, { passive: true });
+                    window.addEventListener('resize', onPathScroll, { passive: true });
+                    this.updatePath();
+                }
 
                 if (this._reduce) {
                     document.querySelectorAll('.seerah-reveal').forEach(el => el.classList.add('is-visible'));
@@ -411,6 +491,16 @@
                     this._artObserver.observe(sentinel);
                 }
                 if (this.mode === 'articles') this.loadArticles();
+            },
+
+            updatePath() {
+                if (this.mode !== 'journey' || ! this._journeyEl) return;
+                const rect = this._journeyEl.getBoundingClientRect();
+                // The "reading line" sits ~38% down the viewport — the light
+                // stays just ahead of where the eye is.
+                const line = window.innerHeight * 0.38;
+                const progress = Math.min(1, Math.max(0, (line - rect.top) / Math.max(rect.height, 1)));
+                this._journeyEl.style.setProperty('--jp', progress.toFixed(4));
             },
 
             async loadMilestone(slug, isRetry = false) {
@@ -502,6 +592,7 @@
                     if (window.lucide) lucide.createIcons();
                 });
                 if (m === 'articles') this.loadArticles();
+                if (m === 'journey') this.$nextTick(() => this.updatePath());
             },
 
             goTo(anchor, index) {
