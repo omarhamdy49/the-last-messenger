@@ -367,3 +367,67 @@ if (! function_exists('excerpt_sentence')) {
         return rtrim(mb_substr($window, 0, $cut ?: $max), " ،,;:-–—").$end;
     }
 }
+
+if (! function_exists('enhance_rich_embeds')) {
+    /**
+     * Render-time polish for editor module embeds stored inside rich content.
+     *
+     * The admin editor's verse blot stores the ayah text with bare end-of-ayah
+     * marks (U+06DD) and no numbers — the ornament renders as an empty circle.
+     * The verse range starts at the number in the embed's own anchor (#N), so
+     * the marks can be numbered sequentially at render time, which fixes every
+     * already-stored embed without re-authoring. Bare marks become the same
+     * `.verse-number` chips the article renderer uses; the closing ornament
+     * gains the final verse's number. Idempotent: numbered marks are skipped.
+     *
+     * Also strips the decorative emoji (📖 📜 📍) older blot payloads stored in
+     * footer links — the icon belongs to CSS, not content.
+     */
+    function enhance_rich_embeds(?string $html): ?string
+    {
+        if ($html === null || ! str_contains($html, 'module-embed')) {
+            return $html;
+        }
+
+        // Emoji out of embed footer links (any embed type).
+        $html = preg_replace(
+            '/(<div class="module-embed__footer">\s*<a [^>]*>)\s*[\x{1F4D6}\x{1F4DC}\x{1F4CD}]\s*/u',
+            '$1',
+            $html
+        ) ?? $html;
+
+        $numbered = preg_replace_callback(
+            '/<div class="module-embed module-embed--verse[^"]*"[^>]*>.*?<\/div><\/div>/su',
+            function (array $m): string {
+                $block = $m[0];
+
+                // The range's first ayah number lives in the embed's own link.
+                if (! preg_match('/#(\d+)/', $block, $anchor)) {
+                    return $block;
+                }
+                $next = (int) $anchor[1];
+
+                // Fill each bare end-of-ayah mark (no digits already attached).
+                $block = preg_replace_callback(
+                    '/\x{06DD}(?!\s*[0-9\x{0660}-\x{0669}])/u',
+                    function () use (&$next): string {
+                        return '<span class="verse-number">'.$next++.'</span>';
+                    },
+                    $block
+                ) ?? $block;
+
+                // The final verse carries no mark — number it before the
+                // closing ornament.
+                return preg_replace(
+                    '/\s*﴾/u',
+                    ' <span class="verse-number">'.$next.'</span>﴾',
+                    $block,
+                    1
+                ) ?? $block;
+            },
+            $html
+        );
+
+        return $numbered ?? $html;
+    }
+}

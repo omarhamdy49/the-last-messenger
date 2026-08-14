@@ -427,7 +427,9 @@ final class SeerahController extends Controller
             'slug' => $event->slug,
             'title' => $event->getTranslation('title', $locale) ?? __('seerah.public.untitled_event'),
             'description' => $event->getTranslation('description', $locale),
-            'content' => $event->getTranslation('content', $locale),
+            // Numbers the bare ayah marks inside stored verse embeds and strips
+            // footer emoji — see enhance_rich_embeds(). Runs once per cache fill.
+            'content' => enhance_rich_embeds($event->getTranslation('content', $locale)),
             'milestone' => $milestone ? [
                 'slug' => $milestone->slug,
                 'title' => $milestone->getTranslation('title', $locale) ?? '',

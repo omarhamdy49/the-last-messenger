@@ -23,7 +23,8 @@
     @if ($showName)
         {{-- nowrap + truncate: the English wordmark is far longer than the Arabic
          one and wrapped to two lines at xl, which pushed the nav row out of
-         alignment. --}}
-        <span class="hidden truncate whitespace-nowrap text-xl font-bold gradient-text sm:block 2xl:text-2xl">{{ $name }}</span>
+         alignment. Always visible — the mark alone reads as an icon, not a
+         brand; phones get a smaller size and a truncation cap. --}}
+        <span class="block truncate whitespace-nowrap text-base font-bold gradient-text max-w-[9.5rem] sm:max-w-none sm:text-xl 2xl:text-2xl">{{ $name }}</span>
     @endif
 </a>

@@ -46,19 +46,38 @@
     .series-hero-glow--a {
         width: 30rem; height: 30rem; inset-inline-start: -8rem; top: -12rem;
         background: radial-gradient(circle, #64CCC5 0%, transparent 70%);
+        animation: series-drift-a 26s ease-in-out infinite;
     }
     .series-hero-glow--b {
         width: 26rem; height: 26rem; inset-inline-end: -6rem; bottom: -12rem;
         background: radial-gradient(circle, #0056b3 0%, transparent 70%);
+        animation: series-drift-b 22s ease-in-out infinite;
     }
+    @keyframes series-drift-a { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(28px, 16px) scale(1.07); } }
+    @keyframes series-drift-b { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-24px, 12px) scale(1.05); } }
 
     /* ── Series cards ── */
     .series-card {
+        position: relative;
         border-radius: 1.25rem; overflow: hidden; background: #fff;
         border: 1px solid rgb(243 244 246);
         box-shadow: 0 1px 3px rgba(2,30,68,.06), 0 8px 24px -12px rgba(2,30,68,.10);
         transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
     }
+    /* Light hairline: the top edge ignites on hover — the library's echo. */
+    .series-card::after {
+        content: ''; position: absolute; top: 0; inset-inline: 14%; height: 2px;
+        border-radius: 2px; z-index: 2; pointer-events: none;
+        background: linear-gradient(90deg, transparent, #64CCC5, transparent);
+        opacity: 0; transform: scaleX(.35);
+        transition: opacity .45s ease, transform .55s cubic-bezier(.22, 1, .36, 1);
+    }
+    .series-card:hover::after,
+    .series-card:focus-visible::after { opacity: 1; transform: scaleX(1); }
+
+    /* Staggered arrival (added by JS only when IO + motion allow) */
+    .series-reveal { opacity: 0; transform: translateY(18px); transition: opacity .5s ease-out, transform .55s cubic-bezier(.16,1,.3,1); }
+    .series-reveal.is-visible { opacity: 1; transform: none; }
     .dark .series-card { background: #16213e; border-color: rgba(100,204,197,.10); }
     .series-card:hover {
         transform: translateY(-6px);
@@ -83,6 +102,8 @@
 
     @media (prefers-reduced-motion: reduce) {
         .series-card, .series-cue { transition: none !important; transform: none !important; }
+        .series-hero-glow--a, .series-hero-glow--b { animation: none; }
+        .series-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
     }
 </style>
 @endpush
@@ -217,5 +238,26 @@
         @endif
     </div>
 </div>
+
+@push('scripts')
+<script>
+    // Staggered card reveal as the shelves enter the viewport; the safety
+    // timer force-reveals anything the observer missed.
+    (function () {
+        const cards = document.querySelectorAll('.series-card');
+        if (! cards.length) return;
+        if (! ('IntersectionObserver' in window)
+            || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        cards.forEach(el => el.classList.add('series-reveal'));
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(en => {
+                if (en.isIntersecting) { en.target.classList.add('is-visible'); io.unobserve(en.target); }
+            });
+        }, { rootMargin: '80px 0px', threshold: 0.05 });
+        cards.forEach(el => io.observe(el));
+        setTimeout(() => cards.forEach(el => el.classList.add('is-visible')), 2500);
+    })();
+</script>
+@endpush
 
 @endsection
