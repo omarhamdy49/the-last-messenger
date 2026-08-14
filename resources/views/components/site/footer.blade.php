@@ -1,16 +1,15 @@
 {{--
-    Ported from the-last-messenger-ui/index-enhanced.html footer.
-    Link groups, brand name/description, social URLs, and the copyright line
-    come from the Content domain (MenuService + SiteSettingsService) via
-    ContentServiceProvider's view composer. Empty groups render nothing.
+    Site footer. Link groups, brand description and social URLs come from the
+    Content domain (MenuService + SiteSettingsService) via ContentServiceProvider's
+    view composer. Empty groups render nothing. Uses the shared <x-site.logo>
+    lockup (same seal + wordmark as the header). Copyright line is fixed by
+    product decision — not settings-driven.
 --}}
 @php
     $footerQuickMenu = $footerQuickMenu ?? [];
     $footerModulesMenu = $footerModulesMenu ?? [];
     $footerSocialLinks = $footerSocialLinks ?? [];
-    $siteName = $siteName ?? __('site.site_name');
     $siteDescription = $siteDescription ?? __('site.footer_tagline');
-    $footerCopyright = $footerCopyright ?? __('site.all_rights_reserved');
 
     $menuItemUrl = function (array $item): string {
         if (!empty($item['route_name']) && Route::has($item['route_name'])) {
@@ -21,69 +20,103 @@
     };
 @endphp
 
-<footer class="bg-[#212529] dark:bg-[#0a0a0a] text-[#E9ECEF]">
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-            <div>
-                <div class="flex items-center space-s-3 mb-6">
-                    <div class="w-12 h-12 bg-gradient-to-br from-[#0056b3] to-[#218838] rounded-xl flex items-center justify-center">
-                        <i class="w-8 h-8 text-white" data-lucide="book-open"></i>
-                    </div>
-                    <span class="text-2xl font-bold text-white">{{ $siteName }}</span>
-                </div>
-                <p class="text-sm text-[#DEE2E6]">{{ $siteDescription }}</p>
-            </div>
+<footer class="relative bg-[#16181d] dark:bg-[#0a0a0a] text-[#DEE2E6] overflow-hidden">
+    {{-- Brand gradient hairline --}}
+    <div class="h-px bg-gradient-to-r from-transparent via-[#0056b3] to-transparent"></div>
+    <div class="h-px bg-gradient-to-r from-[#0056b3]/0 via-[#218838]/60 to-[#64CCC5]/0 blur-[1px]"></div>
 
-            <div>
-                @if (count($footerQuickMenu) > 0)
-                    <h4 class="font-bold text-white mb-4">{{ __('site.quick_links') }}</h4>
-                    <ul class="space-y-3 text-sm">
-                        @foreach ($footerQuickMenu as $item)
-                            <li><a href="{{ $menuItemUrl($item) }}" class="text-[#DEE2E6] hover:text-white transition">{{ $item['label'] }}</a></li>
-                        @endforeach
-                    </ul>
-                @endif
-            </div>
+    {{-- Soft brand glow behind the brand column --}}
+    <div aria-hidden="true"
+         class="pointer-events-none absolute -top-32 start-0 w-[28rem] h-[28rem] rounded-full opacity-[0.07]"
+         style="background: radial-gradient(circle, #0056b3 0%, #218838 45%, transparent 70%);"></div>
 
-            <div>
-                @if (count($footerModulesMenu) > 0)
-                    <h4 class="font-bold text-white mb-4">{{ __('site.modules') }}</h4>
-                    <ul class="space-y-3 text-sm">
-                        @foreach ($footerModulesMenu as $item)
-                            <li><a href="{{ $menuItemUrl($item) }}" class="text-[#DEE2E6] hover:text-white transition">{{ $item['label'] }}</a></li>
-                        @endforeach
-                    </ul>
-                @endif
-            </div>
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20 relative">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 mb-14">
 
-            <div>
+            {{-- Brand --}}
+            <div class="lg:col-span-2">
+                <x-site.logo :eager="false" class="mb-6" />
+                <p class="text-sm leading-7 text-[#ADB5BD] max-w-sm">{{ $siteDescription }}</p>
+
                 @if (count($footerSocialLinks) > 0)
-                    <h4 class="font-bold text-white mb-4">{{ __('site.follow_us') }}</h4>
-                    <div class="flex space-s-4 mb-6">
+                    <div class="flex items-center gap-3 mt-8">
                         @foreach ($footerSocialLinks as $social)
                             <a href="{{ $social['url'] }}"
                                aria-label="{{ $social['label'] ?? $social['icon'] }}"
-                               class="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition">
-                                <i class="w-5 h-5" data-lucide="{{ $social['icon'] }}"></i>
+                               class="group w-10 h-10 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center
+                                      transition-all duration-300 hover:border-transparent hover:bg-gradient-to-br hover:from-[#0056b3] hover:to-[#218838] hover:shadow-lg hover:shadow-[#0056b3]/25 hover:-translate-y-0.5">
+                                <i class="w-4.5 h-4.5 text-[#ADB5BD] group-hover:text-white transition-colors" data-lucide="{{ $social['icon'] }}"></i>
                             </a>
                         @endforeach
                     </div>
                 @endif
-
-                <h4 class="font-bold text-white mb-3 text-sm">{{ __('site.newsletter') }}</h4>
-                <form class="flex" @submit.prevent="$store.toast.push('{{ __('site.newsletter_thanks') }}')">
-                    <input type="email" required placeholder="{{ __('site.newsletter_placeholder') }}"
-                           class="flex-1 px-4 py-2 rounded-s-lg bg-white/10 border border-white/20 text-white placeholder-white/50 outline-none" />
-                    <button type="submit" aria-label="Subscribe"
-                            class="bg-gradient-to-r from-[#0056b3] to-[#218838] px-6 py-2 rounded-e-lg font-semibold hover:shadow-lg transition">
-                        <i class="w-5 h-5" data-lucide="send"></i>
-                    </button>
-                </form>
             </div>
+
+            {{-- Quick links --}}
+            @if (count($footerQuickMenu) > 0)
+                <div>
+                    <h4 class="text-white font-bold mb-5 flex items-center gap-2">
+                        <span class="w-6 h-px bg-gradient-to-r from-[#0056b3] to-[#218838]"></span>
+                        {{ __('site.quick_links') }}
+                    </h4>
+                    <ul class="space-y-3.5 text-sm">
+                        @foreach ($footerQuickMenu as $item)
+                            <li>
+                                <a href="{{ $menuItemUrl($item) }}"
+                                   class="inline-block text-[#ADB5BD] hover:text-white hover:translate-x-1 rtl:hover:-translate-x-1 transition-all duration-200">
+                                    {{ $item['label'] }}
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            {{-- Modules --}}
+            @if (count($footerModulesMenu) > 0)
+                <div>
+                    <h4 class="text-white font-bold mb-5 flex items-center gap-2">
+                        <span class="w-6 h-px bg-gradient-to-r from-[#0056b3] to-[#218838]"></span>
+                        {{ __('site.modules') }}
+                    </h4>
+                    <ul class="space-y-3.5 text-sm">
+                        @foreach ($footerModulesMenu as $item)
+                            <li>
+                                <a href="{{ $menuItemUrl($item) }}"
+                                   class="inline-block text-[#ADB5BD] hover:text-white hover:translate-x-1 rtl:hover:-translate-x-1 transition-all duration-200">
+                                    {{ $item['label'] }}
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            {{-- Follow us --}}
+            @if (count($footerSocialLinks) > 0)
+                <div>
+                    <h4 class="text-white font-bold mb-5 flex items-center gap-2">
+                        <span class="w-6 h-px bg-gradient-to-r from-[#0056b3] to-[#218838]"></span>
+                        {{ __('site.follow_us') }}
+                    </h4>
+                    <ul class="space-y-3.5 text-sm">
+                        @foreach ($footerSocialLinks as $social)
+                            <li>
+                                <a href="{{ $social['url'] }}"
+                                   class="inline-flex items-center gap-2.5 text-[#ADB5BD] hover:text-white hover:translate-x-1 rtl:hover:-translate-x-1 transition-all duration-200">
+                                    <i class="w-4 h-4" data-lucide="{{ $social['icon'] }}"></i>
+                                    {{ $social['label'] ?? $social['icon'] }}
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
         </div>
 
-        <div class="pt-8 border-t border-[#DEE2E6]/20 text-center text-sm text-[#DEE2E6]">
-            <p>© {{ date('Y') }} {{ $siteName }}. {{ $footerCopyright }}.</p>
+        {{-- Copyright --}}
+        <div class="pt-8 border-t border-white/10 text-center">
+            <p class="text-sm text-[#ADB5BD]">© {{ date('Y') }} خاتم المرسلين. جميع الحقوق محفوظة لأمة محمد ﷺ</p>
         </div>
     </div>
 </footer>
