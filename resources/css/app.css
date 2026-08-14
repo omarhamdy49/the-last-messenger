@@ -1043,3 +1043,29 @@
    usable on pages (search) that have no toggle. */
 .hadith-list[data-view="compact"] .hadith-matn { -webkit-line-clamp: 1; }
 .hadith-list[data-view="expanded"] .hadith-matn { -webkit-line-clamp: unset; overflow: visible; }
+
+/* ── Site scrollbar ─────────────────────────────────────────────────
+   The brand gradient as the document's scrollbar thumb. Gradients only
+   exist in the -webkit- scrollbar model (Chrome/Safari/Edge), and Chrome
+   ignores those rules the moment `scrollbar-width`/`scrollbar-color` are
+   set — so the flat teal fallback is gated to engines without the
+   -webkit- selector (Firefox). Track stays invisible in both themes. */
+@supports not selector(::-webkit-scrollbar) {
+    html {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(100, 204, 197, .45) transparent;
+    }
+}
+html::-webkit-scrollbar { width: 10px; height: 10px; }
+html::-webkit-scrollbar-track { background: transparent; }
+html::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #0056b3 0%, #64CCC5 55%, #218838 100%);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+html::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #1a6fd1 0%, #7fe0d9 55%, #2aa348 100%);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}

@@ -169,17 +169,27 @@
         overflow-y: auto;
         overscroll-behavior: contain;
         scroll-behavior: smooth;
-        /* Slim teal thumb on an invisible track — the default scrollbar
-           painted a fat white bar down the dark card. Chrome 121+/Firefox
-           take the standard properties; the -webkit- rules cover Safari. */
-        scrollbar-width: thin;
-        scrollbar-color: rgba(100, 204, 197, .35) transparent;
     }
-    .toc-scroll:hover { scrollbar-color: rgba(100, 204, 197, .6) transparent; }
+    /* Brand-gradient thumb on an invisible track — the default scrollbar
+       painted a fat white bar down the dark card. Gradients only exist in
+       the -webkit- model; the flat teal fallback is gated to engines
+       without it (Firefox), since Chrome drops -webkit- styling whenever
+       scrollbar-width/scrollbar-color are set. */
+    @supports not selector(::-webkit-scrollbar) {
+        .toc-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(100, 204, 197, .45) transparent;
+        }
+    }
     .toc-scroll::-webkit-scrollbar { width: 5px; }
     .toc-scroll::-webkit-scrollbar-track { background: transparent; }
-    .toc-scroll::-webkit-scrollbar-thumb { background: rgba(100, 204, 197, .35); border-radius: 9999px; }
-    .toc-scroll::-webkit-scrollbar-thumb:hover { background: rgba(100, 204, 197, .6); }
+    .toc-scroll::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #0056b3 0%, #64CCC5 55%, #218838 100%);
+        border-radius: 9999px;
+    }
+    .toc-scroll::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, #1a6fd1 0%, #7fe0d9 55%, #2aa348 100%);
+    }
     @media (prefers-reduced-motion: reduce) {
         .toc-scroll { scroll-behavior: auto; }
     }
