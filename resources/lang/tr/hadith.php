@@ -95,6 +95,8 @@ return [
     'books_count' => ':count books',
     'browse_collection' => 'Külliyatı incele',
     'browse_collections' => 'Browse hadith collections',
+    'featured_collections' => 'Öne çıkan külliyatlar',
+    'all_collections' => 'Tüm külliyatlar',
     'browse_intro' => 'Browse the hadith collections, arranged by book and chapter.',
     'chain' => 'Chain',
     'chapter' => 'Chapter',

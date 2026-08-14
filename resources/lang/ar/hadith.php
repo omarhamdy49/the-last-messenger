@@ -95,6 +95,8 @@ return [
     'books_count' => ':count كتاب',
     'browse_collection' => 'تصفح المجموعة',
     'browse_collections' => 'تصفح مجموعات الحديث',
+    'featured_collections' => 'المجموعات المميزة',
+    'all_collections' => 'جميع المجموعات',
     'browse_intro' => 'تصفح كتب الحديث الشريف مرتبة حسب الكتب والأبواب.',
     'chain' => 'السند',
     'chapter' => 'الباب',

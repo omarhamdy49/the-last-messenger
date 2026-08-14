@@ -126,6 +126,40 @@ class Hadith extends Model
     }
 
     /**
+     * Locale-aware citation. The stored `canonical_reference` is English
+     * ("Sahih al-Bukhari 1"); Arabic pages cite as "صحيح البخاري ١" instead.
+     */
+    public function displayReference(?string $locale = null): string
+    {
+        if (($locale ?? app()->getLocale()) === 'ar' && $this->collection?->title_ar) {
+            return $this->collection->title_ar.' '.arabic_digits($this->number);
+        }
+
+        return (string) $this->canonical_reference;
+    }
+
+    /**
+     * Locale-aware in-book citation. Stored as "Book 1, Hadith 1" (English);
+     * translated structurally for Arabic pages.
+     */
+    public function displayInBookReference(?string $locale = null): ?string
+    {
+        $ref = $this->in_book_reference;
+
+        if ($ref === null || ($locale ?? app()->getLocale()) !== 'ar') {
+            return $ref;
+        }
+
+        $ref = str_replace(
+            ['Book', 'Hadith', ','],
+            [__('hadith.book'), __('hadith.hadith'), '،'],
+            $ref
+        );
+
+        return preg_replace_callback('/\d+/', fn ($m) => arabic_digits($m[0]), $ref);
+    }
+
+    /**
      * The public address. A colon, not a slash: `/hadith/{slug}/{bookNumber}`
      * already occupies the slash form, so `/hadith/bukhari/12` would be
      * ambiguous between book 12 and reference key 12.

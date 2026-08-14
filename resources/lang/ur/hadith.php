@@ -95,6 +95,8 @@ return [
     'books_count' => ':count books',
     'browse_collection' => 'مجموعہ دیکھیں',
     'browse_collections' => 'Browse hadith collections',
+    'featured_collections' => 'نمایاں مجموعے',
+    'all_collections' => 'تمام مجموعے',
     'browse_intro' => 'Browse the hadith collections, arranged by book and chapter.',
     'chain' => 'Chain',
     'chapter' => 'Chapter',

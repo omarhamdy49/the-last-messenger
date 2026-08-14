@@ -18,7 +18,7 @@
 <article class="group relative rounded-2xl border border-gray-100 dark:border-white/5 bg-white dark:bg-white/[.03] p-5 sm:p-6 hover:border-[#64CCC5]/50 hover:shadow-lg transition-all">
     <div class="flex flex-wrap items-center gap-2 mb-4">
         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-gradient-to-l from-[#0056b3] to-[#218838] text-white">
-            <i data-lucide="hash" class="w-3 h-3"></i>{{ $hadith->number }}
+            <i data-lucide="hash" class="w-3 h-3"></i>{{ $locale === 'ar' ? arabic_digits($hadith->number) : $hadith->number }}
         </span>
 
         @if ($showCollection && $hadith->collection)
@@ -54,7 +54,7 @@
 
     <div class="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 flex flex-wrap items-center justify-between gap-3">
         <span class="text-[11px] text-gray-400 dark:text-gray-500 font-medium">
-            {{ $hadith->canonical_reference }}
+            {{ $hadith->displayReference($locale) }}
         </span>
         <a href="{{ route('public.hadith.show', $hadith->collection?->slug ? $hadith->collection->slug.':'.$hadith->reference_key : '#') }}"
            class="inline-flex items-center gap-1.5 text-xs font-bold text-[#0056b3] dark:text-[#64CCC5] hover:gap-2.5 transition-all">

@@ -212,20 +212,26 @@ final class EloquentHadithImportRepository implements HadithImportRepositoryInte
         array $bookNumbers,
     ): int {
         return DB::transaction(function () use ($definition, $source, $bookNumbers): int {
+            $attributes = [
+                'reference_template' => $definition->referenceTemplate,
+                'title_ar' => $source->titleAr,
+                'title_en' => $source->titleEn,
+                'intro_en' => $source->introEn,
+                'total_hadith' => $definition->expectedHadiths,
+                'has_books' => true,
+                'has_chapters' => $definition->hasChapters,
+                'sort_order' => $definition->sortOrder,
+                'is_published' => false,
+            ];
+
+            // See upsertBookCollection: never wipe a curated intro_ar with null.
+            if ($source->introAr !== null) {
+                $attributes['intro_ar'] = $source->introAr;
+            }
+
             $collection = HadithCollection::query()->updateOrCreate(
                 ['slug' => $definition->slug],
-                [
-                    'reference_template' => $definition->referenceTemplate,
-                    'title_ar' => $source->titleAr,
-                    'title_en' => $source->titleEn,
-                    'intro_ar' => $source->introAr,
-                    'intro_en' => $source->introEn,
-                    'total_hadith' => $definition->expectedHadiths,
-                    'has_books' => true,
-                    'has_chapters' => $definition->hasChapters,
-                    'sort_order' => $definition->sortOrder,
-                    'is_published' => false,
-                ],
+                $attributes,
             );
             $extraBooks = HadithBook::query()
                 ->where('collection_id', $collection->id)
@@ -361,21 +367,26 @@ final class EloquentHadithImportRepository implements HadithImportRepositoryInte
 
     private function upsertBookCollection(MappedSunnahCollection $source): HadithCollection
     {
-        return HadithCollection::query()->updateOrCreate(
-            ['slug' => $source->slug],
-            [
-                'reference_template' => $source->referenceTemplate,
-                'title_ar' => $source->titleAr,
-                'title_en' => $source->titleEn,
-                'intro_ar' => $source->introAr,
-                'intro_en' => $source->introEn,
-                'total_hadith' => $source->expectedHadiths,
-                'has_books' => true,
-                'has_chapters' => $source->hasChapters,
-                'sort_order' => $source->sortOrder,
-                'is_published' => true,
-            ],
-        );
+        $attributes = [
+            'reference_template' => $source->referenceTemplate,
+            'title_ar' => $source->titleAr,
+            'title_en' => $source->titleEn,
+            'intro_en' => $source->introEn,
+            'total_hadith' => $source->expectedHadiths,
+            'has_books' => true,
+            'has_chapters' => $source->hasChapters,
+            'sort_order' => $source->sortOrder,
+            'is_published' => true,
+        ];
+
+        // The source rarely has a real Arabic intro (SunnahCollectionData
+        // rejects the English text it serves under lang=ar). Never let a null
+        // wipe a locally curated intro_ar on re-import.
+        if ($source->introAr !== null) {
+            $attributes['intro_ar'] = $source->introAr;
+        }
+
+        return HadithCollection::query()->updateOrCreate(['slug' => $source->slug], $attributes);
     }
 
     private function upsertBook(int $collectionId, MappedSunnahBook $source): HadithBook

@@ -42,10 +42,27 @@ final readonly class SunnahCollectionData
             name: $name,
             titleAr: $titleAr,
             titleEn: $titleEn,
-            introAr: self::optional($localized['ar']['shortIntro'] ?? null),
+            introAr: self::arabicOnly(self::optional($localized['ar']['shortIntro'] ?? null)),
             introEn: self::optional($localized['en']['shortIntro'] ?? null),
             availableHadiths: (int) ($payload['totalAvailableHadith'] ?? 0),
         );
+    }
+
+    /**
+     * Sunnah.com serves the ENGLISH shortIntro under lang=ar for every
+     * collection. Reject mostly-Latin text rather than store it as Arabic.
+     * Counted, not just matched — the English text still contains the ﷺ
+     * ligature, which lives in the Arabic Unicode block.
+     */
+    private static function arabicOnly(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        return preg_match_all('/\p{Arabic}/u', $value) > preg_match_all('/\p{Latin}/u', $value)
+            ? $value
+            : null;
     }
 
     private static function optional(mixed $value): ?string

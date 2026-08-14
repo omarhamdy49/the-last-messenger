@@ -69,6 +69,12 @@ class HadithCollection extends Model
         return $query->where('is_published', true);
     }
 
+    /** Public URL of the cover image, or null → views render the CSS placeholder cover. */
+    public function coverUrl(): ?string
+    {
+        return $this->thumb ? asset('storage/'.ltrim($this->thumb, '/')) : null;
+    }
+
     public function title(?string $locale = null): string
     {
         return ($locale ?? app()->getLocale()) === 'ar' ? $this->title_ar : $this->title_en;
@@ -76,7 +82,23 @@ class HadithCollection extends Model
 
     public function intro(?string $locale = null): ?string
     {
-        return ($locale ?? app()->getLocale()) === 'ar' ? $this->intro_ar : $this->intro_en;
+        if (($locale ?? app()->getLocale()) !== 'ar') {
+            return $this->intro_en;
+        }
+
+        // The Sunnah.com import filled intro_ar with the ENGLISH source intro
+        // for every collection. Never surface mostly-Latin text as the Arabic
+        // intro — hide it until real Arabic copy exists. Counted, not just
+        // matched: English intros still contain the ﷺ ligature, which lives in
+        // the Arabic Unicode block.
+        if ($this->intro_ar === null || $this->intro_ar === '') {
+            return null;
+        }
+
+        $arabic = preg_match_all('/\p{Arabic}/u', $this->intro_ar);
+        $latin = preg_match_all('/\p{Latin}/u', $this->intro_ar);
+
+        return $arabic > $latin ? $this->intro_ar : null;
     }
 
     /**

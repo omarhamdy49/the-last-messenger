@@ -14,7 +14,7 @@
     $excerpt = \Illuminate\Support\Str::of((string) $hadith->text_ar)->limit(155);
 @endphp
 
-@section('title', $hadith->canonical_reference.' — '.$collectionTitle)
+@section('title', $hadith->displayReference($locale).' — '.$collectionTitle)
 @section('meta_description', $excerpt)
 
 @push('structured_data')
@@ -56,7 +56,7 @@
 
             <div class="px-6 sm:px-8 py-5 border-b border-gray-100 dark:border-white/5 flex flex-wrap items-center gap-2">
                 <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-l from-[#0056b3] to-[#218838] text-white">
-                    <i data-lucide="hash" class="w-3.5 h-3.5"></i>{{ __('hadith.hadith_number_label') }} {{ $hadith->number }}
+                    <i data-lucide="hash" class="w-3.5 h-3.5"></i>{{ __('hadith.hadith_number_label') }} {{ $locale === 'ar' ? arabic_digits($hadith->number) : $hadith->number }}
                 </span>
 
                 @if ($grade)
@@ -72,7 +72,9 @@
                     </span>
                 @endif
 
-                @if ($hadith->raw_grade)
+                {{-- Raw source grade is English evidence text; only worth showing
+                     when the mapper refused to classify (grade is NULL). --}}
+                @if (! $grade && $hadith->raw_grade)
                     <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400">
                         {{ __('hadith.raw_grade') }}: {{ $hadith->raw_grade }}
                     </span>
@@ -115,19 +117,19 @@
                 <dl class="grid sm:grid-cols-2 gap-3 text-xs">
                     <div>
                         <dt class="text-gray-400 dark:text-gray-500 mb-0.5">{{ __('hadith.reference_canonical_label') }}</dt>
-                        <dd class="font-bold text-gray-900 dark:text-white">{{ $hadith->canonical_reference }}</dd>
+                        <dd class="font-bold text-gray-900 dark:text-white">{{ $hadith->displayReference($locale) }}</dd>
                     </div>
                     @if ($hadith->in_book_reference)
                         <div>
                             <dt class="text-gray-400 dark:text-gray-500 mb-0.5">{{ __('hadith.reference_in_book_label') }}</dt>
-                            <dd class="font-bold text-gray-900 dark:text-white">{{ $hadith->in_book_reference }}</dd>
+                            <dd class="font-bold text-gray-900 dark:text-white">{{ $hadith->displayInBookReference($locale) }}</dd>
                         </div>
                     @endif
                 </dl>
 
                 <div class="mt-4 flex flex-wrap items-center gap-2">
                     <button type="button"
-                            @click="navigator.clipboard.writeText($refs.matn.innerText.trim() + '\n\n' + @js($hadith->canonical_reference)).then(() => { copied = true; setTimeout(() => copied = false, 1800) })"
+                            @click="navigator.clipboard.writeText($refs.matn.innerText.trim() + '\n\n' + @js($hadith->displayReference($locale))).then(() => { copied = true; setTimeout(() => copied = false, 1800) })"
                             class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-[#64CCC5] transition-colors">
                         <i data-lucide="copy" class="w-3.5 h-3.5"></i>
                         <span x-text="copied ? @js(__('hadith.copied')) : @js(__('hadith.copy'))"></span>
