@@ -80,7 +80,9 @@ final class UpdateArticleData
         $resolvedStatus = $validated['status'] ?? $article->status ?? 'draft';
 
         return new self(
-            thumb: $request->hasFile('thumb') ? $request->file('thumb') : $thumbOverride,
+            // Override wins: the controller routes direct uploads through the
+            // media library (optimized) and hands back the processed copy.
+            thumb: $thumbOverride ?? ($request->hasFile('thumb') ? $request->file('thumb') : null),
             writerId: (int) ($validated['writer_id'] ?? $article->writer_id),
             readTime: (int) ($validated['read_time'] ?? $article->read_time),
             isFeatured: $request->boolean('is_featured'),

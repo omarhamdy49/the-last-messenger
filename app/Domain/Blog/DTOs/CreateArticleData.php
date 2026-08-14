@@ -79,7 +79,9 @@ final class CreateArticleData
         $validated = $request->validated();
 
         return new self(
-            thumb: $request->hasFile('thumb') ? $request->file('thumb') : $thumbOverride,
+            // Override wins: the controller routes direct uploads through the
+            // media library (optimized) and hands back the processed copy.
+            thumb: $thumbOverride ?? ($request->hasFile('thumb') ? $request->file('thumb') : null),
             writerId: (int) ($validated['writer_id'] ?? auth()->id()),
             readTime: isset($validated['read_time']) ? (int) $validated['read_time'] : null,
             isFeatured: $request->boolean('is_featured'),

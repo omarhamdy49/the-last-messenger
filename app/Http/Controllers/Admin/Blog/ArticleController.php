@@ -188,7 +188,8 @@ class ArticleController extends AdminController
             'categories.translations:id,category_id,locale,name',
             'tags:id,slug,type',
             'tags.translations:id,tag_id,locale,name',
-            'mediaItems:id,filename,original_filename,path,mime_type,size,type',
+            // public_key/disk/metadata feed the thumbnail_url accessor
+            'mediaItems:id,public_key,disk,metadata,filename,original_filename,path,mime_type,size,type',
             'gallery:id,article_id,image,caption,order',
             'episodes:id,program_id,slug,video_url,season_number,episode_number,is_published',
             'episodes.translations:id,media_episode_id,locale,title',
@@ -258,15 +259,28 @@ class ArticleController extends AdminController
     }
 
     /**
-     * When a thumbnail was chosen from the media library (thumb_id) rather than
-     * uploaded directly, materialize a plaintext copy of the original as an
-     * UploadedFile the create/update pipeline can store like any uploaded
-     * thumbnail. A directly uploaded `thumb` file always wins. The caller owns
-     * the returned file's temp path and must clean it up after the action runs.
+     * Resolve the thumbnail to store, always via the media library. A library
+     * pick (thumb_id) is materialized as a plaintext copy; a direct `thumb`
+     * upload is first registered in the library (which applies the library's
+     * optimization and size presets) and then materialized the same way. The
+     * caller owns the returned file's temp path and must clean it up after
+     * the action runs.
      */
     private function resolveLibraryThumb(StoreArticleRequest|UpdateArticleRequest $request): ?UploadedFile
     {
-        if ($request->hasFile('thumb') || ! $request->filled('thumb_id')) {
+        if ($request->hasFile('thumb')) {
+            $media = $this->mediaService->upload($request->file('thumb'), [
+                'collection_name' => 'articles',
+            ]);
+            $copy = $this->mediaService->temporaryOriginalCopyById($media->id);
+
+            // Fall back to the raw upload if the fresh library copy can't be read.
+            return $copy === null
+                ? $request->file('thumb')
+                : new UploadedFile($copy->path, $copy->filename, null, null, true);
+        }
+
+        if (! $request->filled('thumb_id')) {
             return null;
         }
 
@@ -658,7 +672,8 @@ class ArticleController extends AdminController
             'categories.translations:id,category_id,locale,name',
             'tags:id,slug,type',
             'tags.translations:id,tag_id,locale,name',
-            'mediaItems:id,filename,original_filename,path,mime_type,size,type',
+            // public_key/disk/metadata feed the thumbnail_url accessor
+            'mediaItems:id,public_key,disk,metadata,filename,original_filename,path,mime_type,size,type',
             'gallery:id,article_id,image,caption,order',
             'episodes:id,program_id,slug,video_url,season_number,episode_number,is_published',
             'episodes.translations:id,media_episode_id,locale,title',
@@ -749,6 +764,7 @@ class ArticleController extends AdminController
             ])->filter(fn (array $item): bool => $item['id'] !== null)->values()->all(),
             'media_items' => $article->mediaItems->map(fn ($media) => [
                 'id' => $media->id,
+                'thumbnail_url' => $media->thumbnail_url,
                 'filename' => $media->filename,
                 'original_filename' => $media->original_filename,
                 'path' => $media->path,

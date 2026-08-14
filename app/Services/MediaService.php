@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\Media;
 use App\Models\MediaSizePreset;
 use App\Repositories\MediaRepository;
+use App\Services\Dtos\TemporaryMediaCopy;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -311,7 +312,7 @@ class MediaService
      * null when the id is unknown. Keeps consumers (controllers in other
      * modules) decoupled from the Media model.
      */
-    public function temporaryOriginalCopyById(int $mediaId): ?\App\Services\Dtos\TemporaryMediaCopy
+    public function temporaryOriginalCopyById(int $mediaId): ?TemporaryMediaCopy
     {
         $media = Media::query()->find($mediaId);
 
@@ -319,7 +320,7 @@ class MediaService
             return null;
         }
 
-        return new \App\Services\Dtos\TemporaryMediaCopy(
+        return new TemporaryMediaCopy(
             path: $this->temporaryOriginalCopy($media),
             filename: $media->original_filename ?: basename($media->path),
         );
@@ -597,6 +598,7 @@ class MediaService
 
     protected function optimizeImageFile(string $path, array $options = []): void
     {
+        $original = file_get_contents($path);
         $image = $this->imageManager->decodePath($path)->orient();
         $maxWidth = (int) ($options['max_width'] ?? 2200);
         $maxHeight = (int) ($options['max_height'] ?? 2200);
@@ -604,6 +606,13 @@ class MediaService
 
         $image->scaleDown($maxWidth, $maxHeight);
         $image->save($path, quality: $quality);
+        clearstatcache(true, $path);
+
+        // Re-encoding can inflate already-compressed files (PNG photos grow at
+        // quality 85). Optimization must never make the file bigger.
+        if ($original !== false && (filesize($path) ?: 0) >= strlen($original)) {
+            file_put_contents($path, $original);
+        }
     }
 
     protected function isEncryptedMedia(Media $media, ?array $variantData = null): bool

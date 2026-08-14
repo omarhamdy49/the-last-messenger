@@ -976,7 +976,12 @@
                             <template x-for="(item, index) in formData.media_items" :key="item.id">
                                 <div class="flex items-center gap-3 p-3 rounded-lg border"
                                      :class="darkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'">
-                                    <i data-lucide="video" class="w-8 h-8 text-gray-400 flex-shrink-0"></i>
+                                    <template x-if="item.thumbnail_url">
+                                        <img :src="item.thumbnail_url" class="w-12 h-12 rounded-lg object-cover flex-shrink-0" alt="">
+                                    </template>
+                                    <template x-if="!item.thumbnail_url">
+                                        <i data-lucide="video" class="w-8 h-8 text-gray-400 flex-shrink-0"></i>
+                                    </template>
                                     <div class="flex-1 min-w-0">
                                         <p class="font-medium text-sm truncate" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="item.title || item.original_filename"></p>
                                         <p class="text-xs text-gray-500" x-text="item.type || item.mime_type"></p>
@@ -1070,7 +1075,9 @@
                             :label="__('articles.fields.references')"
                             :fields="[
                                 ['name' => 'name', 'label' => __('articles.fields.reference_name'), 'type' => 'text', 'placeholder' => __('articles.fields.reference_name')],
-                                ['name' => 'url', 'label' => __('articles.fields.reference_url'), 'type' => 'url', 'placeholder' => 'https://...'],
+                                {{-- type=text: type=url makes the browser block submit on a non-URL value
+                                     inside a hidden tab ("invalid form control is not focusable") --}}
+                                ['name' => 'url', 'label' => __('articles.fields.reference_url'), 'type' => 'text', 'placeholder' => 'https://...'],
                                 ['name' => 'type', 'label' => __('articles.fields.reference_type'), 'type' => 'text', 'placeholder' => __('articles.fields.reference_type')]
                             ]"
                             :values="old('references', $article ? $article->references : [])"

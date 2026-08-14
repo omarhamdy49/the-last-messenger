@@ -101,7 +101,7 @@ class UpdateArticleRequest extends FormRequest
         // References
         $rules['references'] = 'nullable|array';
         $rules['references.*.name'] = 'required_with:references|string|max:200';
-        $rules['references.*.url'] = 'nullable|url|max:500';
+        $rules['references.*.url'] = 'nullable|string|max:500';
         $rules['references.*.type'] = 'nullable|string|max:50';
 
         // Statistics
