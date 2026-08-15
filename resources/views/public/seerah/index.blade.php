@@ -146,6 +146,51 @@
                 @endforeach
             </div>
 
+            {{-- Search is the CTA on a directory: this posts straight to the events
+                 page, so typing here lands on the filtered results. --}}
+            <form method="GET" action="{{ route('public.seerah.events') }}" role="search"
+                  class="mt-7 mx-auto max-w-xl flex flex-col sm:flex-row items-stretch gap-2">
+                <label for="seerah-journey-q" class="sr-only">{{ __('seerah.public.search_placeholder') }}</label>
+                <div class="relative flex-1">
+                    <i data-lucide="search" class="absolute start-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500 pointer-events-none"></i>
+                    <input id="seerah-journey-q" type="search" name="q"
+                           placeholder="{{ __('seerah.public.search_placeholder') }}"
+                           class="w-full h-12 ps-12 pe-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-white/90 dark:bg-white/[.06] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 shadow-sm backdrop-blur focus:outline-none focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent transition-shadow">
+                </div>
+                <button type="submit"
+                        class="h-12 px-6 rounded-2xl font-bold text-white whitespace-nowrap bg-gradient-to-r from-[#0056b3] to-[#218838] shadow-sm hover:shadow-lg hover:shadow-[#0056b3]/20 transition-shadow focus:outline-none focus:ring-2 focus:ring-[#64CCC5] focus:ring-offset-2 dark:focus:ring-offset-[#0d1226]">
+                    {{ __('seerah.public.search_submit') }}
+                </button>
+            </form>
+
+            <a href="{{ route('public.seerah.events') }}"
+               class="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-[#0056b3] dark:text-[#64CCC5] hover:underline focus:outline-none focus:ring-2 focus:ring-[#64CCC5] rounded">
+                <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>{{ __('seerah.public.browse_and_filter') }}
+            </a>
+
+            {{-- Shortcuts into the filtered directory: the flags exist on individual
+                 stations, but nothing at this level pointed at them. --}}
+            @if (($stats['pivotal'] ?? 0) > 0 || ($stats['disputed'] ?? 0) > 0)
+            <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
+                @if (($stats['pivotal'] ?? 0) > 0)
+                <a href="{{ route('public.seerah.events', ['pivotal' => 1]) }}"
+                   class="min-h-11 inline-flex items-center gap-1.5 px-3.5 rounded-xl font-bold text-[13px] border border-amber-500/40 text-amber-700 dark:text-amber-300 bg-amber-500/5 hover:bg-amber-500/15 transition-colors focus:outline-none focus:ring-2 focus:ring-[#64CCC5]">
+                    <i data-lucide="star" class="w-3.5 h-3.5"></i>
+                    <span>{{ __('seerah.public.pivotal_event') }}</span>
+                    <span class="px-1.5 rounded-full text-[11px] bg-amber-500/15 tabular-nums">{{ $stats['pivotal'] }}</span>
+                </a>
+                @endif
+                @if (($stats['disputed'] ?? 0) > 0)
+                <a href="{{ route('public.seerah.events', ['disputed' => 1]) }}"
+                   class="min-h-11 inline-flex items-center gap-1.5 px-3.5 rounded-xl font-bold text-[13px] border border-violet-500/40 text-violet-700 dark:text-violet-300 bg-violet-500/5 hover:bg-violet-500/15 transition-colors focus:outline-none focus:ring-2 focus:ring-[#64CCC5]">
+                    <i data-lucide="scale" class="w-3.5 h-3.5"></i>
+                    <span>{{ __('seerah.public.dispute_badge') }}</span>
+                    <span class="px-1.5 rounded-full text-[11px] bg-violet-500/15 tabular-nums">{{ $stats['disputed'] }}</span>
+                </a>
+                @endif
+            </div>
+            @endif
+
             <div class="mt-6 inline-flex p-1 rounded-2xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-sm" role="tablist">
                 <button @click="setMode('journey')" role="tab" :aria-selected="mode==='journey'"
                         :class="mode==='journey' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow' : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'"
@@ -271,6 +316,24 @@
                         <h2 class="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white leading-snug">{{ $m['title'] }}</h2>
                         @if($m['subtitle'])<p class="mt-1.5 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{{ $m['subtitle'] }}</p>@endif
 
+                        {{-- Per-era flag counts, each a link into the filtered directory. --}}
+                        @if(($m['pivotalCount'] ?? 0) > 0 || ($m['disputedCount'] ?? 0) > 0)
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            @if(($m['pivotalCount'] ?? 0) > 0)
+                            <a href="{{ $m['pivotalUrl'] }}"
+                               class="min-h-9 inline-flex items-center gap-1.5 px-2.5 rounded-full text-[11px] font-bold border border-amber-500/30 text-amber-700 dark:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 transition-colors focus:outline-none focus:ring-2 focus:ring-[#64CCC5]">
+                                <i data-lucide="star" class="w-3 h-3"></i>{{ $m['pivotalCount'] }} {{ __('seerah.public.pivotal_event') }}
+                            </a>
+                            @endif
+                            @if(($m['disputedCount'] ?? 0) > 0)
+                            <a href="{{ $m['disputedUrl'] }}"
+                               class="min-h-9 inline-flex items-center gap-1.5 px-2.5 rounded-full text-[11px] font-bold border border-violet-500/30 text-violet-700 dark:text-violet-300 bg-violet-500/5 hover:bg-violet-500/15 transition-colors focus:outline-none focus:ring-2 focus:ring-[#64CCC5]">
+                                <i data-lucide="scale" class="w-3 h-3"></i>{{ $m['disputedCount'] }} {{ __('seerah.public.dispute_badge') }}
+                            </a>
+                            @endif
+                        </div>
+                        @endif
+
                         {{-- events — lazy-loaded when the era scrolls into view, one station per row --}}
                         <div class="mt-4 grid gap-2.5" data-events-grid></div>
 
@@ -363,8 +426,10 @@
             <div class="absolute -top-12 -start-12 w-44 h-44 rounded-full bg-white/10 blur-3xl"></div>
             <h2 class="relative text-2xl sm:text-3xl font-bold">{{ __('seerah.public.cta_title') }}</h2>
             <p class="relative mt-3 max-w-2xl mx-auto text-white/85">{{ __('seerah.public.cta_subtitle') }}</p>
-            <a href="{{ route('public.seerah.events') }}" class="relative mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-[#0056b3] font-bold hover:scale-105 transition-transform">
-                <i data-lucide="compass" class="w-5 h-5"></i>{{ __('seerah.public.browse_all_events') }}
+            {{-- The Shama'il section left the timeline for its own article series,
+                 so this CTA is the path readers take to reach it. --}}
+            <a href="{{ route('public.series.show', 'shamail-an-nabi') }}" class="relative mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-[#0056b3] font-bold hover:scale-105 transition-transform">
+                <i data-lucide="sparkles" class="w-5 h-5"></i>{{ __('seerah.public.browse_shamail_series') }}
             </a>
         </div>
     </section>
@@ -380,10 +445,16 @@
         </div>
         <div class="flex-1 min-w-0">
             <h3 data-tpl="title" class="font-bold text-[15px] text-gray-900 dark:text-white leading-snug line-clamp-2 group-hover:text-[#0056b3] dark:group-hover:text-[#64CCC5] transition-colors"></h3>
-            <div class="mt-1 flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500 min-w-0">
+            <div class="mt-1 flex items-center flex-wrap gap-x-1.5 gap-y-1 text-[11px] text-gray-400 dark:text-gray-500 min-w-0">
                 <span data-tpl="type" class="font-semibold text-[#0056b3]/70 dark:text-[#64CCC5]/80 flex-shrink-0"></span>
                 <span data-tpl="hijri" class="flex-shrink-0 tabular-nums"></span>
                 <span data-tpl="location" class="truncate"></span>
+                <span data-tpl="pivotal" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full flex-shrink-0 font-bold bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-400">
+                    <i data-lucide="star" class="w-3 h-3"></i>{{ __('seerah.public.pivotal_event') }}
+                </span>
+                <span data-tpl="dispute" class="inline-flex items-center gap-1 px-1.5 rounded-full flex-shrink-0 font-bold bg-violet-500/10 border border-violet-500/30 text-violet-700 dark:text-violet-300">
+                    <i data-lucide="scale" class="w-3 h-3"></i>{{ __('seerah.public.dispute_badge') }}
+                </span>
             </div>
         </div>
         <i data-lucide="chevron-left" class="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-[#64CCC5] ltr:rotate-180 flex-shrink-0 transition-colors"></i>
@@ -399,6 +470,12 @@
                     <i data-tpl="icon" class="w-3 h-3"></i><span data-tpl="type"></span>
                 </span>
                 <span data-tpl="hijri" class="text-[11px] font-bold text-gray-400 dark:text-gray-500 tabular-nums"></span>
+                <span data-tpl="pivotal" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-400">
+                    <i data-lucide="star" class="w-3 h-3"></i>{{ __('seerah.public.pivotal_event') }}
+                </span>
+                <span data-tpl="dispute" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-violet-500/10 border border-violet-500/30 text-violet-700 dark:text-violet-300">
+                    <i data-lucide="scale" class="w-3 h-3"></i>{{ __('seerah.public.dispute_badge') }}
+                </span>
             </div>
             <h3 data-tpl="title" class="font-bold text-base text-gray-900 dark:text-white group-hover:text-[#0056b3] dark:group-hover:text-[#64CCC5] transition-colors leading-snug line-clamp-2"></h3>
             <p data-tpl="description" class="mt-1.5 text-sm text-gray-600 dark:text-gray-300 leading-relaxed line-clamp-3 flex-1"></p>
@@ -553,6 +630,12 @@
                 return el;
             },
 
+            // Keeps a pre-rendered flag marker (icon + label) or drops it entirely.
+            _toggle(root, sel, keep) {
+                const el = root.querySelector(`[data-tpl="${sel}"]`);
+                if (el && ! keep) el.remove();
+            },
+
             buildEventCard(ev) {
                 const node = document.getElementById('seerah-ev-tpl').content.firstElementChild.cloneNode(true);
                 node.href = ev.url;
@@ -562,6 +645,8 @@
                 this._fill(node, 'type', ev.typeLabel);
                 this._fill(node, 'hijri', ev.hijriLabel ? `· ${ev.hijriLabel}` : null);
                 this._fill(node, 'location', ev.location ? `· ${ev.location}` : null);
+                this._toggle(node, 'pivotal', ev.isPivotal);
+                this._toggle(node, 'dispute', ev.hasDispute);
                 return node;
             },
 
@@ -581,6 +666,8 @@
                 } else {
                     node.querySelector('[data-tpl="locationWrap"]').remove();
                 }
+                this._toggle(node, 'pivotal', ev.isPivotal);
+                this._toggle(node, 'dispute', ev.hasDispute);
                 return node;
             },
 

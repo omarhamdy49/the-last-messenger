@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Site;
 
+use App\Domain\Seerah\Enums\EventImportance;
 use App\Domain\Seerah\Enums\EventPhase;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Models\SeerahMilestone;
@@ -16,6 +17,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -68,12 +70,14 @@ final class SeerahController extends Controller
                             // era — unassigned events still count.
                             'events' => SeerahEvent::query()->published()->count(),
                             'span' => $this->journeySpan($journey, $locale),
+                            'pivotal' => array_sum(array_column($journey, 'pivotalCount')),
+                            'disputed' => array_sum(array_column($journey, 'disputedCount')),
                         ],
                     ];
                 } catch (Throwable $e) {
                     report($e);
 
-                    return ['journey' => [], 'stats' => ['milestones' => 0, 'events' => 0, 'span' => '']];
+                    return ['journey' => [], 'stats' => ['milestones' => 0, 'events' => 0, 'span' => '', 'pivotal' => 0, 'disputed' => 0]];
                 }
             },
         );
@@ -176,6 +180,14 @@ final class SeerahController extends Controller
                     'gregorianRange' => $milestone->gregorianRangeLabel(),
                     'eventCount' => $milestone->events->count(),
                     'eventsUrl' => route('public.seerah.journey.events', $milestone->slug),
+                    // Flags surfaced on the era card itself: buried 6000px down inside
+                    // a lazy-loaded row, a marker is not findable.
+                    'pivotalCount' => $milestone->events->where('is_pivotal', true)->count(),
+                    'disputedCount' => $milestone->events
+                        ->filter(fn (SeerahEvent $event): bool => filled($event->getTranslation('dispute_note', $locale)))
+                        ->count(),
+                    'pivotalUrl' => route('public.seerah.events', ['milestone' => $milestone->slug, 'pivotal' => 1]),
+                    'disputedUrl' => route('public.seerah.events', ['milestone' => $milestone->slug, 'disputed' => 1]),
                 ];
             })
             ->filter(fn (array $milestone): bool => $milestone['eventCount'] > 0)
@@ -211,26 +223,26 @@ final class SeerahController extends Controller
         $locale = app()->getLocale();
         $perPage = 12;
         $page = max(1, (int) $request->query('page', 1));
-        $search = trim((string) $request->query('q', ''));
-        $category = (string) $request->query('category', 'all');
 
-        // Whitelist the category against active DB event-type slugs to prevent invalid filtering.
-        $activeSlugs = $this->eventTypeService->getForDropdown()->pluck('slug')->all();
-        $validCategory = $category !== 'all' && in_array($category, $activeSlugs, true)
-            ? $category
-            : 'all';
+        // Every filter is whitelisted against real data before it reaches a query.
+        $typeSlugs = $this->eventTypeService->getForDropdown()->pluck('slug')->all();
+        $milestones = $this->milestoneService->getForDropdown();
 
-        $cacheKey = SeerahCacheKeys::events($locale, $search, $validCategory, $page);
+        $filters = [
+            'search' => trim((string) $request->query('q', '')),
+            'type' => $this->whitelisted($request->query('category'), $typeSlugs),
+            'milestone' => $this->whitelisted($request->query('milestone'), $milestones->pluck('slug')->all()),
+            'importance' => $this->whitelisted($request->query('importance'), EventImportance::values()),
+            'pivotal' => $request->boolean('pivotal'),
+            'disputed' => $request->boolean('disputed'),
+            'sort' => $request->query('sort') === 'desc' ? 'desc' : 'asc',
+        ];
 
-        $payload = Cache::remember($cacheKey, 900, function () use ($search, $validCategory, $perPage, $locale): array {
+        $cacheKey = SeerahCacheKeys::events($locale, $filters, $page);
+
+        $payload = Cache::remember($cacheKey, 900, function () use ($filters, $perPage, $locale): array {
             try {
-                if ($search !== '') {
-                    $paginator = $this->seerahEventService->searchEvents($search, $perPage);
-                } elseif ($validCategory !== 'all') {
-                    $paginator = $this->seerahEventService->getEventsByType($validCategory, $perPage);
-                } else {
-                    $paginator = $this->seerahEventService->getAllEvents($perPage);
-                }
+                $paginator = $this->seerahEventService->paginatePublicFiltered($filters, $locale, $perPage);
 
                 $items = collect($paginator->items())
                     ->map(fn (SeerahEvent $event) => $this->mapTimelineEvent($event, $locale))
@@ -242,12 +254,16 @@ final class SeerahController extends Controller
                     'total' => $paginator->total(),
                     'currentPage' => $paginator->currentPage(),
                     'lastPage' => $paginator->lastPage(),
-                    'categoryCounts' => $this->seerahEventService->countByCategory(),
+                    'categoryCounts' => $this->seerahEventService->countPublicByCategory($locale),
+                    'facets' => $this->seerahEventService->publicFilterFacets($locale),
                 ];
             } catch (Throwable $e) {
                 report($e);
 
-                return ['items' => [], 'total' => 0, 'currentPage' => 1, 'lastPage' => 1, 'categoryCounts' => []];
+                return [
+                    'items' => [], 'total' => 0, 'currentPage' => 1, 'lastPage' => 1,
+                    'categoryCounts' => [], 'facets' => ['pivotal' => 0, 'disputed' => 0, 'importance' => []],
+                ];
             }
         });
 
@@ -263,15 +279,113 @@ final class SeerahController extends Controller
             ],
         );
 
-        $categoryPills = $this->buildCategoryPills($payload['categoryCounts'], $locale, $search);
-
         return view('public.seerah.events', [
             'events' => $events,
-            'categoryPills' => $categoryPills,
-            'activeCategory' => $validCategory,
-            'searchQuery' => $search,
+            'categoryPills' => $this->buildCategoryPills($payload['categoryCounts'], $locale, $filters),
+            'milestoneOptions' => $milestones->map(fn (SeerahMilestone $milestone) => [
+                'value' => $milestone->slug,
+                'label' => $milestone->getTranslation('title', $locale) ?? $milestone->slug,
+            ])->all(),
+            'importanceOptions' => collect(EventImportance::cases())
+                ->map(fn (EventImportance $case) => [
+                    'value' => $case->value,
+                    'label' => $locale === 'ar' ? $case->labelArabic() : $case->label(),
+                    'count' => $payload['facets']['importance'][$case->value] ?? 0,
+                ])
+                ->filter(fn (array $option) => $option['count'] > 0)
+                ->values()
+                ->all(),
+            'facets' => $payload['facets'],
+            'filters' => $filters,
+            'filterUrl' => fn (array $overrides = []) => $this->eventsUrl($filters, $overrides),
+            'activeChips' => $this->buildActiveFilterChips($filters, $locale, $milestones),
+            'searchQuery' => $filters['search'],
+            'activeCategory' => $filters['type'] ?: 'all',
             'totalEvents' => $payload['total'],
         ]);
+    }
+
+    /**
+     * @param  array<int, string>  $allowed
+     */
+    private function whitelisted(mixed $value, array $allowed): string
+    {
+        $value = is_string($value) ? trim($value) : '';
+
+        return in_array($value, $allowed, true) ? $value : '';
+    }
+
+    /**
+     * Directory URL carrying the current filter set, with overrides applied.
+     * Any change resets to page 1 — page 3 of the old filter is not page 3 of the new one.
+     *
+     * @param  array<string, mixed>  $filters
+     * @param  array<string, mixed>  $overrides
+     */
+    private function eventsUrl(array $filters, array $overrides = []): string
+    {
+        $query = array_merge([
+            'q' => $filters['search'],
+            'category' => $filters['type'],
+            'milestone' => $filters['milestone'],
+            'importance' => $filters['importance'],
+            'pivotal' => $filters['pivotal'] ? 1 : null,
+            'disputed' => $filters['disputed'] ? 1 : null,
+            'sort' => $filters['sort'] === 'desc' ? 'desc' : null,
+        ], $overrides);
+
+        return route('public.seerah.events', array_filter($query, fn ($value) => $value !== null && $value !== '' && $value !== false));
+    }
+
+    /**
+     * One removable chip per active filter — a filter you cannot see is a filter
+     * you cannot undo.
+     *
+     * @param  array<string, mixed>  $filters
+     * @param  Collection<int, SeerahMilestone>  $milestones
+     * @return array<int, array{label: string, url: string}>
+     */
+    private function buildActiveFilterChips(array $filters, string $locale, $milestones): array
+    {
+        $chips = [];
+
+        if ($filters['search'] !== '') {
+            $chips[] = ['label' => '«'.$filters['search'].'»', 'url' => $this->eventsUrl($filters, ['q' => null])];
+        }
+
+        if ($filters['type'] !== '') {
+            $type = $this->eventTypeService->getForDropdown()->firstWhere('slug', $filters['type']);
+            $chips[] = [
+                'label' => $type?->getTranslation('name', $locale) ?? $filters['type'],
+                'url' => $this->eventsUrl($filters, ['category' => null]),
+            ];
+        }
+
+        if ($filters['milestone'] !== '') {
+            $milestone = $milestones->firstWhere('slug', $filters['milestone']);
+            $chips[] = [
+                'label' => $milestone?->getTranslation('title', $locale) ?? $filters['milestone'],
+                'url' => $this->eventsUrl($filters, ['milestone' => null]),
+            ];
+        }
+
+        if ($filters['importance'] !== '') {
+            $case = EventImportance::tryFrom($filters['importance']);
+            $chips[] = [
+                'label' => $case ? ($locale === 'ar' ? $case->labelArabic() : $case->label()) : $filters['importance'],
+                'url' => $this->eventsUrl($filters, ['importance' => null]),
+            ];
+        }
+
+        if ($filters['pivotal']) {
+            $chips[] = ['label' => __('seerah.public.pivotal_event'), 'url' => $this->eventsUrl($filters, ['pivotal' => null])];
+        }
+
+        if ($filters['disputed']) {
+            $chips[] = ['label' => __('seerah.public.dispute_badge'), 'url' => $this->eventsUrl($filters, ['disputed' => null])];
+        }
+
+        return $chips;
     }
 
     /**
@@ -357,6 +471,8 @@ final class SeerahController extends Controller
             'location' => $event->location,
             'isPivotal' => (bool) $event->is_pivotal,
             'isFeatured' => (bool) $event->is_featured,
+            // Marker only on cards; the note itself is read on the event page.
+            'hasDispute' => filled($event->getTranslation('dispute_note', $locale)),
             'url' => route('public.seerah.event', $event->slug),
         ];
     }
@@ -462,6 +578,12 @@ final class SeerahController extends Controller
                 'url' => route('public.articles.show', $articleLocale->slug),
             ] : null,
             'isPivotal' => (bool) $event->is_pivotal,
+            'importance' => $event->importance?->value,
+            'importanceLabel' => $event->importance
+                ? ($locale === 'ar' ? $event->importance->labelArabic() : $event->importance->label())
+                : null,
+            // Dating dispute carried by the reference chronology («وقيل…»).
+            'disputeNote' => $event->getTranslation('dispute_note', $locale),
             'viewsCount' => (int) $event->views_count,
             'statistics' => is_array($event->statistics) ? $event->statistics : [],
             'characters' => $characters,
@@ -500,16 +622,14 @@ final class SeerahController extends Controller
      * @param  array<string, int>  $counts
      * @return array<int, array<string, mixed>>
      */
-    private function buildCategoryPills(array $counts, string $locale, string $search = ''): array
+    private function buildCategoryPills(array $counts, string $locale, array $filters): array
     {
-        $total = array_sum($counts);
-
         $pills = [[
             'value' => 'all',
             'label' => __('seerah.public.filter_all'),
             'icon' => 'layout-grid',
-            'count' => $total,
-            'url' => route('public.seerah.events', array_filter(['q' => $search ?: null])),
+            'count' => array_sum($counts),
+            'url' => $this->eventsUrl($filters, ['category' => null]),
         ]];
 
         foreach ($this->eventTypeService->getForDropdown() as $type) {
@@ -523,10 +643,8 @@ final class SeerahController extends Controller
                 'label' => $type->getTranslation('name', $locale),
                 'icon' => $type->icon ?? 'circle',
                 'count' => $count,
-                'url' => route('public.seerah.events', array_filter([
-                    'category' => $type->slug,
-                    'q' => $search ?: null,
-                ])),
+                // Picking a type keeps the other filters — pills are not a reset button.
+                'url' => $this->eventsUrl($filters, ['category' => $type->slug]),
             ];
         }
 

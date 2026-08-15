@@ -120,7 +120,8 @@ final class HomeController extends Controller
         // each source is a single aggregate query, cached for 1 hour.
         $stats = Cache::remember('home_module_stats', 3600, fn (): array => [
             'surahs' => self::SURAH_COUNT,
-            'seerah_events' => (int) ($this->seerahEventService->getIndexStats()['total'] ?? 0),
+            // published + ready only: getIndexStats() is the admin total and counts drafts.
+            'seerah_events' => (int) ($this->seerahEventService->getIndexStats()['published'] ?? 0),
             'hadiths' => Hadith::query()->publiclyVisible()->count(),
             'sahaba' => Muslim::query()->where('is_published', true)->count(),
         ]);

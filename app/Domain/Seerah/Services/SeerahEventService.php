@@ -174,6 +174,7 @@ class SeerahEventService extends BaseService
                 'title' => $data->title,
                 'description' => $data->description,
                 'content' => $data->content,
+                'dispute_note' => $data->disputeNote,
             ]);
 
             $this->syncLocaleArrays($event, $data->lessons, $data->sources);
@@ -217,6 +218,7 @@ class SeerahEventService extends BaseService
                 'title' => $data->title,
                 'description' => $data->description,
                 'content' => $data->content,
+                'dispute_note' => $data->disputeNote,
             ]);
 
             $this->syncLocaleArrays($event, $data->lessons, $data->sources);
@@ -385,6 +387,35 @@ class SeerahEventService extends BaseService
     public function countByCategory(): array
     {
         return $this->repository->getIndexStats()['categories'];
+    }
+
+    /**
+     * Public filter-pill counts — published + translation-ready only.
+     *
+     * @return array<string, int>
+     */
+    public function countPublicByCategory(string $locale): array
+    {
+        return $this->repository->countPublicByCategory($locale);
+    }
+
+    /**
+     * Public events directory — search + type + milestone + importance +
+     * pivotal + dispute + sort, all composable.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function paginatePublicFiltered(array $filters, string $locale, int $perPage = 12): LengthAwarePaginator
+    {
+        return $this->repository->paginatePublicFiltered($filters, $locale, $perPage);
+    }
+
+    /**
+     * @return array{pivotal: int, disputed: int, importance: array<string, int>}
+     */
+    public function publicFilterFacets(string $locale): array
+    {
+        return $this->repository->publicFilterFacets($locale);
     }
 
     /**

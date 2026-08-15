@@ -62,9 +62,17 @@ final class SeerahCacheKeys
         return self::eventKey('articlesFeed', compact('locale', 'page'));
     }
 
-    public static function events(string $locale, string $search, string $category, int $page): string
+    /**
+     * Every filter has to be part of the key — leave one out and two different
+     * filter sets share a cached page.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public static function events(string $locale, array $filters, int $page): string
     {
-        return self::eventKey('publicEvents', compact('locale', 'search', 'category', 'page'));
+        ksort($filters);
+
+        return self::eventKey('publicEvents', ['locale' => $locale, 'page' => $page] + $filters);
     }
 
     public static function event(string $slug, string $locale): string

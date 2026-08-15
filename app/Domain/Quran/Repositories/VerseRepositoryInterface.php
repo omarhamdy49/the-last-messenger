@@ -10,6 +10,7 @@ use App\Domain\Quran\Models\Word;
 use App\Domain\Shared\Contracts\RepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection as SupportCollection;
 
 interface VerseRepositoryInterface extends RepositoryInterface
 {
@@ -115,7 +116,11 @@ interface VerseRepositoryInterface extends RepositoryInterface
      * Printed-mushaf word layout for a surah, ordered for line-by-line rendering
      * (page → line → position).
      *
-     * @return Collection<int, Word>
+     * Plain rows, not Word models: البقرة alone is 6,402 words, and a cached
+     * Eloquent collection that size costs ~11 MB serialized and blows the 128 MB
+     * memory limit on unserialize — the surah page 500s under any load.
+     *
+     * @return SupportCollection<int, object>
      */
-    public function getMushafWordsBySurah(int $surahNumber): Collection;
+    public function getMushafWordsBySurah(int $surahNumber): SupportCollection;
 }

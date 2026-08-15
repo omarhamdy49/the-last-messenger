@@ -121,11 +121,15 @@
         ['icon' => 'map-pin', 'label' => __('seerah.public.location_label'), 'value' => $event['location']],
         ['icon' => 'landmark', 'label' => __('seerah.public.era_label'), 'value' => $event['eraLabel']],
         ['icon' => 'route', 'label' => __('seerah.public.phase_label'), 'value' => $event['phaseLabel']],
+        ['icon' => 'flame', 'label' => __('seerah.public.importance_label'), 'value' => $event['importanceLabel'] ?? null],
     ])->filter(fn ($f) => ! empty($f['value']));
+
+    $disputeNote = $event['disputeNote'] ?? null;
 
     // TOC entries drive both the sidebar list and the scroll-spy order.
     $toc = collect([
         ['id' => 'introduction', 'label' => __('seerah.public.section_intro'), 'show' => $hasDescription],
+        ['id' => 'dispute', 'label' => __('seerah.public.dispute_heading'), 'show' => (bool) ($event['disputeNote'] ?? null)],
         ['id' => 'context', 'label' => __('seerah.public.section_context'), 'show' => $hasContent],
         ['id' => 'timeline', 'label' => __('seerah.public.event_timeline_heading'), 'show' => $hasTimeline],
         ['id' => 'characters', 'label' => __('seerah.public.section_characters'), 'show' => $hasCharacters],
@@ -264,9 +268,20 @@
                         <i data-lucide="{{ $event['icon'] }}" class="w-4 h-4"></i>{{ $event['typeLabel'] }}
                     </span>
                     @if ($event['isPivotal'])
-                        <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-400/20 backdrop-blur-md border border-amber-200/30 text-sm font-bold text-amber-100">
-                            <i data-lucide="star" class="w-4 h-4"></i>{{ __('seerah.public.pivotal_event') }}
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-400/25 backdrop-blur-md border border-amber-200/40 text-xs font-bold text-amber-50">
+                            <i data-lucide="star" class="w-3.5 h-3.5"></i>{{ __('seerah.public.pivotal_event') }}
                         </span>
+                    @endif
+                    @if (($event['importance'] ?? null) === 'high')
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-xs font-bold">
+                            <i data-lucide="flame" class="w-3.5 h-3.5"></i>{{ $event['importanceLabel'] }}
+                        </span>
+                    @endif
+                    @if ($disputeNote)
+                        {{-- Anchor, not decoration: jumps to the note itself. --}}
+                        <a href="#dispute" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-violet-400/30 backdrop-blur-md border border-violet-200/50 text-xs font-bold text-violet-50 hover:bg-violet-400/45 transition-colors">
+                            <i data-lucide="scale" class="w-3.5 h-3.5"></i>{{ __('seerah.public.dispute_badge') }}
+                        </a>
                     @endif
                 </div>
 
@@ -340,6 +355,19 @@
                             <p class="text-lg sm:text-xl leading-relaxed text-gray-700 dark:text-gray-300">
                                 {!! nl2br(e($event['description'])) !!}
                             </p>
+                        </section>
+                    @endif
+
+                    <!-- Dating dispute — the reference chronology's «وقيل…» carried verbatim -->
+                    @if ($disputeNote)
+                        <section id="dispute" class="scroll-mt-28 flex items-start gap-4 rounded-3xl p-5 sm:p-6 border border-violet-300/60 bg-violet-50 dark:bg-violet-500/10 dark:border-violet-400/30">
+                            <div class="w-10 h-10 rounded-2xl bg-violet-600 flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="scale" class="w-5 h-5 text-white"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="font-bold mb-1 text-violet-900 dark:text-violet-200">{{ __('seerah.public.dispute_heading') }}</p>
+                                <p class="leading-relaxed break-words text-violet-900/90 dark:text-violet-100/90">{{ $disputeNote }}</p>
+                            </div>
                         </section>
                     @endif
 

@@ -144,7 +144,7 @@ class SeerahEvent extends Model implements HasMedia
      */
     public function getTranslatableFields(): array
     {
-        return ['title', 'description', 'content'];
+        return ['title', 'description', 'content', 'dispute_note'];
     }
 
     /**

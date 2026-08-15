@@ -186,6 +186,30 @@
                 @endforeach
             </div>
         </div>
+
+        <!-- تنبيه الخلاف في التأريخ — يُعرض للزائر كصندوق تحذير في صفحة الحدث -->
+        @if($event->getTranslation('dispute_note', 'ar', false))
+        <div class="rounded-2xl border p-6 border-violet-300/60 bg-violet-50 dark:bg-violet-500/10 dark:border-violet-400/30">
+            <h2 class="text-xl font-bold mb-6 flex items-center gap-2 text-violet-900 dark:text-violet-200">
+                <i data-lucide="scale" class="w-5 h-5"></i>
+                تنبيه الخلاف في التأريخ
+            </h2>
+
+            <div class="space-y-3">
+                @foreach(['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'] as $lang => $label)
+                    @if($event->getTranslation('dispute_note', $lang, false))
+                    <div class="p-4 rounded-xl bg-white/60 dark:bg-white/[.04]">
+                        <label class="text-xs font-medium text-violet-700 dark:text-violet-300">{{ $label }}</label>
+                        <p class="mt-1 leading-relaxed text-violet-900 dark:text-violet-100"
+                           dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">
+                            {{ $event->getTranslation('dispute_note', $lang, false) }}
+                        </p>
+                    </div>
+                    @endif
+                @endforeach
+            </div>
+        </div>
+        @endif
     </div>
 
     <!-- Sidebar -->

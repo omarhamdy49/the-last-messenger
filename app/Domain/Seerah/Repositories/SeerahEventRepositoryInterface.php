@@ -60,6 +60,28 @@ interface SeerahEventRepositoryInterface extends RepositoryInterface
     public function getIndexStats(): array;
 
     /**
+     * Publicly visible event counts grouped by type slug, for the public filter
+     * pills. Unlike getIndexStats() this respects status + translation readiness.
+     *
+     * @return array<string, int>
+     */
+    public function countPublicByCategory(string $locale): array;
+
+    /**
+     * Public events directory with every filter composed into one query.
+     *
+     * @param  array{search?: string, type?: string, milestone?: string, importance?: string, pivotal?: bool, disputed?: bool, sort?: string}  $filters
+     */
+    public function paginatePublicFiltered(array $filters, string $locale, int $perPage = 12): LengthAwarePaginator;
+
+    /**
+     * Counts behind the public filter controls.
+     *
+     * @return array{pivotal: int, disputed: int, importance: array<string, int>}
+     */
+    public function publicFilterFacets(string $locale): array;
+
+    /**
      * Paginate events for the admin index with optional whitelisted filters
      * (type, importance, status, search).
      *

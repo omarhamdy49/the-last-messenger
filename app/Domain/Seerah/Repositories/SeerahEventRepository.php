@@ -49,8 +49,8 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
                 'id', 'slug', 'hijri_date', 'hijri_year', 'hijri_month', 'hijri_day',
                 'gregorian_year', 'seerah_event_type_id', 'seerah_milestone_id', 'phase',
                 'era', 'location', 'latitude', 'longitude', 'featured_image', 'gallery',
-                'related_article_id', 'is_pivotal', 'is_featured', 'views_count',
-                'statistics', 'display_order',
+                'related_article_id', 'is_pivotal', 'is_featured', 'importance',
+                'views_count', 'statistics', 'display_order',
             ])
             ->with($this->publicDetailRelations($locale))
             ->where('slug', $slug);
@@ -148,6 +148,77 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
                 ->chronological()
                 ->get(['id', 'slug', 'location', 'latitude', 'longitude', 'seerah_event_type_id', 'hijri_year'])
         );
+    }
+
+    /**
+     * {@inheritdoc}
+     *
+     * One query for the whole public directory — search, type, milestone,
+     * importance, pivotal and dating-dispute compose instead of branching into
+     * three mutually exclusive methods, so "معجزة + مفصلي" is expressible.
+     */
+    public function paginatePublicFiltered(array $filters, string $locale, int $perPage = 12): LengthAwarePaginator
+    {
+        $query = $this->model->newQuery()->with($this->listRelations());
+
+        if (! empty($filters['search'])) {
+            $term = $filters['search'];
+            $query->where(function ($q) use ($term) {
+                $q->whereHas('translations', fn ($tq) => FullTextSearchHelper::apply($tq, ['title', 'description'], $term))
+                    ->orWhere('location', 'LIKE', "%{$term}%");
+            });
+        }
+
+        if (! empty($filters['type'])) {
+            $query->byType($filters['type']);
+        }
+
+        if (! empty($filters['milestone'])) {
+            $query->whereHas('milestone', fn ($q) => $q->where('slug', $filters['milestone']));
+        }
+
+        if (! empty($filters['importance'])) {
+            $query->where('importance', $filters['importance']);
+        }
+
+        if (! empty($filters['pivotal'])) {
+            $query->where('is_pivotal', true);
+        }
+
+        if (! empty($filters['disputed'])) {
+            $query->whereHas('translations', fn ($q) => $q
+                ->where('locale', $locale)
+                ->whereNotNull('dispute_note')
+                ->where('dispute_note', '<>', ''));
+        }
+
+        return $this->publicVisibility->apply($query, $locale)
+            ->chronological($filters['sort'] === 'desc' ? 'desc' : 'asc')
+            ->paginate($perPage);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function publicFilterFacets(string $locale): array
+    {
+        $base = fn () => $this->publicVisibility->apply($this->model->newQuery(), $locale);
+
+        $importance = $base()
+            ->selectRaw('importance, COUNT(*) as count')
+            ->groupBy('importance')
+            ->pluck('count', 'importance')
+            ->map(fn ($count) => (int) $count)
+            ->all();
+
+        return [
+            'pivotal' => $base()->where('is_pivotal', true)->count(),
+            'disputed' => $base()->whereHas('translations', fn ($q) => $q
+                ->where('locale', $locale)
+                ->whereNotNull('dispute_note')
+                ->where('dispute_note', '<>', ''))->count(),
+            'importance' => $importance,
+        ];
     }
 
     /**
@@ -321,7 +392,8 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
         return [
             // description included: public list cards render an excerpt, and
             // without the column here getTranslation() silently returned null.
-            'translations:id,seerah_event_id,locale,title,description',
+            // dispute_note included: list cards carry the ⚠ dating-dispute marker.
+            'translations:id,seerah_event_id,locale,title,description,dispute_note',
             'type:id,slug,icon,color,gradient',
             'type.translations:id,seerah_event_type_id,locale,name',
         ];
@@ -334,7 +406,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     {
         return [
             'translations' => fn ($relation) => $relation
-                ->select(['id', 'seerah_event_id', 'locale', 'title', 'description', 'content', 'lessons', 'sources', 'is_ready'])
+                ->select(['id', 'seerah_event_id', 'locale', 'title', 'description', 'content', 'lessons', 'sources', 'dispute_note', 'is_ready'])
                 ->where('locale', $locale)
                 ->where('is_ready', true),
             'type:id,slug,icon,color,gradient',
@@ -520,6 +592,26 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     private function defaultRelations(): array
     {
         return $this->detailRelations();
+    }
+
+    /**
+     * {@inheritdoc}
+     *
+     * getIndexStats() counts every row whatever its status — that is the admin
+     * header. The public filter pills must not, or drafts inflate them (they
+     * read «578» over a list of 545).
+     */
+    public function countPublicByCategory(string $locale): array
+    {
+        $query = $this->model->newQuery()
+            ->leftJoin('seerah_event_types as t', 't.id', '=', 'seerah_events.seerah_event_type_id')
+            ->selectRaw("COALESCE(t.slug, 'unknown') as type_slug, COUNT(*) as count")
+            ->groupBy('type_slug');
+
+        return $this->publicVisibility->apply($query, $locale)
+            ->pluck('count', 'type_slug')
+            ->map(fn ($count) => (int) $count)
+            ->all();
     }
 
     /**

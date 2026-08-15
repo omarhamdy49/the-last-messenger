@@ -16,6 +16,7 @@ use Illuminate\Http\UploadedFile;
  * @param  array<string, string|null>  $title  Locale-keyed titles.
  * @param  array<string, string|null>  $description  Locale-keyed descriptions.
  * @param  array<string, string|null>  $content  Locale-keyed body content.
+ * @param  array<string, string|null>  $disputeNote  Locale-keyed dating-dispute notice.
  */
 final class CreateSeerahEventData
 {
@@ -24,6 +25,7 @@ final class CreateSeerahEventData
         public readonly array $title,
         public readonly array $description,
         public readonly array $content,
+        public readonly array $disputeNote,
         public readonly ?string $hijriDate,
         public readonly ?int $hijriYear,
         public readonly ?int $hijriMonth,
@@ -122,6 +124,7 @@ final class CreateSeerahEventData
             title: $validated['title'] ?? [],
             description: $validated['description'] ?? [],
             content: $validated['content'] ?? [],
+            disputeNote: $validated['dispute_note'] ?? [],
             hijriDate: $validated['hijri_date'] ?? null,
             hijriYear: isset($validated['hijri_year']) ? (int) $validated['hijri_year'] : null,
             hijriMonth: isset($validated['hijri_month']) ? (int) $validated['hijri_month'] : null,

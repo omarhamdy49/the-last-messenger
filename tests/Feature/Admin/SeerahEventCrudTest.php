@@ -43,6 +43,7 @@ class SeerahEventCrudTest extends TestCase
             'title' => $this->localizedField('غزوة بدر', 'Battle of Badr'),
             'description' => $this->localizedField('وصف عربي للحدث', 'English event description'),
             'content' => $this->localizedField('تفاصيل عربية للحدث', 'English event content'),
+            'dispute_note' => $this->localizedField('قيل سنة 2 هـ وقيل 3 هـ', 'Some place it in 2 AH, others in 3 AH'),
             'hijri_date' => '17 رمضان 2 هـ',
             'hijri_year' => 2,
             'hijri_month' => 9,
@@ -69,6 +70,8 @@ class SeerahEventCrudTest extends TestCase
         $this->assertSame('غزوة بدر', $event->getTranslation('title', 'ar'));
         $this->assertSame('Battle of Badr FR', $event->getTranslation('title', 'fr'));
         $this->assertSame('Battle of Badr UR', $event->getTranslation('title', 'ur'));
+        $this->assertSame('قيل سنة 2 هـ وقيل 3 هـ', $event->getTranslation('dispute_note', 'ar'));
+        $this->assertSame('Some place it in 2 AH, others in 3 AH', $event->getTranslation('dispute_note', 'en', false));
         $this->assertSame($sourceArticle->id, $event->related_article_id);
         $this->assertSame($battleTypeId, $event->seerah_event_type_id);
         $this->assertSame('battle', $event->type->slug);
@@ -89,6 +92,7 @@ class SeerahEventCrudTest extends TestCase
             'title' => $this->localizedField('غزوة بدر الكبرى', 'The Great Battle of Badr'),
             'description' => $this->localizedField('وصف عربي محدث', 'Updated English description'),
             'content' => $this->localizedField('تفاصيل عربية محدثة', 'Updated English content'),
+            'dispute_note' => $this->localizedField('الراجح 2 هـ', 'The stronger view is 2 AH'),
             'hijri_date' => '17 رمضان 2 هـ',
             'hijri_year' => 2,
             'hijri_month' => 9,
@@ -114,6 +118,8 @@ class SeerahEventCrudTest extends TestCase
 
         $this->assertSame('غزوة بدر الكبرى', $event->getTranslation('title', 'ar'));
         $this->assertSame('The Great Battle of Badr TR', $event->getTranslation('title', 'tr'));
+        $this->assertSame('الراجح 2 هـ', $event->getTranslation('dispute_note', 'ar'));
+        $this->assertSame('The stronger view is 2 AH', $event->getTranslation('dispute_note', 'en', false));
         $this->assertSame($updatedArticle->id, $event->related_article_id);
         $this->assertSame('Badr Valley', $event->location);
         $this->assertSame(2, $event->display_order);

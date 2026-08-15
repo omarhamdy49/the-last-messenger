@@ -45,6 +45,7 @@ class SeerahEventTranslation extends Model
         'content',
         'lessons',
         'sources',
+        'dispute_note',
         'is_ready',
     ];
 

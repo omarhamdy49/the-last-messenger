@@ -116,6 +116,26 @@
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
+
+                    {{-- تنبيه الخلاف في التأريخ: يُعرض في صفحة الحدث كصندوق تحذير، وكشارة ⚠ على البطاقات --}}
+                    <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            تنبيه الخلاف في التأريخ ({{ strtoupper($lang) }})
+                        </label>
+                        <textarea name="dispute_note[{{ $lang }}]"
+                                  rows="3"
+                                  maxlength="1000"
+                                  class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all resize-none"
+                                  :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                                  dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
+                                  placeholder="مثال: موافقة عام الفيل لسنة 570/571م هي المشهور، وقد رجّح باحثون سنة 571م.">{{ old("dispute_note.{$lang}") }}</textarea>
+                        <p class="mt-1 text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
+                            اتركه فارغاً إن لم يكن في تأريخ الحدث خلاف.
+                        </p>
+                        @error("dispute_note.{$lang}")
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
                 </div>
                 @endforeach
             </div>

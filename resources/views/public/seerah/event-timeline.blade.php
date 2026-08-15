@@ -140,6 +140,19 @@
     $hasLessons = $lessons->isNotEmpty();
     $sources = collect($event['sources'] ?? [])->filter(fn ($x) => ! empty($x['title']));
     $hasSources = $sources->isNotEmpty();
+    $disputeNote = $event['disputeNote'] ?? null;
+    // كل علم باسمه — العهد والمرحلة والأهمية لم يكن لها أثر في هذا القالب أصلاً.
+    $facts = collect([
+        ['icon' => 'calendar', 'label' => __('seerah.public.hijri_date_label'), 'value' => $event['hijriDate']],
+        ['icon' => 'calendar-days', 'label' => __('seerah.public.gregorian_year_label'), 'value' => $event['gregorianYear'] ? $event['gregorianYear'].' '.__('seerah.public.gregorian_suffix') : null],
+        ['icon' => $event['icon'], 'label' => __('seerah.public.type_label'), 'value' => $event['typeLabel']],
+        ['icon' => 'map-pin', 'label' => __('seerah.public.location_label'), 'value' => $event['location']],
+        ['icon' => 'landmark', 'label' => __('seerah.public.era_label'), 'value' => $event['eraLabel']],
+        ['icon' => 'route', 'label' => __('seerah.public.phase_label'), 'value' => $event['phaseLabel']],
+        ['icon' => 'flame', 'label' => __('seerah.public.importance_label'), 'value' => $event['importanceLabel'] ?? null],
+        ['icon' => 'star', 'label' => __('seerah.public.pivotal_label'), 'value' => $event['isPivotal'] ? __('seerah.public.pivotal_event') : null],
+        ['icon' => 'flag', 'label' => __('seerah.public.milestone_label'), 'value' => $event['milestone']['title'] ?? null],
+    ])->filter(fn ($fact) => ! empty($fact['value']))->values();
     // Timeline is the default style now — the switch link opts into the article view.
     $articleStyleUrl = route('public.seerah.event', ['slug' => $event['slug'], 'view' => 'article']);
     $characterGradients = [
@@ -344,10 +357,24 @@
                         {{ $event['typeLabel'] }}
                     </span>
                     @if ($event['isPivotal'])
-                        <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 backdrop-blur-md text-sm font-semibold">
-                            <i data-lucide="star" class="w-4 h-4"></i>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-400/30 border border-amber-200/50 backdrop-blur-md text-xs font-bold">
+                            <i data-lucide="star" class="w-3.5 h-3.5"></i>
                             {{ __('seerah.public.pivotal_event') }}
                         </span>
+                    @endif
+                    @if (($event['importance'] ?? null) === 'high')
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md text-xs font-bold">
+                            <i data-lucide="flame" class="w-3.5 h-3.5"></i>
+                            {{ $event['importanceLabel'] }}
+                        </span>
+                    @endif
+                    @if ($disputeNote)
+                        {{-- Anchor, not decoration: jumps to the note itself. --}}
+                        <a href="#event-dispute"
+                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-violet-400/30 border border-violet-200/50 backdrop-blur-md text-xs font-bold hover:bg-violet-400/45 transition-colors">
+                            <i data-lucide="scale" class="w-3.5 h-3.5"></i>
+                            {{ __('seerah.public.dispute_badge') }}
+                        </a>
                     @endif
                 </div>
 
@@ -385,6 +412,41 @@
                 <i data-lucide="chevron-down" class="w-8 h-8 text-white/70"></i>
             </div>
         </section>
+
+        <!-- Dating dispute — the reference chronology's «وقيل…» carried verbatim -->
+        @if ($disputeNote)
+            <section id="event-dispute" class="scroll-mt-28 pt-10 sm:pt-12">
+                <div class="max-w-4xl mx-auto px-4 sm:px-6">
+                    <div class="flex items-start gap-4 rounded-3xl p-5 sm:p-6 border border-violet-300/60 bg-violet-50 dark:bg-violet-500/10 dark:border-violet-400/30">
+                        <div class="w-10 h-10 rounded-2xl bg-violet-600 flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="scale" class="w-5 h-5 text-white"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="font-bold mb-1 text-violet-900 dark:text-violet-200">{{ __('seerah.public.dispute_heading') }}</p>
+                            <p class="leading-relaxed break-words text-violet-900/90 dark:text-violet-100/90">{{ $disputeNote }}</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        @endif
+
+        <!-- بطاقة الحقائق: كل علم باسمه، لا أيقونة مجرّدة -->
+        @if ($facts->isNotEmpty())
+            <section id="event-facts" class="scroll-mt-28 pt-10 sm:pt-12">
+                <div class="max-w-4xl mx-auto px-4 sm:px-6">
+                    <dl class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        @foreach ($facts as $fact)
+                            <div class="rounded-2xl p-4 border" :class="darkMode ? 'bg-gray-900/50 border-white/10' : 'bg-white border-gray-200'">
+                                <dt class="flex items-center gap-1.5 text-xs font-semibold" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                                    <i data-lucide="{{ $fact['icon'] }}" class="w-3.5 h-3.5"></i>{{ $fact['label'] }}
+                                </dt>
+                                <dd class="mt-1 font-bold break-words" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $fact['value'] }}</dd>
+                            </div>
+                        @endforeach
+                    </dl>
+                </div>
+            </section>
+        @endif
 
         <!-- Animated Stats -->
         @if ($hasStatistics)

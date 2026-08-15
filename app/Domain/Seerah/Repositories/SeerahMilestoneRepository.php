@@ -47,7 +47,7 @@ class SeerahMilestoneRepository extends BaseRepository implements SeerahMileston
                 ->with([
                     'translations',
                     'events' => fn ($q) => $q->published()->chronological()->with([
-                        'translations:id,seerah_event_id,locale,title',
+                        'translations:id,seerah_event_id,locale,title,dispute_note',
                         'type:id,slug,icon,color,gradient',
                         'type.translations:id,seerah_event_type_id,locale,name',
                     ]),

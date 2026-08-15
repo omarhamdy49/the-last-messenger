@@ -14,6 +14,7 @@ use App\Domain\Shared\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\Cache;
 
 class VerseRepository extends BaseRepository implements VerseRepositoryInterface
@@ -443,9 +444,13 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
      * Printed-mushaf word layout for a surah, ordered for line-by-line rendering
      * (by page, then line, then word position). Cached — the layout is static.
      *
-     * @return Collection<int, Word>
+     * Returned as plain rows (`toBase()`), never Word models: البقرة is 6,402
+     * words, and that many hydrated models serialize to ~11 MB — unserializing
+     * the cache entry alone exhausted the 128 MB limit and 500'd the page.
+     *
+     * @return SupportCollection<int, object>
      */
-    public function getMushafWordsBySurah(int $surahNumber): Collection
+    public function getMushafWordsBySurah(int $surahNumber): SupportCollection
     {
         return Cache::remember(
             QuranCacheKeys::mushafWordsBySurah($surahNumber),
@@ -468,6 +473,7 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
                 ->orderBy('line_number')
                 ->orderBy('verse_number') // verses share lines; order by verse before word position
                 ->orderBy('position')
+                ->toBase()
                 ->get()
         );
     }
