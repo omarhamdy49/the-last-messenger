@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Seerah\Repositories;
 
+use App\Domain\Seerah\Models\SeerahMilestone;
 use App\Domain\Shared\Contracts\RepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -14,7 +15,7 @@ interface SeerahMilestoneRepositoryInterface extends RepositoryInterface
      * All active milestones, ordered, with translations (cached) — for dropdowns
      * and the public timeline.
      *
-     * @return Collection<int, \App\Domain\Seerah\Models\SeerahMilestone>
+     * @return Collection<int, SeerahMilestone>
      */
     public function allActiveOrdered(): Collection;
 
@@ -22,7 +23,7 @@ interface SeerahMilestoneRepositoryInterface extends RepositoryInterface
      * Active milestones (ordered) each eager-loaded with their published events in
      * chronological order — for the public hero-journey timeline.
      *
-     * @return Collection<int, \App\Domain\Seerah\Models\SeerahMilestone>
+     * @return Collection<int, SeerahMilestone>
      */
     public function getActiveWithPublishedEvents(): Collection;
 

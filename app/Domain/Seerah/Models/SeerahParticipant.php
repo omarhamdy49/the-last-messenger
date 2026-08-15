@@ -6,6 +6,8 @@ namespace App\Domain\Seerah\Models;
 
 use App\Domain\Seerah\Enums\ParticipantRole;
 use App\Domain\Shared\Traits\HasLocalizedContent;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,8 +22,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property array $name
  * @property ParticipantRole $role
  * @property array|null $description
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class SeerahParticipant extends Model
 {
@@ -82,8 +84,8 @@ class SeerahParticipant extends Model
     /**
      * Scope: Filter by role
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByRole($query, ParticipantRole|string $role)
     {

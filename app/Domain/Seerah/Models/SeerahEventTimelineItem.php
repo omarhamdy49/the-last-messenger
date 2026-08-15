@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Seerah\Models;
 
 use App\Domain\Shared\Traits\HasLocalizedContent;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,8 +20,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id
  * @property int $seerah_event_id
  * @property int $display_order
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class SeerahEventTimelineItem extends Model
 {
@@ -79,8 +81,8 @@ class SeerahEventTimelineItem extends Model
     /**
      * Scope: Order by display order
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeOrdered($query)
     {

@@ -174,18 +174,18 @@
             <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
                 @if (($stats['pivotal'] ?? 0) > 0)
                 <a href="{{ route('public.seerah.events', ['pivotal' => 1]) }}"
-                   class="min-h-11 inline-flex items-center gap-1.5 px-3.5 rounded-xl font-bold text-[13px] border border-amber-500/40 text-amber-700 dark:text-amber-300 bg-amber-500/5 hover:bg-amber-500/15 transition-colors focus:outline-none focus:ring-2 focus:ring-[#64CCC5]">
+                   class="min-h-11 inline-flex items-center gap-1.5 px-3.5 rounded-xl font-bold text-[13px] border bg-gradient-to-l from-[#0056b3] to-[#218838] text-white border-transparent shadow-sm hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-[#64CCC5]">
                     <i data-lucide="star" class="w-3.5 h-3.5"></i>
                     <span>{{ __('seerah.public.pivotal_event') }}</span>
-                    <span class="px-1.5 rounded-full text-[11px] bg-amber-500/15 tabular-nums">{{ $stats['pivotal'] }}</span>
+                    <span class="px-1.5 rounded-full text-[11px] bg-white/25 tabular-nums">{{ $stats['pivotal'] }}</span>
                 </a>
                 @endif
                 @if (($stats['disputed'] ?? 0) > 0)
                 <a href="{{ route('public.seerah.events', ['disputed' => 1]) }}"
-                   class="min-h-11 inline-flex items-center gap-1.5 px-3.5 rounded-xl font-bold text-[13px] border border-violet-500/40 text-violet-700 dark:text-violet-300 bg-violet-500/5 hover:bg-violet-500/15 transition-colors focus:outline-none focus:ring-2 focus:ring-[#64CCC5]">
-                    <i data-lucide="scale" class="w-3.5 h-3.5"></i>
+                   class="min-h-11 inline-flex items-center gap-1.5 px-3.5 rounded-xl font-bold text-[13px] border border-red-500/40 text-red-700 dark:text-red-300 bg-red-500/10 hover:bg-red-500/20 transition-colors focus:outline-none focus:ring-2 focus:ring-[#64CCC5]">
+                    <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
                     <span>{{ __('seerah.public.dispute_badge') }}</span>
-                    <span class="px-1.5 rounded-full text-[11px] bg-violet-500/15 tabular-nums">{{ $stats['disputed'] }}</span>
+                    <span class="px-1.5 rounded-full text-[11px] bg-red-500/15 tabular-nums">{{ $stats['disputed'] }}</span>
                 </a>
                 @endif
             </div>
@@ -321,14 +321,14 @@
                         <div class="mt-3 flex flex-wrap gap-2">
                             @if(($m['pivotalCount'] ?? 0) > 0)
                             <a href="{{ $m['pivotalUrl'] }}"
-                               class="min-h-9 inline-flex items-center gap-1.5 px-2.5 rounded-full text-[11px] font-bold border border-amber-500/30 text-amber-700 dark:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 transition-colors focus:outline-none focus:ring-2 focus:ring-[#64CCC5]">
+                               class="min-h-9 inline-flex items-center gap-1.5 px-2.5 rounded-full text-[11px] font-bold bg-gradient-to-l from-[#0056b3] to-[#218838] text-white border-transparent hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-[#64CCC5]">
                                 <i data-lucide="star" class="w-3 h-3"></i>{{ $m['pivotalCount'] }} {{ __('seerah.public.pivotal_event') }}
                             </a>
                             @endif
                             @if(($m['disputedCount'] ?? 0) > 0)
                             <a href="{{ $m['disputedUrl'] }}"
-                               class="min-h-9 inline-flex items-center gap-1.5 px-2.5 rounded-full text-[11px] font-bold border border-violet-500/30 text-violet-700 dark:text-violet-300 bg-violet-500/5 hover:bg-violet-500/15 transition-colors focus:outline-none focus:ring-2 focus:ring-[#64CCC5]">
-                                <i data-lucide="scale" class="w-3 h-3"></i>{{ $m['disputedCount'] }} {{ __('seerah.public.dispute_badge') }}
+                               class="min-h-9 inline-flex items-center gap-1.5 px-2.5 rounded-full text-[11px] font-bold border border-red-500/30 text-red-700 dark:text-red-300 bg-red-500/10 hover:bg-red-500/20 transition-colors focus:outline-none focus:ring-2 focus:ring-[#64CCC5]">
+                                <i data-lucide="alert-triangle" class="w-3 h-3"></i>{{ $m['disputedCount'] }} {{ __('seerah.public.dispute_badge') }}
                             </a>
                             @endif
                         </div>
@@ -449,11 +449,11 @@
                 <span data-tpl="type" class="font-semibold text-[#0056b3]/70 dark:text-[#64CCC5]/80 flex-shrink-0"></span>
                 <span data-tpl="hijri" class="flex-shrink-0 tabular-nums"></span>
                 <span data-tpl="location" class="truncate"></span>
-                <span data-tpl="pivotal" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full flex-shrink-0 font-bold bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-400">
+                <span data-tpl="pivotal" class="inline-flex items-center gap-1 px-1.5 rounded-full flex-shrink-0 font-bold bg-gradient-to-l from-[#0056b3] to-[#218838] text-white border-transparent">
                     <i data-lucide="star" class="w-3 h-3"></i>{{ __('seerah.public.pivotal_event') }}
                 </span>
-                <span data-tpl="dispute" class="inline-flex items-center gap-1 px-1.5 rounded-full flex-shrink-0 font-bold bg-violet-500/10 border border-violet-500/30 text-violet-700 dark:text-violet-300">
-                    <i data-lucide="scale" class="w-3 h-3"></i>{{ __('seerah.public.dispute_badge') }}
+                <span data-tpl="dispute" class="inline-flex items-center gap-1 px-1.5 rounded-full flex-shrink-0 font-bold bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300">
+                    <i data-lucide="alert-triangle" class="w-3 h-3"></i>{{ __('seerah.public.dispute_badge') }}
                 </span>
             </div>
         </div>
@@ -470,11 +470,11 @@
                     <i data-tpl="icon" class="w-3 h-3"></i><span data-tpl="type"></span>
                 </span>
                 <span data-tpl="hijri" class="text-[11px] font-bold text-gray-400 dark:text-gray-500 tabular-nums"></span>
-                <span data-tpl="pivotal" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-400">
+                <span data-tpl="pivotal" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-gradient-to-l from-[#0056b3] to-[#218838] text-white border-transparent">
                     <i data-lucide="star" class="w-3 h-3"></i>{{ __('seerah.public.pivotal_event') }}
                 </span>
-                <span data-tpl="dispute" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-violet-500/10 border border-violet-500/30 text-violet-700 dark:text-violet-300">
-                    <i data-lucide="scale" class="w-3 h-3"></i>{{ __('seerah.public.dispute_badge') }}
+                <span data-tpl="dispute" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300">
+                    <i data-lucide="alert-triangle" class="w-3 h-3"></i>{{ __('seerah.public.dispute_badge') }}
                 </span>
             </div>
             <h3 data-tpl="title" class="font-bold text-base text-gray-900 dark:text-white group-hover:text-[#0056b3] dark:group-hover:text-[#64CCC5] transition-colors leading-snug line-clamp-2"></h3>

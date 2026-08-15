@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Seerah\Repositories;
 
+use App\Domain\Seerah\Models\SeerahEventType;
 use App\Domain\Shared\Contracts\RepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -13,7 +14,7 @@ interface SeerahEventTypeRepositoryInterface extends RepositoryInterface
     /**
      * All active types, ordered for dropdowns (cached).
      *
-     * @return Collection<int, \App\Domain\Seerah\Models\SeerahEventType>
+     * @return Collection<int, SeerahEventType>
      */
     public function allActiveOrdered(): Collection;
 

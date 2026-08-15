@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Seerah\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -18,8 +19,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $name Translated participant name
  * @property string|null $description Translated participant description
  * @property bool $is_ready Indicates if translation is complete
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class SeerahParticipantTranslation extends Model
 {

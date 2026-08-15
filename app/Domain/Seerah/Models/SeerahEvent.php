@@ -11,14 +11,19 @@ use App\Domain\Seerah\Enums\SeerahEventStatus;
 use App\Domain\Shared\Traits\HasInteractions;
 use App\Domain\Shared\Traits\HasLocalizedContent;
 use App\Models\Article;
+use Carbon\Carbon;
+use Database\Factories\SeerahEventFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /**
  * SeerahEvent Model
@@ -48,8 +53,8 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property int $views_count
  * @property int $display_order
  * @property bool $is_featured
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class SeerahEvent extends Model implements HasMedia
 {
@@ -126,9 +131,9 @@ class SeerahEvent extends Model implements HasMedia
     /**
      * Resolve the factory for this model (custom Domain namespace).
      */
-    protected static function newFactory(): \Database\Factories\SeerahEventFactory
+    protected static function newFactory(): SeerahEventFactory
     {
-        return \Database\Factories\SeerahEventFactory::new();
+        return SeerahEventFactory::new();
     }
 
     /**
@@ -225,8 +230,8 @@ class SeerahEvent extends Model implements HasMedia
     /**
      * Scope: filter events by milestone id.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByMilestone($query, int $milestoneId)
     {
@@ -252,8 +257,8 @@ class SeerahEvent extends Model implements HasMedia
     /**
      * Scope: Filter by era
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByEra($query, EventEra|string $era)
     {
@@ -265,8 +270,8 @@ class SeerahEvent extends Model implements HasMedia
     /**
      * Scope: Filter by phase
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByPhase($query, EventPhase|string $phase)
     {
@@ -278,8 +283,8 @@ class SeerahEvent extends Model implements HasMedia
     /**
      * Scope: Pivotal events ("حدث مفصلي")
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopePivotal($query)
     {
@@ -331,8 +336,8 @@ class SeerahEvent extends Model implements HasMedia
      *
      * Accepts a type id (int) or a type slug (string, resolved via the relation).
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByType($query, int|string $type)
     {
@@ -346,8 +351,8 @@ class SeerahEvent extends Model implements HasMedia
     /**
      * Scope: Published events only (visible to the public)
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopePublished($query)
     {
@@ -357,8 +362,8 @@ class SeerahEvent extends Model implements HasMedia
     /**
      * Scope: Draft events only
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeDraft($query)
     {
@@ -368,8 +373,8 @@ class SeerahEvent extends Model implements HasMedia
     /**
      * Scope: Filter by importance
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByImportance($query, EventImportance|string $importance)
     {
@@ -381,8 +386,8 @@ class SeerahEvent extends Model implements HasMedia
     /**
      * Scope: Filter by Hijri year
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByHijriYear($query, int $year)
     {
@@ -392,8 +397,8 @@ class SeerahEvent extends Model implements HasMedia
     /**
      * Scope: Filter by Gregorian year
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByGregorianYear($query, int $year)
     {
@@ -403,8 +408,8 @@ class SeerahEvent extends Model implements HasMedia
     /**
      * Scope: Filter by location
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByLocation($query, string $location)
     {
@@ -414,8 +419,8 @@ class SeerahEvent extends Model implements HasMedia
     /**
      * Scope: Featured events
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeFeatured($query)
     {
@@ -425,8 +430,8 @@ class SeerahEvent extends Model implements HasMedia
     /**
      * Scope: Order chronologically (by Hijri date)
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeChronological($query, string $direction = 'asc')
     {
@@ -439,8 +444,8 @@ class SeerahEvent extends Model implements HasMedia
     /**
      * Scope: Events with location
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeWithLocation($query)
     {
@@ -468,11 +473,11 @@ class SeerahEvent extends Model implements HasMedia
     /**
      * Register media conversions
      */
-    public function registerMediaConversions(?\Spatie\MediaLibrary\MediaCollections\Models\Media $media = null): void
+    public function registerMediaConversions(?Media $media = null): void
     {
         // Thumbnail conversion (150x150 crop-center)
         $this->addMediaConversion('thumbnail')
-            ->fit(\Spatie\Image\Enums\Fit::Crop, 150, 150)
+            ->fit(Fit::Crop, 150, 150)
             ->sharpen(10)
             ->optimize()
             ->performOnCollections('featured_image', 'gallery')
@@ -480,7 +485,7 @@ class SeerahEvent extends Model implements HasMedia
 
         // Medium conversion (800x600 contain)
         $this->addMediaConversion('medium')
-            ->fit(\Spatie\Image\Enums\Fit::Contain, 800, 600)
+            ->fit(Fit::Contain, 800, 600)
             ->sharpen(10)
             ->optimize()
             ->performOnCollections('featured_image', 'gallery')
@@ -488,7 +493,7 @@ class SeerahEvent extends Model implements HasMedia
 
         // Large conversion (1200x800 contain)
         $this->addMediaConversion('large')
-            ->fit(\Spatie\Image\Enums\Fit::Contain, 1200, 800)
+            ->fit(Fit::Contain, 1200, 800)
             ->sharpen(10)
             ->optimize()
             ->performOnCollections('featured_image', 'gallery')

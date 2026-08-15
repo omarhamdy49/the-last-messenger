@@ -399,8 +399,8 @@
         {{-- Flag toggles: links, not checkboxes — one tap applies, and each is a real URL. --}}
         <div class="sm:col-span-2 flex flex-wrap gap-2">
           @foreach ([
-            ['key' => 'pivotal', 'icon' => 'star', 'label' => __('seerah.public.pivotal_event'), 'count' => $facets['pivotal'], 'tone' => 'amber'],
-            ['key' => 'disputed', 'icon' => 'scale', 'label' => __('seerah.public.dispute_badge'), 'count' => $facets['disputed'], 'tone' => 'violet'],
+            ['key' => 'pivotal', 'icon' => 'star', 'label' => __('seerah.public.pivotal_event'), 'count' => $facets['pivotal'], 'tone' => 'brand'],
+            ['key' => 'disputed', 'icon' => 'scale', 'label' => __('seerah.public.dispute_badge'), 'count' => $facets['disputed'], 'tone' => 'danger'],
           ] as $toggle)
             @continue($toggle['count'] === 0)
             {{-- Static + conditional classes must live in ONE @class: a second
@@ -409,14 +409,14 @@
                aria-pressed="{{ $filters[$toggle['key']] ? 'true' : 'false' }}"
                @class([
                  'min-h-11 inline-flex items-center gap-1.5 px-3.5 rounded-xl border font-bold text-[13px] transition-colors focus:outline-none focus:ring-2 focus:ring-[#64CCC5]',
-                 'bg-amber-500 border-amber-500 text-white shadow-sm shadow-amber-500/25' => $filters[$toggle['key']] && $toggle['tone'] === 'amber',
-                 'bg-violet-600 border-violet-600 text-white shadow-sm shadow-violet-600/25' => $filters[$toggle['key']] && $toggle['tone'] === 'violet',
-                 'border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10' => ! $filters[$toggle['key']] && $toggle['tone'] === 'amber',
-                 'border-violet-500/40 text-violet-700 dark:text-violet-300 hover:bg-violet-500/10' => ! $filters[$toggle['key']] && $toggle['tone'] === 'violet',
+                 'bg-gradient-to-l from-[#0056b3] to-[#218838] text-white border-transparent shadow-sm' => $filters[$toggle['key']] && $toggle['tone'] === 'brand',
+                 'bg-red-600 border-red-600 text-white shadow-sm shadow-red-600/25' => $filters[$toggle['key']] && $toggle['tone'] === 'danger',
+                 'border-[#0056b3]/40 text-[#0056b3] dark:text-[#64CCC5] dark:border-[#64CCC5]/40 hover:bg-[#0056b3]/10' => ! $filters[$toggle['key']] && $toggle['tone'] === 'brand',
+                 'border-red-500/40 text-red-700 dark:text-red-300 hover:bg-red-500/10' => ! $filters[$toggle['key']] && $toggle['tone'] === 'danger',
                ])>
               <i data-lucide="{{ $toggle['icon'] }}" class="w-3.5 h-3.5"></i>
               <span>{{ $toggle['label'] }}</span>
-              <span class="px-1.5 rounded-full text-[11px] tabular-nums {{ $filters[$toggle['key']] ? 'bg-white/25' : ($toggle['tone'] === 'violet' ? 'bg-violet-500/15' : 'bg-amber-500/15') }}">{{ $toggle['count'] }}</span>
+              <span class="px-1.5 rounded-full text-[11px] tabular-nums {{ $filters[$toggle['key']] ? 'bg-white/25' : ($toggle['tone'] === 'danger' ? 'bg-red-500/15' : 'bg-[#0056b3]/10 dark:bg-[#64CCC5]/15') }}">{{ $toggle['count'] }}</span>
             </a>
           @endforeach
         </div>
@@ -576,17 +576,17 @@
 
                   <!-- Pivotal -->
                   @if ($event['isPivotal'])
-                    <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30">
-                      <i data-lucide="star" class="w-3 h-3 text-amber-600 dark:text-amber-400"></i>
-                      <span class="text-[11px] font-bold text-amber-700 dark:text-amber-300">{{ __('seerah.public.pivotal_event') }}</span>
+                    <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-l from-[#0056b3] to-[#218838] text-white border-transparent">
+                      <i data-lucide="star" class="w-3 h-3"></i>
+                      <span class="text-[11px] font-bold">{{ __('seerah.public.pivotal_event') }}</span>
                     </div>
                   @endif
 
                   <!-- Dating dispute -->
                   @if ($event['hasDispute'] ?? false)
-                    <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-500/10 border border-violet-500/30">
-                      <i data-lucide="scale" class="w-3 h-3 text-violet-600 dark:text-violet-400"></i>
-                      <span class="text-[11px] font-bold text-violet-700 dark:text-violet-300">{{ __('seerah.public.dispute_badge') }}</span>
+                    <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/30">
+                      <i data-lucide="alert-triangle" class="w-3 h-3 text-red-600 dark:text-red-400"></i>
+                      <span class="text-[11px] font-bold text-red-700 dark:text-red-300">{{ __('seerah.public.dispute_badge') }}</span>
                     </div>
                   @endif
                 </div>

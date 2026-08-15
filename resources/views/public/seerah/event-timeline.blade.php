@@ -357,7 +357,7 @@
                         {{ $event['typeLabel'] }}
                     </span>
                     @if ($event['isPivotal'])
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-400/30 border border-amber-200/50 backdrop-blur-md text-xs font-bold">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-l from-[#0056b3] to-[#218838] text-white shadow-sm text-xs font-bold">
                             <i data-lucide="star" class="w-3.5 h-3.5"></i>
                             {{ __('seerah.public.pivotal_event') }}
                         </span>
@@ -371,8 +371,8 @@
                     @if ($disputeNote)
                         {{-- Anchor, not decoration: jumps to the note itself. --}}
                         <a href="#event-dispute"
-                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-violet-400/30 border border-violet-200/50 backdrop-blur-md text-xs font-bold hover:bg-violet-400/45 transition-colors">
-                            <i data-lucide="scale" class="w-3.5 h-3.5"></i>
+                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/85 border border-red-300/50 text-white text-xs font-bold hover:bg-red-600 transition-colors">
+                            <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
                             {{ __('seerah.public.dispute_badge') }}
                         </a>
                     @endif
@@ -417,13 +417,13 @@
         @if ($disputeNote)
             <section id="event-dispute" class="scroll-mt-28 pt-10 sm:pt-12">
                 <div class="max-w-4xl mx-auto px-4 sm:px-6">
-                    <div class="flex items-start gap-4 rounded-3xl p-5 sm:p-6 border border-violet-300/60 bg-violet-50 dark:bg-violet-500/10 dark:border-violet-400/30">
-                        <div class="w-10 h-10 rounded-2xl bg-violet-600 flex items-center justify-center flex-shrink-0">
-                            <i data-lucide="scale" class="w-5 h-5 text-white"></i>
+                    <div class="flex items-start gap-4 rounded-3xl p-5 sm:p-6 border border-red-300/60 bg-red-50 dark:bg-red-500/10 dark:border-red-400/30">
+                        <div class="w-10 h-10 rounded-2xl bg-red-500 flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="alert-triangle" class="w-5 h-5 text-white"></i>
                         </div>
                         <div class="min-w-0">
-                            <p class="font-bold mb-1 text-violet-900 dark:text-violet-200">{{ __('seerah.public.dispute_heading') }}</p>
-                            <p class="leading-relaxed break-words text-violet-900/90 dark:text-violet-100/90">{{ $disputeNote }}</p>
+                            <p class="font-bold mb-1 text-red-900 dark:text-red-200">{{ __('seerah.public.dispute_heading') }}</p>
+                            <p class="leading-relaxed break-words text-red-900/90 dark:text-red-100/90">{{ $disputeNote }}</p>
                         </div>
                     </div>
                 </div>

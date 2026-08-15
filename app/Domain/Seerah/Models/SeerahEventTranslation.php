@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domain\Seerah\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * SeerahEventTranslation Model
@@ -19,8 +21,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $description
  * @property string|null $content
  * @property bool $is_ready
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  * @property-read SeerahEvent $seerahEvent
  */
 class SeerahEventTranslation extends Model
@@ -73,8 +75,8 @@ class SeerahEventTranslation extends Model
     /**
      * Scope: Filter by locale.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByLocale($query, string $locale)
     {
@@ -84,8 +86,8 @@ class SeerahEventTranslation extends Model
     /**
      * Scope: Only ready translations.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeReady($query)
     {
@@ -95,8 +97,8 @@ class SeerahEventTranslation extends Model
     /**
      * Scope: Search title field.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeSearchTitle($query, string $term)
     {
@@ -106,8 +108,8 @@ class SeerahEventTranslation extends Model
     /**
      * Scope: Search description field.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeSearchDescription($query, string $term)
     {
