@@ -103,8 +103,24 @@
 
     {{-- SERIES HEADER --}}
     <section class="relative overflow-hidden border-b border-gray-100 dark:border-[#0f3460]">
+        {{-- Brand gradient stays underneath: it is the backdrop when a series has
+             no cover, and the fallback if the cover 404s. --}}
         <div class="absolute inset-0 bg-gradient-to-br from-primary via-[#136f4b] to-secondary" aria-hidden="true"></div>
-        <div class="absolute inset-0 bg-black/25" aria-hidden="true"></div>
+        @if (! empty($series['cover']))
+            {{-- Poster artwork pinned to the physical left, sized by its own aspect
+                 (h-full + w-auto) so the whole image shows with no letterbox. Its
+                 right edge is masked away so it dissolves into the brand gradient
+                 instead of ending on a seam — and in RTL that keeps the text column
+                 on the right over flat colour. `left-0` / `to right` are physical
+                 on purpose: they must not flip with direction. --}}
+            <img src="{{ $series['cover'] }}" alt="" aria-hidden="true" fetchpriority="high"
+                 class="absolute inset-y-0 left-0 h-full w-auto max-w-none pointer-events-none"
+                 style="-webkit-mask-image: linear-gradient(to right, black 40%, transparent 92%); mask-image: linear-gradient(to right, black 40%, transparent 92%);"
+                 onerror="this.remove()">
+        @endif
+        {{-- Narrow screens have no room for the left-artwork / right-text split, so
+             the poster ends up directly under the copy: darken it there only. --}}
+        <div class="absolute inset-0 bg-black/75 sm:bg-black/25" aria-hidden="true"></div>
         {{-- Dotted lattice, fading downward (matches the library heroes) --}}
         <div class="absolute inset-0 opacity-[0.12] pointer-events-none"
              style="background-image: radial-gradient(#fff 1px, transparent 1.5px); background-size: 26px 26px; -webkit-mask-image: linear-gradient(to bottom, black, transparent); mask-image: linear-gradient(to bottom, black, transparent);"
