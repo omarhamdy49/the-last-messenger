@@ -9,6 +9,7 @@ use App\Domain\Blog\DTOs\UpdateSeriesData;
 use App\Domain\Blog\Models\Series;
 use App\Domain\Blog\Repositories\SeriesRepositoryInterface;
 use App\Domain\Shared\Services\BaseService;
+use App\Domain\Shared\Services\PublicImageService;
 use App\Domain\Shared\Services\SlugGenerator;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -36,6 +37,7 @@ class SeriesService extends BaseService
      */
     public function __construct(
         SeriesRepositoryInterface $repository,
+        private readonly PublicImageService $images,
         private readonly SlugGenerator $slugs = new SlugGenerator,
     ) {
         $this->repository = $repository;
@@ -101,13 +103,13 @@ class SeriesService extends BaseService
      */
     public function storeSeries(CreateSeriesData $data): Series
     {
-        $thumbnailPath = null;
-
         // Store the file before opening the transaction so that filesystem
         // errors are surfaced before any DB writes occur.
-        if ($data->thumbnail !== null) {
-            $thumbnailPath = $data->thumbnail->store('series/thumbnails', 'public');
-        }
+        $thumbnailPath = $this->images->store(
+            $data->thumbnail ?? $data->thumbnailId,
+            'series/thumbnails',
+            'series'
+        );
 
         try {
             $series = DB::transaction(function () use ($data, $thumbnailPath): Series {
@@ -146,7 +148,7 @@ class SeriesService extends BaseService
         } catch (\Throwable $e) {
             // Roll back uploaded file if the transaction failed
             if ($thumbnailPath !== null && Storage::disk('public')->exists($thumbnailPath)) {
-                Storage::disk('public')->delete($thumbnailPath);
+                $this->images->delete($thumbnailPath);
             }
 
             throw $e;
@@ -175,10 +177,11 @@ class SeriesService extends BaseService
         $series = Series::with('translations')->findOrFail($id);
         $oldThumbnail = $series->thumbnail;
 
-        $newThumbnailPath = null;
-        if ($data->thumbnail !== null) {
-            $newThumbnailPath = $data->thumbnail->store('series/thumbnails', 'public');
-        }
+        $newThumbnailPath = $this->images->store(
+            $data->thumbnail ?? $data->thumbnailId,
+            'series/thumbnails',
+            'series'
+        );
 
         try {
             DB::transaction(function () use ($series, $data, $newThumbnailPath): void {
@@ -229,7 +232,7 @@ class SeriesService extends BaseService
         } catch (\Throwable $e) {
             // Roll back newly uploaded file on failure
             if ($newThumbnailPath !== null && Storage::disk('public')->exists($newThumbnailPath)) {
-                Storage::disk('public')->delete($newThumbnailPath);
+                $this->images->delete($newThumbnailPath);
             }
 
             throw $e;
@@ -239,7 +242,7 @@ class SeriesService extends BaseService
         if ($newThumbnailPath !== null && $oldThumbnail !== null
             && Storage::disk('public')->exists($oldThumbnail)
         ) {
-            Storage::disk('public')->delete($oldThumbnail);
+            $this->images->delete($oldThumbnail);
         }
 
         $this->repository->clearCache();
@@ -271,7 +274,7 @@ class SeriesService extends BaseService
         });
 
         if ($deleted && $thumbnail !== null && Storage::disk('public')->exists($thumbnail)) {
-            Storage::disk('public')->delete($thumbnail);
+            $this->images->delete($thumbnail);
         }
 
         $this->repository->clearCache();
@@ -308,7 +311,7 @@ class SeriesService extends BaseService
                 });
 
                 if ($thumbnail !== null && Storage::disk('public')->exists($thumbnail)) {
-                    Storage::disk('public')->delete($thumbnail);
+                    $this->images->delete($thumbnail);
                 }
 
                 $deleted++;

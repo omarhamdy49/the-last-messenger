@@ -8,8 +8,10 @@ use App\Domain\Quran\DTOs\CreateReciterData;
 use App\Domain\Quran\DTOs\UpdateReciterData;
 use App\Domain\Quran\Models\Reciter;
 use App\Domain\Quran\Repositories\ReciterRepositoryInterface;
+use App\Domain\Shared\Services\PublicImageService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -24,7 +26,8 @@ class ReciterService
      * Constructor
      */
     public function __construct(
-        protected ReciterRepositoryInterface $reciterRepository
+        protected ReciterRepositoryInterface $reciterRepository,
+        protected PublicImageService $images,
     ) {}
 
     /**
@@ -102,8 +105,9 @@ class ReciterService
             ? $this->generateSlug($data->name['en'] ?? $data->name['ar'])
             : $data->slug;
 
-        $profileImagePath = $data->profileImage
-            ? $this->uploadProfileImage($data->profileImage)
+        $source = $data->profileImage ?? $data->profileImageId;
+        $profileImagePath = $source !== null
+            ? ($this->uploadProfileImage($source) ?: null)
             : null;
 
         return $this->reciterRepository->create([
@@ -142,12 +146,13 @@ class ReciterService
             $payload['slug'] = $data->slug;
         }
 
-        // Handle profile image upload
-        if ($data->profileImage !== null) {
+        // Handle profile image: a fresh upload or a media-library pick.
+        $source = $data->profileImage ?? $data->profileImageId;
+        if ($source !== null) {
             if ($reciter->profile_image) {
                 $this->deleteProfileImage($reciter->profile_image);
             }
-            $payload['profile_image'] = $this->uploadProfileImage($data->profileImage);
+            $payload['profile_image'] = $this->uploadProfileImage($source);
         }
 
         $this->reciterRepository->update($reciter, $payload);
@@ -253,9 +258,9 @@ class ReciterService
      *
      * @return string Path to uploaded file
      */
-    private function uploadProfileImage(\Illuminate\Http\UploadedFile $file): string
+    private function uploadProfileImage(UploadedFile|int $source): string
     {
-        return $file->store('reciters/profiles', 'public');
+        return $this->images->store($source, 'reciters/profiles', 'reciters') ?? '';
     }
 
     /**
@@ -264,7 +269,10 @@ class ReciterService
     private function deleteProfileImage(string $path): bool
     {
         if (Storage::disk('public')->exists($path)) {
-            return Storage::disk('public')->delete($path);
+            // Removes the derived card/hero copies alongside the original.
+            $this->images->delete($path);
+
+            return true;
         }
 
         return false;

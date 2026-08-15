@@ -121,8 +121,10 @@ class UpdateReciterRequest extends FormRequest
                 'nullable',
                 'image',
                 'mimes:jpeg,png,jpg,webp',
-                'max:2048', // 2MB
+                'max:10240', // 10MB
             ],
+
+            'profile_image_id' => ['nullable', 'integer', 'exists:media,id'],
 
             // Featured status
             'is_featured' => [
@@ -156,7 +158,7 @@ class UpdateReciterRequest extends FormRequest
             'style.in' => 'نوع القراءة غير صالح',
             'profile_image.image' => 'الملف يجب أن يكون صورة',
             'profile_image.mimes' => 'الصورة يجب أن تكون بصيغة jpeg أو png أو webp',
-            'profile_image.max' => 'حجم الصورة يجب ألا يتجاوز 2 ميجابايت',
+            'profile_image.max' => 'حجم الصورة يجب ألا يتجاوز 10 ميجابايت',
             'display_order.integer' => 'ترتيب العرض يجب أن يكون رقماً صحيحاً',
             'display_order.min' => 'ترتيب العرض يجب أن يكون صفر أو أكبر',
         ];

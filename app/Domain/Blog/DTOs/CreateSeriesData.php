@@ -26,6 +26,7 @@ final class CreateSeriesData
         public readonly array $description,
         public readonly ?string $slug,
         public readonly ?UploadedFile $thumbnail,
+        public readonly ?int $thumbnailId,
         public readonly ?array $articleIds,
     ) {}
 
@@ -41,6 +42,7 @@ final class CreateSeriesData
             description: $validated['description'] ?? [],
             slug: $validated['slug'] ?? null,
             thumbnail: $request->hasFile('thumbnail') ? $request->file('thumbnail') : null,
+            thumbnailId: isset($validated['thumbnail_id']) ? (int) $validated['thumbnail_id'] : null,
             articleIds: $validated['article_ids'] ?? null,
         );
     }

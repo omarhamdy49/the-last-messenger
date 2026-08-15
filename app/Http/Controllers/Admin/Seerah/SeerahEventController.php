@@ -15,10 +15,10 @@ use App\Domain\Seerah\Services\SeerahEventService;
 use App\Domain\Seerah\Services\SeerahEventTypeService;
 use App\Domain\Seerah\Services\SeerahMilestoneService;
 use App\Domain\Shared\Services\AdminLoggerService;
+use App\Domain\Shared\Services\PublicImageService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreSeerahEventRequest;
 use App\Http\Requests\Admin\UpdateSeerahEventRequest;
-use App\Models\Media;
 use App\Repositories\ArticleRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -42,7 +42,8 @@ class SeerahEventController extends Controller
         protected SeerahEventTypeService $eventTypeService,
         protected SeerahMilestoneService $milestoneService,
         protected AdminLoggerService $logger,
-        protected ArticleRepository $articleRepository
+        protected ArticleRepository $articleRepository,
+        protected PublicImageService $images,
     ) {}
 
     /**
@@ -347,7 +348,7 @@ class SeerahEventController extends Controller
         $paths = [];
 
         foreach ($request->file('gallery', []) as $file) {
-            if ($file instanceof UploadedFile && ($stored = $file->store('seerah-events/gallery', 'public'))) {
+            if ($file instanceof UploadedFile && ($stored = $this->images->store($file, 'seerah-events/gallery', 'seerah-events'))) {
                 $paths[] = $stored;
             }
         }
@@ -373,12 +374,13 @@ class SeerahEventController extends Controller
             return [];
         }
 
-        return Media::query()
-            ->whereIn('id', $ids)
-            ->pluck('path')
-            ->filter(fn ($path): bool => is_string($path) && trim($path) !== '')
-            ->values()
-            ->all();
+        // Library originals live on the private disk and are encrypted at rest,
+        // so their `path` is unreadable through Storage::url(). Each pick has to
+        // be materialised into a public copy (with derived sizes) instead.
+        return array_values(array_filter(array_map(
+            fn (int $id): ?string => $this->images->store($id, 'seerah-events/gallery', 'seerah-events'),
+            $ids
+        )));
     }
 
     /**
@@ -388,10 +390,14 @@ class SeerahEventController extends Controller
     private function resolveFeaturedImagePath(Request $request, ?UploadedFile $upload): ?string
     {
         if ($upload !== null) {
-            return $upload->store('seerah-events/featured-images', 'public') ?: null;
+            return $this->images->store($upload, 'seerah-events/featured-images', 'seerah-events');
         }
 
-        return $this->mediaLibraryPaths($request->input('featured_image_id'))[0] ?? null;
+        $id = (int) $request->input('featured_image_id');
+
+        return $id > 0
+            ? $this->images->store($id, 'seerah-events/featured-images', 'seerah-events')
+            : null;
     }
 
     /**

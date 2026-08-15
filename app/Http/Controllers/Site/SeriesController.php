@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Site;
 
 use App\Domain\Blog\Models\Series;
+use App\Domain\Shared\Services\PublicImageService;
 use App\Http\Controllers\Controller;
 use App\Models\Article;
 use Illuminate\Contracts\View\View;
@@ -132,8 +133,19 @@ final class SeriesController extends Controller
             'slug' => $series->slug,
             'title' => $t->title,
             'description' => trim(strip_tags((string) $t->description)),
+            // Cards render ~420px wide, so serve the derived card copy rather
+            // than the multi-megabyte original (falls back for legacy rows).
             'thumbnail' => $series->thumbnail
-                ? (Str::startsWith($series->thumbnail, ['http', '/']) ? $series->thumbnail : asset('storage/'.$series->thumbnail))
+                ? (Str::startsWith($series->thumbnail, ['http', '/'])
+                    ? $series->thumbnail
+                    : PublicImageService::url($series->thumbnail, 'card'))
+                : null,
+            // Same image at hero width for the full-bleed header on the show page;
+            // the card copy is only 640px and visibly blurs when stretched.
+            'cover' => $series->thumbnail
+                ? (Str::startsWith($series->thumbnail, ['http', '/'])
+                    ? $series->thumbnail
+                    : PublicImageService::url($series->thumbnail, 'hero'))
                 : null,
             'articlesCount' => $withCount ?? (int) ($series->published_articles_count ?? $series->total_articles),
             'url' => route('public.series.show', $series->slug),

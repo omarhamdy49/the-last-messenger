@@ -245,9 +245,10 @@
                  :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
                 <x-admin.image-upload
                     name="thumbnail"
+                    idName="thumbnail_id"
                     :label="__('articles.fields.thumbnail')"
                     placeholderIcon="layers"
-                    maxSize="2MB"
+                    maxSize="10MB"
                     formats="JPG, PNG, WebP, GIF"
                     accept="image/jpeg,image/png,image/webp,image/gif"
                 />

@@ -46,7 +46,8 @@ class UpdateSeriesRequest extends FormRequest
             'description.ur' => 'nullable|string|max:1000',
 
             // Thumbnail upload
-            'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            'thumbnail_id' => ['nullable', 'integer', 'exists:media,id'],
 
             // Slug (unique except for current series)
             'slug' => 'nullable|string|max:255|unique:series,slug,'.$seriesId,
@@ -73,7 +74,7 @@ class UpdateSeriesRequest extends FormRequest
             'description.en.max' => 'English description must not exceed 1000 characters',
             'thumbnail.image' => 'الصورة المصغرة يجب أن تكون من نوع صورة',
             'thumbnail.mimes' => 'الصورة المصغرة يجب أن تكون من نوع: jpeg, png, jpg, gif, webp',
-            'thumbnail.max' => 'حجم الصورة المصغرة يجب أن لا يتجاوز 2 ميجابايت',
+            'thumbnail.max' => 'حجم الصورة المصغرة يجب أن لا يتجاوز 10 ميجابايت',
             'slug.unique' => 'الرابط المختصر مستخدم بالفعل',
         ];
     }

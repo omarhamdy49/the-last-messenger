@@ -200,9 +200,10 @@
 
                 <x-admin.image-upload
                     name="profile_image"
+                    idName="profile_image_id"
                     aspectClass="aspect-square"
                     placeholderIcon="mic"
-                    maxSize="2MB"
+                    maxSize="10MB"
                     formats="JPG, PNG, WebP"
                     :currentImage="$reciter->profile_image ? asset('storage/' . $reciter->profile_image) : null"
                     :mediaLibrary="false"
