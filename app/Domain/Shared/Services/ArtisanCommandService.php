@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Shared\Services;
 
+use App\Domain\Shared\Models\CommandRun;
 use App\Jobs\RunArtisanCommandJob;
-use App\Models\CommandRun;
 use Illuminate\Support\Facades\Artisan;
 use Symfony\Component\Console\Command\Command as SymfonyCommand;
 use Symfony\Component\Console\Input\InputArgument;

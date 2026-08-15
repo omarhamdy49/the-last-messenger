@@ -19,12 +19,18 @@ deptrac:
       - App\Models\Article
     App\Domain\Blog\Models\UserInteraction:
       - App\Models\User
+    App\Domain\Blog\Repositories\TagRepository:
+      - App\Models\Article
     App\Domain\Blog\Services\ArticleBulkHandler:
       - App\Models\Article
     App\Domain\Blog\Services\BlogDashboardStatsProvider:
       - App\Models\Article
     App\Domain\Blog\Services\SlugGeneratorService:
       - App\Models\ArticleLocale
+    App\Domain\Blog\Services\TagService:
+      - App\Models\Article
+    App\Domain\Media\Services\MediaAttachmentService:
+      - App\Services\MediaService
     App\Domain\Seerah\Models\SeerahEvent:
       - App\Models\Article
       - App\Models\User
@@ -39,6 +45,8 @@ deptrac:
     App\Domain\Shared\Models\AuditLog:
       - App\Models\User
     App\Domain\Shared\Models\BulkOperation:
+      - App\Models\User
+    App\Domain\Shared\Models\CommandRun:
       - App\Models\User
     App\Domain\Shared\Models\ContentSchedule:
       - App\Models\User
@@ -61,11 +69,16 @@ deptrac:
     App\Domain\Shared\Services\AdminLoggerService:
       - App\Models\User
     App\Domain\Shared\Services\AnalyticsService:
+      - App\Domain\Media\Enums\MediaViewableType
+      - App\Domain\Media\Models\LiveChannel
+      - App\Domain\Media\Models\MediaEpisode
+      - App\Domain\Media\Models\MediaProgram
       - App\Domain\People\Models\Muslim
       - App\Domain\Quran\Models\Reciter
       - App\Domain\Quran\Models\Surah
       - App\Domain\Quran\Models\Verse
       - App\Domain\Seerah\Models\SeerahEvent
+      - App\Models\Article
       - App\Models\User
     App\Domain\Shared\Services\DashboardService:
       - App\Models\User
@@ -73,6 +86,9 @@ deptrac:
       - App\Models\User
     App\Domain\Shared\Services\InteractionService:
       - App\Models\User
+    App\Domain\Shared\Services\PublicImageService:
+      - App\Models\Media
+      - App\Services\MediaService
     App\Domain\Shared\Services\SavedFilterService:
       - App\Models\User
     App\Domain\Shared\Services\SearchService:
@@ -80,6 +96,7 @@ deptrac:
     App\Domain\Shared\Traits\HasInteractions:
       - App\Models\User
     App\Http\Controllers\Admin\ActivityLogController:
+      - App\Models\Article
       - App\Models\User
     App\Http\Controllers\Admin\AdminAuthController:
       - App\Models\User
@@ -92,22 +109,29 @@ deptrac:
       - App\Models\MediaSizePreset
     App\Http\Controllers\Admin\UserController:
       - App\Models\User
+    App\Http\Controllers\Admin\VersionController:
+      - App\Models\Article
     App\Http\Controllers\Api\AuthController:
       - App\Models\User
     App\Http\Controllers\Api\InteractionController:
+      - App\Models\Article
       - App\Models\User
     App\Http\Controllers\Site\ArticleController:
       - App\Models\Article
       - App\Models\ArticleLocale
+    App\Http\Controllers\Site\ArticleMediaController:
+      - App\Models\Media
     App\Http\Controllers\Site\PasswordResetController:
       - App\Models\User
+    App\Http\Controllers\Site\SeriesController:
+      - App\Models\Article
     App\Http\Controllers\Site\SocialAuthController:
       - App\Models\User
     App\Models\Article:
       - App\Domain\Blog\Models\Category
-      - App\Domain\Media\Models\MediaEpisode
       - App\Domain\Blog\Models\Series
       - App\Domain\Blog\Models\Tag
+      - App\Domain\Media\Models\MediaEpisode
       - App\Domain\Seerah\Models\SeerahEvent
     App\Repositories\ArticleRepository:
       - App\Domain\Blog\Models\Category

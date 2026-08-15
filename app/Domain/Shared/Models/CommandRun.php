@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Models;
+namespace App\Domain\Shared\Models;
 
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;

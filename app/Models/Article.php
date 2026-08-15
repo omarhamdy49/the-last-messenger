@@ -7,9 +7,9 @@ namespace App\Models;
 use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Models\Series;
 use App\Domain\Blog\Models\Tag;
-use App\Domain\Blog\Services\ArticleThumbService;
 use App\Domain\Media\Models\MediaEpisode;
 use App\Domain\Seerah\Models\SeerahEvent;
+use App\Domain\Shared\Services\PublicImageService;
 use App\Domain\Shared\Traits\HasVersions;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -269,7 +269,7 @@ class Article extends Model
             return null;
         }
 
-        $derived = ArticleThumbService::derivedPath($this->thumb, $size);
+        $derived = PublicImageService::derivedPath($this->thumb, $size);
 
         return Storage::disk('public')->exists($derived)
             ? asset('storage/'.$derived)

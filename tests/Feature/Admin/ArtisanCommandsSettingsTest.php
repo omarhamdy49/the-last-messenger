@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Admin;
 
+use App\Domain\Shared\Models\CommandRun;
 use App\Domain\Shared\Services\ArtisanCommandService;
 use App\Jobs\RunArtisanCommandJob;
-use App\Models\CommandRun;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Domain\Shared\Models\CommandRun;
 use App\Domain\Shared\Services\ArtisanCommandService;
-use App\Models\CommandRun;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
