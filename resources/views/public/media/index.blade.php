@@ -30,7 +30,12 @@
                      @if ($index > 0) style="display: none;" @endif
                      class="absolute inset-0">
                     @if ($slide['banner'])
-                        <img src="{{ $slide['banner'] }}" alt="" @if ($index > 0) loading="lazy" @endif
+                        {{-- Full-bleed hero: render maxresdefault (1280px) when the
+                             banner is a CDN thumbnail, or the 480px hqdefault
+                             visibly pixelates at this size. onerror covers videos
+                             with no HD upload. --}}
+                        <img src="{{ $slide['banner_hq'] ?? $slide['banner'] }}" alt="" @if ($index > 0) loading="lazy" @endif
+                             @if (! empty($slide['banner_hq'])) onerror="this.onerror=null;this.src='{{ $slide['banner'] }}'" @endif
                              class="absolute inset-0 w-full h-full object-cover scale-105">
                     @else
                         <div class="absolute inset-0 bg-gradient-to-br {{ $slide['gradient'] }}">
