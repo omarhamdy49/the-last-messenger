@@ -74,7 +74,6 @@ return [
         'media' => [
             'icon' => 'clapperboard',
             'commands' => [
-                'media:backfill-artwork' => ['queued' => true],
                 'media:compute-trending' => [],
                 'media:publish-scheduled' => [],
                 // Manual-only (no longer scheduled). Queued: the delete loop

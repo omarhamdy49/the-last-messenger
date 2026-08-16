@@ -168,12 +168,31 @@ class MediaProgram extends Model implements HasMedia
     /** YouTube CDN thumbnail of the first episode; null when no YouTube episodes. */
     public function youtubeThumbnailUrl(): ?string
     {
+        $videoId = $this->firstEpisodeVideoId();
+
+        return $videoId !== null ? YouTubeUrl::thumbnailUrl($videoId) : null;
+    }
+
+    /**
+     * maxresdefault (1280px) for the full-bleed hero, which renders far larger
+     * than the 480px hqdefault. Not every video has an HD upload, so this 404s
+     * sometimes — callers must pair it with youtubeThumbnailUrl() as an onerror
+     * fallback, exactly as the episode page does.
+     */
+    public function youtubeMaxResThumbnailUrl(): ?string
+    {
+        $videoId = $this->firstEpisodeVideoId();
+
+        return $videoId !== null ? YouTubeUrl::maxResThumbnailUrl($videoId) : null;
+    }
+
+    private function firstEpisodeVideoId(): ?string
+    {
         $videoUrl = $this->relationLoaded('episodes')
             ? $this->episodes->first()?->video_url
             : $this->episodes()->value('video_url');
-        $videoId = YouTubeUrl::videoId($videoUrl);
 
-        return $videoId !== null ? YouTubeUrl::thumbnailUrl($videoId) : null;
+        return YouTubeUrl::videoId($videoUrl);
     }
 
     // ------------------------------------------------------------------

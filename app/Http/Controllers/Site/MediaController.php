@@ -307,10 +307,15 @@ final class MediaController extends Controller
             'maturity_label' => __('media.public.maturity_'.$program->maturity_rating->value),
             'episodes_count' => (int) ($program->episodes_count ?? 0),
             'is_trending' => (bool) $program->is_trending,
-            // Cards read the small poster conversion; the hero/cover reads the
-            // HQ banner original (both saved at sync time).
+            // Artwork comes from the YouTube CDN unless an admin uploaded a
+            // real file. When it is the 480px CDN fallback, offer maxres
+            // (1280px) first for the full-bleed hero — the view falls back via
+            // onerror when the video has no HD upload.
             'poster' => $program->poster_thumb_url,
             'banner' => $program->banner_url ?? $program->poster_url,
+            'banner_hq' => $program->getFirstMedia('banner') === null
+                ? $program->youtubeMaxResThumbnailUrl()
+                : null,
             'gradient' => self::CATEGORY_GRADIENTS[$category] ?? self::CATEGORY_GRADIENTS['documentary'],
         ];
     }

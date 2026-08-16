@@ -17,10 +17,8 @@ use App\Domain\Media\Repositories\MediaProgramRepositoryInterface;
 use App\Domain\Media\Support\YouTubeClient;
 use App\Domain\Media\Support\YouTubeUrl;
 use App\Jobs\SyncYouTubePlaylistJob;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Spatie\MediaLibrary\HasMedia;
 
 /**
  * Orchestrates importing YouTube data into the Media domain.
@@ -319,13 +317,9 @@ class YouTubeSyncService
 
         $this->writeTranslations($episode, $video);
 
-        // HQ thumbnail saved once per episode (cards use the small conversion).
-        try {
-            $this->attachMissingEpisodeThumbnail($episode);
-        } catch (\Throwable $e) {
-            report($e);
-        }
-
+        // No artwork is copied to our disk: thumbnails are served straight from
+        // i.ytimg.com, which is already a CDN and already hosts every size we
+        // render. See MediaEpisode::getThumbnailUrl().
         $this->episodeRepo->clearCacheForProgram($program->id);
         $this->episodeRepo->clearCacheForEpisodeNumber($program->id, 1, $number);
 
@@ -344,13 +338,6 @@ class YouTubeSyncService
         $this->episodeRepo->update($episode->id, $core);
 
         $this->writeTranslations($episode, $video);
-
-        // Re-syncs pick up thumbnails for episodes imported before HQ artwork existed.
-        try {
-            $this->attachMissingEpisodeThumbnail($episode);
-        } catch (\Throwable $e) {
-            report($e);
-        }
 
         $this->episodeRepo->clearCacheForProgram($episode->program_id);
         $this->episodeRepo->clearCacheForEpisodeNumber($episode->program_id, $episode->season_number, $episode->episode_number);
@@ -407,124 +394,11 @@ class YouTubeSyncService
             $program->syncTranslations($translations);
         }
 
-        // Episode thumbnails stay on the YouTube CDN (cards render small),
-        // but the program banner is materialized as a real HQ file: the
-        // full-bleed hero renders it at 1200px+ and the 480px hqdefault
-        // fallback pixelates there. Best-effort — artwork never fails a sync.
-        try {
-            $this->attachMissingArtwork($program);
-        } catch (\Throwable $e) {
-            report($e);
-        }
-
+        // Program artwork is served from the YouTube CDN too. The hero renders
+        // at 1200px+, so MediaProgram exposes maxresdefault (1280px) for it and
+        // the view falls back to hqdefault via onerror when a video has no HD
+        // upload — same pattern the episode page already used.
         $this->programRepo->clearCacheForModel($program->id);
-    }
-
-    /**
-     * Download the best-resolution YouTube thumbnail (maxres → sd → hq) of
-     * the program's first episode once, and attach it to every missing
-     * artwork collection: 'banner' (hero/cover renders the HQ original) and
-     * 'poster' (Spatie generates the 300x450 'thumbnail' + 'medium'
-     * conversions cards use). Collections that already have media are left
-     * untouched — admin uploads are never overwritten. True when attached.
-     */
-    public function attachMissingArtwork(MediaProgram $program): bool
-    {
-        $missing = array_values(array_filter(
-            ['banner', 'poster'],
-            fn (string $collection): bool => $program->getFirstMedia($collection) === null,
-        ));
-        if ($missing === []) {
-            return false;
-        }
-
-        $videoId = YouTubeUrl::videoId(
-            $this->episodeRepo->getByProgramForSync($program->id)->first()?->video_url
-        );
-        if ($videoId === null) {
-            return false;
-        }
-
-        $bytes = $this->downloadBestThumbnail($videoId);
-        if ($bytes === null) {
-            return false;
-        }
-
-        $attached = false;
-        foreach ($missing as $collection) {
-            $attached = $this->attachImage($program, $bytes, "{$videoId}-{$collection}.jpg", $collection) || $attached;
-        }
-
-        if ($attached) {
-            $this->programRepo->clearCacheForModel($program->id);
-        }
-
-        return $attached;
-    }
-
-    /**
-     * Same for one episode: HQ original into the 'thumbnail' collection
-     * (cards read the 400x225 'thumb' conversion; the player poster facade
-     * reads the original). No-op when media already exists or the episode
-     * is not a YouTube video. Returns true when attached.
-     */
-    public function attachMissingEpisodeThumbnail(MediaEpisode $episode): bool
-    {
-        if ($episode->getFirstMedia('thumbnail') !== null) {
-            return false;
-        }
-
-        $videoId = YouTubeUrl::videoId($episode->video_url);
-        if ($videoId === null) {
-            return false;
-        }
-
-        $bytes = $this->downloadBestThumbnail($videoId);
-        if ($bytes === null || ! $this->attachImage($episode, $bytes, "{$videoId}-thumbnail.jpg", 'thumbnail')) {
-            return false;
-        }
-
-        $this->episodeRepo->clearCacheForProgram($episode->program_id);
-        $this->episodeRepo->clearCacheForEpisodeNumber($episode->program_id, $episode->season_number, $episode->episode_number);
-
-        return true;
-    }
-
-    /** Best-available CDN thumbnail bytes (maxres → sd → hq), or null. */
-    private function downloadBestThumbnail(string $videoId): ?string
-    {
-        foreach (YouTubeUrl::thumbnailCandidates($videoId) as $url) {
-            try {
-                $response = Http::timeout(10)->get($url);
-            } catch (\Throwable) {
-                continue; // network hiccup — try the next resolution
-            }
-
-            if ($response->successful()) {
-                return $response->body();
-            }
-            // maxres/sd 404 on videos without an HD upload — fall through.
-        }
-
-        return null;
-    }
-
-    private function attachImage(HasMedia $model, string $bytes, string $fileName, string $collection): bool
-    {
-        try {
-            // addMedia() moves the file, so each collection gets its own temp copy.
-            $temp = tempnam(sys_get_temp_dir(), 'yt-art-');
-            file_put_contents($temp, $bytes);
-            $model->addMedia($temp)
-                ->usingFileName($fileName)
-                ->toMediaCollection($collection);
-
-            return true;
-        } catch (\Throwable $e) {
-            report($e);
-
-            return false;
-        }
     }
 
     /** Arabic content → 'ar', otherwise 'en'. */

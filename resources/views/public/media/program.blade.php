@@ -23,7 +23,11 @@
     <section class="relative min-h-[65svh] md:min-h-[78vh] flex flex-col justify-end overflow-hidden bg-gray-950">
         {{-- Backdrop --}}
         @if ($program['banner'])
-            <img src="{{ $program['banner'] }}" alt=""
+            {{-- banner_hq is maxresdefault (1280px) when the banner is a CDN
+                 thumbnail; onerror drops back to the 480px hqdefault for
+                 videos uploaded without an HD source. --}}
+            <img src="{{ $program['banner_hq'] ?? $program['banner'] }}" alt=""
+                 @if (! empty($program['banner_hq'])) onerror="this.onerror=null;this.src='{{ $program['banner'] }}'" @endif
                  class="absolute inset-0 w-full h-full object-cover scale-105">
         @else
             <div class="absolute inset-0 bg-gradient-to-br {{ $program['gradient'] }}">
