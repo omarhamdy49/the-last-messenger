@@ -195,6 +195,7 @@ return [
     'contact_subject_placeholder' => 'Mesajınızın konusu nedir?',
     'contact_message' => 'Mesaj',
     'contact_message_placeholder' => 'Mesajınızı buraya yazın...',
+    'contact_message_charset' => 'En fazla 200 karakter — yalnızca harf, rakam ve boşluk, ayrıca ? - _ !',
     'contact_send' => 'Mesaj Gönder',
     'contact_sending' => 'Gönderiliyor...',
     'contact_success' => 'Mesajınız başarıyla gönderildi. Bize ulaştığınız için teşekkürler!',

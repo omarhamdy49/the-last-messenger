@@ -23,10 +23,22 @@ final class StoreContactMessageRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:255'],
-            'subject' => ['required', 'string', 'max:200'],
-            'message' => ['required', 'string', 'max:5000'],
+            'subject' => ['required', 'string', 'max:150'],
+            // Cap at 200 and whitelist letters/digits/spaces + ? - _ ! only.
+            // Blocking . : / @ kills the URLs every lead-gen spam carries.
+            'message' => ['required', 'string', 'max:200', 'regex:/^[\p{L}\p{N}\s?\-_!]+$/u'],
             // Honeypot: hidden field humans never fill — any value rejects.
             'website' => ['prohibited'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'message.regex' => __('site.contact_message_charset'),
         ];
     }
 

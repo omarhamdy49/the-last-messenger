@@ -195,6 +195,7 @@ return [
     'contact_subject_placeholder' => 'ما موضوع رسالتك؟',
     'contact_message' => 'الرسالة',
     'contact_message_placeholder' => 'اكتب رسالتك هنا...',
+    'contact_message_charset' => 'يُسمح بـ 200 حرف كحد أقصى، وبالحروف والأرقام والمسافات فقط مع الرموز ? - _ !',
     'contact_send' => 'إرسال الرسالة',
     'contact_sending' => 'جارٍ الإرسال...',
     'contact_success' => 'تم إرسال رسالتك بنجاح. شكراً لتواصلك معنا!',

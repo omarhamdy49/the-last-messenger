@@ -195,6 +195,7 @@ return [
     'contact_subject_placeholder' => 'آپ کے پیغام کا موضوع کیا ہے؟',
     'contact_message' => 'پیغام',
     'contact_message_placeholder' => 'اپنا پیغام یہاں لکھیں...',
+    'contact_message_charset' => 'زیادہ سے زیادہ 200 حروف — صرف حروف، اعداد اور خالی جگہ، نیز ? - _ !',
     'contact_send' => 'پیغام بھیجیں',
     'contact_sending' => 'بھیجا جا رہا ہے...',
     'contact_success' => 'آپ کا پیغام کامیابی سے بھیج دیا گیا۔ رابطے کا شکریہ!',

@@ -90,7 +90,7 @@
                             <span class="absolute inset-y-0 start-0 flex items-center ps-3 text-gray-400 pointer-events-none">
                                 <i data-lucide="tag" class="w-5 h-5"></i>
                             </span>
-                            <input id="subject" name="subject" type="text" required maxlength="200"
+                            <input id="subject" name="subject" type="text" required maxlength="150"
                                    value="{{ old('subject') }}"
                                    placeholder="{{ __('site.contact_subject_placeholder') }}"
                                    class="w-full ps-11 pe-4 py-3 text-base sm:text-sm rounded-xl border bg-white dark:bg-[#1a1a2e] border-gray-300 dark:border-gray-700 focus:border-[#0056b3] focus:ring-2 focus:ring-[#0056b3]/20 outline-none transition @error('subject') border-red-400 @enderror">
@@ -103,9 +103,10 @@
                     {{-- Message --}}
                     <div>
                         <label for="message" class="block text-sm font-semibold mb-2">{{ __('site.contact_message') }}</label>
-                        <textarea id="message" name="message" rows="6" required maxlength="5000"
+                        <textarea id="message" name="message" rows="6" required maxlength="200"
                                   placeholder="{{ __('site.contact_message_placeholder') }}"
                                   class="w-full px-4 py-3 text-base sm:text-sm rounded-xl border bg-white dark:bg-[#1a1a2e] border-gray-300 dark:border-gray-700 focus:border-[#0056b3] focus:ring-2 focus:ring-[#0056b3]/20 outline-none transition resize-y @error('message') border-red-400 @enderror">{{ old('message') }}</textarea>
+                        <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ __('site.contact_message_charset') }}</p>
                         @error('message')
                             <p class="mt-1.5 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
                         @enderror

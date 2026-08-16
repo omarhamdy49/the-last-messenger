@@ -17,8 +17,9 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email');
-            $table->string('subject', 500);
-            $table->text('body');
+            $table->string('subject', 150);
+            // Public form caps the message at 200 chars (StoreContactMessageRequest).
+            $table->string('body', 255);
             $table->boolean('is_read')->default(false);
             $table->timestamp('read_at')->nullable();
             $table->timestamps();

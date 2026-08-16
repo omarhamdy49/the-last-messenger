@@ -195,6 +195,7 @@ return [
     'contact_subject_placeholder' => 'What is your message about?',
     'contact_message' => 'Message',
     'contact_message_placeholder' => 'Write your message here...',
+    'contact_message_charset' => 'Max 200 characters — letters, numbers and spaces only, plus ? - _ !',
     'contact_send' => 'Send Message',
     'contact_sending' => 'Sending...',
     'contact_success' => 'Your message has been sent successfully. Thank you for reaching out!',
