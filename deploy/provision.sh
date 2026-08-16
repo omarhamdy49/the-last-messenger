@@ -61,9 +61,12 @@ main() {
   local stages
   if [[ $# -gt 0 ]]; then
     stages="$*"
+    EXPLICIT_STAGES=1
   else
     stages="$(list_stages)"
+    EXPLICIT_STAGES=0
   fi
+  export EXPLICIT_STAGES
 
   for s in ${stages}; do run_stage "${s}"; done
 

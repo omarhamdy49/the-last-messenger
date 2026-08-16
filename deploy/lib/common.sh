@@ -80,10 +80,20 @@ mark_done() {
 is_done() {
   local marker="${STATE_DIR}/$1.done"
   [[ -f "${marker}" ]] || return 1
-  # Markers written before fingerprinting are empty; they cannot be trusted to
-  # describe what is actually installed, so treat them as stale and reconcile.
-  # Stages are idempotent by contract, so re-running is the safe direction.
-  [[ -s "${marker}" ]] || { log "Stage $1 has a legacy marker — re-running to reconcile."; return 1; }
+  # Markers written before fingerprinting are empty and cannot describe what is
+  # actually installed. Reconciling them is the point — but on an existing
+  # server EVERY marker is legacy, so a bare `provision.sh` would suddenly
+  # re-run all of 20-ssh-hardening, 55-mysql and 70-ssl against live traffic.
+  # Reconcile only stages the operator named explicitly; for a full run, say so
+  # with FORCE=1 rather than having it happen by surprise.
+  if [[ ! -s "${marker}" ]]; then
+    if [[ "${EXPLICIT_STAGES:-0}" == "1" ]]; then
+      log "Stage $1 has a legacy marker — re-running to reconcile."
+      return 1
+    fi
+    warn "Stage $1 has a legacy marker; skipping in a full run. Name it explicitly (or FORCE=1) to reconcile."
+    return 0
+  fi
   [[ "$(cat "${marker}")" == "$(stage_fingerprint "$1")" ]]
 }
 
