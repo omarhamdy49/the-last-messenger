@@ -145,13 +145,24 @@
 
             {{-- STEP: syncing --}}
             <div x-show="step === 'syncing'" x-cloak class="py-4">
+                {{-- A run sitting in the `sync` queue behind another import is not
+                     importing yet: showing it as 0% under "جاري الاستيراد" is what
+                     made a healthy queued run look broken. Report the real state. --}}
                 <div class="flex items-center justify-between text-sm mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                    <span class="font-medium">{{ __('admin.yt_importing') }}</span>
-                    <span class="tabular-nums" x-text="progress.processed + ' / ' + progress.total"></span>
+                    <span class="font-medium"
+                          x-text="progress.status === 'pending' ? @js(__('admin.yt_status_pending')) : @js(__('admin.yt_importing'))"></span>
+                    <span x-show="progress.status !== 'pending'" class="tabular-nums"
+                          x-text="progress.processed + ' / ' + progress.total"></span>
                 </div>
                 <div class="w-full h-3 rounded-full overflow-hidden" :class="darkMode ? 'bg-gray-800' : 'bg-gray-200'"
-                     role="progressbar" :aria-valuenow="progress.percent" aria-valuemin="0" aria-valuemax="100">
-                    <div class="h-full bg-gradient-to-r from-[#0056b3] to-[#218838] transition-all duration-500"
+                     role="progressbar" :aria-valuenow="progress.status === 'pending' ? null : progress.percent"
+                     aria-valuemin="0" aria-valuemax="100">
+                    {{-- Queued: indeterminate. There is no percentage to report until
+                         the worker picks the run up and markRunning() sets a total. --}}
+                    <div x-show="progress.status === 'pending'"
+                         class="h-full w-full bg-gradient-to-r from-[#0056b3] to-[#218838] opacity-40 animate-pulse"></div>
+                    <div x-show="progress.status !== 'pending'"
+                         class="h-full bg-gradient-to-r from-[#0056b3] to-[#218838] transition-all duration-500"
                          :style="'width:' + progress.percent + '%'"></div>
                 </div>
                 <p class="mt-2 text-xs truncate" :class="darkMode ? 'text-gray-500' : 'text-gray-400'" x-text="progress.message"></p>
@@ -392,7 +403,7 @@ function youtubeImport(config) {
 
             this.step = 'syncing';
             this.error = '';
-            this.progress = { percent: 0, processed: 0, total: this.selected.length, created: 0, updated: 0, message: '' };
+            this.progress = { status: 'pending', percent: 0, processed: 0, total: this.selected.length, created: 0, updated: 0, message: '' };
             try {
                 const r = await fetch(config.syncRoute, {
                     method: 'POST', headers: this.postHeaders(),
@@ -446,15 +457,25 @@ function youtubeImport(config) {
                 if (!d.success) return;
                 const x = d.data;
                 this.progress = {
-                    percent: x.percent, processed: x.processed, total: x.total,
+                    status: x.status, percent: x.percent, processed: x.processed, total: x.total,
                     created: x.created, updated: x.updated, message: x.message || '',
                 };
-                // Surface the escape hatch after ~14s (7 ticks) with no forward
-                // progress — a run nothing is consuming, not a slow one.
+                // Surface the escape hatch for a run nothing is consuming — not
+                // a slow one. `pending` means tlm-sync-worker has not picked it
+                // up yet, which is the state the banner actually describes; a
+                // `running` job is provably being consumed and only needs a
+                // guard against a worker that died mid-import.
+                //
+                // The old rule (7 ticks / ~14s of no forward progress, ignoring
+                // status) fired on perfectly healthy imports: one playlist takes
+                // 4-6 minutes because yt-dlp runs once per video, and with
+                // SYNC_QUEUE_WORKERS=1 a second import legitimately sits pending
+                // behind the first for that whole time with processed stuck at 0.
                 if (!x.is_terminal) {
+                    const stallLimit = x.status === 'pending' ? 90 : 300; // 3 min queued / 10 min no progress
                     if (x.processed > this._lastProcessed) {
                         this._lastProcessed = x.processed; this._stall = 0; this.stuck = false;
-                    } else if (++this._stall >= 7 && !this.stuck) {
+                    } else if (++this._stall >= stallLimit && !this.stuck) {
                         this.stuck = true;
                         this.$nextTick(() => window.lucide && window.lucide.createIcons());
                     }
