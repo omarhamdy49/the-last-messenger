@@ -42,6 +42,7 @@ class MediaServiceProvider extends ServiceProvider
             binary: (string) config('youtube.yt_dlp_path', 'yt-dlp'),
             timeout: (int) config('youtube.process_timeout', 600),
             subtitleLanguages: (array) config('youtube.subtitle_languages', ['ar', 'en']),
+            cookiesPath: config('youtube.cookies_path'),
         ));
     }
 }

@@ -27,7 +27,22 @@ class YouTubeClient
         private readonly string $binary = 'yt-dlp',
         private readonly int $timeout = 600,
         private readonly array $subtitleLanguages = ['ar', 'en'],
+        private readonly ?string $cookiesPath = null,
     ) {}
+
+    /**
+     * Args prepended to every yt-dlp invocation. Adds --cookies only when a
+     * readable cookies file is configured — a missing/blank path silently
+     * falls back to a cookieless run rather than breaking every call.
+     *
+     * @return list<string>
+     */
+    private function globalArgs(): array
+    {
+        return $this->cookiesPath !== null && $this->cookiesPath !== '' && is_readable($this->cookiesPath)
+            ? ['--cookies', $this->cookiesPath]
+            : [];
+    }
 
     /**
      * Full metadata for one video. Pass a watch/embed/short URL or a bare id.
@@ -165,7 +180,7 @@ class YouTubeClient
      */
     private function run(array $args): string
     {
-        $process = new Process([$this->binary, ...$args]);
+        $process = new Process([$this->binary, ...$this->globalArgs(), ...$args]);
         $process->setTimeout($this->timeout);
 
         try {
@@ -191,7 +206,7 @@ class YouTubeClient
      */
     private function runAllowingFailure(array $args): void
     {
-        $process = new Process([$this->binary, ...$args]);
+        $process = new Process([$this->binary, ...$this->globalArgs(), ...$args]);
         $process->setTimeout($this->timeout);
 
         try {

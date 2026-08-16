@@ -14,6 +14,14 @@ return [
     'yt_dlp_path' => env('YT_DLP_PATH', 'yt-dlp'),
 
     /*
+    | Netscape-format cookies file exported from a logged-in YouTube session.
+    | Datacenter IPs get challenged with "Sign in to confirm you're not a bot",
+    | which fails every extraction; passing session cookies clears it. Optional:
+    | left unset (or pointing at a missing file) yt-dlp runs cookieless as before.
+    */
+    'cookies_path' => env('YT_DLP_COOKIES'),
+
+    /*
     | Max seconds a single yt-dlp invocation may run before it is killed.
     | Deep per-video fetches (metadata + subtitles) are the slow path.
     */
