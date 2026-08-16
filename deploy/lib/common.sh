@@ -46,8 +46,46 @@ require_cmd() {
 is_installed() { dpkg -s "$1" >/dev/null 2>&1; }
 
 # Idempotency markers — a stage records completion so re-runs are cheap/safe.
-mark_done()  { mkdir -p "${STATE_DIR}"; touch "${STATE_DIR}/$1.done"; }
-is_done()    { [[ -f "${STATE_DIR}/$1.done" ]]; }
+#
+# The marker stores a fingerprint of what the stage WAS when it ran, not just
+# its name. A name-only marker silently pins the server to the version of a
+# stage that first ran: 80-supervisor gained tlm-sync-worker (3f0211e) and
+# tlm-tracking-worker (8fc0192) long after its marker was written, so those
+# workers were never installed and the `sync` queue had nothing consuming it —
+# YouTube imports queued forever with no error anywhere.
+#
+# The fingerprint covers the stage file plus every template it names, so
+# editing a rendered config counts as a change too.
+stage_fingerprint() {
+  local file="${STAGES_DIR:-${DEPLOY_ROOT}/stages}/$1.sh"
+  # Every step tolerates "not found": a stage names both its source templates
+  # and its destination configs (tlm-worker.conf), and only the former exist
+  # under templates/. Under `set -e` plus the ERR trap, an unguarded cat of a
+  # destination name aborts the whole fingerprint and silently returns a
+  # short hash — which is exactly the kind of quiet drift this is meant to stop.
+  {
+    [[ -f "${file}" ]] && cat "${file}"
+    grep -oE '[A-Za-z0-9._-]+\.(conf|ini|cnf)' "${file}" 2>/dev/null | sort -u |
+      while read -r tpl; do
+        if [[ -f "${TEMPLATES_DIR}/${tpl}" ]]; then cat "${TEMPLATES_DIR}/${tpl}"; fi
+      done
+  } | sha256sum | cut -d' ' -f1
+}
+
+mark_done() {
+  mkdir -p "${STATE_DIR}"
+  stage_fingerprint "$1" > "${STATE_DIR}/$1.done"
+}
+
+is_done() {
+  local marker="${STATE_DIR}/$1.done"
+  [[ -f "${marker}" ]] || return 1
+  # Markers written before fingerprinting are empty; they cannot be trusted to
+  # describe what is actually installed, so treat them as stale and reconcile.
+  # Stages are idempotent by contract, so re-running is the safe direction.
+  [[ -s "${marker}" ]] || { log "Stage $1 has a legacy marker — re-running to reconcile."; return 1; }
+  [[ "$(cat "${marker}")" == "$(stage_fingerprint "$1")" ]]
+}
 
 # --- File helpers ----------------------------------------------------------
 backup_file() {
