@@ -68,7 +68,7 @@ stage_fingerprint() {
     grep -oE '[A-Za-z0-9._-]+\.(conf|ini|cnf)' "${file}" 2>/dev/null | sort -u |
       while read -r tpl; do
         if [[ -f "${TEMPLATES_DIR}/${tpl}" ]]; then cat "${TEMPLATES_DIR}/${tpl}"; fi
-      done
+      done || true
   } | sha256sum | cut -d' ' -f1
 }
 
