@@ -37,6 +37,9 @@ echo "──────── Application ────────"
 if [[ -e "${APP_DIR}/current/artisan" ]]; then
   check "supervisor workers up" bash -c "supervisorctl status tlm-worker:* | grep -q RUNNING"
   check "sync worker up"        bash -c "supervisorctl status tlm-sync-worker:* | grep -q RUNNING"
+  # Omitting this one is how view tracking stayed dead while the healthcheck
+  # reported everything green — every queue the app dispatches to gets a check.
+  check "tracking worker up"    bash -c "supervisorctl status tlm-tracking-worker:* | grep -q RUNNING"
   check "scheduler up"          bash -c "supervisorctl status tlm-scheduler | grep -q RUNNING"
   # Local HTTPS app probe (resolve domain to loopback to avoid external DNS).
   code=$(curl -kso /dev/null -w '%{http_code}' --resolve "${APP_DOMAIN}:443:127.0.0.1" "https://${APP_DOMAIN}/" 2>/dev/null || echo 000)
