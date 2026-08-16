@@ -135,7 +135,15 @@ log "Pruning inactive releases (keeping current only)..."
 current_release="$(readlink -f "${CURRENT}")"
 for release in "${RELEASES_DIR}"/*/; do
   [[ -d "${release}" ]] || continue
-  [[ "$(readlink -f "${release}")" == "${current_release}" ]] || rm -rf -- "${release}"
+  [[ "$(readlink -f "${release}")" == "${current_release}" ]] && continue
+  # Best-effort: the release is already superseded and the new one is live
+  # (symlink flipped, health probe passed above). A dir that won't fully
+  # delete — e.g. a file php-fpm wrote as www-data that deployer can't remove —
+  # is not worth failing an otherwise-live deploy. Warn, don't abort.
+  # ponytail: cruft accumulates if this keeps warning; fix at the root by
+  # chowning old releases to deployer if disk grows.
+  rm -rf -- "${release}" || \
+    echo "::warning:: Could not fully prune ${release} — left in place."
 done
 
 rm -f "${ARTIFACT}"
