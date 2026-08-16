@@ -390,6 +390,25 @@ class MediaProgramController extends Controller
     }
 
     /**
+     * POST /su/portal/v1/admin/media/youtube/sync-status/{run}/retry
+     * Re-queue a stalled or failed run from the progress modal.
+     */
+    public function retryYoutubeSync(YouTubeSyncService $service, int $runId): JsonResponse
+    {
+        $run = $service->retryRun($runId);
+
+        if ($run === null) {
+            return response()->json(['success' => false, 'message' => __('admin.not_found')], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'run_id' => $run->id,
+            'status_url' => route('admin.media.youtube.sync-status', $run->id),
+        ]);
+    }
+
+    /**
      * Attach poster/banner from a direct upload or a media-library pick.
      * An upload wins over a library id when the form somehow sends both.
      */

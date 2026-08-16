@@ -132,6 +132,31 @@ class YouTubeSyncService
     }
 
     /**
+     * Re-queue an existing run without re-analysing — the "restart" control in
+     * the progress modal, for a run that stalled (e.g. the sync worker wasn't
+     * consuming the queue) or failed. The import is idempotent: episodes are
+     * matched by video id, so a re-run updates in place instead of duplicating.
+     */
+    public function retryRun(int $runId): ?YouTubeSyncRun
+    {
+        $run = YouTubeSyncRun::find($runId);
+
+        if (! $run instanceof YouTubeSyncRun) {
+            return null;
+        }
+
+        $run->update([
+            'status' => YouTubeSyncStatus::Pending,
+            'error' => null,
+            'message' => null,
+        ]);
+
+        SyncYouTubePlaylistJob::dispatch($run->id);
+
+        return $run;
+    }
+
+    /**
      * Progress snapshot for a run, or null when the run does not exist.
      *
      * @return array{status:string,is_terminal:bool,total:int,processed:int,created:int,updated:int,percent:int,message:?string,error:?string}|null

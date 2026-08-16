@@ -22,6 +22,7 @@ Route::prefix('media-programs')->group(function (): void {
 // source before any program row exists, so these take no program id.
 Route::post('media/youtube/analyze', [MediaProgramController::class, 'analyzeYoutube'])->name('admin.media.youtube.analyze');
 Route::get('media/youtube/sync-status/{run}', [MediaProgramController::class, 'youtubeSyncStatus'])->name('admin.media.youtube.sync-status');
+Route::post('media/youtube/sync-status/{run}/retry', [MediaProgramController::class, 'retryYoutubeSync'])->name('admin.media.youtube.retry');
 Route::resource('media-programs', MediaProgramController::class)->names([
     'index' => 'admin.media-programs.index',
     'create' => 'admin.media-programs.create',

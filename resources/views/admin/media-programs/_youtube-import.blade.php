@@ -25,6 +25,7 @@
         analyzeRoute: '{{ route('admin.media.youtube.analyze') }}',
         syncRoute: @js($syncRoute),
         statusRouteTemplate: '{{ route('admin.media.youtube.sync-status', ['run' => '__RUN__']) }}',
+        retryRouteTemplate: '{{ route('admin.media.youtube.retry', ['run' => '__RUN__']) }}',
         csrf: '{{ csrf_token() }}',
         prefill: @js($prefill),
         resumeRun: @js($resumeRun),
@@ -158,7 +159,24 @@
                     <span class="flex items-center gap-1.5 text-green-500"><i data-lucide="plus-circle" class="w-4 h-4"></i>{{ __('admin.yt_episodes_created') }}: <span class="tabular-nums" x-text="progress.created"></span></span>
                     <span class="flex items-center gap-1.5 text-blue-500"><i data-lucide="refresh-cw" class="w-4 h-4"></i>{{ __('admin.yt_episodes_updated') }}: <span class="tabular-nums" x-text="progress.updated"></span></span>
                 </div>
-                <p class="mt-4 text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ __('admin.yt_keep_open_hint') }}</p>
+                <p x-show="!stuck" class="mt-4 text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ __('admin.yt_keep_open_hint') }}</p>
+
+                {{-- Stall escape hatch: a run the worker never picked up would
+                     otherwise poll forever with the modal locked. --}}
+                <div x-show="stuck" x-cloak class="mt-4 rounded-xl border p-3 text-sm"
+                     :class="darkMode ? 'border-amber-800/50 bg-amber-900/20 text-amber-300' : 'border-amber-200 bg-amber-50 text-amber-700'">
+                    <p class="flex items-center gap-1.5 font-medium"><i data-lucide="alert-triangle" class="w-4 h-4"></i>{{ __('admin.yt_stuck_title') }}</p>
+                    <p class="mt-1 text-xs opacity-90">{{ __('admin.yt_stuck_hint') }}</p>
+                    <div class="mt-3 flex gap-2">
+                        <button type="button" @click="retry()"
+                                class="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-[#0056b3] to-[#218838] flex items-center gap-1.5">
+                            <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>{{ __('admin.yt_restart') }}
+                        </button>
+                        <button type="button" @click="close()"
+                                class="px-3 py-1.5 rounded-lg text-xs font-semibold border"
+                                :class="darkMode ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-600 hover:bg-gray-50'">{{ __('admin.yt_close') }}</button>
+                    </div>
+                </div>
             </div>
 
             {{-- STEP: done --}}
@@ -210,9 +228,16 @@
                 <div class="flex gap-3">
                     <button type="button" x-show="step === 'error'" @click="step = 'input'"
                             class="px-4 py-2.5 rounded-xl text-sm font-semibold border"
-                            :class="darkMode ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'">{{ __('admin.yt_retry') }}</button>
+                            :class="darkMode ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'">{{ __('admin.yt_start_over') }}</button>
+                    <button type="button" x-show="step === 'error' && runId" @click="retry()"
+                            class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-[#0056b3] to-[#218838] hover:scale-105 transition-all flex items-center gap-2">
+                        <i data-lucide="rotate-cw" class="w-4 h-4"></i>{{ __('admin.yt_retry') }}
+                    </button>
                     <button type="button" @click="close()"
-                            class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-[#0056b3] to-[#218838] hover:scale-105 transition-all">{{ __('admin.yt_close') }}</button>
+                            class="px-5 py-2.5 rounded-xl text-sm font-semibold"
+                            :class="step === 'done'
+                                ? 'text-white bg-gradient-to-r from-[#0056b3] to-[#218838] hover:scale-105 transition-all'
+                                : (darkMode ? 'border border-gray-700 text-gray-300 hover:bg-gray-800' : 'border border-gray-300 text-gray-700 hover:bg-gray-50')">{{ __('admin.yt_close') }}</button>
                 </div>
             </template>
         </div>
@@ -232,12 +257,19 @@ function youtubeImport(config) {
         rows: [],
         error: '',
         statusUrl: null,
+        runId: null,
         poll: null,
+        // Stall tracking: reveal a restart/close escape hatch when a run makes
+        // no forward progress (e.g. the sync worker isn't consuming the queue).
+        stuck: false,
+        _stall: 0,
+        _lastProcessed: -1,
         progress: { percent: 0, processed: 0, total: 0, created: 0, updated: 0, message: '' },
 
-        // Modal is locked while an import is in flight — closing it would
-        // hide progress the admin has no other way back to.
-        get busy() { return this.step === 'syncing'; },
+        // Modal is locked while an import is actively progressing — closing it
+        // would hide progress the admin has no other way back to. Once a run
+        // looks stuck, unlock so the admin isn't trapped.
+        get busy() { return this.step === 'syncing' && !this.stuck; },
 
         get selected() { return this.rows.filter(r => r.include); },
 
@@ -380,10 +412,31 @@ function youtubeImport(config) {
         },
 
         startPolling(runId, statusUrl) {
+            this.runId = runId;
             this.statusUrl = statusUrl || config.statusRouteTemplate.replace('__RUN__', runId);
             this.step = 'syncing';
+            this.stuck = false; this._stall = 0; this._lastProcessed = -1;
             this.poll = setInterval(() => this.tick(), 2000);
             this.tick();
+        },
+
+        // Re-queue the current run without re-analysing. Used by the "restart"
+        // control (stuck poll) and the error step.
+        async retry() {
+            if (!this.runId) { this.step = 'input'; return; }
+            if (this.poll) { clearInterval(this.poll); this.poll = null; }
+            this.error = '';
+            this.step = 'syncing';
+            this.stuck = false; this._stall = 0; this._lastProcessed = -1;
+            this.progress = { percent: 0, processed: 0, total: this.progress.total, created: 0, updated: 0, message: '' };
+            try {
+                const r = await fetch(config.retryRouteTemplate.replace('__RUN__', this.runId), {
+                    method: 'POST', headers: this.postHeaders(),
+                });
+                const d = await r.json();
+                if (!r.ok || !d.success) { this.error = d.message || 'Error'; this.step = 'error'; return; }
+                this.startPolling(d.run_id, d.status_url);
+            } catch (e) { this.error = String(e); this.step = 'error'; }
         },
 
         async tick() {
@@ -396,6 +449,16 @@ function youtubeImport(config) {
                     percent: x.percent, processed: x.processed, total: x.total,
                     created: x.created, updated: x.updated, message: x.message || '',
                 };
+                // Surface the escape hatch after ~14s (7 ticks) with no forward
+                // progress — a run nothing is consuming, not a slow one.
+                if (!x.is_terminal) {
+                    if (x.processed > this._lastProcessed) {
+                        this._lastProcessed = x.processed; this._stall = 0; this.stuck = false;
+                    } else if (++this._stall >= 7 && !this.stuck) {
+                        this.stuck = true;
+                        this.$nextTick(() => window.lucide && window.lucide.createIcons());
+                    }
+                }
                 if (x.is_terminal) {
                     clearInterval(this.poll); this.poll = null;
                     if (x.status === 'completed') {
