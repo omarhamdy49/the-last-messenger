@@ -109,7 +109,15 @@
         $inlineCss = request()->routeIs('public.home') && ! $vite->isRunningHot() && is_file($criticalCss);
     @endphp
     @if ($inlineCss)
-        <style>{!! file_get_contents($criticalCss) !!}</style>
+        {{-- Wrap the inlined critical CSS in a low-priority cascade layer. It is
+             penthouse-extracted at mobile width and UNLAYERED, so its `.hidden`
+             (display:none) otherwise outranked the layered app.css `xl:flex`/`sm:*`
+             utilities — unlayered beats every layer — leaving the whole nav +
+             action bar stuck at display:none on the homepage ONLY. As layer
+             `critical` (first declared in the document) it sits below app.css's
+             theme/base/components/utilities, so app.css wins once it loads while
+             the critical set still paints above-the-fold first. --}}
+        <style>{!! '@layer critical{'.file_get_contents($criticalCss).'}' !!}</style>
         <link rel="preload" as="style" href="{{ $vite->asset('resources/css/app.css') }}" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="{{ $vite->asset('resources/css/app.css') }}"></noscript>
         @vite('resources/js/app.js')
