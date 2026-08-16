@@ -29,6 +29,7 @@ cat > "/etc/sudoers.d/90-${DEPLOY_USER}-deploy" <<EOF
 ${DEPLOY_USER} ALL=(root) NOPASSWD: /usr/bin/systemctl reload php${PHP_VERSION}-fpm, \\
   /usr/bin/systemctl reload nginx, \\
   /usr/bin/supervisorctl restart all, \\
+  /usr/bin/supervisorctl restart tlm-scheduler, \\
   /usr/bin/supervisorctl reread, \\
   /usr/bin/supervisorctl update, \\
   /usr/bin/supervisorctl status, \\

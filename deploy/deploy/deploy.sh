@@ -110,7 +110,15 @@ ${PHP_BIN} artisan queue:restart
 
 # The scheduler holds no in-flight work, so a hard restart is safe and puts the
 # new release's schedule in effect immediately.
-sudo supervisorctl restart tlm-scheduler
+#
+# Non-fatal on purpose. This verb was added in 3f0211e but the NOPASSWD list in
+# stages/15-user.sh predates it, so on a server provisioned before that stage is
+# re-run sudo has no rule to match, asks for a password with no TTY, and fails
+# the whole deploy *after* `current` has already been flipped. A stale scheduler
+# is worth a warning, not a rollback of a release that is otherwise live.
+sudo supervisorctl restart tlm-scheduler || {
+  echo "::warning:: Could not restart tlm-scheduler (sudo rule missing?) — it keeps running the previous release until re-run stage 15-user."
+}
 
 log "Health probe..."
 ${PHP_BIN} artisan about >/dev/null 2>&1 || { echo "artisan about failed"; exit 1; }
