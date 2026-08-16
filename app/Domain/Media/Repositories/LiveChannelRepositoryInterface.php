@@ -37,6 +37,9 @@ interface LiveChannelRepositoryInterface extends RepositoryInterface
      */
     public function findPublishedBySlug(string $slug): ?LiveChannel;
 
+    /** First published channel in display order (for the nav quick-link). */
+    public function firstPublished(): ?LiveChannel;
+
     /**
      * Other published channels excluding the given id (related list).
      */

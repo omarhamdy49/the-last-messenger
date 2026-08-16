@@ -86,6 +86,20 @@ class LiveChannelRepository extends BaseRepository implements LiveChannelReposit
         );
     }
 
+    public function firstPublished(): ?LiveChannel
+    {
+        return Cache::remember(
+            MediaCacheKeys::liveChannelFirst(),
+            self::CACHE_TTL,
+            fn () => LiveChannel::query()
+                ->select(self::LIST_COLUMNS)
+                ->with(['translations:id,live_channel_id,locale,title,is_ready', 'media'])
+                ->published()
+                ->ordered()
+                ->first()
+        );
+    }
+
     public function getRelated(int $excludeId, int $limit = 6): Collection
     {
         return LiveChannel::query()
@@ -110,6 +124,7 @@ class LiveChannelRepository extends BaseRepository implements LiveChannelReposit
         // Row caches at the common caps used by the public list.
         Cache::forget(MediaCacheKeys::liveChannelsRow(12));
         Cache::forget(MediaCacheKeys::liveChannelsRow(10));
+        Cache::forget(MediaCacheKeys::liveChannelFirst());
 
         if ($channel !== null) {
             Cache::forget(MediaCacheKeys::liveChannelBySlug($channel->slug));

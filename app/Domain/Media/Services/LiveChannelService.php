@@ -49,6 +49,12 @@ class LiveChannelService extends BaseService
         return $this->repository->getRelated($excludeId, $limit);
     }
 
+    /** First published channel in display order — used for the nav live quick-link. */
+    public function getFirstPublished(): ?LiveChannel
+    {
+        return $this->repository->firstPublished();
+    }
+
     /**
      * @throws ResourceNotFoundException
      */

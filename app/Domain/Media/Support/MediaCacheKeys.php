@@ -86,6 +86,11 @@ final class MediaCacheKeys
         return "media_live_channel_{$slug}";
     }
 
+    public static function liveChannelFirst(): string
+    {
+        return 'media_live_channel_first';
+    }
+
     public static function stats(): string
     {
         return 'media_dashboard_stats';
