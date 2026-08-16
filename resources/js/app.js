@@ -325,6 +325,29 @@ Alpine.data('viewToggle', (key = 'viewMode', initial = 'grid') => ({
     },
 }));
 
+/* --------------------------------------------------- broken-image fallback ---
+   Any <img> that fails to load (missing/renamed media file, e.g. article or
+   series thumbnails) swaps to the shared placeholder instead of showing a broken
+   image. One capture-phase listener covers every image on the page (image errors
+   don't bubble but do fire in capture at document level); the data flag makes it
+   idempotent and stops a loop if the placeholder itself were ever missing. */
+const swapToPlaceholder = (img) => {
+    if (img.dataset.imgFallback) return;
+    img.dataset.imgFallback = '1';
+    img.src = '/images/placeholder.png';
+    img.srcset = '';
+};
+document.addEventListener('error', (e) => {
+    const t = e.target;
+    if (t && t.tagName === 'IMG') swapToPlaceholder(t);
+}, true);
+// Catch images that already errored before this script ran (above-the-fold).
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('img').forEach((img) => {
+        if (img.src && img.complete && img.naturalWidth === 0) swapToPlaceholder(img);
+    });
+});
+
 /* ----------------------------------------------------------- lifecycle --- */
 Alpine.store('theme').init();
 Alpine.start();
