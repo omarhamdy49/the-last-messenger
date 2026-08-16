@@ -79,7 +79,6 @@ ${PHP_BIN} artisan migrate --force --no-interaction
 # the columns but not the rows, so without this a deploy renders those blocks
 # empty. Every seeder listed here must stay idempotent: this runs on each deploy.
 log "Seeding database-backed site chrome..."
-${PHP_BIN} artisan db:seed --class='Database\Seeders\Hadith\HadithCollectionSeeder' --force --no-interaction
 ${PHP_BIN} artisan db:seed --class=HomeModuleCardsSeeder --force --no-interaction
 ${PHP_BIN} artisan db:seed --class=HomeSectionsSeeder --force --no-interaction
 
