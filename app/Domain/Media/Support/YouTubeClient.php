@@ -31,17 +31,29 @@ class YouTubeClient
     ) {}
 
     /**
-     * Args prepended to every yt-dlp invocation. Adds --cookies only when a
-     * readable cookies file is configured — a missing/blank path silently
-     * falls back to a cookieless run rather than breaking every call.
+     * Args prepended to every yt-dlp invocation.
+     *
+     * --ignore-no-formats-error: we only ever pull metadata/subtitles and never
+     * download media, but yt-dlp still resolves its default format during info
+     * extraction and hard-errors ("Requested format is not available") on
+     * livestreams, premieres and members-only videos. Ignoring it lets those
+     * entries import their metadata instead of failing the whole video.
+     *
+     * --cookies is added only when a readable cookies file is configured — a
+     * missing/blank path silently falls back to a cookieless run.
      *
      * @return list<string>
      */
     private function globalArgs(): array
     {
-        return $this->cookiesPath !== null && $this->cookiesPath !== '' && is_readable($this->cookiesPath)
-            ? ['--cookies', $this->cookiesPath]
-            : [];
+        $args = ['--ignore-no-formats-error'];
+
+        if ($this->cookiesPath !== null && $this->cookiesPath !== '' && is_readable($this->cookiesPath)) {
+            $args[] = '--cookies';
+            $args[] = $this->cookiesPath;
+        }
+
+        return $args;
     }
 
     /**

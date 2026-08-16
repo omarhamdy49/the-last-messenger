@@ -37,3 +37,6 @@ Thumbs.db
 # SSH deploy key (never commit)
 /ovh_vps
 /ovh_vps.pub
+
+# Local yt-dlp session cookies (secret; provisioned to prod shared/ separately)
+deploy/secrets/
