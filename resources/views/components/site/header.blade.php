@@ -169,7 +169,7 @@
                     </a>
 
                     <!-- Makkah live channel (hidden on phones — surfaced in the mobile menu instead) -->
-                    <a href="{{ route('public.media.live', 'el-quran-makkah') }}"
+                    <a href="{{ route('public.media.live', 'quran-live') }}"
                        class="relative hidden sm:inline-flex p-2.5 rounded-full hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50"
                        aria-label="{{ __('site.makkah_live') }}" title="{{ __('site.makkah_live') }}">
                         <x-icons.kaaba class="w-5 h-5" />
@@ -277,7 +277,7 @@
                    class="sm:hidden flex items-center space-s-3 px-4 py-3 rounded-lg hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 font-semibold text-[#0056b3] dark:text-[#64CCC5]">
                     <i class="w-5 h-5" data-lucide="sparkles"></i><span>{{ __('site.ask_ai') }}</span>
                 </a>
-                <a href="{{ route('public.media.live', 'el-quran-makkah') }}"
+                <a href="{{ route('public.media.live', 'quran-live') }}"
                    class="sm:hidden flex items-center space-s-3 px-4 py-3 rounded-lg hover:bg-[#E9ECEF]/50 dark:hover:bg-[#0f3460]/50 font-semibold">
                     <x-icons.kaaba class="w-5 h-5" /><span>{{ __('site.makkah_live') }}</span>
                 </a>
