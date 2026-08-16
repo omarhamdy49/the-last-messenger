@@ -120,6 +120,26 @@ sudo supervisorctl restart tlm-scheduler || {
   echo "::warning:: Could not restart tlm-scheduler (sudo rule missing?) — it keeps running the previous release until re-run stage 15-user."
 }
 
+# Reconcile Supervisor with any worker-config changes shipped in this release.
+# `reread` picks up added/changed programs, `update` (re)starts them — both are
+# in the deploy user's NOPASSWD allowlist. Guarded like the scheduler restart:
+# the ERR trap is still armed here, so a missing sudo rule or a supervisor
+# hiccup must warn, never roll back a release that is already live.
+#
+# This does NOT render conf files (writing /etc/supervisor/conf.d needs root and
+# the queue env vars — that stays a provisioning concern, stage 80). So a
+# brand-new worker still needs one `provision.sh 80-supervisor`; after that,
+# every deploy keeps Supervisor in sync. The status check below turns the
+# "conf never rendered" case from a silently unconsumed queue into a loud
+# warning instead of a stuck import nobody notices.
+sudo supervisorctl reread 2>/dev/null || echo "::warning:: supervisorctl reread failed (sudo rule missing? re-run stage 15-user)."
+sudo supervisorctl update 2>/dev/null || echo "::warning:: supervisorctl update failed."
+for prog in tlm-worker tlm-sync-worker tlm-tracking-worker tlm-scheduler; do
+  sudo supervisorctl status "${prog}:*" 2>/dev/null | grep -q RUNNING \
+    || sudo supervisorctl status "${prog}" 2>/dev/null | grep -q RUNNING \
+    || echo "::warning:: Supervisor program '${prog}' is not RUNNING — run 'sudo FORCE=1 ./provision.sh 80-supervisor' on the server."
+done
+
 log "Health probe..."
 ${PHP_BIN} artisan about >/dev/null 2>&1 || { echo "artisan about failed"; exit 1; }
 APP_DOMAIN="${APP_DOMAIN:-localhost}"
