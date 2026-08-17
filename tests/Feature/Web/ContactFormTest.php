@@ -6,6 +6,7 @@ namespace Tests\Feature\Web;
 
 use App\Domain\Content\Models\ContactMessage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -80,6 +81,41 @@ final class ContactFormTest extends TestCase
 
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['email']);
+    }
+
+    /**
+     * Ordinary punctuation has to survive — an Arabic-first form that rejects a
+     * full stop rejects almost every real message. Links are what lead-gen spam
+     * carries, so they are what gets blocked.
+     *
+     * @return array<string, array{0: string, 1: bool}>
+     */
+    public static function messageBodies(): array
+    {
+        return [
+            'arabic prose' => ['السلام عليكم، لدي سؤال حول مصادر الأحاديث المنشورة.', true],
+            'english prose' => ['Hello, I have a question about your sources. Thanks!', true],
+            'bare url' => ['Check my site https://spam.example.com now', false],
+            'www host' => ['Visit www.spam-offers.example for a free quote', false],
+            'bare domain' => ['Great deals at spam-offers.example today', false],
+            'email address' => ['Reply to me at spammer@example.com please', false],
+        ];
+    }
+
+    #[DataProvider('messageBodies')]
+    public function test_message_allows_punctuation_but_rejects_links(string $message, bool $accepted): void
+    {
+        $response = $this->postJson('/contact', array_merge($this->validPayload(), ['message' => $message]));
+
+        if ($accepted) {
+            $response->assertStatus(302);
+            $this->assertSame(1, ContactMessage::query()->count());
+
+            return;
+        }
+
+        $response->assertStatus(422)->assertJsonValidationErrors(['message']);
+        $this->assertSame(0, ContactMessage::query()->count());
     }
 
     public function test_filled_honeypot_rejects_submission(): void

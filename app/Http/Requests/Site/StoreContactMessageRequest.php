@@ -24,9 +24,18 @@ final class StoreContactMessageRequest extends FormRequest
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:255'],
             'subject' => ['required', 'string', 'max:150'],
-            // Cap at 200 and whitelist letters/digits/spaces + ? - _ ! only.
-            // Blocking . : / @ kills the URLs every lead-gen spam carries.
-            'message' => ['required', 'string', 'max:200', 'regex:/^[\p{L}\p{N}\s?\-_!]+$/u'],
+            // Cap at 200, whitelist letters/digits/spaces and ordinary sentence
+            // punctuation (Arabic ، ؛ ؟ included — an Arabic-first form that
+            // rejects a full stop rejects almost every real message).
+            // Links are what lead-gen spam actually carries, so they are blocked
+            // by their own rule rather than by banning the dot.
+            'message' => [
+                'required',
+                'string',
+                'max:200',
+                'regex:/^[\p{L}\p{N}\s?!\-_.,:;()\x{060C}\x{061B}\x{061F}]+$/u',
+                'not_regex:/https?:\/\/|www\.|\S@\S|\.[a-z]{2,}\b/iu',
+            ],
             // Honeypot: hidden field humans never fill — any value rejects.
             'website' => ['prohibited'],
         ];
@@ -39,6 +48,7 @@ final class StoreContactMessageRequest extends FormRequest
     {
         return [
             'message.regex' => __('site.contact_message_charset'),
+            'message.not_regex' => __('site.contact_message_no_links'),
         ];
     }
 

@@ -195,6 +195,16 @@ final class MuslimScholarsSahabaImportTest extends TestCase
 
     public function test_reviewed_map_covers_current_seeded_people_without_merging_known_homonyms(): void
     {
+        // Asserts row-for-row against the reviewed 7,806-row export, which lives
+        // under storage/app (gitignored) rather than in the repo. Whoever holds
+        // the file gets the check; a fresh clone and CI skip it instead of
+        // failing on data they were never given.
+        $csv = base_path('storage/app/sahaba-import-preview/muslimscholars-sahaba-mapped-preview.csv');
+
+        if (! is_readable($csv)) {
+            $this->markTestSkipped("Reviewed import export not present at {$csv}.");
+        }
+
         $this->seed([
             IslamicRoleSeeder::class,
             ProphetLineageSeeder::class,
@@ -202,9 +212,7 @@ final class MuslimScholarsSahabaImportTest extends TestCase
         ]);
 
         $service = app(MuslimScholarsSahabaImportService::class);
-        $preview = $service->preview(base_path(
-            'storage/app/sahaba-import-preview/muslimscholars-sahaba-mapped-preview.csv'
-        ));
+        $preview = $service->preview($csv);
         $plan = $service->plan($preview);
 
         $this->assertSame(7806, $plan->total());

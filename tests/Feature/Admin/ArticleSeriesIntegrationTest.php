@@ -47,10 +47,12 @@ class ArticleSeriesIntegrationTest extends TestCase
             'thumbnail' => UploadedFile::fake()->image('series-thumb.jpg', 800, 400),
         ];
 
-        $this->post(route('admin.series.store'), $payload)
-            ->assertRedirect(route('admin.series.index'));
+        $response = $this->post(route('admin.series.store'), $payload);
 
         $series = Series::query()->firstOrFail();
+
+        // Store lands on the new series, not back on the listing.
+        $response->assertRedirect(route('admin.series.show', $series->id));
 
         $this->assertSame('seerah-series', $series->slug);
         $this->assertSame('سلسلة السيرة', $series->getTranslation('title', 'ar'));
@@ -84,7 +86,7 @@ class ArticleSeriesIntegrationTest extends TestCase
         ];
 
         $this->put(route('admin.series.update', $series), $payload)
-            ->assertRedirect(route('admin.series.index'));
+            ->assertRedirect(route('admin.series.show', $series->id));
 
         $series->refresh();
         $this->assertSame('عنوان محدث', $series->getTranslation('title', 'ar'));
@@ -106,7 +108,7 @@ class ArticleSeriesIntegrationTest extends TestCase
         ];
 
         $this->put(route('admin.series.update', $series), $payload)
-            ->assertRedirect(route('admin.series.index'));
+            ->assertRedirect(route('admin.series.show', $series->id));
 
         $series->refresh();
         $this->assertNotSame($initialPath, $series->thumbnail);
