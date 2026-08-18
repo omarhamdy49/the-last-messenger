@@ -608,10 +608,23 @@
                                         height="256"
                                         loading="lazy"
                                         class="w-full h-56 border-0"></iframe>
-                                @if ($event['location'])
-                                    <p class="p-4 text-sm flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                                        <i data-lucide="map" class="w-4 h-4 flex-shrink-0"></i>{{ $event['location'] }}
-                                    </p>
+                                {{-- The canonical, localized place name sits above the
+                                     historian's descriptive note. Both are shown: the
+                                     note carries detail no place record holds
+                                     ("على نحو 8 أميال جنوب المدينة"). --}}
+                                @if ($event['place'] || $event['location'])
+                                    <div class="p-4 space-y-1.5">
+                                        @if ($event['place'] && $event['place']['name'])
+                                            <p class="text-sm font-semibold flex items-center gap-2 text-gray-900 dark:text-white">
+                                                <i data-lucide="map-pin" class="w-4 h-4 flex-shrink-0"></i>{{ $event['place']['name'] }}
+                                            </p>
+                                        @endif
+                                        @if ($event['location'])
+                                            <p class="text-sm flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                                                <i data-lucide="map" class="w-4 h-4 flex-shrink-0"></i>{{ $event['location'] }}
+                                            </p>
+                                        @endif
+                                    </div>
                                 @endif
                             </div>
                         @endif

@@ -8,6 +8,7 @@ use App\Domain\Seerah\Enums\EventEra;
 use App\Domain\Seerah\Enums\EventImportance;
 use App\Domain\Seerah\Enums\EventPhase;
 use App\Domain\Seerah\Enums\SeerahEventStatus;
+use App\Domain\Shared\Models\Location;
 use App\Domain\Shared\Traits\HasInteractions;
 use App\Domain\Shared\Traits\HasLocalizedContent;
 use App\Models\Article;
@@ -89,6 +90,7 @@ class SeerahEvent extends Model implements HasMedia
         'era',
         'phase',
         'location',
+        'location_id',
         'latitude',
         'longitude',
         'featured_image',
@@ -114,6 +116,7 @@ class SeerahEvent extends Model implements HasMedia
         'gregorian_year' => 'integer',
         'seerah_event_type_id' => 'integer',
         'seerah_milestone_id' => 'integer',
+        'location_id' => 'integer',
         'importance' => EventImportance::class,
         'status' => SeerahEventStatus::class,
         'era' => EventEra::class,
@@ -225,6 +228,64 @@ class SeerahEvent extends Model implements HasMedia
     public function milestone(): BelongsTo
     {
         return $this->belongsTo(SeerahMilestone::class, 'seerah_milestone_id');
+    }
+
+    /**
+     * The canonical place this event happened at.
+     *
+     * NAMED `place()`, NOT `location()`. `seerah_events.location` is an existing
+     * string column holding the descriptive note, so an Eloquent relation called
+     * `location` would be shadowed by it — `$event->location` returns the column
+     * and never reaches the relation. Renaming the relation is a one-word change;
+     * renaming the column would churn ~30 call sites for nothing.
+     *
+     * The free-text `location` column is NOT replaced by this — it holds
+     * editorial prose ("حمراء الأسد على نحو 8 أميال جنوب المدينة") that no place
+     * record can reconstruct. The two are read together: this supplies
+     * coordinates and a localized name, `location` supplies the description.
+     */
+    public function place(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'location_id');
+    }
+
+    /**
+     * Coordinates for the map, in precedence order.
+     *
+     * The event's own coordinates win when it has them — an event may happen at
+     * a specific spot within a place. Otherwise the place's coordinates are
+     * used, which is what takes the map from 2 of 578 events to most of the 279
+     * that name a place.
+     *
+     * @return array{latitude: float, longitude: float}|null
+     */
+    public function resolvedCoordinates(): ?array
+    {
+        if ($this->latitude !== null && $this->longitude !== null) {
+            return [
+                'latitude' => (float) $this->latitude,
+                'longitude' => (float) $this->longitude,
+            ];
+        }
+
+        $place = $this->relationLoaded('place') ? $this->place : null;
+
+        if ($place?->hasCoordinates()) {
+            return [
+                'latitude' => (float) $place->latitude,
+                'longitude' => (float) $place->longitude,
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Whether a map can be rendered for this event at all.
+     */
+    public function hasResolvableCoordinates(): bool
+    {
+        return $this->resolvedCoordinates() !== null;
     }
 
     /**

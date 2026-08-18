@@ -525,8 +525,16 @@ final class SeerahController extends Controller
             ->all();
 
         $articleLocale = $event->article?->locales->firstWhere('locale', $locale);
-        $latitude = $event->latitude !== null ? (float) $event->latitude : null;
-        $longitude = $event->longitude !== null ? (float) $event->longitude : null;
+
+        // Coordinates come from the event when it has its own, otherwise from
+        // the canonical place it resolves to. Before the locations module only
+        // 2 of 578 events carried coordinates, so 576 event pages rendered this
+        // map region blank; the fallback is what fills it.
+        $coordinates = $event->resolvedCoordinates();
+        $latitude = $coordinates['latitude'] ?? null;
+        $longitude = $coordinates['longitude'] ?? null;
+
+        $place = $event->relationLoaded('place') ? $event->place : null;
         $mapUrl = null;
 
         if ($latitude !== null && $longitude !== null) {
@@ -562,7 +570,15 @@ final class SeerahController extends Controller
             'hijriDate' => $event->hijri_date,
             'hijriYear' => $event->hijri_year,
             'gregorianYear' => $event->gregorian_year,
+            // `location` is the historian's descriptive note and is unchanged.
+            // `place` is the canonical, localized place name — they are shown
+            // together, not one instead of the other.
             'location' => $event->location,
+            'place' => $place ? [
+                'slug' => $place->slug,
+                'name' => $place->name($locale),
+                'type' => $place->type->value,
+            ] : null,
             'latitude' => $latitude,
             'longitude' => $longitude,
             'mapUrl' => $mapUrl,

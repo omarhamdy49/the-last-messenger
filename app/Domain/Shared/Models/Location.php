@@ -6,6 +6,7 @@ namespace App\Domain\Shared\Models;
 
 use App\Domain\Shared\Enums\LocationType;
 use App\Domain\Shared\Exceptions\BusinessRuleViolationException;
+use App\Domain\Shared\Helpers\VersionedCacheKey;
 use App\Domain\Shared\Services\LocationUsageRegistry;
 use App\Domain\Shared\Traits\HasLocalizedContent;
 use Carbon\Carbon;
@@ -94,6 +95,19 @@ class Location extends Model
             $location->guardAgainstCycle();
             $location->depth = static::computeDepth($location->parent_id);
         });
+
+        // Invalidate the cached vocabulary on ANY write, not only writes that
+        // went through LocationRepository. The seeder, the factory and tinker
+        // all bypass the repository, and a stale vocabulary silently resolves
+        // content against places that no longer exist — which is worse than a
+        // cache miss because it looks like it worked.
+        //
+        // Versioned key, never Cache::flush(): flushing wipes other modules'
+        // caches and the rate limiter.
+        $invalidate = static fn (): null => tap(null, static fn () => VersionedCacheKey::bump('location'));
+
+        static::saved($invalidate);
+        static::deleted($invalidate);
     }
 
     // ---------------------------------------------------------------- hierarchy

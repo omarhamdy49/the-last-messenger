@@ -48,7 +48,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
             ->select([
                 'id', 'slug', 'hijri_date', 'hijri_year', 'hijri_month', 'hijri_day',
                 'gregorian_year', 'seerah_event_type_id', 'seerah_milestone_id', 'phase',
-                'era', 'location', 'latitude', 'longitude', 'featured_image', 'gallery',
+                'era', 'location', 'location_id', 'latitude', 'longitude', 'featured_image', 'gallery',
                 'related_article_id', 'is_pivotal', 'is_featured', 'importance',
                 'views_count', 'statistics', 'display_order',
             ])
@@ -422,6 +422,13 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
             'milestone.translations' => fn ($relation) => $relation
                 ->select(['id', 'seerah_milestone_id', 'locale', 'title'])
                 ->where('locale', $locale),
+            // Canonical place: supplies the map coordinates when the event has
+            // none of its own, and the localized place name. Columns are named
+            // and the parent select carries location_id, per constitution II.
+            'place:id,slug,type,latitude,longitude',
+            'place.translations' => fn ($relation) => $relation
+                ->select(['id', 'location_id', 'locale', 'name'])
+                ->whereIn('locale', array_unique([$locale, 'ar'])),
             'participants:id,event_id,participant_type,participant_id,role',
             'participants.translations' => fn ($relation) => $relation
                 ->select(['id', 'seerah_participant_id', 'locale', 'name', 'description'])

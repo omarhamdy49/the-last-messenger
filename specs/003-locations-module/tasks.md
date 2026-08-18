@@ -95,25 +95,34 @@ place, the localized name shows, and the original prose is unchanged.
 
 > Write these first and confirm they fail before implementing.
 
-- [ ] T019 [P] [US1] Unit test the alias normaliser — tashkeel stripped, alef forms unified, `ة`→`ه`, `ى`→`ي`, leading `al-`/`as-` stripped, whitespace collapsed — in `tests/Unit/Domain/Shared/LocationNormaliserTest.php`
-- [ ] T020 [P] [US1] Unit test longest-alias-first selection using the worked examples in `data-model.md`: `المسجد النبوي بالمدينة` → mosque not city, `شِعب أبي طالب بمكة` → Makkah, `المنطقة المحايدة بين الجيشين` → null, `Makkah or Medinah` → null. In `tests/Unit/Domain/Shared/LocationResolverTest.php`
-- [ ] T021 [P] [US1] Feature test the map coordinate precedence — event coordinates win over the location's, the location's are used when the event has none, and neither present renders no map **and no error** — in `tests/Feature/Seerah/SeerahEventMapTest.php`
-- [ ] T022 [P] [US1] Feature test that an event's descriptive `location` prose is still rendered, exported and searchable after a place is assigned, in `tests/Feature/Seerah/SeerahEventLocationPreservationTest.php`
+- [X] T019 [P] [US1] Unit test the alias normaliser — tashkeel stripped, alef forms unified, `ة`→`ه`, `ى`→`ي`, leading `al-`/`as-` stripped, whitespace collapsed — in `tests/Unit/Domain/Shared/LocationNormaliserTest.php`
+- [X] T020 [P] [US1] Unit test longest-alias-first selection using the worked examples in `data-model.md`: `المسجد النبوي بالمدينة` → mosque not city, `شِعب أبي طالب بمكة` → Makkah, `المنطقة المحايدة بين الجيشين` → null, `Makkah or Medinah` → null. In `tests/Unit/Domain/Shared/LocationResolverTest.php`
+- [X] T021 [P] [US1] Feature test the map coordinate precedence — event coordinates win over the location's, the location's are used when the event has none, and neither present renders no map **and no error** — in `tests/Feature/Seerah/SeerahEventMapTest.php`
+- [X] T022 [P] [US1] Feature test that an event's descriptive `location` prose is still rendered, exported and searchable after a place is assigned, in `tests/Feature/Seerah/SeerahEventLocationPreservationTest.php`
 
 ### Implementation for User Story 1
 
-- [ ] T023 [US1] Create `LocationResolver` — the normaliser, the cached vocabulary loader, and longest-alias-first selection returning a location id or null with a reason (`no-match` / `ambiguous`), in `app/Domain/Shared/Services/LocationResolver.php`
-- [ ] T024 [US1] Create `LocationSeeder` with ~55 canonical places per the tree in `data-model.md` — `ar` + `en` names minimum, coordinates on **every** place, `parent_id` hierarchy, alias lists covering every observed spelling. Idempotent, keyed on `slug`. In `database/seeders/LocationSeeder.php`
-- [ ] T025 [US1] Add the seeder self-check that **aborts** on a duplicate alias, an empty alias, a parent cycle, or a place missing an Arabic name — constitution X forbids picking a winner silently — in `database/seeders/LocationSeeder.php`
-- [ ] T026 [P] [US1] Add `location()` belongsTo, `location_id` to `$fillable`, and a `resolvedCoordinates()` accessor returning event coordinates first and the location's second, in `app/Domain/Seerah/Models/SeerahEvent.php`
-- [ ] T027 [US1] Create `BackfillLocationsCommand` (`locations:backfill {--dry-run}`) resolving Seerah events in chunks, writing `location_id` **only where NULL**, transaction per chunk, in `app/Console/Commands/BackfillLocationsCommand.php`
-- [ ] T028 [US1] Add the itemised report — examined / resolved / no-match / ambiguous / already-assigned per content type — that **fails loudly if the columns do not sum to examined**, in `app/Console/Commands/BackfillLocationsCommand.php`
-- [ ] T029 [US1] Change the map gate from event coordinates to event coordinates ?? location coordinates at `app/Http/Controllers/Site/SeerahController.php:530`, keeping the existing bounding-box embed unchanged
-- [ ] T030 [US1] Eager-load `location:id,slug,latitude,longitude` and `location.translations:id,location_id,locale,name` with `location_id` present in the parent select, on the event detail and timeline read paths in `app/Domain/Seerah/Repositories/SeerahEventRepository.php`
-- [ ] T031 [US1] Render the localized place name above the retained prose note on the event page in `resources/views/public/seerah/event.blade.php`, using logical properties only and verified in Arabic RTL
-- [ ] T032 [US1] Feature test the backfill's idempotency and write rules — a second run resolves zero, a manually assigned `location_id` survives, ambiguous rows stay NULL — in `tests/Feature/Console/BackfillLocationsCommandTest.php`
+- [X] T023 [US1] Create `LocationResolver` — the normaliser, the cached vocabulary loader, and longest-alias-first selection returning a location id or null with a reason (`no-match` / `ambiguous`), in `app/Domain/Shared/Services/LocationResolver.php`
+- [X] T024 [US1] Create `LocationSeeder` with ~55 canonical places per the tree in `data-model.md` — `ar` + `en` names minimum, coordinates on **every** place, `parent_id` hierarchy, alias lists covering every observed spelling. Idempotent, keyed on `slug`. In `database/seeders/LocationSeeder.php`
+- [X] T025 [US1] Add the seeder self-check that **aborts** on a duplicate alias, an empty alias, a parent cycle, or a place missing an Arabic name — constitution X forbids picking a winner silently — in `database/seeders/LocationSeeder.php`
+- [X] T026 [P] [US1] Add `location()` belongsTo, `location_id` to `$fillable`, and a `resolvedCoordinates()` accessor returning event coordinates first and the location's second, in `app/Domain/Seerah/Models/SeerahEvent.php`
+- [X] T027 [US1] Create `BackfillLocationsCommand` (`locations:backfill {--dry-run}`) resolving Seerah events in chunks, writing `location_id` **only where NULL**, transaction per chunk, in `app/Console/Commands/BackfillLocationsCommand.php`
+- [X] T028 [US1] Add the itemised report — examined / resolved / no-match / ambiguous / already-assigned per content type — that **fails loudly if the columns do not sum to examined**, in `app/Console/Commands/BackfillLocationsCommand.php`
+- [X] T029 [US1] Change the map gate from event coordinates to event coordinates ?? location coordinates at `app/Http/Controllers/Site/SeerahController.php:530`, keeping the existing bounding-box embed unchanged
+- [X] T030 [US1] Eager-load `location:id,slug,latitude,longitude` and `location.translations:id,location_id,locale,name` with `location_id` present in the parent select, on the event detail and timeline read paths in `app/Domain/Seerah/Repositories/SeerahEventRepository.php`
+- [X] T031 [US1] Render the localized place name above the retained prose note on the event page in `resources/views/public/seerah/event.blade.php`, using logical properties only and verified in Arabic RTL
+- [X] T032 [US1] Feature test the backfill's idempotency and write rules — a second run resolves zero, a manually assigned `location_id` survives, ambiguous rows stay NULL — in `tests/Feature/Console/BackfillLocationsCommandTest.php`
 
 **Checkpoint**: run `php artisan migrate && php artisan db:seed --class=LocationSeeder && php artisan locations:backfill`, then quickstart check 2. Maps must rise from 2 to at least 180. **This alone is a shippable increment.**
+
+**Measured on completion**: maps 2 → **206**. Companions **6,663 / 6,677 (99.8%)**. Surahs **114/114**. Madinah spellings collapsed to **1,419** rows on one place. 88 rows left for an editor (39 ambiguous + 35 no-match on Seerah, 14 ambiguous on companions).
+
+**Two corrections made during implementation**, both recorded in `research.md` / `data-model.md`:
+
+1. **Ranking is by hierarchy depth, not alias length.** `المدينة المنورة` (15 chars) is longer than `المسجد النبوي` (13), so longest-alias-first returned the *less* specific place. FR-010 asks for "most specific", which is depth; length is only the tiebreaker.
+2. **The Seerah relation is `place()`, not `location()`.** `seerah_events.location` is an existing string column, so an Eloquent relation named `location` is shadowed by the attribute and never reached. Renaming the relation is one word; renaming the column would churn ~30 call sites.
+
+A third rule was added that the plan did not anticipate: **alias subsumption**. When a lower-ranked hit's alias sits inside the matched alias (`منى` inside al-Aqabah's own name `العقبة بمنى`), it is not a second place. Without it, 3 events reported false ambiguity.
 
 ---
 

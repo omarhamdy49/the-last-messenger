@@ -109,15 +109,22 @@ would add a table and a join to save nothing.
 
 ---
 
-## R-05 — Resolution strategy: longest-alias-first, ambiguity left unresolved
+## R-05 — Resolution strategy: deepest place wins, ambiguity left unresolved
 
-**Decision**: for each source string, test every alias in the vocabulary and take the **longest**
-alias that matches. Where the string names two places or is explicitly uncertain, leave the foreign
-key NULL.
+**Decision**: for each source string, test every alias in the vocabulary and take the hit on the
+**deepest** place in the hierarchy, breaking ties by normalised alias length. Where the string names
+two places on different branches, leave the foreign key NULL.
 
-**Rationale**: place names nest, so shortest-match is actively wrong. `"المسجد النبوي بالمدينة"`
-contains both `المسجد النبوي` and `المدينة`; the correct answer is the mosque. Longest-alias-first
-picks it deterministically without needing a scoring model.
+**Rationale**: place names nest, so shortest-match is actively wrong.
+`"المسجد النبوي بالمدينة المنورة"` contains both the mosque and its parent city, and the mosque is
+the answer.
+
+**Corrected during implementation.** This decision originally read "take the longest alias that
+matches", and that is wrong. `المدينة المنورة` is 15 characters against the mosque's 13, so
+longest-alias-first returns the city — the *less* specific place. String length only proxies for
+specificity until a landmark sits inside a city with a two-word name, which is the common shape in
+this dataset. Hierarchy depth is the real signal and is what FR-010 asks for. The unit test
+`test_the_deepest_matching_place_wins_over_its_own_ancestor` pins it.
 
 Ambiguity is real and must not be guessed. From `muslims.birth_place`: `Yemen/Makkah` (5 rows),
 `Makkah/Abyssinia` (4), `Makkah or Medinah` (1), `Abyssinia or Medina` (1), `Yeman/Hijaz` (2),
@@ -129,7 +136,9 @@ a rounding error. They stay NULL and surface in the editor queue.
 - *Fuzzy / Levenshtein matching* — rejected: it would resolve the ambiguous cases by silently
   picking one, which is exactly the failure mode being avoided, and it is unnecessary for a
   vocabulary whose variants are known and enumerable.
-- *First-match-wins* — rejected: resolves `"المسجد النبوي بالمدينة"` to the city.
+- *First-match-wins* — rejected: resolves `"المسجد النبوي بالمدينة المنورة"` to whichever alias the
+  index happened to list first.
+- *Longest-alias-first* — tried and rejected during implementation, see above.
 
 ---
 

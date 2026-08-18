@@ -140,15 +140,21 @@ Normalisation applied to **both** sides before comparison:
 4. Lowercase, and strip a leading `al-` / `Al-` / `as-` on Latin text.
 5. Collapse runs of whitespace to one space, trim.
 
-Selection: test every alias against the normalised source string and take the **longest** alias that
-matches. Ties are impossible because aliases are unique across the vocabulary — the seeder aborts if
-they are not.
+Selection: test every alias against the normalised source string, then take the hit on the
+**deepest** place in the hierarchy, using normalised alias length only to break ties.
+
+**Depth leads, not length.** An earlier draft ranked by alias length alone and was wrong:
+`"المسجد النبوي بالمدينة المنورة"` matches both the mosque (13 characters) and its parent city
+(`المدينة المنورة`, 15 characters), so longest-alias-first returns the *less* specific place. String
+length is a proxy for specificity that inverts exactly when a landmark sits inside a city with a
+two-word name — which is the common case here. Hierarchy depth is the real signal, and it is what
+FR-010 ("the most specific matching place") actually asks for.
 
 Worked examples, drawn from live rows:
 
 | Source text | Resolves to | Why |
 |---|---|---|
-| `المسجد النبوي بالمدينة` | `masjid-an-nabawi` | Longest match wins over `المدينة`. |
+| `المسجد النبوي بالمدينة المنورة` | `masjid-an-nabawi` | Deeper place wins over its own ancestor, even though the ancestor's alias is longer. |
 | `شِعب أبي طالب بمكة` | `makkah` | Diacritics stripped; `مكة` matched via the `بمكة` alias. |
 | `حصون بني قريظة جنوب المدينة` | `al-madinah` | Only `المدينة` matches. |
 | `Medinah` / `Medina` / `Madinah` | `al-madinah` | All three are registered aliases. |
