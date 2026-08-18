@@ -393,6 +393,10 @@ final class QuranController extends Controller
                         'nameEn' => $surahDto->nameEn,
                         'transliteration' => $surahDto->transliteration,
                         'revelationPlace' => $surahDto->revelationPlace,
+                        // The classification (مكية/مدنية) above; the place name
+                        // below. They answer different questions and are shown
+                        // together, never one instead of the other.
+                        'revelationPlaceName' => $surahDto->revelationPlaceName,
                         'revelationOrder' => $surahDto->revelationOrder,
                         'versesCount' => $surahDto->versesCount,
                         'bismillahPre' => $surahDto->bismillahPre,

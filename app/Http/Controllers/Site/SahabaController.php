@@ -116,14 +116,28 @@ final class SahabaController extends Controller
      */
     private function mapProfile(Muslim $muslim, string $locale): array
     {
-        $muslim->loadMissing('roles');
+        $muslim->loadMissing([
+            'roles',
+            // Named columns, and birth_place_id is already on the parent row.
+            'birthPlace:id,slug,latitude,longitude',
+            'birthPlace.translations' => fn ($relation) => $relation
+                ->select(['id', 'location_id', 'locale', 'name'])
+                ->whereIn('locale', array_unique([$locale, 'ar'])),
+        ]);
+
+        // The canonical place when the record resolved to one, otherwise the
+        // original recorded text. The stored value is English-only across all
+        // 6,677 populated rows, so on an Arabic page the place is the difference
+        // between "Medinah" and "المدينة المنورة".
+        $birthPlace = $muslim->birthPlace?->name($locale)
+            ?: ($muslim->getTranslation('birth_place', $locale) ?: null);
 
         return [
             'name' => $muslim->name($locale),
             'fullName' => $muslim->name($locale),
             'kunya' => $muslim->getTranslation('kunya', $locale) ?: null,
             'biography' => $muslim->getTranslation('bio', $locale) ?: null,
-            'birthPlace' => $muslim->getTranslation('birth_place', $locale) ?: null,
+            'birthPlace' => $birthPlace,
             'isFemale' => $muslim->gender?->value === 'female',
             'birthDateHijri' => $muslim->birth_date_hijri,
             'deathDateHijri' => $muslim->death_date_hijri,

@@ -7,6 +7,7 @@ namespace App\Domain\People\Models;
 use App\Domain\People\Enums\Gender;
 use App\Domain\People\ValueObjects\MuslimProfile;
 use App\Domain\Shared\Contracts\PersonReference;
+use App\Domain\Shared\Models\Location;
 use App\Domain\Shared\Support\ArabicNormalizer;
 use Database\Factories\MuslimFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -62,6 +63,7 @@ class Muslim extends Model
         'bio',
         'content',
         'birth_place',
+        'birth_place_id',
         'gender',
         'birth_year_hijri',
         'death_year_hijri',
@@ -133,6 +135,19 @@ class Muslim extends Model
     public function father(): BelongsTo
     {
         return $this->belongsTo(self::class, 'father_id');
+    }
+
+    /**
+     * The canonical birthplace.
+     *
+     * The `birth_place` JSON column is kept alongside this until nothing reads
+     * it. It is English-only across all 6,677 populated rows and carries the
+     * spelling drift this reference resolves — Medinah/Medina/Madinah are one
+     * place stored three ways.
+     */
+    public function birthPlace(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'birth_place_id');
     }
 
     public function mother(): BelongsTo

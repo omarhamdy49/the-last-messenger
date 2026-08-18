@@ -28,6 +28,13 @@ final readonly class SurahDTO implements JsonSerializable
         public ?string $description,
         public ?string $createdAt,
         public ?string $updatedAt,
+        // Localized name of the canonical revelation place, when the relation
+        // was eager-loaded. Nullable and last so existing positional callers are
+        // unaffected. This is NOT a replacement for $revelationPlace: that is the
+        // مكية/مدنية classification and stays authoritative.
+        public ?string $revelationPlaceName = null,
+        public ?float $revelationLatitude = null,
+        public ?float $revelationLongitude = null,
     ) {}
 
     /**
@@ -35,6 +42,9 @@ final readonly class SurahDTO implements JsonSerializable
      */
     public static function fromModel(Surah $surah, string $locale = 'ar'): self
     {
+        // Only when eager-loaded — never lazy-load here, this runs per row.
+        $place = $surah->relationLoaded('revelationLocation') ? $surah->revelationLocation : null;
+
         // Get description from SurahInfo if loaded
         $description = null;
         if ($surah->relationLoaded('info')) {
@@ -56,6 +66,9 @@ final readonly class SurahDTO implements JsonSerializable
             description: $description,
             createdAt: $surah->created_at?->toIso8601String(),
             updatedAt: $surah->updated_at?->toIso8601String(),
+            revelationPlaceName: $place?->name($locale),
+            revelationLatitude: $place?->latitude !== null ? (float) $place->latitude : null,
+            revelationLongitude: $place?->longitude !== null ? (float) $place->longitude : null,
         );
     }
 
@@ -95,6 +108,7 @@ final readonly class SurahDTO implements JsonSerializable
             'name_en' => $this->nameEn,
             'transliteration' => $this->transliteration,
             'revelation_place' => $this->revelationPlace,
+            'revelation_place_name' => $this->revelationPlaceName,
             'revelation_order' => $this->revelationOrder,
             'verses_count' => $this->versesCount,
             'bismillah_pre' => $this->bismillahPre,

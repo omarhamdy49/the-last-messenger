@@ -26,6 +26,15 @@ final readonly class GetSurahByNumberHandler
             throw SurahNotFoundException::withNumber($query->number);
         }
 
+        // The canonical revelation place: supplies a localized name and map pin
+        // beside the unchanged مكية/مدنية classification. Named columns only.
+        $surah->load([
+            'revelationLocation:id,slug,latitude,longitude',
+            'revelationLocation.translations' => fn ($relation) => $relation
+                ->select(['id', 'location_id', 'locale', 'name'])
+                ->whereIn('locale', array_unique([$query->locale, 'ar'])),
+        ]);
+
         if ($query->withInfo) {
             $surah->load('info');
         }

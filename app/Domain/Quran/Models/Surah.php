@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Models;
 
+use App\Domain\Shared\Models\Location;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -41,6 +43,7 @@ class Surah extends Model
      */
     protected $fillable = [
         'revelation_place',
+        'revelation_location_id',
         'revelation_order',
         'bismillah_pre',
         'name_ar',
@@ -68,6 +71,22 @@ class Surah extends Model
     public function verses(): HasMany
     {
         return $this->hasMany(Verse::class, 'surah_id')->orderBy('verse_number');
+    }
+
+    /**
+     * Where this surah was revealed, as a place with coordinates.
+     *
+     * ADDITIVE. `revelation_place` and the RevelationPlace enum are UNCHANGED
+     * and remain the single source of truth for the مكية/مدنية classification —
+     * that is a statement about the period of revelation (before or after the
+     * Hijra), not a coordinate. SurahRepository::getByRevelationPlace(), the
+     * admin filter, the cached counts, the exporter and the importer all still
+     * read it. This relation only adds a map pin and a localized place name
+     * beside it.
+     */
+    public function revelationLocation(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'revelation_location_id');
     }
 
     /**

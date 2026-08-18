@@ -34,6 +34,9 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
     private const SURAH_COLUMNS = [
         'id',
         'revelation_place',
+        // The foreign key must be in the parent select or the eager-loaded
+        // revelationLocation relation silently matches nothing (constitution II).
+        'revelation_location_id',
         'revelation_order',
         'bismillah_pre',
         'name_ar',

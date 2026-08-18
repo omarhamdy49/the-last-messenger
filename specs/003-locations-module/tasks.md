@@ -168,21 +168,25 @@ three render **المدينة المنورة** in Arabic.
 
 ### Tests for User Story 3
 
-- [ ] T048 [P] [US3] Feature test that the three Madinah spellings resolve to one location id and render identically, and that an ambiguous birthplace renders its original text unchanged, in `tests/Feature/People/MuslimBirthPlaceTest.php`
-- [ ] T049 [P] [US3] Feature test that all 114 surahs resolve to a location **and** that `revelation_place` is byte-identical before and after the backfill, in `tests/Feature/Quran/SurahRevelationLocationTest.php`
+- [X] T048 [P] [US3] Feature test that the three Madinah spellings resolve to one location id and render identically, and that an ambiguous birthplace renders its original text unchanged, in `tests/Feature/People/MuslimBirthPlaceTest.php`
+- [X] T049 [P] [US3] Feature test that all 114 surahs resolve to a location **and** that `revelation_place` is byte-identical before and after the backfill, in `tests/Feature/Quran/SurahRevelationLocationTest.php`
 
 ### Implementation for User Story 3
 
-- [ ] T050 [P] [US3] Add `birthPlace()` belongsTo on `birth_place_id` and add the column to `$fillable`, in `app/Domain/People/Models/Muslim.php`
-- [ ] T051 [P] [US3] Add `revelationLocation()` belongsTo on `revelation_location_id` and add the column to `$fillable`. **Do not touch `revelation_place`, `scopeMakki` or `scopeMadani`.** In `app/Domain/Quran/Models/Surah.php`
-- [ ] T052 [US3] Extend `BackfillLocationsCommand` with the companion pass — normalized exact match, ambiguous multi-place values left NULL — in `app/Console/Commands/BackfillLocationsCommand.php`
-- [ ] T053 [US3] Extend `BackfillLocationsCommand` with the surah pass — deterministic `makkah`→Makkah, `madinah`→Madinah, no alias matching — in `app/Console/Commands/BackfillLocationsCommand.php`
-- [ ] T054 [US3] Eager-load the birthplace with named columns on the profile and directory read paths, keeping `birth_place_id` in the parent select, in `app/Domain/People/Repositories/` and `app/Http/Controllers/Site/SahabaController.php`
-- [ ] T055 [P] [US3] Render the localized birthplace, falling back to the original recorded text when unresolved and omitting the section entirely when neither exists, in `resources/views/public/sahaba/show.blade.php`
-- [ ] T056 [P] [US3] Render the localized revelation place beside the unchanged مكية/مدنية badge on the surah page in `resources/views/public/quran/`
-- [ ] T057 [US3] Run `npm run build`
+- [X] T050 [P] [US3] Add `birthPlace()` belongsTo on `birth_place_id` and add the column to `$fillable`, in `app/Domain/People/Models/Muslim.php`
+- [X] T051 [P] [US3] Add `revelationLocation()` belongsTo on `revelation_location_id` and add the column to `$fillable`. **Do not touch `revelation_place`, `scopeMakki` or `scopeMadani`.** In `app/Domain/Quran/Models/Surah.php`
+- [X] T052 [US3] Extend `BackfillLocationsCommand` with the companion pass — normalized exact match, ambiguous multi-place values left NULL — in `app/Console/Commands/BackfillLocationsCommand.php`
+- [X] T053 [US3] Extend `BackfillLocationsCommand` with the surah pass — deterministic `makkah`→Makkah, `madinah`→Madinah, no alias matching — in `app/Console/Commands/BackfillLocationsCommand.php`
+- [X] T054 [US3] Eager-load the birthplace with named columns on the profile and directory read paths, keeping `birth_place_id` in the parent select, in `app/Domain/People/Repositories/` and `app/Http/Controllers/Site/SahabaController.php`
+- [X] T055 [P] [US3] Render the localized birthplace, falling back to the original recorded text when unresolved and omitting the section entirely when neither exists, in `resources/views/public/sahaba/show.blade.php`
+- [X] T056 [P] [US3] Render the localized revelation place beside the unchanged مكية/مدنية badge on the surah page in `resources/views/public/quran/`
+- [X] T057 [US3] Run `npm run build`
 
-**Checkpoint**: quickstart check 3 passes — zero unresolved across the three Madinah spellings, at least 1,419 resolved.
+**Checkpoint**: quickstart check 3 passes — zero unresolved across the three Madinah spellings, at least 1,419 resolved. **Measured: 1,419 exactly.**
+
+**Note on T052/T053**: both landed with US1 — the backfill command was written with all three passes (Seerah, companions, surahs) in one file rather than extended twice.
+
+**Correction found here**: `RevelationPlace`'s own docblock, and this feature's `research.md`, both name `Surah::scopeMakki` / `scopeMadani` as readers of the enum. **Those scopes do not exist.** The filtering lives in `SurahRepository::getByRevelationPlace()`, and the enum has **23** readers, not the 14 first claimed. `research.md` R-07 now records this.
 
 ---
 
