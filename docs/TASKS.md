@@ -1220,3 +1220,30 @@ costs a minute per run to do it.
 Note the `style` (Pint) job also fails, on 16 pre-existing files (2025 migrations,
 seeders, factories, `seerah` lang files). It is not in `deploy: needs:`, so it does
 not block. Left as-is; one `./vendor/bin/pint` run clears it.
+
+
+#### Phase 0-3 application code deployed, 18 Aug 2026 12:16
+
+Run #54 cleared both blocking gates and shipped release `20260818121558`.
+First deploy of the application changes — everything before this was infrastructure.
+
+Verified on production:
+
+| Check | Result |
+|---|---|
+| Shipped `deploy/` tree | carries the stage 65 guard (was stale by 6 files) |
+| Five new migrations | all `Ran` — batch 12 and 13 |
+| Services (mysql, redis, nginx, php-fpm) | all active |
+| Application error log | 0 ERROR/CRITICAL lines |
+| Public endpoints | 8/8 → 200 |
+| Admin portal | 302 to login (correct) |
+| `/api/v1/health` | 200 |
+| Memory available | 2.26 GB |
+
+The three unique indexes and the `restrict` foreign key applied without error, which
+also means production held no duplicate rows that would have blocked them — worth
+noting, because a unique index is exactly the migration that fails on live data after
+passing on a clean test database.
+
+`/hadith` remains the slow endpoint at 512 ms against 104-293 ms for everything else.
+Unchanged by this deploy; it is the first Phase 4 profiling target.
