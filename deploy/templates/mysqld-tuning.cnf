@@ -24,6 +24,13 @@ innodb_io_capacity_max  = 2000
 innodb_read_io_threads  = 4
 innodb_write_io_threads = 4
 
+# --- performance_schema ---
+# Auto-sizes off max_connections and costs ~150-250MB of RSS. Nothing on this box reads it
+# (no APM, no Percona toolkit) and the slow query log below covers diagnosis, so it is off
+# by default. Flip MYSQL_PERFORMANCE_SCHEMA=ON in config.env when you actually need to
+# profile, then re-run: sudo FORCE=1 ./provision.sh 55-mysql
+performance_schema      = ${MYSQL_PERFORMANCE_SCHEMA}
+
 # --- Memory caps (keep total RSS well under 4GB alongside PHP+Redis). ---
 tmp_table_size          = 32M
 max_heap_table_size     = 32M

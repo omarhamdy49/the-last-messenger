@@ -16,7 +16,8 @@ systemctl enable --now mysql >/dev/null 2>&1 || systemctl enable --now mysqld >/
 # Tuning config first so it's in effect after the restart below.
 export MYSQL_INNODB_BUFFER_POOL MYSQL_MAX_CONNECTIONS
 log "Writing InnoDB tuning..."
-render_template "${TEMPLATES_DIR}/mysqld-tuning.cnf" "/etc/mysql/mysql.conf.d/99-tlm.cnf"
+RENDER_MODE=0640 RENDER_OWNER=root:mysql \
+  render_template "${TEMPLATES_DIR}/mysqld-tuning.cnf" "/etc/mysql/mysql.conf.d/99-tlm.cnf"
 
 # --- Secure the root account (idempotent: works whether auth_socket or password). ---
 log "Securing MySQL root + applying baseline hardening..."

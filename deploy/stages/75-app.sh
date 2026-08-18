@@ -28,7 +28,10 @@ if [[ -f "${ENV_FILE}" ]] && [[ "${FORCE:-0}" != "1" ]]; then
 else
   export APP_KEY APP_DOMAIN TIMEZONE DB_NAME DB_USER DB_PASSWORD REDIS_PASSWORD QUEUE_CONNECTION
   log "Writing production .env..."
-  render_template "${TEMPLATES_DIR}/env.production" "${ENV_FILE}"
+  # php-fpm (www-data) must be able to read this, or a cold config cache is a site-wide
+  # outage — see the note in deploy/deploy/deploy.sh.
+  RENDER_MODE=0640 RENDER_OWNER="${DEPLOY_USER}:www-data" \
+    render_template "${TEMPLATES_DIR}/env.production" "${ENV_FILE}"
 fi
 chmod 640 "${ENV_FILE}"
 

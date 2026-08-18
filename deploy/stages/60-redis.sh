@@ -11,7 +11,9 @@ log "Writing Redis overrides..."
 # The Debian/Ubuntu package ships a single redis.conf; drop our overrides into a
 # conf.d dir and `include` it (last-wins) so package upgrades don't clobber them.
 mkdir -p /etc/redis/redis.conf.d
-render_template "${TEMPLATES_DIR}/redis-overrides.conf" "/etc/redis/redis.conf.d/tlm.conf"
+# Contains `requirepass`. root:redis 0640 — readable by the daemon, nobody else.
+RENDER_MODE=0640 RENDER_OWNER=root:redis \
+  render_template "${TEMPLATES_DIR}/redis-overrides.conf" "/etc/redis/redis.conf.d/tlm.conf"
 ensure_line "include /etc/redis/redis.conf.d/tlm.conf" /etc/redis/redis.conf
 
 systemctl enable redis-server >/dev/null 2>&1 || true

@@ -122,8 +122,25 @@ render_template() {
     if printenv "$v" >/dev/null 2>&1; then shellfmt+="\$${v} "; fi
   done
 
-  envsubst "${shellfmt}" < "$src" > "$dst"
-  ok "Rendered $(basename "$src") -> ${dst}"
+  # Render via a restricted-umask subshell, then install with an explicit mode.
+  #
+  # `> "$dst"` creates the file at 0666 & ~umask — 0644 under root's default. Several of
+  # these templates carry secrets: redis-overrides.conf holds `requirepass`, and with
+  # SESSION_DRIVER=redis that password forges admin sessions; mysqld-tuning.cnf and
+  # env.production are equally sensitive. World-readable was safe here only by accident,
+  # because the Debian redis package happens to pre-create /etc/redis with a restrictive
+  # mode — nothing in this script asserted it.
+  #
+  # Callers may set RENDER_MODE / RENDER_OWNER to override (75-app.sh needs
+  # 640 deploy_user:www-data so php-fpm can read .env).
+  local mode="${RENDER_MODE:-0640}" owner="${RENDER_OWNER:-}"
+  local tmp
+  tmp="$(mktemp)"
+  ( umask 077; envsubst "${shellfmt}" < "$src" > "$tmp" )
+  install -m "$mode" "$tmp" "$dst"
+  rm -f "$tmp"
+  [[ -n "$owner" ]] && chown "$owner" "$dst"
+  ok "Rendered $(basename "$src") -> ${dst} (mode ${mode}${owner:+, owner ${owner}})"
 }
 
 # Idempotently ensure a line is present in a file.
@@ -193,4 +210,21 @@ wait_apt_lock() {
 apt_quiet() {
   wait_apt_lock
   DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confold" "$@"
+}
+
+# Is this domain's site file already serving a WORKING TLS block?
+#
+# "Working" deliberately means both halves: a 443 listener AND an ssl_certificate
+# whose file is actually on disk. A block referencing a deleted cert cannot start
+# nginx, so preserving it would strand the box — in that case the caller should
+# rewrite it with the plaintext bootstrap block instead.
+#
+# Lives here rather than inline in stage 65 so it can be exercised by
+# deploy/lib/selftest-nginx-guard.sh without running a provision.
+tls_site_is_live() {
+  local site="$1" cert
+  [[ -f "${site}" ]] || return 1
+  grep -qE '^[[:space:]]*listen[[:space:]]+(\[::\]:)?443' "${site}" || return 1
+  cert="$(grep -m1 -E '^[[:space:]]*ssl_certificate[[:space:]]' "${site}" | awk '{print $2}' | tr -d ';')"
+  [[ -n "${cert}" && -f "${cert}" ]]
 }

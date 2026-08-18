@@ -137,6 +137,17 @@ gzip -dc "${REMOTE_DUMP}" | mysql --defaults-extra-file="${REMOTE_CNF}" \
 
 php artisan migrate --force --no-interaction
 php artisan optimize:clear
+
+# Rebuild the caches optimize:clear just dropped — deploy.sh does this and this script did
+# not, which left the box running with NO bootstrap/cache/config.php until the next code
+# deploy happened to recreate it. That matters because php-fpm (www-data) may not be able
+# to read shared/.env directly, in which case the config cache is the only thing standing
+# between a cold cache and a site-wide 500. Cheap to run, and removes the asymmetry.
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+php artisan event:cache
+
 sudo supervisorctl restart all
 php artisan up
 MAINTENANCE=0

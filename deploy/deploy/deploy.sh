@@ -61,10 +61,51 @@ fi
 
 log "Linking shared .env and storage..."
 ln -nfs "${SHARED_DIR}/.env" "${RELEASE}/.env"
+
+# Re-assert .env mode/group on EVERY deploy, not just at provision time.
+#
+# Stage 75 sets 640 deployer:www-data, but any hand-edit of shared/.env resets it — a
+# `>` redirect or an editor that writes-and-renames leaves it 600 deployer:deployer, and
+# nothing put it back. That is not cosmetic: php-fpm runs as www-data, so with mode 600
+# it cannot read .env AT ALL. The site keeps working only because config:cache below bakes
+# everything into bootstrap/cache/config.php — which means the moment that cache is
+# cleared (an admin clicking "Clear Config Cache", or optimize:clear from a script),
+# every request loses APP_KEY and the DB credentials and the site 500s until someone SSHes
+# in. Found live on 17 Aug 2026: mode was 600 and www-data could not read it.
+#
+# No sudo needed: deployer owns the file and is a member of www-data.
+if [[ -f "${SHARED_DIR}/.env" ]]; then
+  chgrp www-data "${SHARED_DIR}/.env" 2>/dev/null || true
+  chmod 640 "${SHARED_DIR}/.env"
+  log "  .env perms asserted: $(stat -c '%a %U:%G' "${SHARED_DIR}/.env")"
+fi
 rm -rf "${RELEASE}/storage"
 ln -nfs "${SHARED_DIR}/storage" "${RELEASE}/storage"
 
 cd "${RELEASE}"
+
+# .env drift check. Stage 75 writes shared/.env only if it does not already exist, so every
+# edit to templates/env.production since first provision has been a silent no-op on the
+# server. That is how the live CACHE_STORE sat at `file` while the template said `redis`,
+# and how DB_QUEUE_RETRY_AFTER went missing entirely — the latter meaning the queue
+# considered a 3600s sync job abandoned after 90s and released it mid-run.
+#
+# Warn only, never fail: a missing key must not block a deploy, but it must stop being
+# invisible.
+ENV_TEMPLATE="${RELEASE}/deploy/templates/env.production"
+if [[ -f "${ENV_TEMPLATE}" ]] && [[ -f "${SHARED_DIR}/.env" ]]; then
+  missing=""
+  while IFS= read -r key; do
+    grep -qE "^${key}=" "${SHARED_DIR}/.env" || missing="${missing} ${key}"
+  done < <(grep -oE '^[A-Z_][A-Z0-9_]*=' "${ENV_TEMPLATE}" | tr -d '=' | sort -u)
+
+  if [[ -n "${missing}" ]]; then
+    echo "WARNING: shared/.env is missing keys present in env.production:${missing}"
+    echo "         Add them by hand, or re-run: sudo FORCE=1 ./provision.sh 75-app"
+  else
+    log "  .env has every key from env.production"
+  fi
+fi
 
 log "composer install (production)..."
 # composer.lock is resolved for PHP 8.5 (config.platform.php=8.5.4), so the
