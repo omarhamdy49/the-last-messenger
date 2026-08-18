@@ -34,6 +34,7 @@
         'categories'      => 'content',
         'tags'            => 'content',
         'series'          => 'content',
+        'locations'       => 'content',
         'seerah-events'   => 'seerah',
         'seerah-event-types' => 'seerah',
         'seerah-milestones' => 'seerah',
@@ -148,7 +149,7 @@
             <div>
                 <button @click="toggleSubmenu('content')"
                         :class="openSubmenu === 'content' ||
-                                ['articles','categories','tags','series'].includes(activeMenu) ?
+                                ['articles','categories','locations','tags','series'].includes(activeMenu) ?
                             'bg-gradient-primary text-white shadow-lg' :
                             (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
                         class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
@@ -192,6 +193,16 @@
                        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
                         <i data-lucide="folder" class="w-4 h-4"></i>
                         <span>{{ __('admin.categories') }}</span>
+                    </a>
+
+                    <a href="{{ route('admin.locations.index') }}"
+                       @click="activeMenu = 'locations'"
+                       :class="isActive('locations') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="map-pin" class="w-4 h-4"></i>
+                        <span>{{ __('locations.title') }}</span>
                     </a>
 
                     <a href="{{ route('admin.tags.index') }}"

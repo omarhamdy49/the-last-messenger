@@ -136,24 +136,24 @@ parent; it appears nested in the list and is selectable wherever content records
 
 ### Tests for User Story 2
 
-- [ ] T033 [P] [US2] Feature test `admin.locations.index` and `show` — success, 401 unauthenticated, 403 unauthorized, 404 unknown id — in `tests/Feature/Admin/LocationControllerTest.php`
-- [ ] T034 [P] [US2] Feature test `store` and `update` — success, 422 on missing Arabic name, 422 on duplicate slug, 422 on an alias already owned by another place, 422 on a parent that would create a cycle, 401, 403 — in `tests/Feature/Admin/LocationControllerTest.php`
-- [ ] T035 [P] [US2] Feature test `destroy` — 302 when unreferenced, **422 with the reference count** when referenced, 404, 401, 403 — in `tests/Feature/Admin/LocationDeleteGuardTest.php`
-- [ ] T036 [P] [US2] Feature test that the index filter and sort parameters reject any value outside the allowlist rather than interpolating it, in `tests/Feature/Security/LocationFilterAllowlistTest.php`
+- [X] T033 [P] [US2] Feature test `admin.locations.index` and `show` — success, 401 unauthenticated, 403 unauthorized, 404 unknown id — in `tests/Feature/Admin/LocationControllerTest.php`
+- [X] T034 [P] [US2] Feature test `store` and `update` — success, 422 on missing Arabic name, 422 on duplicate slug, 422 on an alias already owned by another place, 422 on a parent that would create a cycle, 401, 403 — in `tests/Feature/Admin/LocationControllerTest.php`
+- [X] T035 [P] [US2] Feature test `destroy` — 302 when unreferenced, **422 with the reference count** when referenced, 404, 401, 403 — in `tests/Feature/Admin/LocationDeleteGuardTest.php`
+- [X] T036 [P] [US2] Feature test that the index filter and sort parameters reject any value outside the allowlist rather than interpolating it, in `tests/Feature/Security/LocationFilterAllowlistTest.php`
 
 ### Implementation for User Story 2
 
-- [ ] T037 [P] [US2] Create `StoreLocationRequest` with the rules in `contracts/admin-locations.md`, rejecting unexpected fields and requiring `translations.ar.name`, in `app/Http/Requests/Admin/StoreLocationRequest.php`
-- [ ] T038 [P] [US2] Create `UpdateLocationRequest` — same rules with `unique:locations,slug,{id}` and the self-parent check, in `app/Http/Requests/Admin/UpdateLocationRequest.php`
-- [ ] T039 [P] [US2] Create `LocationResource` exposing id, slug, localized name, type, parent name, coordinates and active flag, in `app/Http/Resources/LocationResource.php`
-- [ ] T040 [US2] Create `LocationController` modelled on `app/Http/Controllers/Admin/Seerah/SeerahEventTypeController.php` — authorize every action, one service call per action, content-negotiate with `$request->expectsJson()`, allowlist every sort and filter name, cap `per_page` as `(int)`. In `app/Http/Controllers/Admin/LocationController.php`
-- [ ] T041 [US2] Add `search`, `bulkDelete` and `toggleActive` actions to `app/Http/Controllers/Admin/LocationController.php`
-- [ ] T042 [US2] Create the admin route file registering `/search`, `/bulk-delete`, `/{id}/toggle-active` and `/create` **before** `Route::resource` so they do not resolve as `{id}`, in `routes/admin/shared.php`, and include it wherever `routes/admin/seerah.php` is included
-- [ ] T043 [P] [US2] Build the index view as a parent tree showing localized name, type, parent, whether coordinates exist and the reference count, in `resources/views/admin/locations/index.blade.php`
-- [ ] T044 [P] [US2] Build the create and edit views with five language tabs (Arabic first and selected by default), type, parent, coordinates and a repeatable aliases field, in `resources/views/admin/locations/create.blade.php` and `resources/views/admin/locations/edit.blade.php`
-- [ ] T045 [P] [US2] Build the show view in `resources/views/admin/locations/show.blade.php`
-- [ ] T046 [US2] Add the Locations entry to the admin sidebar in `resources/views/admin/layouts/sidebar.blade.php`, using the translation key not a hardcoded string
-- [ ] T047 [US2] Run `npm run build` — there is no Vite dev server in this setup and new Blade views silently break without it
+- [X] T037 [P] [US2] Create `StoreLocationRequest` with the rules in `contracts/admin-locations.md`, rejecting unexpected fields and requiring `translations.ar.name`, in `app/Http/Requests/Admin/StoreLocationRequest.php`
+- [X] T038 [P] [US2] Create `UpdateLocationRequest` — same rules with `unique:locations,slug,{id}` and the self-parent check, in `app/Http/Requests/Admin/UpdateLocationRequest.php`
+- [X] T039 [P] [US2] Create `LocationResource` exposing id, slug, localized name, type, parent name, coordinates and active flag, in `app/Http/Resources/LocationResource.php`
+- [X] T040 [US2] Create `LocationController` modelled on `app/Http/Controllers/Admin/Seerah/SeerahEventTypeController.php` — authorize every action, one service call per action, content-negotiate with `$request->expectsJson()`, allowlist every sort and filter name, cap `per_page` as `(int)`. In `app/Http/Controllers/Admin/LocationController.php`
+- [X] T041 [US2] Add `search`, `bulkDelete` and `toggleActive` actions to `app/Http/Controllers/Admin/LocationController.php`
+- [X] T042 [US2] Create the admin route file registering `/search`, `/bulk-delete`, `/{id}/toggle-active` and `/create` **before** `Route::resource` so they do not resolve as `{id}`, in `routes/admin/shared.php`, and include it wherever `routes/admin/seerah.php` is included
+- [X] T043 [P] [US2] Build the index view as a parent tree showing localized name, type, parent, whether coordinates exist and the reference count, in `resources/views/admin/locations/index.blade.php`
+- [X] T044 [P] [US2] Build the create and edit views with five language tabs (Arabic first and selected by default), type, parent, coordinates and a repeatable aliases field, in `resources/views/admin/locations/create.blade.php` and `resources/views/admin/locations/edit.blade.php`
+- [X] T045 [P] [US2] Build the show view in `resources/views/admin/locations/show.blade.php`
+- [X] T046 [US2] Add the Locations entry to the admin sidebar in `resources/views/admin/layouts/sidebar.blade.php`, using the translation key not a hardcoded string
+- [X] T047 [US2] Run `npm run build` — there is no Vite dev server in this setup and new Blade views silently break without it
 
 **Checkpoint**: an editor can complete the full place lifecycle in Arabic, and a referenced place cannot be deleted.
 

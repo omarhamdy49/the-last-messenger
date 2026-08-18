@@ -368,4 +368,5 @@ Route::prefix('su/portal/v1/admin')
         require __DIR__.'/admin/genealogy.php';
         require __DIR__.'/admin/media.php';
         require __DIR__.'/admin/content.php';
+        require __DIR__.'/admin/shared.php';
     });

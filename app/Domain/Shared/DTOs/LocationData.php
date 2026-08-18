@@ -53,7 +53,7 @@ final readonly class LocationData
             aliases: self::cleanAliases($validated['aliases'] ?? []),
             isActive: (bool) ($validated['is_active'] ?? true),
             displayOrder: (int) ($validated['display_order'] ?? 0),
-            translations: self::cleanTranslations($validated['translations'] ?? []),
+            translations: self::cleanTranslations($validated),
         );
     }
 
@@ -90,31 +90,32 @@ final readonly class LocationData
     }
 
     /**
-     * Reshape locale-major input into the field-major shape syncTranslations() expects.
+     * Pull the translatable fields out of the validated payload.
      *
-     * In:  ['ar' => ['name' => 'مكة'], 'en' => ['name' => 'Makkah']]
-     * Out: ['name' => ['ar' => 'مكة', 'en' => 'Makkah']]
+     * Admin forms post field-major (`name[ar]`, `description[ar]`), which is the
+     * shape HasLocalizedContent::syncTranslations() already expects, so there is
+     * nothing to reshape — only empties to drop.
      *
-     * @param  array<string, mixed>  $translations
-     * @return array<string, array<string, string|null>>
+     * @param  array<string, mixed>  $validated
+     * @return array<string, array<string, string>>
      */
-    public static function cleanTranslations(array $translations): array
+    public static function cleanTranslations(array $validated): array
     {
         $byField = [];
 
-        foreach ($translations as $locale => $fields) {
-            if (! is_array($fields)) {
+        foreach (['name', 'description'] as $field) {
+            $values = $validated[$field] ?? null;
+
+            if (! is_array($values)) {
                 continue;
             }
 
-            foreach (['name', 'description'] as $field) {
-                $value = $fields[$field] ?? null;
-
+            foreach ($values as $locale => $value) {
                 if (! is_string($value) || trim($value) === '') {
                     continue;
                 }
 
-                $byField[$field][$locale] = trim($value);
+                $byField[$field][(string) $locale] = trim($value);
             }
         }
 
