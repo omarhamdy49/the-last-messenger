@@ -1018,3 +1018,14 @@ ray($variable);
 **Laravel Version:** 13.0
 **PHP Version:** 8.5
 - localize all view make it in arabic by default
+
+## Active Technologies
+
+- PHP 8.5, Laravel 13, MySQL 8 (InnoDB, utf8mb4). No new package added by in-flight features.
+
+## Recent Changes
+
+- `003-locations-module`: shared `locations` + `location_translations` tables in
+  `app/Domain/Shared/`, with additive nullable FKs on `seerah_events`, `muslims` and
+  `quran_surahs`. No existing place column is dropped. See
+  `specs/003-locations-module/plan.md`.
