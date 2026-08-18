@@ -19,6 +19,8 @@ use App\Domain\Shared\Repositories\ContentVersionRepository;
 use App\Domain\Shared\Repositories\ContentVersionRepositoryInterface;
 use App\Domain\Shared\Repositories\ImportRepository;
 use App\Domain\Shared\Repositories\ImportRepositoryInterface;
+use App\Domain\Shared\Repositories\LocationRepository;
+use App\Domain\Shared\Repositories\LocationRepositoryInterface;
 use App\Domain\Shared\Repositories\SavedFilterRepository;
 use App\Domain\Shared\Repositories\SavedFilterRepositoryInterface;
 use App\Domain\Shared\Repositories\SchedulerRepository;
@@ -31,6 +33,7 @@ use App\Domain\Shared\Repositories\UserInteractionRepository;
 use App\Domain\Shared\Repositories\UserInteractionRepositoryInterface;
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Domain\Shared\Services\BulkOperationService;
+use App\Domain\Shared\Services\LocationUsageRegistry;
 use App\Domain\Shared\Services\PublicVisibilityRegistry;
 use Illuminate\Support\ServiceProvider;
 
@@ -43,6 +46,24 @@ class SharedServiceProvider extends ServiceProvider
             fn ($app) => new PublicVisibilityRegistry(
                 $app->tagged(PublicVisibilityProviderInterface::class)
             )
+        );
+
+        // Which tables point at `locations`. Registered here rather than as
+        // relations on the Location model, because Shared is a leaf and may not
+        // import Domain\Seerah, Domain\People or Domain\Quran (constitution IV).
+        // Only the table and column names cross the boundary, never a class.
+        $this->app->singleton(
+            LocationUsageRegistry::class,
+            fn (): LocationUsageRegistry => new LocationUsageRegistry([
+                ['table' => 'seerah_events', 'column' => 'location_id', 'label' => 'seerah_events'],
+                ['table' => 'muslims', 'column' => 'birth_place_id', 'label' => 'muslims'],
+                ['table' => 'quran_surahs', 'column' => 'revelation_location_id', 'label' => 'quran_surahs'],
+            ])
+        );
+
+        $this->app->bind(
+            LocationRepositoryInterface::class,
+            LocationRepository::class
         );
 
         $this->app->bind(

@@ -10,6 +10,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.5",
+        "cweagans/composer-patches": "^1.7",
         "ezyang/htmlpurifier": "^4.19",
         "intervention/image": "^4.2",
         "laravel/framework": "^13.0",
@@ -94,6 +95,12 @@
     "extra": {
         "laravel": {
             "dont-discover": []
+        },
+        "composer-exit-on-patch-failure": true,
+        "patches": {
+            "laravel/socialite": {
+                "CVE-2026-73683: Facebook OIDC nonce replay \u2014 backport of laravel/socialite PR #789 (commit caf714f), no released fix yet": "patches/laravel-socialite-CVE-2026-73683.patch"
+            }
         }
     },
     "config": {
@@ -102,7 +109,8 @@
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
-            "php-http/discovery": true
+            "php-http/discovery": true,
+            "cweagans/composer-patches": true
         },
         "platform": {
             "php": "8.5.4"

@@ -38,9 +38,9 @@ reader's language), the admin select in **US4** (same outcome — an editor assi
 **Purpose**: the pieces every later phase imports. No project initialization — this is an existing
 application and **no new package is added**.
 
-- [ ] T001 [P] Create `LocationType` enum with cases `city`, `region`, `country`, `mountain`, `valley`, `mosque`, `well`, `battlefield`, `landmark` plus `values()` and `label()` (Arabic) in `app/Domain/Shared/Enums/LocationType.php`
-- [ ] T002 [P] Create Arabic translation file with every key the admin screens and validation messages need in `resources/lang/ar/locations.php`
-- [ ] T003 [P] Create the four sibling translation files, keys identical to Arabic, in `resources/lang/en/locations.php`, `resources/lang/fr/locations.php`, `resources/lang/tr/locations.php`, `resources/lang/ur/locations.php`
+- [X] T001 [P] Create `LocationType` enum with cases `city`, `region`, `country`, `mountain`, `valley`, `mosque`, `well`, `battlefield`, `landmark` plus `values()` and `label()` (Arabic) in `app/Domain/Shared/Enums/LocationType.php`
+- [X] T002 [P] Create Arabic translation file with every key the admin screens and validation messages need in `resources/lang/ar/locations.php`
+- [X] T003 [P] Create the four sibling translation files, keys identical to Arabic, in `resources/lang/en/locations.php`, `resources/lang/fr/locations.php`, `resources/lang/tr/locations.php`, `resources/lang/ur/locations.php`
 
 ---
 
@@ -51,33 +51,33 @@ phase is complete.**
 
 ### Schema
 
-- [ ] T004 Create the `locations` table migration — `slug` unique, `type` varchar(20), `parent_id` self-FK `ON DELETE SET NULL`, `depth` tinyint default 0, `latitude`/`longitude` `decimal(10,7)` nullable, `aliases` json nullable, `is_active`, `display_order`, timestamps. Ship **only** the `slug` unique index and the FK index — no `(is_active, type)` composite, per constitution II. Driver-guarded and reversible, in `database/migrations/2026_08_18_000001_create_locations_table.php`
-- [ ] T005 Create the `location_translations` table migration mirroring `category_translations` — `location_id` FK `ON DELETE CASCADE`, `locale`, `name`, `description`, `is_ready`, unique `(location_id, locale)`, index `(locale, name)`, in `database/migrations/2026_08_18_000002_create_location_translations_table.php`
-- [ ] T006 Create one migration adding all three nullable `ON DELETE SET NULL` foreign keys — `seerah_events.location_id` after `location`, `muslims.birth_place_id` after `birth_place`, `quran_surahs.revelation_location_id` after `revelation_place`. **Drop or alter nothing.** `down()` removes exactly these three columns. In `database/migrations/2026_08_18_000003_add_location_foreign_keys.php`
+- [X] T004 Create the `locations` table migration — `slug` unique, `type` varchar(20), `parent_id` self-FK `ON DELETE SET NULL`, `depth` tinyint default 0, `latitude`/`longitude` `decimal(10,7)` nullable, `aliases` json nullable, `is_active`, `display_order`, timestamps. Ship **only** the `slug` unique index and the FK index — no `(is_active, type)` composite, per constitution II. Driver-guarded and reversible, in `database/migrations/2026_08_18_000001_create_locations_table.php`
+- [X] T005 Create the `location_translations` table migration mirroring `category_translations` — `location_id` FK `ON DELETE CASCADE`, `locale`, `name`, `description`, `is_ready`, unique `(location_id, locale)`, index `(locale, name)`, in `database/migrations/2026_08_18_000002_create_location_translations_table.php`
+- [X] T006 Create one migration adding all three nullable `ON DELETE SET NULL` foreign keys — `seerah_events.location_id` after `location`, `muslims.birth_place_id` after `birth_place`, `quran_surahs.revelation_location_id` after `revelation_place`. **Drop or alter nothing.** `down()` removes exactly these three columns. In `database/migrations/2026_08_18_000003_add_location_foreign_keys.php`
 
 ### Models
 
-- [ ] T007 [P] Create `LocationTranslation` model — `$fillable`, `is_ready` boolean cast, `location()` belongsTo, `scopeByLocale`, `scopeReady`; copy the shape of `app/Domain/Blog/Models/CategoryTranslation.php`, in `app/Domain/Shared/Models/LocationTranslation.php`
-- [ ] T008 Create `Location` model using `HasLocalizedContent` — explicit `$fillable`, `LocationType` cast, `aliases` array cast, `getTranslationModelClass()`, `getTranslatableFields()` returning `['name','description']`, `parent()`/`children()` self-relations, `scopeActive`, `scopeRoots`. **Declare no relation to any domain model** — `Shared` is a leaf (constitution IV). In `app/Domain/Shared/Models/Location.php`
-- [ ] T009 Add the saving hook to `Location` that recomputes `depth` from the parent chain with a hop limit, and **rejects a cycle** including `parent_id === id`, throwing a domain exception. Mirror `Category::computeDepth()`. In `app/Domain/Shared/Models/Location.php`
+- [X] T007 [P] Create `LocationTranslation` model — `$fillable`, `is_ready` boolean cast, `location()` belongsTo, `scopeByLocale`, `scopeReady`; copy the shape of `app/Domain/Blog/Models/CategoryTranslation.php`, in `app/Domain/Shared/Models/LocationTranslation.php`
+- [X] T008 Create `Location` model using `HasLocalizedContent` — explicit `$fillable`, `LocationType` cast, `aliases` array cast, `getTranslationModelClass()`, `getTranslatableFields()` returning `['name','description']`, `parent()`/`children()` self-relations, `scopeActive`, `scopeRoots`. **Declare no relation to any domain model** — `Shared` is a leaf (constitution IV). In `app/Domain/Shared/Models/Location.php`
+- [X] T009 Add the saving hook to `Location` that recomputes `depth` from the parent chain with a hop limit, and **rejects a cycle** including `parent_id === id`, throwing a domain exception. Mirror `Category::computeDepth()`. In `app/Domain/Shared/Models/Location.php`
 
 ### Typed boundaries
 
-- [ ] T010 [P] Create `final readonly` DTOs `CreateLocationData` and `UpdateLocationData` with named factories, carrying slug, type, parent, coordinates, aliases, flags and the per-locale translations, in `app/Domain/Shared/DTOs/CreateLocationData.php` and `app/Domain/Shared/DTOs/UpdateLocationData.php`
+- [X] T010 [P] Create `final readonly` DTOs `CreateLocationData` and `UpdateLocationData` with named factories, carrying slug, type, parent, coordinates, aliases, flags and the per-locale translations, in `app/Domain/Shared/DTOs/CreateLocationData.php` and `app/Domain/Shared/DTOs/UpdateLocationData.php`
 
 ### Data access and services
 
-- [ ] T011 Create `LocationRepositoryInterface` declaring the read and write methods the service needs, in `app/Domain/Shared/Repositories/LocationRepositoryInterface.php`
-- [ ] T012 Implement `LocationRepository` extending `BaseRepository` — explicit `select()` on every list query, `with('translations:id,location_id,locale,name')` on reads, `DB::transaction()` **inside** the repository wrapping a location plus its translation rows, `clearCache()` calling `parent::clearCache()`. In `app/Domain/Shared/Repositories/LocationRepository.php`
-- [ ] T013 [P] Create `LocationUsageRegistry` holding `[table, column]` pairs with `register()` and `countReferences(int $locationId): array` returning a per-table breakdown via the query builder. **Names no domain model** — see `research.md` R-06. In `app/Domain/Shared/Services/LocationUsageRegistry.php`
-- [ ] T014 Create `LocationService` — CRUD orchestration against the interface, alias-conflict rejection, and a `delete()` that asks `LocationUsageRegistry` first and refuses with the reference breakdown, in `app/Domain/Shared/Services/LocationService.php`
-- [ ] T015 Bind `LocationRepositoryInterface` → `LocationRepository` and register `LocationUsageRegistry` as a singleton pre-loaded with the three `[table, column]` pairs, in `app/Providers/SharedServiceProvider.php`
+- [X] T011 Create `LocationRepositoryInterface` declaring the read and write methods the service needs, in `app/Domain/Shared/Repositories/LocationRepositoryInterface.php`
+- [X] T012 Implement `LocationRepository` extending `BaseRepository` — explicit `select()` on every list query, `with('translations:id,location_id,locale,name')` on reads, `DB::transaction()` **inside** the repository wrapping a location plus its translation rows, `clearCache()` calling `parent::clearCache()`. In `app/Domain/Shared/Repositories/LocationRepository.php`
+- [X] T013 [P] Create `LocationUsageRegistry` holding `[table, column]` pairs with `register()` and `countReferences(int $locationId): array` returning a per-table breakdown via the query builder. **Names no domain model** — see `research.md` R-06. In `app/Domain/Shared/Services/LocationUsageRegistry.php`
+- [X] T014 Create `LocationService` — CRUD orchestration against the interface, alias-conflict rejection, and a `delete()` that asks `LocationUsageRegistry` first and refuses with the reference breakdown, in `app/Domain/Shared/Services/LocationService.php`
+- [X] T015 Bind `LocationRepositoryInterface` → `LocationRepository` and register `LocationUsageRegistry` as a singleton pre-loaded with the three `[table, column]` pairs, in `app/Providers/SharedServiceProvider.php`
 
 ### Foundational tests
 
-- [ ] T016 [P] Unit test the hierarchy rules — depth derived correctly at each level, self-parent rejected, a 2-node cycle rejected, a 3-node cycle rejected — in `tests/Unit/Domain/Shared/LocationHierarchyTest.php`
-- [ ] T017 [P] Feature test the schema against MySQL — self-referencing FK nulls the child on parent delete, translations cascade, `aliases` JSON round-trips Arabic unchanged, `(location_id, locale)` uniqueness is enforced — in `tests/Feature/Locations/LocationSchemaTest.php`
-- [ ] T018 [P] Feature test that `LocationUsageRegistry` counts references across all three registered tables and returns zero for an unreferenced location, in `tests/Feature/Locations/LocationUsageRegistryTest.php`
+- [X] T016 [P] Unit test the hierarchy rules — depth derived correctly at each level, self-parent rejected, a 2-node cycle rejected, a 3-node cycle rejected — in `tests/Unit/Domain/Shared/LocationHierarchyTest.php`
+- [X] T017 [P] Feature test the schema against MySQL — self-referencing FK nulls the child on parent delete, translations cascade, `aliases` JSON round-trips Arabic unchanged, `(location_id, locale)` uniqueness is enforced — in `tests/Feature/Locations/LocationSchemaTest.php`
+- [X] T018 [P] Feature test that `LocationUsageRegistry` counts references across all three registered tables and returns zero for an unreferenced location, in `tests/Feature/Locations/LocationUsageRegistryTest.php`
 
 **Checkpoint**: `php artisan migrate` runs and rolls back cleanly, `composer deptrac` passes with **no new baseline entry**, and the three foundational tests are green. User stories can now begin.
 

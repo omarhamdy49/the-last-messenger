@@ -1,0 +1,14 @@
+# Snyk policy file — https://docs.snyk.io/snyk-cli/test-for-vulnerabilities/the-.snyk-file
+version: v1.25.0
+ignore:
+  SNYK-PHP-LARAVELSOCIALITE-18857660:
+    - '*':
+        reason: >-
+          Remediated by backporting the official upstream fix (laravel/socialite
+          PR #789, commit caf714f) via composer-patches
+          (patches/laravel-socialite-CVE-2026-73683.patch), which adds Facebook
+          OIDC id_token nonce validation. No tagged release carries the fix yet.
+          The app also never calls the vulnerable userFromToken()/OIDC path
+          (SocialAuthController uses the redirect flow). Re-evaluate when a patched
+          release ships, then drop the patch and this ignore.
+        expires: 2026-11-16T00:00:00.000Z
