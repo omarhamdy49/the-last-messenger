@@ -228,28 +228,36 @@ and which resolves to المدينة المنورة is returned.
 
 ### Tests for User Story 5
 
-- [ ] T069 [P] [US5] Feature test that searching a place name returns content resolved to that place even when the content's own text words it differently, and that alias terms work, in `tests/Feature/Search/LocationSearchResolutionTest.php`
+- [X] T069 [P] [US5] Feature test that searching a place name returns content resolved to that place even when the content's own text words it differently, and that alias terms work, in `tests/Feature/Search/LocationSearchResolutionTest.php`
 
 ### Implementation for User Story 5
 
-- [ ] T070 [US5] Add place resolution to the Seerah search path so a place term also matches on `location_id`, keeping the existing `location` prose match — `SearchModule::SEERAH::searchableFields()` is unchanged — in `app/Domain/Shared/Enums/SearchModule.php` and the search query builder
-- [ ] T071 [US5] Add a place filter to the admin event index, allowlisted, in `app/Domain/Seerah/Repositories/SeerahEventRepository.php`
-- [ ] T072 [US5] Verify with `EXPLAIN` that the place filter uses the foreign-key index, and **only then** add any further index — constitution II forbids shipping one before that
+- [X] T070 [US5] Add place resolution to the Seerah search path so a place term also matches on `location_id`, keeping the existing `location` prose match — `SearchModule::SEERAH::searchableFields()` is unchanged — in `app/Domain/Shared/Enums/SearchModule.php` and the search query builder
+- [X] T071 [US5] Add a place filter to the admin event index, allowlisted, in `app/Domain/Seerah/Repositories/SeerahEventRepository.php`
+- [X] T072 [US5] Verify with `EXPLAIN` that the place filter uses the foreign-key index, and **only then** add any further index — constitution II forbids shipping one before that
 
 **Checkpoint**: all five stories complete.
+
+**T072 EXPLAIN result** — all three place-driven queries already use the foreign-key index, so **no additional index ships**:
+
+```
+place filter on seerah_events    type=ref  key=seerah_events_location_id_foreign   rows=48
+unmapped queue on seerah_events  type=ref  key=seerah_events_location_id_foreign   rows=373
+unmapped queue on muslims        type=ref  key=muslims_birth_place_id_foreign      rows=1174
+```
 
 ---
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T073 [P] Add the Locations screens to `tests/Feature/NoNPlusOneQueriesTest.php`, and assert the Seerah timeline and companion directory query counts are **unchanged** from the pre-feature baseline (SC-009)
-- [ ] T074 [P] Verify every key in `resources/lang/ar/locations.php` exists in the other four files and that no user-visible string is hardcoded (constitution V)
-- [ ] T075 [P] Audit every new Blade view for physical `left-`/`right-`/`pl-`/`pr-` layout classes and replace with logical properties; verify each screen in Arabic RTL and in both themes
-- [ ] T076 Run `composer deptrac` and confirm it passes **with no new baseline entry** — a new entry means `Shared` acquired a domain import and `research.md` R-06 was violated
-- [ ] T077 Run `./vendor/bin/pint` and `php artisan test`; both must be green
-- [ ] T078 Walk `quickstart.md` end to end on a fresh database, recording actual numbers against SC-001 through SC-009 — report what was run, not what was assumed (constitution X)
-- [ ] T079 Verify the migration rolls back by explicit migration name and returns the schema to its exact prior state; **do not use `--step=N`** (constitution VIII)
-- [ ] T080 Update `docs/LOCATIONS-MODULE-DESIGN-2026-08-18.md` with any decision that changed during implementation, so the design document does not drift from the code
+- [X] T073 [P] Add the Locations screens to `tests/Feature/NoNPlusOneQueriesTest.php`, and assert the Seerah timeline and companion directory query counts are **unchanged** from the pre-feature baseline (SC-009)
+- [X] T074 [P] Verify every key in `resources/lang/ar/locations.php` exists in the other four files and that no user-visible string is hardcoded (constitution V)
+- [X] T075 [P] Audit every new Blade view for physical `left-`/`right-`/`pl-`/`pr-` layout classes and replace with logical properties; verify each screen in Arabic RTL and in both themes
+- [X] T076 Run `composer deptrac` and confirm it passes **with no new baseline entry** — a new entry means `Shared` acquired a domain import and `research.md` R-06 was violated
+- [X] T077 Run `./vendor/bin/pint` and `php artisan test`; both must be green
+- [X] T078 Walk `quickstart.md` end to end on a fresh database, recording actual numbers against SC-001 through SC-009 — report what was run, not what was assumed (constitution X)
+- [X] T079 Verify the migration rolls back by explicit migration name and returns the schema to its exact prior state; **do not use `--step=N`** (constitution VIII)
+- [X] T080 Update `docs/LOCATIONS-MODULE-DESIGN-2026-08-18.md` with any decision that changed during implementation, so the design document does not drift from the code
 
 ---
 

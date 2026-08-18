@@ -10,6 +10,7 @@ use App\Domain\Shared\Enums\FilterType;
 use App\Domain\Shared\Enums\SearchModule;
 use App\Domain\Shared\Enums\SortDirection;
 use App\Domain\Shared\Helpers\FullTextSearchHelper;
+use App\Domain\Shared\Repositories\LocationRepositoryInterface;
 use App\Support\Utilities\TextSanitizer;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -24,6 +25,10 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class SearchQueryBuilder
 {
+    public function __construct(
+        private readonly LocationRepositoryInterface $locations,
+    ) {}
+
     /**
      * The only sort values the search pipeline accepts, mapped to real columns.
      *
@@ -83,14 +88,14 @@ class SearchQueryBuilder
         $groups = $module->fullTextGroups();
 
         if ($groups === []) {
-            $this->applyBasicSearch($query, $fields, $searchTerm);
+            $this->applyBasicSearch($query, $fields, $searchTerm, $module);
 
             return;
         }
 
         $likeOnly = $module->likeOnlyFields();
 
-        $query->where(function (Builder $outer) use ($groups, $likeOnly, $searchTerm): void {
+        $query->where(function (Builder $outer) use ($groups, $likeOnly, $searchTerm, $module): void {
             foreach ($groups as $group) {
                 $columns = $group['columns'];
 
@@ -113,7 +118,44 @@ class SearchQueryBuilder
             foreach ($likeOnly as $field) {
                 $this->applyLikeToField($outer, $field, $searchTerm, boolean: 'or');
             }
+
+            $this->applyPlaceResolution($outer, $module, $searchTerm);
         });
+    }
+
+    /**
+     * Also match content by the canonical place it resolves to.
+     *
+     * Searching "المدينة" should return the event whose own text reads
+     * "حصون بني قريظة جنوب المدينة" — the existing LIKE already catches that one,
+     * because the term happens to appear. But it should equally return an event
+     * whose text says only "أُحُد", since Uhud sits inside Madinah, and no LIKE
+     * over the prose can know that. The place reference is what carries it.
+     *
+     * Additive: the prose LIKE above is untouched, so nothing that matched
+     * before stops matching.
+     */
+    private function applyPlaceResolution(Builder $outer, SearchModule $module, string $searchTerm): void
+    {
+        $column = match ($module) {
+            SearchModule::SEERAH => 'location_id',
+            SearchModule::SAHABA => 'birth_place_id',
+            default => null,
+        };
+
+        if ($column === null || trim($searchTerm) === '') {
+            return;
+        }
+
+        // Bounded to a ~55-row cached vocabulary, so this is one extra subquery
+        // regardless of how many places match.
+        $placeIds = $this->locations->search($searchTerm, 25)->modelKeys();
+
+        if ($placeIds === []) {
+            return;
+        }
+
+        $outer->orWhereIn($column, $placeIds);
     }
 
     /**
@@ -214,11 +256,15 @@ class SearchQueryBuilder
      *
      * @param  array<string>  $fields
      */
-    private function applyBasicSearch(Builder $query, array $fields, string $searchTerm): void
+    private function applyBasicSearch(Builder $query, array $fields, string $searchTerm, ?SearchModule $module = null): void
     {
-        $query->where(function (Builder $q) use ($fields, $searchTerm) {
+        $query->where(function (Builder $q) use ($fields, $searchTerm, $module) {
             foreach ($fields as $field) {
                 $this->applyLikeToField($q, $field, $searchTerm, boolean: 'or');
+            }
+
+            if ($module !== null) {
+                $this->applyPlaceResolution($q, $module, $searchTerm);
             }
         });
     }

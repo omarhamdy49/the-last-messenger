@@ -1,7 +1,7 @@
 # Locations Module — Design
 
 **Date:** 2026-08-18
-**Status:** Approved design, not yet implemented
+**Status:** Implemented on branch `003-locations-module`. See §9 for what changed during the build.
 **Scope:** Lookup + map data. No public `/locations` routes, no place detail pages.
 
 ---
@@ -286,3 +286,88 @@ One runnable check per non-trivial piece:
 - **Two ways to read a place** (`location` prose vs `location_id`) during phases
   1–3. Bounded: the note is display text, the FK is the queryable value, and
   nothing derives one from the other at runtime.
+
+---
+
+## 9. What changed during implementation
+
+The design above is left as written. Seven things turned out differently once it
+met the code; each is recorded here so the document does not drift from what
+shipped. Specs, plan and tests carry the same corrections.
+
+### 9.1 Resolution ranks by hierarchy depth, not alias length
+
+§4.2 said "longest-alias-first". **That is wrong.** `المدينة المنورة` is 15
+characters against the Prophet's Mosque's `المسجد النبوي` at 13, so ranking by
+string length returns the *less* specific place. Length proxies for specificity
+only until a landmark sits inside a city with a two-word name — the common shape
+in this dataset. The resolver ranks by hierarchy depth and uses alias length only
+to break ties. Pinned by
+`tests/Unit/Domain/Shared/LocationResolverTest::test_the_deepest_matching_place_wins_over_its_own_ancestor`.
+
+### 9.2 A third matching rule: alias subsumption
+
+Not anticipated. When a lower-ranked hit's alias sits *inside* the matched alias
+— `منى` inside al-Aqabah's own registered name `العقبة بمنى` — it is not a second
+place being named. Without this rule three events reported false ambiguity.
+
+### 9.3 The Seerah relation is `place()`, not `location()`
+
+`seerah_events.location` is an existing string column, so an Eloquent relation
+named `location` is shadowed by the attribute and never reached — `$event->location`
+returns the prose. Renaming the relation is one word; renaming the column would
+have churned ~30 call sites for nothing. The column and the foreign key keep the
+names in §3.2.
+
+### 9.4 One `LocationData` DTO, not a Create/Update pair
+
+The create and update payloads are field-for-field identical; the only difference
+is the `unique:locations,slug,{id}` rule, which belongs to the FormRequest. A
+second class with no differing field is the speculative abstraction constitution
+IX forbids.
+
+### 9.5 Reference counting goes through a registry, not relations
+
+`Shared` is a leaf module: it imports no domain module. So `Location` cannot
+declare `hasMany(SeerahEvent)` for the delete guard — that would fail `deptrac`.
+`LocationUsageRegistry` holds `[table, column]` pairs registered by each
+consumer's service provider and counts through the query builder, keeping the
+dependency arrow pointing inward.
+
+### 9.6 The `zoom` column was dropped before it shipped
+
+The existing OSM embed computes a bounding box (`lat ± 0.04`), not a zoom level,
+so the column would have shipped with no reader.
+
+### 9.7 `RevelationPlace::scopeMakki`/`scopeMadani` do not exist
+
+The enum's **own docblock** claims `Surah::scopeMakki` and `scopeMadani` rely on
+it, and §3.4 above repeated that claim. Verified by grep: those scopes are not
+defined anywhere. The filtering lives in `SurahRepository::getByRevelationPlace()`.
+The enum has **23** readers, not the 14 first stated — more than claimed, not
+fewer, so nothing in the decision changes.
+
+---
+
+## 10. Measured outcome
+
+Reproduced end to end on a full rollback and re-apply:
+
+| Criterion | Target | Actual |
+|---|---|---|
+| Seerah event pages that can render a map | ≥ 180 | **2 → 206** |
+| Companions resolved to a place | ≥ 95% | **6,663 / 6,677 = 99.8%** |
+| Rows collapsed onto one Madinah | ≥ 1,419 | **1,419** |
+| Surahs carrying a place | 114 | **114 / 114** |
+| Canonical places seeded | ~55 | **59**, every one with coordinates |
+| Original place text lost | 0 | **0** — 279 / 6,677 / 114 all intact |
+
+**88 rows are deliberately left unresolved**: 39 ambiguous + 35 no-match on
+Seerah, 14 ambiguous on companions. These are not failures — FR-011 requires text
+that names two places (`Makkah or Medinah`, `من مكة إلى المدينة`) or no place at
+all (`المنطقة المحايدة بين الجيشين`) to be left for an editor rather than
+guessed. They surface in the admin `?unmapped=1` queue.
+
+Gates at completion: **1,077 tests passing**, `pint` clean, `deptrac` 0 violations
+with no new baseline entry, migrations reversible with every original column
+intact after rollback.

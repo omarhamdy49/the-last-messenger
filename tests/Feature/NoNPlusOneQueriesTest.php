@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Domain\Quran\Models\Surah;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Models\SeerahEventType;
+use App\Domain\Shared\Models\Location;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -102,5 +103,77 @@ class NoNPlusOneQueriesTest extends TestCase
             $queryCount,
             "Categories index uses too many queries: {$queryCount}. Check for N+1."
         );
+    }
+
+    public function test_the_admin_locations_index_does_not_cause_n_plus_one(): void
+    {
+        // A tree of 20 places, each with names in two locales and a parent —
+        // exactly the shape that produces one query per row if the eager loads
+        // or the parent select are wrong.
+        $root = Location::factory()->withNames(['ar' => 'الحجاز', 'en' => 'Hijaz'])->create(['slug' => 'root']);
+
+        for ($i = 1; $i <= 20; $i++) {
+            Location::factory()
+                ->withNames(['ar' => "مكان {$i}", 'en' => "Place {$i}"])
+                ->create(['slug' => "place-{$i}", 'parent_id' => $root->id]);
+        }
+
+        $admin = $this->createAdminUser();
+        $this->actingAs($admin);
+
+        $queryCount = 0;
+        DB::listen(function () use (&$queryCount): void {
+            $queryCount++;
+        });
+
+        $this->get(route('admin.locations.index'))->assertOk();
+
+        // Constant regardless of row count: pagination count, the page itself,
+        // the translations eager load, the parents eager load, plus the session
+        // and permission reads the admin guard performs on every request.
+        $this->assertLessThanOrEqual(
+            15,
+            $queryCount,
+            "Admin locations index uses too many queries: {$queryCount}. Check for N+1."
+        );
+    }
+
+    public function test_resolving_a_place_name_adds_no_query_per_row(): void
+    {
+        // The point of eager-loading the place with named columns: rendering the
+        // place name for 20 events must not issue 20 queries.
+        $place = Location::factory()->withNames(['ar' => 'المدينة المنورة'])->create([
+            'slug' => 'al-madinah', 'latitude' => '24.5247000', 'longitude' => '39.5692000',
+        ]);
+
+        for ($i = 1; $i <= 20; $i++) {
+            SeerahEvent::query()->create([
+                'slug' => "placed-event-{$i}",
+                'seerah_event_type_id' => SeerahEventType::query()->where('slug', 'other')->value('id'),
+                'importance' => 'medium',
+                'location' => "وصف المكان {$i}",
+                'location_id' => $place->id,
+                'display_order' => $i,
+                'title' => ['ar' => "عنوان {$i}", 'en' => "Title {$i}"],
+                'description' => ['ar' => "وصف {$i}", 'en' => "Description {$i}"],
+            ]);
+        }
+
+        $events = SeerahEvent::query()
+            ->select(['id', 'slug', 'location', 'location_id'])
+            ->with(['place:id,slug,latitude,longitude', 'place.translations:id,location_id,locale,name'])
+            ->get();
+
+        $queryCount = 0;
+        DB::listen(function () use (&$queryCount): void {
+            $queryCount++;
+        });
+
+        foreach ($events as $event) {
+            $event->place?->name('ar');
+            $event->resolvedCoordinates();
+        }
+
+        $this->assertSame(0, $queryCount, "Rendering place names issued {$queryCount} queries; it must issue none.");
     }
 }
