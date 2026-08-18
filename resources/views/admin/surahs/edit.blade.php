@@ -116,6 +116,21 @@
                         @enderror
                     </div>
 
+                    {{-- The place, beside the classification above — NOT instead
+                         of it. مكية/مدنية states the period of revelation
+                         (before or after the Hijra); this states the geography.
+                         A Makki surah revealed at الطائف is both. --}}
+                    <div>
+                        <x-admin.place-picker
+                            name="revelation_location_id"
+                            :selected="old('revelation_location_id', $surah->revelation_location_id)"
+                            :selected-label="$surah->revelationLocation?->name()"
+                            :label="__('locations.public.revelation_place')" />
+                        @error('revelation_location_id')
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <!-- Revelation Order -->
                     <div>
                         <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">

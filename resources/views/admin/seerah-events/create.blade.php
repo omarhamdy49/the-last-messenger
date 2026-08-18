@@ -223,17 +223,29 @@
                 </h2>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Location Name -->
+                    <!-- Canonical place: drives the map pin and the localized name -->
+                    <div class="md:col-span-3">
+                        <x-admin.place-picker
+                            name="location_id"
+                            :selected="old('location_id')"
+                            :label="__('locations.singular')"
+                            :hint="__('locations.hints.parent')" />
+                        @error('location_id')
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Descriptive note: kept alongside, never replaced -->
                     <div class="md:col-span-3">
                         <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
-                            اسم الموقع
+                            {{ __('locations.public.place_note') }}
                         </label>
                         <input type="text"
                                name="location"
                                value="{{ old('location') }}"
                                class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                               placeholder="مثال: المدينة المنورة">
+                               placeholder="مثال: حمراء الأسد على نحو 8 أميال جنوب المدينة">
                         @error('location')
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror

@@ -98,6 +98,9 @@ class StoreSahabiRequest extends FormRequest
             'conversion_order' => ['nullable', 'integer', 'min:1'],
             'roles' => ['nullable', 'string', 'max:1000'],
             'birth_place' => ['nullable', 'string', 'max:255'],
+            // The canonical birthplace. Additive: `birth_place` above keeps
+            // whatever text was originally recorded.
+            'birth_place_id' => ['nullable', 'integer', 'exists:locations,id'],
             'death_place' => ['nullable', 'string', 'max:255'],
             'burial_place' => ['nullable', 'string', 'max:255'],
             'tribe' => ['nullable', 'string', 'max:255'],

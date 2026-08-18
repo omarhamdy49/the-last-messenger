@@ -59,6 +59,15 @@ final class EloquentMuslimRepository implements MuslimRepositoryInterface
             $query->whereKeyNot($filters->excludeId);
         }
 
+        // Review queue: records a birthplace in text, but has no canonical
+        // reference for it. `birth_place` is a JSON column, so "has text" is a
+        // non-null, non-empty-object test.
+        if ($filters->unmappedBirthPlaceOnly) {
+            $query->whereNull('birth_place_id')
+                ->whereNotNull('birth_place')
+                ->whereRaw('JSON_LENGTH(birth_place) > 0');
+        }
+
         return $query
             ->with(['roles:id,slug,name_ar,name_en'])
             // A search must be ordered by relevance, not recency. Sorting the

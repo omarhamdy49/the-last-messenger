@@ -137,6 +137,9 @@ class StoreSeerahEventRequest extends FormRequest
             'participants.*.role' => ['nullable', new Enum(ParticipantRole::class)],
             'participants.*.participant_id' => ['nullable', 'integer', 'exists:muslims,id'],
             'location' => ['nullable', 'string', 'max:255'],
+            // The canonical place. Additive: `location` above keeps the
+            // historian's descriptive note.
+            'location_id' => ['nullable', 'integer', 'exists:locations,id'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'related_article_id' => ['nullable', 'integer', 'exists:articles,id'],

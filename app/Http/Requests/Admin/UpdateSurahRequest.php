@@ -61,6 +61,9 @@ class UpdateSurahRequest extends FormRequest
 
             // Revelation metadata
             'revelation_place' => ['required', Rule::in(RevelationPlace::values())],
+            // Additive: revelation_place above is unchanged and remains the
+            // single source of truth for the مكية/مدنية classification.
+            'revelation_location_id' => ['nullable', 'integer', 'exists:locations,id'],
             'revelation_order' => ['nullable', 'integer', 'min:1', 'max:114'],
 
             // Statistics (read-only in most cases)

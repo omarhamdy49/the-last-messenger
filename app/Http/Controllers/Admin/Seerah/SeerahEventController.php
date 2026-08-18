@@ -15,6 +15,7 @@ use App\Domain\Seerah\Services\SeerahEventService;
 use App\Domain\Seerah\Services\SeerahEventTypeService;
 use App\Domain\Seerah\Services\SeerahMilestoneService;
 use App\Domain\Shared\Services\AdminLoggerService;
+use App\Domain\Shared\Services\LocationUsageRegistry;
 use App\Domain\Shared\Services\PublicImageService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreSeerahEventRequest;
@@ -61,9 +62,18 @@ class SeerahEventController extends Controller
             'status' => $request->string('status')->toString() ?: null,
             'milestone' => $request->integer('milestone') ?: null,
             'search' => $request->string('search')->toString() ?: null,
+            // Review queue + place filter. Both are booleans/ints cast here, so
+            // neither reaches the query as raw input (constitution VII).
+            'unmapped' => $request->boolean('unmapped') ?: null,
+            'location_id' => $request->integer('location_id') ?: null,
         ]);
 
         $events = $this->seerahEventService->paginateWithFilters($filters, $perPage);
+
+        // Constitution X: the tail the resolver deliberately left alone is shown,
+        // not silently dropped. Without a visible count nobody ever works it.
+        $unmappedCount = app(LocationUsageRegistry::class)
+            ->countUnresolved(['seerah_events' => 'location'])['seerah_events'] ?? 0;
 
         // Single aggregate query delegated to repository via service
         $stats = $this->seerahEventService->getIndexStats();
@@ -86,7 +96,7 @@ class SeerahEventController extends Controller
             ]);
         }
 
-        return view('admin.seerah-events.index', compact('events', 'stats', 'eventTypes', 'milestones', 'statuses'));
+        return view('admin.seerah-events.index', compact('events', 'stats', 'eventTypes', 'milestones', 'statuses', 'unmappedCount'));
     }
 
     /**

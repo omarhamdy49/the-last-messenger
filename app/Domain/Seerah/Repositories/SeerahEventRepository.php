@@ -267,7 +267,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
             ->with([...$this->listRelations(), 'milestone:id,slug,icon,color,gradient', 'milestone.translations:id,seerah_milestone_id,locale,title'])
             ->select([
                 'id', 'slug', 'seerah_event_type_id', 'seerah_milestone_id', 'importance', 'status',
-                'hijri_year', 'hijri_date', 'location', 'is_featured', 'is_pivotal', 'display_order',
+                'hijri_year', 'hijri_date', 'location', 'location_id', 'is_featured', 'is_pivotal', 'display_order',
                 'hijri_month', 'hijri_day',
             ])
             // After select(), not before: select() replaces the column list and would
@@ -288,6 +288,19 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
 
         if (! empty($filters['milestone'])) {
             $query->byMilestone((int) $filters['milestone']);
+        }
+
+        // The editor's review queue: rows that NAME a place in prose but carry
+        // no canonical reference. Rows with no place text at all are excluded —
+        // they are not unresolved, they simply name no place.
+        if (! empty($filters['unmapped'])) {
+            $query->whereNull('location_id')
+                ->whereNotNull('location')
+                ->where('location', '<>', '');
+        }
+
+        if (! empty($filters['location_id'])) {
+            $query->where('location_id', (int) $filters['location_id']);
         }
 
         if (! empty($filters['search'])) {

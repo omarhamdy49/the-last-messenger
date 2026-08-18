@@ -38,6 +38,20 @@
 @endsection
 
 @section('content')
+
+    {{-- Review queue: rows that name a place in prose but carry no canonical
+         reference. The resolver leaves ambiguous and place-less text alone by
+         design, so this is the editor's worklist, not an error count. --}}
+    @if(($unmappedCount ?? 0) > 0)
+        <a href="{{ request()->fullUrlWithQuery(['unmapped' => 1]) }}"
+           class="mb-6 flex items-center gap-2 px-4 py-3 rounded-xl border text-sm transition-colors
+                  bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100
+                  dark:bg-amber-900/25 dark:border-amber-800 dark:text-amber-200 dark:hover:bg-amber-900/40">
+            <i data-lucide="map-pin-off" class="w-4 h-4 flex-shrink-0"></i>
+            <span>{{ __('locations.messages.unmapped_count', ['count' => $unmappedCount]) }}</span>
+            <i data-lucide="arrow-left" class="w-4 h-4 ms-auto rtl:rotate-180"></i>
+        </a>
+    @endif
 <div x-data="seerahEventsIndex()"
      @toggle-filters.window="filtersOpen = !filtersOpen">
 

@@ -32,6 +32,12 @@ final readonly class MuslimListFilters
          * most likely to be looking for.
          */
         public bool $latestFirst = false,
+        /**
+         * The editor's review queue: people who record a birthplace in text but
+         * carry no canonical place reference. People with no birthplace at all
+         * are excluded — they are not unresolved, they simply record none.
+         */
+        public bool $unmappedBirthPlaceOnly = false,
     ) {}
 
     public static function fromRequest(Request $request, bool $publishedOnly = true): self

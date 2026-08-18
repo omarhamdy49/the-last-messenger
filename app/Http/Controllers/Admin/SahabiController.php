@@ -14,6 +14,7 @@ use App\Domain\People\Repositories\MuslimRepositoryInterface;
 use App\Domain\People\Services\GenealogyTreeService;
 use App\Domain\People\Services\MuslimDirectoryService;
 use App\Domain\People\ValueObjects\MuslimProfile;
+use App\Domain\Shared\Services\LocationUsageRegistry;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\BulkMuslimActionRequest;
 use App\Http\Requests\Admin\StoreMuslimRequest;
@@ -53,10 +54,15 @@ class SahabiController extends Controller
             search: $filters->search,
             publishedOnly: false,
             perPage: min(max((int) $request->query('per_page', 15), 10), 100),
+            unmappedBirthPlaceOnly: $request->boolean('unmapped'),
         ));
 
         return view('admin.sahaba.index', [
             'sahaba' => $sahaba,
+            // The tail the resolver left for an editor. Shown so it is workable
+            // rather than invisible (constitution X).
+            'unmappedCount' => app(LocationUsageRegistry::class)
+                ->countUnresolved(['muslims' => 'birth_place'])['muslims'] ?? 0,
             'stats' => $this->adminStats($activeRole?->slug),
             'filters' => $filters,
             'roles' => $roles,

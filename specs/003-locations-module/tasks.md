@@ -200,20 +200,20 @@ filtered view and survives `locations:backfill`.
 
 ### Tests for User Story 4
 
-- [ ] T058 [P] [US4] Feature test `?unmapped=1` on both index screens — returns only rows with place text and a NULL foreign key, and excludes rows with no place text at all — in `tests/Feature/Admin/UnmappedLocationFilterTest.php`
-- [ ] T059 [P] [US4] Feature test `admin.locations.search` — matches translated names **and** aliases so `Medina` finds المدينة المنورة, returns only active places, caps `limit`, and covers 401/403 — in `tests/Feature/Admin/LocationSearchTest.php`
+- [X] T058 [P] [US4] Feature test `?unmapped=1` on both index screens — returns only rows with place text and a NULL foreign key, and excludes rows with no place text at all — in `tests/Feature/Admin/UnmappedLocationFilterTest.php`
+- [X] T059 [P] [US4] Feature test `admin.locations.search` — matches translated names **and** aliases so `Medina` finds المدينة المنورة, returns only active places, caps `limit`, and covers 401/403 — in `tests/Feature/Admin/LocationSearchTest.php`
 
 ### Implementation for User Story 4
 
-- [ ] T060 [US4] Add the `?unmapped=1` filter (`location_id IS NULL AND location <> ''`) to the admin event index query, allowlisted like every other filter, in `app/Domain/Seerah/Repositories/SeerahEventRepository.php` and the admin controller
-- [ ] T061 [US4] Add the equivalent `?unmapped=1` filter over `birth_place_id` / `birth_place` to the companion index in `app/Http/Controllers/Admin/SahabiController.php` and its repository
-- [ ] T062 [P] [US4] Add `location_id` → `nullable, integer, exists:locations,id` to `app/Http/Requests/Admin/StoreSeerahEventRequest.php` and `app/Http/Requests/Admin/UpdateSeerahEventRequest.php`, and thread it through `CreateSeerahEventData`, `UpdateSeerahEventData` and `SeerahEventService`
-- [ ] T063 [US4] Add the place select beside the existing text input and relabel that input **وصف المكان**, in `resources/views/admin/seerah-events/edit.blade.php` (~line 198) and the matching create view
-- [ ] T064 [US4] Replace the birth place text input with a searchable select writing `birth_place_id`, showing the existing `birth_place` text read-only beneath it, in `resources/views/admin/sahaba/_form.blade.php`; add validation to the Sahabi store and update requests
-- [ ] T065 [US4] Add the revelation place select writing `revelation_location_id` to the admin surah form and `app/Http/Controllers/Admin/Quran/SurahController.php`, leaving the مكية/مدنية field untouched
-- [ ] T066 [P] [US4] Build the shared Alpine place-picker partial backed by `admin.locations.search`, in `resources/views/components/`
-- [ ] T067 [US4] Add the unresolved-count badge to the Seerah and Sahaba index headers so the remaining tail is visible rather than silent (constitution X), in `resources/views/admin/seerah-events/index.blade.php` and `resources/views/admin/sahaba/index.blade.php`
-- [ ] T068 [US4] Run `npm run build`
+- [X] T060 [US4] Add the `?unmapped=1` filter (`location_id IS NULL AND location <> ''`) to the admin event index query, allowlisted like every other filter, in `app/Domain/Seerah/Repositories/SeerahEventRepository.php` and the admin controller
+- [X] T061 [US4] Add the equivalent `?unmapped=1` filter over `birth_place_id` / `birth_place` to the companion index in `app/Http/Controllers/Admin/SahabiController.php` and its repository
+- [X] T062 [P] [US4] Add `location_id` → `nullable, integer, exists:locations,id` to `app/Http/Requests/Admin/StoreSeerahEventRequest.php` and `app/Http/Requests/Admin/UpdateSeerahEventRequest.php`, and thread it through `CreateSeerahEventData`, `UpdateSeerahEventData` and `SeerahEventService`
+- [X] T063 [US4] Add the place select beside the existing text input and relabel that input **وصف المكان**, in `resources/views/admin/seerah-events/edit.blade.php` (~line 198) and the matching create view
+- [X] T064 [US4] Replace the birth place text input with a searchable select writing `birth_place_id`, showing the existing `birth_place` text read-only beneath it, in `resources/views/admin/sahaba/_form.blade.php`; add validation to the Sahabi store and update requests
+- [X] T065 [US4] Add the revelation place select writing `revelation_location_id` to the admin surah form and `app/Http/Controllers/Admin/Quran/SurahController.php`, leaving the مكية/مدنية field untouched
+- [X] T066 [P] [US4] Build the shared Alpine place-picker partial backed by `admin.locations.search`, in `resources/views/components/`
+- [X] T067 [US4] Add the unresolved-count badge to the Seerah and Sahaba index headers so the remaining tail is visible rather than silent (constitution X), in `resources/views/admin/seerah-events/index.blade.php` and `resources/views/admin/sahaba/index.blade.php`
+- [X] T068 [US4] Run `npm run build`
 
 **Checkpoint**: the full editorial loop works — see the tail, assign it, and it survives a re-run.
 

@@ -88,6 +88,7 @@
                     <div class="sm:col-span-2">
                         <label for="birth_place_{{ $code }}" class="block text-sm font-semibold mb-1.5" :class="darkMode ? 'text-gray-200' : 'text-gray-700'">
                             {{ __('sahaba.birth_place') }} ({{ $label }})
+                            <span class="text-xs font-normal opacity-60">— {{ __('locations.public.place_note') }}</span>
                         </label>
                         <input id="birth_place_{{ $code }}" name="birth_place[{{ $code }}]" type="text"
                                value="{{ old('birth_place.'.$code, $muslim?->getTranslation('birth_place', $code, false) ?? '') }}"
@@ -120,6 +121,19 @@
                     </div>
                 </div>
             @endforeach
+
+            {{-- One canonical birthplace for the person, not one per locale:
+                 the place carries its own names in all five languages. The
+                 per-locale text fields above keep whatever was originally
+                 recorded. --}}
+            <div class="mt-6 pt-6 border-t" :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
+                <x-admin.place-picker
+                    name="birth_place_id"
+                    :selected="old('birth_place_id', $muslim?->birth_place_id)"
+                    :selected-label="$muslim?->birthPlace?->name()"
+                    :label="__('locations.public.birth_place')" />
+                @error('birth_place_id') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+            </div>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2 mt-6 pt-6 border-t"

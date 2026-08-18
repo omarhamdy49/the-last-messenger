@@ -52,6 +52,9 @@ class StoreMuslimRequest extends FormRequest
             'content.ar' => ['nullable', 'string'],
             'content.en' => ['nullable', 'string'],
             'birth_place' => ['nullable', 'array'],
+            // The canonical birthplace. Additive: `birth_place` above keeps
+            // whatever text was originally recorded.
+            'birth_place_id' => ['nullable', 'integer', 'exists:locations,id'],
             'birth_place.ar' => ['nullable', 'string', 'max:200'],
             'birth_place.en' => ['nullable', 'string', 'max:200'],
 
