@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Shared\Enums;
 
+use App\Domain\Shared\Services\FavorableRegistry;
+
 /**
  * Favorable Type Enum.
  *
@@ -14,7 +16,7 @@ namespace App\Domain\Shared\Enums;
  *
  * This enum intentionally holds NO references to concrete model classes: the
  * Shared layer must not import domain modules or app models (deptrac). The
- * slug↔class mapping lives in {@see \App\Domain\Shared\Services\FavorableRegistry},
+ * slug↔class mapping lives in {@see FavorableRegistry},
  * which is populated at boot from a provider.
  */
 enum FavorableType: string

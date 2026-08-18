@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Support\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 /**
  * Admin Dashboard Controller
@@ -32,7 +33,7 @@ class DashboardController extends Controller
      *
      * GET /su/portal/v1/admin/dashboard
      */
-    public function index(): \Illuminate\View\View
+    public function index(): View
     {
         // The blade's stat cards read $stats[...] with `?? 0` fallbacks — rendering
         // without this mapping silently shows zeros for every module.

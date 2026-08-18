@@ -10,6 +10,7 @@ use App\Exceptions\Domain\ResourceNotFoundException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SaveFilterRequest;
 use App\Http\Resources\SavedFilterResource;
+use App\Http\Resources\SearchResultResource;
 use App\Support\Traits\ApiResponse;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
@@ -95,9 +96,13 @@ class FilterController extends Controller
                 user: $request->user(),
                 data: $request->validated(),
             );
-        } catch (ResourceNotFoundException) {
+        } catch (ResourceNotFoundException $e) {
+            report($e);
+
             return $this->notFoundResponse('Filter not found');
         } catch (AuthorizationException $e) {
+            report($e);
+
             return $this->forbiddenResponse($e->getMessage());
         }
 
@@ -119,9 +124,13 @@ class FilterController extends Controller
                 id: $id,
                 user: $request->user(),
             );
-        } catch (ResourceNotFoundException) {
+        } catch (ResourceNotFoundException $e) {
+            report($e);
+
             return $this->notFoundResponse('Filter not found');
         } catch (AuthorizationException $e) {
+            report($e);
+
             return $this->forbiddenResponse($e->getMessage());
         }
 
@@ -154,12 +163,30 @@ class FilterController extends Controller
                 ]
             );
 
+            // ApiResponse::paginatedResponse serialises $paginator->items() verbatim, so
+            // the items must already be resources. Raw models would emit every column of
+            // every eager-loaded relation — getDefaultRelations(ARTICLE) loads `writer`,
+            // and users.email is not in User::$hidden, so this endpoint was leaking
+            // writer email addresses alongside full article bodies and seo_metadata.
+            // SearchController::searchWithin already wraps this exact service output the
+            // same way; apply() simply never did.
+            $results->setCollection(
+                $results->getCollection()
+                    ->map(fn ($result): array => (new SearchResultResource($result))->resolve($request))
+            );
+
             return $this->paginatedResponse($results, 'Filter applied successfully');
-        } catch (ResourceNotFoundException) {
+        } catch (ResourceNotFoundException $e) {
+            report($e);
+
             return $this->notFoundResponse('Filter not found');
         } catch (AuthorizationException $e) {
+            report($e);
+
             return $this->forbiddenResponse($e->getMessage());
         } catch (\Throwable $e) {
+            report($e);
+
             return $this->errorResponse('Failed to apply filter', 400);
         }
     }
@@ -176,9 +203,13 @@ class FilterController extends Controller
                 id: $id,
                 user: $request->user(),
             );
-        } catch (ResourceNotFoundException) {
+        } catch (ResourceNotFoundException $e) {
+            report($e);
+
             return $this->notFoundResponse('Filter not found');
         } catch (AuthorizationException $e) {
+            report($e);
+
             return $this->forbiddenResponse($e->getMessage());
         }
 

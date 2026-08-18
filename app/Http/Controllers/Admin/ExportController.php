@@ -125,6 +125,8 @@ class ExportController extends Controller
                 'message' => 'Invalid module',
             ], 400);
         } catch (BusinessRuleViolationException $e) {
+            report($e);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -222,6 +224,8 @@ class ExportController extends Controller
                 'data' => ['deleted_count' => $deletedCount],
             ]);
         } catch (\Throwable $e) {
+            report($e);
+
             return response()->json([
                 'success' => false,
                 'message' => 'فشل تنظيف الملفات: '.$e->getMessage(),

@@ -10,6 +10,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreInteractionRequest;
 use App\Http\Resources\UserEngagementMetricResource;
 use App\Http\Resources\UserInteractionResource;
+use App\Models\Article;
+use App\Models\User;
 use App\Support\Traits\ApiResponse;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -91,7 +93,7 @@ class InteractionController extends Controller
             return $this->forbiddenResponse('You may only view your own engagement data.');
         }
 
-        $user = \App\Models\User::findOrFail($id);
+        $user = User::findOrFail($id);
         $history = $this->interactionService->getUserEngagementHistory($user);
 
         return $this->successResponse($history, 'User engagement retrieved successfully');
@@ -185,7 +187,9 @@ class InteractionController extends Controller
 
                 try {
                     $this->visibleContent($type, (int) $item['interactable_id']);
-                } catch (ModelNotFoundException) {
+                } catch (ModelNotFoundException $e) {
+                    report($e);
+
                     return null;
                 }
 
@@ -232,7 +236,7 @@ class InteractionController extends Controller
         $query = $class::query();
 
         match ($type) {
-            'Article' => $query->where('status', \App\Models\Article::STATUS_PUBLISHED),
+            'Article' => $query->where('status', Article::STATUS_PUBLISHED),
             'Hadith' => $query->publiclyVisible(),
             'MediaProgram' => $query->published(),
             'MediaEpisode' => $query->published()

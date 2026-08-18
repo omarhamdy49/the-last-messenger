@@ -7,6 +7,7 @@ namespace App\Domain\Quran\Application\Handlers;
 use App\Domain\Quran\Application\DTOs\TafsirDTO;
 use App\Domain\Quran\Application\Queries\GetTafsirByVerseQuery;
 use App\Domain\Quran\Repositories\TafseerRepositoryInterface;
+use App\Domain\Quran\Repositories\VerseRepositoryInterface;
 use Illuminate\Support\Collection;
 
 /**
@@ -23,7 +24,7 @@ final readonly class GetTafsirByVerseHandler
      */
     public function handle(GetTafsirByVerseQuery $query): Collection
     {
-        $verse = app(\App\Domain\Quran\Repositories\VerseRepositoryInterface::class)->find($query->verseId);
+        $verse = app(VerseRepositoryInterface::class)->find($query->verseId);
 
         if ($verse === null) {
             return collect();

@@ -93,7 +93,11 @@ class DashboardService
                             'sparkline' => $this->getSparklineDataForTable('users', 7),
                         ],
                     ]);
-                } catch (\Throwable) {
+                } catch (\Throwable $e) {
+                    // Fallback kept, but the failure is now traceable: without report() a real
+                    // bug (broken query, dropped column) looked identical to 'no data'.
+                    report($e);
+
                     return [
                         'users' => ['total' => 0, 'new' => 0, 'change' => 0, 'sparkline' => []],
                     ];
@@ -132,7 +136,11 @@ class DashboardService
                             'icon' => $this->getActionIcon($log->action),
                             'color' => $this->getActionColor($log->action),
                         ]);
-                } catch (\Throwable) {
+                } catch (\Throwable $e) {
+                    // Fallback kept, but the failure is now traceable: without report() a real
+                    // bug (broken query, dropped column) looked identical to 'no data'.
+                    report($e);
+
                     return collect();
                 }
             }
@@ -170,7 +178,11 @@ class DashboardService
                         'latest_upload' => null,
                         'pending_reviews' => 0,
                     ];
-                } catch (\Throwable) {
+                } catch (\Throwable $e) {
+                    // Fallback kept, but the failure is now traceable: without report() a real
+                    // bug (broken query, dropped column) looked identical to 'no data'.
+                    report($e);
+
                     return [
                         'top_article' => null,
                         'most_active_day' => null,
@@ -300,7 +312,11 @@ class DashboardService
             }
 
             return $data;
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            // Fallback kept, but the failure is now traceable: without report() a real
+            // bug (broken query, dropped column) looked identical to 'no data'.
+            report($e);
+
             return array_fill(0, $days, 0);
         }
     }

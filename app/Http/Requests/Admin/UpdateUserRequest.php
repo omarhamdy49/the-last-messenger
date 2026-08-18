@@ -7,6 +7,7 @@ namespace App\Http\Requests\Admin;
 use App\Http\Requests\Admin\Concerns\ProtectsPrivilegedUsers;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 /**
  * Update User Request (Admin)
@@ -27,7 +28,8 @@ class UpdateUserRequest extends FormRequest
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            // Same policy as creation — see StoreUserRequest.
+            'password' => ['nullable', 'string', 'confirmed', Password::min(12)->mixedCase()->numbers()->symbols()],
             'language' => ['nullable', 'string', 'in:ar,en,fr,tr,ur'],
             'roles' => ['nullable', 'array'],
             'roles.*' => ['string', 'exists:roles,name'],

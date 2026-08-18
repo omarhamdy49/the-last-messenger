@@ -20,13 +20,22 @@ use App\Models\Article;
 use App\Models\ArticleLocale;
 use App\Models\User;
 use Database\Factories\MediaProgramFactory;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Tests\Support\CommitsForFullTextSearch;
 use Tests\TestCase;
 
 final class PublicVisibilityGatingTest extends TestCase
 {
-    use RefreshDatabase;
+    /**
+     * DatabaseTruncation, NOT RefreshDatabase — required, not a preference.
+     *
+     * Unified search now uses MySQL FULLTEXT (MATCH…AGAINST) instead of a full-table LIKE.
+     * InnoDB does not populate a FULLTEXT index until the inserting transaction COMMITS, and
+     * RefreshDatabase wraps each test in a transaction it rolls back — so MATCH against rows
+     * the test just seeded matches nothing. The query is valid and silently returns zero
+     * rows, which reads as a search bug rather than a test-isolation artefact.
+     */
+    use CommitsForFullTextSearch;
 
     protected function setUp(): void
     {

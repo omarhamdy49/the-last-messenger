@@ -6,9 +6,9 @@ namespace App\Domain\Shared\Services;
 
 use App\Domain\Shared\Enums\ScheduleAction;
 use App\Domain\Shared\Enums\ScheduleStatus;
+use App\Domain\Shared\Exceptions\BusinessRuleViolationException;
 use App\Domain\Shared\Models\ContentSchedule;
 use App\Domain\Shared\Repositories\SchedulerRepositoryInterface;
-use App\Exceptions\Domain\BusinessLogicException;
 use App\Exceptions\Domain\ResourceNotFoundException;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -37,7 +37,7 @@ class SchedulerService
     /**
      * Schedule content for publishing
      *
-     * @throws BusinessLogicException
+     * @throws BusinessRuleViolationException
      */
     public function schedulePublish(
         Model $content,
@@ -53,7 +53,7 @@ class SchedulerService
             $content->id,
             ScheduleAction::PUBLISH
         )) {
-            throw new BusinessLogicException('Content already has a pending publish schedule');
+            throw new BusinessRuleViolationException('Content already has a pending publish schedule');
         }
 
         $data = [
@@ -78,7 +78,7 @@ class SchedulerService
     /**
      * Schedule content for unpublishing
      *
-     * @throws BusinessLogicException
+     * @throws BusinessRuleViolationException
      */
     public function scheduleUnpublish(
         Model $content,
@@ -93,7 +93,7 @@ class SchedulerService
             $content->id,
             ScheduleAction::UNPUBLISH
         )) {
-            throw new BusinessLogicException('Content already has a pending unpublish schedule');
+            throw new BusinessRuleViolationException('Content already has a pending unpublish schedule');
         }
 
         $data = [
@@ -113,7 +113,7 @@ class SchedulerService
     /**
      * Schedule content update
      *
-     * @throws BusinessLogicException
+     * @throws BusinessRuleViolationException
      */
     public function scheduleUpdate(
         Model $content,
@@ -124,7 +124,7 @@ class SchedulerService
         ?string $notes = null
     ): ContentSchedule {
         if (empty($updateData)) {
-            throw new BusinessLogicException('Update data cannot be empty');
+            throw new BusinessRuleViolationException('Update data cannot be empty');
         }
 
         $data = [
@@ -202,14 +202,14 @@ class SchedulerService
      * Update schedule
      *
      * @throws ResourceNotFoundException
-     * @throws BusinessLogicException
+     * @throws BusinessRuleViolationException
      */
     public function updateSchedule(int $id, array $data): ContentSchedule
     {
         $schedule = $this->getScheduleById($id);
 
         if (! $schedule->canBeUpdated()) {
-            throw new BusinessLogicException('Schedule cannot be updated in its current status');
+            throw new BusinessRuleViolationException('Schedule cannot be updated in its current status');
         }
 
         // Parse scheduled_at if provided
@@ -233,14 +233,14 @@ class SchedulerService
      * Cancel schedule
      *
      * @throws ResourceNotFoundException
-     * @throws BusinessLogicException
+     * @throws BusinessRuleViolationException
      */
     public function cancelSchedule(int $id): bool
     {
         $schedule = $this->getScheduleById($id);
 
         if (! $schedule->canBeCancelled()) {
-            throw new BusinessLogicException('Schedule cannot be cancelled in its current status');
+            throw new BusinessRuleViolationException('Schedule cannot be cancelled in its current status');
         }
 
         return $this->repository->cancelSchedule($id);

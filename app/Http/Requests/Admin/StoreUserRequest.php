@@ -6,6 +6,7 @@ namespace App\Http\Requests\Admin;
 
 use App\Http\Requests\Admin\Concerns\ProtectsPrivilegedUsers;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Password;
 
 /**
  * Store User Request (Admin)
@@ -24,7 +25,11 @@ class StoreUserRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            // These accounts reach /su/portal/v1/admin. They previously had the WEAKEST policy in
+            // the application — a bare min:8, no complexity — while public registration required
+            // mixed case + numbers and the API required 12 chars with symbols. `password` was a
+            // valid admin password.
+            'password' => ['required', 'string', 'confirmed', Password::min(12)->mixedCase()->numbers()->symbols()],
             'language' => ['nullable', 'string', 'in:ar,en,fr,tr,ur'],
             'roles' => ['nullable', 'array'],
             'roles.*' => ['string', 'exists:roles,name'],

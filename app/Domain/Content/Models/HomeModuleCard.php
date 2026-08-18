@@ -6,7 +6,9 @@ namespace App\Domain\Content\Models;
 
 use App\Domain\Content\Enums\HomeModuleCardPlacement;
 use App\Domain\Shared\Traits\HasLocalizedContent;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /**
  * HomeModuleCard Model
@@ -24,8 +26,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property bool $is_featured
  * @property bool $is_active
  * @property int $sort_order
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class HomeModuleCard extends Model
 {
@@ -94,8 +96,8 @@ class HomeModuleCard extends Model
     /**
      * Scope: Only active cards.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeActive($query)
     {
@@ -105,8 +107,8 @@ class HomeModuleCard extends Model
     /**
      * Scope: Order for display.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeOrdered($query)
     {

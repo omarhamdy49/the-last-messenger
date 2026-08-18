@@ -9,6 +9,7 @@ use App\Domain\Shared\Enums\BulkOperationTypeEnum;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * Bulk Operation Model
@@ -28,10 +29,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property array|null $error_log
  * @property bool $dry_run
  * @property bool $notify_on_completion
- * @property \Illuminate\Support\Carbon|null $started_at
- * @property \Illuminate\Support\Carbon|null $completed_at
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property Carbon|null $started_at
+ * @property Carbon|null $completed_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  * @property-read User $creator
  */
 class BulkOperation extends Model

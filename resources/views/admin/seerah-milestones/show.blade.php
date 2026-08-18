@@ -35,6 +35,50 @@
                 @endforeach
             </div>
         </div>
+
+        <!-- Related events -->
+        <div class="rounded-2xl border p-6" :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+            <div class="flex items-center justify-between gap-3 mb-6">
+                <h2 class="text-xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                    {{ __('admin.events') }}
+                    <span class="text-sm font-normal" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">({{ $eventsCount }})</span>
+                </h2>
+                <a href="{{ route('admin.seerah-events.index', ['milestone' => $milestone->id]) }}"
+                   class="text-sm font-semibold text-accent hover:underline flex items-center gap-1">
+                    {{ __('admin.view_all') }}
+                    <i data-lucide="chevron-left" class="w-4 h-4 rtl:rotate-180"></i>
+                </a>
+            </div>
+
+            <div class="space-y-2">
+                @forelse($events as $event)
+                <a href="{{ route('admin.seerah-events.show', $event->id) }}"
+                   class="flex items-center gap-3 p-3 rounded-xl border transition-colors"
+                   :class="darkMode ? 'border-gray-800 hover:bg-gray-800/50' : 'border-gray-200 hover:bg-gray-50'">
+                    <div class="w-9 h-9 rounded-lg bg-gradient-to-br {{ $event->type?->gradient ?: 'from-[#0056b3] to-[#218838]' }} flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="{{ $event->type?->icon ?? 'calendar' }}" class="w-4 h-4 text-white"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="font-semibold truncate" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $event->getTranslation('title', 'ar') }}</p>
+                        <p class="text-xs truncate flex items-center gap-2 mt-0.5" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
+                            @if($event->hijri_date)<span class="inline-flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i>{{ $event->hijri_date }}</span>@endif
+                            @if($event->location)<span class="inline-flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i>{{ $event->location }}</span>@endif
+                        </p>
+                    </div>
+                    <span class="hidden sm:inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold flex-shrink-0
+                        {{ $event->status?->value === 'published' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400' }}">
+                        {{ $event->status?->labelArabic() }}
+                    </span>
+                </a>
+                @empty
+                <p class="text-sm text-center py-6" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ __('admin.no_results') }}</p>
+                @endforelse
+            </div>
+
+            @if($events->hasPages())
+            <div class="mt-6">{{ $events->links() }}</div>
+            @endif
+        </div>
     </div>
 
     <div class="space-y-6">

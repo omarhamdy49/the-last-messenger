@@ -16,6 +16,7 @@ use App\Support\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 use Spatie\Permission\Models\Role;
 
 /**
@@ -38,7 +39,7 @@ class UserController extends Controller
      *
      * GET /su/portal/v1/admin/users
      */
-    public function index(Request $request): \Illuminate\View\View|JsonResponse
+    public function index(Request $request): View|JsonResponse
     {
         // Clamped like search() below: an unbounded per_page would let one
         // request page the whole users table.
@@ -96,7 +97,7 @@ class UserController extends Controller
      *
      * GET /su/portal/v1/admin/users/create
      */
-    public function create(): \Illuminate\View\View
+    public function create(): View
     {
         return view('admin.users.create');
     }
@@ -106,7 +107,7 @@ class UserController extends Controller
      *
      * GET /su/portal/v1/admin/users/{id}/edit
      */
-    public function edit(Request $request, int $id): \Illuminate\View\View
+    public function edit(Request $request, int $id): View
     {
         $user = User::with('roles:id,name')
             ->select(['id', 'name', 'email', 'language', 'email_verified_at', 'created_at'])

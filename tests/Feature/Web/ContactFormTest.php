@@ -26,7 +26,11 @@ final class ContactFormTest extends TestCase
             'name' => 'عمر',
             'email' => 'omar@example.com',
             'subject' => 'استفسار عن المحتوى',
-            'message' => 'السلام عليكم، لدي سؤال حول مصادر الأحاديث المنشورة.',
+            // StoreContactMessageRequest deliberately whitelists letters, digits, spaces
+            // and `? - _ !` only — blocking `. : / @` is what kills the URLs in lead-gen
+            // spam (see the rule's own comment). This payload previously contained `،`
+            // and a full stop and so was rejected once that rule landed.
+            'message' => 'السلام عليكم لدي سؤال حول مصادر الأحاديث المنشورة',
         ];
     }
 
@@ -59,6 +63,20 @@ final class ContactFormTest extends TestCase
             'subject' => 'استفسار عن المحتوى',
             'is_read' => false,
         ]);
+    }
+
+    /**
+     * Pins the anti-spam intent so a future "let users write normal punctuation" change is
+     * a deliberate decision rather than an accident. The cost is real — a visitor cannot
+     * end a sentence with a full stop — and is the owner's call, not this test's.
+     */
+    public function test_message_containing_a_url_is_rejected(): void
+    {
+        $this->withSession(['locale' => 'ar'])
+            ->post('/contact', [...$this->validPayload(), 'message' => 'Visit https://spam.example.com now'])
+            ->assertSessionHasErrors('message');
+
+        $this->assertDatabaseCount('contact_messages', 0);
     }
 
     public function test_missing_fields_return_422(): void

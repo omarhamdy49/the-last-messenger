@@ -21,6 +21,12 @@ use Illuminate\Validation\ValidationException;
  */
 class AuthController extends Controller
 {
+    /**
+     * A real bcrypt hash of a value nothing can match, used to equalise the work done on a
+     * missing-account login. Generated once at class level so the cost matches a live hash.
+     */
+    private const DUMMY_HASH = '$2y$12$yYJ7r.9DJDi7ubG5LcshcOxtdQl0SogjBkZK7sQZNVzpK0RRjGlLe';
+
     use ApiResponse;
 
     public function __construct(private readonly UserRepository $users) {}
@@ -75,7 +81,19 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+        // Hash::check runs even when the email is unknown. Without the dummy verify below,
+        // a miss returned in ~1ms while a hit paid the full bcrypt cost (~100ms at
+        // BCRYPT_ROUNDS=12) — a reliable oracle for enumerating which addresses have
+        // accounts. Burning the same work on both paths removes the signal.
+        if (! $user) {
+            Hash::check($request->password, self::DUMMY_HASH);
+
+            throw ValidationException::withMessages([
+                'email' => ['The provided credentials are incorrect.'],
+            ]);
+        }
+
+        if (! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);

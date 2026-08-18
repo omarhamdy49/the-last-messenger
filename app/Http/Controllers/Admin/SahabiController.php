@@ -134,6 +134,8 @@ class SahabiController extends Controller
             try {
                 $this->tree->assignParent($muslim, $column, $data[$column] === null ? null : (int) $data[$column]);
             } catch (GenealogyCycleException $e) {
+                report($e);
+
                 return back()->withInput()->withErrors([$column => $e->getMessage()]);
             }
 

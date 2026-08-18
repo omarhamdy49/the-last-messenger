@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Domain\Content\Models;
 
 use App\Domain\Shared\Traits\HasLocalizedContent;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /**
  * QuickFilterChip Model
@@ -19,8 +21,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $target_url Route name or absolute url
  * @property bool $is_active
  * @property int $sort_order
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class QuickFilterChip extends Model
 {
@@ -83,8 +85,8 @@ class QuickFilterChip extends Model
     /**
      * Scope: Only active chips.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeActive($query)
     {
@@ -94,8 +96,8 @@ class QuickFilterChip extends Model
     /**
      * Scope: Order for display.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeOrdered($query)
     {

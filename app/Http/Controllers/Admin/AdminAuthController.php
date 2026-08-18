@@ -11,6 +11,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Admin portal authentication.
@@ -55,12 +56,21 @@ final class AdminAuthController extends Controller
         $provider = Auth::guard(self::GUARD)->getProvider();
 
         if ($user === null || ! $provider->validateCredentials($user, $credentials)) {
+            // Both failure branches are logged. Previously neither was, so a password-spray
+            // against the portal left no trace anywhere: brute-force defence was throttle:5,1
+            // plus an nginx zone, both per-IP and both invisible after the fact.
+            $this->logFailedLogin($request, $credentials['email'], 'bad_credentials');
+
             return back()
                 ->withErrors(['email' => __('auth.failed')])
                 ->withInput($request->only('email'));
         }
 
         if (! $user->hasAnyRole(self::ADMIN_ROLES)) {
+            // A valid public account trying the admin portal is worth seeing separately —
+            // it is either a confused user or someone probing with harvested credentials.
+            $this->logFailedLogin($request, $credentials['email'], 'not_an_admin');
+
             return back()
                 ->withErrors(['email' => __('admin.no_admin_access')])
                 ->withInput($request->only('email'));
@@ -80,5 +90,19 @@ final class AdminAuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('login');
+    }
+
+    /**
+     * Record a rejected portal login. Deliberately records the email (it was submitted, not
+     * discovered) and the client IP, but never the password or any part of it.
+     */
+    private function logFailedLogin(Request $request, string $email, string $reason): void
+    {
+        Log::warning('admin.login.failed', [
+            'reason' => $reason,
+            'email' => $email,
+            'ip' => $request->ip(),
+            'user_agent' => substr((string) $request->userAgent(), 0, 200),
+        ]);
     }
 }

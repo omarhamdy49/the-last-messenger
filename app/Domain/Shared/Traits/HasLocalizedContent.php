@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Domain\Shared\Traits;
 
 use App\Domain\Shared\Models\Language;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -144,7 +147,7 @@ trait HasLocalizedContent
      *
      * @param  string|null  $locale  The locale code (defaults to app locale)
      */
-    public function translationFor(?string $locale = null): ?\Illuminate\Database\Eloquent\Model
+    public function translationFor(?string $locale = null): ?Model
     {
         $locale = $locale ?? app()->getLocale();
 
@@ -251,7 +254,7 @@ trait HasLocalizedContent
     /**
      * Find a translation record by locale from the loaded relationship.
      */
-    protected function findTranslationByLocale(string $locale): ?\Illuminate\Database\Eloquent\Model
+    protected function findTranslationByLocale(string $locale): ?Model
     {
         $translations = $this->getLoadedTranslations();
 
@@ -261,7 +264,7 @@ trait HasLocalizedContent
     /**
      * Get the loaded translations collection. Auto-loads if not yet loaded.
      */
-    protected function getLoadedTranslations(): \Illuminate\Database\Eloquent\Collection
+    protected function getLoadedTranslations(): Collection
     {
         if (! $this->relationLoaded('translations')) {
             $this->load('translations');
@@ -273,8 +276,8 @@ trait HasLocalizedContent
     /**
      * Scope: Eager load translations for a single locale.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeWithTranslation($query, ?string $locale = null)
     {
@@ -288,8 +291,8 @@ trait HasLocalizedContent
     /**
      * Scope: Eager load all translations.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeWithAllTranslations($query)
     {
@@ -299,11 +302,11 @@ trait HasLocalizedContent
     /**
      * Scope: Search a translatable field using whereHas on translations table.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  Builder  $query
      * @param  string  $field  Translatable field name
      * @param  string  $term  Search term
      * @param  string|null  $locale  Optional locale filter
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @return Builder
      */
     public function scopeSearchTranslation($query, string $field, string $term, ?string $locale = null)
     {

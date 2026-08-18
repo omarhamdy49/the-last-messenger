@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Admin\Content;
 
 use App\Domain\Content\Models\SiteSetting;
+use App\Domain\Content\Services\SiteSettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -75,7 +76,7 @@ class ContentScreensSmokeTest extends TestCase
             ],
         ])->assertRedirect(route('admin.content.settings.index', ['group' => 'general']));
 
-        $service = app(\App\Domain\Content\Services\SiteSettingsService::class);
+        $service = app(SiteSettingsService::class);
 
         $this->assertSame('خاتم المرسلين', $service->get('site_name', 'ar'));
         $this->assertSame('The Last Messenger', $service->get('site_name', 'en'));

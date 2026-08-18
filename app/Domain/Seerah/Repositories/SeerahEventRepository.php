@@ -286,6 +286,10 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
             $query->where('status', $filters['status']);
         }
 
+        if (! empty($filters['milestone'])) {
+            $query->byMilestone((int) $filters['milestone']);
+        }
+
         if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {

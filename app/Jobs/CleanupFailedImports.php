@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Domain\Shared\Models\Import;
 use App\Domain\Shared\Repositories\ImportRepositoryInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -53,7 +54,7 @@ class CleanupFailedImports implements ShouldQueue
             Log::info('Starting import cleanup', ['days_old' => $this->daysOld]);
 
             // Get old completed imports
-            $imports = \App\Domain\Shared\Models\Import::where('status', 'completed')
+            $imports = Import::where('status', 'completed')
                 ->where('completed_at', '<', now()->subDays($this->daysOld))
                 ->get();
 

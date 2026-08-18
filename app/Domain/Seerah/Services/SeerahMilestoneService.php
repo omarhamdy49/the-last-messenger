@@ -10,6 +10,9 @@ use App\Domain\Shared\Services\BaseService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
+/**
+ * @extends BaseService<SeerahMilestoneRepositoryInterface>
+ */
 class SeerahMilestoneService extends BaseService
 {
     public function __construct(

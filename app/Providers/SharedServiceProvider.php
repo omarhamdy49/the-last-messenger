@@ -4,7 +4,33 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\Blog\Services\ArticleBulkHandler;
+use App\Domain\Media\Services\MediaProgramBulkHandler;
+use App\Domain\Quran\Services\VerseBulkHandler;
+use App\Domain\Seerah\Services\SeerahEventBulkHandler;
 use App\Domain\Shared\Contracts\PublicVisibilityProviderInterface;
+use App\Domain\Shared\Repositories\AdminLogRepository;
+use App\Domain\Shared\Repositories\AdminLogRepositoryInterface;
+use App\Domain\Shared\Repositories\AuditLogRepository;
+use App\Domain\Shared\Repositories\AuditLogRepositoryInterface;
+use App\Domain\Shared\Repositories\BulkOperationRepository;
+use App\Domain\Shared\Repositories\BulkOperationRepositoryInterface;
+use App\Domain\Shared\Repositories\ContentVersionRepository;
+use App\Domain\Shared\Repositories\ContentVersionRepositoryInterface;
+use App\Domain\Shared\Repositories\ImportRepository;
+use App\Domain\Shared\Repositories\ImportRepositoryInterface;
+use App\Domain\Shared\Repositories\SavedFilterRepository;
+use App\Domain\Shared\Repositories\SavedFilterRepositoryInterface;
+use App\Domain\Shared\Repositories\SchedulerRepository;
+use App\Domain\Shared\Repositories\SchedulerRepositoryInterface;
+use App\Domain\Shared\Repositories\SearchHistoryRepository;
+use App\Domain\Shared\Repositories\SearchHistoryRepositoryInterface;
+use App\Domain\Shared\Repositories\UserEngagementMetricRepository;
+use App\Domain\Shared\Repositories\UserEngagementMetricRepositoryInterface;
+use App\Domain\Shared\Repositories\UserInteractionRepository;
+use App\Domain\Shared\Repositories\UserInteractionRepositoryInterface;
+use App\Domain\Shared\Services\AdminLoggerService;
+use App\Domain\Shared\Services\BulkOperationService;
 use App\Domain\Shared\Services\PublicVisibilityRegistry;
 use Illuminate\Support\ServiceProvider;
 
@@ -20,57 +46,57 @@ class SharedServiceProvider extends ServiceProvider
         );
 
         $this->app->bind(
-            \App\Domain\Shared\Repositories\AdminLogRepositoryInterface::class,
-            \App\Domain\Shared\Repositories\AdminLogRepository::class
+            AdminLogRepositoryInterface::class,
+            AdminLogRepository::class
         );
         $this->app->bind(
-            \App\Domain\Shared\Repositories\ImportRepositoryInterface::class,
-            \App\Domain\Shared\Repositories\ImportRepository::class
+            ImportRepositoryInterface::class,
+            ImportRepository::class
         );
         $this->app->bind(
-            \App\Domain\Shared\Repositories\UserInteractionRepositoryInterface::class,
-            \App\Domain\Shared\Repositories\UserInteractionRepository::class
+            UserInteractionRepositoryInterface::class,
+            UserInteractionRepository::class
         );
         $this->app->bind(
-            \App\Domain\Shared\Repositories\UserEngagementMetricRepositoryInterface::class,
-            \App\Domain\Shared\Repositories\UserEngagementMetricRepository::class
+            UserEngagementMetricRepositoryInterface::class,
+            UserEngagementMetricRepository::class
         );
         $this->app->bind(
-            \App\Domain\Shared\Repositories\BulkOperationRepositoryInterface::class,
-            \App\Domain\Shared\Repositories\BulkOperationRepository::class
+            BulkOperationRepositoryInterface::class,
+            BulkOperationRepository::class
         );
         $this->app->bind(
-            \App\Domain\Shared\Repositories\SchedulerRepositoryInterface::class,
-            \App\Domain\Shared\Repositories\SchedulerRepository::class
+            SchedulerRepositoryInterface::class,
+            SchedulerRepository::class
         );
         $this->app->bind(
-            \App\Domain\Shared\Repositories\SearchHistoryRepositoryInterface::class,
-            \App\Domain\Shared\Repositories\SearchHistoryRepository::class
+            SearchHistoryRepositoryInterface::class,
+            SearchHistoryRepository::class
         );
         $this->app->bind(
-            \App\Domain\Shared\Repositories\SavedFilterRepositoryInterface::class,
-            \App\Domain\Shared\Repositories\SavedFilterRepository::class
+            SavedFilterRepositoryInterface::class,
+            SavedFilterRepository::class
         );
         $this->app->bind(
-            \App\Domain\Shared\Repositories\ContentVersionRepositoryInterface::class,
-            \App\Domain\Shared\Repositories\ContentVersionRepository::class
+            ContentVersionRepositoryInterface::class,
+            ContentVersionRepository::class
         );
         $this->app->bind(
-            \App\Domain\Shared\Repositories\AuditLogRepositoryInterface::class,
-            \App\Domain\Shared\Repositories\AuditLogRepository::class
+            AuditLogRepositoryInterface::class,
+            AuditLogRepository::class
         );
 
         $this->app->singleton(
-            \App\Domain\Shared\Services\BulkOperationService::class,
+            BulkOperationService::class,
             function ($app) {
-                return new \App\Domain\Shared\Services\BulkOperationService(
-                    repository: $app->make(\App\Domain\Shared\Repositories\BulkOperationRepositoryInterface::class),
-                    adminLogger: $app->make(\App\Domain\Shared\Services\AdminLoggerService::class),
+                return new BulkOperationService(
+                    repository: $app->make(BulkOperationRepositoryInterface::class),
+                    adminLogger: $app->make(AdminLoggerService::class),
                     handlers: [
-                        new \App\Domain\Blog\Services\ArticleBulkHandler,
-                        new \App\Domain\Quran\Services\VerseBulkHandler,
-                        new \App\Domain\Seerah\Services\SeerahEventBulkHandler,
-                        new \App\Domain\Media\Services\MediaProgramBulkHandler,
+                        new ArticleBulkHandler,
+                        new VerseBulkHandler,
+                        new SeerahEventBulkHandler,
+                        new MediaProgramBulkHandler,
                     ],
                 );
             }

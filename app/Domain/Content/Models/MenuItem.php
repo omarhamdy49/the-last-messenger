@@ -6,9 +6,12 @@ namespace App\Domain\Content\Models;
 
 use App\Domain\Content\Enums\MenuLocation;
 use App\Domain\Shared\Traits\HasLocalizedContent;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 /**
  * MenuItem Model
@@ -26,10 +29,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $icon
  * @property bool $is_active
  * @property int $sort_order
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  * @property-read MenuItem|null $parent
- * @property-read \Illuminate\Database\Eloquent\Collection<int, MenuItem> $children
+ * @property-read Collection<int, MenuItem> $children
  */
 class MenuItem extends Model
 {
@@ -112,8 +115,8 @@ class MenuItem extends Model
     /**
      * Scope: Filter by menu location.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByLocation($query, MenuLocation|string $location)
     {
@@ -125,8 +128,8 @@ class MenuItem extends Model
     /**
      * Scope: Only active items.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeActive($query)
     {
@@ -136,8 +139,8 @@ class MenuItem extends Model
     /**
      * Scope: Order for display.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeOrdered($query)
     {

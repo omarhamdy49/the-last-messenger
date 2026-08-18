@@ -206,17 +206,11 @@ class Reciter extends Model
         return $query->where('style', $style);
     }
 
-    /**
-     * Scope: Search by name (multi-language)
-     *
-     * @param  Builder  $query
-     * @return Builder
-     */
-    public function scopeSearch($query, string $term)
-    {
-        return $query->where(function ($q) use ($term) {
-            $q->whereRaw("JSON_EXTRACT(name, '$.ar') LIKE ?", ["%{$term}%"])
-                ->orWhereRaw("JSON_EXTRACT(name, '$.en') LIKE ?", ["%{$term}%"]);
-        });
-    }
+    // scopeSearch() was removed: it had zero callers anywhere in app/ or tests/
+    // (every ->search() call in the codebase is on a repository or service, never on
+    // this model's builder), and it was JSON_EXTRACT(name, '$.ar') against a column that no longer exists — the table is
+    // `quran_reciters` and reciter names live in `reciter_translations`. Calling this
+    // would have raised "Unknown column 'name'".
+    // Searching this data goes through the repository, which uses
+    // FullTextSearchHelper / a constrained whereHas instead.
 }

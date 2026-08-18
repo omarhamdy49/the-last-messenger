@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Seerah;
 
 use App\Domain\Seerah\Models\SeerahMilestone;
+use App\Domain\Seerah\Services\SeerahEventService;
 use App\Domain\Seerah\Services\SeerahMilestoneService;
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
@@ -22,6 +23,7 @@ class SeerahMilestoneController extends Controller
 {
     public function __construct(
         protected SeerahMilestoneService $milestoneService,
+        protected SeerahEventService $eventService,
         protected AdminLoggerService $logger,
     ) {}
 
@@ -71,12 +73,18 @@ class SeerahMilestoneController extends Controller
     /**
      * GET /su/portal/v1/admin/seerah-milestones/{id}
      */
-    public function show(int $id): View
+    public function show(int $id, Request $request): View
     {
         $milestone = $this->milestoneService->findOrFail($id);
-        $eventsCount = $milestone->events()->count();
 
-        return view('admin.seerah-milestones.show', compact('milestone', 'eventsCount'));
+        // Same paginator the events index uses — one filter, one query shape.
+        $events = $this->eventService->paginateWithFilters(
+            ['milestone' => $id],
+            $request->integer('per_page', 15)
+        );
+        $eventsCount = $events->total();
+
+        return view('admin.seerah-milestones.show', compact('milestone', 'events', 'eventsCount'));
     }
 
     /**

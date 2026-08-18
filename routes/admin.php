@@ -63,9 +63,10 @@ Route::get('su/portal/v1/admin/dashboard', [DashboardController::class, 'index']
     ->middleware(['web', 'auth:admin', 'admin', 'role:super_admin|admin|editor,admin', 'throttle:60,1'])
     ->name('admin.dashboard');
 
-// Analytics Route Alias
+// Analytics Route Alias — same gate as the analytics group below, or the alias is a way
+// straight past it.
 Route::get('su/portal/v1/admin/analytics', [AnalyticsController::class, 'dashboard'])
-    ->middleware(['web', 'auth:admin', 'admin', 'role:super_admin|admin|editor,admin', 'throttle:60,1'])
+    ->middleware(['web', 'auth:admin', 'admin', 'role:super_admin|admin|editor,admin', 'permission:view analytics,admin', 'throttle:60,1'])
     ->name('admin.analytics');
 
 // Settings Hub — tabs for languages, media presets and Artisan commands.
@@ -119,11 +120,15 @@ Route::prefix('su/portal/v1/admin')
             // Legacy endpoints (for backward compatibility)
             Route::get('/growth', [DashboardController::class, 'growth'])->name('growth');
             Route::get('/popular', [DashboardController::class, 'popular'])->name('popular');
-            Route::post('/cache/clear', [DashboardController::class, 'clearCache'])->name('cache.clear');
+            // Reading the dashboard is fine for editors; flushing its caches is not — an
+            // unprivileged POST here forces every cached dashboard query to rebuild at once.
+            Route::post('/cache/clear', [DashboardController::class, 'clearCache'])
+                ->middleware('role:super_admin|admin,admin')
+                ->name('cache.clear');
         });
 
         // Analytics Routes
-        Route::prefix('analytics')->name('admin.analytics.')->group(function (): void {
+        Route::prefix('analytics')->name('admin.analytics.')->middleware('permission:view analytics,admin')->group(function (): void {
             Route::get('/', [AnalyticsController::class, 'dashboard'])->name('index');
             Route::get('/stats', [AnalyticsController::class, 'getStats'])->name('stats');
             Route::get('/charts/{type}', [AnalyticsController::class, 'getChartData'])->name('charts');
@@ -139,10 +144,9 @@ Route::prefix('su/portal/v1/admin')
             Route::post('/cache/clear', [AnalyticsController::class, 'clearCache'])->name('cache.clear');
         });
 
-        // Components Demo Route (for development)
-        Route::get('/components-demo', function () {
-            return view('admin.components-demo');
-        })->name('admin.components.demo');
+        // The `/components-demo` dev route was removed: it returned view('admin.components-demo'),
+        // which was never created, so the route was a guaranteed 500 for its whole life.
+        // Found by tests/Feature/Admin/AdminRouteSmokeTest.php on its first run.
 
         Route::prefix('media-library')->name('admin.media-library.')->group(function (): void {
             Route::get('/', [MediaController::class, 'index'])->name('index');
@@ -224,6 +228,16 @@ Route::prefix('su/portal/v1/admin')
             ]);
         });
 
+        // `roles/create` MUST be registered before the `roles/{role}` route that the
+        // resource below declares, or the static segment resolves as the {role} parameter
+        // and dispatches to RoleController::show(int $id) with 'create' — a TypeError 500.
+        // The role-creation page was dead for exactly this reason. It stays super-admin
+        // only, matching the privilege-definition group further down.
+        // (CLAUDE.md: "Register static segments before Route::resource or /{param}".)
+        Route::middleware('role:super_admin,admin')->group(function (): void {
+            Route::get('roles/create', [RoleController::class, 'create'])->name('admin.roles.create');
+        });
+
         // Reading the role catalogue is part of user administration — the edit
         // form needs it to render the assignable-roles list.
         Route::middleware('role:super_admin|admin,admin')->group(function (): void {
@@ -244,8 +258,10 @@ Route::prefix('su/portal/v1/admin')
                 Route::post('/{id}/permissions', [RoleController::class, 'assignPermissions'])->name('admin.roles.assign-permissions');
             });
             Route::get('/permissions', [RoleController::class, 'permissions'])->name('admin.permissions.index');
-            Route::resource('roles', RoleController::class)->except(['index', 'show'])->names([
-                'create' => 'admin.roles.create',
+            // `create` is excluded here — it is registered above the `roles/{role}` route
+            // so the static segment wins. Leaving it in would register a second route
+            // named admin.roles.create.
+            Route::resource('roles', RoleController::class)->except(['index', 'show', 'create'])->names([
                 'store' => 'admin.roles.store',
                 'edit' => 'admin.roles.edit',
                 'update' => 'admin.roles.update',
@@ -254,7 +270,7 @@ Route::prefix('su/portal/v1/admin')
         });
 
         // Activity Log Routes
-        Route::prefix('activity-logs')->name('admin.activity-logs.')->group(function (): void {
+        Route::prefix('activity-logs')->name('admin.activity-logs.')->middleware('role:super_admin|admin,admin')->group(function (): void {
             Route::get('/', [ActivityLogController::class, 'index'])->name('index');
             Route::get('/user/{userId}', [ActivityLogController::class, 'userActivity'])->name('user');
             Route::get('/model/{type}/{id}', [ActivityLogController::class, 'modelHistory'])->name('model');
@@ -262,7 +278,7 @@ Route::prefix('su/portal/v1/admin')
         });
 
         // Language Settings Routes
-        Route::prefix('settings/languages')->name('admin.settings.languages.')->group(function (): void {
+        Route::prefix('settings/languages')->name('admin.settings.languages.')->middleware('permission:manage settings,admin')->group(function (): void {
             Route::get('/', [LanguageSettingsController::class, 'index'])->name('index');
             Route::get('/list', [LanguageSettingsController::class, 'list'])->name('list');
             Route::post('/', [LanguageSettingsController::class, 'store'])->name('store');
@@ -274,7 +290,7 @@ Route::prefix('su/portal/v1/admin')
         });
 
         // Export Routes
-        Route::prefix('export')->name('admin.export.')->group(function (): void {
+        Route::prefix('export')->name('admin.export.')->middleware('role:super_admin|admin,admin')->group(function (): void {
             Route::post('/', [ExportController::class, 'export'])->name('export');
             Route::get('/{module}/columns', [ExportController::class, 'getColumns'])->name('columns');
             Route::get('/history', [ExportController::class, 'history'])->name('history');
@@ -283,7 +299,7 @@ Route::prefix('su/portal/v1/admin')
         });
 
         // Import Routes
-        Route::prefix('import')->name('admin.import.')->group(function (): void {
+        Route::prefix('import')->name('admin.import.')->middleware('role:super_admin|admin,admin')->group(function (): void {
             Route::get('/{module}', [ImportController::class, 'importForm'])->name('form');
             Route::post('/{module}/parse', [ImportController::class, 'parseFile'])->name('parse');
             Route::post('/{module}/validate', [ImportController::class, 'validateData'])->name('validate');
@@ -296,7 +312,7 @@ Route::prefix('su/portal/v1/admin')
         });
 
         // Content Scheduler Routes
-        Route::prefix('scheduler')->name('admin.scheduler.')->group(function (): void {
+        Route::prefix('scheduler')->name('admin.scheduler.')->middleware('role:super_admin|admin,admin')->group(function (): void {
             Route::get('/', [SchedulerController::class, 'index'])->name('index');
             Route::get('/create', [SchedulerController::class, 'create'])->name('create');
             Route::post('/', [SchedulerController::class, 'store'])->name('store');
@@ -318,7 +334,7 @@ Route::prefix('su/portal/v1/admin')
         });
 
         // Version Control Routes
-        Route::prefix('versions')->name('admin.versions.')->group(function (): void {
+        Route::prefix('versions')->name('admin.versions.')->middleware('role:super_admin|admin,admin')->group(function (): void {
             Route::get('/stats', [VersionController::class, 'stats'])->name('stats');
             Route::get('/{type}/{id}', [VersionController::class, 'getVersions'])->name('list');
             Route::get('/{versionId}', [VersionController::class, 'getVersion'])->name('show');
@@ -329,7 +345,7 @@ Route::prefix('su/portal/v1/admin')
         });
 
         // Audit Log Routes
-        Route::prefix('audit')->name('admin.audit.')->group(function (): void {
+        Route::prefix('audit')->name('admin.audit.')->middleware('role:super_admin|admin,admin')->group(function (): void {
             Route::get('/', [AuditController::class, 'index'])->name('index');
             Route::get('/stats', [AuditController::class, 'stats'])->name('stats');
             Route::get('/export', [AuditController::class, 'export'])->name('export');

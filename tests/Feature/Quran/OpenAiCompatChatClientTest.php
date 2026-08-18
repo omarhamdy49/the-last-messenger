@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Quran;
 
+use App\Domain\Quran\Infrastructure\Llm\ChatResult;
 use App\Domain\Quran\Infrastructure\Llm\OpenAiCompatChatClient;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -87,7 +88,7 @@ final class OpenAiCompatChatClientTest extends TestCase
         $this->assertSame(9, $result->usage['total_tokens']);
     }
 
-    private function stream(?callable $onDelta = null): \App\Domain\Quran\Infrastructure\Llm\ChatResult
+    private function stream(?callable $onDelta = null): ChatResult
     {
         return (new OpenAiCompatChatClient('fake_llm'))->streamChat(
             [['role' => 'user', 'content' => 'hi']],

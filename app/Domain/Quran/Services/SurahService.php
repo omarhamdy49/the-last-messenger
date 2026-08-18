@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Cache;
 /**
  * Surah Service
  * Handles business logic for Quran surahs (chapters)
+ *
+ * @extends BaseService<SurahRepositoryInterface>
  */
 class SurahService extends BaseService
 {

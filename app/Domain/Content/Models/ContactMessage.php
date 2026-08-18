@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Content\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /**
  * ContactMessage Model
@@ -17,9 +19,9 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $subject
  * @property string $body
  * @property bool $is_read
- * @property \Illuminate\Support\Carbon|null $read_at
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
+ * @property Carbon|null $read_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class ContactMessage extends Model
 {
@@ -57,8 +59,8 @@ class ContactMessage extends Model
     /**
      * Scope: Only unread messages.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeUnread($query)
     {

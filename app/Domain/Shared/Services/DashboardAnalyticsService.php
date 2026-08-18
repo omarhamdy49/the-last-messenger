@@ -6,6 +6,7 @@ namespace App\Domain\Shared\Services;
 
 use App\Domain\Shared\Contracts\DashboardStatsProviderInterface;
 use App\Domain\Shared\Models\AdminLog;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -275,7 +276,7 @@ class DashboardAnalyticsService
     /**
      * Get monthly growth for a database table by table name
      *
-     * @param  \Carbon\Carbon  $startDate
+     * @param  Carbon  $startDate
      * @return array<int, array<string, mixed>>
      */
     private function getMonthlyGrowthForTable(string $table, $startDate): array
@@ -292,7 +293,11 @@ class DashboardAnalyticsService
                 ->get()
                 ->map(fn ($row) => ['month' => $row->month, 'count' => $row->count])
                 ->toArray();
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            // Fallback kept, but the failure is now traceable: without report() a real
+            // bug (broken query, dropped column) looked identical to 'no data'.
+            report($e);
+
             return [];
         }
     }

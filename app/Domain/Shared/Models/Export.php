@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Shared\Models;
 
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -22,9 +23,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $file_name
  * @property int $file_size
  * @property string $status
- * @property \Carbon\Carbon|null $completed_at
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon|null $completed_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class Export extends Model
 {

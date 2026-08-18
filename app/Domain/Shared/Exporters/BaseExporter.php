@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Shared\Exporters;
 
 use App\Domain\Shared\Enums\ExportFormat;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\FromCollection;
@@ -12,6 +13,7 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Excel;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
@@ -154,7 +156,7 @@ abstract class BaseExporter implements FromCollection, ShouldAutoSize, WithHeadi
             return '';
         }
 
-        if ($date instanceof \Carbon\Carbon) {
+        if ($date instanceof Carbon) {
             return $date->format('Y-m-d H:i:s');
         }
 
@@ -219,9 +221,9 @@ abstract class BaseExporter implements FromCollection, ShouldAutoSize, WithHeadi
 
         // Export based on format
         if ($format === ExportFormat::CSV) {
-            $this->store($fullFilename, 'exports', \Maatwebsite\Excel\Excel::CSV);
+            $this->store($fullFilename, 'exports', Excel::CSV);
         } else {
-            $this->store($fullFilename, 'exports', \Maatwebsite\Excel\Excel::XLSX);
+            $this->store($fullFilename, 'exports', Excel::XLSX);
         }
 
         return $path;

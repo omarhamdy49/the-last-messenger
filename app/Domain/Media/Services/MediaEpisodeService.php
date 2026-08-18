@@ -17,6 +17,9 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 
+/**
+ * @extends BaseService<MediaEpisodeRepositoryInterface>
+ */
 class MediaEpisodeService extends BaseService
 {
     public function __construct(

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Shared\Services;
 
 use App\Domain\Shared\Models\Language;
+use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
@@ -42,7 +43,7 @@ class LanguageCacheService
     /**
      * Get cache store (with or without tags)
      *
-     * @return \Illuminate\Contracts\Cache\Repository
+     * @return Repository
      */
     protected function cache(): mixed
     {

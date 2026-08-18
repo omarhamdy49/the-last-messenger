@@ -7,6 +7,7 @@ namespace App\Domain\Topics\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Carbon;
 
 /**
  * TopicItem Model
@@ -24,8 +25,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property string $itemable_type Morph alias: verse|hadith|article
  * @property int $itemable_id
  * @property int $sort_order
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  * @property-read Topic $topic
  * @property-read Model|null $itemable
  */

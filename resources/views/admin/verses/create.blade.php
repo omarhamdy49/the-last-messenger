@@ -149,9 +149,47 @@
                                name="ruku_number"
                                value="{{ old('ruku_number') }}"
                                min="1"
+                               max="558"
+                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                               required>
+                        @error('ruku_number')
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    {{-- rub_el_hizb_number is NOT NULL in the schema; the form never
+                         submitted it, so every save failed the insert. --}}
+                    <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            {{ __('quran.verses.rub_el_hizb') }}
+                        </label>
+                        <input type="number"
+                               name="rub_el_hizb_number"
+                               value="{{ old('rub_el_hizb_number') }}"
+                               min="1"
+                               max="240"
+                               class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                               required>
+                        @error('rub_el_hizb_number')
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Manzil Number (optional) -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            {{ __('quran.verses.manzil') }}
+                        </label>
+                        <input type="number"
+                               name="manzil_number"
+                               value="{{ old('manzil_number') }}"
+                               min="1"
+                               max="7"
                                class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                        @error('ruku_number')
+                        @error('manzil_number')
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
                     </div>

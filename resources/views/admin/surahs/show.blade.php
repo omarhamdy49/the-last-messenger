@@ -438,14 +438,9 @@ use Illuminate\Support\Str;
                     <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">عدد الآيات</span>
                     <span class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $stats['verses_count'] ?? $surah->verses_count }}</span>
                 </div>
-                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">عدد الكلمات</span>
-                    <span class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ number_format($stats['words_count'] ?? 0) }}</span>
-                </div>
-                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">عدد الحروف</span>
-                    <span class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ number_format($stats['letters_count'] ?? 0) }}</span>
-                </div>
+                {{-- عدد الكلمات / عدد الحروف removed: words_count and letters_count are
+                     not columns on quran_surahs and have no accessor, so both rows had
+                     always rendered 0. See SurahController::show(). --}}
             </div>
         </div>
 

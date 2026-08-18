@@ -17,8 +17,16 @@ use Illuminate\Support\Facades\DB;
 /**
  * Interaction Service
  * Handles user interaction tracking and engagement metrics
+ *
+ * Deliberately does NOT extend BaseService. It holds two repositories and never assigned
+ * `$this->repository`, so every one of the nine inherited methods (all/paginate/find/
+ * findOrFail/create/update/delete/count/exists) would have raised "typed property
+ * BaseService::$repository must not be accessed before initialization". Nothing called
+ * them, so the trap was latent rather than live — but the inheritance bought nothing and
+ * could not be satisfied, so it is gone rather than papered over by picking one of the two
+ * repositories arbitrarily.
  */
-class InteractionService extends BaseService
+class InteractionService
 {
     public function __construct(
         protected UserInteractionRepositoryInterface $interactionRepository,

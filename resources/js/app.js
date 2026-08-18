@@ -20,6 +20,26 @@ Alpine.plugin(collapse);
 const renderIcons = () => createIcons({ icons });
 window.renderIcons = renderIcons;
 
+/* --------------------------------------------------- genealogy canvas --- */
+/*
+ * The genealogy page's d3 tree, loaded on demand.
+ *
+ * This `import()` is written literally so Vite can see it: the module stays a
+ * separate lazily-fetched chunk (d3 never rides along in app.js), but it is
+ * part of the normal module graph, resolved by the bundler.
+ *
+ * It used to be a separate Vite *entry* that the page fetched by building the
+ * URL by hand with `Vite::asset()`. That URL is the dev server's origin
+ * (127.0.0.1:5173), which broke two ways: from a phone on the LAN, 127.0.0.1
+ * is the phone, so the tree never loaded; and in the browser the cross-origin
+ * module dragged in a second HMR client that put the page into a reload loop,
+ * wiping any open branch or fullscreen canvas a second after you touched it.
+ * Letting the bundler own the reference removes both, and the production
+ * entry-export tree-shaking workaround with it.
+ */
+window.loadGenealogyTree = () =>
+    import('./genealogy-tree.js').then((m) => m.mountGenealogyTree);
+
 /* ----------------------------------------------------------- dark mode --- */
 Alpine.store('theme', {
     dark: localStorage.getItem('darkMode') !== 'false', // default: dark; honor an explicit light preference

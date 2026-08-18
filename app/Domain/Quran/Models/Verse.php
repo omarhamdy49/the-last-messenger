@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Models;
 
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,8 +25,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null $manzil_number
  * @property int|null $sajdah_number
  * @property int $page_number
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class Verse extends Model
 {
@@ -95,6 +97,30 @@ class Verse extends Model
     }
 
     /**
+     * Eager-load constraint for reader paths: load only the translation
+     * editions a reader actually renders for $locale, not every locale/edition
+     * in quran_verse_translations (112k rows). Usable with ->load() and ->with().
+     *
+     * `ar` (source Arabic text -> VerseDTO::textArabic, the fallback), `en`
+     * (the inlined default translation) and `en-tl` (transliteration) are read
+     * by the reader regardless of $locale (see Site\QuranController), so they
+     * stay in the set to preserve output and the Arabic fallback.
+     *
+     * ponytail: reader lang set is fixed; widen it if the UI inlines another
+     * edition.
+     *
+     * @return array<string, \Closure>
+     */
+    public static function readerTranslationsEagerLoad(string $locale = 'ar'): array
+    {
+        $langs = array_values(array_unique(['ar', 'en', 'en-tl', $locale]));
+
+        return ['translations' => fn ($q) => $q
+            ->select(['id', 'verse_id', 'resource_id', 'lang', 'text'])
+            ->whereIn('lang', $langs)];
+    }
+
+    /**
      * Get translation for specific language
      */
     public function getTranslation(string $lang = 'ar'): ?VerseTranslation
@@ -144,8 +170,8 @@ class Verse extends Model
     /**
      * Scope: Filter by surah
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeBySurah($query, int $surahId)
     {
@@ -155,8 +181,8 @@ class Verse extends Model
     /**
      * Scope: Filter by juz
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByJuz($query, int $juz)
     {
@@ -166,8 +192,8 @@ class Verse extends Model
     /**
      * Scope: Filter by page
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByPage($query, int $page)
     {
@@ -177,8 +203,8 @@ class Verse extends Model
     /**
      * Scope: Filter by hizb
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByHizb($query, int $hizb)
     {
@@ -188,8 +214,8 @@ class Verse extends Model
     /**
      * Scope: Filter sajdah verses only
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeSajdah($query)
     {
@@ -199,8 +225,8 @@ class Verse extends Model
     /**
      * Scope: Filter by ruku
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByRuku($query, int $ruku)
     {
@@ -210,8 +236,8 @@ class Verse extends Model
     /**
      * Scope: Filter by manzil
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByManzil($query, int $manzil)
     {

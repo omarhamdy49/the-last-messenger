@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Domain\Content\Models;
 
 use App\Domain\Shared\Traits\HasLocalizedContent;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /**
  * Faq Model
@@ -17,8 +19,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $category
  * @property bool $is_active
  * @property int $sort_order
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class Faq extends Model
 {
@@ -79,8 +81,8 @@ class Faq extends Model
     /**
      * Scope: Only active FAQs.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeActive($query)
     {
@@ -90,8 +92,8 @@ class Faq extends Model
     /**
      * Scope: Filter by category.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByCategory($query, string $category)
     {
@@ -101,8 +103,8 @@ class Faq extends Model
     /**
      * Scope: Order for display.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeOrdered($query)
     {

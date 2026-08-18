@@ -201,10 +201,21 @@ final class MuslimScholarsSahabaImportTest extends TestCase
             ProphetFamilySeeder::class,
         ]);
 
+        // This case verifies a one-off data-migration mapping against a 7,806-row CSV that
+        // lives under storage/app/ and is not tracked in git, and it hard-asserts counts
+        // tied to that snapshot. It can only run on a machine that still has the artefact —
+        // in CI, or on a fresh clone, it is not a regression signal. Skip rather than fail.
+        $csv = base_path('storage/app/sahaba-import-preview/muslimscholars-sahaba-mapped-preview.csv');
+
+        if (! is_file($csv) || ! is_readable($csv)) {
+            $this->markTestSkipped(
+                'Reviewed-map snapshot not present at storage/app/sahaba-import-preview/'
+                .'muslimscholars-sahaba-mapped-preview.csv (untracked import artefact).'
+            );
+        }
+
         $service = app(MuslimScholarsSahabaImportService::class);
-        $preview = $service->preview(base_path(
-            'storage/app/sahaba-import-preview/muslimscholars-sahaba-mapped-preview.csv'
-        ));
+        $preview = $service->preview($csv);
         $plan = $service->plan($preview);
 
         $this->assertSame(7806, $plan->total());

@@ -47,8 +47,11 @@ class ArticleSeriesIntegrationTest extends TestCase
             'thumbnail' => UploadedFile::fake()->image('series-thumb.jpg', 800, 400),
         ];
 
-        $this->post(route('admin.series.store'), $payload)
-            ->assertRedirect(route('admin.series.index'));
+        // SeriesController::store redirects to the new series' show page (matching
+        // admin.media-programs.show), not the index. The assertion below was stale.
+        $response = $this->post(route('admin.series.store'), $payload);
+        $series = Series::query()->where('slug', 'seerah-series')->firstOrFail();
+        $response->assertRedirect(route('admin.series.show', $series->id));
 
         $series = Series::query()->firstOrFail();
 
@@ -84,7 +87,7 @@ class ArticleSeriesIntegrationTest extends TestCase
         ];
 
         $this->put(route('admin.series.update', $series), $payload)
-            ->assertRedirect(route('admin.series.index'));
+            ->assertRedirect(route('admin.series.show', $series->id));
 
         $series->refresh();
         $this->assertSame('عنوان محدث', $series->getTranslation('title', 'ar'));
@@ -106,7 +109,7 @@ class ArticleSeriesIntegrationTest extends TestCase
         ];
 
         $this->put(route('admin.series.update', $series), $payload)
-            ->assertRedirect(route('admin.series.index'));
+            ->assertRedirect(route('admin.series.show', $series->id));
 
         $series->refresh();
         $this->assertNotSame($initialPath, $series->thumbnail);

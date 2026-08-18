@@ -7,11 +7,14 @@ namespace App\Http\Requests\Admin\MediaProgram;
 use App\Domain\Media\Enums\MaturityRating;
 use App\Domain\Media\Enums\ProgramCategory;
 use App\Domain\Media\Support\YouTubeUrl;
+use App\Http\Requests\Admin\Content\Concerns\SanitizesRichText;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreMediaProgramRequest extends FormRequest
 {
+    use SanitizesRichText;
+
     public function authorize(): bool
     {
         return $this->user()->hasAnyRole(['admin', 'super_admin']);
@@ -86,5 +89,16 @@ class StoreMediaProgramRequest extends FormRequest
             'slug.unique' => 'This slug is already taken.',
             'category.in' => 'Invalid category value.',
         ];
+    }
+
+    /**
+     * These render with {!! !!} on /media/{slug} and in the admin episode page, and
+     * the same columns also receive third-party YouTube text (sanitised in
+     * YouTubeSyncService). Purify here so both write paths land clean.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->sanitizeRichTextField('description');
+        $this->sanitizeRichTextField('host');
     }
 }

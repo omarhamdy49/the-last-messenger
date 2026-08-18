@@ -78,10 +78,10 @@ class BulkOperationController extends Controller
      *
      * GET /admin/bulk-operations/{id}/status
      */
-    public function status(string $id): JsonResponse
+    public function status(Request $request, string $id): JsonResponse
     {
         try {
-            $operation = $this->bulkOperationService->getOperationStatus((int) $id);
+            $operation = $this->bulkOperationService->getOperationStatus((int) $id, $this->ownerScope($request));
 
             return $this->successResponse(
                 new BulkOperationResource($operation),
@@ -138,6 +138,10 @@ class BulkOperationController extends Controller
     public function destroy(string $id, Request $request): JsonResponse
     {
         try {
+            // Resolve under the caller's scope first: cancelOperation() takes only an id,
+            // so without this an editor could cancel another admin's running operation.
+            $this->bulkOperationService->getOperationStatus((int) $id, $this->ownerScope($request));
+
             $cancelled = $this->bulkOperationService->cancelOperation((int) $id);
 
             if (! $cancelled) {
@@ -176,10 +180,10 @@ class BulkOperationController extends Controller
      *
      * GET /admin/bulk-operations/{id}/download
      */
-    public function download(string $id): JsonResponse
+    public function download(Request $request, string $id): JsonResponse
     {
         try {
-            $operation = $this->bulkOperationService->getOperationStatus((int) $id);
+            $operation = $this->bulkOperationService->getOperationStatus((int) $id, $this->ownerScope($request));
 
             if (! $operation->isComplete()) {
                 return $this->errorResponse(
@@ -244,5 +248,17 @@ class BulkOperationController extends Controller
                 500
             );
         }
+    }
+
+    /**
+     * null for a super admin (platform-wide), otherwise the caller's own id.
+     *
+     * index() and stats() already scoped this way; download(), status() and destroy() took
+     * a raw {id} and did not, which made them an IDOR onto other admins' operations and
+     * their result_data (which carries the submitted request_data).
+     */
+    private function ownerScope(Request $request): ?int
+    {
+        return $request->user()->hasRole('super_admin') ? null : (int) $request->user()->id;
     }
 }

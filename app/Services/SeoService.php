@@ -9,6 +9,7 @@ use App\Exceptions\SeoGenerationException;
 use App\Models\Article;
 use App\Services\Dtos\SeoMetadata;
 use App\Services\Dtos\SeoValidationResult;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -152,7 +153,7 @@ class SeoService
                 'name' => $article->author->name,
             ];
 
-            if (\Illuminate\Support\Facades\Route::has('profile.show')) {
+            if (Route::has('profile.show')) {
                 $authorData['url'] = route('profile.show', $article->author->id);
             }
 

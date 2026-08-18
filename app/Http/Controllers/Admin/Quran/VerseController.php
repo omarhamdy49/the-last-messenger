@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin\Quran;
 
+use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Quran\Services\SurahService;
 use App\Domain\Quran\Services\VerseService;
@@ -11,6 +12,7 @@ use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreVerseRequest;
 use App\Http\Requests\Admin\UpdateVerseRequest;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -110,7 +112,9 @@ class VerseController extends Controller
             Cache::forget(QuranCacheKeys::versesBySurah($verse->surah_id));
             Cache::forget(QuranCacheKeys::surahTotalVerses());
             Cache::forget(QuranCacheKeys::sajdaVersesCount());
-            if ($verse->is_sajda) {
+            // `is_sajda` is not a column and has no accessor — reading it returned null,
+            // so this cache was never actually cleared. hasSajdah() derives from sajdah_number.
+            if ($verse->hasSajdah()) {
                 Cache::forget(QuranCacheKeys::sajdaVerses());
             }
 
@@ -121,6 +125,8 @@ class VerseController extends Controller
                 ->route('admin.verses.show', $verse->id)
                 ->with('success', 'Verse created successfully');
         } catch (\Throwable $e) {
+            report($e);
+
             return redirect()
                 ->back()
                 ->withInput()
@@ -137,14 +143,11 @@ class VerseController extends Controller
     {
         $verse = $this->verseService->getWithRelations($id);
 
-        // Get verse statistics
-        $stats = [
-            'words_count' => $verse->words_count ?? 0,
-            'letters_count' => $verse->letters_count ?? 0,
-            'tafseer_count' => $verse->tafsirs()->count(),
-        ];
-
-        return view('admin.verses.show', compact('verse', 'stats'));
+        // No $stats here: show.blade.php never read it. words_count/letters_count are
+        // not columns on quran_verses and Verse declares no accessor, so both always
+        // resolved to null and `?? 0` hid it; tafseer_count was a COUNT query per page
+        // view for a value nothing rendered. The view lists $verse->tafsirs directly.
+        return view('admin.verses.show', compact('verse'));
     }
 
     /**
@@ -190,6 +193,8 @@ class VerseController extends Controller
                 ->route('admin.verses.show', $id)
                 ->with('success', 'Verse updated successfully');
         } catch (\Throwable $e) {
+            report($e);
+
             return redirect()
                 ->back()
                 ->withInput()
@@ -224,6 +229,8 @@ class VerseController extends Controller
                 ->route('admin.verses.index')
                 ->with('success', 'Verse deleted successfully');
         } catch (\Throwable $e) {
+            report($e);
+
             return redirect()
                 ->back()
                 ->with('error', 'Failed to delete verse: '.$e->getMessage());
@@ -250,7 +257,7 @@ class VerseController extends Controller
             // Log bulk action
             $this->logger->logBulkAction(
                 'bulk_delete',
-                \App\Domain\Quran\Models\Verse::class,
+                Verse::class,
                 $ids,
                 $request->user()
             );
@@ -269,6 +276,7 @@ class VerseController extends Controller
                 ->route('admin.verses.index')
                 ->with('success', $message);
         } catch (\Throwable $e) {
+            report($e);
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => false,
@@ -341,6 +349,6 @@ class VerseController extends Controller
      * Helper: Get surahs for dropdown selector
      * Cached for 30 minutes
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
 }

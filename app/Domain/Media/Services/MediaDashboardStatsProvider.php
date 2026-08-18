@@ -24,7 +24,9 @@ class MediaDashboardStatsProvider implements DashboardStatsProviderInterface
                 'total' => MediaProgram::count(),
                 'views' => (int) MediaProgram::sum('views_count'),
             ];
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            report($e);
+
             return ['total' => 0, 'views' => 0];
         }
     }

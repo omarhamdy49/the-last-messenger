@@ -4,8 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Blog\Models\Category;
+use App\Domain\Blog\Models\Series;
+use App\Domain\Blog\Models\Tag;
+use App\Domain\Media\Models\MediaProgram;
+use App\Domain\People\Models\Muslim;
+use App\Domain\Quran\Models\Verse;
+use App\Domain\Seerah\Models\SeerahEvent;
+use App\Domain\Shared\Models\AdminLog;
 use App\Domain\Shared\Repositories\AdminLogRepositoryInterface;
 use App\Http\Controllers\Controller;
+use App\Models\Article;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -50,12 +59,12 @@ class ActivityLogController extends Controller
 
         // Calculate stats
         $stats = [
-            'today' => \App\Domain\Shared\Models\AdminLog::whereDate('created_at', today())->count(),
-            'week' => \App\Domain\Shared\Models\AdminLog::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
-            'users' => \App\Domain\Shared\Models\AdminLog::whereDate('created_at', today())
+            'today' => AdminLog::whereDate('created_at', today())->count(),
+            'week' => AdminLog::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
+            'users' => AdminLog::whereDate('created_at', today())
                 ->distinct('user_id')
                 ->count('user_id'),
-            'topAction' => \App\Domain\Shared\Models\AdminLog::whereDate('created_at', today())
+            'topAction' => AdminLog::whereDate('created_at', today())
                 ->groupBy('action')
                 ->selectRaw('action, COUNT(*) as count')
                 ->orderByDesc('count')
@@ -139,6 +148,7 @@ class ActivityLogController extends Controller
                     }
                 }
             } catch (\Throwable $e) {
+                report($e);
                 // Model doesn't exist or can't be loaded
                 $modelExists = false;
             }
@@ -192,15 +202,15 @@ class ActivityLogController extends Controller
     protected function modelRegistry(): array
     {
         return [
-            \App\Models\Article::class => ['label' => 'مقال', 'route' => 'admin.articles.show'],
-            \App\Domain\Blog\Models\Category::class => ['label' => 'تصنيف', 'route' => 'admin.categories.show'],
-            \App\Domain\Blog\Models\Series::class => ['label' => 'سلسلة', 'route' => 'admin.series.show'],
-            \App\Domain\Blog\Models\Tag::class => ['label' => 'وسم', 'route' => 'admin.tags.show'],
-            \App\Domain\Media\Models\MediaProgram::class => ['label' => 'برنامج إعلامي', 'route' => 'admin.media-programs.show'],
-            \App\Domain\Seerah\Models\SeerahEvent::class => ['label' => 'حدث سيرة', 'route' => 'admin.seerah-events.show'],
-            \App\Domain\People\Models\Muslim::class => ['label' => 'شخصية', 'route' => 'admin.genealogy.show'],
-            \App\Domain\Quran\Models\Verse::class => ['label' => 'آية قرآنية', 'route' => 'admin.verses.show'],
-            \App\Models\User::class => ['label' => 'مستخدم', 'route' => 'admin.users.show'],
+            Article::class => ['label' => 'مقال', 'route' => 'admin.articles.show'],
+            Category::class => ['label' => 'تصنيف', 'route' => 'admin.categories.show'],
+            Series::class => ['label' => 'سلسلة', 'route' => 'admin.series.show'],
+            Tag::class => ['label' => 'وسم', 'route' => 'admin.tags.show'],
+            MediaProgram::class => ['label' => 'برنامج إعلامي', 'route' => 'admin.media-programs.show'],
+            SeerahEvent::class => ['label' => 'حدث سيرة', 'route' => 'admin.seerah-events.show'],
+            Muslim::class => ['label' => 'شخصية', 'route' => 'admin.genealogy.show'],
+            Verse::class => ['label' => 'آية قرآنية', 'route' => 'admin.verses.show'],
+            User::class => ['label' => 'مستخدم', 'route' => 'admin.users.show'],
         ];
     }
 
@@ -218,6 +228,8 @@ class ActivityLogController extends Controller
         try {
             return route($entry['route'], $modelId);
         } catch (\Throwable $e) {
+            report($e);
+
             return null;
         }
     }

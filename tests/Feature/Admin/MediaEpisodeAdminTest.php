@@ -9,6 +9,8 @@ use App\Domain\Media\Models\MediaEpisodeTranslation;
 use App\Domain\Media\Models\MediaProgram;
 use App\Domain\Media\Models\MediaProgramTranslation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -382,14 +384,14 @@ final class MediaEpisodeAdminTest extends TestCase
 
     public function test_deleting_episode_removes_its_thumbnail_files(): void
     {
-        \Illuminate\Support\Facades\Storage::fake('public');
+        Storage::fake('public');
         $admin = $this->createAdminUser();
         $program = $this->createProgram();
         $episode = $this->createEpisode($program, 1);
-        $episode->addMedia(\Illuminate\Http\UploadedFile::fake()->image('thumb.jpg', 800, 450))
+        $episode->addMedia(UploadedFile::fake()->image('thumb.jpg', 800, 450))
             ->toMediaCollection('thumbnail');
 
-        $this->assertNotEmpty(\Illuminate\Support\Facades\Storage::disk('public')->allFiles());
+        $this->assertNotEmpty(Storage::disk('public')->allFiles());
 
         $this->actingAs($admin)->delete('/su/portal/v1/admin/media-episodes/'.$episode->id);
 
@@ -397,7 +399,7 @@ final class MediaEpisodeAdminTest extends TestCase
             'model_type' => (new MediaEpisode)->getMorphClass(),
             'model_id' => $episode->id,
         ]);
-        $this->assertEmpty(\Illuminate\Support\Facades\Storage::disk('public')->allFiles());
+        $this->assertEmpty(Storage::disk('public')->allFiles());
     }
 
     // ------------------------------------------------------------------
@@ -542,13 +544,13 @@ final class MediaEpisodeAdminTest extends TestCase
 
     public function test_admin_can_change_thumbnail_from_hero(): void
     {
-        \Illuminate\Support\Facades\Storage::fake('public');
+        Storage::fake('public');
         $admin = $this->createAdminUser();
         $episode = $this->createEpisode($this->createProgram(), 1);
 
         $response = $this->actingAs($admin)->post(
             '/su/portal/v1/admin/media-episodes/'.$episode->id.'/thumbnail',
-            ['thumbnail' => \Illuminate\Http\UploadedFile::fake()->image('thumb.jpg', 800, 450)]
+            ['thumbnail' => UploadedFile::fake()->image('thumb.jpg', 800, 450)]
         );
 
         $response->assertRedirect('/su/portal/v1/admin/media-episodes/'.$episode->id);
@@ -557,10 +559,10 @@ final class MediaEpisodeAdminTest extends TestCase
 
     public function test_admin_can_remove_thumbnail_from_hero(): void
     {
-        \Illuminate\Support\Facades\Storage::fake('public');
+        Storage::fake('public');
         $admin = $this->createAdminUser();
         $episode = $this->createEpisode($this->createProgram(), 1);
-        $episode->addMedia(\Illuminate\Http\UploadedFile::fake()->image('thumb.jpg', 800, 450))
+        $episode->addMedia(UploadedFile::fake()->image('thumb.jpg', 800, 450))
             ->toMediaCollection('thumbnail');
 
         $response = $this->actingAs($admin)->post(

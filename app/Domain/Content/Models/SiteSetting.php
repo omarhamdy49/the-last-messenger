@@ -6,7 +6,9 @@ namespace App\Domain\Content\Models;
 
 use App\Domain\Content\Enums\SiteSettingType;
 use App\Domain\Shared\Traits\HasLocalizedContent;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /**
  * SiteSetting Model
@@ -21,8 +23,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $value Non-translatable value (urls/images/bools)
  * @property bool $is_translatable
  * @property int $sort_order
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class SiteSetting extends Model
 {
@@ -87,8 +89,8 @@ class SiteSetting extends Model
     /**
      * Scope: Filter by settings group.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByGroup($query, string $group)
     {

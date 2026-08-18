@@ -129,6 +129,7 @@ class ReciterController extends Controller
                 ->route('admin.reciters.index')
                 ->with('success', __('admin.reciter_created'));
         } catch (\Throwable $e) {
+            report($e);
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => false,
@@ -204,6 +205,7 @@ class ReciterController extends Controller
                 ->route('admin.reciters.index')
                 ->with('success', __('admin.reciter_updated'));
         } catch (\Throwable $e) {
+            report($e);
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => false,
@@ -244,6 +246,7 @@ class ReciterController extends Controller
                 ->route('admin.reciters.index')
                 ->with('success', __('admin.reciter_deleted'));
         } catch (\Throwable $e) {
+            report($e);
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => false,
@@ -296,6 +299,7 @@ class ReciterController extends Controller
                 ->route('admin.reciters.index')
                 ->with('success', __('admin.reciters_bulk_deleted', ['count' => $deleted]));
         } catch (\Throwable $e) {
+            report($e);
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => false,
@@ -340,6 +344,8 @@ class ReciterController extends Controller
                 'message' => __('admin.reciters_reordered'),
             ]);
         } catch (\Throwable $e) {
+            report($e);
+
             return response()->json([
                 'success' => false,
                 'message' => __('admin.reciters_reorder_failed'),
@@ -377,6 +383,8 @@ class ReciterController extends Controller
                 ],
             ]);
         } catch (\Throwable $e) {
+            report($e);
+
             return response()->json([
                 'success' => false,
                 'message' => __('admin.reciter_featured_toggle_failed'),
@@ -405,6 +413,8 @@ class ReciterController extends Controller
                 'count' => $reciters->count(),
             ]);
         } catch (\Throwable $e) {
+            report($e);
+
             return response()->json([
                 'success' => false,
                 'message' => __('admin.reciter_search_failed'),

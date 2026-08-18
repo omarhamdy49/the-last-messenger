@@ -6,6 +6,7 @@ namespace App\Domain\Quran\Application\Handlers;
 
 use App\Domain\Quran\Application\DTOs\VerseDTO;
 use App\Domain\Quran\Application\Queries\ListVersesByJuzQuery;
+use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Repositories\VerseRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
@@ -23,7 +24,7 @@ final readonly class ListVersesByJuzHandler
         $results = $this->verseRepository->getByJuz($query->juz, $query->perPage);
 
         if ($query->withTranslations) {
-            $results->getCollection()->load('translations');
+            $results->getCollection()->load(Verse::readerTranslationsEagerLoad($query->locale));
         }
 
         $results->getCollection()->transform(

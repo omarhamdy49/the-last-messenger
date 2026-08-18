@@ -364,7 +364,7 @@ if (! function_exists('excerpt_sentence')) {
         // No usable sentence end — back off to the last whole word.
         $cut = mb_strrpos($window, ' ');
 
-        return rtrim(mb_substr($window, 0, $cut ?: $max), " ،,;:-–—").$end;
+        return rtrim(mb_substr($window, 0, $cut ?: $max), ' ،,;:-–—').$end;
     }
 }
 

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Models;
 
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -20,8 +22,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $transliteration
  * @property int $verses_count
  * @property array|null $pages
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class Surah extends Model
 {
@@ -120,8 +122,8 @@ class Surah extends Model
     /**
      * Scope: Filter by revelation place
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByRevelationPlace($query, string $place)
     {
@@ -131,8 +133,8 @@ class Surah extends Model
     /**
      * Scope: Order by revelation order
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByRevelationOrder($query)
     {
@@ -142,8 +144,8 @@ class Surah extends Model
     /**
      * Scope: Makkan surahs
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeMakkan($query)
     {
@@ -153,8 +155,8 @@ class Surah extends Model
     /**
      * Scope: Madinan surahs
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeMadinan($query)
     {

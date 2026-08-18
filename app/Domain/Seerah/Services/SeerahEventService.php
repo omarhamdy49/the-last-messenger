@@ -19,6 +19,9 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * @extends BaseService<SeerahEventRepositoryInterface>
+ */
 class SeerahEventService extends BaseService
 {
     /**

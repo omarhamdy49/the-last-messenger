@@ -27,7 +27,12 @@
     'inLanguage' => 'ar',
     'isPartOf' => ['@type' => 'Book', 'name' => $collectionTitle],
     'url' => url()->current(),
-], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}
+{{-- JSON_UNESCAPED_SLASHES removed deliberately: inside a <script> block it strips the
+     one default escape that stops a `</script>` inside the payload from terminating the
+     block early. `text` here is hadith text imported from sunnah.com — third-party
+     content in an unescaped context. JSON_HEX_* is what public/genealogy/index.blade.php
+     already uses for the same reason. --}}
 </script>
 @endpush
 

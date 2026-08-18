@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature\Api;
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
+use Tests\Support\CommitsForFullTextSearch;
 use Tests\TestCase;
 
 /**
@@ -15,7 +15,16 @@ use Tests\TestCase;
  */
 final class SearchApiTest extends TestCase
 {
-    use RefreshDatabase;
+    /**
+     * DatabaseTruncation, NOT RefreshDatabase — required, not a preference.
+     *
+     * Unified search now uses MySQL FULLTEXT (MATCH…AGAINST) instead of a full-table LIKE.
+     * InnoDB does not populate a FULLTEXT index until the inserting transaction COMMITS, and
+     * RefreshDatabase wraps each test in a transaction it rolls back — so MATCH against rows
+     * the test just seeded matches nothing. The query is valid and silently returns zero
+     * rows, which reads as a search bug rather than a test-isolation artefact.
+     */
+    use CommitsForFullTextSearch;
 
     private const SEARCH_TERM = 'السيرة';
 

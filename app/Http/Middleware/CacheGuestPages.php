@@ -27,8 +27,96 @@ final class CacheGuestPages
      * per-user JSON endpoint: the hub HTML is identical for every guest
      * (guest My-List lives in localStorage; view counting happens on the
      * detail pages, which stay uncached).
+     *
+     * ---------------------------------------------------------------------------
+     * A route qualifies only if ALL of these hold. Three of them disqualify pages
+     * that otherwise look harmless, so check each before adding one:
+     *
+     *  1. No per-GUEST variation. Per-USER variation is fine — this middleware only
+     *     marks a response cacheable when auth()->guest(), and authenticated
+     *     responses get `private, no-store`, so @auth blocks are simply absent from
+     *     the shared copy. What breaks caching is variation between guests, which is
+     *     why rendersDefaultLocale() exists.
+     *  2. No @csrf form in the view. The cacheable branch strips Set-Cookie, so a
+     *     first-time visitor never receives a session — any token rendered into the
+     *     HTML is a stale one belonging to whoever's render got cached, and the form
+     *     fails validation. That rules out contact, auth, profile and quran/ask.
+     *  3. No write on the GET path. An edge hit never reaches PHP, so a view counter
+     *     on the GET simply stops counting. Media moved its counters to a queued,
+     *     deduplicated recorder, but that still runs per request — queueing does not
+     *     help if the request never arrives.
+     *
+     * Deliberately EXCLUDED, with the reason, so nobody has to re-derive it:
+     *
+     *   public.seerah.event      SeerahEventService:66,84 increments views inline on
+     *                            the GET — the last synchronous counter in the app.
+     *                            Add this route once that moves to MediaViewRecorder.
+     *   public.media.program     Queued view recording, but still per request.
+     *   public.media.episode     Also renders watch progress.
+     *   public.media.live        Live channel view recording.
+     *   public.articles.show     The reader records views via an async POST
+     *                            (ArticleController::registerView) specifically so the
+     *                            page can be cached — but that POST is CSRF-protected
+     *                            and reads its token from the cached HTML's
+     *                            <meta name="csrf-token">, so a cookieless visitor
+     *                            would 419 and the counter would silently stop. Cache
+     *                            this only together with exempting that one route from
+     *                            CSRF (it is already session-guarded and throttled
+     *                            30/min, so the exemption is cheap — but it is a
+     *                            security decision, not a caching one).
+     *   public.search            Query-driven; server-side throttled already.
+     *   public.quran.ask*        CSRF form + per-user quota.
+     *   favorites/profile/auth   Per-user by definition.
+     * ---------------------------------------------------------------------------
      */
-    private const CACHEABLE_ROUTES = ['public.home', 'public.media'];
+    private const CACHEABLE_ROUTES = [
+        // Home + media hub (pre-existing).
+        'public.home',
+        'public.media',
+
+        // Module landing pages. `lat_nav` was the slowest group under stress
+        // (p95 2.19 s, p99 6.77 s), and it is entirely these.
+        'public.articles',
+        'public.series',
+        'public.seerah',
+        'public.seerah.events',
+        'public.hadith',
+        'public.sahaba',
+        'public.topics',
+        'public.genealogy',
+        'public.genealogy.people',
+        'public.media.live.index',
+
+        // Quran reader — second-slowest group (p95 1.69 s) and entirely read-only.
+        'public.quran',
+        'public.quran.surah',
+        'public.quran.surah.short',
+        'public.quran.surah.translation',
+        'public.quran.juz',
+        'public.quran.page',
+        'public.quran.hizb',
+        'public.quran.asbab',
+        'public.quran.reciters',
+        'public.quran.reciter',
+        'public.quran.surahs.json',
+        'public.quran.verse.tafsir',
+
+        // Detail pages with no counter and no form.
+        'public.series.show',
+        'public.topics.show',
+        'public.hadith.collection',
+        'public.hadith.book',
+        'public.hadith.show',
+        'public.sahaba.show',
+        'public.sahaba.tree',
+
+        // Static content.
+        'public.about',
+        'public.privacy',
+        'public.terms',
+        'public.faq',
+        'public.pages.show',
+    ];
 
     public function handle(Request $request, Closure $next): Response
     {

@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
@@ -81,7 +82,7 @@ class RoleService
      * @param  array<string>  $permissionNames
      * @return array{role: Role, old_values: array<string, mixed>}
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function update(int $id, string $name, array $permissionNames = []): array
     {
@@ -108,7 +109,7 @@ class RoleService
      * Returns the deleted Role model so the caller can pass it to AdminLoggerService.
      *
      * @throws \RuntimeException
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function delete(int $id): Role
     {
@@ -163,7 +164,7 @@ class RoleService
      *
      * @param  array<string>  $permissionNames
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function syncPermissions(int $id, array $permissionNames): Role
     {
@@ -178,7 +179,7 @@ class RoleService
      *
      * @return array{allowed: bool, reason: string}
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function canDelete(int $id): array
     {
@@ -208,7 +209,7 @@ class RoleService
     /**
      * Find a single role with its full permission data.
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function getRoleWithPermissions(int $id): Role
     {
@@ -220,7 +221,7 @@ class RoleService
     /**
      * Return the number of users currently assigned to a role.
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function getUserCount(int $id): int
     {
@@ -243,7 +244,7 @@ class RoleService
     /**
      * Clone a role with all of its permissions under a new name.
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function cloneRole(int $originalId, string $newName): array
     {
@@ -288,7 +289,7 @@ class RoleService
     /**
      * Evaluate whether a role name belongs to the protected set.
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function isSystemRole(int $id): array
     {

@@ -4,10 +4,16 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Media\Models\MediaEpisode;
+use App\Domain\Media\Models\MediaProgram;
+use App\Domain\People\Models\Muslim;
+use App\Domain\Quran\Models\Verse;
+use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Shared\Services\VersionService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RevertVersionRequest;
 use App\Http\Resources\ContentVersionResource;
+use App\Models\Article;
 use App\Support\Traits\ApiResponse;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
@@ -265,12 +271,12 @@ class VersionController extends Controller
     protected function resolveModel(string $type, int $id)
     {
         $modelClass = match ($type) {
-            'articles' => \App\Models\Article::class,
-            'seerah' => \App\Domain\Seerah\Models\SeerahEvent::class,
-            'muslims' => \App\Domain\People\Models\Muslim::class,
-            'media-programs' => \App\Domain\Media\Models\MediaProgram::class,
-            'media-episodes' => \App\Domain\Media\Models\MediaEpisode::class,
-            'quran-verses' => \App\Domain\Quran\Models\Verse::class,
+            'articles' => Article::class,
+            'seerah' => SeerahEvent::class,
+            'muslims' => Muslim::class,
+            'media-programs' => MediaProgram::class,
+            'media-episodes' => MediaEpisode::class,
+            'quran-verses' => Verse::class,
             default => throw new \InvalidArgumentException("Invalid model type: {$type}"),
         };
 

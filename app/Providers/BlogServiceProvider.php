@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\Blog\Repositories\CategoryRepository;
+use App\Domain\Blog\Repositories\CategoryRepositoryInterface;
+use App\Domain\Blog\Repositories\SeriesRepository;
+use App\Domain\Blog\Repositories\SeriesRepositoryInterface;
+use App\Domain\Blog\Repositories\TagRepository;
+use App\Domain\Blog\Repositories\TagRepositoryInterface;
 use App\Domain\Blog\Services\ArticlePublicVisibility;
 use App\Domain\Shared\Contracts\PublicVisibilityProviderInterface;
 use App\Models\Article;
@@ -20,16 +26,16 @@ class BlogServiceProvider extends ServiceProvider
         $this->app->tag(ArticlePublicVisibility::class, PublicVisibilityProviderInterface::class);
 
         $this->app->bind(
-            \App\Domain\Blog\Repositories\CategoryRepositoryInterface::class,
-            \App\Domain\Blog\Repositories\CategoryRepository::class
+            CategoryRepositoryInterface::class,
+            CategoryRepository::class
         );
         $this->app->bind(
-            \App\Domain\Blog\Repositories\SeriesRepositoryInterface::class,
-            \App\Domain\Blog\Repositories\SeriesRepository::class
+            SeriesRepositoryInterface::class,
+            SeriesRepository::class
         );
         $this->app->bind(
-            \App\Domain\Blog\Repositories\TagRepositoryInterface::class,
-            \App\Domain\Blog\Repositories\TagRepository::class
+            TagRepositoryInterface::class,
+            TagRepository::class
         );
     }
 }

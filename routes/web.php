@@ -77,7 +77,11 @@ Route::get('/quran/{surahNumber}', [QuranController::class, 'surah'])
 // constrained: `number` allows `1a`, which the source really uses.
 // bookNumber allows `35b`, `introduction` and `letter`, which the source uses.
 Route::get('/hadith', [HadithController::class, 'index'])->name('public.hadith');
-Route::get('/hadith/search', [HadithController::class, 'search'])->name('public.hadith.search');
+// throttle:search — HadithBrowseService runs MATCH…AGAINST twice (WHERE + ORDER BY) over
+// ~38k rows per request, uncached. Every other search surface was already throttled; this
+// one was not.
+Route::get('/hadith/search', [HadithController::class, 'search'])
+    ->middleware('throttle:search')->name('public.hadith.search');
 // A single hadith is `{collection}:{referenceKey}` — the colon keeps it out of
 // the `/hadith/{slug}/{bookNumber}` namespace, where `/hadith/bukhari/12` would
 // be ambiguous between book 12 and reference key 12. Declared before the
@@ -94,9 +98,42 @@ Route::get('/sitemap.xml', [SitemapController::class, 'articles'])->name('sitema
 
 // robots.txt served dynamically so the Sitemap directive uses the real request host.
 Route::get('/robots.txt', function () {
-    $body = "User-agent: *\nDisallow:\n\nSitemap: ".url('/sitemap.xml')."\n";
+    // Allow-list: named search engines and AI agents may crawl; everyone else is denied.
+    // Agent lists and closed paths live in config/robots.php.
+    //
+    // robots.txt is advisory — compliant crawlers honour it, scrapers ignore it entirely.
+    // Actual protection against abusive traffic is nginx's limit_req/limit_conn plus
+    // Cloudflare's bot rules, not this file.
+    $allowed = [
+        ...config('robots.search_engines', []),
+        ...config('robots.ai_agents', []),
+    ];
+    $disallowedPaths = config('robots.disallowed_paths', []);
 
-    return response($body, 200, ['Content-Type' => 'text/plain']);
+    $lines = [];
+
+    foreach ($allowed as $agent) {
+        $lines[] = "User-agent: {$agent}";
+    }
+
+    if ($allowed !== []) {
+        // Only Disallow lines. Anything not matched by one is permitted by default, so an
+        // additional empty `Disallow:` would contradict the rules above it — parsers differ
+        // on how they resolve that, and it is not needed to express "allow the rest".
+        foreach ($disallowedPaths as $path) {
+            $lines[] = "Disallow: {$path}";
+        }
+
+        $lines[] = '';
+    }
+
+    // Everything not named above.
+    $lines[] = 'User-agent: *';
+    $lines[] = 'Disallow: /';
+    $lines[] = '';
+    $lines[] = 'Sitemap: '.url('/sitemap.xml');
+
+    return response(implode("\n", $lines)."\n", 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
 })->name('robots');
 
 // Articles / Blog
@@ -140,7 +177,13 @@ Route::get('/sahaba/{slug}', [SahabaController::class, 'show'])
 
 // Genealogy — the family-tree explorer, rebuilt on `muslims`. `?root=` picks
 // the person the tree is drawn from; any muslim is a valid root.
+// `?root=` bypasses the 30-min cache entirely (GenealogyController::index caches only the
+// default root) and runs recursive CTEs at LINEAGE_DEPTH=40 plus the sibling/uncle/cousin
+// queries. Unauthenticated and, until now, unthrottled: one host looping distinct slugs
+// saturates MySQL. The slug pattern also bounds the cache-key space.
 Route::get('/genealogy', [GenealogyController::class, 'index'])
+    ->middleware('throttle:search')
+    ->where('root', '[A-Za-z0-9\\-]{0,120}')
     ->name('public.genealogy');
 Route::get('/genealogy/people', [GenealogyController::class, 'people'])
     ->middleware('throttle:search')->name('public.genealogy.people');
@@ -161,8 +204,10 @@ Route::get('/media/{slug}/episodes/{episode}', [MediaController::class, 'episode
     ->whereNumber('episode')->name('public.media.episode');
 
 // Topics (cross-module aggregation: verses + hadiths + articles per theme)
-Route::get('/topics', [TopicController::class, 'index'])->name('public.topics');
-Route::get('/topics/{slug}', [TopicController::class, 'show'])->name('public.topics.show');
+Route::get('/topics', [TopicController::class, 'index'])
+    ->middleware('throttle:search')->name('public.topics');
+Route::get('/topics/{slug}', [TopicController::class, 'show'])
+    ->middleware('throttle:search')->name('public.topics.show');
 
 // Unified Search
 // Throttled like the other search surfaces: this one fans out LIKE/fulltext

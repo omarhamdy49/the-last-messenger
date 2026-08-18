@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * Saved Filter Model
@@ -22,9 +23,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property bool $is_public
  * @property bool $is_default
  * @property int $usage_count
- * @property \Illuminate\Support\Carbon|null $last_used_at
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
+ * @property Carbon|null $last_used_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class SavedFilter extends Model
 {

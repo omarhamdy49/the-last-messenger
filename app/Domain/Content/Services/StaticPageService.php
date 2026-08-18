@@ -7,6 +7,7 @@ namespace App\Domain\Content\Services;
 use App\Domain\Content\Models\StaticPage;
 use App\Domain\Content\Repositories\StaticPageRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -26,33 +27,49 @@ final class StaticPageService
      * Get a published page resolved for one locale, or null when the slug
      * is unknown, inactive, or not yet published.
      *
-     * @return array{id: int, slug: string, title: string|null, body: string|null, seo_title: string|null, seo_description: string|null, published_at: \Illuminate\Support\Carbon|null}|null
+     * @return array{id: int, slug: string, title: string|null, body: string|null, seo_title: string|null, seo_description: string|null, published_at: Carbon|null}|null
      */
     public function getBySlug(string $slug, ?string $locale = null): ?array
     {
         $locale = $locale ?? app()->getLocale();
 
-        // rememberForever skips storing null, so misses stay uncached.
-        return Cache::rememberForever(
-            ContentCacheKeys::staticPage($slug, $locale),
-            function () use ($slug, $locale): ?array {
-                $page = $this->repository->findPublishedBySlug($slug);
+        // The comment that used to sit here — "rememberForever skips storing null, so misses
+        // stay uncached" — was false. Laravel's implementation has no null check:
+        //
+        //     $this->forever($key, $value = $callback());
+        //
+        // So every miss wrote a PERMANENT entry. `/pages/{slug}` is public and matches
+        // `[a-z0-9\-]+`, so looping distinct slugs filled the cache with immortal nulls;
+        // under Redis with allkeys-lru that evicts real cache AND live sessions
+        // (SESSION_DRIVER=redis), logging out every user including admins.
+        //
+        // Now: a hit is cached for an hour, a miss is not cached at all.
+        $key = ContentCacheKeys::staticPage($slug, $locale);
+        $cached = Cache::get($key);
 
-                if ($page === null) {
-                    return null;
-                }
+        if ($cached !== null) {
+            return $cached;
+        }
 
-                return [
-                    'id' => $page->id,
-                    'slug' => $page->slug,
-                    'title' => $page->getTranslation('title', $locale),
-                    'body' => $page->getTranslation('body', $locale),
-                    'seo_title' => $page->getTranslation('seo_title', $locale),
-                    'seo_description' => $page->getTranslation('seo_description', $locale),
-                    'published_at' => $page->published_at,
-                ];
-            }
-        );
+        $page = $this->repository->findPublishedBySlug($slug);
+
+        if ($page === null) {
+            return null;
+        }
+
+        $payload = [
+            'id' => $page->id,
+            'slug' => $page->slug,
+            'title' => $page->getTranslation('title', $locale),
+            'body' => $page->getTranslation('body', $locale),
+            'seo_title' => $page->getTranslation('seo_title', $locale),
+            'seo_description' => $page->getTranslation('seo_description', $locale),
+            'published_at' => $page->published_at,
+        ];
+
+        Cache::put($key, $payload, 3600);
+
+        return $payload;
     }
 
     /**

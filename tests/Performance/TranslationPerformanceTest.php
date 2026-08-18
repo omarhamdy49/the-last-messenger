@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Performance;
 
-use App\Models\Article;
 use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Quran\Models\Surah;
 use App\Domain\Shared\Services\LanguageCacheService;
+use App\Models\Article;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;

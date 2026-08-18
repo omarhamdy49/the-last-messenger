@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin\MediaProgram;
 
+use App\Http\Requests\Admin\Content\Concerns\SanitizesRichText;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreMediaEpisodeRequest extends FormRequest
 {
+    use SanitizesRichText;
+
     public function authorize(): bool
     {
         return $this->user()->hasAnyRole(['admin', 'super_admin']);
@@ -62,5 +65,16 @@ class StoreMediaEpisodeRequest extends FormRequest
             'slug.unique' => 'This slug is already taken.',
             'program_id.exists' => 'Program not found.',
         ];
+    }
+
+    /**
+     * These render with {!! !!} on /media/{slug} and in the admin episode page, and
+     * the same columns also receive third-party YouTube text (sanitised in
+     * YouTubeSyncService). Purify here so both write paths land clean.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->sanitizeRichTextField('description');
+        $this->sanitizeRichTextField('transcript');
     }
 }

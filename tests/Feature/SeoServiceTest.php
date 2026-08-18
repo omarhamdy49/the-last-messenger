@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Exceptions\SeoException;
 use App\Models\Article;
 use App\Models\User;
 use App\Services\SeoService;
@@ -338,7 +339,7 @@ class SeoServiceTest extends TestCase
         $article = Article::factory()->create(['user_id' => $user->id]);
 
         // Assert
-        $this->expectException(\App\Exceptions\SeoException::class);
+        $this->expectException(SeoException::class);
 
         // Act
         $this->seoService->generateSeoData($article, 'invalid_locale');

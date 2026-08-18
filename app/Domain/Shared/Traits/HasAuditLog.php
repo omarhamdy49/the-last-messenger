@@ -6,6 +6,7 @@ namespace App\Domain\Shared\Traits;
 
 use App\Domain\Shared\Models\AuditLog;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -61,7 +62,7 @@ trait HasAuditLog
         });
 
         // Log restoration (if soft deletes)
-        if (in_array(\Illuminate\Database\Eloquent\SoftDeletes::class, class_uses_recursive(static::class))) {
+        if (in_array(SoftDeletes::class, class_uses_recursive(static::class))) {
             static::restored(function ($model) {
                 if (method_exists($model, 'shouldAudit') && ! $model->shouldAudit()) {
                     return;

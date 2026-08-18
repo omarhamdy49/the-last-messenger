@@ -66,8 +66,8 @@ class FilterBuilder
      * Add date range filter
      *
      * @param  string  $field  Date field name
-     * @param  string|\Illuminate\Support\Carbon|null  $from  Start date
-     * @param  string|\Illuminate\Support\Carbon|null  $to  End date
+     * @param  string|Carbon|null  $from  Start date
+     * @param  string|Carbon|null  $to  End date
      */
     public function addDateRange(string $field, string|Carbon|null $from = null, string|Carbon|null $to = null): self
     {

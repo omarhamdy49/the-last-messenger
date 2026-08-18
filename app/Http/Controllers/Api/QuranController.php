@@ -12,6 +12,7 @@ use App\Http\Resources\VerseResource;
 use App\Support\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Routing\Controller;
 use Illuminate\Validation\ValidationException;
 
@@ -134,7 +135,7 @@ class QuranController extends Controller
             $perPage = max(1, min(100, $request->integer('per_page', 50)));
             $paginator = $this->quranService->getVersesByJuz($juz, $perPage);
 
-            /** @var \Illuminate\Pagination\LengthAwarePaginator $paginator */
+            /** @var LengthAwarePaginator $paginator */
             $paginator->through(fn ($verse) => new VerseResource($verse));
 
             return $this->paginatedResponse($paginator);
@@ -216,6 +217,8 @@ class QuranController extends Controller
                 'per_page' => 'sometimes|integer|min:1|max:100',
             ]);
         } catch (ValidationException $e) {
+            report($e);
+
             return $this->validationErrorResponse($e->errors());
         }
 
@@ -231,7 +234,7 @@ class QuranController extends Controller
                 $verses = $this->quranService->searchTranslation($query, $language, $perPage);
             }
 
-            /** @var \Illuminate\Pagination\LengthAwarePaginator $verses */
+            /** @var LengthAwarePaginator $verses */
             $verses->through(fn ($verse) => new VerseResource($verse));
 
             return $this->paginatedResponse($verses);
@@ -262,6 +265,8 @@ class QuranController extends Controller
                 'locale' => 'sometimes|string|in:ar,en,fr,tr,ur',
             ]);
         } catch (ValidationException $e) {
+            report($e);
+
             return $this->validationErrorResponse($e->errors());
         }
 

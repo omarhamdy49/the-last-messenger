@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Http\Requests\Admin\Article;
 
 use App\Domain\Blog\Enums\ArticleStatus;
+use App\Http\Requests\Admin\Article\Concerns\SanitizesArticleContent;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreArticleRequest extends FormRequest
 {
+    use SanitizesArticleContent;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -202,5 +205,9 @@ class StoreArticleRequest extends FormRequest
             }
             $this->merge(['is_ready' => $isReady]);
         }
+
+        // LAST: after content_blocks JSON has been decoded into `content`, so the
+        // purifier sees the real block array rather than an opaque JSON string.
+        $this->sanitizeArticleRichText();
     }
 }

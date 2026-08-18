@@ -5,10 +5,26 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Domain\Content\Enums\MenuLocation;
+use App\Domain\Content\Repositories\ContactMessageRepository;
+use App\Domain\Content\Repositories\ContactMessageRepositoryInterface;
+use App\Domain\Content\Repositories\FaqRepository;
+use App\Domain\Content\Repositories\FaqRepositoryInterface;
+use App\Domain\Content\Repositories\HomeContentRepository;
+use App\Domain\Content\Repositories\HomeContentRepositoryInterface;
+use App\Domain\Content\Repositories\HomeSectionRepository;
+use App\Domain\Content\Repositories\HomeSectionRepositoryInterface;
+use App\Domain\Content\Repositories\MenuItemRepository;
+use App\Domain\Content\Repositories\MenuItemRepositoryInterface;
+use App\Domain\Content\Repositories\SiteSettingRepository;
+use App\Domain\Content\Repositories\SiteSettingRepositoryInterface;
+use App\Domain\Content\Repositories\StaticPageRepository;
+use App\Domain\Content\Repositories\StaticPageRepositoryInterface;
+use App\Domain\Content\Services\FaqService;
 use App\Domain\Content\Services\HomeContentService;
 use App\Domain\Content\Services\HomeSectionService;
 use App\Domain\Content\Services\MenuService;
 use App\Domain\Content\Services\SiteSettingsService;
+use App\Domain\Shared\Contracts\FaqPublisherInterface;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\View as ViewFacade;
 use Illuminate\Support\ServiceProvider;
@@ -18,45 +34,45 @@ class ContentServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(
-            \App\Domain\Content\Repositories\SiteSettingRepositoryInterface::class,
-            \App\Domain\Content\Repositories\SiteSettingRepository::class
+            SiteSettingRepositoryInterface::class,
+            SiteSettingRepository::class
         );
 
         $this->app->bind(
-            \App\Domain\Content\Repositories\MenuItemRepositoryInterface::class,
-            \App\Domain\Content\Repositories\MenuItemRepository::class
+            MenuItemRepositoryInterface::class,
+            MenuItemRepository::class
         );
 
         $this->app->bind(
-            \App\Domain\Content\Repositories\HomeContentRepositoryInterface::class,
-            \App\Domain\Content\Repositories\HomeContentRepository::class
+            HomeContentRepositoryInterface::class,
+            HomeContentRepository::class
         );
 
         $this->app->bind(
-            \App\Domain\Content\Repositories\HomeSectionRepositoryInterface::class,
-            \App\Domain\Content\Repositories\HomeSectionRepository::class
+            HomeSectionRepositoryInterface::class,
+            HomeSectionRepository::class
         );
 
         $this->app->bind(
-            \App\Domain\Content\Repositories\StaticPageRepositoryInterface::class,
-            \App\Domain\Content\Repositories\StaticPageRepository::class
+            StaticPageRepositoryInterface::class,
+            StaticPageRepository::class
         );
 
         $this->app->bind(
-            \App\Domain\Content\Repositories\FaqRepositoryInterface::class,
-            \App\Domain\Content\Repositories\FaqRepository::class
+            FaqRepositoryInterface::class,
+            FaqRepository::class
         );
 
         $this->app->bind(
-            \App\Domain\Content\Repositories\ContactMessageRepositoryInterface::class,
-            \App\Domain\Content\Repositories\ContactMessageRepository::class
+            ContactMessageRepositoryInterface::class,
+            ContactMessageRepository::class
         );
 
         // Cross-domain FAQ publishing (Shared contract) — lets the Quran "Ask AI"
         // moderation publish an inquiry as a FAQ without importing the Content domain.
         $this->app->bind(
-            \App\Domain\Shared\Contracts\FaqPublisherInterface::class,
-            \App\Domain\Content\Services\FaqService::class
+            FaqPublisherInterface::class,
+            FaqService::class
         );
     }
 

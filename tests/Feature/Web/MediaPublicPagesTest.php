@@ -12,8 +12,8 @@ use App\Domain\Media\Models\MediaEpisodeTranslation;
 use App\Domain\Media\Models\MediaProgram;
 use App\Domain\Media\Models\MediaProgramTranslation;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Tests\Support\CommitsForFullTextSearch;
 use Tests\TestCase;
 
 /**
@@ -22,7 +22,16 @@ use Tests\TestCase;
  */
 final class MediaPublicPagesTest extends TestCase
 {
-    use RefreshDatabase;
+    /**
+     * DatabaseTruncation, NOT RefreshDatabase — required, not a preference.
+     *
+     * Unified search now uses MySQL FULLTEXT (MATCH…AGAINST) instead of a full-table LIKE.
+     * InnoDB does not populate a FULLTEXT index until the inserting transaction COMMITS, and
+     * RefreshDatabase wraps each test in a transaction it rolls back — so MATCH against rows
+     * the test just seeded matches nothing. The query is valid and silently returns zero
+     * rows, which reads as a search bug rather than a test-isolation artefact.
+     */
+    use CommitsForFullTextSearch;
 
     private function createProgram(array $overrides = [], string $title = 'برنامج السيرة التجريبي'): MediaProgram
     {

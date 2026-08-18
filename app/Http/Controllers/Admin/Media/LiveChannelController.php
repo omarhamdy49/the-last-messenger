@@ -166,7 +166,8 @@ class LiveChannelController extends Controller
             try {
                 $this->channelService->deleteChannel((int) $id);
                 $deleted++;
-            } catch (\Throwable) {
+            } catch (\Throwable $e) {
+                report($e);
                 // Continue — partial deletes are acceptable for bulk operations.
             }
         }

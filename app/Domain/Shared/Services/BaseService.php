@@ -8,13 +8,25 @@ use App\Domain\Shared\Contracts\RepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 /**
  * Base Service Class
  * Provides common service layer operations
+ *
+ * Subclasses each hold a narrower repository than RepositoryInterface, but PHP property
+ * types are **invariant** — redeclaring `protected CategoryRepositoryInterface $repository`
+ * in a child is a fatal error ("Type of X::$repository must be RepositoryInterface"). So
+ * the narrowing is expressed for static analysis instead: this class is generic over its
+ * repository, and every subclass declares `@extends BaseService<ItsRepositoryInterface>`.
+ * That makes the ~98 `$this->repository->…` calls across the subclasses type-checkable
+ * without changing a line of runtime behaviour.
+ *
+ * @template TRepository of RepositoryInterface
  */
 abstract class BaseService
 {
+    /** @var TRepository */
     protected RepositoryInterface $repository;
 
     /**
@@ -55,7 +67,7 @@ abstract class BaseService
      *
      * @param  array<string>  $relations
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function findOrFail(int $id, array $relations = []): Model
     {

@@ -56,7 +56,12 @@ return Application::configure(basePath: dirname(__DIR__))
             SecureApiResponseHeaders::class,
         ]);
 
+        // AddRequestId also runs on `web`, not just `api` — the admin panel and public
+        // site are the bulk of traffic, and without this their log lines carry no
+        // correlation id at all. Appended rather than prepended so CacheGuestPages keeps
+        // the outermost response position it deliberately claims below.
         $middleware->web(append: [
+            AddRequestId::class,
             SetLocale::class,
         ]);
 

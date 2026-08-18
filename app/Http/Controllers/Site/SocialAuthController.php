@@ -26,12 +26,15 @@ use Laravel\Socialite\Facades\Socialite;
  *
  * Account resolution order on callback:
  *  1. (provider, provider_id) match — returning social user, just sign in.
- *  2. Same email — link the provider to the existing local account. The
- *     provider attests the address, so an unverified email becomes verified.
- *  3. Otherwise create a new account. The provider verified the email, so
- *     email_verified_at is set immediately. The NOT NULL password column gets
- *     a random hashed value that is never disclosed (see the social-login
- *     users migration for why the column was not made nullable).
+ *  2. Same email — link the provider to the existing local account, but ONLY
+ *     when the provider has attested the address (see providerVerifiedEmail).
+ *     Without attestation this is a pre-auth account-takeover vector, so the
+ *     link is refused rather than silently trusting the claimed email.
+ *  3. Otherwise create a new account. email_verified_at is set immediately only
+ *     when the provider attested the address; otherwise the standard Registered
+ *     verification-email flow runs. The NOT NULL password column gets a random
+ *     hashed value that is never disclosed (see the social-login users migration
+ *     for why the column was not made nullable).
  */
 final class SocialAuthController extends Controller
 {
@@ -82,11 +85,13 @@ final class SocialAuthController extends Controller
             return $this->failToLogin(__('auth_web.social_no_email'));
         }
 
-        if ($provider === 'google' && ! $this->hasVerifiedGoogleEmail($providerUser)) {
+        $user = $this->resolveUser($provider, $providerUser);
+
+        // resolveUser refuses to hand over an existing account to a provider that
+        // has not attested the email (account-takeover guard).
+        if ($user === null) {
             return $this->failToLogin(__('auth_web.social_unverified_email'));
         }
-
-        $user = $this->resolveUser($provider, $providerUser);
 
         Auth::login($user, remember: true);
         $request->session()->regenerate();
@@ -113,16 +118,33 @@ final class SocialAuthController extends Controller
             ->withErrors(['social' => $message]);
     }
 
-    private function hasVerifiedGoogleEmail(ProviderUser $providerUser): bool
+    /**
+     * Whether the provider positively attests ownership of the returned email.
+     *
+     * This is the single trust gate for every provider. Only a "yes" here may
+     * auto-link a social identity to a pre-existing local (password) account or
+     * mark a new account's email verified. Google exposes `verified_email`;
+     * Facebook's Graph API exposes no equivalent flag, so it is never trusted to
+     * attest — presenting a victim's (unverified) email must not take over their
+     * account. A new provider that cannot attest simply falls through to the
+     * standard email-verification flow.
+     */
+    private function providerVerifiedEmail(string $provider, ProviderUser $providerUser): bool
     {
-        return method_exists($providerUser, 'getRaw')
+        return $provider === 'google'
+            && method_exists($providerUser, 'getRaw')
             && data_get($providerUser->getRaw(), 'verified_email') === true;
     }
 
-    private function resolveUser(string $provider, ProviderUser $providerUser): User
+    /**
+     * Returns the resolved user, or null when linking to an existing local
+     * account is refused because the provider has not attested the email.
+     */
+    private function resolveUser(string $provider, ProviderUser $providerUser): ?User
     {
         $providerId = (string) $providerUser->getId();
         $email = mb_strtolower(trim((string) $providerUser->getEmail()));
+        $emailVerifiedByProvider = $this->providerVerifiedEmail($provider, $providerUser);
 
         $matched = User::query()
             ->where('provider', $provider)
@@ -136,10 +158,16 @@ final class SocialAuthController extends Controller
         $byEmail = User::query()->where('email', $email)->first();
 
         if ($byEmail !== null) {
+            // Account-takeover guard: never attach a social identity to an
+            // existing account on an email the provider has not verified.
+            if (! $emailVerifiedByProvider) {
+                return null;
+            }
+
             return $this->linkProvider($byEmail, $provider, $providerId);
         }
 
-        return $this->createUser($provider, $providerUser, $email);
+        return $this->createUser($provider, $providerUser, $email, $emailVerifiedByProvider);
     }
 
     /**
@@ -157,7 +185,7 @@ final class SocialAuthController extends Controller
         return $user;
     }
 
-    private function createUser(string $provider, ProviderUser $providerUser, string $email): User
+    private function createUser(string $provider, ProviderUser $providerUser, string $email, bool $emailVerified): User
     {
         $name = trim((string) ($providerUser->getName()
             ?: $providerUser->getNickname()
@@ -174,13 +202,17 @@ final class SocialAuthController extends Controller
             'last_login_at' => now(),
         ]);
 
-        // Not mass-assignable on purpose; the provider verified the address.
-        $user->markEmailAsVerified();
+        // Not mass-assignable on purpose; only mark verified when the provider
+        // actually attested the address. Otherwise Registered's verification
+        // listener sends the confirmation email like a normal signup.
+        if ($emailVerified) {
+            $user->markEmailAsVerified();
+        }
 
         $this->storeProviderAvatar($user, $providerUser->getAvatar());
 
-        // The verification-email listener no-ops because the email is already
-        // verified; other Registered listeners still run.
+        // For an attested email the verification-email listener no-ops (already
+        // verified); other Registered listeners still run.
         event(new Registered($user));
 
         return $user;

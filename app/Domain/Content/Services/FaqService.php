@@ -8,6 +8,7 @@ use App\Domain\Content\Models\Faq;
 use App\Domain\Content\Repositories\FaqRepositoryInterface;
 use App\Domain\Shared\Contracts\FaqPublisherInterface;
 use App\Domain\Shared\ValueObjects\FaqDraft;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -71,9 +72,9 @@ final class FaqService implements FaqPublisherInterface
     /**
      * Every FAQ with translations for admin management (uncached).
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, Faq>
+     * @return Collection<int, Faq>
      */
-    public function faqsForAdmin(): \Illuminate\Database\Eloquent\Collection
+    public function faqsForAdmin(): Collection
     {
         return $this->repository->allWithTranslations();
     }

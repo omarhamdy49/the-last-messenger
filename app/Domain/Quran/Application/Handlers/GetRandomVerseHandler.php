@@ -7,6 +7,7 @@ namespace App\Domain\Quran\Application\Handlers;
 use App\Domain\Quran\Application\DTOs\VerseDTO;
 use App\Domain\Quran\Application\Queries\GetRandomVerseQuery;
 use App\Domain\Quran\Exceptions\VerseNotFoundException;
+use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Repositories\VerseRepositoryInterface;
 
 /**
@@ -27,7 +28,7 @@ final readonly class GetRandomVerseHandler
         }
 
         if ($query->withTranslations) {
-            $verse->load('translations');
+            $verse->load(Verse::readerTranslationsEagerLoad($query->locale));
         }
 
         $verse->load('surah');

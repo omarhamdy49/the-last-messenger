@@ -415,13 +415,11 @@ class SearchService
         // `muslims` rows and are gated by `is_published` like everything else.
         $this->publicVisibility->apply($eloquentQuery, app()->getLocale());
 
-        // Delegate full-text / LIKE search to the query builder
-        $this->queryBuilder->applySearch(
-            $eloquentQuery,
-            $module->searchableFields(),
-            $modelClass,
-            $query
-        );
+        // Delegate full-text / LIKE search to the query builder. It takes the module now
+        // rather than a field list + model class: the FULLTEXT groups are per-module
+        // metadata (which index covers which columns on which relation), and MATCH() cannot
+        // be derived from the model alone.
+        $this->queryBuilder->applySearch($eloquentQuery, $module, $query);
 
         $filterBuilder = new FilterBuilder($eloquentQuery);
         $this->queryBuilder->applyFilters($filterBuilder, $filters, $module);

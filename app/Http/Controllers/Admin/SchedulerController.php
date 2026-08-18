@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Domain\Shared\Enums\ScheduleAction;
+use App\Domain\Shared\Exceptions\BusinessRuleViolationException;
 use App\Domain\Shared\Services\SchedulerService;
-use App\Exceptions\Domain\BusinessLogicException;
 use App\Exceptions\Domain\ResourceNotFoundException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ScheduleContentRequest;
@@ -185,7 +185,8 @@ class SchedulerController extends Controller
 
             return redirect()->route('admin.scheduler.show', $schedule->id)
                 ->with('success', 'تم إنشاء الجدولة بنجاح');
-        } catch (BusinessLogicException $e) {
+        } catch (BusinessRuleViolationException $e) {
+            report($e);
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => false,
@@ -197,6 +198,7 @@ class SchedulerController extends Controller
                 ->withInput()
                 ->withErrors(['error' => $e->getMessage()]);
         } catch (\Throwable $e) {
+            report($e);
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => false,
@@ -229,6 +231,7 @@ class SchedulerController extends Controller
 
             return view('admin.scheduler.show', compact('schedule'));
         } catch (ResourceNotFoundException $e) {
+            report($e);
             abort(404, $e->getMessage());
         }
     }
@@ -253,6 +256,7 @@ class SchedulerController extends Controller
 
             return view('admin.scheduler.edit', compact('schedule', 'timezones'));
         } catch (ResourceNotFoundException $e) {
+            report($e);
             abort(404, $e->getMessage());
         }
     }
@@ -278,8 +282,10 @@ class SchedulerController extends Controller
             return redirect()->route('admin.scheduler.show', $id)
                 ->with('success', 'تم تحديث الجدولة بنجاح');
         } catch (ResourceNotFoundException $e) {
+            report($e);
             abort(404, $e->getMessage());
-        } catch (BusinessLogicException $e) {
+        } catch (BusinessRuleViolationException $e) {
+            report($e);
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => false,
@@ -313,8 +319,10 @@ class SchedulerController extends Controller
             return redirect()->route('admin.scheduler.index')
                 ->with('success', 'تم إلغاء الجدولة بنجاح');
         } catch (ResourceNotFoundException $e) {
+            report($e);
             abort(404, $e->getMessage());
-        } catch (BusinessLogicException $e) {
+        } catch (BusinessRuleViolationException $e) {
+            report($e);
             if (request()->wantsJson()) {
                 return response()->json([
                     'success' => false,

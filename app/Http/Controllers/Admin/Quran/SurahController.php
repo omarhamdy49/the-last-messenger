@@ -95,11 +95,13 @@ class SurahController extends Controller
     {
         $surah = $this->surahService->getWithDetails($id);
 
-        // Get verse statistics
+        // words_count/letters_count used to live here. Neither is a column on
+        // quran_surahs and Surah declares no accessor, so both always resolved to
+        // null and `?? 0` hid it — the card had shown 0 since it shipped. Dropped
+        // along with their two rows in the view rather than derived from
+        // quran_words: nobody needs the numbers, and no columns added on spec.
         $stats = [
             'verses_count' => $surah->verses_count,
-            'words_count' => $surah->words_count ?? 0,
-            'letters_count' => $surah->letters_count ?? 0,
         ];
 
         // Get verses for this surah (paginated for performance)
@@ -152,6 +154,8 @@ class SurahController extends Controller
                 ->route('admin.surahs.show', $id)
                 ->with('success', 'Surah updated successfully');
         } catch (\Throwable $e) {
+            report($e);
+
             return redirect()
                 ->back()
                 ->withInput()

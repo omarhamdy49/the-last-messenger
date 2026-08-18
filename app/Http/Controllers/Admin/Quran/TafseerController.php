@@ -8,6 +8,7 @@ use App\Domain\Quran\Models\VerseTafsir;
 use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Quran\Services\SurahService;
 use App\Domain\Quran\Services\TafseerService;
+use App\Domain\Shared\Exceptions\BusinessRuleViolationException;
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreTafseerRequest;
@@ -15,6 +16,7 @@ use App\Http\Requests\Admin\UpdateTafseerRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
@@ -123,7 +125,8 @@ class TafseerController extends Controller
 
             return redirect()->route('admin.tafseer.show', $tafseer)
                 ->with('success', 'تم إنشاء التفسير بنجاح');
-        } catch (\App\Exceptions\Domain\DuplicateResourceException $e) {
+        } catch (BusinessRuleViolationException $e) {
+            report($e);
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => false,
@@ -135,6 +138,7 @@ class TafseerController extends Controller
                 ->withInput()
                 ->withErrors(['duplicate' => $e->getMessage()]);
         } catch (\Throwable $e) {
+            report($e);
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => false,
@@ -224,7 +228,8 @@ class TafseerController extends Controller
 
             return redirect()->route('admin.tafseer.show', $tafseer)
                 ->with('success', 'تم تحديث التفسير بنجاح');
-        } catch (\App\Exceptions\Domain\DuplicateResourceException $e) {
+        } catch (BusinessRuleViolationException $e) {
+            report($e);
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => false,
@@ -236,6 +241,7 @@ class TafseerController extends Controller
                 ->withInput()
                 ->withErrors(['duplicate' => $e->getMessage()]);
         } catch (\Throwable $e) {
+            report($e);
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => false,
@@ -285,6 +291,7 @@ class TafseerController extends Controller
             return redirect()->route('admin.tafseer.index')
                 ->with('success', 'تم حذف التفسير بنجاح');
         } catch (\Throwable $e) {
+            report($e);
             if (request()->wantsJson()) {
                 return response()->json([
                     'success' => false,
@@ -332,6 +339,7 @@ class TafseerController extends Controller
             return redirect()->route('admin.tafseer.index')
                 ->with('success', "تم حذف {$deleted} تفسير بنجاح");
         } catch (\Throwable $e) {
+            report($e);
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => false,
@@ -376,6 +384,6 @@ class TafseerController extends Controller
     /**
      * Helper: Get surahs for selector dropdown
      *
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
 }

@@ -22,6 +22,8 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 /**
  * Category Service
  * Handles business logic for categories
+ *
+ * @extends BaseService<CategoryRepositoryInterface>
  */
 class CategoryService extends BaseService
 {

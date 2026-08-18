@@ -219,7 +219,7 @@
             selected: [],
             // x-model bound rows: set `selected` and let Alpine mirror it. Reading
             // <tbody> here would miss the mobile card stack rendered outside it.
-            pageIds: {{ Js::from(collect($milestones)->pluck('id')->all()) }},
+            pageIds: {{ Js::from($milestones->pluck('id')->all()) }},
             toggleAll(e) {
                 this.selected = e.target.checked ? [...this.pageIds] : [];
             },

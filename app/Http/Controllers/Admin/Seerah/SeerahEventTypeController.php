@@ -119,7 +119,9 @@ class SeerahEventTypeController extends Controller
 
         try {
             $this->typeService->deleteType($id);
-        } catch (SeerahEventTypeInUseException) {
+        } catch (SeerahEventTypeInUseException $e) {
+            report($e);
+
             return redirect()->route('admin.seerah-event-types.index')
                 ->with('error', __('admin.type_in_use_cannot_delete'));
         }

@@ -16,6 +16,9 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection as SupportCollection;
 
+/**
+ * @extends BaseService<MediaProgramRepositoryInterface>
+ */
 class MediaProgramService extends BaseService
 {
     public function __construct(

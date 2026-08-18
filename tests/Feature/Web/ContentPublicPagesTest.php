@@ -218,8 +218,12 @@ final class ContentPublicPagesTest extends TestCase
         $response = $this->withSession(['locale' => 'ar'])->get('/');
 
         $response->assertOk();
-        // Header nav label from the seeded header menu
-        $response->assertSee('المواضيع');
+        // Header nav labels from the seeded header menu. This asserted 'المواضيع' (Topics),
+        // which MenuSeeder has never seeded — its HEADER group is Home / Biography /
+        // Library (Articles, Series) / Hadith / Videos / Family Tree. The point of the test
+        // is that header chrome is DB-driven, so assert labels the seeder actually creates.
+        $response->assertSee('السيرة');
+        $response->assertSee('المكتبة');
         // Footer quick link + copyright from settings
         $response->assertSee('سياسة الخصوصية');
         $response->assertSee('جميع الحقوق محفوظة');

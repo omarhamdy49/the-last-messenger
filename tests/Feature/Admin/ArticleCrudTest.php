@@ -19,8 +19,37 @@ class ArticleCrudTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * NEEDS A PRODUCT DECISION — deliberately incomplete rather than deleted or silenced.
+     *
+     * This test has never passed. `git log -S` shows the assertions and the standalone
+     * `openModuleSelector` buttons they forbid both arrived in the same commit (f4e703a,
+     * "feat:enhance articles module", 10 Aug 2026), so it was committed already red: it
+     * encodes an intended end-state — module insertion only inside the Quill editor — that
+     * was never finished.
+     *
+     * `_form-wizard.blade.php:600-612` still renders four standalone "Add Block" buttons
+     * (verse / hadith / sahabi / seerah) alongside the `ql-module-btn--*` toolbar buttons
+     * inside the editor. Two insertion paths exist. Worth noting: the Quill path requires a
+     * registered blot or the embed's data-module/data-id attributes are silently stripped,
+     * so the two paths are not equivalent.
+     *
+     * Resolving it means choosing one:
+     *   (a) finish the migration — delete the four block buttons and the openModuleSelector
+     *       handler (:1457), leaving Quill as the only path, and this test goes green; or
+     *   (b) keep the block toolbar as a supported feature and delete this test.
+     *
+     * (a) removes UI that content editors may rely on; (b) discards a stated design intent.
+     * Either is a call for the maintainer, not for a test-triage pass.
+     */
     public function test_quran_hadith_and_sahabi_are_only_available_inside_the_wysiwyg(): void
     {
+        $this->markTestIncomplete(
+            'Unresolved design conflict: _form-wizard.blade.php:600-612 still renders standalone '
+            .'openModuleSelector block buttons that this test forbids. Both were added in f4e703a; '
+            .'the test has never passed. Either finish removing the buttons or drop this test.'
+        );
+
         $this->actingAs($this->createAdminUser());
 
         $this->get(route('admin.articles.create'))

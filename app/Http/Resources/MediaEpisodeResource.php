@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Domain\Media\Models\MediaEpisode;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @mixin \App\Domain\Media\Models\MediaEpisode
+ * @mixin MediaEpisode
  */
 class MediaEpisodeResource extends JsonResource
 {

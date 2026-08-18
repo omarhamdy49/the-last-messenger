@@ -9,10 +9,13 @@ use App\Domain\Blog\Models\Series;
 use App\Domain\Blog\Models\Tag;
 use App\Domain\Quran\Models\Reciter;
 use App\Domain\Seerah\Models\SeerahEvent;
+use App\Domain\Seerah\Models\SeerahEventType;
 use App\Domain\Seerah\Models\SeerahParticipant;
 use App\Domain\Shared\Models\Language;
+use App\Domain\Shared\Models\LanguageTranslation;
 use App\Models\Article;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Symfony\Component\Finder\Finder;
 use Tests\TestCase;
 
 /**
@@ -47,7 +50,7 @@ class TranslationMigrationE2ETest extends TestCase
         $this->assertTrue(\Schema::hasTable('language_translations'));
 
         // Verify relationship works
-        $this->assertTrue($language->getTranslationModelClass() === \App\Domain\Shared\Models\LanguageTranslation::class);
+        $this->assertTrue($language->getTranslationModelClass() === LanguageTranslation::class);
         $this->assertContains('name', $language->getTranslatableFields());
 
         $this->assertTrue(true); // Translation system ready
@@ -141,7 +144,7 @@ class TranslationMigrationE2ETest extends TestCase
     {
         $event = SeerahEvent::create([
             'slug' => 'migration-to-medina',
-            'seerah_event_type_id' => \App\Domain\Seerah\Models\SeerahEventType::query()->where('slug', 'other')->value('id'),
+            'seerah_event_type_id' => SeerahEventType::query()->where('slug', 'other')->value('id'),
         ]);
 
         // Verify translation table exists
@@ -190,8 +193,6 @@ class TranslationMigrationE2ETest extends TestCase
         $this->assertTrue(true);
     }
 
-
-
     /**
      * Test 14: No Spatie HasTranslations Remaining
      * Verify 100% migration completion
@@ -199,7 +200,7 @@ class TranslationMigrationE2ETest extends TestCase
     public function test_no_spatie_translations_remaining(): void
     {
         // Grep through app/Domain and app/Models for Spatie imports
-        $finder = new \Symfony\Component\Finder\Finder;
+        $finder = new Finder;
         $finder->files()->in(base_path('app/Domain'))
             ->in(base_path('app/Models'))
             ->name('*.php');
@@ -318,7 +319,7 @@ class TranslationMigrationE2ETest extends TestCase
             'reciter_translations',
             'seerah_event_translations',
             'seerah_participant_translations',
-                    ];
+        ];
 
         // Tables exist (we verified above)
         // FULLTEXT indexes exist (created in migrations with if mysql check)
@@ -368,7 +369,7 @@ class TranslationMigrationE2ETest extends TestCase
             'reciter_translations',
             'seerah_event_translations',
             'seerah_participant_translations',
-                        'language_translations',
+            'language_translations',
             // Article uses Spatie JSON columns (no separate article_translations table)
         ];
 

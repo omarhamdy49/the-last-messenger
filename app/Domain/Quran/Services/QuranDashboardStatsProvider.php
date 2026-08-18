@@ -23,7 +23,9 @@ class QuranDashboardStatsProvider implements DashboardStatsProviderInterface
             return [
                 'total' => Verse::count(),
             ];
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            report($e);
+
             return ['total' => 0];
         }
     }

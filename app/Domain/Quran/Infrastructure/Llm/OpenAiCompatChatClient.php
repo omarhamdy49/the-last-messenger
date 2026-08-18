@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Infrastructure\Llm;
 
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -97,7 +99,7 @@ final class OpenAiCompatChatClient implements ChatClientInterface
     /**
      * @param  array<string, mixed>  $cfg
      */
-    private function request(array $cfg): \Illuminate\Http\Client\PendingRequest
+    private function request(array $cfg): PendingRequest
     {
         return Http::baseUrl((string) $cfg['base_url'])
             ->withToken((string) $cfg['api_key'])
@@ -143,7 +145,7 @@ final class OpenAiCompatChatClient implements ChatClientInterface
      *
      * @param  callable(string): void  $onContentDelta
      */
-    private function consumeStream(\Illuminate\Http\Client\Response $response, callable $onContentDelta): ChatResult
+    private function consumeStream(Response $response, callable $onContentDelta): ChatResult
     {
         $body = $response->toPsrResponse()->getBody();
 

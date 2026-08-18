@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Domain\Shared\Models\SearchHistory;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * Search History Resource
  *
- * @mixin \App\Domain\Shared\Models\SearchHistory
+ * @mixin SearchHistory
  */
 class SearchHistoryResource extends JsonResource
 {

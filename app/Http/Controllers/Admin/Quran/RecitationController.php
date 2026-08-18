@@ -9,6 +9,7 @@ use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreRecitationRequest;
 use App\Http\Requests\Admin\UpdateRecitationRequest;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -57,6 +58,8 @@ class RecitationController extends Controller
                 ->route('admin.reciters.show', $reciter)
                 ->with('success', __('quran.recitations.created'));
         } catch (\Throwable $e) {
+            report($e);
+
             return $this->failure($request, __('quran.recitations.create_failed'));
         }
     }
@@ -92,9 +95,13 @@ class RecitationController extends Controller
             return redirect()
                 ->route('admin.reciters.show', $reciter)
                 ->with('success', __('quran.recitations.updated'));
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
+            report($e);
+
             return $this->notFound($request);
         } catch (\Throwable $e) {
+            report($e);
+
             return $this->failure($request, __('quran.recitations.update_failed'));
         }
     }
@@ -126,9 +133,13 @@ class RecitationController extends Controller
             return redirect()
                 ->route('admin.reciters.show', $reciter)
                 ->with('success', __('quran.recitations.deleted'));
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
+            report($e);
+
             return $this->notFound($request);
         } catch (\Throwable $e) {
+            report($e);
+
             return $this->failure($request, __('quran.recitations.delete_failed'));
         }
     }

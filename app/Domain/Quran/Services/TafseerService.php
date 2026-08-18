@@ -6,8 +6,8 @@ namespace App\Domain\Quran\Services;
 
 use App\Domain\Quran\Models\VerseTafsir;
 use App\Domain\Quran\Repositories\TafseerRepositoryInterface;
+use App\Domain\Shared\Exceptions\BusinessRuleViolationException;
 use App\Domain\Shared\Services\BaseService;
-use App\Exceptions\Domain\DuplicateResourceException;
 use App\Exceptions\Domain\ResourceNotFoundException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
@@ -16,6 +16,8 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * Tafseer Service
  * Business logic for Tafseer management
+ *
+ * @extends BaseService<TafseerRepositoryInterface>
  */
 class TafseerService extends BaseService
 {
@@ -95,13 +97,13 @@ class TafseerService extends BaseService
      *
      * @param  array<string, mixed>  $data
      *
-     * @throws DuplicateResourceException
+     * @throws BusinessRuleViolationException
      */
     public function create(array $data): Model
     {
         // Check for duplicates - combination of verse_key and language must be unique
         if ($this->repository->checkDuplicate($data['verse_key'], $data['lang'])) {
-            throw new DuplicateResourceException(
+            throw new BusinessRuleViolationException(
                 "Tafseer already exists for verse {$data['verse_key']} in language {$data['lang']}"
             );
         }
@@ -115,14 +117,14 @@ class TafseerService extends BaseService
      * @param  array<string, mixed>  $data
      *
      * @throws ResourceNotFoundException
-     * @throws DuplicateResourceException
+     * @throws BusinessRuleViolationException
      */
     public function updateTafseer(VerseTafsir $tafseer, array $data): Model
     {
         // Check for duplicates (excluding current record)
         if (isset($data['verse_key']) && isset($data['lang'])) {
             if ($this->repository->checkDuplicate($data['verse_key'], $data['lang'], $tafseer->id)) {
-                throw new DuplicateResourceException(
+                throw new BusinessRuleViolationException(
                     "Tafseer already exists for verse {$data['verse_key']} in language {$data['lang']}"
                 );
             }

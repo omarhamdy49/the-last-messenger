@@ -74,7 +74,11 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
      * Resource (edition) of each translation — lets the DTO pick the default
      * edition per language deterministically when several editions exist.
      */
-    private const TRANSLATION_RESOURCE_EAGER = 'translations.resource:id,is_default,language';
+    // `slug` and `name` are required, not optional: TranslationResource emits both, and
+    // TranslationResource::getName() reads `name[$locale]` with `slug` as its last-resort
+    // fallback. Selecting only id/is_default/language left them null — a constrained query
+    // feeding a Resource that reads unselected columns, which fails silently.
+    private const TRANSLATION_RESOURCE_EAGER = 'translations.resource:id,slug,name,language,is_default';
 
     /**
      * Get model instance

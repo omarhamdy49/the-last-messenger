@@ -7,6 +7,7 @@ namespace App\Domain\Shared\Services;
 use App\Domain\Shared\Contracts\FavorableRegistryInterface;
 use App\Domain\Shared\DTOs\FavoriteItemData;
 use App\Domain\Shared\Enums\FavorableType;
+use App\Domain\Shared\Exceptions\EntityNotFoundException;
 use App\Domain\Shared\Repositories\FavoriteRepositoryInterface;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -122,8 +123,8 @@ final class FavoriteService
      * Add a bookmark for the user. Idempotent: re-bookmarking the same content
      * is a no-op. Returns true when a new bookmark was created.
      *
-     * @throws \App\Domain\Shared\Exceptions\EntityNotFoundException when the
-     *                                                               content type is unregistered or the content row does not exist.
+     * @throws EntityNotFoundException when the
+     *                                 content type is unregistered or the content row does not exist.
      */
     public function add(User $user, FavorableType $type, int $contentId): bool
     {
@@ -152,14 +153,14 @@ final class FavoriteService
      *
      * @return class-string<Model>
      *
-     * @throws \App\Domain\Shared\Exceptions\EntityNotFoundException
+     * @throws EntityNotFoundException
      */
     private function requireExistingContent(FavorableType $type, int $contentId): string
     {
         $morphClass = $this->registry->modelClass($type);
 
         if ($morphClass === null || ! class_exists($morphClass)) {
-            throw \App\Domain\Shared\Exceptions\EntityNotFoundException::withId($type->value, $contentId);
+            throw EntityNotFoundException::withId($type->value, $contentId);
         }
 
         /** @var Model $model */
@@ -167,7 +168,7 @@ final class FavoriteService
         $exists = $model->newQuery()->whereKey($contentId)->exists();
 
         if (! $exists) {
-            throw \App\Domain\Shared\Exceptions\EntityNotFoundException::withId($type->value, $contentId);
+            throw EntityNotFoundException::withId($type->value, $contentId);
         }
 
         return $morphClass;

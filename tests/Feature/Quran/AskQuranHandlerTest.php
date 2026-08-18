@@ -10,6 +10,7 @@ use App\Domain\Quran\Exceptions\MonthlyQuotaExceededException;
 use App\Domain\Quran\Infrastructure\Llm\ChatClientInterface;
 use App\Domain\Quran\Infrastructure\Llm\ChatResult;
 use App\Domain\Quran\Infrastructure\Mcp\QuranMcpClientInterface;
+use App\Domain\Quran\Models\AiInquiry;
 use App\Domain\Quran\Repositories\AiInquiryQuotaRepositoryInterface;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -192,7 +193,7 @@ final class AskQuranHandlerTest extends TestCase
 
         // The persisted/cached answer must be only the final round — the tool-use
         // preamble that streamed live must NOT survive into the saved answer.
-        $inquiry = \App\Domain\Quran\Models\AiInquiry::where('user_id', $user->id)->firstOrFail();
+        $inquiry = AiInquiry::where('user_id', $user->id)->firstOrFail();
         $this->assertStringNotContainsString('Let me search', $inquiry->answer);
         $this->assertStringContainsString('[[2:153]]', $inquiry->answer);
 

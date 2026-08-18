@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Domain\Topics\Models;
 
 use App\Domain\Shared\Traits\HasLocalizedContent;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 /**
  * Topic Model
@@ -25,10 +28,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $color
  * @property bool $is_featured
  * @property int $display_order
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
- * @property-read \Illuminate\Database\Eloquent\Collection<int, TopicTranslation> $translations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, TopicItem> $items
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property-read Collection<int, TopicTranslation> $translations
+ * @property-read Collection<int, TopicItem> $items
  */
 class Topic extends Model
 {
@@ -92,8 +95,8 @@ class Topic extends Model
     /**
      * Scope: featured topics first, then by display order.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeOrdered($query)
     {

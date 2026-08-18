@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Quran\Models;
 
 use App\Domain\Shared\Traits\HasLocalizedContent;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Collection;
@@ -20,8 +22,8 @@ use Illuminate\Support\Collection;
  * @property string|null $event_key
  * @property int $display_order
  * @property bool $is_active
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class RevelationContext extends Model
 {
@@ -123,8 +125,8 @@ class RevelationContext extends Model
     /**
      * Scope: only active contexts.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeActive($query)
     {
@@ -134,8 +136,8 @@ class RevelationContext extends Model
     /**
      * Scope: filter by revelation period (makki/madani).
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByPeriod($query, string $period)
     {

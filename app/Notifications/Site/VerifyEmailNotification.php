@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications\Site;
 
+use App\Models\User;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\URL;
@@ -19,7 +20,7 @@ use Illuminate\Support\Facades\URL;
 final class VerifyEmailNotification extends VerifyEmail
 {
     /**
-     * @param  \App\Models\User  $notifiable
+     * @param  User  $notifiable
      */
     protected function verificationUrl($notifiable): string
     {

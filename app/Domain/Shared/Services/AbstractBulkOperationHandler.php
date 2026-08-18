@@ -6,6 +6,8 @@ namespace App\Domain\Shared\Services;
 
 use App\Domain\Shared\Contracts\BulkOperationHandlerInterface;
 use App\Domain\Shared\Enums\BulkOperationTypeEnum;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -16,6 +18,11 @@ use Illuminate\Database\Eloquent\Model;
  */
 abstract class AbstractBulkOperationHandler implements BulkOperationHandlerInterface
 {
+    /**
+     * How many rows preview() shows. Small on purpose — it feeds a confirmation dialog.
+     */
+    protected const PREVIEW_LIMIT = 10;
+
     /**
      * Return the fully-qualified Eloquent model class for this entity type.
      *
@@ -55,15 +62,41 @@ abstract class AbstractBulkOperationHandler implements BulkOperationHandlerInter
      */
     public function preview(array $ids): array
     {
-        $model = $this->modelClass();
-
-        return $model::whereIn('id', array_slice($ids, 0, 10))
-            ->get(['id', 'title', 'name'])
-            ->map(fn ($item) => [
-                'id' => $item->id,
-                'title' => $item->title ?? $item->name ?? 'N/A',
+        return $this->previewQuery(array_slice($ids, 0, static::PREVIEW_LIMIT))
+            ->get()
+            ->map(fn (Model $item) => [
+                'id' => (int) $item->getKey(),
+                'title' => $this->previewLabel($item),
             ])
             ->all();
+    }
+
+    /**
+     * Base query for preview(). Selects `id` only; override to add the columns or
+     * relations previewLabel() needs.
+     *
+     * This used to be a single `->get(['id', 'title', 'name'])` for every module, which
+     * threw `SQLSTATE[42S22] Unknown column` on all four handlers — no table has both
+     * columns (`articles` has `title` only; `seerah_events`, `quran_verses` and
+     * `media_programs` have neither, since their titles live in translation tables).
+     *
+     * @param  int[]  $ids
+     * @return Builder<Model>
+     */
+    protected function previewQuery(array $ids): Builder
+    {
+        $model = $this->modelClass();
+
+        return $model::query()->whereIn('id', $ids)->select(['id']);
+    }
+
+    /**
+     * Human-readable label for one previewed row. Override per module; the default is
+     * deliberately dumb rather than guessing at a column that may not exist.
+     */
+    protected function previewLabel(Model $item): string
+    {
+        return '#'.$item->getKey();
     }
 
     /**
@@ -508,9 +541,9 @@ abstract class AbstractBulkOperationHandler implements BulkOperationHandlerInter
     // -------------------------------------------------------------------------
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Collection<int, Model>  $items
+     * @param  Collection<int, Model>  $items
      */
-    private function toCsv(\Illuminate\Database\Eloquent\Collection $items): string
+    private function toCsv(Collection $items): string
     {
         if ($items->isEmpty()) {
             return '';

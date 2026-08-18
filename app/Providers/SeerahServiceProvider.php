@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\Seerah\Repositories\SeerahEventRepository;
+use App\Domain\Seerah\Repositories\SeerahEventRepositoryInterface;
+use App\Domain\Seerah\Repositories\SeerahEventTypeRepository;
+use App\Domain\Seerah\Repositories\SeerahEventTypeRepositoryInterface;
+use App\Domain\Seerah\Repositories\SeerahMilestoneRepository;
+use App\Domain\Seerah\Repositories\SeerahMilestoneRepositoryInterface;
 use App\Domain\Seerah\Services\SeerahCacheKeys;
 use App\Domain\Seerah\Services\SeerahPublicVisibility;
 use App\Domain\Shared\Contracts\PublicVisibilityProviderInterface;
@@ -25,18 +31,18 @@ class SeerahServiceProvider extends ServiceProvider
         $this->app->tag(SeerahPublicVisibility::class, PublicVisibilityProviderInterface::class);
 
         $this->app->bind(
-            \App\Domain\Seerah\Repositories\SeerahEventRepositoryInterface::class,
-            \App\Domain\Seerah\Repositories\SeerahEventRepository::class
+            SeerahEventRepositoryInterface::class,
+            SeerahEventRepository::class
         );
 
         $this->app->bind(
-            \App\Domain\Seerah\Repositories\SeerahEventTypeRepositoryInterface::class,
-            \App\Domain\Seerah\Repositories\SeerahEventTypeRepository::class
+            SeerahEventTypeRepositoryInterface::class,
+            SeerahEventTypeRepository::class
         );
 
         $this->app->bind(
-            \App\Domain\Seerah\Repositories\SeerahMilestoneRepositoryInterface::class,
-            \App\Domain\Seerah\Repositories\SeerahMilestoneRepository::class
+            SeerahMilestoneRepositoryInterface::class,
+            SeerahMilestoneRepository::class
         );
     }
 }

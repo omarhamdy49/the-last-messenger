@@ -9,6 +9,7 @@ use App\Domain\Shared\Enums\FilterOperator;
 use App\Domain\Shared\Enums\FilterType;
 use App\Domain\Shared\Enums\SearchModule;
 use App\Domain\Shared\Enums\SortDirection;
+use App\Domain\Shared\Helpers\FullTextSearchHelper;
 use App\Support\Utilities\TextSanitizer;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -50,29 +51,69 @@ class SearchQueryBuilder
     /**
      * Apply the appropriate full-text search strategy to an existing Builder.
      *
-     * If the model exposes getFullTextColumns(), MySQL MATCH/AGAINST is used;
-     * otherwise falls back to OR-LIKE across searchable fields.
+     * This used to gate on `method_exists($modelClass, 'getFullTextColumns')` — which NO
+     * model implemented, so 100% of unified search took the OR-LIKE path: per request, four
+     * modules × (COUNT + SELECT) with correlated `orWhereHas` LIKEs over `article_locale`
+     * and `quran_verse_translations` (112k rows in production). One crawler on `/search?q=`
+     * could saturate both cores while every FULLTEXT index in the schema sat unused.
+     *
+     * The gate could never have fired: MATCH() needs an index covering exactly the listed
+     * columns and cannot span tables, and for every content module the searchable text is
+     * in a per-locale translation table. So the MATCH has to go INSIDE the relationship
+     * subquery. SearchModule::fullTextGroups() carries that mapping; anything no index
+     * covers stays on LIKE via likeOnlyFields(), so narrowing coverage never silently drops
+     * a field from search.
      *
      * @param  Builder  $query  Eloquent query to mutate
-     * @param  array<string>  $fields  Searchable field list from SearchModule
-     * @param  string  $modelClass  Fully-qualified model class name
+     * @param  SearchModule  $module  Module being searched
      * @param  string  $searchTerm  Raw search term
      */
     public function applySearch(
         Builder $query,
-        array $fields,
-        string $modelClass,
+        SearchModule $module,
         string $searchTerm
     ): void {
-        if ($searchTerm === '' || empty($fields)) {
+        $searchTerm = trim($searchTerm);
+        $fields = $module->searchableFields();
+
+        if ($searchTerm === '' || $fields === []) {
             return;
         }
 
-        if (method_exists($modelClass, 'getFullTextColumns')) {
-            $this->applyMySQLFullText($query, $modelClass::getFullTextColumns(), $searchTerm);
-        } else {
+        $groups = $module->fullTextGroups();
+
+        if ($groups === []) {
             $this->applyBasicSearch($query, $fields, $searchTerm);
+
+            return;
         }
+
+        $likeOnly = $module->likeOnlyFields();
+
+        $query->where(function (Builder $outer) use ($groups, $likeOnly, $searchTerm): void {
+            foreach ($groups as $group) {
+                $columns = $group['columns'];
+
+                if ($group['relation'] === null) {
+                    // Columns on the module's own table.
+                    $outer->orWhere(
+                        fn (Builder $q) => FullTextSearchHelper::apply($q, $columns, $searchTerm)
+                    );
+
+                    continue;
+                }
+
+                // Columns on a related (translation) table — MATCH inside the subquery.
+                $outer->orWhereHas(
+                    $group['relation'],
+                    fn (Builder $q) => FullTextSearchHelper::apply($q, $columns, $searchTerm)
+                );
+            }
+
+            foreach ($likeOnly as $field) {
+                $this->applyLikeToField($outer, $field, $searchTerm, boolean: 'or');
+            }
+        });
     }
 
     /**
@@ -162,20 +203,6 @@ class SearchQueryBuilder
     // -------------------------------------------------------------------------
 
     /**
-     * Add a MySQL MATCH … AGAINST full-text clause.
-     *
-     * @param  array<string>  $columns  Columns that carry a FULLTEXT index
-     */
-    private function applyMySQLFullText(Builder $query, array $columns, string $searchTerm): void
-    {
-        $columnsString = implode(',', $columns);
-        $query->whereRaw(
-            "MATCH({$columnsString}) AGAINST(? IN NATURAL LANGUAGE MODE)",
-            [$searchTerm]
-        );
-    }
-
-    /**
      * Add OR-LIKE conditions across plain, JSON-path, and related-table fields.
      *
      * Field formats supported:
@@ -191,24 +218,52 @@ class SearchQueryBuilder
     {
         $query->where(function (Builder $q) use ($fields, $searchTerm) {
             foreach ($fields as $field) {
-                if (str_contains($field, '->')) {
-                    $q->orWhereRaw(
-                        "JSON_UNQUOTE(JSON_EXTRACT({$field})) LIKE ?",
-                        ["%{$searchTerm}%"]
-                    );
-                } elseif (str_contains($field, '.')) {
-                    [$relation, $column] = explode('.', $field, 2);
-                    $columnTerm = $this->termForColumn($column, $searchTerm);
-                    $q->orWhereHas(
-                        $relation,
-                        fn (Builder $relationQuery) => $relationQuery->where($column, 'LIKE', "%{$columnTerm}%")
-                    );
-                } else {
-                    $columnTerm = $this->termForColumn($field, $searchTerm);
-                    $q->orWhere($field, 'LIKE', "%{$columnTerm}%");
-                }
+                $this->applyLikeToField($q, $field, $searchTerm, boolean: 'or');
             }
         });
+    }
+
+    /**
+     * Add a single LIKE condition for one searchable field, in any of the three supported
+     * shapes. Shared by applyBasicSearch() and by applySearch()'s likeOnlyFields() pass, so
+     * a field that no FULLTEXT index covers behaves identically on both paths.
+     *
+     * @param  'and'|'or'  $boolean
+     */
+    private function applyLikeToField(
+        Builder $query,
+        string $field,
+        string $searchTerm,
+        string $boolean = 'and'
+    ): void {
+        $or = $boolean === 'or';
+
+        if (str_contains($field, '->')) {
+            $sql = "JSON_UNQUOTE(JSON_EXTRACT({$field})) LIKE ?";
+            $or
+                ? $query->orWhereRaw($sql, ["%{$searchTerm}%"])
+                : $query->whereRaw($sql, ["%{$searchTerm}%"]);
+
+            return;
+        }
+
+        if (str_contains($field, '.')) {
+            [$relation, $column] = explode('.', $field, 2);
+            $columnTerm = $this->termForColumn($column, $searchTerm);
+            $callback = fn (Builder $relationQuery) => $relationQuery->where($column, 'LIKE', "%{$columnTerm}%");
+
+            $or
+                ? $query->orWhereHas($relation, $callback)
+                : $query->whereHas($relation, $callback);
+
+            return;
+        }
+
+        $columnTerm = $this->termForColumn($field, $searchTerm);
+
+        $or
+            ? $query->orWhere($field, 'LIKE', "%{$columnTerm}%")
+            : $query->where($field, 'LIKE', "%{$columnTerm}%");
     }
 
     /**

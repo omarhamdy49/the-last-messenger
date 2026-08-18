@@ -16,6 +16,7 @@ use App\Domain\Media\Repositories\MediaEpisodeRepositoryInterface;
 use App\Domain\Media\Repositories\MediaProgramRepositoryInterface;
 use App\Domain\Media\Support\YouTubeClient;
 use App\Domain\Media\Support\YouTubeUrl;
+use App\Domain\Shared\Services\RichTextSanitizer;
 use App\Jobs\SyncYouTubePlaylistJob;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -42,6 +43,10 @@ class YouTubeSyncService
         private readonly MediaEpisodeService $episodes,
         private readonly MediaEpisodeRepositoryInterface $episodeRepo,
         private readonly MediaProgramRepositoryInterface $programRepo,
+        // YouTube text is third-party input rendered with {!! !!} on /media/{slug} and in
+        // the admin episode page. It gets the same allowlist as admin WYSIWYG content, so
+        // nothing reaches a rich-text column unpurified.
+        private readonly RichTextSanitizer $sanitizer,
     ) {}
 
     /**
@@ -377,10 +382,10 @@ class YouTubeSyncService
         $locale = $this->detectLocale($video->title.' '.$video->description);
 
         $episode->syncTranslations([
-            'title' => [$locale => $video->title],
-            'description' => [$locale => $video->description],
+            'title' => [$locale => $this->sanitizer->clean($video->title)],
+            'description' => [$locale => $this->sanitizer->clean($video->description)],
             'transcript' => $video->transcript !== null && $video->transcript !== ''
-                ? [$locale => $video->transcript]
+                ? [$locale => $this->sanitizer->clean($video->transcript)]
                 : [],
         ]);
     }
@@ -407,13 +412,13 @@ class YouTubeSyncService
         $program->load('translations');
         $translations = [];
         if (blank($program->getTranslation('title', $locale, false))) {
-            $translations['title'] = [$locale => $playlist->title];
+            $translations['title'] = [$locale => $this->sanitizer->clean($playlist->title)];
         }
         if (filled($playlist->description) && blank($program->getTranslation('description', $locale, false))) {
-            $translations['description'] = [$locale => $playlist->description];
+            $translations['description'] = [$locale => $this->sanitizer->clean($playlist->description)];
         }
         if (filled($playlist->channel) && blank($program->getTranslation('host', $locale, false))) {
-            $translations['host'] = [$locale => $playlist->channel];
+            $translations['host'] = [$locale => $this->sanitizer->clean($playlist->channel)];
         }
         if ($translations !== []) {
             $program->syncTranslations($translations);

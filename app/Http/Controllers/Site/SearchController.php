@@ -343,7 +343,8 @@ final class SearchController extends Controller
                 ->take(8)
                 ->values()
                 ->all();
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            report($e);
             $popular = [];
         }
 

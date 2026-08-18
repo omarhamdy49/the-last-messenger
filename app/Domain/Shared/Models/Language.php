@@ -6,6 +6,7 @@ namespace App\Domain\Shared\Models;
 
 use App\Domain\Shared\Traits\HasLocalizedContent;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
@@ -23,8 +24,8 @@ use Illuminate\Support\Facades\Cache;
  * @property bool $is_default
  * @property int $sort_order
  * @property string|null $flag_icon
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class Language extends Model
 {

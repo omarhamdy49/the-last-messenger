@@ -7,7 +7,9 @@ namespace App\Http\Controllers\Admin\Blog;
 use App\Domain\Blog\DTOs\CreateCategoryData;
 use App\Domain\Blog\DTOs\UpdateCategoryData;
 use App\Domain\Blog\Enums\CategoryType;
+use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Services\CategoryService;
+use App\Domain\Shared\Helpers\VersionedCacheKey;
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreCategoryRequest;
@@ -16,6 +18,7 @@ use App\Support\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 /**
@@ -254,36 +257,52 @@ class CategoryController extends Controller
         ]);
 
         $ids = $request->input('ids');
-        $deleted = 0;
+
+        // One query for all candidates (was findOrFail + hasChildren + articles()->count()
+        // per id, i.e. ~3-4 queries per selected category).
+        $categories = Category::query()
+            ->whereIn('id', $ids)
+            ->withCount(['children', 'articles'])
+            ->get(['id']);
+
+        $deletableIds = [];
         $failed = 0;
 
-        foreach ($ids as $id) {
-            try {
-                $category = $this->categoryService->findOrFail($id);
-
-                // Skip if has children or articles
-                if ($category->hasChildren() || $category->articles()->count() > 0) {
-                    $failed++;
-
-                    continue;
-                }
-
-                $this->categoryService->delete($id);
-                $deleted++;
-            } catch (\Throwable $e) {
-                \Log::warning('admin.category.bulk_delete_item_failed', [
-                    'user_id' => auth()->id(),
-                    'category_id' => $id,
-                    'error' => $e->getMessage(),
-                ]);
+        foreach ($categories as $category) {
+            // Skip if has children or articles
+            if ($category->children_count > 0 || $category->articles_count > 0) {
                 $failed++;
+
+                continue;
             }
+
+            $deletableIds[] = $category->id;
+        }
+
+        // ids that vanished between validation and this query (e.g. deleted
+        // concurrently) never made it into $categories - count them as failed
+        // too, matching the old catch(\Throwable) behaviour for a missing row.
+        $failed += count($ids) - $categories->count();
+
+        $deleted = 0;
+
+        if ($deletableIds !== []) {
+            $deleted = Category::query()->whereIn('id', $deletableIds)->delete();
+
+            // Mirrors CategoryRepository::clearCache() (bypassed here for a
+            // single-query bulk delete); keep in sync if that method changes.
+            VersionedCacheKey::bump('category');
+            Cache::forget('categories:all');
+            Cache::forget('categories:published');
+            Cache::forget('categories:by_type');
+            Cache::forget('categories:tree');
+            Cache::forget('categories:siblings');
         }
 
         // Log bulk action
         $this->logger->logBulkAction(
             'bulk_delete',
-            \App\Domain\Blog\Models\Category::class,
+            Category::class,
             $ids,
             $request->user()
         );
@@ -366,7 +385,7 @@ class CategoryController extends Controller
         $language = $request->input('language', 'ar');
         $type = $request->input('type');
 
-        $tree = \App\Domain\Blog\Models\Category::getTree(null, $language);
+        $tree = Category::getTree(null, $language);
 
         if ($type) {
             // array_values() keeps the payload a JSON array after filtering.

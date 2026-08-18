@@ -7,6 +7,7 @@ namespace App\Domain\Quran\Application\Handlers;
 use App\Domain\Quran\Application\DTOs\VerseDTO;
 use App\Domain\Quran\Application\Queries\GetVerseByKeyQuery;
 use App\Domain\Quran\Exceptions\VerseNotFoundException;
+use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Repositories\VerseRepositoryInterface;
 
 /**
@@ -33,7 +34,7 @@ final readonly class GetVerseByKeyHandler
         }
 
         if ($query->withTranslations) {
-            $verse->load('translations');
+            $verse->load(Verse::readerTranslationsEagerLoad($query->locale));
         }
 
         if ($query->withTafsir) {

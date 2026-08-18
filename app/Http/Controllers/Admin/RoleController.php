@@ -13,6 +13,7 @@ use App\Services\RoleService;
 use App\Support\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 use Spatie\Permission\Models\Role;
 
 /**
@@ -34,7 +35,7 @@ class RoleController extends Controller
      *
      * GET /su/portal/v1/admin/roles
      */
-    public function index(Request $request): \Illuminate\View\View|JsonResponse
+    public function index(Request $request): View|JsonResponse
     {
         $roles = $this->roleService->list([
             'search' => $request->input('search'),
@@ -65,7 +66,7 @@ class RoleController extends Controller
      *
      * GET /su/portal/v1/admin/roles/create
      */
-    public function create(): \Illuminate\View\View
+    public function create(): View
     {
         return view('admin.roles.create');
     }
@@ -108,7 +109,7 @@ class RoleController extends Controller
      *
      * GET /su/portal/v1/admin/roles/{id}/edit
      */
-    public function edit(int $id): \Illuminate\View\View
+    public function edit(int $id): View
     {
         return view('admin.roles.edit', ['id' => $id]);
     }

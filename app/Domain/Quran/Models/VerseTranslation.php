@@ -117,25 +117,13 @@ class VerseTranslation extends Model
         return $query->where('lang', $lang);
     }
 
-    /**
-     * Scope: Search in text (with or without tashkeel)
-     *
-     * @param  Builder  $query
-     * @return Builder
-     */
-    public function scopeSearch($query, string $term)
-    {
-        $supportsFullText = $query->getConnection()->getDriverName() === 'mysql';
-
-        return $query->where(function ($q) use ($term, $supportsFullText) {
-            if ($supportsFullText) {
-                $q->whereRaw('MATCH(text, text_notashkeel) AGAINST(? IN NATURAL LANGUAGE MODE)', [$term]);
-            }
-
-            $q->orWhere('text', 'LIKE', "%{$term}%")
-                ->orWhere('text_notashkeel', 'LIKE', "%{$term}%");
-        });
-    }
+    // scopeSearch() was removed: it had zero callers anywhere in app/ or tests/
+    // (every ->search() call in the codebase is on a repository or service, never on
+    // this model's builder), and it was OR-ing MATCH with LIKE meant MySQL could never use quran_verse_translations'
+    // FULLTEXT index (112k rows in production): it had to scan every row for the LIKE
+    // regardless, so the MATCH added cost and the index was pure storage overhead.
+    // Searching this data goes through the repository, which uses
+    // FullTextSearchHelper / a constrained whereHas instead.
 
     /**
      * Scope: Arabic translations

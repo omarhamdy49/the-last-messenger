@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Helpers;
 
-use App\Models\Article;
 use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Models\Series;
 use App\Domain\Blog\Models\Tag;
 use App\Domain\Media\Models\MediaProgram;
+use App\Models\Article;
 use App\Models\User;
 
 /**

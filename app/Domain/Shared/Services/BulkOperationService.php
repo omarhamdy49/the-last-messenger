@@ -11,6 +11,7 @@ use App\Domain\Shared\Models\BulkOperation;
 use App\Domain\Shared\Repositories\BulkOperationRepositoryInterface;
 use App\Jobs\ProcessBulkOperation;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -20,6 +21,8 @@ use Illuminate\Support\Facades\Log;
  * Orchestrates bulk operations across all content modules.
  * Domain knowledge lives exclusively in registered BulkOperationHandlerInterface
  * implementations — this service has no direct dependency on domain models.
+ *
+ * @extends BaseService<BulkOperationRepositoryInterface>
  */
 class BulkOperationService extends BaseService
 {
@@ -160,9 +163,29 @@ class BulkOperationService extends BaseService
     /**
      * Return current status for an operation.
      */
-    public function getOperationStatus(int $operationId): BulkOperation
+    /**
+     * Fetch one operation, optionally scoped to its owner.
+     *
+     * $forUserId null means "no ownership restriction" and is reserved for super admins —
+     * the same predicate index() and getOperationStatistics() already use. Without it the
+     * {id} routes were a straight IDOR: an editor could walk
+     * /bulk-operations/1..N/download and read another admin's export payload, which
+     * includes the submitted request_data.
+     *
+     * @throws ModelNotFoundException when the operation does not exist OR belongs to
+     *                                someone else — deliberately indistinguishable, so the
+     *                                endpoint cannot be used to enumerate ids.
+     */
+    public function getOperationStatus(int $operationId, ?int $forUserId = null): BulkOperation
     {
-        return $this->repository->findOrFail($operationId, ['*'], ['creator']);
+        /** @var BulkOperation $operation */
+        $operation = $this->repository->findOrFail($operationId, ['*'], ['creator']);
+
+        if ($forUserId !== null && (int) $operation->created_by !== $forUserId) {
+            throw new ModelNotFoundException("Bulk operation [{$operationId}] not found.");
+        }
+
+        return $operation;
     }
 
     /**

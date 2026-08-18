@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Shared\Models;
 
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -25,15 +26,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $total_searches
  * @property int $engagement_score
  * @property int $streak_days
- * @property \Carbon\Carbon|null $last_activity_at
- * @property \Carbon\Carbon|null $streak_started_at
+ * @property Carbon|null $last_activity_at
+ * @property Carbon|null $streak_started_at
  * @property int $total_time_spent_seconds
  * @property int $avg_session_duration_seconds
  * @property int $monthly_views
  * @property int $monthly_interactions
- * @property \Carbon\Carbon|null $metrics_month
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon|null $metrics_month
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class UserEngagementMetric extends Model
 {

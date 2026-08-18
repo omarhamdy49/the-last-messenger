@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Domain\Quran\Models\VerseTranslation;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @mixin \App\Domain\Quran\Models\VerseTranslation
+ * @mixin VerseTranslation
  */
 class TranslationResource extends JsonResource
 {
@@ -30,12 +31,18 @@ class TranslationResource extends JsonResource
             'verse_id' => $this->verse_id,
             'resource_id' => $this->resource_id,
             'lang' => $this->lang,
-            'edition' => $this->whenLoaded('resource', fn () => [
-                'id' => $this->resource->id,
-                'slug' => $this->resource->slug,
-                'name' => $this->resource->getName(app()->getLocale()),
-                'language' => $this->resource->language,
-                'is_default' => $this->resource->is_default,
+            // Take the edition from the closure argument, never from `$this->resource`.
+            // Inside a JsonResource, `$this->resource` is Laravel's own property holding
+            // the *wrapped model* (the VerseTranslation) — not the `resource()` belongsTo.
+            // Reading it here called VerseTranslation::getName(), which does not exist, so
+            // these four endpoints 500'd: /quran/surahs/{n}/verses, /verses/{v}, /random,
+            // /search. whenLoaded() passes the loaded relation as the first argument.
+            'edition' => $this->whenLoaded('resource', fn ($edition) => [
+                'id' => $edition->id,
+                'slug' => $edition->slug,
+                'name' => $edition->getName(app()->getLocale()),
+                'language' => $edition->language,
+                'is_default' => $edition->is_default,
             ]),
             'text' => $isTransliteration ? $this->stripMarkup($this->text) : $this->text,
             'text_notashkeel' => $this->text_notashkeel,

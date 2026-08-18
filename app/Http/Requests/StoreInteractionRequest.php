@@ -4,7 +4,16 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Domain\Hadith\Models\Hadith;
+use App\Domain\Media\Models\MediaEpisode;
+use App\Domain\Media\Models\MediaProgram;
+use App\Domain\People\Models\Muslim;
+use App\Domain\Quran\Models\Surah;
+use App\Domain\Quran\Models\Verse;
+use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Shared\Enums\InteractionType;
+use App\Models\Article;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -22,14 +31,14 @@ class StoreInteractionRequest extends FormRequest
      * @var array<string, class-string<Model>>
      */
     public const CONTENT_TYPES = [
-        'Article' => \App\Models\Article::class,
-        'Hadith' => \App\Domain\Hadith\Models\Hadith::class,
-        'MediaProgram' => \App\Domain\Media\Models\MediaProgram::class,
-        'MediaEpisode' => \App\Domain\Media\Models\MediaEpisode::class,
-        'SeerahEvent' => \App\Domain\Seerah\Models\SeerahEvent::class,
-        'Sahabi' => \App\Domain\People\Models\Muslim::class,
-        'QuranVerse' => \App\Domain\Quran\Models\Verse::class,
-        'QuranSurah' => \App\Domain\Quran\Models\Surah::class,
+        'Article' => Article::class,
+        'Hadith' => Hadith::class,
+        'MediaProgram' => MediaProgram::class,
+        'MediaEpisode' => MediaEpisode::class,
+        'SeerahEvent' => SeerahEvent::class,
+        'Sahabi' => Muslim::class,
+        'QuranVerse' => Verse::class,
+        'QuranSurah' => Surah::class,
     ];
 
     /**
@@ -43,7 +52,7 @@ class StoreInteractionRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {

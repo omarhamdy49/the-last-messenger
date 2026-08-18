@@ -21,10 +21,10 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/css/admin.css',
                 'resources/js/app.js',
-                // Its own entry on purpose: the genealogy page dynamic-imports
-                // it (with its d3 dependencies) only when the tree canvas nears
-                // the viewport. It must never ride along in app.js.
-                'resources/js/genealogy-tree.js',
+                // NOT an entry: app.js dynamic-imports it, so Vite code-splits
+                // it into its own lazily-fetched chunk automatically. As an
+                // entry it had to be referenced by a hand-built URL at runtime,
+                // which is what broke it on phones and looped HMR in dev.
                 'resources/js/admin/app.js',
                 'resources/js/admin/rich-text.js',
             ],

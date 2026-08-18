@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * Search History Model
@@ -21,9 +22,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $results_count
  * @property string|null $ip_address
  * @property string|null $user_agent
- * @property \Illuminate\Support\Carbon $searched_at
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
+ * @property Carbon $searched_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class SearchHistory extends Model
 {

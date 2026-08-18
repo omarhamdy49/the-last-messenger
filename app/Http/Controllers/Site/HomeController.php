@@ -39,9 +39,9 @@ final class HomeController extends Controller
 
         // Featured companions for the carousel. A companion is now a `muslims`
         // row carrying the `sahabi` role, not a separate record.
-        $featuredSahaba = Cache::remember(
+        $featuredSahaba = Cache::flexible(
             "home_featured_sahaba_{$locale}_8",
-            1800,
+            [900, 1800],
             fn () => $this->muslimDirectory->list(new MuslimListFilters(
                 roleSlug: 'sahabi',
                 featured: true,
@@ -49,13 +49,17 @@ final class HomeController extends Controller
             ))->items(),
         );
 
-        $featuredArticles = Cache::remember(
+        $featuredArticles = Cache::flexible(
             "home_featured_articles_{$locale}_3",
-            1800,
+            [900, 1800],
             fn () => $this->articleRepository->getHomeFeaturedArticles($locale, 3),
         );
 
-        // Daily verse — random, cached per day per locale
+        // Daily verse — random, cached per day per locale.
+        // Deliberately remember(), not flexible(): the key contains today's date, so at
+        // midnight it is a brand-new key with no stale value to serve. flexible() can only
+        // help when something is already cached, so it would add machinery and change
+        // nothing. Warming this key would be the real fix; out of scope here.
         $dailyVerse = Cache::remember(
             "home_daily_verse_{$locale}_".now()->format('Y-m-d'),
             86400,
@@ -67,7 +71,9 @@ final class HomeController extends Controller
                     );
 
                     return $dto->toArray();
-                } catch (Throwable) {
+                } catch (Throwable $e) {
+                    report($e);
+
                     return null;
                 }
             },
@@ -118,7 +124,9 @@ final class HomeController extends Controller
 
         // Real derived counts (replaces the previous hardcoded numbers) —
         // each source is a single aggregate query, cached for 1 hour.
-        $stats = Cache::remember('home_module_stats', 3600, fn (): array => [
+        // Four aggregate COUNTs, one of them over ~38k hadiths — worth never rebuilding
+        // synchronously on a user's request.
+        $stats = Cache::flexible('home_module_stats', [1800, 3600], fn (): array => [
             'surahs' => self::SURAH_COUNT,
             // published + ready only: getIndexStats() is the admin total and counts drafts.
             'seerah_events' => (int) ($this->seerahEventService->getIndexStats()['published'] ?? 0),
@@ -137,9 +145,9 @@ final class HomeController extends Controller
         // from his `muslims` record and its extended profile. Null when the
         // record is absent — the card falls back to the translations, so a
         // fresh install without the People seeders still renders.
-        $prophet = Cache::remember(
+        $prophet = Cache::flexible(
             "home_prophet_{$locale}",
-            1800,
+            [900, 1800],
             fn (): ?Muslim => Muslim::query()
                 ->published()
                 ->whereHas('roles', fn ($roles) => $roles->where('islamic_roles.slug', 'prophet'))

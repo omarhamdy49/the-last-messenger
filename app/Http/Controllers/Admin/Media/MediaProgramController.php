@@ -240,7 +240,8 @@ class MediaProgramController extends Controller
             try {
                 $this->programService->deleteProgram((int) $id);
                 $deleted++;
-            } catch (\Throwable) {
+            } catch (\Throwable $e) {
+                report($e);
                 // Continue — partial deletes are acceptable for bulk operations
             }
         }
@@ -342,6 +343,8 @@ class MediaProgramController extends Controller
                 'data' => $service->analyzeSource($request->validated()['playlist_url']),
             ]);
         } catch (\Throwable $e) {
+            report($e);
+
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
     }

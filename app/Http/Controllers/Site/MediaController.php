@@ -96,9 +96,14 @@ final class MediaController extends Controller
             // fallbacks; unique() folds catalogue aliases of the same person.
             $locale = app()->getLocale();
             $reciters = Reciter::query()->active()->recitationsOnly()->featured()
-                ->with('translations')
+                ->with('translations:id,reciter_id,locale,name')
                 ->orderByRaw('(profile_image IS NULL)')
-                ->latest()->get()
+                // ponytail: alias-folding by translated name (with locale
+                // fallback) can't move into SQL cheaply, so it stays in PHP —
+                // but bound the fetch instead of hydrating every featured row.
+                // 30 leaves 3x headroom over the 10-unique cap for a curated
+                // teaser set; raise it if featured reciters ever grows large.
+                ->latest()->limit(30)->get()
                 ->unique(fn (Reciter $reciter): string => $reciter->getDisplayName($locale))
                 ->take(10)
                 ->map(fn (Reciter $reciter): array => [
@@ -179,7 +184,8 @@ final class MediaController extends Controller
     {
         try {
             $program = $this->programService->getBySlug($slug);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            report($e);
             abort(404);
         }
 
@@ -210,7 +216,8 @@ final class MediaController extends Controller
     {
         try {
             $program = $this->programService->getBySlug($slug);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            report($e);
             abort(404);
         }
 
@@ -218,7 +225,8 @@ final class MediaController extends Controller
 
         try {
             $episode = $this->episodeService->getEpisode($program->id, $season, $episodeNumber);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            report($e);
             abort(404);
         }
 
@@ -269,7 +277,8 @@ final class MediaController extends Controller
     {
         try {
             $channel = $this->liveChannelService->getPublishedBySlug($slug);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            report($e);
             abort(404);
         }
 

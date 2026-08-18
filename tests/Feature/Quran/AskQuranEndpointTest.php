@@ -7,6 +7,7 @@ namespace Tests\Feature\Quran;
 use App\Domain\Quran\Infrastructure\Llm\ChatClientInterface;
 use App\Domain\Quran\Infrastructure\Llm\ChatResult;
 use App\Domain\Quran\Infrastructure\Mcp\QuranMcpClientInterface;
+use App\Domain\Quran\Models\AiInquiry;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -131,7 +132,7 @@ final class AskQuranEndpointTest extends TestCase
             ->postJson('/quran/ask', ['question' => 'What does the Quran say about gratitude?'])
             ->assertOk();
 
-        $geo = \App\Domain\Quran\Models\AiInquiry::query()->latest('id')->first()->geo;
+        $geo = AiInquiry::query()->latest('id')->first()->geo;
         $this->assertSame('EG', $geo['country']);   // upper-cased
         $this->assertSame('Cairo', $geo['city']);
         $this->assertArrayNotHasKey('lat', $geo);    // only country + city are kept
@@ -147,7 +148,7 @@ final class AskQuranEndpointTest extends TestCase
             ->postJson('/quran/ask', ['question' => 'What does the Quran say about kindness?'])
             ->assertOk();
 
-        $geo = \App\Domain\Quran\Models\AiInquiry::query()->latest('id')->first()->geo;
+        $geo = AiInquiry::query()->latest('id')->first()->geo;
         $this->assertArrayNotHasKey('country', $geo); // invalid format rejected
         $this->assertSame('Cairo', $geo['city']);
     }
@@ -161,7 +162,7 @@ final class AskQuranEndpointTest extends TestCase
             ->postJson('/quran/ask', ['question' => "What about patience'; DROP TABLE users; <b>x</b>?"])
             ->assertOk();
 
-        $stored = \App\Domain\Quran\Models\AiInquiry::query()->latest('id')->first()->question;
+        $stored = AiInquiry::query()->latest('id')->first()->question;
         $this->assertStringNotContainsString("'", $stored);
         $this->assertStringNotContainsString(';', $stored);
         $this->assertStringNotContainsString('<', $stored);

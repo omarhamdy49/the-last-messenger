@@ -280,6 +280,7 @@ return [
         'search_placeholder' => 'ابحث عن اسم...',
         'search_hint' => 'اكتب اسماً للتصفية الفورية للأشخاص.',
         'prophet_relation' => 'خاتم الأنبياء والمرسلين',
+        'prophet_honorific' => 'سيدنا :name',
         'view_details' => 'عرض التفاصيل',
         'historical_note' => 'نبذة تاريخية',
         'born' => 'وُلِد',
@@ -335,5 +336,45 @@ return [
         'pagination_label' => 'تصفّح الصفحات',
         'prev_page' => 'الصفحة السابقة',
         'next_page' => 'الصفحة التالية',
+
+        // Kinship labels — what each card says about its relation to the focus
+        // person. Gendered pairs; the masculine form is the neutral fallback
+        // when the record does not state a gender.
+        'rel_self' => 'صاحب الشجرة',
+        'rel_father' => 'الأب',
+        'rel_grandfather' => 'الجدّ',
+        'rel_ancestor_n' => 'الجدّ :n',
+        'rel_wife_m' => 'زوج',
+        'rel_wife_f' => 'زوجة',
+        'rel_child_m' => 'ابن',
+        'rel_child_f' => 'ابنة',
+        'rel_grandchild_m' => 'حفيد',
+        'rel_grandchild_f' => 'حفيدة',
+        'rel_sibling_m' => 'أخ',
+        'rel_sibling_f' => 'أخت',
+        'rel_uncle_m' => 'عمّ',
+        'rel_uncle_f' => 'عمّة',
+        'rel_cousin_m' => 'ابن العمّ',
+        'rel_cousin_f' => 'بنت العمّ',
+        'rel_relative' => 'من الأسرة',
+
+        // Groups the list is sectioned by.
+        'group_ancestor' => 'سلسلة النسب الشريف',
+        'group_self' => 'خاتم الأنبياء والمرسلين',
+        'group_wife' => 'أمّهات المؤمنين',
+        'group_child' => 'الأبناء والبنات',
+        'group_grandchild' => 'الأحفاد',
+        'group_sibling' => 'الإخوة والأخوات',
+        'group_uncle' => 'الأعمام والعمّات',
+        'group_cousin' => 'أبناء وبنات العمّ',
+        'group_relative' => 'صلات المصاهرة',
+
+        // Mobile lineage spine + fullscreen canvas.
+        'spine_root_note' => 'أقدم جدٍّ موثّق في السلسلة',
+        'open_canvas' => 'الشجرة التفاعلية',
+        'close_canvas' => 'إغلاق الشجرة التفاعلية',
+        'hide_ancestors' => 'إخفاء الأجداد الأعلى',
+        'show_ancestors' => 'إظهار الأجداد الأعلى',
+        'canvas_failed' => 'تعذّر تحميل الشجرة التفاعلية. السلسلة أعلاه تعرض النسب كاملاً.',
     ],
 ];

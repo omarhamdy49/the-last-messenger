@@ -19,6 +19,9 @@ use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use Throwable;
 
+/**
+ * @extends BaseService<SurahRepositoryInterface>
+ */
 class QuranService extends BaseService
 {
     /** Locale of the Arabic source text rows in quran_verse_translations. */
@@ -46,7 +49,7 @@ class QuranService extends BaseService
     public function paginateVerses(int $perPage = 15): LengthAwarePaginator
     {
         $verses = $this->verseRepository->paginateWithFilters($perPage, '', 'verse_key', []);
-        $verses->getCollection()->load('translations');
+        $verses->getCollection()->load(Verse::readerTranslationsEagerLoad(app()->getLocale()));
 
         return $verses;
     }

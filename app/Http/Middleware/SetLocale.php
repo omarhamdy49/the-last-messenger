@@ -34,7 +34,7 @@ class SetLocale
      * 4. Request header (Accept-Language)
      * 5. Default locale (ar)
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {

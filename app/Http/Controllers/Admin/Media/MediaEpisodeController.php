@@ -269,6 +269,8 @@ class MediaEpisodeController extends Controller
             return redirect()->route('admin.media-episodes.show', $id)
                 ->with('success', __('admin.yt_episode_synced'));
         } catch (\Throwable $e) {
+            report($e);
+
             return redirect()->route('admin.media-episodes.show', $id)
                 ->with('error', __('admin.yt_sync_failed').': '.$e->getMessage());
         }
@@ -293,6 +295,8 @@ class MediaEpisodeController extends Controller
                 'data' => $service->previewVideo((string) $request->input('video_url')),
             ]);
         } catch (\Throwable $e) {
+            report($e);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage() ?: __('admin.yt_sync_failed'),
@@ -327,7 +331,8 @@ class MediaEpisodeController extends Controller
             try {
                 $this->episodeService->deleteEpisode((int) $id);
                 $deleted++;
-            } catch (\Throwable) {
+            } catch (\Throwable $e) {
+                report($e);
                 // Continue
             }
         }

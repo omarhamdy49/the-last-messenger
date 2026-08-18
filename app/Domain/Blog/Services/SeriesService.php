@@ -20,6 +20,8 @@ use Illuminate\Support\Str;
 /**
  * Series Service
  * Handles business logic for series management
+ *
+ * @extends BaseService<SeriesRepositoryInterface>
  */
 class SeriesService extends BaseService
 {

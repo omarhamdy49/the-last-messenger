@@ -7,9 +7,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Support\Traits\ApiResponse;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Base Admin Controller
@@ -76,7 +79,8 @@ abstract class AdminController extends Controller
     {
         try {
             return $request->validate($rules, $messages);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
+            report($e);
             // For API requests, return JSON response
             if ($request->expectsJson()) {
                 throw $e;
@@ -187,6 +191,7 @@ abstract class AdminController extends Controller
                 $callback($id);
                 $results['success']++;
             } catch (\Throwable $e) {
+                report($e);
                 $results['failed']++;
                 $results['errors'][$id] = $e->getMessage();
             }
@@ -234,7 +239,7 @@ abstract class AdminController extends Controller
      * @param  string  $message  Success message
      * @param  mixed  $data  Response data
      * @param  string  $redirectRoute  Route to redirect (for web requests)
-     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+     * @return JsonResponse|RedirectResponse
      */
     protected function success(string $message, mixed $data = null, ?string $redirectRoute = null)
     {
@@ -251,7 +256,7 @@ abstract class AdminController extends Controller
      *
      * @param  string  $message  Error message
      * @param  int  $code  HTTP status code
-     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+     * @return JsonResponse|RedirectResponse
      */
     protected function failure(string $message, int $code = 400)
     {
@@ -265,7 +270,7 @@ abstract class AdminController extends Controller
     /**
      * Switch application locale
      *
-     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+     * @return JsonResponse|RedirectResponse
      */
     public function switchLocale(Request $request)
     {
@@ -302,7 +307,7 @@ abstract class AdminController extends Controller
     /**
      * Get current locale information
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function getLocaleInfo(Request $request)
     {

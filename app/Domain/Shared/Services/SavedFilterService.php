@@ -8,6 +8,7 @@ use App\Domain\Shared\Models\SavedFilter;
 use App\Domain\Shared\Repositories\SavedFilterRepositoryInterface;
 use App\Exceptions\Domain\ResourceNotFoundException;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Collection;
 
 /**
@@ -79,7 +80,7 @@ class SavedFilterService
      * user+module are cleared first.
      *
      * @throws ResourceNotFoundException
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
     public function update(int $id, User|int $user, array $data): SavedFilter
     {
@@ -109,7 +110,7 @@ class SavedFilterService
      * Delete a saved filter, enforcing ownership.
      *
      * @throws ResourceNotFoundException
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
     public function delete(int $id, User|int $user): void
     {
@@ -125,7 +126,7 @@ class SavedFilterService
      * Set a filter as the module default for a user, enforcing ownership.
      *
      * @throws ResourceNotFoundException
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
     public function setDefault(int $id, User|int $user): SavedFilter
     {
@@ -156,14 +157,14 @@ class SavedFilterService
      * Increments usage_count on every successful access.
      *
      * @throws ResourceNotFoundException
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
     public function findAccessibleForApply(int $id, ?User $user): SavedFilter
     {
         $filter = $this->findOrFail($id);
 
         if (! $filter->is_public && $filter->user_id !== $user?->id) {
-            throw new \Illuminate\Auth\Access\AuthorizationException(
+            throw new AuthorizationException(
                 'You do not have permission to use this filter'
             );
         }
@@ -177,12 +178,12 @@ class SavedFilterService
     /**
      * Assert that the given user owns the filter.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
     private function assertOwnership(SavedFilter $filter, int $userId, string $action): void
     {
         if ($filter->user_id !== $userId) {
-            throw new \Illuminate\Auth\Access\AuthorizationException(
+            throw new AuthorizationException(
                 "You do not have permission to {$action} this filter"
             );
         }

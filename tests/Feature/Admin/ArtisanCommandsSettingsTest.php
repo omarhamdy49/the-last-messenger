@@ -78,8 +78,10 @@ final class ArtisanCommandsSettingsTest extends TestCase
 
     public function test_a_quick_command_runs_inline_and_records_its_output(): void
     {
+        // `migrate:status`, not `cache:clear` — every cache-clearing command is queued now
+        // (see the next test for why), so cache:clear is no longer an inline command.
         $response = $this->actingAs($this->createAdminUser())
-            ->postJson('/su/portal/v1/admin/settings/commands/run', ['command' => 'cache:clear']);
+            ->postJson('/su/portal/v1/admin/settings/commands/run', ['command' => 'migrate:status']);
 
         $response->assertOk()->assertJsonPath('data.run.status', CommandRun::STATUS_COMPLETED);
 
@@ -87,6 +89,34 @@ final class ArtisanCommandsSettingsTest extends TestCase
         $this->assertSame(0, $run->exit_code);
         $this->assertNotEmpty($run->output);
         $this->assertNotNull($run->finished_at);
+    }
+
+    /**
+     * Every command that drops the config cache MUST be queued.
+     *
+     * ArtisanCommandService::start() runs non-queued commands inline, in the web request, as
+     * www-data. php-fpm cannot be relied on to read shared/.env directly — a hand-edit
+     * silently resets it to 600 deployer:deployer — in which case
+     * bootstrap/cache/config.php is the only configuration source it has. Clearing that
+     * from inside a web request removed APP_KEY and the DB credentials from every
+     * subsequent request and took the whole site down until someone SSHed in.
+     *
+     * Queue workers run as the deploy user, which can read .env, so the same command is
+     * safe there. This test is the guard against someone making them inline again for
+     * responsiveness.
+     */
+    public function test_cache_clearing_commands_are_queued_never_run_in_the_request(): void
+    {
+        $config = config('artisan-commands.groups.cache.commands', []);
+
+        $this->assertNotEmpty($config, 'the cache command group vanished');
+
+        foreach ($config as $command => $settings) {
+            $this->assertTrue(
+                (bool) ($settings['queued'] ?? false),
+                "[{$command}] must be queued — running it inline as www-data can take the site down."
+            );
+        }
     }
 
     public function test_a_long_command_is_queued_rather_than_run_in_the_request(): void

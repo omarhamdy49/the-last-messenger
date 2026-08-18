@@ -4,8 +4,23 @@ deptrac:
       - App\Models\Article
     App\Domain\Blog\Actions\UpdateArticleAction:
       - App\Models\Article
+    App\Domain\Blog\DTOs\CreateArticleData:
+      - App\Http\Requests\Admin\Article\StoreArticleRequest
+    App\Domain\Blog\DTOs\CreateCategoryData:
+      - App\Http\Requests\Admin\StoreCategoryRequest
+    App\Domain\Blog\DTOs\CreateSeriesData:
+      - App\Http\Requests\Admin\StoreSeriesRequest
+    App\Domain\Blog\DTOs\CreateTagData:
+      - App\Http\Requests\Admin\StoreTagRequest
     App\Domain\Blog\DTOs\UpdateArticleData:
+      - App\Http\Requests\Admin\Article\UpdateArticleRequest
       - App\Models\Article
+    App\Domain\Blog\DTOs\UpdateCategoryData:
+      - App\Http\Requests\Admin\UpdateCategoryRequest
+    App\Domain\Blog\DTOs\UpdateSeriesData:
+      - App\Http\Requests\Admin\UpdateSeriesRequest
+    App\Domain\Blog\DTOs\UpdateTagData:
+      - App\Http\Requests\Admin\UpdateTagRequest
     App\Domain\Blog\Exporters\ArticleExporter:
       - App\Models\Article
     App\Domain\Blog\Importers\ArticleImporter:
@@ -29,8 +44,28 @@ deptrac:
       - App\Models\ArticleLocale
     App\Domain\Blog\Services\TagService:
       - App\Models\Article
+    App\Domain\Media\DTOs\CreateLiveChannelData:
+      - App\Http\Requests\Admin\LiveChannel\StoreLiveChannelRequest
+    App\Domain\Media\DTOs\CreateMediaEpisodeData:
+      - App\Http\Requests\Admin\MediaProgram\StoreMediaEpisodeRequest
+    App\Domain\Media\DTOs\CreateMediaProgramData:
+      - App\Http\Requests\Admin\MediaProgram\StoreMediaProgramRequest
+    App\Domain\Media\DTOs\UpdateLiveChannelData:
+      - App\Http\Requests\Admin\LiveChannel\UpdateLiveChannelRequest
+    App\Domain\Media\DTOs\UpdateMediaEpisodeData:
+      - App\Http\Requests\Admin\MediaProgram\UpdateMediaEpisodeRequest
+    App\Domain\Media\DTOs\UpdateMediaProgramData:
+      - App\Http\Requests\Admin\MediaProgram\UpdateMediaProgramRequest
     App\Domain\Media\Services\MediaAttachmentService:
       - App\Services\MediaService
+    App\Domain\Media\Services\MediaViewRecorder:
+      - App\Jobs\RecordMediaViewJob
+    App\Domain\Media\Services\YouTubeSyncService:
+      - App\Jobs\SyncYouTubePlaylistJob
+    App\Domain\Quran\DTOs\CreateReciterData:
+      - App\Http\Requests\Admin\StoreReciterRequest
+    App\Domain\Quran\DTOs\UpdateReciterData:
+      - App\Http\Requests\Admin\UpdateReciterRequest
     App\Domain\Seerah\Models\SeerahEvent:
       - App\Models\Article
       - App\Models\User
@@ -80,6 +115,10 @@ deptrac:
       - App\Domain\Seerah\Models\SeerahEvent
       - App\Models\Article
       - App\Models\User
+    App\Domain\Shared\Services\ArtisanCommandService:
+      - App\Jobs\RunArtisanCommandJob
+    App\Domain\Shared\Services\BulkOperationService:
+      - App\Jobs\ProcessBulkOperation
     App\Domain\Shared\Services\DashboardService:
       - App\Models\User
     App\Domain\Shared\Services\FavoriteService:

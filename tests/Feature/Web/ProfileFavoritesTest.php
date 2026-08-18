@@ -9,6 +9,7 @@ use App\Models\Favorite;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 /**
@@ -129,7 +130,7 @@ final class ProfileFavoritesTest extends TestCase
         $response->assertSessionHas('toast');
 
         $this->assertTrue(
-            \Illuminate\Support\Facades\Hash::check('NewSecret1', $user->fresh()->password),
+            Hash::check('NewSecret1', $user->fresh()->password),
         );
     }
 

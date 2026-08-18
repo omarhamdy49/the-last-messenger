@@ -6,6 +6,7 @@ namespace App\Domain\Quran\Application\Handlers;
 
 use App\Domain\Quran\Application\DTOs\VerseDTO;
 use App\Domain\Quran\Application\Queries\GetSajdaVersesQuery;
+use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Repositories\VerseRepositoryInterface;
 use Illuminate\Support\Collection;
 
@@ -26,7 +27,7 @@ final readonly class GetSajdaVersesHandler
         $verses = $this->verseRepository->getSajdaVerses();
 
         if ($query->withTranslations) {
-            $verses->load('translations');
+            $verses->load(Verse::readerTranslationsEagerLoad($query->locale));
         }
 
         $verses->load('surah');

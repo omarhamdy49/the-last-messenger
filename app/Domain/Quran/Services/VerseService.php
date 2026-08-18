@@ -8,10 +8,13 @@ use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Repositories\VerseRepositoryInterface;
 use App\Domain\Shared\Services\BaseService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * Verse Service
  * Handles business logic for Quran verses (ayahs)
+ *
+ * @extends BaseService<VerseRepositoryInterface>
  */
 class VerseService extends BaseService
 {
@@ -156,7 +159,7 @@ class VerseService extends BaseService
     /**
      * Get verses by surah
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
     public function getBySurah(int $surahId)
     {
@@ -193,7 +196,7 @@ class VerseService extends BaseService
     /**
      * Get verses by page
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
     public function getByPage(int $page)
     {

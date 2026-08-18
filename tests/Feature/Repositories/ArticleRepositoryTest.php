@@ -7,6 +7,7 @@ namespace Tests\Feature\Repositories;
 use App\Models\Article;
 use App\Models\ArticleLocale;
 use App\Repositories\ArticleRepository;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -93,7 +94,7 @@ class ArticleRepositoryTest extends TestCase
         $repo = app(ArticleRepository::class);
         $results = $repo->getAllWithFilters([], null, 10);
 
-        $this->assertInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class, $results);
+        $this->assertInstanceOf(LengthAwarePaginator::class, $results);
         $this->assertEquals(5, $results->total());
     }
 

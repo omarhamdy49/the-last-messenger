@@ -6,11 +6,14 @@ namespace App\Http\Requests\Admin\MediaProgram;
 
 use App\Domain\Media\Enums\MaturityRating;
 use App\Domain\Media\Enums\ProgramCategory;
+use App\Http\Requests\Admin\Content\Concerns\SanitizesRichText;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateMediaProgramRequest extends FormRequest
 {
+    use SanitizesRichText;
+
     public function authorize(): bool
     {
         return $this->user()->hasAnyRole(['admin', 'super_admin']);
@@ -70,5 +73,16 @@ class UpdateMediaProgramRequest extends FormRequest
             'title.ar.required' => 'Arabic title is required.',
             'slug.unique' => 'This slug is already taken.',
         ];
+    }
+
+    /**
+     * These render with {!! !!} on /media/{slug} and in the admin episode page, and
+     * the same columns also receive third-party YouTube text (sanitised in
+     * YouTubeSyncService). Purify here so both write paths land clean.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->sanitizeRichTextField('description');
+        $this->sanitizeRichTextField('host');
     }
 }

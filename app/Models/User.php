@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Notifications\Site\VerifyEmailNotification;
+use Carbon\Carbon;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -26,10 +27,10 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $avatar_path
  * @property string|null $provider
  * @property string|null $provider_id
- * @property \Carbon\Carbon|null $email_verified_at
- * @property \Carbon\Carbon|null $last_login_at
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon|null $email_verified_at
+ * @property Carbon|null $last_login_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class User extends Authenticatable implements MustVerifyEmail
 {

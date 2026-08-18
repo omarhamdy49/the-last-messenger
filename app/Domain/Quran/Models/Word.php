@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Models;
 
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -25,8 +27,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $char_type
  * @property int $line_number
  * @property int $page_number
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class Word extends Model
 {
@@ -86,8 +88,8 @@ class Word extends Model
     /**
      * Scope: a single surah's words (denormalised number, no join).
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeBySurahNumber($query, int $surahNumber)
     {
@@ -97,8 +99,8 @@ class Word extends Model
     /**
      * Scope: a single mushaf page's words.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByPage($query, int $page)
     {

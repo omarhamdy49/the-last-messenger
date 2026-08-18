@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Domain\Shared\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Carbon;
 
 /**
  * Content Version Model
@@ -25,7 +27,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property array|null $metadata
  * @property string|null $ip_address
  * @property string|null $user_agent
- * @property \Illuminate\Support\Carbon $created_at
+ * @property Carbon $created_at
  */
 class ContentVersion extends Model
 {
@@ -77,7 +79,7 @@ class ContentVersion extends Model
      */
     public function changedBy(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\User::class, 'changed_by');
+        return $this->belongsTo(User::class, 'changed_by');
     }
 
     /**

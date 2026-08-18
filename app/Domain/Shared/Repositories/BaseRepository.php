@@ -7,6 +7,7 @@ namespace App\Domain\Shared\Repositories;
 use App\Domain\Shared\Contracts\RepositoryInterface;
 use App\Domain\Shared\Helpers\VersionedCacheKey;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
@@ -252,7 +253,7 @@ abstract class BaseRepository implements RepositoryInterface
      * @param  array<string>  $relations
      * @param  array<string>  $columns
      */
-    protected function queryWithOptimizations(array $relations = [], array $columns = ['*']): \Illuminate\Database\Eloquent\Builder
+    protected function queryWithOptimizations(array $relations = [], array $columns = ['*']): Builder
     {
         $query = $this->model->select($columns);
 

@@ -6,10 +6,13 @@ namespace App\Domain\Media\Models;
 
 use App\Domain\Media\Enums\LiveStatus;
 use App\Domain\Shared\Traits\HasLocalizedContent;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /**
  * LiveChannel Model
@@ -25,8 +28,8 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property bool $is_published
  * @property int $display_order
  * @property int $views_count
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class LiveChannel extends Model implements HasMedia
 {
@@ -153,10 +156,10 @@ class LiveChannel extends Model implements HasMedia
             ->useDisk('public');
     }
 
-    public function registerMediaConversions(?\Spatie\MediaLibrary\MediaCollections\Models\Media $media = null): void
+    public function registerMediaConversions(?Media $media = null): void
     {
         $this->addMediaConversion('thumb')
-            ->fit(\Spatie\Image\Enums\Fit::Crop, 400, 225)
+            ->fit(Fit::Crop, 400, 225)
             ->optimize()
             ->performOnCollections('thumbnail')
             ->nonQueued();

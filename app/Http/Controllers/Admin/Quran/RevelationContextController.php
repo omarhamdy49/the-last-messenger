@@ -20,7 +20,9 @@ use App\Http\Requests\Admin\StoreRevelationContextRequest;
 use App\Http\Requests\Admin\UpdateRevelationContextRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
  * Admin Revelation Context (Asbab al-Nuzul) Controller
@@ -149,7 +151,7 @@ class RevelationContextController extends Controller
 
             return redirect()->route('admin.revelation-contexts.show', $context->id)
                 ->with('success', __('quran.asbab.updated'));
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+        } catch (HttpException $e) {
             throw $e;
         } catch (\Throwable $e) {
             report($e);
@@ -180,6 +182,6 @@ class RevelationContextController extends Controller
     /**
      * Helper: cached surah list for selector dropdowns (matches TafseerController).
      *
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
 }

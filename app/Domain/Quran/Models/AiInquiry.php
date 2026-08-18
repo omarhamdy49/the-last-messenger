@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -32,11 +33,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int $tool_calls
  * @property array|null $geo
  * @property int|null $published_faq_id
- * @property \Carbon\Carbon|null $answer_edited_at
+ * @property Carbon|null $answer_edited_at
  * @property int|null $answer_edited_by
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
- * @property \Carbon\Carbon|null $deleted_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property Carbon|null $deleted_at
  */
 class AiInquiry extends Model
 {

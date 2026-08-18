@@ -8,6 +8,7 @@ use App\Domain\Content\Enums\HomeModuleCardPlacement;
 use App\Domain\Content\Models\HomeModuleCard;
 use App\Domain\Content\Models\QuickFilterChip;
 use App\Domain\Content\Repositories\HomeContentRepositoryInterface;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -85,9 +86,9 @@ final class HomeContentService
     /**
      * Every module card with translations for admin management (uncached).
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, HomeModuleCard>
+     * @return Collection<int, HomeModuleCard>
      */
-    public function cardsForAdmin(?HomeModuleCardPlacement $placement = null): \Illuminate\Database\Eloquent\Collection
+    public function cardsForAdmin(?HomeModuleCardPlacement $placement = null): Collection
     {
         return $this->repository->allCardsWithTranslations($placement);
     }
@@ -150,9 +151,9 @@ final class HomeContentService
     /**
      * Every quick-filter chip with translations for admin management (uncached).
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, QuickFilterChip>
+     * @return Collection<int, QuickFilterChip>
      */
-    public function chipsForAdmin(): \Illuminate\Database\Eloquent\Collection
+    public function chipsForAdmin(): Collection
     {
         return $this->repository->allChipsWithTranslations();
     }

@@ -93,17 +93,31 @@ return [
 
         'cache' => [
             'icon' => 'zap',
+
+            // Every command that DROPS the config cache is queued on purpose.
+            //
+            // ArtisanCommandService::start() runs non-queued commands inline, in the web
+            // request — as www-data. php-fpm may not be able to read shared/.env directly
+            // (mode 640 deployer:www-data at best, and a hand-edit silently resets it to
+            // 600), in which case bootstrap/cache/config.php is the ONLY configuration
+            // source it has. Clearing it from inside a web request therefore removed
+            // APP_KEY and the DB credentials from every subsequent request and took the
+            // whole site down until someone SSHed in to re-run config:cache.
+            //
+            // Queue workers run as ${DEPLOY_USER} (see supervisor-worker.conf), which can
+            // read .env, so the same command is safe there — and the CommandRun row gives
+            // the operator progress instead of a hung request.
             'commands' => [
-                'optimize' => [],
-                'optimize:clear' => [],
-                'cache:clear' => [],
-                'config:cache' => [],
-                'config:clear' => [],
-                'route:cache' => [],
-                'route:clear' => [],
-                'view:cache' => [],
-                'view:clear' => [],
-                'event:clear' => [],
+                'optimize' => ['queued' => true],
+                'optimize:clear' => ['queued' => true],
+                'cache:clear' => ['queued' => true],
+                'config:cache' => ['queued' => true],
+                'config:clear' => ['queued' => true],
+                'route:cache' => ['queued' => true],
+                'route:clear' => ['queued' => true],
+                'view:cache' => ['queued' => true],
+                'view:clear' => ['queued' => true],
+                'event:clear' => ['queued' => true],
             ],
         ],
 

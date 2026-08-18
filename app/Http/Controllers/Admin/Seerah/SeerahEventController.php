@@ -59,6 +59,7 @@ class SeerahEventController extends Controller
             'type' => $request->string('event_type')->toString() ?: null,
             'importance' => $request->string('importance')->toString() ?: null,
             'status' => $request->string('status')->toString() ?: null,
+            'milestone' => $request->integer('milestone') ?: null,
             'search' => $request->string('search')->toString() ?: null,
         ]);
 
@@ -67,6 +68,7 @@ class SeerahEventController extends Controller
         // Single aggregate query delegated to repository via service
         $stats = $this->seerahEventService->getIndexStats();
         $eventTypes = $this->eventTypeService->getForDropdown();
+        $milestones = $this->milestoneService->getForDropdown();
         $statuses = SeerahEventStatus::cases();
 
         // Return JSON for AJAX requests
@@ -84,7 +86,7 @@ class SeerahEventController extends Controller
             ]);
         }
 
-        return view('admin.seerah-events.index', compact('events', 'stats', 'eventTypes', 'statuses'));
+        return view('admin.seerah-events.index', compact('events', 'stats', 'eventTypes', 'milestones', 'statuses'));
     }
 
     /**
@@ -258,6 +260,7 @@ class SeerahEventController extends Controller
                 $this->seerahEventService->delete($id);
                 $deleted++;
             } catch (\Throwable $e) {
+                report($e);
                 // Continue deleting
             }
         }

@@ -6,6 +6,7 @@ namespace Tests\Unit\Domain\Shared\Repositories;
 
 use App\Domain\Shared\Repositories\BaseRepository;
 use App\Models\Article;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -31,7 +32,7 @@ class BaseRepositoryTest extends TestCase
 
         $repository = new class extends BaseRepository
         {
-            protected function getModel(): \Illuminate\Database\Eloquent\Model
+            protected function getModel(): Model
             {
                 return new Article;
             }

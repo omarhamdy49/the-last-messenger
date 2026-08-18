@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Admin;
 
 use App\Domain\Blog\Enums\ArticleStatus;
+use App\Http\Requests\Admin\Content\Concerns\SanitizesRichText;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -15,9 +16,15 @@ use Illuminate\Validation\Rule;
  *
  * Handles multi-language content validation with proper authorization,
  * SEO metadata, and image uploads for article creation.
+ *
+ * NOTE: unused by any route/controller — the live write path is
+ * App\Http\Requests\Admin\Article\StoreArticleRequest. Kept in sync anyway
+ * (SEC-02) so it isn't a live vuln again if something is ever re-wired to it.
  */
 class StoreArticleRequest extends FormRequest
 {
+    use SanitizesRichText;
+
     /**
      * Determine if the user is authorized to make this request.
      *
@@ -294,6 +301,10 @@ class StoreArticleRequest extends FormRequest
         if (! empty($data)) {
             $this->merge($data);
         }
+
+        // Purify content/excerpt HTML — trimming alone let stored <script> through.
+        $this->sanitizeRichTextField('content');
+        $this->sanitizeRichTextField('excerpt');
     }
 
     /**

@@ -91,6 +91,8 @@ class SearchController extends Controller
 
             return $this->paginatedResponse($results, "Search in {$module} completed successfully");
         } catch (\InvalidArgumentException $e) {
+            report($e);
+
             return $this->errorResponse($e->getMessage(), 400);
         }
     }

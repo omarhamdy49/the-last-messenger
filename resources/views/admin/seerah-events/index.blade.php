@@ -82,7 +82,7 @@
          x-collapse
          class="mb-6 p-6 rounded-2xl border"
          :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-        <form method="GET" action="{{ route('admin.seerah-events.index') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <form method="GET" action="{{ route('admin.seerah-events.index') }}" class="grid grid-cols-1 md:grid-cols-6 gap-4">
             <!-- Search -->
             <div class="md:col-span-2">
                 <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -108,6 +108,23 @@
                     @foreach($eventTypes as $type)
                         <option value="{{ $type->slug }}" {{ request('event_type') == $type->slug ? 'selected' : '' }}>
                             {{ $type->getTranslation('name', 'ar') }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- Milestone Filter (DB-driven) -->
+            <div>
+                <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                    الحقبة
+                </label>
+                <select name="milestone"
+                        class="w-full px-4 py-2.5 text-base sm:text-sm rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                        :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                    <option value="">{{ __('admin.all') }}</option>
+                    @foreach($milestones as $milestone)
+                        <option value="{{ $milestone->id }}" {{ (int) request('milestone') === $milestone->id ? 'selected' : '' }}>
+                            {{ $milestone->getTranslation('title', 'ar') }}
                         </option>
                     @endforeach
                 </select>
@@ -239,10 +256,12 @@
                         </td>
                         <td class="px-6 py-4 hidden xl:table-cell">
                             @if($event->milestone)
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold max-w-[16rem] bg-gradient-to-r {{ $event->milestone->gradient ?: 'from-[#0056b3] to-[#218838]' }} text-white">
+                                <a href="{{ route('admin.seerah-milestones.show', $event->milestone->id) }}"
+                                   title="عرض الحقبة"
+                                   class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold max-w-[16rem] bg-gradient-to-r {{ $event->milestone->gradient ?: 'from-[#0056b3] to-[#218838]' }} text-white transition-all hover:scale-105 hover:shadow-md">
                                     <i data-lucide="{{ $event->milestone->icon ?: 'milestone' }}" class="w-3 h-3 flex-shrink-0"></i>
                                     <span class="truncate">{{ $event->milestone->getTranslation('title', 'ar') }}</span>
-                                </span>
+                                </a>
                             @else
                                 <span class="text-xs" :class="darkMode ? 'text-gray-600' : 'text-gray-400'">بدون حقبة</span>
                             @endif
@@ -356,10 +375,12 @@
                 @endif
 
                 @if($event->milestone)
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold max-w-full bg-gradient-to-r {{ $event->milestone->gradient ?: 'from-[#0056b3] to-[#218838]' }} text-white">
+                    <a href="{{ route('admin.seerah-milestones.show', $event->milestone->id) }}"
+                       title="عرض الحقبة"
+                       class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold max-w-full bg-gradient-to-r {{ $event->milestone->gradient ?: 'from-[#0056b3] to-[#218838]' }} text-white transition-all hover:shadow-md">
                         <i data-lucide="{{ $event->milestone->icon ?: 'milestone' }}" class="w-3 h-3 flex-shrink-0"></i>
                         <span class="truncate">{{ $event->milestone->getTranslation('title', 'ar') }}</span>
-                    </span>
+                    </a>
                 @endif
 
                 @if($event->type)
@@ -451,12 +472,12 @@
 <script>
     function seerahEventsIndex() {
         return {
-            filtersOpen: {{ request()->hasAny(['event_type', 'importance', 'status', 'search']) ? 'true' : 'false' }},
+            filtersOpen: {{ request()->hasAny(['event_type', 'importance', 'status', 'milestone', 'search']) ? 'true' : 'false' }},
             selected: [],
             // The row checkboxes are x-model bound, so Alpine mirrors `selected`
             // into them on its own. Reading the DOM here instead would miss the
             // mobile card stack, which renders the same rows outside <tbody>.
-            pageIds: {{ Js::from(collect($events ?? [])->pluck('id')->all()) }},
+            pageIds: {{ Js::from($events->pluck('id')->all()) }},
             toggleAll(e) {
                 this.selected = e.target.checked ? [...this.pageIds] : [];
             },

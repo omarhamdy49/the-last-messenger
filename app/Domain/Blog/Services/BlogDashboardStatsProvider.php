@@ -27,7 +27,9 @@ class BlogDashboardStatsProvider implements DashboardStatsProviderInterface
                 'draft' => Article::where('status', 'draft')->count(),
                 'archived' => Article::where('status', 'archived')->count(),
             ];
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            report($e);
+
             return ['total' => 0, 'published' => 0, 'draft' => 0, 'archived' => 0, 'views' => 0];
         }
     }

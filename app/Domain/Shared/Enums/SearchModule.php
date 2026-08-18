@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domain\Shared\Enums;
 
+use App\Domain\Media\Models\MediaProgram;
+use App\Domain\People\Models\Muslim;
+use App\Domain\Quran\Models\Verse;
+use App\Domain\Seerah\Models\SeerahEvent;
+use App\Models\Article;
+
 /**
  * Search Module Enum
  * Defines searchable modules
@@ -53,6 +59,75 @@ enum SearchModule: string
     }
 
     /**
+     * FULLTEXT groups for this module — one entry per MySQL FULLTEXT index.
+     *
+     * `MATCH()` requires an index covering EXACTLY the listed column set, and cannot span
+     * tables. That is why `getFullTextColumns()` on the models was never viable and every
+     * search silently fell back to a full-table LIKE: for all content modules the
+     * searchable text lives in a per-locale translation table, so the MATCH has to happen
+     * inside the relationship subquery, not against the parent.
+     *
+     * Verified against the live schema (information_schema.STATISTICS, INDEX_TYPE=FULLTEXT):
+     *
+     *   article_locale            ft_search                        (title, excerpt)
+     *   media_program_translations fulltext_program_title_desc      (title, description)
+     *   seerah_event_translations fulltext_title_description        (title, description)
+     *   quran_verse_translations  …_text_text_notashkeel_fulltext   (text, text_notashkeel)
+     *   muslims                   ft_muslims_search_name_ar        (search_name_ar)
+     *   muslims                   ft_muslims_search_name_en        (search_name_en)
+     *
+     * Note `muslims` has two SEPARATE single-column indexes, so they are two groups —
+     * `MATCH(search_name_ar, search_name_en)` would be a MySQL error. They also index the
+     * *folded* columns, not `name_ar`/`name_en`, which is what makes the Arabic
+     * normalisation (الصلاة vs الصلاه) actually match.
+     *
+     * `relation` null means the columns live on the module's own table.
+     *
+     * @return array<int, array{relation: string|null, columns: array<int, string>}>
+     */
+    public function fullTextGroups(): array
+    {
+        return match ($this) {
+            self::ARTICLE => [
+                ['relation' => 'locales', 'columns' => ['title', 'excerpt']],
+            ],
+            self::MEDIA => [
+                ['relation' => 'translations', 'columns' => ['title', 'description']],
+            ],
+            self::SEERAH => [
+                ['relation' => 'translations', 'columns' => ['title', 'description']],
+            ],
+            self::QURAN => [
+                ['relation' => 'translations', 'columns' => ['text', 'text_notashkeel']],
+            ],
+            self::SAHABA => [
+                ['relation' => null, 'columns' => ['search_name_ar']],
+                ['relation' => null, 'columns' => ['search_name_en']],
+            ],
+            self::ALL => [],
+        };
+    }
+
+    /**
+     * Searchable fields with no FULLTEXT index behind them. These keep LIKE and are OR-ed
+     * alongside the MATCH clauses, so narrowing the index coverage never silently drops a
+     * field from search.
+     *
+     * @return array<int, string>
+     */
+    public function likeOnlyFields(): array
+    {
+        return match ($this) {
+            // article_locale's ft_search covers title + excerpt only — `content` is not
+            // in the index.
+            self::ARTICLE => ['locales.content'],
+            // `location` is a plain column on seerah_events.
+            self::SEERAH => ['location'],
+            default => [],
+        };
+    }
+
+    /**
      * Get filterable fields for this module
      *
      * @return array<string, FilterType>
@@ -98,11 +173,11 @@ enum SearchModule: string
     public function modelClass(): ?string
     {
         return match ($this) {
-            self::ARTICLE => \App\Models\Article::class,
-            self::MEDIA => \App\Domain\Media\Models\MediaProgram::class,
-            self::SEERAH => \App\Domain\Seerah\Models\SeerahEvent::class,
-            self::SAHABA => \App\Domain\People\Models\Muslim::class,
-            self::QURAN => \App\Domain\Quran\Models\Verse::class,
+            self::ARTICLE => Article::class,
+            self::MEDIA => MediaProgram::class,
+            self::SEERAH => SeerahEvent::class,
+            self::SAHABA => Muslim::class,
+            self::QURAN => Verse::class,
             self::ALL => null,
         };
     }

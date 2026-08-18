@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Utils;
 
+use Illuminate\Support\Collection;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -192,7 +193,7 @@ class HttpResponse
     /**
      * Collect data from response and return
      */
-    public function collect(?string $key = null): \Illuminate\Support\Collection
+    public function collect(?string $key = null): Collection
     {
         $data = $key ? $this->get($key, []) : $this->json();
 

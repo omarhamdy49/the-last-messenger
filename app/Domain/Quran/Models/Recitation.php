@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -18,8 +19,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $quality
  * @property int|null $duration_seconds
  * @property int|null $file_size_kb
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class Recitation extends Model
 {

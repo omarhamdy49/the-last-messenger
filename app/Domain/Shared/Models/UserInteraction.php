@@ -6,6 +6,7 @@ namespace App\Domain\Shared\Models;
 
 use App\Domain\Shared\Enums\InteractionType;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -27,8 +28,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property string|null $user_agent
  * @property string|null $device_type
  * @property string|null $platform
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class UserInteraction extends Model
 {

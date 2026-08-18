@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Domain\Quran\Models\Surah;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @mixin \App\Domain\Quran\Models\Surah
+ * @mixin Surah
  */
 class SurahResource extends JsonResource
 {
@@ -24,7 +25,10 @@ class SurahResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'number' => $this->revelation_order,
+            // The surah number IS the id (1..114) — see SurahRepository:65-68. This used
+            // to emit revelation_order, so every consumer received the revelation order
+            // in the `number` field: Al-Fatihah (id 1) reported 5, Al-Baqarah 87.
+            'number' => $this->id,
             'name_ar' => $this->name_ar,
             'name_en' => $this->name_en,
             'transliteration' => $this->transliteration,

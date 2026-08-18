@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Topics\Repositories;
 
 use App\Domain\Topics\Models\Topic;
+use App\Domain\Topics\Models\TopicItem;
 use Illuminate\Database\Eloquent\Collection;
 
 interface TopicRepositoryInterface
@@ -26,7 +27,7 @@ interface TopicRepositoryInterface
      * and the minimal relations needed to render a card. Returns the items
      * ordered by sort_order.
      *
-     * @return Collection<int, \App\Domain\Topics\Models\TopicItem>
+     * @return Collection<int, TopicItem>
      */
     public function itemsForTopic(int $topicId, string $itemableType, string $locale): Collection;
 

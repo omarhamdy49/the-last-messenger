@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Content;
 
 use App\Domain\Content\DTOs\CreateContactMessageData;
+use App\Domain\Content\Models\ContactMessage;
 use App\Domain\Content\Services\ContactMessageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -22,7 +23,7 @@ class ContactMessageServiceTest extends TestCase
         $this->service = app(ContactMessageService::class);
     }
 
-    private function createMessage(): \App\Domain\Content\Models\ContactMessage
+    private function createMessage(): ContactMessage
     {
         return $this->service->create(new CreateContactMessageData(
             name: 'Omar',

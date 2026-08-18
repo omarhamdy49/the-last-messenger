@@ -1,6 +1,37 @@
 # Pre-existing layer/boundary violations are recorded in the baseline so CI fails
 # only on NEW violations. Regenerate after intentionally clearing debt:
 #   vendor/bin/deptrac analyse --formatter=baseline --output=deptrac.baseline.yaml
+#
+# -----------------------------------------------------------------------------------
+# Coverage note (17 Aug 2026)
+#
+# This gate used to classify only app/Http/{Controllers,Middleware}, app/Domain/*,
+# app/{Repositories,Services,Models,Providers,Console} — so app/Http/Requests,
+# app/Http/Resources, app/Jobs, app/Exceptions, app/Utils, app/Helpers, app/Rules,
+# app/Observers and app/Notifications were in NO layer. Dependencies into and out of
+# them were invisible: the gate reported "0 violations" while seeing a fraction of the
+# graph. Those layers are now declared (Requests, Resources, Jobs, Exceptions,
+# SupportCode).
+#
+# Widening coverage surfaced 21 genuine violations, now recorded in the baseline as
+# known debt rather than permitted by the ruleset:
+#
+#   16 ×  Domain\{Blog,Media,Quran}\DTOs\*Data  ⇒  Http\Requests\*
+#         A layering inversion: `fromRequest(StoreArticleRequest $r)` makes the domain
+#         depend on the HTTP layer. The fix is for controllers to pass primitives (or a
+#         domain-owned input object), not a FormRequest.
+#
+#    5 ×  Domain\{Media,Shared}\Services\*  ⇒  Jobs\*
+#         Domain services referencing concrete queue jobs (MediaViewRecorder,
+#         YouTubeSyncService, ArtisanCommandService, BulkOperationService). Benign today;
+#         a dispatcher contract in Shared\Contracts would remove it.
+#
+# Both are Phase 6 (structural) work — see docs/TASKS.md. `Shared` still imports from no
+# domain module, which is the invariant that actually protects module isolation.
+#
+# The `DomainSahaba` layer was removed: it collected app/Domain/{Sahaba,Genealogy}/,
+# both deleted in the People migration, so it matched nothing.
+# -----------------------------------------------------------------------------------
 imports:
   - deptrac.baseline.yaml
 
@@ -27,6 +58,46 @@ deptrac:
         - type: directory
           value: app/Http/Middleware/
 
+    # FormRequests: validation only, no business logic (verified across 118 classes).
+    - name: Requests
+      collectors:
+        - type: directory
+          value: app/Http/Requests/
+
+    # API/JSON serialisation. These read models and domain enums.
+    - name: Resources
+      collectors:
+        - type: directory
+          value: app/Http/Resources/
+
+    # Queue jobs orchestrate domain services, so they may reach broadly.
+    - name: Jobs
+      collectors:
+        - type: directory
+          value: app/Jobs/
+
+    - name: Exceptions
+      collectors:
+        - type: directory
+          value: app/Exceptions/
+
+    # Framework-adjacent odds and ends: helpers, utils, validation rules,
+    # observers, notifications, HTTP support.
+    - name: SupportCode
+      collectors:
+        - type: directory
+          value: app/Utils/
+        - type: directory
+          value: app/Helpers/
+        - type: directory
+          value: app/Rules/
+        - type: directory
+          value: app/Observers/
+        - type: directory
+          value: app/Notifications/
+        - type: directory
+          value: app/Http/Support/
+
     # -------------------------------------------------------------------------
     # Domain Modules — isolated by default. Genealogy is part of Sahaba because
     # both use the same canonical identity and family graph.
@@ -50,13 +121,6 @@ deptrac:
       collectors:
         - type: directory
           value: app/Domain/Quran/
-
-    - name: DomainSahaba
-      collectors:
-        - type: directory
-          value: app/Domain/Sahaba/
-        - type: directory
-          value: app/Domain/Genealogy/
 
     # -------------------------------------------------------------------------
     # People Layer — the application-wide person identity (`muslims`).
@@ -149,12 +213,16 @@ deptrac:
   ruleset:
     Controllers:
       - Shared
+      - Requests
+      - Resources
+      - Exceptions
+      - SupportCode
+      - Jobs
       - People
       - DomainBlog
       - DomainContent
       - DomainHadith
       - DomainQuran
-      - DomainSahaba
       - DomainSeerah
       - DomainMedia
       - DomainTopics
@@ -162,52 +230,132 @@ deptrac:
 
     Middleware:
       - Shared
+      - SupportCode
 
-    DomainBlog:
-      - Shared
-
-    DomainContent:
-      - Shared
-
-    DomainHadith:
-      - Shared
-      - DomainSahaba
-
-    DomainQuran:
-      - Shared
-
-    DomainSahaba:
-      - Shared
-
-    People:
-      - Shared
-
-    DomainSeerah:
-      - Shared
-
-    DomainMedia:
-      - Shared
-
-    DomainTopics:
-      - Shared
-
-    Shared: []
-
-    Infrastructure:
+    # Requests and Resources sit at the edge: they validate and serialise, so they
+    # legitimately reference domain enums/DTOs and app-level models. They must not
+    # reach Infrastructure (repositories/services) — that is a controller's job.
+    Requests:
       - Shared
       - Models
-
-    Models:
-      - Shared
-
-    Bootstrap:
-      - Shared
+      - Exceptions
+      - SupportCode
       - People
       - DomainBlog
       - DomainContent
       - DomainHadith
       - DomainQuran
-      - DomainSahaba
+      - DomainSeerah
+      - DomainMedia
+      - DomainTopics
+
+    Resources:
+      - Shared
+      - Models
+      - SupportCode
+      - People
+      - DomainBlog
+      - DomainContent
+      - DomainHadith
+      - DomainQuran
+      - DomainSeerah
+      - DomainMedia
+      - DomainTopics
+
+    # Jobs orchestrate: they wire domain services together the way a controller does.
+    Jobs:
+      - Shared
+      - Models
+      - Infrastructure
+      - Exceptions
+      - SupportCode
+      - People
+      - DomainBlog
+      - DomainContent
+      - DomainHadith
+      - DomainQuran
+      - DomainSeerah
+      - DomainMedia
+      - DomainTopics
+
+    Exceptions:
+      - Shared
+
+    SupportCode:
+      - Shared
+      - Models
+      - Exceptions
+
+    DomainBlog:
+      - Shared
+      - Exceptions
+      - SupportCode
+
+    DomainContent:
+      - Shared
+      - Exceptions
+      - SupportCode
+
+    DomainHadith:
+      - Shared
+      - Exceptions
+      - SupportCode
+
+    DomainQuran:
+      - Shared
+      - Exceptions
+      - SupportCode
+
+    People:
+      - Shared
+      - Exceptions
+      - SupportCode
+
+    DomainSeerah:
+      - Shared
+      - Exceptions
+      - SupportCode
+
+    DomainMedia:
+      - Shared
+      - Exceptions
+      - SupportCode
+
+    DomainTopics:
+      - Shared
+      - Exceptions
+      - SupportCode
+
+    # `Shared` still imports from no domain module — that invariant is intact and is the
+    # one that matters. It may reference the shared domain-exception namespace, the same
+    # allowance every other layer has. (Two exception hierarchies exist —
+    # app/Exceptions/Domain and app/Domain/Shared/Exceptions — which is worth
+    # consolidating; tracked separately, not a boundary crime.)
+    Shared:
+      - Exceptions
+
+    Infrastructure:
+      - Shared
+      - Models
+      - Exceptions
+      - SupportCode
+
+    Models:
+      - Shared
+      - SupportCode
+
+    Bootstrap:
+      - Shared
+      - Requests
+      - Resources
+      - Jobs
+      - Exceptions
+      - SupportCode
+      - People
+      - DomainBlog
+      - DomainContent
+      - DomainHadith
+      - DomainQuran
       - DomainSeerah
       - DomainMedia
       - DomainTopics

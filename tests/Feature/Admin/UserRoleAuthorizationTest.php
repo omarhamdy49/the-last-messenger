@@ -18,6 +18,11 @@ use Tests\TestCase;
  */
 class UserRoleAuthorizationTest extends TestCase
 {
+    /**
+     * Passwords here satisfy the admin policy: 12+ chars, mixed case, a number and a symbol.
+     * Admin-created accounts used to have the weakest policy in the application (bare
+     * min:8) despite reaching /su/portal/v1/admin — weaker than public registration.
+     */
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -90,8 +95,8 @@ class UserRoleAuthorizationTest extends TestCase
         $this->actingAs($admin, 'admin')
             ->putJson(route('admin.users.update', $victim->id), [
                 'name' => 'Hijacked',
-                'password' => 'NewSecret123',
-                'password_confirmation' => 'NewSecret123',
+                'password' => 'Str0ng!Portal#Pass',
+                'password_confirmation' => 'Str0ng!Portal#Pass',
             ])
             ->assertForbidden();
 
@@ -258,8 +263,8 @@ class UserRoleAuthorizationTest extends TestCase
             ->post(route('admin.users.store'), [
                 'name' => 'New Editor',
                 'email' => 'new-editor@example.com',
-                'password' => 'Secret123',
-                'password_confirmation' => 'Secret123',
+                'password' => 'Str0ng!Portal#Pass',
+                'password_confirmation' => 'Str0ng!Portal#Pass',
             ])
             ->assertRedirect(route('admin.users.index'))
             ->assertSessionHas('success');

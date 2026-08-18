@@ -34,9 +34,13 @@ final class ArticleController extends Controller
     {
         $locale = app()->getLocale();
 
-        $payload = Cache::remember(
+        $payload = Cache::flexible(
+            // flexible(), not remember(): rebuilding this reads every ready article plus
+            // the category and tag facets. On expiry that ran once per concurrent request
+            // (up to pm.max_children at a time) with no lock; now the first request past the
+            // 30-min mark serves the stale payload and refreshes after the response.
             "public_articles_index_{$locale}",
-            3600,
+            [1800, 3600],
             function () use ($locale): array {
                 try {
                     // One column-scoped read of all ready articles (client paginates).
@@ -101,9 +105,9 @@ final class ArticleController extends Controller
     {
         $locale = app()->getLocale();
 
-        $payload = Cache::remember(
+        $payload = Cache::flexible(
             "public_article_show_{$slug}_{$locale}",
-            3600,
+            [1800, 3600],
             function () use ($slug, $locale): ?array {
                 try {
                     $article = $this->articles->findBySlug($slug, $locale);
@@ -178,7 +182,9 @@ final class ArticleController extends Controller
         try {
             $views = $this->articles->incrementViews($id);
             session()->put($sessionKey, true);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            report($e);
+
             return response()->json(['ok' => false], 200);
         }
 
@@ -616,7 +622,9 @@ final class ArticleController extends Controller
             return $category->getTranslation('name', $locale)
                 ?: $category->getTranslation('name', 'ar')
                 ?: null;
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            report($e);
+
             return null;
         }
     }
@@ -630,7 +638,9 @@ final class ArticleController extends Controller
             return $tag->getTranslation('name', $locale)
                 ?: $tag->getTranslation('name', 'ar')
                 ?: $tag->slug;
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            report($e);
+
             return $tag->slug;
         }
     }

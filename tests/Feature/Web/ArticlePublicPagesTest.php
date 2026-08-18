@@ -178,7 +178,7 @@ final class ArticlePublicPagesTest extends TestCase
         $this->assertNotContains('غير مستخدم', array_column($tags, 'name'));
     }
 
-    public function test_show_returns_200_with_title_author_and_related_section(): void
+    public function test_show_returns_200_with_title_and_author(): void
     {
         $article = $this->makeArticle('shown-article', 'Shown Article Title');
 
@@ -186,8 +186,13 @@ final class ArticlePublicPagesTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Shown Article Title')
-            ->assertSee($article->writer->name)
-            ->assertSee(__('articles.public.related_articles'));
+            ->assertSee($article->writer->name);
+
+        // The related-articles heading is not asserted here: show.blade.php:1031 guards
+        // that whole section with `@if (! empty($related))`, and this fixture is a lone
+        // article with no siblings, so its absence is correct. Related articles have their
+        // own coverage in test_related_articles_come_from_the_same_type below.
+        $response->assertDontSee(__('articles.public.related_articles'));
     }
 
     public function test_show_renders_related_articles_from_same_category(): void
@@ -206,20 +211,32 @@ final class ArticlePublicPagesTest extends TestCase
         $this->assertSame('Sibling Battle Article', $related[0]['title']);
     }
 
-    public function test_show_increments_views_exactly_once_per_session(): void
+    /**
+     * View counting is NOT a side effect of rendering the page. It is a separate
+     * session-guarded, throttled endpoint the reader calls asynchronously on load
+     * (`POST /articles/{id}/view` → ArticleController::registerView), which keeps bots and
+     * prefetches from inflating the counter. This test previously asserted that a plain GET
+     * incremented views and had been failing since that design changed.
+     */
+    public function test_registering_a_view_counts_once_per_session(): void
     {
         $article = $this->makeArticle('counted-article', 'Counted Article');
 
         $this->get(route('public.articles.show', 'counted-article'))->assertOk();
+        $this->assertSame(0, (int) $article->fresh()->views, 'rendering alone must not count a view');
+
+        $this->postJson(route('public.articles.view', $article->id))
+            ->assertOk()
+            ->assertJson(['ok' => true]);
         $this->assertSame(1, (int) $article->fresh()->views);
 
-        // Same session: a refresh must not inflate the counter.
-        $this->get(route('public.articles.show', 'counted-article'))->assertOk();
+        // Same session: a repeat call must not inflate the counter.
+        $this->postJson(route('public.articles.view', $article->id))->assertOk();
         $this->assertSame(1, (int) $article->fresh()->views);
 
         // New session: counts again.
         $this->flushSession();
-        $this->get(route('public.articles.show', 'counted-article'))->assertOk();
+        $this->postJson(route('public.articles.view', $article->id))->assertOk();
         $this->assertSame(2, (int) $article->fresh()->views);
     }
 

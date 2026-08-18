@@ -143,6 +143,8 @@ final class QuranController extends Controller
                 limit: 20,
             );
         } catch (Throwable $e) {
+            report($e);
+
             return response()->json([
                 'message' => __('quran.public.ask_error'),
             ], 502);
@@ -379,7 +381,8 @@ final class QuranController extends Controller
                 try {
                     $infoDto = $this->quranQueryService->getSurahInfo($surahNumber, 'ar');
                     $surahInfo = $infoDto->description ?? $infoDto->content ?? null;
-                } catch (Throwable) {
+                } catch (Throwable $e) {
+                    report($e);
                     $surahInfo = null;
                 }
 
@@ -433,7 +436,9 @@ final class QuranController extends Controller
                     'nameEn' => $r->getDisplayName('en'),
                     'everyayah_folder' => $r->everyayahFolder,
                 ])->values()->all();
-            } catch (Throwable) {
+            } catch (Throwable $e) {
+                report($e);
+
                 return [];
             }
         });
@@ -490,7 +495,9 @@ final class QuranController extends Controller
 
         try {
             return $this->quranQueryService->getSurahByNumber($number, $locale)->nameAr;
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            report($e);
+
             return null;
         }
     }
@@ -693,7 +700,9 @@ final class QuranController extends Controller
                         ->all(),
                     'total' => $items->count(),
                 ];
-            } catch (Throwable) {
+            } catch (Throwable $e) {
+                report($e);
+
                 return ['featured' => [], 'all' => [], 'total' => 0];
             }
         });
@@ -793,7 +802,9 @@ final class QuranController extends Controller
                     ->map(fn ($s) => ['number' => $s->number, 'nameAr' => $s->nameAr])
                     ->values()
                     ->all();
-            } catch (Throwable) {
+            } catch (Throwable $e) {
+                report($e);
+
                 return [];
             }
         });

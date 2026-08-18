@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Models;
 
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,8 +19,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $lang
  * @property string $text
  * @property bool $active
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class VerseTafsir extends Model
 {
@@ -73,8 +75,8 @@ class VerseTafsir extends Model
     /**
      * Scope: filter by tafsir resource (source).
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByResource($query, int $resourceId)
     {
@@ -84,8 +86,8 @@ class VerseTafsir extends Model
     /**
      * Scope: Filter by language
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByLang($query, string $lang)
     {
@@ -95,8 +97,8 @@ class VerseTafsir extends Model
     /**
      * Scope: Active only
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeActive($query)
     {
@@ -106,8 +108,8 @@ class VerseTafsir extends Model
     /**
      * Scope: Filter by verse key
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByVerseKey($query, string $verseKey)
     {
@@ -117,8 +119,8 @@ class VerseTafsir extends Model
     /**
      * Scope: Arabic tafsirs
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeArabic($query)
     {
@@ -128,22 +130,17 @@ class VerseTafsir extends Model
     /**
      * Scope: English tafsirs
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeEnglish($query)
     {
         return $query->where('lang', 'en');
     }
 
-    /**
-     * Scope: Search in tafsir text
-     *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    public function scopeSearch($query, string $term)
-    {
-        return $query->where('text', 'LIKE', "%{$term}%");
-    }
+    // scopeSearch() was removed: it had zero callers anywhere in app/ or tests/
+    // (every ->search() call in the codebase is on a repository or service, never on
+    // this model's builder), and it was LIKE '%...%' over a longText column with no index behind it.
+    // Searching this data goes through the repository, which uses
+    // FullTextSearchHelper / a constrained whereHas instead.
 }

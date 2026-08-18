@@ -7,6 +7,7 @@ namespace App\Domain\Shared\Importers;
 use App\Domain\Shared\DTOs\ImportError;
 use App\Domain\Shared\DTOs\ImportResult;
 use App\Domain\Shared\Models\Import;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -442,7 +443,7 @@ abstract class BaseImporter
         }
 
         try {
-            return \Carbon\Carbon::parse($date)->format($format);
+            return Carbon::parse($date)->format($format);
         } catch (Throwable) {
             return null;
         }

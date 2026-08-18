@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Media\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -19,8 +20,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $episode_id
  * @property int $seconds
  * @property bool $completed
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class EpisodeWatchProgress extends Model
 {

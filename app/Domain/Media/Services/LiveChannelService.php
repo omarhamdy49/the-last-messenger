@@ -15,6 +15,9 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 
+/**
+ * @extends BaseService<LiveChannelRepositoryInterface>
+ */
 class LiveChannelService extends BaseService
 {
     public function __construct(

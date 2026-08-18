@@ -10,6 +10,7 @@ use App\Domain\Quran\Importers\QuranVerseImporter;
 use App\Domain\Quran\Importers\ReciterImporter;
 use App\Domain\Quran\Importers\TafseerImporter;
 use App\Domain\Seerah\Importers\SeerahEventImporter;
+use App\Domain\Shared\Exceptions\ImporterNotFoundException;
 use App\Domain\Shared\Models\Import;
 use App\Domain\Shared\Repositories\ImportRepositoryInterface;
 use App\Domain\Shared\Services\AdminLoggerService;
@@ -202,6 +203,8 @@ class ImportController extends Controller
                 'preview' => $preview,
             ]);
         } catch (Throwable $e) {
+            report($e);
+
             return $this->errorResponse('Failed to preview: '.$e->getMessage(), 500);
         }
     }
@@ -301,6 +304,8 @@ class ImportController extends Controller
                 'has_errors' => $import->errors()->count() > 0,
             ]);
         } catch (Throwable $e) {
+            report($e);
+
             return $this->errorResponse('Failed to get status: '.$e->getMessage(), 500);
         }
     }
@@ -324,6 +329,8 @@ class ImportController extends Controller
 
             return $this->paginatedResponse($imports);
         } catch (Throwable $e) {
+            report($e);
+
             return $this->errorResponse('Failed to get history: '.$e->getMessage(), 500);
         }
     }
@@ -347,6 +354,8 @@ class ImportController extends Controller
 
             return $this->paginatedResponse($errors);
         } catch (Throwable $e) {
+            report($e);
+
             return $this->errorResponse('Failed to get errors: '.$e->getMessage(), 500);
         }
     }
@@ -379,6 +388,8 @@ class ImportController extends Controller
 
             return $this->successResponse(['message' => 'Import deleted successfully']);
         } catch (Throwable $e) {
+            report($e);
+
             return $this->errorResponse('Failed to delete import: '.$e->getMessage(), 500);
         }
     }
@@ -404,7 +415,7 @@ class ImportController extends Controller
             'quran_verses' => new QuranVerseImporter($import),
             'reciters' => new ReciterImporter($import),
             'tafseer' => new TafseerImporter($import),
-            default => throw \App\Domain\Shared\Exceptions\ImporterNotFoundException::forModule($import->module),
+            default => throw ImporterNotFoundException::forModule($import->module),
         };
     }
 

@@ -35,7 +35,11 @@ final class QuranReaderService
     {
         try {
             return $this->recitationRepository->getSurahAudioUrls($surahNumber);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // Fallback kept, but the failure is now traceable: without report() a real
+            // bug (broken query, dropped column) looked identical to 'no data'.
+            report($e);
+
             return [];
         }
     }
@@ -56,7 +60,11 @@ final class QuranReaderService
                     'language' => $r->language,
                 ])
                 ->all();
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // Fallback kept, but the failure is now traceable: without report() a real
+            // bug (broken query, dropped column) looked identical to 'no data'.
+            report($e);
+
             return [];
         }
     }
@@ -79,7 +87,11 @@ final class QuranReaderService
                     'is_default' => $r->is_default,
                 ])
                 ->all();
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // Fallback kept, but the failure is now traceable: without report() a real
+            // bug (broken query, dropped column) looked identical to 'no data'.
+            report($e);
+
             return [];
         }
     }
@@ -92,7 +104,11 @@ final class QuranReaderService
     {
         try {
             return $this->tafseerRepository->getVerseText($verseId, $resourceId) ?? '';
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // Fallback kept, but the failure is now traceable: without report() a real
+            // bug (broken query, dropped column) looked identical to 'no data'.
+            report($e);
+
             return '';
         }
     }
@@ -106,7 +122,11 @@ final class QuranReaderService
     {
         try {
             return $this->verseRepository->getSurahTranslationByResource($surahNumber, $resourceId);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // Fallback kept, but the failure is now traceable: without report() a real
+            // bug (broken query, dropped column) looked identical to 'no data'.
+            report($e);
+
             return [];
         }
     }
@@ -126,7 +146,11 @@ final class QuranReaderService
     {
         try {
             $words = $this->verseRepository->getMushafWordsBySurah($surahNumber);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // Fallback kept, but the failure is now traceable: without report() a real
+            // bug (broken query, dropped column) looked identical to 'no data'.
+            report($e);
+
             return [];
         }
 

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Domain\Content\Models;
 
 use App\Domain\Shared\Traits\HasLocalizedContent;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /**
  * StaticPage Model
@@ -16,9 +18,9 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $id
  * @property string $slug
  * @property bool $is_active
- * @property \Illuminate\Support\Carbon|null $published_at
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
+ * @property Carbon|null $published_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class StaticPage extends Model
 {
@@ -79,8 +81,8 @@ class StaticPage extends Model
     /**
      * Scope: Only publicly visible pages (active and published).
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopePublished($query)
     {
