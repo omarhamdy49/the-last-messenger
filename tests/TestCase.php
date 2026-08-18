@@ -15,6 +15,28 @@ abstract class TestCase extends BaseTestCase
     use CreatesApplication;
 
     /**
+     * Never let a Blade view's @vite directive depend on a frontend build.
+     *
+     * Vite resolves in two steps: if public/hot exists it points at the dev server,
+     * otherwise it reads public/build/manifest.json and THROWS when that is absent.
+     * A developer machine almost always has one or the other, so the whole suite goes
+     * green locally; CI checks out a clean tree with neither and 95 tests die on
+     * "Vite manifest not found" — a failure about asset builds, not about behaviour.
+     *
+     * Eighteen test classes had each discovered this and called withoutVite() by hand.
+     * Doing it once here covers the rest and removes the local/CI divergence for good.
+     * Those individual calls are harmless (it is idempotent) and are left in place.
+     *
+     * If a test ever needs the real thing, it can opt back in per-test.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->withoutVite();
+    }
+
+    /**
      * Authenticate as the given user.
      *
      * Admin portal routes use the dedicated `admin` session guard, so mirror the

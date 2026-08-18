@@ -1188,3 +1188,35 @@ Every privileged stage therefore needs a human at a root shell. Setting a passwo
 `deployer` (once, as root) would make its existing sudo grant usable and remove the
 handoff; adding the deploy key to `/root/.ssh/authorized_keys` would do the same more
 broadly. Both are the operator's call.
+
+
+#### CI incident — 95 tests failed on the first gated push, 18 Aug 2026
+
+Run #53 failed the new `test` gate with 95 failures, all of one error:
+
+    Vite manifest not found at: public/build/manifest.json
+
+**The local run that said it was safe was a false green.** `php artisan test` had
+reported 955 passed minutes earlier. It passed because `public/hot` existed on this
+machine — Laravel's Vite helper checks the hot file first and points at the dev
+server, never reading the manifest. Hiding the manifest locally therefore did not
+reproduce the failure; only removing *both* did. A developer machine essentially
+always has one or the other, so this class of failure cannot be caught locally by
+default, and the first thing to check when CI disagrees with a green local suite is
+which of the two is present.
+
+Fixed in `tests/TestCase.php`: the base class now calls `withoutVite()` in `setUp()`.
+Eighteen test classes had each already discovered this and called it by hand — that
+duplication was the signal it belonged in the base class. No test asserts on real
+built-asset output, so nothing loses coverage.
+
+Verified by deleting `public/hot` AND `public/build/manifest.json` and re-running the
+full suite: 955 passed, 3278 assertions.
+
+The alternative — adding `npm ci && npm run build` to the test job — was rejected: it
+makes every test run depend on a frontend build to exercise backend behaviour, and
+costs a minute per run to do it.
+
+Note the `style` (Pint) job also fails, on 16 pre-existing files (2025 migrations,
+seeders, factories, `seerah` lang files). It is not in `deploy: needs:`, so it does
+not block. Left as-is; one `./vendor/bin/pint` run clears it.
