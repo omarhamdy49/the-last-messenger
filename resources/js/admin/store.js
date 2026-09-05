@@ -18,17 +18,21 @@ Alpine.store('admin', {
     // ============================================
     // DARK MODE
     // ============================================
-    darkMode: window.resolveDarkMode('adminDarkMode'),
+    // 'darkMode', not 'adminDarkMode': the layout, the header toggle and every
+    // admin component read 'darkMode', so a separate key here meant the store and
+    // the chrome around it could disagree — visible on the pages that bind to
+    // $store.admin.darkMode (help, coming-soon).
+    darkMode: window.resolveDarkMode('darkMode'),
 
     toggleDarkMode() {
         this.darkMode = !this.darkMode;
-        localStorage.setItem('adminDarkMode', this.darkMode);
+        localStorage.setItem('darkMode', this.darkMode);
         this.updateDarkModeClass();
     },
 
     setDarkMode(value) {
         this.darkMode = value;
-        localStorage.setItem('adminDarkMode', value);
+        localStorage.setItem('darkMode', value);
         this.updateDarkModeClass();
     },
 

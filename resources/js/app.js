@@ -49,8 +49,22 @@ Alpine.store('theme', {
         document.documentElement.classList.toggle('dark', this.dark);
         queueMicrotask(renderIcons);
     },
+
+    /** Forget the explicit choice and follow the system again. */
+    useSystem() {
+        this.dark = window.clearThemePreference('darkMode');
+        queueMicrotask(renderIcons);
+    },
     init() {
         document.documentElement.classList.toggle('dark', this.dark);
+
+        // theme-preference.blade.php flips the class when the OS changes and no
+        // explicit choice is stored; mirror it into reactive state so every
+        // :class binding follows too.
+        window.addEventListener('theme-changed', (event) => {
+            this.dark = event.detail.dark;
+            queueMicrotask(renderIcons);
+        });
     },
 });
 

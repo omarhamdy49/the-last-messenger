@@ -22,6 +22,7 @@
           }
       }"
       :class="darkMode ? 'dark' : ''"
+      @theme-changed.window="darkMode = $event.detail.dark"
       class="antialiased">
 <head>
     @include('partials.theme-preference')
