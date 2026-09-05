@@ -272,6 +272,9 @@ class QuranSyncService
             [
                 'verse_id' => $verseId,
                 'lang' => $data['lan'],
+                // Legacy, edition-less row. Without this the match would hit an
+                // imported edition in the same language and overwrite its text.
+                'resource_id' => null,
             ],
             [
                 'text' => $data['text'],
@@ -290,6 +293,8 @@ class QuranSyncService
                 [
                     'verse_id' => $verseId,
                     'lang' => $arVerseTafsir['language'],
+                    // Legacy, edition-less row — see saveVerseTranslation().
+                    'resource_id' => null,
                 ],
                 [
                     'lang' => $arVerseTafsir['language'],
@@ -307,6 +312,8 @@ class QuranSyncService
                 [
                     'verse_id' => $verseId,
                     'lang' => $enVerseTafsir['language'],
+                    // Legacy, edition-less row — see saveVerseTranslation().
+                    'resource_id' => null,
                 ],
                 [
                     'lang' => $enVerseTafsir['language'],
