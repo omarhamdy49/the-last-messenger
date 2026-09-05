@@ -70,7 +70,7 @@ class SeriesRepository extends BaseRepository implements SeriesRepositoryInterfa
     {
         $cacheKey = $this->getCacheKey('countByStatus', compact('status'));
 
-        return Cache::remember($cacheKey, $this->cacheTTL, function () use ($status) {
+        return (int) Cache::remember($cacheKey, $this->cacheTTL, function () use ($status) {
             return $this->model->where('status', $status)->count();
         });
     }

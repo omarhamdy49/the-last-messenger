@@ -155,7 +155,7 @@ class QuranSyncService
 
             // Step 2: Get and save surah info
             $this->notify($this->onProgress, "[{$surahNumber}/{$toChapter}] Fetching surah info...", 'substep');
-            $infoData = $this->getSurahInfo($surahData['id']);
+            $infoData = $this->getSurahInfo($surahData['id'], 'ar');
             $this->saveSurahInfo($surah->id, $infoData);
             $result['surah_info']++;
 
@@ -327,10 +327,10 @@ class QuranSyncService
         }
     }
 
-    public function getSurahInfo(int $surahNumber): array
+    public function getSurahInfo(int $surahNumber, string $lang = 'ar'): array
     {
         $response = $this->requestWithRetry(
-            fn () => $this->quranClient()->get("chapters/{$surahNumber}/info")
+            fn () => $this->quranClient()->get("chapters/{$surahNumber}/info", ['language' => $lang])
         );
 
         if (! $response->isSuccessful()) {
@@ -343,7 +343,11 @@ class QuranSyncService
 
         return [
             'surah_id' => $data['chapter_id'],
-            'lang' => substr($data['language_name'], 0, 2),
+            // NOT $data['language_name'] — the endpoint returns it as null for
+            // every chapter, so substr(null, 0, 2) stored '' and the reader's
+            // where('lang', 'ar') never matched, 500ing every surah info page.
+            // The language we asked for is the language we got.
+            'lang' => $lang,
             'desc' => $data['short_text'],
             'content' => $data['text'],
             'source' => $data['source'],

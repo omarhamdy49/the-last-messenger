@@ -266,7 +266,7 @@ class UserInteractionRepository extends BaseRepository implements UserInteractio
             $type = $type->value;
         }
 
-        return Cache::remember(
+        return (int) Cache::remember(
             "interactions:count:type:{$type}",
             $this->cacheTTL,
             fn () => $this->model->where('interaction_type', $type)->count()
@@ -278,7 +278,7 @@ class UserInteractionRepository extends BaseRepository implements UserInteractio
      */
     public function countByUser(int $userId): int
     {
-        return Cache::remember(
+        return (int) Cache::remember(
             "interactions:count:user:{$userId}",
             $this->cacheTTL,
             fn () => $this->model->where('user_id', $userId)->count()

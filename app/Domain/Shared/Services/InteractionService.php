@@ -164,7 +164,7 @@ class InteractionService
      */
     public function getEngagementScore(User $user): int
     {
-        return Cache::remember(
+        return (int) Cache::remember(
             "engagement:score:user:{$user->id}",
             1800,
             fn () => $this->metricRepository->getOrCreateForUser($user->id)->engagement_score

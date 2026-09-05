@@ -95,7 +95,7 @@
                                 :class="darkMode ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-green-50'">
                             <div class="flex items-center gap-2">
                                 <span class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 flex-shrink-0"
-                                      x-text="surah.revelation_order || surah.id"></span>
+                                      x-text="surah.id"></span>
                                 <div class="min-w-0">
                                     <p class="font-semibold text-sm truncate" :dir="contentDirection" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="surahName(surah)"></p>
                                     <p class="text-xs text-gray-500" x-text="surah.verses_count + ' {{ __('articles.selector.ayat') }}'"></p>
@@ -316,7 +316,7 @@ function moduleSelector() {
             return this.surahs.filter(s =>
                 (s.name_ar && s.name_ar.includes(q)) ||
                 (s.name_en && s.name_en.toLowerCase().includes(q)) ||
-                String(s.revelation_order || s.id).includes(q)
+                String(s.id).includes(q)
             );
         },
 

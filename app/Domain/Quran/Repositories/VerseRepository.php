@@ -437,7 +437,7 @@ class VerseRepository extends BaseRepository implements VerseRepositoryInterface
      */
     public function countSajdaVerses(): int
     {
-        return Cache::remember(
+        return (int) Cache::remember(
             QuranCacheKeys::sajdaVersesCount(),
             self::CACHE_TTL,
             fn () => $this->model->whereNotNull('sajdah_number')->count()

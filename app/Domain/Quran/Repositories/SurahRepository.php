@@ -158,7 +158,7 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
      */
     public function countByRevelation(string $place): int
     {
-        return Cache::remember(
+        return (int) Cache::remember(
             QuranCacheKeys::surahCountByRevelation($place),
             self::CACHE_TTL,
             fn () => $this->model->where('revelation_place', $place)->count()
@@ -170,7 +170,7 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
      */
     public function getTotalVersesCount(): int
     {
-        return Cache::remember(
+        return (int) Cache::remember(
             QuranCacheKeys::surahTotalVerses(),
             self::CACHE_TTL,
             fn () => (int) $this->model->sum('verses_count')
@@ -203,7 +203,7 @@ class SurahRepository extends BaseRepository implements SurahRepositoryInterface
      */
     public function getAverageVersesPerSurah(): float
     {
-        return Cache::remember(
+        return (float) Cache::remember(
             QuranCacheKeys::surahAverageVerses(),
             self::CACHE_TTL,
             // MySQL returns AVG() as a string, which round() rejects under strict_types.

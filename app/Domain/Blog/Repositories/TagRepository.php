@@ -172,7 +172,7 @@ class TagRepository implements TagRepositoryInterface
      */
     public function count(): int
     {
-        return Cache::remember(
+        return (int) Cache::remember(
             'tags:count',
             now()->addMinutes(15),
             fn () => $this->model::count()
@@ -184,7 +184,7 @@ class TagRepository implements TagRepositoryInterface
      */
     public function getTotalUsageCount(): int
     {
-        return Cache::remember(
+        return (int) Cache::remember(
             'tags:total_usage',
             now()->addMinutes(15),
             fn () => DB::table('taggables')

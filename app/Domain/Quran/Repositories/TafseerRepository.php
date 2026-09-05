@@ -262,7 +262,7 @@ class TafseerRepository extends BaseRepository implements TafseerRepositoryInter
      */
     public function countUniqueSurahs(): int
     {
-        return Cache::remember(
+        return (int) Cache::remember(
             QuranCacheKeys::tafseerUniqueSurahs(),
             self::CACHE_TTL,
             fn () => $this->model

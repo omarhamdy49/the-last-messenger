@@ -82,7 +82,7 @@ class CategoryRepository extends BaseRepository implements CategoryRepositoryInt
     {
         $cacheKey = $this->getCacheKey('countByStatus', compact('status'));
 
-        return Cache::remember($cacheKey, $this->cacheTTL, function () use ($status) {
+        return (int) Cache::remember($cacheKey, $this->cacheTTL, function () use ($status) {
             return $this->model->where('status', $status)->count();
         });
     }
@@ -94,7 +94,7 @@ class CategoryRepository extends BaseRepository implements CategoryRepositoryInt
     {
         $cacheKey = $this->getCacheKey('countByType', ['type' => $type->value]);
 
-        return Cache::remember($cacheKey, $this->cacheTTL, function () use ($type) {
+        return (int) Cache::remember($cacheKey, $this->cacheTTL, function () use ($type) {
             return $this->model->where('type', $type)->count();
         });
     }
