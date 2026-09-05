@@ -245,12 +245,23 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
 
         $this->clearCache();
         $this->clearCacheForProgram($programId);
-        foreach ($previousNumbers as $episode) {
-            $this->clearCacheForEpisodeNumber($programId, (int) $episode->season_number, (int) $episode->episode_number);
-        }
+
+        // Single loop to clear both old and new cache keys
         foreach ($orderedIds as $index => $episodeId) {
-            $season = (int) ($previousNumbers->firstWhere('id', $episodeId)?->season_number ?? 1);
-            $this->clearCacheForEpisodeNumber($programId, $season, $index + 1);
+            $episode = $previousNumbers->firstWhere('id', $episodeId);
+            if ($episode !== null) {
+                $season = (int) $episode->season_number;
+                $oldNumber = (int) $episode->episode_number;
+                $newNumber = $index + 1;
+
+                // Clear old cache key (before reordering)
+                $this->clearCacheForEpisodeNumber($programId, $season, $oldNumber);
+
+                // Clear new cache key (after reordering) if different
+                if ($oldNumber !== $newNumber) {
+                    $this->clearCacheForEpisodeNumber($programId, $season, $newNumber);
+                }
+            }
         }
     }
 
