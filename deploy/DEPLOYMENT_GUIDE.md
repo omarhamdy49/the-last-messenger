@@ -396,12 +396,16 @@ in [`../TODO_cloudflare-perf.md`](../TODO_cloudflare-perf.md).
 ### Build / front-end (in the repo — CI builds it)
 - **Vite minifier = terser** (`vite.config.js` `build.minify: 'terser'`) — needs
   the `terser` devDependency (do not remove it; CI's `npm run build` requires it).
-- **Homepage inlines critical CSS** + defers the full sheet
-  (`resources/views/layouts/public.blade.php`, only for `routeIs('public.home')`
-  when not running the Vite dev server). Critical set =
-  `resources/css/critical-home.css`. **Regenerate after CSS changes:**
-  `npm i -D penthouse puppeteer && node gen-critical.cjs public/build/assets/app-*.css`
-  (penthouse/puppeteer are NOT kept as deps so CI doesn't download Chromium).
+- **CSS is render-blocking on every page** — plain `@vite(['resources/css/app.css',
+  ...])` in `resources/views/layouts/public.blade.php`. The homepage's inlined
+  critical set + async (`rel=preload`/`onload`) sheet was REMOVED on 2026-09-05:
+  the generated `critical-home.css` had decayed to 17 rules with zero layout
+  utilities, so the homepage painted completely unstyled until app.css landed
+  (the nav's `w-5 h-5` SVGs ballooned to 300x150 in the unstyled link colour).
+  app.css is 39KB brotli and content-hashed, so it blocks for ~0.3s on a cold
+  visit only. `gen-critical.cjs` and `resources/css/critical-home.css` are gone.
+  To retry the optimisation, generate critical CSS covering above-the-fold at
+  BOTH mobile and desktop widths and verify no flash before re-deferring.
 - **Self-hosted fonts** in `public/fonts/*.woff2` (`@font-face` + `unicode-range`
   in `app.css`, `font-display:swap`), preloaded by locale in the layout — no
   third-party Google Fonts.
