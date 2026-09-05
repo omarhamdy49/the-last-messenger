@@ -56,6 +56,9 @@
              x-transition:leave-start="opacity-100 scale-100"
              x-transition:leave-end="opacity-0 scale-95"
              @click.stop
+             @keydown.arrow-down.prevent="move(1)"
+             @keydown.arrow-up.prevent="move(-1)"
+             @keydown.enter.prevent="chooseActive()"
              class="relative w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto"
              :class="darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'">
 
@@ -110,7 +113,7 @@
             </div>
 
             <!-- Results -->
-            <div class="flex-1 overflow-y-auto custom-scrollbar p-3 min-h-[18rem]">
+            <div x-ref="results" class="flex-1 overflow-y-auto custom-scrollbar p-3 min-h-[18rem]">
                 {{-- Skeleton rather than a spinner: the row count is known, so the
                      list does not jump when the data lands. --}}
                 <template x-if="loading">
@@ -137,13 +140,21 @@
 
                 <template x-if="! loading && people.length > 0">
                     <ul class="space-y-2">
-                        <template x-for="person in people" :key="person.id">
+                        <template x-for="(person, i) in people" :key="person.id">
                             <li>
-                                <button type="button" @click="choose(person)"
-                                        class="w-full text-start flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                                        :class="darkMode
-                                            ? 'border-gray-800 hover:bg-gray-800 hover:border-gray-700'
-                                            : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'">
+                                <button type="button" data-person-row
+                                        @click="isTaken(person) || choose(person)"
+                                        @mousemove="activeIndex = i"
+                                        :disabled="isTaken(person)"
+                                        :aria-disabled="isTaken(person)"
+                                        class="w-full text-start flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed"
+                                        :class="isTaken(person)
+                                            ? (darkMode ? 'border-gray-800 opacity-40' : 'border-gray-200 opacity-50')
+                                            : (activeIndex === i
+                                                ? (darkMode ? 'border-accent bg-accent/10' : 'border-[#0056b3] bg-[#0056b3]/5')
+                                                : (darkMode
+                                                    ? 'border-gray-800 hover:bg-gray-800 hover:border-gray-700'
+                                                    : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'))">
                                     <div class="w-9 h-9 shrink-0 rounded-full grid place-items-center bg-gradient-to-br from-[#0056b3] to-[#218838]">
                                         <i data-lucide="user" class="w-4 h-4 text-white/80"></i>
                                     </div>
@@ -160,6 +171,16 @@
                                                 <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold"
                                                       :class="darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'"
                                                       x-text="'{{ __('sahaba.unpublished') }}'"></span>
+                                            </template>
+
+                                            {{-- Already on this event. Shown, not hidden: an editor
+                                                 who cannot find the record types the name by hand,
+                                                 which is the duplicate this picker prevents. --}}
+                                            <template x-if="isTaken(person)">
+                                                <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold inline-flex items-center gap-1"
+                                                      :class="darkMode ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-50 text-emerald-700'">
+                                                    مُضاف بالفعل
+                                                </span>
                                             </template>
 
                                             <template x-for="roleName in person.roles" :key="roleName">
@@ -190,13 +211,27 @@
             <!-- Pagination -->
             <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-t"
                  :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
-                <p class="text-xs tabular-nums" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
-                    <template x-if="meta.total > 0">
-                        <span>{{ __('sahaba.picker_modal.showing') }}
-                            <span x-text="meta.from"></span>–<span x-text="meta.to"></span>
-                            / <span x-text="meta.total"></span></span>
-                    </template>
-                </p>
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <p class="text-xs tabular-nums" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
+                        <template x-if="meta.total > 0">
+                            <span>{{ __('sahaba.picker_modal.showing') }}
+                                <span x-text="meta.from"></span>–<span x-text="meta.to"></span>
+                                / <span x-text="meta.total"></span></span>
+                        </template>
+                    </p>
+                    {{-- Discoverability: the arrow-key path is invisible otherwise. --}}
+                    <p class="hidden sm:flex items-center gap-1 text-[11px]"
+                       :class="darkMode ? 'text-gray-600' : 'text-gray-400'">
+                        <kbd class="px-1.5 py-0.5 rounded border font-sans"
+                             :class="darkMode ? 'border-gray-700' : 'border-gray-300'">↑</kbd>
+                        <kbd class="px-1.5 py-0.5 rounded border font-sans"
+                             :class="darkMode ? 'border-gray-700' : 'border-gray-300'">↓</kbd>
+                        للتنقّل
+                        <kbd class="px-1.5 py-0.5 rounded border font-sans ms-1"
+                             :class="darkMode ? 'border-gray-700' : 'border-gray-300'">Enter</kbd>
+                        للاختيار
+                    </p>
+                </div>
 
                 <div class="flex items-center gap-2">
                     <button type="button" @click="prev()" :disabled="meta.current_page <= 1 || loading"
@@ -234,6 +269,8 @@
             title: '',
             field: null,
             excludeId: null,
+            takenIds: [],
+            activeIndex: -1,
             query: '',
             role: '',
             page: 1,
@@ -244,15 +281,47 @@
                 this.field = detail?.field ?? null;
                 this.title = detail?.title ?? '';
                 this.excludeId = detail?.excludeId ?? null;
+                // Ids already used by the caller (e.g. people already on this event).
+                // They stay visible but are not selectable — hiding them would make the
+                // editor think the record is missing and type the name by hand, which is
+                // exactly the duplicate this picker exists to prevent.
+                this.takenIds = (detail?.takenIds ?? []).map(Number).filter(Boolean);
                 // Every open starts clean; a stale search from the previous
                 // field would silently hide most of the list.
                 this.query = '';
                 this.role = '';
                 this.page = 1;
+                this.activeIndex = -1;
                 this.isOpen = true;
                 document.body.style.overflow = 'hidden';
                 this.load();
                 this.$nextTick(() => this.$refs.search?.focus());
+            },
+
+            isTaken(person) {
+                return this.takenIds.includes(Number(person.id));
+            },
+
+            /**
+             * Roving selection with the arrow keys. The list can be long and paginated, so
+             * an editor scanning it should never have to leave the search box to pick.
+             */
+            move(step) {
+                if (this.people.length === 0) { return; }
+                const next = this.activeIndex + step;
+                this.activeIndex = next < 0
+                    ? this.people.length - 1
+                    : (next >= this.people.length ? 0 : next);
+                this.$nextTick(() => {
+                    this.$refs.results
+                        ?.querySelectorAll('[data-person-row]')[this.activeIndex]
+                        ?.scrollIntoView({ block: 'nearest' });
+                });
+            },
+
+            chooseActive() {
+                const person = this.people[this.activeIndex];
+                if (person && ! this.isTaken(person)) { this.choose(person); }
             },
 
             close() {
@@ -274,6 +343,7 @@
                     const json = await res.json();
                     this.people = json.data ?? [];
                     this.meta = json.meta ?? this.meta;
+                    this.activeIndex = -1;
                 } catch (e) {
                     this.people = [];
                 } finally {
@@ -298,7 +368,11 @@
                 this.$dispatch('muslim-picked', {
                     field: this.field,
                     id: person.id,
-                    name: person.name || person.name_en || person.slug,
+                    slug: person.slug,
+                    name: person.name || person.name_ar || person.name_en || person.slug,
+                    name_ar: person.name_ar,
+                    roles: person.roles ?? [],
+                    is_published: person.is_published,
                 });
                 this.close();
             },

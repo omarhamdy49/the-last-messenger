@@ -126,6 +126,10 @@ return [
             'commands' => [
                 'about' => [],
                 'storage:link' => [],
+                // Queued without exception: the production database is ~470 MB and
+                // an inline run dies on max_execution_time part-way through writing
+                // the archive, leaving a truncated file that looks like a backup.
+                'db:dump' => ['queued' => true],
                 // Runs nightly on its own; exposed here for an on-demand prune.
                 'admin-logs:prune' => ['queued' => true],
                 'migrate:status' => [],

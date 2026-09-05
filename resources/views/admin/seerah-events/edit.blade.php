@@ -430,6 +430,9 @@
         </div>
     </div>
 </form>
+
+{{-- One instance per page; every participant row opens it via `open-muslim-picker`. --}}
+<x-admin.muslim-picker-modal />
 @endsection
 
 @push('scripts')
