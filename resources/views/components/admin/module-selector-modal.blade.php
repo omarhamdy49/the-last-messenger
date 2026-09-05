@@ -254,7 +254,7 @@ function moduleSelector() {
     const seerahSearchUrl = @js(route('admin.seerah-events.search'));
     return {
         show: false,
-        darkMode: localStorage.getItem('darkMode') === 'true',
+        darkMode: window.resolveDarkMode(),
         moduleType: '',
         targetLocale: '',
         insertMode: 'block', // 'block' or 'inline'

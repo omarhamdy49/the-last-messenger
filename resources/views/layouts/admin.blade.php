@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}"
       dir="{{ in_array(app()->getLocale(), ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
       x-data="{
-          darkMode: localStorage.getItem('darkMode') === 'true',
+          darkMode: window.resolveDarkMode(),
           sidebarOpen: window.innerWidth >= 1024,
           currentLang: '{{ app()->getLocale() }}',
 
@@ -24,6 +24,8 @@
       :class="darkMode ? 'dark' : ''"
       class="antialiased">
 <head>
+    @include('partials.theme-preference')
+    <script>window.applyDarkMode();</script>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">

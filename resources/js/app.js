@@ -42,7 +42,7 @@ window.loadGenealogyTree = () =>
 
 /* ----------------------------------------------------------- dark mode --- */
 Alpine.store('theme', {
-    dark: localStorage.getItem('darkMode') !== 'false', // default: dark; honor an explicit light preference
+    dark: window.resolveDarkMode(),
     toggle() {
         this.dark = !this.dark;
         localStorage.setItem('darkMode', this.dark);

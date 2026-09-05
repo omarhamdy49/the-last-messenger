@@ -15,13 +15,8 @@
       :class="$store.theme.dark ? 'dark' : ''"
       class="antialiased scroll-smooth overflow-x-clip">
 <head>
-    {{-- Pre-paint theme: dark is the default; only an explicit light choice
-         opts out. Runs before any CSS so first paint never flashes light.
-         Alpine's theme store (app.js) uses the same expression and takes over
-         from here. --}}
-    <script>
-        if (localStorage.getItem('darkMode') !== 'false') document.documentElement.classList.add('dark');
-    </script>
+    @include('partials.theme-preference')
+    <script>window.applyDarkMode();</script>
 
     @include('partials.google-analytics')
 
@@ -81,13 +76,6 @@
     }
     </script>
     @stack('structured_data')
-
-    {{-- Prevent a theme flash before Alpine boots while defaulting new visitors to light. --}}
-    <script>
-        if (localStorage.getItem('darkMode') === 'true') {
-            document.documentElement.classList.add('dark');
-        }
-    </script>
 
     {{-- Self-hosted fonts (no render-blocking 3rd-party request). @font-face +
          unicode-range live in app.css; preload the two most-used faces for the

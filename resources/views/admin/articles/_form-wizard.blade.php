@@ -1344,7 +1344,7 @@ function articleForm(article, locales) {
     return {
         activeTab: 'main',
         activeLang: 'ar',
-        darkMode: localStorage.getItem('darkMode') === 'true',
+        darkMode: window.resolveDarkMode(),
         hasUnsavedChanges: false,
         showUnsavedToast: false,
         toastDismissed: false,

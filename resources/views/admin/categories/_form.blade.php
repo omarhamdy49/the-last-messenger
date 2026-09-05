@@ -18,7 +18,7 @@
 <script>
 function categoryForm() {
     return {
-        darkMode:      localStorage.getItem('darkMode') === 'true',
+        darkMode:      window.resolveDarkMode(),
         activeLanguage:'{{ $defLang }}',
         activeSeoLang: '{{ $defLang }}',
 

@@ -24,13 +24,8 @@
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
     <meta name="theme-color" content="#0056b3">
 
-    {{-- Prevent theme flash before Alpine boots (matches the public layout):
-         dark is the default; only an explicit light choice opts out. --}}
-    <script>
-        if (localStorage.getItem('darkMode') !== 'false') {
-            document.documentElement.classList.add('dark');
-        }
-    </script>
+    @include('partials.theme-preference')
+    <script>window.applyDarkMode();</script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

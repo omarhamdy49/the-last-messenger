@@ -17,16 +17,14 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', $locale) }}" dir="{{ $isRtl ? 'rtl' : 'ltr' }}">
 <head>
-    {{-- Match the site's theme choice before first paint; dark is the default. --}}
-    <script>
-        if (localStorage.getItem('darkMode') !== 'false') document.documentElement.classList.add('dark');
-    </script>
+    @include('partials.theme-preference')
+    <script>window.applyDarkMode();</script>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>{{ $heading }} — {{ __('site.site_name') }}</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <meta name="theme-color" content="#0a1020">
+    <meta name="theme-color" content="#0056b3">
     <style>
         /* Fonts are declared locally: app.css is not loaded on this page. */
         @font-face {
