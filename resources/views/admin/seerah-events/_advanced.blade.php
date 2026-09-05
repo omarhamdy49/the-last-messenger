@@ -26,12 +26,40 @@
 
     $oldParticipants = old('participants');
     if ($oldParticipants === null && $event) {
+        // participant_id MUST be carried through. The requests validate it
+        // (exists:muslims,id) and SeerahEventService persists it, so a row rebuilt
+        // without it posts back a null and silently unlinks the person on save —
+        // the same trap that blanks lessons and sources when they are not carried.
+        $linkedIds = $event->participants
+            ->pluck('participant_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        // Seerah must not import App\Domain\People — the PersonLookup contract is
+        // the sanctioned way across that boundary (see the note on the interface).
+        $linkedPeople = $linkedIds === []
+            ? []
+            : app(\App\Domain\Shared\Contracts\PersonLookup::class)->byIds($linkedIds);
+
         $oldParticipants = $event->participants
-            ->map(fn ($p) => [
-                'name' => ['ar' => $p->getTranslation('name', 'ar') ?? ''],
-                'description' => ['ar' => $p->getTranslation('description', 'ar') ?? ''],
-                'role' => $p->role->value,
-            ])
+            ->map(function ($p) use ($linkedPeople) {
+                $id = $p->participant_id ? (int) $p->participant_id : null;
+
+                return [
+                    'name' => ['ar' => $p->getTranslation('name', 'ar') ?? ''],
+                    'description' => ['ar' => $p->getTranslation('description', 'ar') ?? ''],
+                    'role' => $p->role->value,
+                    'participant_id' => $id,
+                    // Display only — never posted. Lets the editor see which person a
+                    // row is linked to instead of a bare id.
+                    'linked_name' => $id !== null && isset($linkedPeople[$id])
+                        ? $linkedPeople[$id]->name('ar')
+                        : null,
+                ];
+            })
             ->values()
             ->all();
     }
@@ -218,56 +246,187 @@
 </div>
 
 <!-- Participants / characters -->
+{{--
+    Companions are LINKED, never typed. Every free-typed name is a duplicate of a
+    record that already exists in the muslims module (7,800+ of them), and a typo
+    silently forks a person into two. So the picker is the primary path and the
+    row shows the linked record.
+
+    Free text stays available for the people the module cannot hold — tribes
+    (جرهم، خزاعة), and pre-Islamic or opposing figures with no record (أبو جهل،
+    هرقل، عمرو بن لحي). Those rows are flagged «يحتاج مراجعة» rather than deleted,
+    so the gap is visible and can be closed later by adding the record.
+--}}
 <div class="rounded-2xl border p-6"
      :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'"
-     x-data="{ rows: {{ Js::from(array_values($oldParticipants ?? [])) }} }">
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <h2 class="text-xl font-bold flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-            <i data-lucide="users" class="w-5 h-5 text-accent"></i>
-            الشخصيات والصحابة
-        </h2>
-        <div class="flex items-center gap-2">
-            <button type="button" @click="rows.push({ name: { ar: '' }, description: { ar: '' }, role: 'companion' })"
-                    class="px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-[#218838] to-[#64CCC5] text-white flex items-center gap-2">
-                <i data-lucide="user-plus" class="w-4 h-4"></i> إضافة صحابي
-            </button>
-            <button type="button" @click="rows.push({ name: { ar: '' }, description: { ar: '' }, role: 'other' })"
-                    class="px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white flex items-center gap-2">
-                <i data-lucide="plus" class="w-4 h-4"></i> إضافة شخصية
-            </button>
+     x-data="seerahParticipants({{ Js::from(array_values($oldParticipants ?? [])) }})"
+     @muslim-picked.window="onPicked($event.detail)">
+
+    <div class="flex flex-wrap items-start justify-between gap-3 mb-5">
+        <div class="min-w-0">
+            <h2 class="text-xl font-bold flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                <i data-lucide="users" class="w-5 h-5 text-accent"></i>
+                الشخصيات والصحابة
+            </h2>
+            <p class="text-xs mt-1" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
+                اربط كل صحابي بسجلّه في وحدة المسلمين. الاسم الحر للقبائل ومَن لا سجلّ له.
+            </p>
+        </div>
+
+        {{-- Counts, so the review state of the whole section reads at a glance. --}}
+        <div class="flex items-center gap-2 text-xs font-semibold" x-show="rows.length > 0">
+            <span class="px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5 tabular-nums"
+                  :class="darkMode ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-50 text-emerald-700'">
+                <i data-lucide="link" class="w-3.5 h-3.5"></i>
+                <span x-text="linkedCount"></span> مرتبط
+            </span>
+            <span x-show="unlinkedCount > 0"
+                  class="px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5 tabular-nums"
+                  :class="darkMode ? 'bg-amber-500/15 text-amber-300' : 'bg-amber-50 text-amber-700'">
+                <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+                <span x-text="unlinkedCount"></span> يحتاج مراجعة
+            </span>
         </div>
     </div>
 
-    <p class="mb-4 text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
-        أسماء حرة تُكتب كما تريد ظهورها في صفحة الحدث — غير مرتبطة بوحدة الصحابة (المسلمين) ولا تنشئ ملفات شخصية.
-    </p>
+    <div class="flex flex-wrap items-center gap-2 mb-5">
+        <button type="button" @click="pickNew()"
+                class="px-4 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white flex items-center gap-2 transition-transform hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+            <i data-lucide="user-plus" class="w-4 h-4"></i>
+            اختيار من وحدة المسلمين
+        </button>
 
-    <div class="space-y-4">
-        <template x-for="(row, index) in rows" :key="index">
-            <div class="rounded-xl border p-4" :class="darkMode ? 'border-gray-800 bg-gray-900/40' : 'border-gray-200 bg-gray-50'">
-                <div class="flex flex-col sm:flex-row gap-3 mb-3">
-                    <input type="text" x-model="row.name.ar" :name="`participants[${index}][name][ar]`"
-                           placeholder="الاسم" dir="rtl"
-                           class="{{ $inputClass }} sm:flex-1" :class="{{ $inputDark }}">
-                    <select x-model="row.role" :name="`participants[${index}][role]`"
-                            class="{{ $inputClass }} sm:w-48" :class="{{ $inputDark }}">
+        <button type="button" @click="addFreeText()"
+                class="px-4 py-2.5 rounded-xl text-sm font-semibold border transition-colors flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                :class="darkMode ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'">
+            <i data-lucide="type" class="w-4 h-4"></i>
+            اسم حر (قبيلة أو بلا سجلّ)
+        </button>
+    </div>
+
+    <div class="space-y-3">
+        <template x-for="(row, index) in rows" :key="row.uid">
+            <div class="rounded-xl border overflow-hidden transition-colors"
+                 :class="row.participant_id
+                     ? (darkMode ? 'border-gray-800 bg-gray-900/40' : 'border-gray-200 bg-white')
+                     : (darkMode ? 'border-amber-500/30 bg-amber-500/5' : 'border-amber-300 bg-amber-50/40')">
+
+                <!-- Identity row -->
+                <div class="flex flex-wrap items-center gap-3 p-4 pb-3">
+                    <div class="w-9 h-9 shrink-0 rounded-full grid place-items-center"
+                         :class="row.participant_id
+                             ? 'bg-gradient-to-br from-[#0056b3] to-[#218838]'
+                             : (darkMode ? 'bg-amber-500/20' : 'bg-amber-200')">
+                        <i :data-lucide="row.participant_id ? 'user-check' : 'help-circle'"
+                           class="w-4 h-4" :class="row.participant_id ? 'text-white' : 'text-amber-700'"></i>
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+                        {{-- Linked: the record's own name, read-only. Editing it here would
+                             fork the person, which is the whole point of linking. --}}
+                        <template x-if="row.participant_id">
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="font-semibold text-sm truncate"
+                                          :class="darkMode ? 'text-white' : 'text-gray-900'"
+                                          x-text="row.linked_name || row.name.ar"></span>
+                                    <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold tabular-nums"
+                                          :class="darkMode ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-50 text-emerald-700'"
+                                          x-text="'#' + row.participant_id"></span>
+                                </div>
+                                <p class="text-[11px] mt-0.5" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
+                                    مرتبط بسجلّ في وحدة المسلمين
+                                </p>
+                            </div>
+                        </template>
+
+                        {{-- Unlinked: free text, and say plainly why it is flagged. --}}
+                        <template x-if="! row.participant_id">
+                            <div class="min-w-0">
+                                <label class="sr-only" :for="`participant-name-${index}`">اسم الشخصية</label>
+                                <input type="text" :id="`participant-name-${index}`"
+                                       x-model="row.name.ar" :name="`participants[${index}][name][ar]`"
+                                       placeholder="اسم القبيلة أو الشخصية" dir="rtl"
+                                       class="{{ $inputClass }} w-full" :class="{{ $inputDark }}">
+                                <p class="text-[11px] mt-1 flex items-center gap-1"
+                                   :class="darkMode ? 'text-amber-400' : 'text-amber-700'">
+                                    <i data-lucide="alert-triangle" class="w-3 h-3"></i>
+                                    غير مرتبط بسجلّ — للمراجعة
+                                </p>
+                            </div>
+                        </template>
+                    </div>
+
+                    <label class="sr-only" :for="`participant-role-${index}`">دور الشخصية في الحدث</label>
+                    <select :id="`participant-role-${index}`"
+                            x-model="row.role" :name="`participants[${index}][role]`"
+                            class="{{ $inputClass }} sm:w-44" :class="{{ $inputDark }}">
                         @foreach($participantRoles as $role)
                             <option value="{{ $role->value }}">{{ $role->labelArabic() }}</option>
                         @endforeach
                     </select>
-                    <button type="button" @click="rows.splice(index, 1)"
-                            class="px-3 py-3 rounded-xl text-red-500 hover:bg-red-500/10 transition-all shrink-0">
-                        <i data-lucide="trash-2" class="w-5 h-5"></i>
-                    </button>
+
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button type="button" @click="pickFor(index)"
+                                class="px-2.5 py-2 rounded-lg text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                                :class="darkMode ? 'bg-gray-800 text-gray-200 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                                :aria-label="row.participant_id ? 'تغيير السجلّ المرتبط' : 'ربط بسجلّ'"
+                                x-text="row.participant_id ? 'تغيير' : 'ربط'"></button>
+
+                        <button type="button" x-show="row.participant_id"
+                                @click="unlink(index)"
+                                class="px-2.5 py-2 rounded-lg text-xs font-semibold text-amber-600 hover:bg-amber-500/10 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                                aria-label="فكّ الربط">فكّ</button>
+
+                        <button type="button" @click="rows.splice(index, 1)"
+                                class="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+                                aria-label="حذف الشخصية">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
                 </div>
-                <textarea x-model="row.description.ar" :name="`participants[${index}][description][ar]`"
-                          rows="2" placeholder="نبذة قصيرة عن دور الشخصية في هذا الحدث" dir="rtl"
-                          class="{{ $inputClass }} resize-y" :class="{{ $inputDark }}"></textarea>
+
+                <!-- Role description -->
+                <div class="px-4 pb-4">
+                    {{-- Posted for linked rows too: the muslims record holds the person's
+                         biography, this holds what they did in THIS event. --}}
+                    <template x-if="row.participant_id">
+                        <input type="hidden" :name="`participants[${index}][name][ar]`"
+                               :value="row.linked_name || row.name.ar">
+                    </template>
+                    <input type="hidden" :name="`participants[${index}][participant_id]`"
+                           :value="row.participant_id ?? ''">
+
+                    <label class="block text-xs font-semibold mb-1.5"
+                           :class="darkMode ? 'text-gray-400' : 'text-gray-600'"
+                           :for="`participant-desc-${index}`">
+                        دوره في هذا الحدث
+                    </label>
+                    <textarea :id="`participant-desc-${index}`"
+                              x-model="row.description.ar" :name="`participants[${index}][description][ar]`"
+                              rows="2" placeholder="سطر واحد: ما الذي فعله في هذا الحدث تحديدًا" dir="rtl"
+                              class="{{ $inputClass }} resize-y w-full" :class="{{ $inputDark }}"></textarea>
+                </div>
             </div>
         </template>
-        <p x-show="rows.length === 0" class="text-sm" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
-            لا توجد شخصيات بعد — قسم «الشخصيات» لن يظهر في صفحة الحدث.
-        </p>
+
+        {{-- Empty state carries the action, not just the message. --}}
+        <div x-show="rows.length === 0"
+             class="rounded-xl border border-dashed py-10 px-6 text-center"
+             :class="darkMode ? 'border-gray-700' : 'border-gray-300'">
+            <div class="inline-flex items-center justify-center w-12 h-12 rounded-full mb-3"
+                 :class="darkMode ? 'bg-gray-800' : 'bg-gray-100'">
+                <i data-lucide="users" class="w-6 h-6" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
+            </div>
+            <p class="text-sm mb-3" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                لا توجد شخصيات بعد — قسم «الشخصيات» لن يظهر في صفحة الحدث.
+            </p>
+            <button type="button" @click="pickNew()"
+                    class="px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white inline-flex items-center gap-2">
+                <i data-lucide="user-plus" class="w-4 h-4"></i>
+                اختيار من وحدة المسلمين
+            </button>
+        </div>
     </div>
 </div>
 
@@ -419,3 +578,111 @@
     @error('gallery')<p class="mt-1 text-sm text-red-500">{{ $message }}</p>@enderror
     @error('gallery.*')<p class="mt-1 text-sm text-red-500">{{ $message }}</p>@enderror
 </div>
+
+@once
+@push('scripts')
+<script>
+    /**
+     * Participant rows for a Seerah event.
+     *
+     * `uid` exists only to key the x-for. Keying on the array index made Alpine reuse
+     * a DOM node when a row was removed, so the row below inherited the deleted row's
+     * linked badge — the link looked moved rather than deleted.
+     */
+    function seerahParticipants(initial) {
+        let seq = 0;
+
+        return {
+            rows: (initial ?? []).map((row) => ({
+                uid: ++seq,
+                name: row.name ?? { ar: '' },
+                description: row.description ?? { ar: '' },
+                role: row.role ?? 'companion',
+                participant_id: row.participant_id ?? null,
+                linked_name: row.linked_name ?? null,
+            })),
+
+            // Which row the picker was opened for; -1 means "append a new row".
+            pickingIndex: -1,
+
+            get linkedCount() {
+                return this.rows.filter((r) => r.participant_id).length;
+            },
+
+            get unlinkedCount() {
+                return this.rows.length - this.linkedCount;
+            },
+
+            /** Ids already on this event, so the picker can grey them out. */
+            takenIds() {
+                return this.rows.map((r) => r.participant_id).filter(Boolean);
+            },
+
+            openPicker(index) {
+                this.pickingIndex = index;
+                this.$dispatch('open-muslim-picker', {
+                    field: 'seerah-participant',
+                    title: 'اختيار شخصية من وحدة المسلمين',
+                    takenIds: this.takenIds(),
+                });
+            },
+
+            pickNew() { this.openPicker(-1); },
+            pickFor(index) { this.openPicker(index); },
+
+            addFreeText() {
+                this.rows.push({
+                    uid: ++seq,
+                    name: { ar: '' },
+                    description: { ar: '' },
+                    role: 'other',
+                    participant_id: null,
+                    linked_name: null,
+                });
+                this.$nextTick(() => window.lucide?.createIcons());
+            },
+
+            onPicked(detail) {
+                if (detail?.field !== 'seerah-participant') { return; }
+
+                const name = detail.name_ar || detail.name || '';
+
+                if (this.pickingIndex === -1) {
+                    this.rows.push({
+                        uid: ++seq,
+                        name: { ar: name },
+                        description: { ar: '' },
+                        role: (detail.roles ?? []).some((r) => String(r).includes('صحاب'))
+                            ? 'companion'
+                            : 'other',
+                        participant_id: detail.id,
+                        linked_name: name,
+                    });
+                } else {
+                    const row = this.rows[this.pickingIndex];
+                    if (row) {
+                        row.participant_id = detail.id;
+                        row.linked_name = name;
+                        // Keep whatever the editor already typed; only fill a blank.
+                        if (!row.name.ar) { row.name.ar = name; }
+                    }
+                }
+
+                this.pickingIndex = -1;
+                this.$nextTick(() => window.lucide?.createIcons());
+            },
+
+            unlink(index) {
+                const row = this.rows[index];
+                if (!row) { return; }
+                // Keep the name as free text so unlinking never loses what was there.
+                if (!row.name.ar) { row.name.ar = row.linked_name ?? ''; }
+                row.participant_id = null;
+                row.linked_name = null;
+                this.$nextTick(() => window.lucide?.createIcons());
+            },
+        };
+    }
+</script>
+@endpush
+@endonce
