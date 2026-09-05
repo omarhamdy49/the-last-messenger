@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Domain\Shared\Models\CommandRun;
 use App\Domain\Shared\Services\ArtisanCommandService;
+use App\Domain\Shared\Services\DatabaseDumpService;
 use App\Http\Controllers\Controller;
 use App\Support\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -22,14 +23,25 @@ class SettingsController extends Controller
 {
     use ApiResponse;
 
-    public function __construct(private readonly ArtisanCommandService $commands) {}
+    public function __construct(
+        private readonly ArtisanCommandService $commands,
+        private readonly DatabaseDumpService $dumps,
+    ) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
+        // Archives are listed for super_admin only, matching the download routes.
+        // Editors and admins reach this page; neither should learn a backup exists,
+        // let alone see its filename.
+        $maySeeBackups = (bool) $request->user('admin')?->hasRole('super_admin');
+
         return view('admin.settings.index', [
             'catalog' => $this->commands->catalog(),
             'runs' => $this->presentRuns(),
             'pollInterval' => (int) config('artisan-commands.poll_interval', 2000),
+            'maySeeBackups' => $maySeeBackups,
+            'backups' => $maySeeBackups ? $this->dumps->archives() : [],
+            'backupsTotal' => $maySeeBackups ? $this->dumps->humanSize($this->dumps->totalSize()) : null,
         ]);
     }
 

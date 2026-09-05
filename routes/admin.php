@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\AuditController;
 use App\Http\Controllers\Admin\BulkOperationController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DatabaseBackupController;
 use App\Http\Controllers\Admin\ExportController;
 use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\LanguageSettingsController;
@@ -83,6 +84,19 @@ Route::prefix('su/portal/v1/admin/settings/commands')
         Route::get('/runs', [SettingsController::class, 'runHistory'])->name('history');
         Route::get('/runs/{run}', [SettingsController::class, 'runStatus'])->name('status');
         Route::post('/run', [SettingsController::class, 'runCommand'])->name('run');
+    });
+
+// Database archives. Creating one goes through the allowlisted-command runner
+// (`db:dump`); these routes only serve what it produced. super_admin ONLY — the
+// rest of the settings hub is reachable by editors and admins, but an archive is
+// every password hash and API token in one file, so it is deliberately narrower
+// than the commands routes above. Throttled hard: a dump is hundreds of MB.
+Route::prefix('su/portal/v1/admin/settings/backups')
+    ->middleware(['web', 'auth:admin', 'admin', 'role:super_admin,admin', 'throttle:10,1'])
+    ->name('admin.settings.backups.')
+    ->group(function (): void {
+        Route::get('/{filename}/download', [DatabaseBackupController::class, 'download'])->name('download');
+        Route::delete('/{filename}', [DatabaseBackupController::class, 'destroy'])->name('destroy');
     });
 
 // Programs & Episodes — now handled by full domain routes below

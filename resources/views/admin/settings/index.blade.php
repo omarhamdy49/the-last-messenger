@@ -57,4 +57,8 @@
 
 @include('admin.settings._commands')
 
+@if($maySeeBackups ?? false)
+    @include('admin.settings._backups')
+@endif
+
 @endsection
