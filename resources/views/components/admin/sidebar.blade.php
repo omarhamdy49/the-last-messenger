@@ -333,6 +333,63 @@
                 </div>
             </div>
 
+            <!-- Hadith (collections -> books -> chapters -> hadiths) -->
+            <div>
+                <button @click="toggleSubmenu('hadith')"
+                        :class="openSubmenu === 'hadith' ||
+                                ['hadith-collections','hadith-books','hadith-chapters','hadiths'].includes(activeMenu) ?
+                            'bg-gradient-primary text-white shadow-lg' :
+                            (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
+                        class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="quote" class="w-5 h-5"></i>
+                        <span class="font-semibold">{{ __('hadith_admin.module') }}</span>
+                    </div>
+                    <i data-lucide="chevron-down"
+                       class="w-4 h-4 transition-transform duration-200"
+                       :class="openSubmenu === 'hadith' ? 'rotate-180' : ''"></i>
+                </button>
+
+                <div x-show="openSubmenu === 'hadith'" class="mt-2 ms-6 space-y-1">
+                    <a href="{{ route('admin.hadith-collections.index') }}"
+                       @click="activeMenu = 'hadith-collections'"
+                       :class="isActive('hadith-collections') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="library" class="w-4 h-4"></i>
+                        <span>{{ __('hadith_admin.collections') }}</span>
+                    </a>
+                    <a href="{{ route('admin.hadith-books.index') }}"
+                       @click="activeMenu = 'hadith-books'"
+                       :class="isActive('hadith-books') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="book" class="w-4 h-4"></i>
+                        <span>{{ __('hadith_admin.books') }}</span>
+                    </a>
+                    <a href="{{ route('admin.hadith-chapters.index') }}"
+                       @click="activeMenu = 'hadith-chapters'"
+                       :class="isActive('hadith-chapters') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="list-tree" class="w-4 h-4"></i>
+                        <span>{{ __('hadith_admin.chapters') }}</span>
+                    </a>
+                    <a href="{{ route('admin.hadiths.index') }}"
+                       @click="activeMenu = 'hadiths'"
+                       :class="isActive('hadiths') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="quote" class="w-4 h-4"></i>
+                        <span>{{ __('hadith_admin.hadiths') }}</span>
+                    </a>
+                </div>
+            </div>
+
             <!-- Islamic Figures (one `muslims` identity, several Islamic roles) -->
             <div>
                 <button @click="toggleSubmenu('muslims')"

@@ -1,0 +1,73 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'module' => 'الحديث الشريف',
+    'collections' => 'كتب الحديث',
+    'books' => 'الأبواب',
+    'chapters' => 'الفصول',
+    'hadiths' => 'الأحاديث',
+
+    'collection' => 'الكتاب',
+    'book' => 'الباب',
+    'chapter' => 'الفصل',
+    'hadith' => 'الحديث',
+
+    'all_collections' => 'كل الكتب',
+    'all_books' => 'كل الأبواب',
+    'all_chapters' => 'كل الفصول',
+    'all_grades' => 'كل الدرجات',
+    'all_statuses' => 'كل الحالات',
+    'ungraded' => 'بلا درجة',
+    'published' => 'منشور',
+    'draft' => 'مسودة',
+    'search_placeholder' => 'ابحث في نص الحديث أو رقمه أو مرجعه…',
+    'search_collections' => 'ابحث باسم الكتاب…',
+    'filter' => 'تصفية',
+    'reset' => 'إعادة تعيين',
+    'no_results' => 'لا توجد نتائج مطابقة.',
+
+    'created_ok' => 'تم الحفظ.',
+    'collection_created' => 'أُضيف الكتاب.',
+    'collection_updated' => 'حُدّث الكتاب.',
+    'collection_deleted' => 'حُذف الكتاب.',
+    'book_created' => 'أُضيف الباب.',
+    'book_updated' => 'حُدّث الباب.',
+    'book_deleted' => 'حُذف الباب.',
+    'chapter_created' => 'أُضيف الفصل.',
+    'chapter_updated' => 'حُدّث الفصل.',
+    'chapter_deleted' => 'حُذف الفصل.',
+    'hadith_created' => 'أُضيف الحديث.',
+    'hadith_updated' => 'حُدّث الحديث.',
+    'hadith_deleted' => 'حُذف الحديث.',
+    'status_updated' => 'حُدّثت الحالة.',
+
+    'collection_published' => 'نُشر الكتاب وصارت أحاديثه ظاهرة.',
+    'collection_unpublished' => 'أُخفي الكتاب، وبه :count حديثًا لن تظهر للزوار.',
+
+    'collection_not_empty' => 'لا يمكن حذف الكتاب: ما زال فيه :books بابًا و:hadiths حديثًا. احذفها أو انقلها أولًا.',
+    'book_not_empty' => 'لا يمكن حذف الباب: ما زال فيه :chapters فصلًا و:hadiths حديثًا.',
+    'chapter_not_empty' => 'لا يمكن حذف الفصل: ما زال فيه :hadiths حديثًا.',
+
+    'book_not_in_collection' => 'الباب المختار لا ينتمي إلى هذا الكتاب.',
+    'chapter_not_in_book' => 'الفصل المختار لا ينتمي إلى هذا الباب.',
+    'chapter_needs_book' => 'اختر البابَ أولًا قبل الفصل.',
+
+    'total' => 'الإجمالي',
+    'visible_publicly' => 'ظاهر للزوار',
+    'grade' => 'الدرجة',
+    'raw_grade' => 'الدرجة كما وردت في المصدر',
+    'reference_key' => 'مفتاح المرجع',
+    'number' => 'الرقم',
+    'text_ar' => 'النص العربي',
+    'text_en' => 'الترجمة الإنجليزية',
+    'narrated_by' => 'الراوي',
+    'actions' => 'الإجراءات',
+    'edit' => 'تعديل',
+    'delete' => 'حذف',
+    'view' => 'عرض',
+    'save' => 'حفظ',
+    'cancel' => 'إلغاء',
+    'add' => 'إضافة',
+];
