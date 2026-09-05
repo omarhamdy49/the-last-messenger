@@ -321,20 +321,32 @@ class TagRepository implements TagRepositoryInterface
     /**
      * Recalculate usage count for all tags
      *
+     * Single GROUP BY aggregation instead of per-tag COUNT queries.
+     *
      * @return int Number of tags updated
      */
     public function recalculateAllUsageCounts(): int
     {
-        $tags = $this->model::select(['id', 'usage_count'])->get();
+        // Get all current tags with their usage counts
+        $tags = $this->model::select(['id', 'usage_count'])->get()->keyBy('id');
+
+        // Single aggregation query to get actual counts from taggables
+        $actualCounts = DB::table('taggables')
+            ->select('tag_id', DB::raw('COUNT(*) as count'))
+            ->groupBy('tag_id')
+            ->get()
+            ->pluck('count', 'tag_id');
+
         $updated = 0;
 
-        foreach ($tags as $tag) {
-            $count = DB::table('taggables')
-                ->where('tag_id', $tag->id)
-                ->count();
+        // Update tags where counts differ
+        foreach ($tags as $tagId => $tag) {
+            $actualCount = $actualCounts->get($tagId, 0);
 
-            if ($tag->usage_count !== $count) {
-                $tag->update(['usage_count' => $count]);
+            if ($tag->usage_count !== $actualCount) {
+                DB::table('tags')
+                    ->where('id', $tagId)
+                    ->update(['usage_count' => $actualCount]);
                 $updated++;
             }
         }
