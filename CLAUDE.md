@@ -499,27 +499,70 @@ columns are not in `casts()`. Meanwhile the authoritative read path is the
 articles through `locales`; do **not** strip the trait until the JSON columns are
 actually dropped and the factory is migrated.
 
-Consequences to respect:
+#### Standard Translation Pattern
 
+**For detailed documentation, see `docs/TRANSLATION_PATTERNS.md`.**
+
+The codebase uses the **`HasLocalizedContent`** trait (`app/Domain/Shared/Traits/HasLocalizedContent.php`)
+for all models with translation tables. This trait provides:
+
+- **Read methods (safe):** `getTranslation($field, $locale)`, `getTranslations($field)`, `translationFor($locale)`
+- **Write method (standard):** `syncTranslations($data)` — **always use this for writes**
+- **Relationship:** `translations()` HasMany relationship
+
+**Critical rules:**
+
+- **ALWAYS use `syncTranslations()` for writes** — the only correct way to save translations
+- **NEVER use `setTranslation()` with `save()`** — this was the old Spatie pattern and is dangerous
+- **Read-only use of `getTranslation()` is safe** — Blade views and display logic can use this
 - **Never** `select('name')` or `with('category:id,name')` on these tables, and never
   `JSON_EXTRACT(name, '$.ar')`. Both throw — the column does not exist.
 - Search via the relation: `whereHas('translations', fn ($q) => $q->where('name', 'LIKE', "%{$term}%"))`.
 - Eager-load translations explicitly and constrain columns:
   `with('translations:id,category_id,locale,name')`.
-- Read through the `HasLocalizedContent` trait (`getTranslation($field, $locale)` /
-  `getTranslations($field)`), or a model accessor where one exists.
-- Write through `syncTranslations()`, not attribute assignment.
 
 ```php
-// Read (locale-aware, falls back to Arabic)
+// ✅ CORRECT — Read (locale-aware, falls back to Arabic)
 $category->getTranslation('name', app()->getLocale())
     ?? $category->getTranslation('name', 'ar');
 
-// Write
+// ✅ CORRECT — Write using syncTranslations (STANDARD PATTERN)
 $category->syncTranslations([
-    'ar' => ['name' => 'السيرة النبوية'],
-    'en' => ['name' => 'The Prophetic Biography'],
+    'name' => [
+        'ar' => 'السيرة النبوية',
+        'en' => 'The Prophetic Biography',
+    ],
+    'description' => [
+        'ar' => 'وصف',
+        'en' => 'Description',
+    ],
 ]);
+
+// ❌ WRONG — NEVER use setTranslation for writes
+// $category->setTranslation('name', 'ar', 'السيرة النبوية');
+// $category->save();
+```
+
+**Service Layer Pattern:**
+```php
+public function createCategory(CreateCategoryData $data): Category
+{
+    return DB::transaction(function () use ($data) {
+        // 1. Create main record
+        $category = $this->repository->create([
+            'slug' => $data->slug,
+            'type' => $data->type,
+        ]);
+        
+        // 2. Sync translations (STANDARD PATTERN)
+        $category->syncTranslations([
+            'name' => $data->name,
+            'description' => $data->description,
+        ]);
+        
+        return $category;
+    });
+}
 ```
 
 Spatie `HasTranslations` remains installed but must **not** be added to these models;
@@ -562,16 +605,26 @@ DateUtil::formatDate($date, 'ar'); // Arabic date format
 ```
 
 ### Multi-Language Content
-**ALL content models use Spatie Translatable.**
+**ALL content models use translation tables via the `HasLocalizedContent` trait.**
+
+See `docs/TRANSLATION_PATTERNS.md` for complete documentation.
 
 ```php
-// Save translations
-$article->setTranslation('title', 'ar', $request->input('title.ar'));
-$article->setTranslation('title', 'en', $request->input('title.en'));
-$article->save();
+// ✅ CORRECT — Save translations using syncTranslations (STANDARD PATTERN)
+$category->syncTranslations([
+    'name' => [
+        'ar' => $request->input('name.ar'),
+        'en' => $request->input('name.en'),
+    ],
+]);
 
-// Retrieve in specific language
-$article->getTranslation('title', 'ar');
+// ✅ SAFE — Retrieve in specific language (read-only)
+$title = $category->getTranslation('name', 'ar');
+$allTitles = $category->getTranslations('name'); // ['ar' => '...', 'en' => '...']
+
+// ❌ WRONG — NEVER use setTranslation with save() for writes
+// $category->setTranslation('name', 'ar', 'السيرة');
+// $category->save(); // This does NOT write to translation tables!
 ```
 
 ### Naming Conventions
@@ -963,6 +1016,7 @@ ray($variable);
 ## Documentation References
 
 ### Internal Documentation (docs/)
+- `TRANSLATION_PATTERNS.md` — **Translation handling guide (REQUIRED READING)**
 - `ADMIN-DESIGN-SYSTEM.md` — Complete admin UI design system
 - `ARTICLE-API-DOCUMENTATION.md` — Articles API documentation
 - `MEDIA-PICKER-ARCHITECTURE.md` — Media picker architecture guide
@@ -990,8 +1044,10 @@ ray($variable);
 ## Gotchas worth knowing before you change anything
 
 - **Translations are in tables, not JSON columns.** See the Translatable Models
-  section. Most historical bugs in this repo trace back to code that was never
-  migrated off the dropped JSON columns.
+  section and `docs/TRANSLATION_PATTERNS.md` for the complete guide. **ALWAYS use
+  `syncTranslations()` for writes; NEVER use `setTranslation()` with `save()`.**
+  Most historical bugs in this repo trace back to code that was never migrated
+  off the dropped JSON columns.
 - **Verify a class exists before trusting an import.** Several files have imported
   classes that do not exist (`App\Domain\Blog\Models\Article` — the real one is
   `App\Models\Article`). PHP does not error on an unused `use`, and `Foo::class`

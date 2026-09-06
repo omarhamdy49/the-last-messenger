@@ -53,7 +53,10 @@ class HomeModuleCardController extends Controller
         try {
             $this->service->createCard(
                 $this->attributesFrom($validated, $request),
-                $this->translationsFrom($validated),
+                [
+                    'title' => $validated['title'],
+                    'description' => $validated['description'] ?? [],
+                ]
             );
 
             return redirect()
@@ -92,7 +95,10 @@ class HomeModuleCardController extends Controller
             $card = $this->service->updateCard(
                 $home_card,
                 $this->attributesFrom($validated, $request),
-                $this->translationsFrom($validated),
+                [
+                    'title' => $validated['title'],
+                    'description' => $validated['description'] ?? [],
+                ]
             );
         } catch (\Throwable $exception) {
             \Log::error('admin.content.home_card.update_failed', [
@@ -143,20 +149,6 @@ class HomeModuleCardController extends Controller
             'is_featured' => $request->boolean('is_featured'),
             'is_active' => $request->boolean('is_active'),
             'sort_order' => $validated['sort_order'] ?? null,
-        ];
-    }
-
-    /**
-     * Map validated input to the translatable field payload.
-     *
-     * @param  array<string, mixed>  $validated
-     * @return array<string, array<string, string|null>>
-     */
-    private function translationsFrom(array $validated): array
-    {
-        return [
-            'title' => $validated['title'],
-            'description' => $validated['description'] ?? [],
         ];
     }
 }

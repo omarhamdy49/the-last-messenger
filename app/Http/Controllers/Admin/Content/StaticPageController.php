@@ -50,7 +50,12 @@ class StaticPageController extends Controller
         try {
             $this->service->create(
                 $this->attributesFrom($validated, $request),
-                $this->translationsFrom($validated),
+                [
+                    'title' => $validated['title'],
+                    'body' => $validated['body'] ?? [],
+                    'seo_title' => $validated['seo_title'] ?? [],
+                    'seo_description' => $validated['seo_description'] ?? [],
+                ],
             );
 
             return redirect()
@@ -89,7 +94,12 @@ class StaticPageController extends Controller
             $page = $this->service->update(
                 $static_page,
                 $this->attributesFrom($validated, $request),
-                $this->translationsFrom($validated),
+                [
+                    'title' => $validated['title'],
+                    'body' => $validated['body'] ?? [],
+                    'seo_title' => $validated['seo_title'] ?? [],
+                    'seo_description' => $validated['seo_description'] ?? [],
+                ],
             );
         } catch (\Throwable $exception) {
             \Log::error('admin.content.static_page.update_failed', [
@@ -134,22 +144,6 @@ class StaticPageController extends Controller
             'slug' => $validated['slug'],
             'is_active' => $request->boolean('is_active'),
             'published_at' => $validated['published_at'] ?? null,
-        ];
-    }
-
-    /**
-     * Map validated input to the translatable field payload.
-     *
-     * @param  array<string, mixed>  $validated
-     * @return array<string, array<string, string|null>>
-     */
-    private function translationsFrom(array $validated): array
-    {
-        return [
-            'title' => $validated['title'],
-            'body' => $validated['body'] ?? [],
-            'seo_title' => $validated['seo_title'] ?? [],
-            'seo_description' => $validated['seo_description'] ?? [],
         ];
     }
 }
