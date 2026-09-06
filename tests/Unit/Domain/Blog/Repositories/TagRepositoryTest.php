@@ -10,7 +10,6 @@ use App\Domain\Blog\Repositories\TagRepository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
@@ -21,105 +20,15 @@ use Tests\TestCase;
  */
 final class TagRepositoryTest extends TestCase
 {
-    private TagRepository $repository;
+    use RefreshDatabase;
 
-    /**
-     * Define environment setup - use SQLite in-memory for fast unit tests
-     */
-    protected function defineEnvironment($app): void
-    {
-        $app['config']->set('database.default', 'sqlite');
-        $app['config']->set('database.connections.sqlite', [
-            'driver' => 'sqlite',
-            'database' => ':memory:',
-            'prefix' => '',
-        ]);
-    }
+    private TagRepository $repository;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        // Create minimal schema without running all migrations
-        $this->createSchema();
-
         $this->repository = new TagRepository();
-    }
-
-    protected function tearDown(): void
-    {
-        // Drop all tables after each test
-        Schema::dropIfExists('taggables');
-        Schema::dropIfExists('tag_translations');
-        Schema::dropIfExists('tags');
-        Schema::dropIfExists('content_versions');
-        Schema::dropIfExists('articles');
-
-        parent::tearDown();
-    }
-
-    private function createSchema(): void
-    {
-        // Create tags table
-        Schema::create('tags', function ($table) {
-            $table->id();
-            $table->string('slug')->unique();
-            $table->string('type')->nullable();
-            $table->string('color')->nullable();
-            $table->integer('usage_count')->default(0);
-            $table->timestamps();
-        });
-
-        // Create tag_translations table
-        Schema::create('tag_translations', function ($table) {
-            $table->id();
-            $table->foreignId('tag_id')->constrained()->cascadeOnDelete();
-            $table->string('locale', 5);
-            $table->string('name');
-            $table->text('description')->nullable();
-            $table->timestamps();
-            $table->unique(['tag_id', 'locale']);
-        });
-
-        // Create articles table (minimal)
-        Schema::create('articles', function ($table) {
-            $table->id();
-            $table->string('slug')->unique();
-            $table->string('status')->default('draft');
-            $table->string('featured_image')->nullable();
-            $table->timestamp('published_at')->nullable();
-            $table->foreignId('writer_id')->nullable();
-            $table->timestamps();
-        });
-
-        // Create taggables pivot table
-        Schema::create('taggables', function ($table) {
-            $table->id();
-            $table->foreignId('tag_id')->constrained()->cascadeOnDelete();
-            $table->morphs('taggable');
-            $table->unique(['tag_id', 'taggable_type', 'taggable_id']);
-        });
-
-        // Create content_versions table (needed by Article's HasVersions trait)
-        Schema::create('content_versions', function ($table) {
-            $table->id();
-            $table->morphs('versionable');
-            $table->integer('version_number')->default(1);
-            $table->enum('change_type', ['created', 'updated', 'published', 'unpublished', 'deleted', 'restored'])->default('updated');
-            $table->foreignId('changed_by')->nullable();
-            $table->string('change_summary', 500)->nullable();
-            $table->json('diff')->nullable();
-            $table->json('snapshot')->nullable();
-            $table->json('metadata')->nullable();
-            $table->string('ip_address', 45)->nullable();
-            $table->text('user_agent')->nullable();
-            $table->timestamp('created_at')->useCurrent();
-        });
-
-        // Register Article morph map
-        \Illuminate\Database\Eloquent\Relations\Relation::morphMap([
-            'article' => \App\Models\Article::class,
-        ]);
     }
 
     private function createTag(string $slug, int $usageCount = 0): Tag
@@ -146,7 +55,8 @@ final class TagRepositoryTest extends TestCase
             'status' => 'published',
             'featured_image' => null,
             'published_at' => now(),
-            'writer_id' => 1,
+            'writer_id' => null,
+            'read_time' => 1,
         ]);
     }
 
@@ -291,7 +201,7 @@ final class TagRepositoryTest extends TestCase
         DB::disableQueryLog();
 
         $aggregationQueries = array_filter($queries, function ($query) {
-            return str_contains($query['query'], 'group by');
+            return str_contains(strtolower($query['query']), 'group by');
         });
 
         $this->assertCount(1, $aggregationQueries, 'Should use exactly one GROUP BY query');
@@ -301,6 +211,6 @@ final class TagRepositoryTest extends TestCase
                    str_contains(strtolower($query['query']), 'tags');
         });
 
-        $this->assertCount(3, $updateQueries, 'Should execute individual updates for each tag');
+        $this->assertCount(1, $updateQueries, 'Should write every changed tag in one UPDATE');
     }
 }

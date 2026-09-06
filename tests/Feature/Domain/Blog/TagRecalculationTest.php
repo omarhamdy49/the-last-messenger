@@ -54,7 +54,7 @@ final class TagRecalculationTest extends TestCase
             'slug' => $slug,
             'status' => Article::STATUS_PUBLISHED,
             'published_at' => now(),
-            'writer_id' => 1,
+            'writer_id' => null,
             'title' => ['ar' => "مقال {$slug}", 'en' => "Article {$slug}"],
             'content' => ['ar' => 'محتوى المقال', 'en' => 'Article content'],
         ]);
@@ -133,11 +133,12 @@ final class TagRecalculationTest extends TestCase
         // Should have SELECT queries but not excessive
         $this->assertLessThan(10, count($selectQueries), 'Should not have excessive SELECT queries');
 
-        // Update queries should equal the number of tags that actually changed
-        $this->assertSame($updatedCount, count($updateQueries), 'Should only update tags that changed');
+        // One batched UPDATE regardless of how many tags changed — that is the
+        // N+1 this test exists to catch.
+        $this->assertCount(1, $updateQueries, 'Should write every changed tag in one UPDATE');
 
-        // Total queries should be much less than 300 (would be 300+ with N+1 pattern for 150 tags)
-        $this->assertLessThan(100, count($queries), 'Total queries should be well under 100 for 150 tags');
+        // Total queries must not scale with the 150 tags.
+        $this->assertLessThan(10, count($queries), 'Query count must be independent of tag count');
     }
 
     public function test_correctly_calculates_usage_counts_for_large_dataset(): void
@@ -269,7 +270,7 @@ final class TagRecalculationTest extends TestCase
         $this->assertSame(100, $updatedCount);
 
         // Verify each tag has approximately 10 uses (200 articles * 5 tags / 100 tags)
-        $totalUsage = Tag::sum('usage_count');
+        $totalUsage = (int) Tag::sum('usage_count');
         $this->assertSame(1000, $totalUsage);
 
         // Verify efficient query pattern even with 1000 total taggings

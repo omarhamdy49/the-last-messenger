@@ -29,7 +29,7 @@ final class EpisodeReorderingTest extends TestCase
     {
         parent::setUp();
         $this->withoutVite();
-        $this->repository = new MediaEpisodeRepository();
+        $this->repository = app(MediaEpisodeRepository::class);
     }
 
     private function createProgram(string $title = 'برنامج السيرة التجريبي'): MediaProgram
@@ -102,7 +102,8 @@ final class EpisodeReorderingTest extends TestCase
 
         // Enable query logging to verify efficiency
         DB::enableQueryLog();
-        $this->repository->reorderEpisodes($program->id, $reversedIds);
+        DB::flushQueryLog();
+        $this->repository->reorderForProgram($program->id, $reversedIds);
         $queries = DB::getQueryLog();
         DB::disableQueryLog();
 
@@ -156,7 +157,9 @@ final class EpisodeReorderingTest extends TestCase
         );
 
         DB::enableQueryLog();
-        $this->repository->reorderEpisodes($program->id, $reorderIds);
+
+        DB::flushQueryLog();
+        $this->repository->reorderForProgram($program->id, $reorderIds);
         $queries = DB::getQueryLog();
         DB::disableQueryLog();
 
@@ -207,7 +210,9 @@ final class EpisodeReorderingTest extends TestCase
         $reversedSeason1Ids = array_reverse(array_map(fn ($ep) => $ep->id, $season1Episodes));
 
         DB::enableQueryLog();
-        $this->repository->reorderEpisodes($program->id, $reversedSeason1Ids);
+
+        DB::flushQueryLog();
+        $this->repository->reorderForProgram($program->id, $reversedSeason1Ids);
         $queries = DB::getQueryLog();
         DB::disableQueryLog();
 
@@ -248,7 +253,9 @@ final class EpisodeReorderingTest extends TestCase
         shuffle($shuffledIds);
 
         DB::enableQueryLog();
-        $this->repository->reorderEpisodes($program->id, $shuffledIds);
+
+        DB::flushQueryLog();
+        $this->repository->reorderForProgram($program->id, $shuffledIds);
         $queries = DB::getQueryLog();
         DB::disableQueryLog();
 
@@ -310,7 +317,7 @@ final class EpisodeReorderingTest extends TestCase
             }
         }
 
-        $this->repository->reorderEpisodes($program->id, $reorderedIds);
+        $this->repository->reorderForProgram($program->id, $reorderedIds);
 
         // Verify correctness
         $reloadedEpisodes = MediaEpisode::where('program_id', $program->id)
@@ -337,7 +344,9 @@ final class EpisodeReorderingTest extends TestCase
         $episode = $this->createEpisode($program, 1, 1);
 
         DB::enableQueryLog();
-        $this->repository->reorderEpisodes($program->id, [$episode->id]);
+
+        DB::flushQueryLog();
+        $this->repository->reorderForProgram($program->id, [$episode->id]);
         $queries = DB::getQueryLog();
         DB::disableQueryLog();
 
@@ -358,7 +367,9 @@ final class EpisodeReorderingTest extends TestCase
         }
 
         DB::enableQueryLog();
-        $this->repository->reorderEpisodes($program->id, []);
+
+        DB::flushQueryLog();
+        $this->repository->reorderForProgram($program->id, []);
         $queries = DB::getQueryLog();
         DB::disableQueryLog();
 
@@ -397,7 +408,9 @@ final class EpisodeReorderingTest extends TestCase
             $reversedIds = array_reverse(array_map(fn ($ep) => $ep->id, $episodes));
 
             DB::enableQueryLog();
-            $this->repository->reorderEpisodes($program->id, $reversedIds);
+
+            DB::flushQueryLog();
+            $this->repository->reorderForProgram($program->id, $reversedIds);
             $queries = DB::getQueryLog();
             DB::disableQueryLog();
 

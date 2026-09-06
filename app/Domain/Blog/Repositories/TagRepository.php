@@ -327,29 +327,20 @@ class TagRepository implements TagRepositoryInterface
      */
     public function recalculateAllUsageCounts(): int
     {
-        // Get all current tags with their usage counts
-        $tags = $this->model::select(['id', 'usage_count'])->get()->keyBy('id');
-
-        // Single aggregation query to get actual counts from taggables
-        $actualCounts = DB::table('taggables')
-            ->select('tag_id', DB::raw('COUNT(*) as count'))
-            ->groupBy('tag_id')
-            ->get()
-            ->pluck('count', 'tag_id');
-
-        $updated = 0;
-
-        // Update tags where counts differ
-        foreach ($tags as $tagId => $tag) {
-            $actualCount = $actualCounts->get($tagId, 0);
-
-            if ($tag->usage_count !== $actualCount) {
-                DB::table('tags')
-                    ->where('id', $tagId)
-                    ->update(['usage_count' => $actualCount]);
-                $updated++;
-            }
-        }
+        // One statement: join every tag to its real tagging count and write back
+        // only the rows that disagree. The previous version aggregated in one
+        // query but then issued one UPDATE per changed tag — 150 tags meant 151
+        // queries. Affected-rows is the changed count, so nothing needs counting
+        // in PHP either. LEFT JOIN + COALESCE covers tags that have no taggables
+        // left and must fall back to 0.
+        $updated = DB::update(
+            'UPDATE tags t
+                LEFT JOIN (
+                    SELECT tag_id, COUNT(*) AS c FROM taggables GROUP BY tag_id
+                ) counts ON counts.tag_id = t.id
+                SET t.usage_count = COALESCE(counts.c, 0)
+              WHERE t.usage_count <> COALESCE(counts.c, 0)'
+        );
 
         Cache::forget('tags:count');
         Cache::forget('tags:total_usage');
