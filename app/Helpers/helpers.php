@@ -138,30 +138,6 @@ if (! function_exists('hijri_date')) {
     }
 }
 
-if (! function_exists('trans_fallback')) {
-    /**
-     * Get translation with fallback to English if not found
-     *
-     * @param  string  $key  Translation key
-     * @param  array  $replace  Replacement values
-     * @param  string|null  $locale  Locale to use
-     */
-    function trans_fallback(string $key, array $replace = [], ?string $locale = null): string
-    {
-        $locale = $locale ?? app()->getLocale();
-
-        // Try to get translation in current locale
-        $translation = trans($key, $replace, $locale);
-
-        // If translation not found and not in English, try English
-        if ($translation === $key && $locale !== 'en') {
-            $translation = trans($key, $replace, 'en');
-        }
-
-        return $translation;
-    }
-}
-
 if (! function_exists('get_locale_name')) {
     /**
      * Get localized name of a language
