@@ -206,31 +206,6 @@ if (! function_exists('trans_fallback')) {
     }
 }
 
-if (! function_exists('format_file_size')) {
-    /**
-     * Format file size in human-readable format (Arabic)
-     *
-     * @param  int  $bytes  File size in bytes
-     * @param  bool  $useArabicNumerals  Use Arabic numerals
-     */
-    function format_file_size(int $bytes, bool $useArabicNumerals = false): string
-    {
-        $units = ['بايت', 'كيلوبايت', 'ميجابايت', 'جيجابايت', 'تيرابايت'];
-
-        for ($i = 0; $bytes > 1024; $i++) {
-            $bytes /= 1024;
-        }
-
-        $size = round($bytes, 2);
-
-        if ($useArabicNumerals) {
-            $size = convert_to_arabic_numerals($size);
-        }
-
-        return $size.' '.$units[$i];
-    }
-}
-
 if (! function_exists('get_locale_name')) {
     /**
      * Get localized name of a language
