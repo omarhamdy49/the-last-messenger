@@ -34,33 +34,6 @@ if (! function_exists('format_arabic_date')) {
     }
 }
 
-if (! function_exists('format_relative_arabic_date')) {
-    /**
-     * Format date as relative time in Arabic (e.g., "منذ 5 دقائق")
-     *
-     * @param  string|Carbon|null  $date
-     */
-    function format_relative_arabic_date($date): string
-    {
-        if (empty($date)) {
-            return '';
-        }
-
-        if (! $date instanceof Carbon) {
-            $date = Carbon::parse($date);
-        }
-
-        $originalLocale = Carbon::getLocale();
-        Carbon::setLocale('ar');
-
-        $relativeDate = $date->diffForHumans();
-
-        Carbon::setLocale($originalLocale);
-
-        return $relativeDate;
-    }
-}
-
 if (! function_exists('convert_to_arabic_numerals')) {
     /**
      * Convert Western numerals (0-9) to Arabic/Hindi numerals (٠-٩)
@@ -162,95 +135,6 @@ if (! function_exists('hijri_date')) {
 
         // For now, return Gregorian date with Arabic format
         return format_arabic_date($date, $format);
-    }
-}
-
-if (! function_exists('localized_route')) {
-    /**
-     * Generate localized route URL
-     *
-     * @param  string  $name  Route name
-     * @param  array  $parameters  Route parameters
-     * @param  string|null  $locale  Locale code
-     */
-    function localized_route(string $name, array $parameters = [], ?string $locale = null): string
-    {
-        $locale = $locale ?? app()->getLocale();
-        $parameters['locale'] = $locale;
-
-        return route($name, $parameters);
-    }
-}
-
-if (! function_exists('trans_fallback')) {
-    /**
-     * Get translation with fallback to English if not found
-     *
-     * @param  string  $key  Translation key
-     * @param  array  $replace  Replacement values
-     * @param  string|null  $locale  Locale to use
-     */
-    function trans_fallback(string $key, array $replace = [], ?string $locale = null): string
-    {
-        $locale = $locale ?? app()->getLocale();
-
-        // Try to get translation in current locale
-        $translation = trans($key, $replace, $locale);
-
-        // If translation not found and not in English, try English
-        if ($translation === $key && $locale !== 'en') {
-            $translation = trans($key, $replace, 'en');
-        }
-
-        return $translation;
-    }
-}
-
-if (! function_exists('format_file_size')) {
-    /**
-     * Format file size in human-readable format (Arabic)
-     *
-     * @param  int  $bytes  File size in bytes
-     * @param  bool  $useArabicNumerals  Use Arabic numerals
-     */
-    function format_file_size(int $bytes, bool $useArabicNumerals = false): string
-    {
-        $units = ['بايت', 'كيلوبايت', 'ميجابايت', 'جيجابايت', 'تيرابايت'];
-
-        for ($i = 0; $bytes > 1024; $i++) {
-            $bytes /= 1024;
-        }
-
-        $size = round($bytes, 2);
-
-        if ($useArabicNumerals) {
-            $size = convert_to_arabic_numerals($size);
-        }
-
-        return $size.' '.$units[$i];
-    }
-}
-
-if (! function_exists('arabic_ordinal')) {
-    /**
-     * Convert number to Arabic ordinal (e.g., 1 => الأول)
-     */
-    function arabic_ordinal(int $number): string
-    {
-        $ordinals = [
-            1 => 'الأول',
-            2 => 'الثاني',
-            3 => 'الثالث',
-            4 => 'الرابع',
-            5 => 'الخامس',
-            6 => 'السادس',
-            7 => 'السابع',
-            8 => 'الثامن',
-            9 => 'التاسع',
-            10 => 'العاشر',
-        ];
-
-        return $ordinals[$number] ?? $number.'';
     }
 }
 
