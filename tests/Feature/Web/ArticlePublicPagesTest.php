@@ -178,7 +178,7 @@ final class ArticlePublicPagesTest extends TestCase
         $this->assertNotContains('غير مستخدم', array_column($tags, 'name'));
     }
 
-    public function test_show_returns_200_with_title_and_author(): void
+    public function test_show_returns_200_with_title_author_and_related_section(): void
     {
         // The related block is rendered only when there is something to put in
         // it, so give the article a sibling — an empty "Related articles"
@@ -191,13 +191,8 @@ final class ArticlePublicPagesTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Shown Article Title')
-            ->assertSee($article->writer->name);
-
-        // The related-articles heading is not asserted here: show.blade.php:1031 guards
-        // that whole section with `@if (! empty($related))`, and this fixture is a lone
-        // article with no siblings, so its absence is correct. Related articles have their
-        // own coverage in test_related_articles_come_from_the_same_type below.
-        $response->assertDontSee(__('articles.public.related_articles'));
+            ->assertSee($article->writer->name)
+            ->assertSee(__('articles.public.related_articles'));
     }
 
     public function test_show_renders_related_articles_from_same_category(): void
