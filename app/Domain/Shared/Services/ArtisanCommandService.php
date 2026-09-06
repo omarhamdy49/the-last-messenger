@@ -28,6 +28,18 @@ use Throwable;
  */
 class ArtisanCommandService
 {
+    /**
+     * Never runnable over HTTP, whatever config/artisan-commands.php says.
+     *
+     * Each of these drops or rewinds the schema. The whitelist alone is one
+     * careless line away from putting a "wipe production" button in the admin
+     * panel — and from letting a test that posts the name execute it for real.
+     */
+    private const FORBIDDEN = [
+        'migrate:fresh', 'migrate:refresh', 'migrate:reset', 'migrate:rollback',
+        'db:wipe', 'schema:dump',
+    ];
+
     /** Global console options that are noise in a web form. */
     private const HIDDEN_OPTIONS = [
         'help', 'quiet', 'verbose', 'version', 'ansi', 'no-ansi',
@@ -51,7 +63,7 @@ class ArtisanCommandService
             foreach ((array) ($group['commands'] ?? []) as $name => $settings) {
                 // A command removed from the app (or from a dropped package)
                 // is skipped rather than rendering a button that 500s.
-                if (! isset($registry[$name])) {
+                if (! isset($registry[$name]) || in_array($name, self::FORBIDDEN, true)) {
                     continue;
                 }
 
@@ -77,6 +89,12 @@ class ArtisanCommandService
      */
     public function find(string $name): ?array
     {
+        // Checked before the whitelist: this is the one gate both the
+        // controller and execute() share, so it is where "impossible" belongs.
+        if (in_array($name, self::FORBIDDEN, true)) {
+            return null;
+        }
+
         foreach ((array) config('artisan-commands.groups', []) as $group) {
             $settings = ($group['commands'] ?? [])[$name] ?? null;
 

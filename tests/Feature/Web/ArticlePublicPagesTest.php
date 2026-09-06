@@ -180,7 +180,12 @@ final class ArticlePublicPagesTest extends TestCase
 
     public function test_show_returns_200_with_title_and_author(): void
     {
-        $article = $this->makeArticle('shown-article', 'Shown Article Title');
+        // The related block is rendered only when there is something to put in
+        // it, so give the article a sibling — an empty "Related articles"
+        // heading over nothing would be worse than omitting the section.
+        $category = $this->makeCategory('shown-category', 'قسم المقال');
+        $article = $this->makeArticle('shown-article', 'Shown Article Title', ['category_id' => $category->id]);
+        $this->makeArticle('shown-sibling', 'Shown Sibling Article', ['category_id' => $category->id]);
 
         $response = $this->get(route('public.articles.show', 'shown-article'));
 
@@ -222,6 +227,8 @@ final class ArticlePublicPagesTest extends TestCase
     {
         $article = $this->makeArticle('counted-article', 'Counted Article');
 
+        // Rendering the page counts nothing: the reader posts a beacon on load,
+        // so a crawler that never runs JS cannot inflate the counter.
         $this->get(route('public.articles.show', 'counted-article'))->assertOk();
         $this->assertSame(0, (int) $article->fresh()->views, 'rendering alone must not count a view');
 

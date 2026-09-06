@@ -57,12 +57,41 @@ final class ArtisanCommandsSettingsTest extends TestCase
 
     public function test_a_command_outside_the_whitelist_is_rejected(): void
     {
+        // Deliberately an inert command: this posts a real name at a real
+        // endpoint, so a regression in the whitelist must not cost us the
+        // schema. `migrate:fresh` used to be the name here — it drops every
+        // table, and RefreshDatabase migrates once per process, so a single
+        // slip would have poisoned every test that ran after this one.
         $this->actingAs($this->createAdminUser())
-            ->postJson('/su/portal/v1/admin/settings/commands/run', ['command' => 'migrate:fresh'])
+            ->postJson('/su/portal/v1/admin/settings/commands/run', ['command' => 'route:list'])
             ->assertStatus(403)
             ->assertJsonPath('error.code', 'command_not_allowed');
 
         $this->assertDatabaseCount('command_runs', 0);
+    }
+
+    public function test_a_schema_destroying_command_cannot_be_whitelisted(): void
+    {
+        // The whitelist is a config file, so it is one careless line away from
+        // exposing a "wipe the database" button. Asserted against the service
+        // rather than over HTTP on purpose: if the guard ever breaks, this test
+        // fails instead of executing migrate:fresh against the test database.
+        config()->set('artisan-commands.groups.testing', [
+            'icon' => 'flask-conical',
+            'commands' => ['migrate:fresh' => [], 'db:wipe' => []],
+        ]);
+
+        $service = app(ArtisanCommandService::class);
+
+        foreach (['migrate:fresh', 'db:wipe'] as $command) {
+            $this->assertNull($service->find($command), "{$command} must never be runnable.");
+        }
+
+        $listed = collect($service->catalog())
+            ->flatMap(fn (array $group): array => array_column($group['commands'], 'name'))
+            ->all();
+
+        $this->assertEmpty(array_intersect($listed, ['migrate:fresh', 'db:wipe']));
     }
 
     public function test_a_missing_required_argument_is_rejected_before_execution(): void

@@ -597,18 +597,10 @@
                                             :class="darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-white text-gray-700 hover:bg-gray-100 shadow-sm'">
                                         <i data-lucide="type" class="w-3.5 h-3.5"></i>{{ __('articles.blocks.text') }}
                                     </button>
-                                    <button type="button" @click="openModuleSelector('verse', '{{ $locale }}')"
-                                            class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50">
-                                        <i data-lucide="book-open" class="w-3.5 h-3.5"></i>{{ __('articles.modules.quran') }}
-                                    </button>
-                                    <button type="button" @click="openModuleSelector('hadith', '{{ $locale }}')"
-                                            class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50">
-                                        <i data-lucide="quote" class="w-3.5 h-3.5"></i>{{ __('articles.modules.hadith') }}
-                                    </button>
-                                    <button type="button" @click="openModuleSelector('sahabi', '{{ $locale }}')"
-                                            class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50">
-                                        <i data-lucide="users" class="w-3.5 h-3.5"></i>{{ __('articles.modules.sahabah') }}
-                                    </button>
+                                    {{-- Quran, Hadith and Sahabi are inserted from inside the WYSIWYG
+                                         toolbar (.ql-module-btn--*), so they embed in the text where the
+                                         writer is typing. Standalone block buttons for them were a second,
+                                         duplicate insertion path and are gone. --}}
                                     <button type="button" @click="openModuleSelector('seerah', '{{ $locale }}')"
                                             class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50">
                                         <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>{{ __('articles.modules.seerah') }}

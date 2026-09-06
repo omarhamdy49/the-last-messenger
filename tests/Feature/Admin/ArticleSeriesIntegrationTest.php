@@ -47,13 +47,12 @@ class ArticleSeriesIntegrationTest extends TestCase
             'thumbnail' => UploadedFile::fake()->image('series-thumb.jpg', 800, 400),
         ];
 
-        // SeriesController::store redirects to the new series' show page (matching
-        // admin.media-programs.show), not the index. The assertion below was stale.
         $response = $this->post(route('admin.series.store'), $payload);
-        $series = Series::query()->where('slug', 'seerah-series')->firstOrFail();
-        $response->assertRedirect(route('admin.series.show', $series->id));
 
         $series = Series::query()->firstOrFail();
+
+        // Store lands on the new series, not back on the listing.
+        $response->assertRedirect(route('admin.series.show', $series->id));
 
         $this->assertSame('seerah-series', $series->slug);
         $this->assertSame('سلسلة السيرة', $series->getTranslation('title', 'ar'));

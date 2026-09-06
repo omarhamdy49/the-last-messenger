@@ -81,6 +81,9 @@ class MenuSeeder extends Seeder
         $navHadith = ['ar' => 'الحديث', 'en' => 'Hadith', 'fr' => 'Hadith', 'tr' => 'Hadis', 'ur' => 'حدیث'];
         $navMedia = ['ar' => 'المرئيات', 'en' => 'Videos', 'fr' => 'Vidéos', 'tr' => 'Videolar', 'ur' => 'ویڈیوز'];
         $navGenealogy = ['ar' => 'شجرة النسب', 'en' => 'Family Tree', 'fr' => 'Arbre Généalogique', 'tr' => 'Soy Ağacı', 'ur' => 'خاندانی درخت'];
+        // site.nav_topics — the /topics section had no header entry, so it was
+        // reachable only by typing the URL.
+        $navTopics = ['ar' => 'المواضيع', 'en' => 'Topics', 'fr' => 'Thèmes', 'tr' => 'Konular', 'ur' => 'موضوعات'];
 
         return [
             // Header nav — order and routes verbatim from header.blade.php $nav.
@@ -96,6 +99,7 @@ class MenuSeeder extends Seeder
                 ['route_name' => 'public.media', 'labels' => $navMedia],
                 ['route_name' => 'public.genealogy', 'labels' => $navGenealogy],
                 ['route_name' => 'public.quran', 'labels' => ['ar' => 'القرآن', 'en' => 'Quran', 'fr' => 'Coran', 'tr' => 'Kuran', 'ur' => 'قرآن']],
+                ['route_name' => 'public.topics', 'labels' => $navTopics],
             ],
 
             // Footer "Quick Links" column — verbatim from footer.blade.php.
