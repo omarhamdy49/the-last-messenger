@@ -404,7 +404,15 @@ const scheduleRenderIcons = () => {
 };
 const containsUnrenderedIcon = (node) => node.nodeType === 1
     && (node.matches?.('i[data-lucide]') || node.querySelector?.('i[data-lucide]'));
-new MutationObserver((mutations) => {
+
+// Debounce the observer callback to reduce processing frequency during rapid DOM updates
+let iconObserverTimer = null;
+let pendingMutations = [];
+
+const processPendingIconMutations = () => {
+    const mutations = pendingMutations;
+    pendingMutations = [];
+
     for (const mutation of mutations) {
         for (const added of mutation.addedNodes) {
             if (containsUnrenderedIcon(added)) {
@@ -413,4 +421,12 @@ new MutationObserver((mutations) => {
             }
         }
     }
-}).observe(document.documentElement, { childList: true, subtree: true });
+};
+
+const debouncedIconCheck = (mutations) => {
+    pendingMutations.push(...mutations);
+    clearTimeout(iconObserverTimer);
+    iconObserverTimer = setTimeout(processPendingIconMutations, 150);
+};
+
+new MutationObserver(debouncedIconCheck).observe(document.documentElement, { childList: true, subtree: true });
