@@ -4,6 +4,7 @@
  */
 
 import Alpine from 'alpinejs';
+import collapse from '@alpinejs/collapse';
 import { createIcons } from 'lucide';
 import Chart from 'chart.js/auto';
 
@@ -15,6 +16,7 @@ import './language-tabs.js';
 
 // Make Alpine and Chart available globally
 window.Alpine = Alpine;
+Alpine.plugin(collapse);
 window.Chart = Chart;
 
 // Initialize Lucide icons
