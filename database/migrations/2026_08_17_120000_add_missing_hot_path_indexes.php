@@ -66,8 +66,9 @@ return new class extends Migration
         }
 
         // Prefix index: `search_history.query` is a long free-text column, so index the
-        // leading 64 characters rather than the whole value.
-        if (Schema::hasTable('search_history')
+        // leading 64 characters rather than the whole value. (MySQL only - SQLite doesn't support prefix indexes)
+        if (Schema::getConnection()->getDriverName() === 'mysql'
+            && Schema::hasTable('search_history')
             && Schema::hasColumn('search_history', 'query')
             && ! $this->indexExists('search_history', 'search_history_query_prefix_index')) {
             Schema::getConnection()->statement(
@@ -75,7 +76,9 @@ return new class extends Migration
             );
         }
 
-        if (Schema::hasTable('quran_verse_tafsirs')
+        // Fulltext index is MySQL-specific - SQLite doesn't support it
+        if (Schema::getConnection()->getDriverName() === 'mysql'
+            && Schema::hasTable('quran_verse_tafsirs')
             && Schema::hasColumn('quran_verse_tafsirs', 'text')
             && ! $this->indexExists('quran_verse_tafsirs', 'quran_verse_tafsirs_text_fulltext')) {
             Schema::table('quran_verse_tafsirs', function (Blueprint $table): void {

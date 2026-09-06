@@ -209,6 +209,10 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
             ->get();
 
         DB::transaction(function () use ($programId, $orderedIds) {
+            if (count($orderedIds) === 0) {
+                return;
+            }
+
             // Phase 1: park current numbers out of range so the per-row unique
             // (program_id, season_number, episode_number) check can't collide
             // while rows are renumbered.
@@ -217,22 +221,47 @@ class MediaEpisodeRepository extends BaseRepository implements MediaEpisodeRepos
                 ->whereIn('id', $orderedIds)
                 ->increment('episode_number', 10000);
 
+            // Phase 2: CASE-based UPDATE — single query instead of N queries.
+            $cases = [];
+            $params = [];
             foreach ($orderedIds as $index => $episodeId) {
-                MediaEpisode::query()
-                    ->where('program_id', $programId)
-                    ->where('id', $episodeId)
-                    ->update(['episode_number' => $index + 1]);
+                $cases[] = 'WHEN id = ? THEN ?';
+                $params[] = $episodeId;
+                $params[] = $index + 1;
             }
+            $params[] = $programId;
+            $params = array_merge($params, $orderedIds);
+
+            $caseStatement = implode(' ', $cases);
+            $placeholders = implode(',', array_fill(0, count($orderedIds), '?'));
+
+            DB::update(
+                "UPDATE media_episodes
+                SET episode_number = CASE {$caseStatement} END
+                WHERE program_id = ? AND id IN ({$placeholders})",
+                $params
+            );
         });
 
         $this->clearCache();
         $this->clearCacheForProgram($programId);
-        foreach ($previousNumbers as $episode) {
-            $this->clearCacheForEpisodeNumber($programId, (int) $episode->season_number, (int) $episode->episode_number);
-        }
+
+        // Single loop to clear both old and new cache keys
         foreach ($orderedIds as $index => $episodeId) {
-            $season = (int) ($previousNumbers->firstWhere('id', $episodeId)?->season_number ?? 1);
-            $this->clearCacheForEpisodeNumber($programId, $season, $index + 1);
+            $episode = $previousNumbers->firstWhere('id', $episodeId);
+            if ($episode !== null) {
+                $season = (int) $episode->season_number;
+                $oldNumber = (int) $episode->episode_number;
+                $newNumber = $index + 1;
+
+                // Clear old cache key (before reordering)
+                $this->clearCacheForEpisodeNumber($programId, $season, $oldNumber);
+
+                // Clear new cache key (after reordering) if different
+                if ($oldNumber !== $newNumber) {
+                    $this->clearCacheForEpisodeNumber($programId, $season, $newNumber);
+                }
+            }
         }
     }
 

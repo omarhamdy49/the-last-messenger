@@ -182,6 +182,7 @@ class UpdateArticleAction
 
         $keptMediaIds = array_column($data->galleryFiles, 'media_id');
         $existing = $article->gallery()->get();
+        $deletedMediaIds = [];
 
         foreach ($existing as $item) {
             if ($item->media_id !== null && in_array($item->media_id, $keptMediaIds, true)) {
@@ -192,10 +193,13 @@ class UpdateArticleAction
                 Storage::disk('public')->delete($item->image);
             }
 
+            $deletedMediaIds[] = $item->media_id;
             $item->delete();
         }
 
-        $existingByMediaId = $article->gallery()->get()->keyBy('media_id');
+        $existingByMediaId = $existing
+            ->reject(fn ($item) => in_array($item->media_id, $deletedMediaIds, true))
+            ->keyBy('media_id');
 
         foreach ($data->galleryFiles as $order => $entry) {
             $current = $existingByMediaId->get($entry['media_id']);
