@@ -231,29 +231,6 @@ if (! function_exists('format_file_size')) {
     }
 }
 
-if (! function_exists('arabic_ordinal')) {
-    /**
-     * Convert number to Arabic ordinal (e.g., 1 => الأول)
-     */
-    function arabic_ordinal(int $number): string
-    {
-        $ordinals = [
-            1 => 'الأول',
-            2 => 'الثاني',
-            3 => 'الثالث',
-            4 => 'الرابع',
-            5 => 'الخامس',
-            6 => 'السادس',
-            7 => 'السابع',
-            8 => 'الثامن',
-            9 => 'التاسع',
-            10 => 'العاشر',
-        ];
-
-        return $ordinals[$number] ?? $number.'';
-    }
-}
-
 if (! function_exists('get_locale_name')) {
     /**
      * Get localized name of a language
