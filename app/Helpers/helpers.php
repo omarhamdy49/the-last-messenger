@@ -34,33 +34,6 @@ if (! function_exists('format_arabic_date')) {
     }
 }
 
-if (! function_exists('format_relative_arabic_date')) {
-    /**
-     * Format date as relative time in Arabic (e.g., "منذ 5 دقائق")
-     *
-     * @param  string|Carbon|null  $date
-     */
-    function format_relative_arabic_date($date): string
-    {
-        if (empty($date)) {
-            return '';
-        }
-
-        if (! $date instanceof Carbon) {
-            $date = Carbon::parse($date);
-        }
-
-        $originalLocale = Carbon::getLocale();
-        Carbon::setLocale('ar');
-
-        $relativeDate = $date->diffForHumans();
-
-        Carbon::setLocale($originalLocale);
-
-        return $relativeDate;
-    }
-}
-
 if (! function_exists('convert_to_arabic_numerals')) {
     /**
      * Convert Western numerals (0-9) to Arabic/Hindi numerals (٠-٩)
