@@ -97,7 +97,7 @@ class ModuleEmbed extends BlockEmbed {
     }
 
     static value(node) {
-        return Object.entries(EMBED_ATTRIBUTES).reduce((carry, [key, attribute]) => {
+        const value = Object.entries(EMBED_ATTRIBUTES).reduce((carry, [key, attribute]) => {
             const attributeValue = node.getAttribute(attribute);
 
             if (attributeValue !== null) {
@@ -106,6 +106,31 @@ class ModuleEmbed extends BlockEmbed {
 
             return carry;
         }, {});
+
+        return { ...ModuleEmbed.valueFromMarkup(node), ...value };
+    }
+
+    /**
+     * Recover the payload from the rendered card when the data-* attributes are missing.
+     *
+     * Content saved before the sanitiser allowed the full payload kept only data-module and
+     * data-id — everything else was purified away. Rebuilding from attributes alone would
+     * then produce an empty card and the next save would persist it, which is exactly how
+     * ten verse cards were lost. The visible text is still in the children, so read it back.
+     * Attributes win wherever they exist; this only fills the holes.
+     */
+    static valueFromMarkup(node) {
+        const text = (selector) => node.querySelector(selector)?.textContent?.trim() || undefined;
+        const link = node.querySelector('.module-embed__footer a');
+
+        return {
+            label: text('.module-embed__label'),
+            text: text('.module-embed__body'),
+            href: link?.getAttribute('href') || undefined,
+            linkLabel: link?.textContent?.trim() || undefined,
+            reference: text('.module-embed__source'),
+            dir: node.getAttribute('dir') || undefined,
+        };
     }
 }
 

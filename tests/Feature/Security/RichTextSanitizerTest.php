@@ -102,6 +102,52 @@ class RichTextSanitizerTest extends TestCase
         $this->assertStringContainsString('data-id="262"', $out);
     }
 
+    /**
+     * The WHOLE payload, not just module + id.
+     *
+     * The editor rebuilds a card from these attributes alone and discards the rendered
+     * children, so an attribute stripped here is content the next save writes back as an
+     * empty card. Only data-module and data-id were allowed, which is how ten verse cards
+     * were blanked by an editor who did nothing but open an event and press save.
+     */
+    public function test_module_embed_payload_attributes_survive(): void
+    {
+        $out = (string) $this->sanitizer()->clean(
+            '<div class="module-embed module-embed--verse" data-module="verse" data-id="262"'
+            .' data-label="سورة البقرة" data-text="اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ"'
+            .' data-href="https://example.test/quran/2" data-link-label="البقرة ٢٥٥"'
+            .' data-reference="البقرة: ٢٥٥" data-dir="rtl" dir="rtl">'
+            .'<span class="module-embed__label">سورة البقرة</span></div>'
+        );
+
+        foreach ([
+            'data-module="verse"',
+            'data-id="262"',
+            'data-label="سورة البقرة"',
+            'data-text="اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ"',
+            'data-href="https://example.test/quran/2"',
+            'data-link-label="البقرة ٢٥٥"',
+            'data-reference="البقرة: ٢٥٥"',
+            'data-dir="rtl"',
+        ] as $attribute) {
+            $this->assertStringContainsString($attribute, $out, "embed payload lost {$attribute}");
+        }
+    }
+
+    /**
+     * data-href is written straight into <a href> when the card is rebuilt, so it is a link
+     * and gets a link's scheme restrictions — allowing the attribute must not open a hole.
+     */
+    public function test_module_embed_href_is_scheme_restricted(): void
+    {
+        $out = (string) $this->sanitizer()->clean(
+            '<div class="module-embed" data-module="verse" data-id="1"'
+            .' data-href="javascript:alert(document.cookie)">x</div>'
+        );
+
+        $this->assertStringNotContainsString('javascript:', $out);
+    }
+
     public function test_plain_text_passes_through_unharmed(): void
     {
         // YouTube descriptions are plain text, and they land in the same columns.

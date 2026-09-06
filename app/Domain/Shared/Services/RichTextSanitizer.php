@@ -24,8 +24,10 @@ use HTMLPurifier_Config;
  *   - Lists:  ol, ul, li (+ data-list="ordered|bullet" — Quill 2 encodes the list style on
  *             <li>, so it must survive sanitisation to round-trip)
  *   - Links:  a[href] restricted to http / https / mailto
- *   - Embeds: div[class|data-module|data-id|dir] + span/cite class, so the moduleEmbed
- *             cards (verse / hadith / seerah) survive round-trips
+ *   - Embeds: div[class|dir] plus the full moduleEmbed payload (data-module, data-id,
+ *             data-label, data-text, data-href, data-link-label, data-reference, data-dir)
+ *             + span/cite class, so the moduleEmbed cards (verse / hadith / seerah) survive
+ *             round-trips. The payload is the card — see the note in purifier().
  */
 final class RichTextSanitizer
 {
@@ -74,11 +76,12 @@ final class RichTextSanitizer
         $config->set(
             'HTML.Allowed',
             'p,br,blockquote,h2,h3,h4,strong,b,em,i,u,s,a[href|target|rel],ol,ul,li[data-list],'
-            .'div[class|data-module|data-id|dir],span[class],cite[class]'
+            .'div[class|data-module|data-id|data-label|data-text|data-href|data-link-label'
+            .'|data-reference|data-dir|dir],span[class],cite[class]'
         );
         $config->set('URI.AllowedSchemes', ['http' => true, 'https' => true, 'mailto' => true]);
         $config->set('HTML.DefinitionID', 'admin-content-rich-text');
-        $config->set('HTML.DefinitionRev', 2);
+        $config->set('HTML.DefinitionRev', 3);
 
         $definition = $config->maybeGetRawHTMLDefinition();
 
@@ -95,11 +98,24 @@ final class RichTextSanitizer
             $definition->addAttribute('li', 'data-list', 'Enum#ordered,bullet');
 
             // Cross-module embeds (Quran verse / hadith / seerah event) are emitted by the
-            // moduleEmbed blot as <div class="module-embed" data-module data-id>. Without
-            // these surviving purification the card is stripped back to bare text and the
-            // citation link to the source is lost.
+            // moduleEmbed blot as <div class="module-embed"> carrying its whole payload in
+            // data-* attributes. Every one of them has to survive here — not just
+            // module/id. The editor rebuilds a card purely from these
+            // attributes (ModuleEmbed.value() in resources/js/admin/rich-text.js) and throws
+            // the rendered children away, so every attribute stripped here is content the
+            // next save writes back as an empty card. Keeping only data-module + data-id is
+            // what blanked ten verse cards: the label, the text and the citation link all
+            // died on the way in, and the editor faithfully persisted the husk.
             $definition->addAttribute('div', 'data-module', 'Enum#verse,hadith,sahabi,seerah');
             $definition->addAttribute('div', 'data-id', 'Text');
+            $definition->addAttribute('div', 'data-label', 'Text');
+            $definition->addAttribute('div', 'data-text', 'Text');
+            // 'URI', not 'Text': this is written straight into <a href> when the card is
+            // rebuilt, so it goes through URI.AllowedSchemes like any other link.
+            $definition->addAttribute('div', 'data-href', 'URI');
+            $definition->addAttribute('div', 'data-link-label', 'Text');
+            $definition->addAttribute('div', 'data-reference', 'Text');
+            $definition->addAttribute('div', 'data-dir', 'Enum#rtl,ltr');
         }
 
         self::$purifier = new HTMLPurifier($config);
