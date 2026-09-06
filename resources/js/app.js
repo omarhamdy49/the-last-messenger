@@ -434,10 +434,20 @@ const debouncedIconCheck = (mutations) => {
    document.documentElement for backward compatibility. */
 const iconObservers = [];
 
-const setupIconObservers = () => {
-    // Clean up any existing observers first
+const cleanupIconObservers = () => {
+    // Disconnect all active observers
     iconObservers.forEach(obs => obs.disconnect());
     iconObservers.length = 0;
+
+    // Clear any pending timers and mutations
+    clearTimeout(iconObserverTimer);
+    iconObserverTimer = null;
+    pendingMutations.length = 0;
+};
+
+const setupIconObservers = () => {
+    // Clean up any existing observers first
+    cleanupIconObservers();
 
     // Look for scoped containers with data-icon-container attribute
     const containers = document.querySelectorAll('[data-icon-container]');
@@ -464,6 +474,11 @@ if (document.readyState === 'loading') {
     setupIconObservers();
 }
 
+// Clean up observers when the page is being unloaded to prevent memory leaks
+// during SPA-style navigation or tab closure
+window.addEventListener('pagehide', cleanupIconObservers);
+
 // Export for potential cleanup or re-initialization
 window.iconObservers = iconObservers;
 window.setupIconObservers = setupIconObservers;
+window.cleanupIconObservers = cleanupIconObservers;
