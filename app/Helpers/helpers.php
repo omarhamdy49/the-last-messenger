@@ -138,23 +138,6 @@ if (! function_exists('hijri_date')) {
     }
 }
 
-if (! function_exists('localized_route')) {
-    /**
-     * Generate localized route URL
-     *
-     * @param  string  $name  Route name
-     * @param  array  $parameters  Route parameters
-     * @param  string|null  $locale  Locale code
-     */
-    function localized_route(string $name, array $parameters = [], ?string $locale = null): string
-    {
-        $locale = $locale ?? app()->getLocale();
-        $parameters['locale'] = $locale;
-
-        return route($name, $parameters);
-    }
-}
-
 if (! function_exists('trans_fallback')) {
     /**
      * Get translation with fallback to English if not found
