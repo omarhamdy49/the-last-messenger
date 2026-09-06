@@ -404,7 +404,15 @@ const scheduleRenderIcons = () => {
 };
 const containsUnrenderedIcon = (node) => node.nodeType === 1
     && (node.matches?.('i[data-lucide]') || node.querySelector?.('i[data-lucide]'));
-new MutationObserver((mutations) => {
+
+// Debounce the observer callback to reduce processing frequency during rapid DOM updates
+let iconObserverTimer = null;
+let pendingMutations = [];
+
+const processPendingIconMutations = () => {
+    const mutations = pendingMutations;
+    pendingMutations = [];
+
     for (const mutation of mutations) {
         for (const added of mutation.addedNodes) {
             if (containsUnrenderedIcon(added)) {
@@ -413,4 +421,64 @@ new MutationObserver((mutations) => {
             }
         }
     }
-}).observe(document.documentElement, { childList: true, subtree: true });
+};
+
+const debouncedIconCheck = (mutations) => {
+    pendingMutations.push(...mutations);
+    clearTimeout(iconObserverTimer);
+    iconObserverTimer = setTimeout(processPendingIconMutations, 150);
+};
+
+/* Set up observers for icon containers. Supports scoped observation via
+   data-icon-container attribute for better performance, with fallback to
+   document.documentElement for backward compatibility. */
+const iconObservers = [];
+
+const cleanupIconObservers = () => {
+    // Disconnect all active observers
+    iconObservers.forEach(obs => obs.disconnect());
+    iconObservers.length = 0;
+
+    // Clear any pending timers and mutations
+    clearTimeout(iconObserverTimer);
+    iconObserverTimer = null;
+    pendingMutations.length = 0;
+};
+
+const setupIconObservers = () => {
+    // Clean up any existing observers first
+    cleanupIconObservers();
+
+    // Look for scoped containers with data-icon-container attribute
+    const containers = document.querySelectorAll('[data-icon-container]');
+
+    if (containers.length > 0) {
+        // Observe each scoped container
+        containers.forEach(container => {
+            const observer = new MutationObserver(debouncedIconCheck);
+            observer.observe(container, { childList: true, subtree: true });
+            iconObservers.push(observer);
+        });
+    } else {
+        // Fallback to document-wide observation (backward compatible)
+        const observer = new MutationObserver(debouncedIconCheck);
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+        iconObservers.push(observer);
+    }
+};
+
+// Initialize observers after DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupIconObservers);
+} else {
+    setupIconObservers();
+}
+
+// Clean up observers when the page is being unloaded to prevent memory leaks
+// during SPA-style navigation or tab closure
+window.addEventListener('pagehide', cleanupIconObservers);
+
+// Export for potential cleanup or re-initialization
+window.iconObservers = iconObservers;
+window.setupIconObservers = setupIconObservers;
+window.cleanupIconObservers = cleanupIconObservers;
