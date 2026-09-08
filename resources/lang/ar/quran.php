@@ -413,6 +413,8 @@ return [
         'close' => 'إغلاق',
         'next_surah' => 'السورة التالية',
         'previous_surah' => 'السورة السابقة',
+        'next_track' => 'المقطع التالي',
+        'previous_track' => 'المقطع السابق',
         'suggest_loading' => 'جارٍ البحث…',
         'suggest_empty' => 'لا توجد سورة أو آية مطابقة',
         'suggest_error' => 'تعذّر تحميل الاقتراحات — اضغط لإعادة المحاولة',

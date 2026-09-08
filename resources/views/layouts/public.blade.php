@@ -166,7 +166,7 @@
          Pages that declare @section('hide_player') (e.g. the Ask-Quran chat shell) suppress it. --}}
     @hasSection('hide_player')
     @else
-        @include('components.site.audio-player')
+        <x-audio-player />
     @endif
 
     @stack('scripts')

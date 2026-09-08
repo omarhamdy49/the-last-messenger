@@ -210,7 +210,7 @@
     <x-admin.confirm-modal />
 
     {{-- Global audio player (persists across admin pages) --}}
-    <x-admin.audio-player />
+    <x-audio-player />
 
     <!-- Initialize Lucide Icons -->
     <script>

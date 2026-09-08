@@ -184,6 +184,8 @@ return [
         'close' => 'Close',
         'next_surah' => 'Next surah',
         'previous_surah' => 'Previous surah',
+        'next_track' => 'Next track',
+        'previous_track' => 'Previous track',
         'suggest_loading' => 'Searching…',
         'suggest_empty' => 'No matching surah or verse',
         'suggest_error' => 'Could not load suggestions — tap to retry',

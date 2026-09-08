@@ -1,27 +1,43 @@
 {{--
-    Shared public audio player — a persistent bottom bar driven by the global
-    `audioPlayer` Alpine store. The Quran reader's floating-rail Play button and
-    per-verse play buttons both route through this one surface (no second player).
+    THE audio player. One component, one `audioPlayer` Alpine store, included by
+    both layouts (public + admin) — there is no second player and no second
+    <audio> element anywhere in the app.
 
-    Extends the admin player pattern with reciter switching: a surah page calls
-    $store.audioPlayer.configure({reciters, reciterId, surah, urlBase}); the bar
-    then exposes a reciter picker that re-resolves the audio URL and resumes from
-    the same time, plus surah-to-surah transport that navigates the page itself.
+    Three levels of context, from least to most:
+      • play({url,title,subtitle})            — one track, no prev/next
+      • setPlaylist(tracks, startIndex)       — ordered list; prev/next walk it
+                                                in-page and tracks roll on
+      • configure({reciters,reciterId,surah,urlBase})
+                                              — the Quran surah reader: prev/next
+                                                navigate to the neighbouring
+                                                surah's PAGE, plus reciter picker
+                                                and per-verse follow-along
+    Prev/next resolve in that order (surah wins), and hide when neither applies —
+    no dead controls.
 
     Layout is two rows: the transport/options row over a full-width scrub bar. The
     transport cluster and the scrub bar are forced dir="ltr" so ⏮/⏭ and the
     progress fill keep their universal meaning on RTL pages.
 
-    Theme follows the public `$store.theme.dark`. Hidden until a track is loaded.
+    Theme is plain Tailwind `dark:`. Both layouts put `dark` on <html> (via
+    applyDarkMode() in partials/theme-preference), so the bar must NOT reach for
+    either layout's private state ($store.theme on public, x-data darkMode on
+    admin) — that is what forked this component in two in the first place.
+
+    Hidden until a track is loaded.
 --}}
 @php
-    $iconBtn = 'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors disabled:opacity-25 disabled:pointer-events-none';
-    $iconBtnTheme = "\$store.theme.dark ? 'text-gray-300 hover:bg-gray-800 hover:text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'";
+    // bg-[#ffffff], not bg-white: app.css carries an unlayered
+    // `.dark .bg-white { ... !important }` that would beat `dark:bg-gray-900`
+    // and repaint the bar navy on public pages only.
+    $surface = 'bg-[#ffffff] dark:bg-gray-900';
+    $iconBtnBase = 'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors disabled:opacity-25 disabled:pointer-events-none';
+    $iconBtnTheme = 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white';
+    $iconBtn = $iconBtnBase.' '.$iconBtnTheme;
 @endphp
 <div x-data x-show="$store.audioPlayer.track" x-cloak
      x-effect="document.body.classList.toggle('site-has-audio', !!$store.audioPlayer.track)"
-     class="fixed bottom-0 inset-x-0 z-50 border-t shadow-2xl"
-     :class="$store.theme.dark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'"
+     class="fixed bottom-0 inset-x-0 z-50 border-t shadow-2xl {{ $surface }} border-gray-200 dark:border-gray-800"
      role="region" aria-label="{{ __('quran.public.listen') }}">
     <div class="mx-auto max-w-5xl px-3 sm:px-4 py-2">
 
@@ -33,24 +49,25 @@
                     <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M18 3a1 1 0 00-1.196-.98l-8 1.6A1 1 0 008 4.6v7.114A3.5 3.5 0 1010 14.5V8.82l6-1.2v3.894A3.5 3.5 0 1018 14V3z"/></svg>
                 </div>
                 <div class="min-w-0">
-                    <p class="text-sm font-semibold truncate font-['Amiri']" :class="$store.theme.dark ? 'text-white' : 'text-gray-900'" x-text="$store.audioPlayer.track?.title"></p>
-                    <p class="text-[11px] truncate" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'" x-text="$store.audioPlayer.track?.subtitle"></p>
+                    <p class="text-sm font-semibold truncate font-['Amiri'] text-gray-900 dark:text-white" x-text="$store.audioPlayer.track?.title"></p>
+                    <p class="text-[11px] truncate text-gray-500 dark:text-gray-400" x-text="$store.audioPlayer.track?.subtitle"></p>
                 </div>
             </div>
 
             {{-- Transport --}}
             <div class="flex items-center gap-0.5 sm:gap-1 flex-shrink-0" dir="ltr">
-                {{-- Previous surah: loads that surah's page and keeps playing --}}
-                <button x-show="$store.audioPlayer.hasSurahNav()"
-                        @click="$store.audioPlayer.gotoSurah(-1)"
-                        :disabled="$store.audioPlayer.surahMeta?.number <= 1"
-                        class="{{ $iconBtn }}" :class="{{ $iconBtnTheme }}"
-                        title="{{ __('quran.public.previous_surah') }}" aria-label="{{ __('quran.public.previous_surah') }}">
+                {{-- Previous: the previous surah's page, or the previous playlist track --}}
+                <button x-show="$store.audioPlayer.hasStepNav()"
+                        @click="$store.audioPlayer.step(-1)"
+                        :disabled="!$store.audioPlayer.canStep(-1)"
+                        class="{{ $iconBtn }}"
+                        :title="$store.audioPlayer.hasSurahNav() ? '{{ __('quran.public.previous_surah') }}' : '{{ __('quran.public.previous_track') }}'"
+                        :aria-label="$store.audioPlayer.hasSurahNav() ? '{{ __('quran.public.previous_surah') }}' : '{{ __('quran.public.previous_track') }}'">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M7 5h2v14H7zM19 5v14l-9.5-7z"/></svg>
                 </button>
 
                 {{-- Back 5s --}}
-                <button @click="$store.audioPlayer.nudge(-5)" class="{{ $iconBtn }}" :class="{{ $iconBtnTheme }}"
+                <button @click="$store.audioPlayer.nudge(-5)" class="{{ $iconBtn }}"
                         title="{{ __('quran.public.rewind_5') }} (←)" aria-label="{{ __('quran.public.rewind_5') }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
                         <path stroke-linecap="round" d="M4 12a8 8 0 1 0 8-8"/>
@@ -68,7 +85,7 @@
                 </button>
 
                 {{-- Forward 5s --}}
-                <button @click="$store.audioPlayer.nudge(5)" class="{{ $iconBtn }}" :class="{{ $iconBtnTheme }}"
+                <button @click="$store.audioPlayer.nudge(5)" class="{{ $iconBtn }}"
                         title="{{ __('quran.public.forward_5') }} (→)" aria-label="{{ __('quran.public.forward_5') }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
                         <path stroke-linecap="round" d="M20 12a8 8 0 1 1-8-8"/>
@@ -77,19 +94,20 @@
                     </svg>
                 </button>
 
-                {{-- Next surah --}}
-                <button x-show="$store.audioPlayer.hasSurahNav()"
-                        @click="$store.audioPlayer.gotoSurah(1)"
-                        :disabled="$store.audioPlayer.surahMeta?.number >= 114"
-                        class="{{ $iconBtn }}" :class="{{ $iconBtnTheme }}"
-                        title="{{ __('quran.public.next_surah') }}" aria-label="{{ __('quran.public.next_surah') }}">
+                {{-- Next --}}
+                <button x-show="$store.audioPlayer.hasStepNav()"
+                        @click="$store.audioPlayer.step(1)"
+                        :disabled="!$store.audioPlayer.canStep(1)"
+                        class="{{ $iconBtn }}"
+                        :title="$store.audioPlayer.hasSurahNav() ? '{{ __('quran.public.next_surah') }}' : '{{ __('quran.public.next_track') }}'"
+                        :aria-label="$store.audioPlayer.hasSurahNav() ? '{{ __('quran.public.next_surah') }}' : '{{ __('quran.public.next_track') }}'">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M15 5h2v14h-2zM5 5v14l9.5-7z"/></svg>
                 </button>
 
-                <span class="w-px h-5 mx-0.5 sm:mx-1 flex-shrink-0" :class="$store.theme.dark ? 'bg-gray-700' : 'bg-gray-200'" aria-hidden="true"></span>
+                <span class="w-px h-5 mx-0.5 sm:mx-1 flex-shrink-0 bg-gray-200 dark:bg-gray-700" aria-hidden="true"></span>
 
                 {{-- Play from the beginning --}}
-                <button @click="$store.audioPlayer.restart()" class="{{ $iconBtn }}" :class="{{ $iconBtnTheme }}"
+                <button @click="$store.audioPlayer.restart()" class="{{ $iconBtn }}"
                         title="{{ __('quran.public.play_from_start') }}" aria-label="{{ __('quran.public.play_from_start') }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
                         <path stroke-linecap="round" d="M4 12a8 8 0 1 0 8-8"/>
@@ -111,23 +129,23 @@
                      start side is the facing one in both LTR and RTL. --}}
                 <button x-show="$store.audioPlayer.surahMeta && $store.audioPlayer.currentReciter()?.everyayah_folder"
                         @click="$store.audioPlayer.toggleFollow()"
-                        class="{{ $iconBtn }} ms-2 sm:ms-3"
+                        class="{{ $iconBtnBase }} ms-2 sm:ms-3"
                         :class="$store.audioPlayer.follow
                             ? 'text-white bg-gradient-to-r from-[#0056b3] to-[#218838]'
-                            : ({{ $iconBtnTheme }})"
+                            : '{{ $iconBtnTheme }}'"
                         :aria-pressed="$store.audioPlayer.follow"
                         title="{{ __('quran.public.follow_verses') }}" aria-label="{{ __('quran.public.follow_verses') }}">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h9M4 12h9M4 18h6"/><circle cx="18" cy="16" r="3.2"/><path stroke-linecap="round" d="m20.4 18.4 1.6 1.6"/></svg>
                 </button>
 
-                <button @click="$store.audioPlayer.cycleSpeed()" class="px-2 h-8 rounded-lg text-xs font-bold tabular-nums transition-colors flex-shrink-0"
-                        :class="$store.theme.dark ? 'text-gray-300 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100'"
+                <button @click="$store.audioPlayer.cycleSpeed()"
+                        class="px-2 h-8 rounded-lg text-xs font-bold tabular-nums transition-colors flex-shrink-0 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                         x-text="$store.audioPlayer.rate + '×'" title="{{ __('quran.public.playback_speed') }}"
                         aria-label="{{ __('quran.public.playback_speed') }}">1×</button>
 
                 {{-- Volume: phones have hardware keys, so the slider is desktop-only --}}
                 <div class="hidden md:flex items-center gap-1.5 flex-shrink-0">
-                    <button @click="$store.audioPlayer.toggleMute()" class="{{ $iconBtn }}" :class="{{ $iconBtnTheme }}"
+                    <button @click="$store.audioPlayer.toggleMute()" class="{{ $iconBtn }}"
                             :title="$store.audioPlayer.volume > 0 ? '{{ __('quran.public.mute') }}' : '{{ __('quran.public.unmute') }}'"
                             :aria-label="$store.audioPlayer.volume > 0 ? '{{ __('quran.public.mute') }}' : '{{ __('quran.public.unmute') }}'">
                         <svg x-show="$store.audioPlayer.volume > 0" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5 6 9H3v6h3l5 4V5z"/><path stroke-linecap="round" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
@@ -141,21 +159,19 @@
                 {{-- Reciter picker (only when reciters are configured) --}}
                 <div class="relative flex-shrink-0" x-show="$store.audioPlayer.reciters.length > 0" @click.outside="$store.audioPlayer.reciterOpen = false">
                     <button @click="$store.audioPlayer.reciterOpen = !$store.audioPlayer.reciterOpen"
-                            class="flex items-center gap-1.5 px-2 sm:px-2.5 h-8 rounded-lg text-xs font-semibold transition-colors max-w-[8rem] sm:max-w-[10rem]"
-                            :class="$store.theme.dark ? 'text-gray-200 hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-100'"
+                            class="flex items-center gap-1.5 px-2 sm:px-2.5 h-8 rounded-lg text-xs font-semibold transition-colors max-w-[8rem] sm:max-w-[10rem] text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
                             title="{{ __('quran.public.choose_reciter') }}" aria-haspopup="listbox" :aria-expanded="$store.audioPlayer.reciterOpen">
                         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14a4 4 0 004-4V6a4 4 0 10-8 0v4a4 4 0 004 4zm6-4a6 6 0 01-12 0m6 6v3"/></svg>
                         <span class="truncate hidden sm:inline" x-text="$store.audioPlayer.reciterName()"></span>
                     </button>
                     <div x-show="$store.audioPlayer.reciterOpen" x-cloak x-transition.opacity
-                         class="absolute bottom-full end-0 mb-2 w-56 max-h-72 overflow-y-auto rounded-xl border shadow-2xl py-1"
-                         :class="$store.theme.dark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'" role="listbox">
+                         class="absolute bottom-full end-0 mb-2 w-56 max-h-72 overflow-y-auto rounded-xl border shadow-2xl py-1 {{ $surface }} border-gray-200 dark:border-gray-700" role="listbox">
                         <template x-for="r in $store.audioPlayer.reciters" :key="r.id">
                             <button @click="$store.audioPlayer.selectReciter(r.id)" role="option"
                                     class="w-full text-start px-3 py-2 text-sm transition-colors flex items-center justify-between gap-2"
                                     :class="r.id === $store.audioPlayer.reciterId
                                         ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white'
-                                        : ($store.theme.dark ? 'text-gray-200 hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-100')">
+                                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800'">
                                 <span class="truncate font-['Amiri']" x-text="r.nameAr || r.nameEn"></span>
                                 <svg x-show="r.id === $store.audioPlayer.reciterId" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                             </button>
@@ -163,7 +179,7 @@
                     </div>
                 </div>
 
-                <button @click="$store.audioPlayer.close()" class="{{ $iconBtn }}" :class="{{ $iconBtnTheme }}"
+                <button @click="$store.audioPlayer.close()" class="{{ $iconBtn }}"
                         aria-label="{{ __('quran.public.close_player') }}" title="{{ __('quran.public.close_player') }}">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
@@ -171,8 +187,7 @@
         </div>
         {{-- Scrub bar (under the transport): click, drag or arrow-key. Own row so it stays grabbable on phones. --}}
         <div class="mt-1 flex items-center gap-2" dir="ltr">
-            <span class="text-[11px] tabular-nums w-10 text-right flex-shrink-0"
-                  :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'"
+            <span class="text-[11px] tabular-nums w-10 text-right flex-shrink-0 text-gray-500 dark:text-gray-400"
                   x-text="$store.audioPlayer.fmt($store.audioPlayer.currentTime)">0:00</span>
 
             <div class="group flex-1 py-1.5 cursor-pointer touch-none focus:outline-none"
@@ -182,8 +197,7 @@
                  tabindex="0" role="slider"
                  :aria-valuenow="Math.round($store.audioPlayer.progress)" aria-valuemin="0" aria-valuemax="100"
                  aria-label="{{ __('quran.public.seek') }}">
-                <div class="h-1.5 rounded-full transition-[height] group-hover:h-2 group-focus:h-2"
-                     :class="$store.theme.dark ? 'bg-gray-700' : 'bg-gray-200'">
+                <div class="h-1.5 rounded-full transition-[height] group-hover:h-2 group-focus:h-2 bg-gray-200 dark:bg-gray-700">
                     <div class="relative h-full rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838]"
                          :style="`width: ${$store.audioPlayer.progress}%`">
                         <span class="absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow ring-1 ring-black/10 opacity-0 transition-opacity group-hover:opacity-100 group-focus:opacity-100"></span>
@@ -191,8 +205,7 @@
                 </div>
             </div>
 
-            <span class="text-[11px] tabular-nums w-10 flex-shrink-0"
-                  :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'"
+            <span class="text-[11px] tabular-nums w-10 flex-shrink-0 text-gray-500 dark:text-gray-400"
                   x-text="$store.audioPlayer.fmt($store.audioPlayer.duration)">0:00</span>
         </div>
 
@@ -201,6 +214,10 @@
 
 <script>
     document.addEventListener('alpine:init', () => {
+        // Guard: the component is included by both layouts, and a page that
+        // somehow renders both must still end up with exactly one store.
+        if (Alpine.store('audioPlayer')) { return; }
+
         Alpine.store('audioPlayer', {
             track: null,            // { url, title, subtitle }
             audio: null,
@@ -211,6 +228,11 @@
             volume: parseFloat(localStorage.getItem('sitePlayerVolume') ?? '1'),
             _lastVolume: 1,         // restored by unmute
             _saveTimer: null,
+
+            // Playlist context: an ordered [{url,title,subtitle}] the transport
+            // walks in place. Null = single-track or surah context.
+            playlist: null,
+            playlistIndex: 0,
 
             // Reciter switching (configured per surah page)
             reciters: [],           // [{ id, nameAr, nameEn, surahAudioUrl, everyayah_folder }]
@@ -268,10 +290,35 @@
                 this.surahUrlBase = urlBase || null;
                 // A queue belongs to the surah that built it.
                 this.queue = null; this.queueIndex = 0; this._preload = null;
+                this.playlist = null; this.playlistIndex = 0;
                 const stored = parseInt(localStorage.getItem('siteReciterId') ?? '', 10);
                 const valid = (id) => this.reciters.some((r) => r.id === id);
                 this.reciterId = valid(stored) ? stored
                     : (valid(reciterId) ? reciterId : (this.reciters[0]?.id ?? null));
+            },
+
+            // Load an ordered list and start at startIndex. Re-selecting the track
+            // that is already loaded toggles it, same as play(). Mutually exclusive
+            // with the surah context: whichever was configured last owns prev/next.
+            setPlaylist(tracks, startIndex = 0) {
+                const list = (Array.isArray(tracks) ? tracks : []).filter((t) => t?.url);
+                if (!list.length) { return; }
+                this.playlist = list;
+                this.playlistIndex = Math.max(0, Math.min(startIndex, list.length - 1));
+                this.surahMeta = null; this.surahUrlBase = null;
+                this.queue = null; this.queueIndex = 0; this._preload = null;
+                if (this.track?.url === list[this.playlistIndex].url) { this.toggle(); return; }
+                this._playListed(true);
+            },
+
+            _playListed(autoplay) {
+                const t = this.playlist[this.playlistIndex];
+                this._teardown();
+                this.track = { url: t.url, title: t.title || '', subtitle: t.subtitle || '' };
+                this.currentTime = 0; this.duration = 0;
+                this._ensureAudio();
+                this._persist();
+                if (autoplay) { this.audio.play().catch(() => {}); }
             },
 
             currentReciter() { return this.reciters.find((r) => r.id === this.reciterId) || null; },
@@ -471,9 +518,11 @@
                 this._playWhole(url, () => resumeAt, wasPlaying);
             },
 
-            // Play a track ({url,title,subtitle}); re-clicking the same url toggles.
+            // Play a standalone track ({url,title,subtitle}); re-clicking the same
+            // url toggles. Drops any playlist — a bare track is not part of a list.
             play(trackData) {
                 if (this.track && this.track.url === trackData.url) { this.toggle(); return; }
+                this.playlist = null; this.playlistIndex = 0;
                 this._teardown();
                 this.track = { url: trackData.url, title: trackData.title || '', subtitle: trackData.subtitle || '' };
                 this.currentTime = 0; this.duration = 0;
@@ -517,10 +566,29 @@
                 this.audio.play().catch(() => {});
             },
 
-            // Surah transport. The player bar lives on the surah page, so moving a
-            // surah means moving the page too; the flag tells the next page's
-            // boot() to resume playback with the same reciter.
+            // Prev/next. Surah context wins — the player bar lives on the surah
+            // page, so moving a surah means moving the page too. Otherwise a
+            // playlist walks in place. Neither: the buttons are hidden.
             hasSurahNav() { return !!(this.surahUrlBase && this.surahMeta?.number); },
+            hasPlaylistNav() { return (this.playlist?.length || 0) > 1; },
+            hasStepNav() { return this.hasSurahNav() || this.hasPlaylistNav(); },
+            canStep(delta) {
+                if (this.hasSurahNav()) {
+                    const n = (this.surahMeta?.number || 0) + delta;
+                    return n >= 1 && n <= 114;
+                }
+                const i = this.playlistIndex + delta;
+                return this.hasPlaylistNav() && i >= 0 && i < this.playlist.length;
+            },
+            step(delta) {
+                if (!this.canStep(delta)) { return; }
+                if (this.hasSurahNav()) { this.gotoSurah(delta); return; }
+                this.playlistIndex += delta;
+                this._playListed(true);
+            },
+
+            // The flag tells the next page's boot() to resume playback with the
+            // same reciter.
             gotoSurah(delta) {
                 const n = (this.surahMeta?.number || 0) + delta;
                 if (!this.hasSurahNav() || n < 1 || n > 114) { return; }
@@ -577,6 +645,7 @@
                 this._teardown();
                 this.track = null; this.playing = false; this.currentTime = 0; this.duration = 0;
                 this.queue = null; this.queueIndex = 0; this._preload = null;
+                this.playlist = null; this.playlistIndex = 0;
                 localStorage.removeItem('sitePlayerTrack');
             },
 
@@ -599,8 +668,11 @@
                 a.addEventListener('pause', () => { this.playing = false; this._persist(); });
                 a.addEventListener('ended', () => {
                     if (this.audio !== a) { return; }
-                    // In queue mode the surah continues into the next ayah.
+                    // In queue mode the surah continues into the next ayah; in a
+                    // playlist it rolls into the next track. A surah page does NOT
+                    // auto-navigate — that would move the page under the listener.
                     if (this._advance()) { return; }
+                    if (this.hasPlaylistNav() && this.canStep(1)) { this.step(1); return; }
                     this.playing = false; this.currentTime = 0; this._persist();
                 });
                 // everyayah is missing the odd ayah file for some reciters; skip
