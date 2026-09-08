@@ -170,7 +170,11 @@ return [
         'hide_tafsir' => 'Hide tafsir',
         'playback_speed' => 'Playback speed',
         'seek' => 'Seek',
-        'follow_verses' => 'Follow verses while reciting',
+        // Was "Follow verses while reciting": highlighting no longer depends on
+        // this toggle, so the label now names what it actually does — swap the one
+        // whole-surah recording for chained per-verse files, which pause after
+        // every ayah.
+        'follow_verses' => 'Play verse by verse',
         'listen_from_here' => 'Listen from here',
         'rewind_5' => 'Back 5 seconds',
         'forward_5' => 'Forward 5 seconds',

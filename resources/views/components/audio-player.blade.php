@@ -10,8 +10,10 @@
       • configure({reciters,reciterId,surah,urlBase})
                                               — the Quran surah reader: prev/next
                                                 navigate to the neighbouring
-                                                surah's PAGE, plus reciter picker
-                                                and per-verse follow-along
+                                                surah's PAGE, plus the reciter
+                                                picker, per-ayah highlighting from
+                                                the mp3quran timings, and the
+                                                verse-by-verse audio toggle
     Prev/next resolve in that order (surah wins), and hide when neither applies —
     no dead controls.
 
@@ -122,9 +124,13 @@
                  overflowed onto the transport. The track title absorbs the
                  squeeze instead, which is what truncate is there for. --}}
             <div class="flex-1 min-w-fit flex items-center justify-end gap-1 sm:gap-2">
-                {{-- Follow along: chains per-verse audio so the page can highlight
-                     the ayah being recited. Only offered where a verse queue is
-                     possible (a surah page, reciter with per-verse files). --}}
+                {{-- Verse-by-verse audio: plays the surah as chained per-verse files
+                     instead of the one whole-surah recording, so every ayah ends in a
+                     pause. It used to be the only way the page could know which ayah
+                     was being recited; mp3quran timings now do that on the single
+                     file, so this is a pacing choice (and still the only mode for the
+                     reciters with no timings). Offered wherever a verse queue is
+                     possible: a surah page, reciter with per-verse files. --}}
                 {{-- ms-*: the options cluster butts up against the transport, and the
                      start side is the facing one in both LTR and RTL. --}}
                 <button x-show="$store.audioPlayer.surahMeta && $store.audioPlayer.currentReciter()?.everyayah_folder"
@@ -252,6 +258,17 @@
             queueIndex: 0,
             _preload: null,
 
+            // Per-ayah timings for the whole-surah recording of the selected
+            // (surah, reciter): [[ayah, startMs, endMs], ...] ascending, with
+            // ayah 0 covering the bismillah. Null means this pair has none —
+            // mp3quran publishes them for 34 of our 56 reciters — and everything
+            // below falls back to what it did before they existed.
+            timings: null,
+            ayahAtTime: null,       // ayah under the playhead, derived from `timings`
+            _timingsCache: {},      // "surah:reciterId" -> array (empty array = none, never refetched)
+            _timingsPending: {},    // "surah:reciterId" -> in-flight promise, so two callers share one request
+            _timingsReq: 0,         // request generation; a late response with an old one is dropped
+
             init() {
                 try {
                     const saved = JSON.parse(localStorage.getItem('sitePlayerTrack') || 'null');
@@ -288,13 +305,18 @@
                 this.reciters = Array.isArray(reciters) ? reciters : [];
                 this.surahMeta = surah || null;
                 this.surahUrlBase = urlBase || null;
-                // A queue belongs to the surah that built it.
+                // A queue belongs to the surah that built it, and so do timings.
                 this.queue = null; this.queueIndex = 0; this._preload = null;
+                this.timings = null; this.ayahAtTime = null; this._timingsReq++;
                 this.playlist = null; this.playlistIndex = 0;
                 const stored = parseInt(localStorage.getItem('siteReciterId') ?? '', 10);
                 const valid = (id) => this.reciters.some((r) => r.id === id);
                 this.reciterId = valid(stored) ? stored
                     : (valid(reciterId) ? reciterId : (this.reciters[0]?.id ?? null));
+                // init() may have restored a paused whole-surah track from a previous
+                // visit. Resuming it goes straight through toggle(), never through
+                // playSurah(), so this is the only place those timings get asked for.
+                if (this.track?.url && this.track.url === this.surahUrl()) { this._loadTimings(); }
             },
 
             // Load an ordered list and start at startIndex. Re-selecting the track
@@ -341,9 +363,17 @@
                 return `${this.reciterName()} · {{ __('quran.public.verse_label') }} ${this.queueIndex + 1}/${this.queue.length}`;
             },
 
-            // The ayah being recited, 1-based — only knowable in queue mode, since
-            // a whole-surah file carries no verse timings. null = not following.
-            get playingAyah() { return this.queue ? this.queueIndex + 1 : null; },
+            // The ayah being recited, 1-based. Three sources, in order:
+            //   queue mode          -> the queued ayah, known by construction
+            //   whole file + timings-> the playhead, resolved in _syncTimedAyah
+            //   neither             -> null
+            // null means "highlight nothing", and so does ayah 0 (the bismillah);
+            // syncPlayingVerse() on the surah page treats any falsy value that way.
+            get playingAyah() {
+                if (this.queue) { return this.queueIndex + 1; }
+
+                return this.ayahAtTime || null;
+            },
 
             // Queue mode is forced by follow-along, and is the only option for a
             // reciter with no whole-surah recording.
@@ -363,6 +393,102 @@
                     if (autoplay) { this.audio.play().catch(() => {}); }
                 }, { once: true });
                 this._persist();
+                this._loadTimings();
+            },
+
+            // Fetch the timings for the selected (surah, reciter), once. Lazy: only
+            // a whole-surah recording can use them, so nothing is fetched until one
+            // starts or the reciter changes. A pair with no timings caches the empty
+            // list, so the second look costs no request.
+            _loadTimings() {
+                // Newest call wins. A response tagged with an older token belongs to
+                // a reciter or surah the reader has already left, and must not land
+                // on top of the current one.
+                const token = ++this._timingsReq;
+                const surah = this.surahMeta?.number;
+                const id = this.reciterId;
+                // Timings describe mp3quran's own whole-surah audio. No recording,
+                // nothing to time — and the per-verse queue never needs them.
+                if (!surah || !id || !this.surahUrlBase || !this.surahUrl()) {
+                    this.timings = null; this.ayahAtTime = null;
+
+                    return Promise.resolve();
+                }
+
+                const key = `${surah}:${id}`;
+                const cached = this._timingsCache[key];
+                if (cached) { this._useTimings(cached, token); return Promise.resolve(); }
+
+                this.timings = null; this.ayahAtTime = null;
+
+                // One request per pair even when two call sites ask at once —
+                // selectReciter() asks, and the _playWhole() it goes on to call
+                // asks again for the same reciter before the first has landed.
+                let req = this._timingsPending[key];
+                if (!req) {
+                    req = fetch(`${this.surahUrlBase}/${surah}/timings/${id}`, { headers: { Accept: 'application/json' } })
+                        .then((r) => (r.ok ? r.json() : null))
+                        .then((data) => (Array.isArray(data?.ayahs) ? data.ayahs : []))
+                        // Highlighting is progressive enhancement: a failed fetch
+                        // costs the reader the highlight and nothing else. An empty
+                        // list is cached like any other answer, so a reciter with no
+                        // timings is asked for exactly once.
+                        .catch(() => [])
+                        .then((ayahs) => {
+                            this._timingsCache[key] = ayahs;
+                            delete this._timingsPending[key];
+
+                            return ayahs;
+                        });
+                    this._timingsPending[key] = req;
+                }
+
+                return req.then((ayahs) => this._useTimings(ayahs, token));
+            },
+
+            _useTimings(ayahs, token) {
+                if (token !== this._timingsReq) { return; }
+                this.timings = ayahs.length ? ayahs : null;
+                this._syncTimedAyah(this.audio?.currentTime || 0);
+            },
+
+            // Which ayah covers an offset in the whole-surah file. Binary search,
+            // not a scan: this runs on every `timeupdate` (~4x a second) and
+            // al-Baqarah has 287 triples. Sticky through any gap between triples,
+            // so a silence does not blink the highlight off. Returns 0 for the
+            // bismillah, null before the first entry.
+            _ayahAtMs(ms) {
+                const t = this.timings;
+                if (!t || !t.length || ms < t[0][1]) { return null; }
+                let lo = 0, hi = t.length - 1;
+                while (lo < hi) {
+                    const mid = (lo + hi + 1) >> 1;
+                    if (t[mid][1] <= ms) { lo = mid; } else { hi = mid - 1; }
+                }
+
+                return t[lo][0];
+            },
+
+            // Where an ayah starts in the whole-surah file, in ms. Null = unknown.
+            _ayahStartMs(ayah) {
+                const t = this.timings?.find((x) => x[0] === ayah);
+
+                return t ? t[1] : null;
+            },
+
+            _timingsTotalMs() {
+                const last = this.timings?.[this.timings.length - 1];
+
+                return last ? last[2] : 0;
+            },
+
+            // Assign only when the ayah actually changes. `playingAyah` feeds a
+            // class binding on every verse card and an x-effect that scrolls the
+            // page; writing it four times a second would re-run all of that for
+            // nothing, most of the time to the same value.
+            _syncTimedAyah(seconds) {
+                const n = this.queue ? null : this._ayahAtMs(seconds * 1000);
+                if (n !== this.ayahAtTime) { this.ayahAtTime = n; }
             },
 
             // Cumulative share of the surah's letters at the end of each ayah.
@@ -381,8 +507,16 @@
 
                 return weights.map((n) => (acc += n) / total);
             },
-            // Which ayah a fraction of the recording falls in, and where an ayah starts.
+            // Which ayah a fraction of the recording falls in, and where an ayah
+            // starts. Real timings win wherever we have them; the letter estimate
+            // is only for the reciters mp3quran publishes none for. Ratios are
+            // taken against the timings' own total, not audio.duration — the file
+            // loaded at the moment of a mode switch is one ayah, not the surah.
             _ayahAt(ratio) {
+                const total = this._timingsTotalMs();
+                // Ayah 0 is the bismillah; resuming from it means resuming at ayah 1.
+                if (total) { return this._ayahAtMs(ratio * total) || 1; }
+
                 const shares = this._ayahShares();
                 if (!shares) { return null; }
                 const i = shares.findIndex((share) => share >= ratio);
@@ -390,6 +524,12 @@
                 return i === -1 ? shares.length : i + 1;
             },
             _ratioAt(ayah) {
+                const total = this._timingsTotalMs();
+                if (total) {
+                    const ms = this._ayahStartMs(ayah);
+                    if (ms !== null) { return ms / total; }
+                }
+
                 const shares = this._ayahShares();
                 if (!shares || ayah <= 1) { return 0; }
 
@@ -429,6 +569,7 @@
                 const url = this._preferQueue() ? null : this.surahUrl();
                 if (url) {
                     this.queue = null;
+                    this._loadTimings();
                     if (restart && this.track?.url === url) { this.restart(); return; }
                     this.play({ url, title: this.surahMeta?.nameAr || '', subtitle: this.reciterName() });
                     return;
@@ -449,9 +590,38 @@
                 this._playQueued(true);
             },
 
-            // Start the surah at one ayah (the per-verse play buttons on the page).
-            // Always queue mode — it's the only mode that can start mid-surah.
+            // Start the surah at one ayah — the per-verse play buttons in verse view
+            // and "listen from here" in reading view both land here. With timings the
+            // whole-surah recording can start mid-surah on its own, so seek and keep
+            // the single gapless file; only a reciter without them needs the queue.
             playAyah(number) {
+                const whole = this._preferQueue() ? null : this.surahUrl();
+                if (!whole) { this._playAyahQueued(number); return; }
+
+                // Returned so a caller can await the seek; nothing in the app does.
+                return this._loadTimings().then(() => {
+                    const ms = this._ayahStartMs(number);
+                    if (ms === null) { this._playAyahQueued(number); return; }
+
+                    if (!this.queue && this.track?.url === whole && this.audio) {
+                        // Re-tapping the ayah already under the playhead toggles it,
+                        // same as the queue path — the card shows a pause icon.
+                        if (this.ayahAtTime === number) { this.toggle(); return; }
+                        this.audio.currentTime = ms / 1000;
+                        this.currentTime = ms / 1000;
+                        this._syncTimedAyah(ms / 1000);
+                        if (!this.playing) { this.audio.play().catch(() => {}); }
+
+                        return;
+                    }
+
+                    this._playWhole(whole, () => ms / 1000, true);
+                });
+            },
+
+            // Chained per-verse files: the only way to start mid-surah for a reciter
+            // with no timings, and what follow-along asks for explicitly.
+            _playAyahQueued(number) {
                 const queue = this.queue || this._verseQueue(this.currentReciter());
                 if (!queue) { window.toast?.('{{ __('quran.public.audio_unavailable') }}', 'error'); return; }
 
@@ -499,6 +669,9 @@
                 this.reciterId = id;
                 this.reciterOpen = false;
                 localStorage.setItem('siteReciterId', String(id));
+                // Timings belong to one recording, so the switch invalidates them
+                // whether or not anything is playing right now.
+                this._loadTimings();
                 if (!this.track) { return; }
 
                 const wasPlaying = this.playing;
@@ -663,7 +836,7 @@
                 a.volume = this.volume;
                 a.playbackRate = this.rate;
                 a.addEventListener('loadedmetadata', () => { this.duration = a.duration || 0; });
-                a.addEventListener('timeupdate', () => { this.currentTime = a.currentTime; this._persistSoon(); });
+                a.addEventListener('timeupdate', () => { this.currentTime = a.currentTime; this._syncTimedAyah(a.currentTime); this._persistSoon(); });
                 a.addEventListener('play', () => { this.playing = true; });
                 a.addEventListener('pause', () => { this.playing = false; this._persist(); });
                 a.addEventListener('ended', () => {
@@ -686,7 +859,7 @@
                 });
                 this.audio = a;
             },
-            _teardown() { if (this.audio) { this.audio.pause(); this.audio.src = ''; this.audio = null; } },
+            _teardown() { this.ayahAtTime = null; if (this.audio) { this.audio.pause(); this.audio.src = ''; this.audio = null; } },
             _persist() { if (this.track) { localStorage.setItem('sitePlayerTrack', JSON.stringify({ ...this.track, currentTime: this.currentTime })); } },
             _persistSoon() { if (this._saveTimer) { return; } this._saveTimer = setTimeout(() => { this._saveTimer = null; this._persist(); }, 2000); },
         });

@@ -471,9 +471,10 @@
                     nameAr: this.surah.nameAr,
                     number: this.surah.number,
                     versesCount: this.surah.versesCount,
-                    // Letters per ayah. The player maps an offset in a whole-surah
-                    // recording onto an ayah with these, so switching follow-along
-                    // on or off keeps the listener's place.
+                    // Letters per ayah. Only a fallback now: the player prefers the
+                    // real mp3quran timings and uses these to map an offset in a
+                    // whole-surah recording onto an ayah for the reciters that have
+                    // none, so switching audio modes keeps the listener's place.
                     weights: this.verses.map((v) => ((v.arabic || '').match(/[\u0621-\u064A\u0671]/g) || []).length),
                 },
                 // Lets the player's next/previous-surah buttons move the page.
