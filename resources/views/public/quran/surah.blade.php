@@ -465,7 +465,15 @@
                 reciterId: this.selectedReciterId,
                 // number + versesCount let the player chain per-verse audio for
                 // reciters that have no whole-surah recording.
-                surah: { nameAr: this.surah.nameAr, number: this.surah.number, versesCount: this.surah.versesCount },
+                surah: {
+                    nameAr: this.surah.nameAr,
+                    number: this.surah.number,
+                    versesCount: this.surah.versesCount,
+                    // Letters per ayah. The player maps an offset in a whole-surah
+                    // recording onto an ayah with these, so switching follow-along
+                    // on or off keeps the listener's place.
+                    weights: this.verses.map((v) => ((v.arabic || '').match(/[\u0621-\u064A\u0671]/g) || []).length),
+                },
                 // Lets the player's next/previous-surah buttons move the page.
                 urlBase: this.surahUrlBase,
             });

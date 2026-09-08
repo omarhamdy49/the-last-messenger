@@ -297,12 +297,77 @@
             // reciter with no whole-surah recording.
             _preferQueue() { return this.follow && !!this.currentReciter()?.everyayah_folder; },
 
+            // Load the whole-surah file and start at at(duration), once the
+            // duration is actually known.
+            _playWhole(url, at, autoplay) {
+                this.queue = null;
+                this._teardown();
+                this.track = { url, title: this.surahMeta?.nameAr || this.track?.title || '', subtitle: this.reciterName() };
+                this.currentTime = 0; this.duration = 0;
+                this._ensureAudio();
+                this.audio.addEventListener('loadedmetadata', () => {
+                    const seconds = at(this.audio.duration || 0);
+                    if (seconds > 0) { this.audio.currentTime = Math.min(seconds, this.audio.duration || seconds); }
+                    if (autoplay) { this.audio.play().catch(() => {}); }
+                }, { once: true });
+                this._persist();
+            },
+
+            // Cumulative share of the surah's letters at the end of each ayah.
+            // Recitation time tracks letters, not ayah count — ayah 282 of
+            // al-Baqarah is not one 286th of the recording. This is the only way
+            // to carry a listener's place between a whole-surah file (no verse
+            // timings anywhere in this project) and the per-verse queue, so it is
+            // an estimate; it always lands on an ayah boundary, so the error stops
+            // there instead of compounding.
+            _ayahShares() {
+                const weights = this.surahMeta?.weights;
+                if (!Array.isArray(weights) || weights.length === 0) { return null; }
+                const total = weights.reduce((sum, n) => sum + n, 0);
+                if (!total) { return null; }
+                let acc = 0;
+
+                return weights.map((n) => (acc += n) / total);
+            },
+            // Which ayah a fraction of the recording falls in, and where an ayah starts.
+            _ayahAt(ratio) {
+                const shares = this._ayahShares();
+                if (!shares) { return null; }
+                const i = shares.findIndex((share) => share >= ratio);
+
+                return i === -1 ? shares.length : i + 1;
+            },
+            _ratioAt(ayah) {
+                const shares = this._ayahShares();
+                if (!shares || ayah <= 1) { return 0; }
+
+                return shares[ayah - 2] ?? 0;
+            },
+
             toggleFollow() {
                 this.follow = !this.follow;
                 localStorage.setItem('siteFollowVerses', this.follow ? '1' : '0');
-                // Without verse timings a wall-clock offset can't be mapped onto an
-                // ayah, so changing modes mid-surah restarts the recitation.
-                if (this.track && this.surahMeta) { this.playSurah(true); }
+                if (!this.track || !this.surahMeta) { return; }
+
+                const wasPlaying = this.playing;
+
+                if (this.follow) {
+                    if (this.queue) { return; }   // already chaining verses
+                    const queue = this._verseQueue(this.currentReciter());
+                    if (!queue) { return; }       // no per-verse audio: nothing to switch to
+                    // Resume at the ayah the current offset falls in, from its start.
+                    const ratio = this.duration ? this.currentTime / this.duration : 0;
+                    this.queue = queue;
+                    this.queueIndex = Math.min((this._ayahAt(ratio) || 1) - 1, queue.length - 1);
+                    this._playQueued(wasPlaying);
+
+                    return;
+                }
+
+                const url = this.surahUrl();
+                if (!url || !this.queue) { return; }   // this reciter only has verses
+                const ratio = this._ratioAt(this.queueIndex + 1);
+                this._playWhole(url, (duration) => ratio * duration, wasPlaying);
             },
 
             // Play the configured surah with the selected reciter (rail Play button).
@@ -398,15 +463,7 @@
                 }
 
                 const resumeAt = this.queue ? 0 : this.currentTime;
-                this.queue = null;
-                this._teardown();
-                this.track = { url, title: this.surahMeta?.nameAr || this.track.title, subtitle: this.reciterName() };
-                this._ensureAudio();
-                this.audio.addEventListener('loadedmetadata', () => {
-                    this.audio.currentTime = Math.min(resumeAt, this.audio.duration || resumeAt);
-                    if (wasPlaying) { this.audio.play().catch(() => {}); }
-                }, { once: true });
-                this._persist();
+                this._playWhole(url, () => resumeAt, wasPlaying);
             },
 
             // Play a track ({url,title,subtitle}); re-clicking the same url toggles.
