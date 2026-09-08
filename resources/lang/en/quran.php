@@ -171,6 +171,7 @@ return [
         'playback_speed' => 'Playback speed',
         'seek' => 'Seek',
         'follow_verses' => 'Follow verses while reciting',
+        'listen_from_here' => 'Listen from here',
         'rewind_5' => 'Back 5 seconds',
         'forward_5' => 'Forward 5 seconds',
         'play_from_start' => 'Play from the beginning',

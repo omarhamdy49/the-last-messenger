@@ -394,6 +394,7 @@ return [
         'playback_speed' => 'سرعة التشغيل',
         'seek' => 'شريط التقدّم',
         'follow_verses' => 'تتبّع الآيات أثناء التلاوة',
+        'listen_from_here' => 'الاستماع من هنا',
         'rewind_5' => 'إرجاع ٥ ثوانٍ',
         'forward_5' => 'تقديم ٥ ثوانٍ',
         'play_from_start' => 'التشغيل من البداية',

@@ -99,14 +99,19 @@
                 </button>
             </div>
 
-            {{-- Speed + volume + reciter + close --}}
-            <div class="flex-1 min-w-0 flex items-center justify-end gap-1 sm:gap-2">
+            {{-- Speed + volume + reciter + close. min-w-fit, not min-w-0: this
+                 cluster must never shrink below its buttons — it did, and then
+                 overflowed onto the transport. The track title absorbs the
+                 squeeze instead, which is what truncate is there for. --}}
+            <div class="flex-1 min-w-fit flex items-center justify-end gap-1 sm:gap-2">
                 {{-- Follow along: chains per-verse audio so the page can highlight
                      the ayah being recited. Only offered where a verse queue is
                      possible (a surah page, reciter with per-verse files). --}}
+                {{-- ms-*: the options cluster butts up against the transport, and the
+                     start side is the facing one in both LTR and RTL. --}}
                 <button x-show="$store.audioPlayer.surahMeta && $store.audioPlayer.currentReciter()?.everyayah_folder"
                         @click="$store.audioPlayer.toggleFollow()"
-                        class="{{ $iconBtn }}"
+                        class="{{ $iconBtn }} ms-2 sm:ms-3"
                         :class="$store.audioPlayer.follow
                             ? 'text-white bg-gradient-to-r from-[#0056b3] to-[#218838]'
                             : ({{ $iconBtnTheme }})"

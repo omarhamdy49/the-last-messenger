@@ -426,6 +426,8 @@
 
         openTafsir: {},
         tafsirVerse: null,      // verse shown in the reading-mode tafsir modal (null = closed)
+        verseMenu: null,        // verse tapped in reading mode (null = menu closed)
+        verseMenuPos: { x: 0, y: 0 },
         tafsirResources: {{ $tafsirResourcesJson }},
         selectedTafsirId: parseInt(localStorage.getItem('selectedTafsirId')) || ({{ $tafsirResources[0]['id'] ?? 0 }}),
         tafsirCache: {},        // resourceId -> { verseId: text } (filled per verse, on demand)
@@ -629,12 +631,34 @@
         // any of its words or its end medallion — opens its tafsir in a modal.
         // Delegated from the card wrapper so the server-rendered mushaf markup
         // (and its own hover script) stay untouched.
-        openTafsirFromMushaf(event) {
-            const el = event.target.closest('[data-verse]');
-            if (!el) { return; }
-            const number = parseInt(el.dataset.verse, 10);
-            const verse = this.verses.find(v => v.number === number);
+        // Reading mode has no per-verse buttons, so a tap offers the two things
+        // there is to do with an ayah: hear it, or read its tafsir.
+        openVerseMenu(event, verse = null) {
+            // Keep the click off document, or the menu's own click-outside
+            // listener would fire on the very click that opened it.
+            event.stopPropagation();
+            if (!verse) {
+                const el = event.target.closest('[data-verse]');
+                if (!el) { return; }
+                verse = this.verses.find((v) => v.number === parseInt(el.dataset.verse, 10));
+            }
             if (!verse) { return; }
+
+            const width = 216, height = 116;
+            this.verseMenu = verse;
+            this.verseMenuPos = {
+                x: Math.min(Math.max(event.clientX - width / 2, 8), window.innerWidth - width - 8),
+                y: event.clientY + height + 16 > window.innerHeight ? event.clientY - height - 8 : event.clientY + 8,
+            };
+        },
+
+        listenFromVerse(verse) {
+            this.verseMenu = null;
+            this.$store.audioPlayer.playAyah(verse.number);
+        },
+
+        showTafsirFor(verse) {
+            this.verseMenu = null;
             this.tafsirVerse = verse;
             this.loadVerseTafsir(verse);
         },
@@ -1121,7 +1145,7 @@
             <div x-show="viewMode === 'reading'" x-cloak class="mb-12">
                 {{-- Tapping any ayah (word or end medallion) opens its tafsir. --}}
                 <div class="verse-card mushaf-card rounded-2xl shadow-lg px-5 sm:px-8 py-8 mx-auto"
-                     @click="openTafsirFromMushaf($event)"
+                     @click="openVerseMenu($event)"
                      :class="$store.theme.dark ? 'bg-gray-900' : 'bg-white'">
                     @include('public.quran._mushaf')
                 </div>
@@ -1141,7 +1165,7 @@
                     <div class="verse-card rounded-2xl shadow-lg p-6 sm:p-8" :class="$store.theme.dark ? 'bg-gray-900' : 'bg-white'">
                         <p class="font-['Amiri'] leading-loose text-start" dir="rtl"
                            :class="$store.theme.dark ? 'text-white' : 'text-gray-900'"
-                           :style="`font-size: ${fontSize}px`"><template x-for="verse in grp.items" :key="verse.id"><span class="cursor-pointer" @click="tafsirVerse = verse; loadVerseTafsir(verse)"><span x-text="verse.arabic"></span><span class="inline-flex items-center justify-center align-middle mx-1 w-7 h-7 text-xs font-sans font-bold rounded-full" :class="$store.theme.dark ? 'bg-gray-800 text-[#64CCC5]' : 'bg-gray-100 text-[#0056b3]'" x-text="fmtNum(verse.number)"></span> </span></template></p>
+                           :style="`font-size: ${fontSize}px`"><template x-for="verse in grp.items" :key="verse.id"><span class="cursor-pointer" @click="openVerseMenu($event, verse)"><span x-text="verse.arabic"></span><span class="inline-flex items-center justify-center align-middle mx-1 w-7 h-7 text-xs font-sans font-bold rounded-full" :class="$store.theme.dark ? 'bg-gray-800 text-[#64CCC5]' : 'bg-gray-100 text-[#0056b3]'" x-text="fmtNum(verse.number)"></span> </span></template></p>
                     </div>
                 </div>
                 </template>
@@ -1195,7 +1219,37 @@
 </main>
 
 {{-- ============================================================ --}}
-{{-- VERSE TAFSIR MODAL (reading view — tapping an ayah opens this)  --}}
+{{-- VERSE ACTIONS (reading view — tapping an ayah opens this)       --}}
+{{-- ============================================================ --}}
+<div x-show="verseMenu" x-cloak x-transition.opacity
+     @click.outside="verseMenu = null"
+     @keydown.escape.window="verseMenu = null"
+     @scroll.window="verseMenu = null"
+     class="fixed rounded-xl border shadow-2xl py-1 overflow-hidden"
+     {{-- one :style, not a static style plus a bound one: a bound string replaces the attribute --}}
+     :style="`left: ${verseMenuPos.x}px; top: ${verseMenuPos.y}px; width: 216px; z-index: 65`"
+     :class="$store.theme.dark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'"
+     role="menu">
+    <p class="px-3 py-1.5 text-[11px] font-semibold"
+       :class="$store.theme.dark ? 'text-gray-500' : 'text-gray-400'">
+        {{ __('quran.public.verse_label') }} <span x-text="verseMenu ? fmtNum(verseMenu.number) : ''"></span>
+    </p>
+    <button type="button" role="menuitem" @click="listenFromVerse(verseMenu)"
+            class="w-full text-start px-3 py-2.5 text-sm font-medium flex items-center gap-2.5 transition-colors"
+            :class="$store.theme.dark ? 'text-gray-200 hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-100'">
+        <svg class="w-4 h-4 flex-shrink-0 text-[#218838]" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.84A1 1 0 004 3.7v12.6a1 1 0 001.5.86l11-6.3a1 1 0 000-1.72l-11-6.3z"/></svg>
+        {{ __('quran.public.listen_from_here') }}
+    </button>
+    <button type="button" role="menuitem" @click="showTafsirFor(verseMenu)"
+            class="w-full text-start px-3 py-2.5 text-sm font-medium flex items-center gap-2.5 transition-colors"
+            :class="$store.theme.dark ? 'text-gray-200 hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-100'">
+        <svg class="w-4 h-4 flex-shrink-0 text-[#0056b3]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.5S10 5 7 5H4v12h3c3 0 5 1.5 5 1.5m0-12S14 5 17 5h3v12h-3c-3 0-5 1.5-5 1.5m0-12v12"/></svg>
+        {{ __('quran.public.show_tafsir') }}
+    </button>
+</div>
+
+{{-- ============================================================ --}}
+{{-- VERSE TAFSIR MODAL (opened from the verse actions menu)        --}}
 {{-- ============================================================ --}}
 <div x-show="tafsirVerse" x-cloak x-transition.opacity
      @keydown.escape.window="tafsirVerse = null"
