@@ -169,11 +169,27 @@ return [
         'show_tafsir' => 'Show tafsir',
         'hide_tafsir' => 'Hide tafsir',
         'playback_speed' => 'Playback speed',
+        'seek' => 'Seek',
+        // Was "Follow verses while reciting": highlighting no longer depends on
+        // this toggle, so the label now names what it actually does — swap the one
+        // whole-surah recording for chained per-verse files, which pause after
+        // every ayah.
+        'follow_verses' => 'Play verse by verse',
+        'listen_from_here' => 'Listen from here',
+        'rewind_5' => 'Back 5 seconds',
+        'forward_5' => 'Forward 5 seconds',
+        'play_from_start' => 'Play from the beginning',
+        'mute' => 'Mute',
+        'unmute' => 'Unmute',
+        'volume' => 'Volume',
+        'close_player' => 'Close player',
         'surah_navigation' => 'Surahs',
         'surah_tools' => 'Surah tools',
         'close' => 'Close',
         'next_surah' => 'Next surah',
         'previous_surah' => 'Previous surah',
+        'next_track' => 'Next track',
+        'previous_track' => 'Previous track',
         'suggest_loading' => 'Searching…',
         'suggest_empty' => 'No matching surah or verse',
         'suggest_error' => 'Could not load suggestions — tap to retry',

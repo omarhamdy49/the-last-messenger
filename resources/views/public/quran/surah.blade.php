@@ -98,6 +98,19 @@
     }
     .mushaf-dark .qw.qw-verse-active { color: #a7f3ef; }
 
+    /* Ayah being recited — stronger than the hover lift, and it stays put. */
+    .mushaf .qw.qw-verse-playing {
+        background-color: rgba(33, 136, 56, 0.16);
+        color: #17693a;
+    }
+    .mushaf-dark .qw.qw-verse-playing {
+        background-color: rgba(100, 204, 197, 0.2);
+        color: #7ee7dd;
+    }
+    .mushaf .ayah-end.ayah-end-playing { filter: drop-shadow(0 0 4px rgba(33, 136, 56, 0.5)); }
+    .mushaf-dark .ayah-end.ayah-end-playing { filter: drop-shadow(0 0 4px rgba(100, 204, 197, 0.55)); }
+    .verse-card.is-playing { box-shadow: 0 0 0 2px #218838, 0 10px 30px -10px rgba(33, 136, 56, 0.45); }
+
     /* Verse-end rosette — our ornament (not a glyph font), holds the verse number. */
     .mushaf .ayah-end {
         position: relative;
@@ -351,7 +364,7 @@
         .mushaf-rail-divider { display: none; }
         .mushaf-rail-pop { bottom: calc(100% + 0.6rem); inset-inline-end: 0; }
         /* Lift the rail above the shared player bar when it's visible. */
-        body.site-has-audio .mushaf-rail { bottom: 5.25rem; }
+        body.site-has-audio .mushaf-rail { bottom: 6.5rem; }
     }
 
     /* Motion is decoration here — the rail stays fully usable without it. */
@@ -397,9 +410,6 @@
         defaultTranslationId: {{ $defaultTranslationId }}, // inlined edition (Saheeh International)
         translationLang: '{{ $defaultTranslationLang }}', // default translation language (English / Saheeh)
 
-        audioPlaying: false,
-        currentVerseId: null,
-        currentAudio: null,
         {{-- Page default only; the shared audioPlayer store owns the live choice
              (a stored siteReciterId wins over this in configure()). --}}
         selectedReciterId: {{ $defaultReciterId }},
@@ -416,6 +426,8 @@
 
         openTafsir: {},
         tafsirVerse: null,      // verse shown in the reading-mode tafsir modal (null = closed)
+        verseMenu: null,        // verse tapped in reading mode (null = menu closed)
+        verseMenuPos: { x: 0, y: 0 },
         tafsirResources: {{ $tafsirResourcesJson }},
         selectedTafsirId: parseInt(localStorage.getItem('selectedTafsirId')) || ({{ $tafsirResources[0]['id'] ?? 0 }}),
         tafsirCache: {},        // resourceId -> { verseId: text } (filled per verse, on demand)
@@ -455,8 +467,27 @@
                 reciterId: this.selectedReciterId,
                 // number + versesCount let the player chain per-verse audio for
                 // reciters that have no whole-surah recording.
-                surah: { nameAr: this.surah.nameAr, number: this.surah.number, versesCount: this.surah.versesCount },
+                surah: {
+                    nameAr: this.surah.nameAr,
+                    number: this.surah.number,
+                    versesCount: this.surah.versesCount,
+                    // Letters per ayah. Only a fallback now: the player prefers the
+                    // real mp3quran timings and uses these to map an offset in a
+                    // whole-surah recording onto an ayah for the reciters that have
+                    // none, so switching audio modes keeps the listener's place.
+                    weights: this.verses.map((v) => ((v.arabic || '').match(/[\u0621-\u064A\u0671]/g) || []).length),
+                },
+                // Lets the player's next/previous-surah buttons move the page.
+                urlBase: this.surahUrlBase,
             });
+
+            // Arrived here from the player's surah transport: keep playing. The
+            // gesture was on the previous page, so a strict autoplay policy can
+            // still refuse — play() swallows that.
+            if (sessionStorage.getItem('siteAutoplaySurah')) {
+                sessionStorage.removeItem('siteAutoplaySurah');
+                this.$store.audioPlayer.playSurah();
+            }
 
             // Deep link to a specific verse (#v65): the native jump fires before
             // Alpine renders the cards, so scroll after render + on later hash changes.
@@ -601,12 +632,34 @@
         // any of its words or its end medallion — opens its tafsir in a modal.
         // Delegated from the card wrapper so the server-rendered mushaf markup
         // (and its own hover script) stay untouched.
-        openTafsirFromMushaf(event) {
-            const el = event.target.closest('[data-verse]');
-            if (!el) { return; }
-            const number = parseInt(el.dataset.verse, 10);
-            const verse = this.verses.find(v => v.number === number);
+        // Reading mode has no per-verse buttons, so a tap offers the two things
+        // there is to do with an ayah: hear it, or read its tafsir.
+        openVerseMenu(event, verse = null) {
+            // Keep the click off document, or the menu's own click-outside
+            // listener would fire on the very click that opened it.
+            event.stopPropagation();
+            if (!verse) {
+                const el = event.target.closest('[data-verse]');
+                if (!el) { return; }
+                verse = this.verses.find((v) => v.number === parseInt(el.dataset.verse, 10));
+            }
             if (!verse) { return; }
+
+            const width = 216, height = 116;
+            this.verseMenu = verse;
+            this.verseMenuPos = {
+                x: Math.min(Math.max(event.clientX - width / 2, 8), window.innerWidth - width - 8),
+                y: event.clientY + height + 16 > window.innerHeight ? event.clientY - height - 8 : event.clientY + 8,
+            };
+        },
+
+        listenFromVerse(verse) {
+            this.verseMenu = null;
+            this.$store.audioPlayer.playAyah(verse.number);
+        },
+
+        showTafsirFor(verse) {
+            this.verseMenu = null;
             this.tafsirVerse = verse;
             this.loadVerseTafsir(verse);
         },
@@ -662,28 +715,40 @@
                 .catch(() => {});
         },
 
+        // Verse play buttons run through the shared bottom player, so a verse and
+        // a surah can never recite over each other and the bar always shows what
+        // is playing. The store starts its per-verse queue at this ayah.
         playVerse(verse) {
-            // Clicking the same verse again toggles pause/resume.
-            if (this.currentVerseId === verse.id && this.currentAudio) {
-                if (this.audioPlaying) { this.currentAudio.pause(); this.audioPlaying = false; }
-                else { this.currentAudio.play().then(() => { this.audioPlaying = true; }).catch(() => {}); }
-                return;
-            }
-            if (this.currentAudio) { this.currentAudio.pause(); }
-            // Same reciter as the shared player / aside picker.
-            const reciter = this.$store.audioPlayer.currentReciter()
-                || this.reciters.find(r => r.id === this.selectedReciterId);
-            if (!reciter || !reciter.everyayah_folder) { return; }
-            const surahPad = String(this.surah.number).padStart(3, '0');
-            const versePad = String(verse.number).padStart(3, '0');
-            const url = `https://everyayah.com/data/${reciter.everyayah_folder}/${surahPad}${versePad}.mp3`;
-            this.currentAudio = new Audio(url);
-            this.currentVerseId = verse.id;
-            this.audioPlaying = true;
-            this.currentAudio.play().catch(() => { this.audioPlaying = false; this.currentVerseId = null; });
-            this.currentAudio.addEventListener('pause', () => { this.audioPlaying = false; });
-            this.currentAudio.addEventListener('play', () => { this.audioPlaying = true; });
-            this.currentAudio.addEventListener('ended', () => { this.audioPlaying = false; this.currentVerseId = null; });
+            this.$store.audioPlayer.playAyah(verse.number);
+        },
+
+        isVerseLoaded(verse) { return this.$store.audioPlayer.playingAyah === verse.number; },
+        isVersePlaying(verse) { return this.isVerseLoaded(verse) && this.$store.audioPlayer.playing; },
+
+        // Paint the ayah being recited and keep it in view. Reading mode marks
+        // every word of the ayah (same shape as the hover highlight); verse mode
+        // marks the card.
+        syncPlayingVerse(number) {
+            document.querySelectorAll('.mushaf .qw-verse-playing, .mushaf .ayah-end-playing')
+                .forEach((el) => el.classList.remove('qw-verse-playing', 'ayah-end-playing'));
+            if (!number) { return; }
+
+            // Single quotes: this whole x-data is one double-quoted HTML attribute.
+            const parts = document.querySelectorAll(`.mushaf [data-verse='${number}']`);
+            parts.forEach((el) => el.classList.add(
+                el.classList.contains('ayah-end') ? 'ayah-end-playing' : 'qw-verse-playing'
+            ));
+
+            const target = this.viewMode === 'verses' ? document.getElementById('v' + number) : parts[0];
+            if (!target) { return; }
+            // ponytail: scroll only when the ayah is off-screen; no tracking of
+            // whether the reader has scrolled away — off-screen is the case that matters.
+            const box = target.getBoundingClientRect();
+            if (box.top > 80 && box.bottom < window.innerHeight - 120) { return; }
+            target.scrollIntoView({
+                behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+                block: 'center',
+            });
         },
 
 
@@ -708,7 +773,8 @@
 >
 
 <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8"
-      :style="$store.audioPlayer.track ? 'padding-bottom: 7rem' : ''">
+      :style="$store.audioPlayer.track ? 'padding-bottom: 8rem' : ''"
+      x-effect="syncPlayingVerse($store.audioPlayer.playingAyah)">
 
     {{-- Breadcrumb --}}
     <nav class="flex mb-8 text-sm animate-fadeIn" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'"
@@ -947,7 +1013,7 @@
                         :id="'v' + verse.number"
                         style="scroll-margin-top: 6rem"
                         class="verse-card rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl"
-                        :class="$store.theme.dark ? 'bg-gray-900' : 'bg-white'"
+                        :class="[$store.theme.dark ? 'bg-gray-900' : 'bg-white', isVerseLoaded(verse) ? 'is-playing' : '']"
                     >
                         {{-- Verse header --}}
                         <div class="flex items-center justify-between p-4"
@@ -969,16 +1035,16 @@
                             <div class="flex items-center gap-2">
                                 <button @click="playVerse(verse)"
                                     class="p-2 rounded-lg transition-colors"
-                                    :class="currentVerseId === verse.id
+                                    :class="isVerseLoaded(verse)
                                         ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white'
                                         : ($store.theme.dark ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-gray-200 text-gray-600 hover:text-gray-900')"
                                     :title="'{{ __('quran.public.listen') }}'"
                                 >
                                     {{-- play, or pause while this verse is playing --}}
-                                    <svg x-show="!(currentVerseId === verse.id && audioPlaying)" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <svg x-show="!isVersePlaying(verse)" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/>
                                     </svg>
-                                    <svg x-show="currentVerseId === verse.id && audioPlaying" x-cloak class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <svg x-show="isVersePlaying(verse)" x-cloak class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 7a1 1 0 011 1v4a1 1 0 11-2 0V8a1 1 0 011-1zm6 0a1 1 0 011 1v4a1 1 0 11-2 0V8a1 1 0 011-1z" clip-rule="evenodd"/>
                                     </svg>
                                 </button>
@@ -1080,7 +1146,7 @@
             <div x-show="viewMode === 'reading'" x-cloak class="mb-12">
                 {{-- Tapping any ayah (word or end medallion) opens its tafsir. --}}
                 <div class="verse-card mushaf-card rounded-2xl shadow-lg px-5 sm:px-8 py-8 mx-auto"
-                     @click="openTafsirFromMushaf($event)"
+                     @click="openVerseMenu($event)"
                      :class="$store.theme.dark ? 'bg-gray-900' : 'bg-white'">
                     @include('public.quran._mushaf')
                 </div>
@@ -1100,7 +1166,7 @@
                     <div class="verse-card rounded-2xl shadow-lg p-6 sm:p-8" :class="$store.theme.dark ? 'bg-gray-900' : 'bg-white'">
                         <p class="font-['Amiri'] leading-loose text-start" dir="rtl"
                            :class="$store.theme.dark ? 'text-white' : 'text-gray-900'"
-                           :style="`font-size: ${fontSize}px`"><template x-for="verse in grp.items" :key="verse.id"><span class="cursor-pointer" @click="tafsirVerse = verse; loadVerseTafsir(verse)"><span x-text="verse.arabic"></span><span class="inline-flex items-center justify-center align-middle mx-1 w-7 h-7 text-xs font-sans font-bold rounded-full" :class="$store.theme.dark ? 'bg-gray-800 text-[#64CCC5]' : 'bg-gray-100 text-[#0056b3]'" x-text="fmtNum(verse.number)"></span> </span></template></p>
+                           :style="`font-size: ${fontSize}px`"><template x-for="verse in grp.items" :key="verse.id"><span class="cursor-pointer" @click="openVerseMenu($event, verse)"><span x-text="verse.arabic"></span><span class="inline-flex items-center justify-center align-middle mx-1 w-7 h-7 text-xs font-sans font-bold rounded-full" :class="$store.theme.dark ? 'bg-gray-800 text-[#64CCC5]' : 'bg-gray-100 text-[#0056b3]'" x-text="fmtNum(verse.number)"></span> </span></template></p>
                     </div>
                 </div>
                 </template>
@@ -1154,7 +1220,37 @@
 </main>
 
 {{-- ============================================================ --}}
-{{-- VERSE TAFSIR MODAL (reading view — tapping an ayah opens this)  --}}
+{{-- VERSE ACTIONS (reading view — tapping an ayah opens this)       --}}
+{{-- ============================================================ --}}
+<div x-show="verseMenu" x-cloak x-transition.opacity
+     @click.outside="verseMenu = null"
+     @keydown.escape.window="verseMenu = null"
+     @scroll.window="verseMenu = null"
+     class="fixed rounded-xl border shadow-2xl py-1 overflow-hidden"
+     {{-- one :style, not a static style plus a bound one: a bound string replaces the attribute --}}
+     :style="`left: ${verseMenuPos.x}px; top: ${verseMenuPos.y}px; width: 216px; z-index: 65`"
+     :class="$store.theme.dark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'"
+     role="menu">
+    <p class="px-3 py-1.5 text-[11px] font-semibold"
+       :class="$store.theme.dark ? 'text-gray-500' : 'text-gray-400'">
+        {{ __('quran.public.verse_label') }} <span x-text="verseMenu ? fmtNum(verseMenu.number) : ''"></span>
+    </p>
+    <button type="button" role="menuitem" @click="listenFromVerse(verseMenu)"
+            class="w-full text-start px-3 py-2.5 text-sm font-medium flex items-center gap-2.5 transition-colors"
+            :class="$store.theme.dark ? 'text-gray-200 hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-100'">
+        <svg class="w-4 h-4 flex-shrink-0 text-[#218838]" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.84A1 1 0 004 3.7v12.6a1 1 0 001.5.86l11-6.3a1 1 0 000-1.72l-11-6.3z"/></svg>
+        {{ __('quran.public.listen_from_here') }}
+    </button>
+    <button type="button" role="menuitem" @click="showTafsirFor(verseMenu)"
+            class="w-full text-start px-3 py-2.5 text-sm font-medium flex items-center gap-2.5 transition-colors"
+            :class="$store.theme.dark ? 'text-gray-200 hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-100'">
+        <svg class="w-4 h-4 flex-shrink-0 text-[#0056b3]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.5S10 5 7 5H4v12h3c3 0 5 1.5 5 1.5m0-12S14 5 17 5h3v12h-3c-3 0-5 1.5-5 1.5m0-12v12"/></svg>
+        {{ __('quran.public.show_tafsir') }}
+    </button>
+</div>
+
+{{-- ============================================================ --}}
+{{-- VERSE TAFSIR MODAL (opened from the verse actions menu)        --}}
 {{-- ============================================================ --}}
 <div x-show="tafsirVerse" x-cloak x-transition.opacity
      @keydown.escape.window="tafsirVerse = null"

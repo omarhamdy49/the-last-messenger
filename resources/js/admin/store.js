@@ -72,8 +72,16 @@ Alpine.store('admin', {
     // ============================================
     // LANGUAGE & RTL
     // ============================================
-    language: localStorage.getItem('adminLanguage') || 'en',
-    isRtl: localStorage.getItem('adminLanguage') === 'ar' || localStorage.getItem('adminLanguage') === 'ur',
+    // The server decides the admin locale — SetLocale force-sets Arabic for every
+    // panel route — so the rendered document is the source of truth and only an
+    // explicit switcher choice overrides it. Defaulting to 'en' here used to stamp
+    // lang=en/dir=ltr over the server's Arabic in init(), flipping the whole panel
+    // to LTR (sidebar on the wrong side) on any browser that had never used the
+    // switcher.
+    language: localStorage.getItem('adminLanguage') || document.documentElement.lang || 'ar',
+    isRtl: localStorage.getItem('adminLanguage')
+        ? ['ar', 'ur'].includes(localStorage.getItem('adminLanguage'))
+        : document.documentElement.dir === 'rtl',
 
     setLanguage(lang) {
         this.language = lang;
@@ -431,9 +439,9 @@ Alpine.store('admin', {
         // Apply dark mode class on init
         this.updateDarkModeClass();
 
-        // Set RTL direction on init
-        document.documentElement.setAttribute('dir', this.getDirection());
-        document.documentElement.setAttribute('lang', this.language);
+        // Direction/lang are rendered by the server; re-stamping them here only
+        // ever overwrote correct values with a client-side guess. setLanguage()
+        // still applies an explicit choice.
 
         // Handle window resize for sidebar
         window.addEventListener('resize', () => {

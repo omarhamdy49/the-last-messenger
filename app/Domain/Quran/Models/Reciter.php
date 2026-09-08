@@ -22,6 +22,8 @@ use Illuminate\Support\Str;
  * @property string|null $style
  * @property string|null $riwayah
  * @property string|null $everyayah_folder
+ * @property int|null $mp3quran_read_id
+ * @property string|null $mp3quran_folder
  * @property string|null $country
  * @property string|null $profile_image
  * @property bool $is_featured
@@ -51,6 +53,8 @@ class Reciter extends Model
         'style',
         'riwayah',
         'everyayah_folder',
+        'mp3quran_read_id',
+        'mp3quran_folder',
         'country',
         'profile_image',
         'is_featured',
@@ -65,6 +69,7 @@ class Reciter extends Model
      * @var array<string, string>
      */
     protected $casts = [
+        'mp3quran_read_id' => 'integer',
         'is_featured' => 'boolean',
         'is_active' => 'boolean',
         'display_order' => 'integer',

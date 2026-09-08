@@ -122,8 +122,6 @@
         sortBy: 'popular',
         perPage: parseInt(localStorage.getItem('recitersPerPage')) || 20,
         currentPage: 1,
-        playingReciterId: null,
-        currentAudio: null,
         featuredReciters: {{ $featuredJson }},
         allReciters: {{ $allJson }},
 
@@ -182,20 +180,6 @@
             if (p < 1 || p > this.totalFilteredPages) { return; }
             this.currentPage = p;
             window.scrollTo({ top: 0, behavior: 'smooth' });
-        },
-
-        playPreview(reciter) {
-            if (this.currentAudio) { this.currentAudio.pause(); }
-            if (this.playingReciterId === reciter.id) {
-                this.playingReciterId = null;
-                return;
-            }
-            this.playingReciterId = reciter.id;
-            if (reciter.firstSurahAudioUrl) {
-                this.currentAudio = new Audio(reciter.firstSurahAudioUrl);
-                this.currentAudio.play().catch(() => { this.playingReciterId = null; });
-                this.currentAudio.addEventListener('ended', () => { this.playingReciterId = null; });
-            }
         },
 
         profileImageSrc(reciter) {
@@ -294,11 +278,6 @@
                                     <span class="text-white text-5xl font-['Amiri']" x-text="initials(reciter)"></span>
                                 </div>
                             </template>
-                            <div x-show="playingReciterId === reciter.id"
-                                 class="absolute -bottom-2 start-1/2 transform -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-[#0056b3] to-[#218838] text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1">
-                                <span class="w-1 h-1 bg-white rounded-full animate-pulse"></span>
-                                {{ __('quran.public.now_playing') }}
-                            </div>
                         </div>
                         <div class="featured-badge absolute -top-2 -end-2 px-3 py-1.5 bg-gradient-to-r from-[#0056b3] to-[#218838] text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1">
                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">

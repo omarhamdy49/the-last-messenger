@@ -266,6 +266,16 @@ final class QuranCacheKeys
         return self::reciterScoped("public:surah_audio_urls:{$surahNumber}");
     }
 
+    /**
+     * Per-ayah timings for one surah of one reciter's recording
+     * (AyahTimingService). Reciter-scoped: the timings describe a recording, so
+     * a reciter edit must drop them and a content edit must not.
+     */
+    public static function surahAyahTimings(int $surahNumber, int $reciterId): string
+    {
+        return self::reciterScoped("public:surah_timings:{$surahNumber}:{$reciterId}");
+    }
+
     // -----------------------------------------------------------------------
     // Shared / helper keys
     // -----------------------------------------------------------------------

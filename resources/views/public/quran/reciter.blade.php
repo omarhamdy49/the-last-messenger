@@ -20,7 +20,7 @@
 
 <div class="min-h-dvh font-['Cairo'] bg-gray-50 dark:bg-gray-950 transition-colors duration-300"
      x-data
-     :style="$store.audioPlayer.track ? 'padding-bottom: 6rem' : ''">
+     :style="$store.audioPlayer.track ? 'padding-bottom: 7rem' : ''">
 
     {{-- ============================================================ --}}
     {{-- PROFILE HERO — brand gradient band, avatar, meta chips        --}}
@@ -112,21 +112,28 @@
             @else
                 {{-- Premium surah tiles — clicking routes through the shared
                      bottom-bar player ($store.audioPlayer), same as the Quran
-                     reader. The active tile shows equalizer bars / pause. --}}
+                     reader. The whole list is handed over as the player's
+                     playlist, so its ⏮/⏭ walk this reciter's recitations and one
+                     surah rolls into the next. The active tile shows equalizer
+                     bars / pause. --}}
+                @php
+                    $playable = collect($recitations)->filter(fn ($r) => filled($r['audio_url']))->values();
+                    $tracks = $playable->map(fn ($r) => [
+                        'url' => $r['audio_url'],
+                        'title' => $r['surah_name'],
+                        'subtitle' => $reciter['name'],
+                    ])->all();
+                @endphp
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"
                      x-data="{
+                        tracks: @js($tracks),
                         isCurrent(url) { return $store.audioPlayer.track?.url === url },
                         isPlaying(url) { return this.isCurrent(url) && $store.audioPlayer.playing },
-                        playOrToggle(url, title) {
-                            this.isCurrent(url)
-                                ? $store.audioPlayer.toggle()
-                                : $store.audioPlayer.play({ url, title, subtitle: @js($reciter['name']) });
-                        },
                      }">
-                    @foreach ($recitations as $recitation)
-                        @continue(blank($recitation['audio_url']))
+                    @foreach ($playable as $i => $recitation)
                         <button type="button"
-                                @click="playOrToggle(@js($recitation['audio_url']), @js($recitation['surah_name']))"
+                                {{-- setPlaylist toggles when the tapped track is already loaded --}}
+                                @click="$store.audioPlayer.setPlaylist(tracks, {{ $i }})"
                                 class="group flex items-center gap-3 rounded-2xl p-3.5 text-start border shadow-sm cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 motion-reduce:transform-none bg-white dark:bg-gray-900 border-gray-100 dark:border-white/10"
                                 :class="isCurrent(@js($recitation['audio_url'])) ? 'ring-2 ring-[#218838]/60 shadow-lg' : ''"
                                 :aria-label="isPlaying(@js($recitation['audio_url'])) ? @js(__('quran.public.pause').' — '.$recitation['surah_name']) : @js(__('quran.public.listen_now').' — '.$recitation['surah_name'])">
