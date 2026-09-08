@@ -75,6 +75,9 @@ class SyncMp3QuranCommand extends Command
     /** @var array<string, string|null> folder => the URL that failed, or null */
     private array $probed = [];
 
+    /** --inactive: import new reciters hidden from the public site. */
+    private bool $inactive = false;
+
     public function handle(): int
     {
         try {
@@ -97,7 +100,7 @@ class SyncMp3QuranCommand extends Command
         $dryRun = (bool) $this->option('dry-run');
         $keep = (bool) $this->option('keep-existing');
         $fresh = (bool) $this->option('fresh');
-        $inactive = (bool) $this->option('inactive');
+        $this->inactive = (bool) $this->option('inactive');
         // A rebuild that did not put the reciters back would leave the site
         // with no audio at all, so --fresh always runs the import.
         $importNew = $fresh || (bool) $this->option('import-new');
@@ -243,7 +246,7 @@ class SyncMp3QuranCommand extends Command
         if ($importNew && $only !== []) {
             $this->warn('--only limits the run to reciters we already have, so --import-new was skipped.');
         } elseif ($importNew) {
-            [$imported, $importedUrls] = $this->importNew($catalogue, $preserved, $dryRun, $inactive);
+            [$imported, $importedUrls] = $this->importNew($catalogue, $preserved, $dryRun);
         }
 
         $this->report($summary, $examples, $folders, $ambiguous, $unmatched, $imported, $importedUrls, $created, $replaced, $kept, $dryRun, $keep);
@@ -340,10 +343,9 @@ class SyncMp3QuranCommand extends Command
      * and "[12/250]" is what drives the progress bar in the admin panel.
      *
      * @param  array<string, list<array<string, mixed>>>  $preserved
-     * @param  bool  $inactive  import hidden from the public site
      * @return array{0: array<string, int>, 1: int}
      */
-    private function importNew(Mp3QuranCatalogue $catalogue, array $preserved, bool $dryRun, bool $inactive): array
+    private function importNew(Mp3QuranCatalogue $catalogue, array $preserved, bool $dryRun): array
     {
         $known = Reciter::query()->whereNotNull('mp3quran_folder')->pluck('mp3quran_folder')->flip()->all();
 
@@ -392,7 +394,7 @@ class SyncMp3QuranCommand extends Command
                 ));
 
                 if (! $dryRun) {
-                    DB::transaction(fn () => $importer->import($moshaf, $preview, $kept, ! $inactive));
+                    DB::transaction(fn () => $importer->import($moshaf, $preview, $kept, ! $this->inactive));
                 }
             }
         }
@@ -693,7 +695,7 @@ class SyncMp3QuranCommand extends Command
             ));
 
             if ($imported['created'] > 0) {
-                $this->info($inactive
+                $this->info($this->inactive
                     ? "{$imported['created']} reciters imported hidden — activate them in the admin panel to publish."
                     : "{$imported['created']} reciters imported and visible on the public site: they are in /quran/reciters and in the surah player's picker.");
             }
