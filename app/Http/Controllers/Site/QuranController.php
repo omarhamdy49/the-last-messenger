@@ -15,6 +15,7 @@ use App\Domain\Quran\Repositories\AiInquiryQuotaRepositoryInterface;
 use App\Domain\Quran\Repositories\AiInquiryRepositoryInterface;
 use App\Domain\Quran\Services\AnswerHtmlRenderer;
 use App\Domain\Quran\Services\AnswerVerseLinker;
+use App\Domain\Quran\Services\AyahTimingService;
 use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Quran\Services\QuranInquirySearchService;
 use App\Domain\Quran\Services\QuranQueryService;
@@ -46,6 +47,7 @@ final class QuranController extends Controller
         private readonly AiInquiryRepositoryInterface $inquiries,
         private readonly AnswerVerseLinker $verseLinker,
         private readonly AnswerHtmlRenderer $answerHtmlRenderer,
+        private readonly AyahTimingService $ayahTimingService,
     ) {}
 
     /**
@@ -705,7 +707,6 @@ final class QuranController extends Controller
                     'description' => $r->getDescription('ar'),
                     'slug' => $r->slug,
                     'recitationsCount' => $r->recitationsCount,
-                    'firstSurahAudioUrl' => null, // resolved client-side
                 ];
 
                 return [
@@ -1001,5 +1002,20 @@ final class QuranController extends Controller
         }
 
         return response()->json($this->quranReaderService->getSurahTranslation($surahNumber, $resourceId));
+    }
+
+    /**
+     * Per-ayah timings for one reciter's whole-surah recording, as compact
+     * [ayah, startMs, endMs] triples, so the player can highlight along with the
+     * audio. Always 200: an unmapped reciter or an unreachable upstream returns
+     * an empty list and the reader simply gets no highlighting.
+     */
+    public function surahTimings(int $surahNumber, int $reciterId): JsonResponse
+    {
+        if ($surahNumber < 1 || $surahNumber > 114) {
+            abort(404);
+        }
+
+        return response()->json($this->ayahTimingService->forSurah($surahNumber, $reciterId));
     }
 }

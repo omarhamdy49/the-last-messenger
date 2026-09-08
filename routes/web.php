@@ -60,6 +60,10 @@ Route::get('/quran/verse/{verseId}/tafsir/{resourceId}', [QuranController::class
     ->whereNumber('verseId')->whereNumber('resourceId')->name('public.quran.verse.tafsir');
 Route::get('/quran/surah/{surahNumber}/translation/{resourceId}', [QuranController::class, 'surahTranslation'])
     ->whereNumber('surahNumber')->whereNumber('resourceId')->name('public.quran.surah.translation');
+// Per-ayah timings for the whole-surah recording, so the player can highlight
+// the ayah being recited. Empty for reciters mp3quran publishes no timings for.
+Route::get('/quran/surah/{surahNumber}/timings/{reciterId}', [QuranController::class, 'surahTimings'])
+    ->whereNumber('surahNumber')->whereNumber('reciterId')->name('public.quran.surah.timings');
 Route::get('/quran/juz/{juz}', [QuranController::class, 'juz'])
     ->whereNumber('juz')->name('public.quran.juz');
 Route::get('/quran/hizb/{hizb}', [QuranController::class, 'hizb'])
