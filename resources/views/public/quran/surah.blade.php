@@ -351,7 +351,7 @@
         .mushaf-rail-divider { display: none; }
         .mushaf-rail-pop { bottom: calc(100% + 0.6rem); inset-inline-end: 0; }
         /* Lift the rail above the shared player bar when it's visible. */
-        body.site-has-audio .mushaf-rail { bottom: 5.25rem; }
+        body.site-has-audio .mushaf-rail { bottom: 6.5rem; }
     }
 
     /* Motion is decoration here — the rail stays fully usable without it. */
@@ -456,7 +456,17 @@
                 // number + versesCount let the player chain per-verse audio for
                 // reciters that have no whole-surah recording.
                 surah: { nameAr: this.surah.nameAr, number: this.surah.number, versesCount: this.surah.versesCount },
+                // Lets the player's next/previous-surah buttons move the page.
+                urlBase: this.surahUrlBase,
             });
+
+            // Arrived here from the player's surah transport: keep playing. The
+            // gesture was on the previous page, so a strict autoplay policy can
+            // still refuse — play() swallows that.
+            if (sessionStorage.getItem('siteAutoplaySurah')) {
+                sessionStorage.removeItem('siteAutoplaySurah');
+                this.$store.audioPlayer.playSurah();
+            }
 
             // Deep link to a specific verse (#v65): the native jump fires before
             // Alpine renders the cards, so scroll after render + on later hash changes.
@@ -708,7 +718,7 @@
 >
 
 <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8"
-      :style="$store.audioPlayer.track ? 'padding-bottom: 7rem' : ''">
+      :style="$store.audioPlayer.track ? 'padding-bottom: 8rem' : ''">
 
     {{-- Breadcrumb --}}
     <nav class="flex mb-8 text-sm animate-fadeIn" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'"

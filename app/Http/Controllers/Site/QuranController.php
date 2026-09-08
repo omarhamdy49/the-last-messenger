@@ -456,6 +456,23 @@ final class QuranController extends Controller
             return $reciter;
         }, $reciters);
 
+        // Alphabetical picker (A→Z / أ→ي). Hamza-carrying alefs are folded to bare
+        // alef in the sort key only, so إبراهيم / أبو بكر land under ا with the
+        // rest instead of ahead of the whole list.
+        usort($reciters, static function (array $a, array $b): int {
+            $key = static function (array $r): string {
+                // The picker labels itself with nameAr (nameEn only when there is
+                // no Arabic name), so sort on the same string the reader sees.
+                $name = $r['nameAr'] ?: ($r['nameEn'] ?? '');
+                $name = str_replace(['أ', 'إ', 'آ', 'ٱ', 'ى'], ['ا', 'ا', 'ا', 'ا', 'ي'], $name);
+
+                // Arabic names first, Latin-labelled leftovers after them.
+                return (preg_match('/^\p{Arabic}/u', $name) === 1 ? '0' : '1').$name;
+            };
+
+            return strcmp($key($a), $key($b));
+        });
+
         $firstRecitationUrl = $reciters[0]['surahAudioUrl'] ?? null;
 
         $prevSurah = $surahNumber > 1 ? $surahNumber - 1 : null;
