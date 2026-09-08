@@ -98,6 +98,19 @@
     }
     .mushaf-dark .qw.qw-verse-active { color: #a7f3ef; }
 
+    /* Ayah being recited — stronger than the hover lift, and it stays put. */
+    .mushaf .qw.qw-verse-playing {
+        background-color: rgba(33, 136, 56, 0.16);
+        color: #17693a;
+    }
+    .mushaf-dark .qw.qw-verse-playing {
+        background-color: rgba(100, 204, 197, 0.2);
+        color: #7ee7dd;
+    }
+    .mushaf .ayah-end.ayah-end-playing { filter: drop-shadow(0 0 4px rgba(33, 136, 56, 0.5)); }
+    .mushaf-dark .ayah-end.ayah-end-playing { filter: drop-shadow(0 0 4px rgba(100, 204, 197, 0.55)); }
+    .verse-card.is-playing { box-shadow: 0 0 0 2px #218838, 0 10px 30px -10px rgba(33, 136, 56, 0.45); }
+
     /* Verse-end rosette — our ornament (not a glyph font), holds the verse number. */
     .mushaf .ayah-end {
         position: relative;
@@ -397,9 +410,6 @@
         defaultTranslationId: {{ $defaultTranslationId }}, // inlined edition (Saheeh International)
         translationLang: '{{ $defaultTranslationLang }}', // default translation language (English / Saheeh)
 
-        audioPlaying: false,
-        currentVerseId: null,
-        currentAudio: null,
         {{-- Page default only; the shared audioPlayer store owns the live choice
              (a stored siteReciterId wins over this in configure()). --}}
         selectedReciterId: {{ $defaultReciterId }},
@@ -672,28 +682,40 @@
                 .catch(() => {});
         },
 
+        // Verse play buttons run through the shared bottom player, so a verse and
+        // a surah can never recite over each other and the bar always shows what
+        // is playing. The store starts its per-verse queue at this ayah.
         playVerse(verse) {
-            // Clicking the same verse again toggles pause/resume.
-            if (this.currentVerseId === verse.id && this.currentAudio) {
-                if (this.audioPlaying) { this.currentAudio.pause(); this.audioPlaying = false; }
-                else { this.currentAudio.play().then(() => { this.audioPlaying = true; }).catch(() => {}); }
-                return;
-            }
-            if (this.currentAudio) { this.currentAudio.pause(); }
-            // Same reciter as the shared player / aside picker.
-            const reciter = this.$store.audioPlayer.currentReciter()
-                || this.reciters.find(r => r.id === this.selectedReciterId);
-            if (!reciter || !reciter.everyayah_folder) { return; }
-            const surahPad = String(this.surah.number).padStart(3, '0');
-            const versePad = String(verse.number).padStart(3, '0');
-            const url = `https://everyayah.com/data/${reciter.everyayah_folder}/${surahPad}${versePad}.mp3`;
-            this.currentAudio = new Audio(url);
-            this.currentVerseId = verse.id;
-            this.audioPlaying = true;
-            this.currentAudio.play().catch(() => { this.audioPlaying = false; this.currentVerseId = null; });
-            this.currentAudio.addEventListener('pause', () => { this.audioPlaying = false; });
-            this.currentAudio.addEventListener('play', () => { this.audioPlaying = true; });
-            this.currentAudio.addEventListener('ended', () => { this.audioPlaying = false; this.currentVerseId = null; });
+            this.$store.audioPlayer.playAyah(verse.number);
+        },
+
+        isVerseLoaded(verse) { return this.$store.audioPlayer.playingAyah === verse.number; },
+        isVersePlaying(verse) { return this.isVerseLoaded(verse) && this.$store.audioPlayer.playing; },
+
+        // Paint the ayah being recited and keep it in view. Reading mode marks
+        // every word of the ayah (same shape as the hover highlight); verse mode
+        // marks the card.
+        syncPlayingVerse(number) {
+            document.querySelectorAll('.mushaf .qw-verse-playing, .mushaf .ayah-end-playing')
+                .forEach((el) => el.classList.remove('qw-verse-playing', 'ayah-end-playing'));
+            if (!number) { return; }
+
+            // Single quotes: this whole x-data is one double-quoted HTML attribute.
+            const parts = document.querySelectorAll(`.mushaf [data-verse='${number}']`);
+            parts.forEach((el) => el.classList.add(
+                el.classList.contains('ayah-end') ? 'ayah-end-playing' : 'qw-verse-playing'
+            ));
+
+            const target = this.viewMode === 'verses' ? document.getElementById('v' + number) : parts[0];
+            if (!target) { return; }
+            // ponytail: scroll only when the ayah is off-screen; no tracking of
+            // whether the reader has scrolled away — off-screen is the case that matters.
+            const box = target.getBoundingClientRect();
+            if (box.top > 80 && box.bottom < window.innerHeight - 120) { return; }
+            target.scrollIntoView({
+                behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+                block: 'center',
+            });
         },
 
 
@@ -718,7 +740,8 @@
 >
 
 <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8"
-      :style="$store.audioPlayer.track ? 'padding-bottom: 8rem' : ''">
+      :style="$store.audioPlayer.track ? 'padding-bottom: 8rem' : ''"
+      x-effect="syncPlayingVerse($store.audioPlayer.playingAyah)">
 
     {{-- Breadcrumb --}}
     <nav class="flex mb-8 text-sm animate-fadeIn" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'"
@@ -957,7 +980,7 @@
                         :id="'v' + verse.number"
                         style="scroll-margin-top: 6rem"
                         class="verse-card rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl"
-                        :class="$store.theme.dark ? 'bg-gray-900' : 'bg-white'"
+                        :class="[$store.theme.dark ? 'bg-gray-900' : 'bg-white', isVerseLoaded(verse) ? 'is-playing' : '']"
                     >
                         {{-- Verse header --}}
                         <div class="flex items-center justify-between p-4"
@@ -979,16 +1002,16 @@
                             <div class="flex items-center gap-2">
                                 <button @click="playVerse(verse)"
                                     class="p-2 rounded-lg transition-colors"
-                                    :class="currentVerseId === verse.id
+                                    :class="isVerseLoaded(verse)
                                         ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white'
                                         : ($store.theme.dark ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-gray-200 text-gray-600 hover:text-gray-900')"
                                     :title="'{{ __('quran.public.listen') }}'"
                                 >
                                     {{-- play, or pause while this verse is playing --}}
-                                    <svg x-show="!(currentVerseId === verse.id && audioPlaying)" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <svg x-show="!isVersePlaying(verse)" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/>
                                     </svg>
-                                    <svg x-show="currentVerseId === verse.id && audioPlaying" x-cloak class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <svg x-show="isVersePlaying(verse)" x-cloak class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 7a1 1 0 011 1v4a1 1 0 11-2 0V8a1 1 0 011-1zm6 0a1 1 0 011 1v4a1 1 0 11-2 0V8a1 1 0 011-1z" clip-rule="evenodd"/>
                                     </svg>
                                 </button>

@@ -101,6 +101,20 @@
 
             {{-- Speed + volume + reciter + close --}}
             <div class="flex-1 min-w-0 flex items-center justify-end gap-1 sm:gap-2">
+                {{-- Follow along: chains per-verse audio so the page can highlight
+                     the ayah being recited. Only offered where a verse queue is
+                     possible (a surah page, reciter with per-verse files). --}}
+                <button x-show="$store.audioPlayer.surahMeta && $store.audioPlayer.currentReciter()?.everyayah_folder"
+                        @click="$store.audioPlayer.toggleFollow()"
+                        class="{{ $iconBtn }}"
+                        :class="$store.audioPlayer.follow
+                            ? 'text-white bg-gradient-to-r from-[#0056b3] to-[#218838]'
+                            : ({{ $iconBtnTheme }})"
+                        :aria-pressed="$store.audioPlayer.follow"
+                        title="{{ __('quran.public.follow_verses') }}" aria-label="{{ __('quran.public.follow_verses') }}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h9M4 12h9M4 18h6"/><circle cx="18" cy="16" r="3.2"/><path stroke-linecap="round" d="m20.4 18.4 1.6 1.6"/></svg>
+                </button>
+
                 <button @click="$store.audioPlayer.cycleSpeed()" class="px-2 h-8 rounded-lg text-xs font-bold tabular-nums transition-colors flex-shrink-0"
                         :class="$store.theme.dark ? 'text-gray-300 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100'"
                         x-text="$store.audioPlayer.rate + '×'" title="{{ __('quran.public.playback_speed') }}"
@@ -199,6 +213,10 @@
             surahMeta: null,        // { nameAr, number, versesCount }
             surahUrlBase: null,     // e.g. https://site/quran/surah — enables surah transport
             reciterOpen: false,
+            // Follow-along: play the surah as chained per-verse files even when a
+            // whole-surah recording exists, so the page can highlight the ayah
+            // being recited. Off by default — the single file is gapless.
+            follow: localStorage.getItem('siteFollowVerses') === '1',
 
             // Verse-chaining fallback. Only a fraction of reciters have a
             // whole-surah recording; the rest play a surah by queueing their
@@ -271,21 +289,60 @@
                 return `${this.reciterName()} · {{ __('quran.public.verse_label') }} ${this.queueIndex + 1}/${this.queue.length}`;
             },
 
+            // The ayah being recited, 1-based — only knowable in queue mode, since
+            // a whole-surah file carries no verse timings. null = not following.
+            get playingAyah() { return this.queue ? this.queueIndex + 1 : null; },
+
+            // Queue mode is forced by follow-along, and is the only option for a
+            // reciter with no whole-surah recording.
+            _preferQueue() { return this.follow && !!this.currentReciter()?.everyayah_folder; },
+
+            toggleFollow() {
+                this.follow = !this.follow;
+                localStorage.setItem('siteFollowVerses', this.follow ? '1' : '0');
+                // Without verse timings a wall-clock offset can't be mapped onto an
+                // ayah, so changing modes mid-surah restarts the recitation.
+                if (this.track && this.surahMeta) { this.playSurah(true); }
+            },
+
             // Play the configured surah with the selected reciter (rail Play button).
-            // Prefers the single whole-surah file; falls back to chaining verses.
-            playSurah() {
-                const url = this.surahUrl();
+            // Prefers the single whole-surah file, unless the reader is following
+            // along; falls back to chaining verses either way.
+            playSurah(restart = false) {
+                const url = this._preferQueue() ? null : this.surahUrl();
                 if (url) {
                     this.queue = null;
+                    if (restart && this.track?.url === url) { this.restart(); return; }
                     this.play({ url, title: this.surahMeta?.nameAr || '', subtitle: this.reciterName() });
                     return;
                 }
 
                 const queue = this._verseQueue(this.currentReciter());
-                if (!queue) { window.toast?.('{{ __('quran.public.audio_unavailable') }}', 'error'); return; }
+                if (!queue) {
+                    // Follow-along asked for verses this reciter can't supply.
+                    const whole = this.surahUrl();
+                    if (whole) { this.queue = null; this.play({ url: whole, title: this.surahMeta?.nameAr || '', subtitle: this.reciterName() }); return; }
+                    window.toast?.('{{ __('quran.public.audio_unavailable') }}', 'error');
+
+                    return;
+                }
 
                 this.queue = queue;
                 this.queueIndex = 0;
+                this._playQueued(true);
+            },
+
+            // Start the surah at one ayah (the per-verse play buttons on the page).
+            // Always queue mode — it's the only mode that can start mid-surah.
+            playAyah(number) {
+                const queue = this.queue || this._verseQueue(this.currentReciter());
+                if (!queue) { window.toast?.('{{ __('quran.public.audio_unavailable') }}', 'error'); return; }
+
+                const idx = Math.max(0, Math.min(number - 1, queue.length - 1));
+                // Re-tapping the ayah that's already loaded toggles it.
+                if (this.queue && this.queueIndex === idx && this.track) { this.toggle(); return; }
+                this.queue = queue;
+                this.queueIndex = idx;
                 this._playQueued(true);
             },
 
@@ -328,7 +385,7 @@
                 if (!this.track) { return; }
 
                 const wasPlaying = this.playing;
-                const url = this.surahUrl();
+                const url = this._preferQueue() ? null : this.surahUrl();
 
                 if (!url) {
                     const queue = this._verseQueue(this.currentReciter());
