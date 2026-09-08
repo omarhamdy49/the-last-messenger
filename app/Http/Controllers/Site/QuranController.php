@@ -35,6 +35,14 @@ use Throwable;
 
 final class QuranController extends Controller
 {
+    /**
+     * One page big enough to hold the whole reciter catalogue. Both reciter
+     * listings want every row; a page smaller than the table drops the tail
+     * silently instead of paginating, which is how importing mp3quran's 245
+     * reciters quietly cut the picker off at 200.
+     */
+    private const RECITER_PAGE = 5000;
+
     public function __construct(
         private readonly QuranQueryService $quranQueryService,
         private readonly QuranReaderService $quranReaderService,
@@ -423,9 +431,10 @@ final class QuranController extends Controller
         $reciters = Cache::remember(QuranCacheKeys::publicRecitersAudioList(), 3600, function () {
             try {
                 $all = $this->quranQueryService->listReciters(
-                    // Must exceed the catalogue size — a short page silently drops
-                    // reciters from the picker rather than paginating it.
-                    perPage: 200,
+                    // Must exceed the catalogue size — a short page silently
+                    // drops reciters from the picker rather than paginating it,
+                    // and importing mp3quran took us past the old cap of 200.
+                    perPage: self::RECITER_PAGE,
                     activeOnly: true,
                     kind: 'recitation',
                 );
@@ -436,12 +445,41 @@ final class QuranController extends Controller
                     ? collect($all->items())
                     : collect($all);
 
-                return $items->map(fn ($r) => [
-                    'id' => $r->id,
-                    'nameAr' => $r->getDisplayName('ar'),
-                    'nameEn' => $r->getDisplayName('en'),
-                    'everyayah_folder' => $r->everyayahFolder,
-                ])->values()->all();
+                $reciters = $items->map(function ($r) {
+                    $nameAr = $r->getDisplayName('ar');
+
+                    return [
+                        'id' => $r->id,
+                        'nameAr' => $nameAr,
+                        // Every consumer reads `nameAr || nameEn`, so an English
+                        // name next to an Arabic one is dead weight inlined into
+                        // every surah page — and the catalogue is ~250 reciters.
+                        'nameEn' => $nameAr === '' ? $r->getDisplayName('en') : null,
+                        'everyayah_folder' => $r->everyayahFolder,
+                    ];
+                })->values()->all();
+
+                // Alphabetical picker (A→Z / أ→ي). Hamza-carrying alefs are folded
+                // to bare alef in the sort key only, so إبراهيم / أبو بكر land
+                // under ا with the rest instead of ahead of the whole list.
+                // Sorted in here, not per request: the order depends only on the
+                // names, which is exactly what this entry caches.
+                usort($reciters, static function (array $a, array $b): int {
+                    $key = static function (array $r): string {
+                        // The picker labels itself with nameAr (nameEn only when
+                        // there is no Arabic name), so sort on the same string
+                        // the reader sees.
+                        $name = $r['nameAr'] ?: ($r['nameEn'] ?? '');
+                        $name = str_replace(['أ', 'إ', 'آ', 'ٱ', 'ى'], ['ا', 'ا', 'ا', 'ا', 'ي'], $name);
+
+                        // Arabic names first, Latin-labelled leftovers after them.
+                        return (preg_match('/^\p{Arabic}/u', $name) === 1 ? '0' : '1').$name;
+                    };
+
+                    return strcmp($key($a), $key($b));
+                });
+
+                return $reciters;
             } catch (Throwable $e) {
                 report($e);
 
@@ -457,23 +495,6 @@ final class QuranController extends Controller
 
             return $reciter;
         }, $reciters);
-
-        // Alphabetical picker (A→Z / أ→ي). Hamza-carrying alefs are folded to bare
-        // alef in the sort key only, so إبراهيم / أبو بكر land under ا with the
-        // rest instead of ahead of the whole list.
-        usort($reciters, static function (array $a, array $b): int {
-            $key = static function (array $r): string {
-                // The picker labels itself with nameAr (nameEn only when there is
-                // no Arabic name), so sort on the same string the reader sees.
-                $name = $r['nameAr'] ?: ($r['nameEn'] ?? '');
-                $name = str_replace(['أ', 'إ', 'آ', 'ٱ', 'ى'], ['ا', 'ا', 'ا', 'ا', 'ي'], $name);
-
-                // Arabic names first, Latin-labelled leftovers after them.
-                return (preg_match('/^\p{Arabic}/u', $name) === 1 ? '0' : '1').$name;
-            };
-
-            return strcmp($key($a), $key($b));
-        });
 
         $firstRecitationUrl = $reciters[0]['surahAudioUrl'] ?? null;
 
@@ -679,7 +700,7 @@ final class QuranController extends Controller
                 $featured = collect($all)->take(3);
 
                 $allReciters = $this->quranQueryService->listReciters(
-                    perPage: 200,
+                    perPage: self::RECITER_PAGE,
                     activeOnly: true,
                     locale: $locale,
                     // Recited translations share this table but are not qaris;

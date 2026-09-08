@@ -22,7 +22,7 @@ use Throwable;
  */
 final class Mp3QuranCatalogue
 {
-    private const RECITERS = 'https://www.mp3quran.net/api/v3/reciters?language=ar';
+    private const RECITERS = 'https://www.mp3quran.net/api/v3/reciters?language=';
 
     private const TIMED_READS = 'https://www.mp3quran.net/api/v3/ayat_timing/reads';
 
@@ -31,12 +31,16 @@ final class Mp3QuranCatalogue
      * @param  array<int, list<array<string, mixed>>>  $moshafsByReciter
      * @param  array<int, array<string, mixed>>  $moshafsById
      * @param  array<string, int>  $readsByFolder
+     * @param  array<int, string>  $englishNames
+     * @param  array<int, string>  $englishMoshafNames
      */
     private function __construct(
         private readonly array $reciters,
         private readonly array $moshafsByReciter,
         private readonly array $moshafsById,
         private readonly array $readsByFolder,
+        private readonly array $englishNames,
+        private readonly array $englishMoshafNames,
     ) {}
 
     /**
@@ -44,8 +48,12 @@ final class Mp3QuranCatalogue
      */
     public static function fetch(): self
     {
-        $catalogue = self::get(self::RECITERS, 'reciters');
+        $catalogue = self::get(self::RECITERS.'ar', 'reciters');
         $reads = self::get(self::TIMED_READS);
+
+        // Arabic is authoritative for structure; English is only read for
+        // names, so that a reciter we create is not Arabic in both columns.
+        [$englishNames, $englishMoshafNames] = self::englishIndex();
 
         $readsByFolder = [];
 
@@ -68,7 +76,7 @@ final class Mp3QuranCatalogue
             $reciters[] = ['id' => $reciterId, 'name' => $name];
 
             foreach ((array) ($entry['moshaf'] ?? []) as $moshaf) {
-                $row = self::normalizeMoshaf($moshaf, $name);
+                $row = self::normalizeMoshaf($moshaf, $reciterId, $name);
 
                 if ($row === null) {
                     continue;
@@ -83,7 +91,7 @@ final class Mp3QuranCatalogue
             throw new RuntimeException('mp3quran.net returned no reciters — aborting without writing anything.');
         }
 
-        return new self($reciters, $byReciter, $byId, $readsByFolder);
+        return new self($reciters, $byReciter, $byId, $readsByFolder, $englishNames, $englishMoshafNames);
     }
 
     /**
@@ -116,6 +124,26 @@ final class Mp3QuranCatalogue
         return $this->moshafsById[$moshafId] ?? null;
     }
 
+    /**
+     * Every recording in the catalogue, for the import-everything path.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function moshafs(): array
+    {
+        return $this->moshafsById;
+    }
+
+    public function englishName(int $reciterId): ?string
+    {
+        return $this->englishNames[$reciterId] ?? null;
+    }
+
+    public function englishMoshafName(int $moshafId): ?string
+    {
+        return $this->englishMoshafNames[$moshafId] ?? null;
+    }
+
     /** The ayat-timing read id for a recording, or null when it has no timings. */
     public function readIdFor(string $folder): ?int
     {
@@ -146,7 +174,7 @@ final class Mp3QuranCatalogue
      * @param  array<string, mixed>  $moshaf
      * @return array<string, mixed>|null null when the entry has no usable audio
      */
-    private static function normalizeMoshaf(array $moshaf, string $reciterName): ?array
+    private static function normalizeMoshaf(array $moshaf, int $reciterId, string $reciterName): ?array
     {
         $server = (string) ($moshaf['server'] ?? '');
 
@@ -161,6 +189,7 @@ final class Mp3QuranCatalogue
 
         return [
             'id' => (int) ($moshaf['id'] ?? 0),
+            'reciter_id' => $reciterId,
             'reciter' => $reciterName,
             'name' => (string) ($moshaf['name'] ?? ''),
             'rewaya_id' => (int) ($moshaf['rewaya_id'] ?? 0),
@@ -197,6 +226,44 @@ final class Mp3QuranCatalogue
         }
 
         return $data;
+    }
+
+    /**
+     * English names keyed by reciter id and by moshaf id.
+     *
+     * A missing or broken English list is not worth aborting a run over — the
+     * Arabic name alone still makes a usable reciter — so this one degrades to
+     * empty instead of throwing.
+     *
+     * @return array{0: array<int, string>, 1: array<int, string>}
+     */
+    private static function englishIndex(): array
+    {
+        try {
+            $english = self::get(self::RECITERS.'eng', 'reciters');
+        } catch (RuntimeException $e) {
+            report($e);
+
+            return [[], []];
+        }
+
+        $names = [];
+        $moshafNames = [];
+
+        foreach ($english as $entry) {
+            $id = (int) ($entry['id'] ?? 0);
+            $name = trim((string) ($entry['name'] ?? ''));
+
+            if ($id > 0 && $name !== '') {
+                $names[$id] = $name;
+            }
+
+            foreach ((array) ($entry['moshaf'] ?? []) as $moshaf) {
+                $moshafNames[(int) ($moshaf['id'] ?? 0)] = (string) ($moshaf['name'] ?? '');
+            }
+        }
+
+        return [$names, $moshafNames];
     }
 
     /** The two endpoints disagree on the trailing slash. */

@@ -7,9 +7,12 @@ namespace App\Console\Commands\Quran;
 use App\Domain\Quran\Infrastructure\Mp3Quran\Mp3QuranCatalogue;
 use App\Domain\Quran\Models\Recitation;
 use App\Domain\Quran\Models\Reciter;
+use App\Domain\Quran\Models\ReciterTranslation;
+use App\Domain\Quran\Services\Mp3QuranReciterImporter;
 use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Quran\Services\ReciterNameMatcher;
 use Illuminate\Console\Command;
+use Illuminate\Console\ConfirmableTrait;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -36,19 +39,27 @@ use Throwable;
  *   php artisan quran:sync-mp3quran --dry-run
  *   php artisan quran:sync-mp3quran
  *   php artisan quran:sync-mp3quran --only=6,29 --keep-existing
- *   php artisan quran:sync-mp3quran --map=36:106      # resolve an ambiguous one
+ *   php artisan quran:sync-mp3quran --map=36:106       # resolve an ambiguous one
+ *   php artisan quran:sync-mp3quran --import-new       # add the rest of the catalogue
+ *   php artisan quran:sync-mp3quran --fresh --force    # rebuild it from scratch
  */
 class SyncMp3QuranCommand extends Command
 {
+    use ConfirmableTrait;
+
     protected $hidden = true;
 
     protected $signature = 'quran:sync-mp3quran
         {--dry-run : Preview only — list every change and write nothing}
+        {--import-new : Also add every mp3quran recording we do not have yet as a new, publicly visible reciter}
+        {--inactive : Import new reciters hidden from the public site, for review before publishing}
+        {--fresh : Delete the reciters imported from mp3quran and rebuild them from scratch. Portraits, ordering, featured flags, slugs and per-verse audio folders are preserved; anything an admin added that mp3quran does not know is not. Implies --import-new}
         {--keep-existing : Keep surahs that already have audio instead of switching them to mp3quran}
         {--only= : Limit the run to these reciter ids, comma separated (blank = all reciters)}
-        {--map=* : Resolve a reciter the matcher was unsure about, as reciterId:mp3quranReadId (comma separated for several)}';
+        {--map=* : Resolve a reciter the matcher was unsure about, as reciterId:mp3quranReadId (comma separated for several)}
+        {--force : Skip the production confirmation prompt}';
 
-    protected $description = 'Match our reciters to mp3quran.net and import their whole-surah audio URLs';
+    protected $description = 'Match our reciters to mp3quran.net, import their whole-surah audio, and optionally add or rebuild the whole catalogue';
 
     /**
      * mp3quran rewaya ids. 21/22 are not riwayat at all — they are how the
@@ -60,6 +71,9 @@ class SyncMp3QuranCommand extends Command
     private const MUJAWWAD = [22];
 
     private const MUALLIM = [21];
+
+    /** @var array<string, string|null> folder => the URL that failed, or null */
+    private array $probed = [];
 
     public function handle(): int
     {
@@ -78,16 +92,35 @@ class SyncMp3QuranCommand extends Command
             ->orderBy('id')
             ->get();
 
-        if ($reciters->isEmpty()) {
-            $this->error('No active reciters found — run quran:import-reciters first.');
-
-            return self::FAILURE;
-        }
-
         $only = array_filter(array_map('intval', explode(',', (string) $this->option('only'))));
         $manual = $this->manualMap();
         $dryRun = (bool) $this->option('dry-run');
         $keep = (bool) $this->option('keep-existing');
+        $fresh = (bool) $this->option('fresh');
+        $inactive = (bool) $this->option('inactive');
+        // A rebuild that did not put the reciters back would leave the site
+        // with no audio at all, so --fresh always runs the import.
+        $importNew = $fresh || (bool) $this->option('import-new');
+
+        // An empty table is only a problem when this run has no way to fill it.
+        if ($reciters->isEmpty() && ! $importNew) {
+            $this->error('No active reciters found — run quran:import-reciters first, or pass --import-new.');
+
+            return self::FAILURE;
+        }
+
+        if ($fresh && ! $dryRun && ! $this->confirmToProceed('Deleting every reciter imported from mp3quran')) {
+            return self::FAILURE;
+        }
+
+        $preserved = $fresh ? $this->freshen($catalogue, $dryRun) : [];
+
+        if ($fresh) {
+            // Everything mapped is gone (or would be); the loop below has
+            // nothing left to reconcile and the import rebuilds from the
+            // snapshot. Filtered in a dry run too, so the preview matches.
+            $reciters = $reciters->whereNull('mp3quran_folder');
+        }
 
         $summary = [];
         $folders = [];
@@ -204,13 +237,167 @@ class SyncMp3QuranCommand extends Command
             });
         }
 
-        $this->report($summary, $examples, $folders, $ambiguous, $unmatched, $created, $replaced, $kept, $dryRun, $keep);
+        $imported = [];
+        $importedUrls = 0;
 
-        if (! $dryRun && ($created > 0 || $replaced > 0)) {
+        if ($importNew && $only !== []) {
+            $this->warn('--only limits the run to reciters we already have, so --import-new was skipped.');
+        } elseif ($importNew) {
+            [$imported, $importedUrls] = $this->importNew($catalogue, $preserved, $dryRun, $inactive);
+        }
+
+        $this->report($summary, $examples, $folders, $ambiguous, $unmatched, $imported, $importedUrls, $created, $replaced, $kept, $dryRun, $keep);
+
+        if (! $dryRun && ($created > 0 || $replaced > 0 || $importedUrls > 0)) {
             QuranCacheKeys::flushReciters();
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Delete the reciters this command imported, keeping a snapshot of
+     * everything mp3quran cannot tell us again.
+     *
+     * Scope is deliberately "has an mp3quran folder" and nothing wider. The
+     * rest of the table — recited translations, qaris that only exist in the
+     * everyayah catalogue — could not be rebuilt from this API, so a rebuild
+     * that removed them would be a one-way loss.
+     *
+     * @return array<string, list<array<string, mixed>>> folder => preserved columns,
+     *                                                   a list because two of our
+     *                                                   rows can share one recording
+     */
+    private function freshen(Mp3QuranCatalogue $catalogue, bool $dryRun): array
+    {
+        // Only delete a reciter whose recording is still in the catalogue and
+        // still answering. Anything else could not be rebuilt, and a rebuild
+        // that loses rows is worse than one that leaves them alone.
+        $targets = Reciter::query()
+            ->whereNotNull('mp3quran_folder')
+            ->with('translations')
+            ->get();
+
+        $stranded = $targets->filter(function (Reciter $reciter) use ($catalogue) {
+            $moshaf = collect($catalogue->moshafs())->firstWhere('server', $reciter->mp3quran_folder);
+
+            return $moshaf === null || $this->probe($moshaf) !== null;
+        });
+
+        if ($stranded->isNotEmpty()) {
+            $this->warn($stranded->count().' mapped reciters are not rebuildable right now (recording gone from the catalogue or unreachable) and are being left as they are: '.$stranded->pluck('slug')->implode(', '));
+            $targets = $targets->reject(fn (Reciter $reciter) => $stranded->contains($reciter));
+        }
+
+        if ($targets->isEmpty()) {
+            $this->line('Nothing to rebuild — no reciter is mapped to mp3quran yet.');
+
+            return [];
+        }
+
+        $ids = $targets->pluck('id')->all();
+        $preserved = [];
+
+        foreach ($targets as $reciter) {
+            $preserved[$reciter->mp3quran_folder][] = Mp3QuranReciterImporter::snapshot($reciter);
+        }
+
+        $recitations = Recitation::query()->whereIn('reciter_id', $ids)->count();
+        $translations = ReciterTranslation::query()->whereIn('reciter_id', $ids)->count();
+        $untouched = Reciter::query()->whereNull('mp3quran_folder')->count();
+
+        $this->warn(sprintf(
+            '%s %d reciters, %d recitation rows and %d translations.',
+            $dryRun ? 'Would delete' : 'Deleting',
+            count($ids),
+            $recitations,
+            $translations,
+        ));
+        $this->line('Kept and re-applied by folder: slug, portrait, country, featured flag, display order, follower count, per-verse (everyayah) folder and translations.');
+        $this->line('Lost: anything else an admin edited by hand on those rows.');
+        $this->line("{$untouched} reciters are not from mp3quran and are left alone — this command could not rebuild them.");
+
+        if (! $dryRun) {
+            // Children first: both FKs cascade today, but an ordered delete
+            // does not depend on that staying true.
+            DB::transaction(function () use ($ids) {
+                Recitation::query()->whereIn('reciter_id', $ids)->delete();
+                ReciterTranslation::query()->whereIn('reciter_id', $ids)->delete();
+                Reciter::query()->whereIn('id', $ids)->delete();
+            });
+
+            QuranCacheKeys::flushReciters();
+        }
+
+        return $preserved;
+    }
+
+    /**
+     * Add every recording in the catalogue we do not already have, one reciter
+     * row per recording.
+     *
+     * Prints a line per reciter rather than a table: this walks ~250 entries,
+     * and "[12/250]" is what drives the progress bar in the admin panel.
+     *
+     * @param  array<string, list<array<string, mixed>>>  $preserved
+     * @param  bool  $inactive  import hidden from the public site
+     * @return array{0: array<string, int>, 1: int}
+     */
+    private function importNew(Mp3QuranCatalogue $catalogue, array $preserved, bool $dryRun, bool $inactive): array
+    {
+        $known = Reciter::query()->whereNotNull('mp3quran_folder')->pluck('mp3quran_folder')->flip()->all();
+
+        // In a --fresh dry run the rows are still there; treat them as gone so
+        // the preview matches what a real run would do.
+        $known = array_diff_key($known, $preserved);
+
+        $importer = new Mp3QuranReciterImporter($catalogue);
+        $pending = array_filter(
+            $catalogue->moshafs(),
+            static fn (array $moshaf) => ! isset($known[$moshaf['server']]),
+        );
+
+        $counts = ['created' => 0, 'restored' => 0, 'skipped' => 0];
+        $urls = 0;
+        $total = count($pending);
+        $seen = 0;
+
+        foreach ($pending as $moshaf) {
+            $seen++;
+            $badUrl = $this->probe($moshaf);
+
+            if ($badUrl !== null) {
+                $counts['skipped']++;
+                $this->warn("[{$seen}/{$total}] skipped {$moshaf['reciter']} — {$badUrl} is not reachable.");
+
+                continue;
+            }
+
+            // Usually one row per recording, but a rebuild puts back however
+            // many of ours pointed at this folder.
+            foreach ($preserved[$moshaf['server']] ?? [null] as $kept) {
+                $preview = $importer->preview($moshaf, $kept);
+
+                $counts[$preview['restored'] ? 'restored' : 'created']++;
+                $urls += count($moshaf['surahs']);
+
+                $this->line(sprintf(
+                    '[%d/%d] %s %s — %s (%d surahs)',
+                    $seen,
+                    $total,
+                    $dryRun ? 'would add' : 'added',
+                    $preview['slug'],
+                    $preview['name_ar'],
+                    count($moshaf['surahs']),
+                ));
+
+                if (! $dryRun) {
+                    DB::transaction(fn () => $importer->import($moshaf, $preview, $kept, ! $inactive));
+                }
+            }
+        }
+
+        return [$counts, $urls];
     }
 
     /**
@@ -331,6 +518,18 @@ class SyncMp3QuranCommand extends Command
      */
     private function probe(array $moshaf): ?string
     {
+        if (array_key_exists($moshaf['server'], $this->probed)) {
+            return $this->probed[$moshaf['server']];
+        }
+
+        return $this->probed[$moshaf['server']] = $this->head($moshaf);
+    }
+
+    /**
+     * @param  array<string, mixed>  $moshaf
+     */
+    private function head(array $moshaf): ?string
+    {
         $urls = Mp3QuranCatalogue::audioUrls($moshaf);
 
         foreach ([array_key_first($urls), array_key_last($urls)] as $surahId) {
@@ -409,6 +608,7 @@ class SyncMp3QuranCommand extends Command
      * @param  array<string, list<string>>  $folders
      * @param  list<array{reciter: string, lines: list<string>}>  $ambiguous
      * @param  list<string>  $unmatched
+     * @param  array<string, int>  $imported
      */
     private function report(
         array $summary,
@@ -416,6 +616,8 @@ class SyncMp3QuranCommand extends Command
         array $folders,
         array $ambiguous,
         array $unmatched,
+        array $imported,
+        int $importedUrls,
         int $created,
         int $replaced,
         int $kept,
@@ -479,6 +681,29 @@ class SyncMp3QuranCommand extends Command
         $matched = count($summary);
         $verb = $dryRun ? 'Would map' : 'Mapped';
         $this->info("{$verb} {$matched} reciters — {$created} audio URLs created, {$replaced} replaced.");
+
+        if ($imported !== []) {
+            $this->info(sprintf(
+                '%s %d new reciters with %d audio URLs (%d rebuilt from the snapshot, %d skipped for unreachable audio).',
+                $dryRun ? 'Would add' : 'Added',
+                $imported['created'],
+                $importedUrls,
+                $imported['restored'],
+                $imported['skipped'],
+            ));
+
+            if ($imported['created'] > 0) {
+                $this->info($inactive
+                    ? "{$imported['created']} reciters imported hidden — activate them in the admin panel to publish."
+                    : "{$imported['created']} reciters imported and visible on the public site: they are in /quran/reciters and in the surah player's picker.");
+            }
+
+            if ($imported['created'] > 0 && ! $dryRun) {
+                // mp3quran publishes neither, and nothing else here can fill
+                // them in — saying the catalogue is complete would be a lie.
+                $this->line('New reciters have no portrait or country yet — run quran:enrich-reciters to fill those from Wikidata.');
+            }
+        }
 
         if ($keep) {
             $this->line("{$kept} surahs already had audio and were kept (--keep-existing).");

@@ -48,7 +48,13 @@ return [
                 'quran:import-recitations' => ['queued' => true],
                 // Replaces the whole-surah audio of every mapped reciter so it
                 // matches the timings Phase 2 highlights from — hence danger.
-                'quran:sync-mp3quran' => ['queued' => true, 'danger' => true],
+                // --force because --fresh is guarded by ConfirmableTrait and
+                // nothing here can answer a console prompt.
+                'quran:sync-mp3quran' => [
+                    'queued' => true,
+                    'danger' => true,
+                    'defaults' => ['--force' => true],
+                ],
                 'quran:import-mushaf-layout' => ['queued' => true],
                 'quran:enrich-reciters' => ['queued' => true],
                 'quran:backfill-hizb' => ['queued' => true],
