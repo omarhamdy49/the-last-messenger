@@ -1,5 +1,5 @@
-# One workflow: three fast gates (architecture, critical tests, Pint) the deploy
-# needs, plus a full-suite report that runs alongside without holding it.
+# One workflow: three fast gates (architecture, critical tests, Pint) that the
+# deploy `needs:`, and nothing else on the critical path.
 # Originally: This file used to be Deploy-only, with architecture
 # checks in a separate deptrac.yml that ran in PARALLEL on the same push — so a
 # deploy could ship code that failed the architecture gate, and a push showed up
@@ -57,11 +57,12 @@ jobs:
   # ── Gate: critical tests (seconds, blocks deploy) ───────────────────────────
   # The full suite is ~1,270 tests and took ~5 minutes per push, most of it in
   # composer install, a second migration pass and tests that guard editorial
-  # detail rather than production safety. The deploy now waits only for the
-  # `Critical` suite in phpunit.xml: auth/authorization boundaries, public
-  # visibility, API security, admin/API route smoke, and the unit layer. The
-  # full suite still runs on every push in `test-full` below, but does not
-  # hold the deploy.
+  # detail rather than production safety. CI now runs only the `Critical` suite
+  # in phpunit.xml: auth/authorization boundaries, public visibility, API
+  # security, admin/API route smoke, and the unit layer.
+  #
+  # The full suite is NOT run by CI at all — run `php artisan test` locally
+  # before pushing anything the Critical suite does not cover.
   #
   # MySQL 8 service rather than SQLite: phpunit.xml pins DB_CONNECTION=mysql, and
   # this codebase's bug classes (JSON_EXTRACT, FULLTEXT, dropped columns,
@@ -128,64 +129,6 @@ jobs:
       # was pure cost.
       - name: 🧪 Run critical tests
         run: php artisan test --testsuite=Critical --stop-on-failure
-
-  # ── Report: full suite (every push, does not block deploy) ──────────────────
-  # Same environment as the gate. Red here is a real regression to fix, but it
-  # surfaces as a failed check on the commit/PR rather than a held deploy.
-  test-full:
-    name: 🧪 Full suite (non-blocking)
-    runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
-          MYSQL_DATABASE: the_last_messenger_test
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping --silent"
-          --health-interval=2s
-          --health-timeout=3s
-          --health-retries=30
-    env:
-      DB_CONNECTION: mysql
-      DB_HOST: 127.0.0.1
-      DB_PORT: 3306
-      DB_DATABASE: the_last_messenger_test
-      DB_USERNAME: root
-      DB_PASSWORD: ''
-    steps:
-      - name: 📥 Checkout
-        uses: actions/checkout@v5
-
-      - name: 🐘 Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.5'
-          extensions: mbstring, xml, curl, zip, gd, bcmath, intl, redis, mysql
-          tools: composer:v2
-          coverage: none
-
-      - name: ♻️ Cache vendor
-        id: vendor-cache
-        uses: actions/cache@v5
-        with:
-          path: vendor
-          key: ${{ runner.os }}-php85-vendor-${{ hashFiles('**/composer.lock') }}
-
-      - name: 📦 Install dependencies
-        if: steps.vendor-cache.outputs.cache-hit != 'true'
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
-
-      - name: ⚙️ Prepare environment
-        run: |
-          cp .env.example .env
-          sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=mysql/' .env
-          php artisan key:generate
-
-      - name: 🧪 Run full suite
-        run: php artisan test
 
   # ── Gate: code style (baseline cleared 13 Sep 2026) ─────────────────────────
   style:

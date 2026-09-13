@@ -14,9 +14,9 @@
         <!-- Deploy gate (.github/workflows/deploy.yml): the tests whose failure means
              production must not ship — auth/authorization boundaries, public
              visibility, API security, every admin + API route rendering, and the
-             pure unit layer. Kept to what runs in seconds; the full suite still runs
-             on every push as its own non-blocking job. Add a file here only when a
-             red result should block a deploy. -->
+             pure unit layer. Kept to what runs in seconds. This is the ONLY suite CI
+             runs — the full suite is a local step (`php artisan test`) before pushing.
+             Add a file here only when a red result should block a deploy. -->
         <testsuite name="Critical">
             <directory>tests/Unit</directory>
             <directory>tests/Feature/Security</directory>
