@@ -1,25 +1,26 @@
 {{--
-    THE NASAB SPINE — the tree as it reads on a phone.
+    مكون عرض السلسلة - الشجرة كما تُقرأ على الهاتف
 
-    A pan-and-zoom canvas is the wrong instrument below a laptop screen: at
-    375px it showed about one and a half of eighty cards, truncated every name,
-    and — because a canvas must claim the touch gesture in order to pan — a
-    swipe that started on it did not scroll the page. This renders the same
-    graph the canvas does, laid out the way a nasab is actually read: one
-    generation per row, oldest at the top, descending to the Prophet ﷺ.
+    عرض عمودي للنسب مع جيل واحد لكل صف، من الأقدم في الأعلى،
+    نزولاً إلى النبي ﷺ. يتم عرضه بالكامل من الخادم - بدون d3، بدون canvas،
+    بدون استيراد ديناميكي.
 
-    It is entirely server-rendered. No d3, no canvas, no dynamic import — so it
-    is present in the HTML for a crawler, it paints before any script runs, and
-    it survives the tree chunk failing to load. Alpine only opens and closes
-    the collapsible parts.
-
-    Expects: $spine (rows, oldest first), $isRtl, $lineageComplete.
+    المعاملات المطلوبة:
+    @param array $spine - صفوف النسب، الأقدم أولاً
+    @param bool $isRtl - هل اللغة من اليمين لليسار
+    @param bool $lineageComplete - هل السلسلة مكتملة
 --}}
+@props([
+    'spine' => [],
+    'isRtl' => true,
+    'lineageComplete' => true,
+])
+
 @php
-    // A twenty-one generation chain is a long scroll to reach the subject of
-    // the page. The oldest forefather anchors the top, the last few
-    // generations before the Prophet ﷺ carry the names most readers came for,
-    // and the stretch between them folds away by default.
+    // سلسلة من واحد وعشرين جيلاً هي تمرير طويل للوصول إلى موضوع الصفحة.
+    // أقدم الأجداد يثبت الأعلى، والأجيال القليلة الأخيرة قبل النبي ﷺ
+    // تحمل الأسماء التي جاء معظم القراء من أجلها، والامتداد بينهم يُطوى
+    // افتراضياً.
     $head = 2;
     $tail = 4;
     $foldFrom = $head;
@@ -36,7 +37,7 @@
                 $isFocus = $row['isFocus'];
             @endphp
 
-            {{-- The fold control sits where the folded run begins. --}}
+            {{-- التحكم في الطي يوضع حيث يبدأ الجزء المطوي. --}}
             @if ($foldedCount > 1 && $index === $foldFrom)
                 <li class="gs-fold">
                     <button type="button" @click="midOpen = !midOpen"
@@ -52,7 +53,7 @@
             <li class="gs-row{{ $isFocus ? ' gs-row--focus' : '' }}"
                 @if ($isFolded) x-show="midOpen" x-cloak x-collapse @endif>
 
-                {{-- Generation marker on the rail. --}}
+                {{-- علامة الجيل على السكة. --}}
                 <span class="gs-marker{{ $isFocus ? ' gs-marker--focus' : '' }}" aria-hidden="true">
                     @if ($isFocus)
                         <i data-lucide="crown" class="w-3.5 h-3.5"></i>
@@ -77,9 +78,9 @@
                                 @elseif ($row['isOldest'])
                                     <span class="gs-tag gs-tag--root">{{ __('genealogy.public.spine_root_note') }}</span>
                                 @else
-                                    {{-- The same wording the directory card
-                                         uses for this person, so the two views
-                                         never label him differently. --}}
+                                    {{-- نفس الصياغة التي تستخدمها بطاقة الدليل
+                                         لهذا الشخص، لذلك لا يمكن للعرضين أبداً
+                                         تسميته بشكل مختلف. --}}
                                     <span class="gs-tag">{{ $row['relationLabel'] }}</span>
                                 @endif
 
@@ -99,9 +100,9 @@
                         <i data-lucide="chevron-{{ $isRtl ? 'left' : 'right' }}" class="gs-go" aria-hidden="true"></i>
                     </button>
 
-                    {{-- The mother recorded for this step. She is not a second
-                         competing spine — she hangs off the generation she
-                         belongs to, beside the son she bore. --}}
+                    {{-- الأم المسجلة لهذه الخطوة. إنها ليست سلسلة ثانية
+                         منافسة - إنها معلقة على الجيل الذي تنتمي إليه،
+                         بجانب الابن الذي أنجبته. --}}
                     @if ($row['mother'])
                         <button type="button" @click="openPerson({{ (int) $row['mother']['id'] }})" class="gs-mother">
                             <i data-lucide="heart" class="w-3.5 h-3.5 shrink-0" aria-hidden="true"></i>
@@ -110,9 +111,9 @@
                         </button>
                     @endif
 
-                    {{-- Collateral lines: the uncles and aunts on this rank,
-                         each holding their own children. Folded by default —
-                         fourteen uncles opened at once bury the chain. --}}
+                    {{-- الخطوط الجانبية: الأعمام والعمات في هذا الرتبة،
+                         كل منهم يحمل أطفاله. مطوي افتراضياً -
+                         أربعة عشر عماً مفتوحين في وقت واحد يدفنون السلسلة. --}}
                     @if ($row['branches'] !== [])
                         <div x-data="{ open: false }" class="gs-branches">
                             <button type="button" @click="open = !open"
@@ -144,9 +145,9 @@
                                             </span>
                                         </button>
 
-                                        {{-- One more hop: this branch's own
-                                             children (the cousins, or the
-                                             children a wife bore). --}}
+                                        {{-- قفزة واحدة أخرى: أطفال هذا الفرع
+                                             الخاص (أبناء العم، أو الأطفال
+                                             الذين ولدتهم الزوجة). --}}
                                         @if (($branch['children'] ?? []) !== [])
                                             <div class="gs-kids">
                                                 @foreach ($branch['children'] as $kid)

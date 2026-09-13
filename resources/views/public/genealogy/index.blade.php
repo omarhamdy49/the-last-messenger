@@ -1097,7 +1097,10 @@
                      corpus with its relation tag and stops there. --}}
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="mx-auto w-full max-w-2xl">
-                    @include('public.genealogy._spine')
+                    <x-public.genealogy.spine-view
+                        :spine="$spine ?? []"
+                        :isRtl="$isRtl"
+                        :lineageComplete="$lineageComplete ?? true" />
 
                     @if ($hasGraph)
                         <button type="button" @click="openCanvas()"
@@ -1175,7 +1178,10 @@
 
         {{-- ═════ LIST VIEW (also the fallback when there is no graph) ═════ --}}
         <div x-show="viewMode === 'list'" @if($hasGraph || $hasSpine) x-cloak @endif>
-            @include('public.genealogy._list')
+            <x-public.genealogy.directory-view
+                :people="$people ?? []"
+                :hasGraph="$hasGraph"
+                :isRtl="$isRtl" />
         </div>
     </main>
     </div>

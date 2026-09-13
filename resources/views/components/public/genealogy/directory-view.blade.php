@@ -1,20 +1,26 @@
 {{--
-    THE DIRECTORY VIEW.
+    مكون عرض الدليل
 
-    What it replaces: eighty full-bleed "Refined Medallion" cards — a 176px
-    portrait each — in graph-walk order, with no indication of who any of these
-    people were to the Prophet ﷺ. On a phone that was one card per screen and
-    seven pages of pagination to cross one family.
+    ما يستبدله: ثمانين بطاقة "ميدالية مكررة" كاملة العرض - صورة بحجم
+    176 بكسل لكل منها - بترتيب المشي في الرسم البياني، بدون أي إشارة إلى
+    من كان أي من هؤلاء الناس للنبي ﷺ.
 
-    What it is now: compact rows grouped by kinship, in the order a nasab
-    reads. The relation label is the point of the card, not an afterthought,
-    and colour carries the same meaning it carries in the tree rather than
-    rotating through a palette for variety.
+    ما هو الآن: صفوف مدمجة مجمعة حسب القرابة، بالترتيب الذي يُقرأ به
+    النسب. تسمية العلاقة هي نقطة البطاقة، وليست فكرة لاحقة، واللون
+    يحمل نفس المعنى الذي يحمله في الشجرة بدلاً من التناوب عبر لوحة
+    للتنوع.
 
-    Pagination is gone on purpose. Eighty compact rows are one scroll with
-    sticky group headings; paging through them in twelves was the slower way
-    to read a family.
+    المعاملات المطلوبة:
+    @param array $people - قائمة الأشخاص
+    @param bool $hasGraph - هل يوجد رسم بياني للشجرة
+    @param bool $isRtl - هل اللغة من اليمين لليسار
 --}}
+@props([
+    'people' => [],
+    'hasGraph' => false,
+    'isRtl' => true,
+])
+
 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
 
     @if (! $hasGraph && count($people))
@@ -56,9 +62,8 @@
                                     <span class="gl-name" x-html="highlightMatch(personName(person))"></span>
 
                                     <span class="gl-tags">
-                                        {{-- The relation is why this card is
-                                             here. It leads, and it is text —
-                                             not colour alone. --}}
+                                        {{-- العلاقة هي سبب وجود هذه البطاقة هنا.
+                                             إنها تقود، وهي نص - ليس اللون فقط. --}}
                                         <span class="gl-rel" :class="`gl-rel--${person.relation}`"
                                               x-text="person.relationLabel"></span>
 
