@@ -43,7 +43,6 @@
         $totalSeconds ? ['value' => $fmtDur($totalSeconds), 'label' => __('quran.playlists.total_duration')] : null,
         ['value' => $num($card['plays']), 'label' => __('quran.playlists.plays')],
     ]));
-    $statCols = ['grid-cols-3', 'grid-cols-4'][count($stats) - 3] ?? 'grid-cols-3';
 @endphp
 
 <div class="min-h-dvh font-['Cairo'] bg-gray-50 dark:bg-gray-950 transition-colors duration-300"
@@ -68,9 +67,9 @@
             <div class="absolute inset-0" style="background-image: url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.4\"%3E%3Cpath d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
         </div>
         <div class="absolute -top-24 -end-24 w-96 h-96 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
-        <span aria-hidden="true" class="absolute -bottom-5 start-6 text-[96px] sm:text-[128px] leading-none font-black tabular-nums text-white/[0.07] select-none pointer-events-none">{{ $num($card['items']) }}</span>
+        <span aria-hidden="true" class="absolute -bottom-4 start-6 text-[80px] sm:text-[104px] leading-none font-black tabular-nums text-white/[0.07] select-none pointer-events-none">{{ $num($card['items']) }}</span>
 
-        <div class="relative grid lg:grid-cols-[1.15fr_0.85fr] gap-8 lg:gap-14 items-center px-6 sm:px-10 lg:px-12 py-7 sm:py-9">
+        <div class="relative grid lg:grid-cols-[1fr_auto] gap-6 lg:gap-12 items-center px-6 sm:px-10 lg:px-12 py-6 sm:py-7">
             {{-- Copy --}}
             <div class="pl-in min-w-0">
                 <div class="flex flex-wrap items-center gap-2 mb-3">
@@ -89,27 +88,25 @@
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold pl-glass">
                         <i data-lucide="{{ $playlist->scope === 'full' ? 'book-open' : 'list-checks' }}" class="w-3.5 h-3.5"></i>{{ __('quran.playlists.scope_'.$playlist->scope) }}
                     </span>
+                    <span class="inline-flex items-center gap-1.5 ps-1 pe-2.5 py-0.5 rounded-full text-xs font-semibold pl-glass text-white/90">
+                        @if ($card['owner']['avatar'])
+                            <img src="{{ $card['owner']['avatar'] }}" alt="" width="20" height="20" class="w-5 h-5 rounded-full object-cover">
+                        @else
+                            <span class="w-5 h-5 rounded-full bg-white/25 text-[10px] font-bold flex items-center justify-center">{{ mb_substr($card['owner']['name'] ?: '?', 0, 1) }}</span>
+                        @endif
+                        {{ $card['owner']['name'] }}
+                    </span>
                 </div>
 
-                <h1 class="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-[1.2] text-start break-words">{{ $playlist->name }}</h1>
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-[1.2] text-start break-words">{{ $playlist->name }}</h1>
                 @if ($playlist->description)
-                    <p class="mt-2.5 text-sm sm:text-base text-white/85 leading-relaxed max-w-[52ch] line-clamp-2">{{ $playlist->description }}</p>
+                    <p class="mt-2 text-sm sm:text-base text-white/85 leading-relaxed max-w-[52ch] line-clamp-1">{{ $playlist->description }}</p>
                 @endif
-
-                {{-- Owner --}}
-                <div class="mt-3 inline-flex items-center gap-2.5 text-sm text-white/85">
-                    @if ($card['owner']['avatar'])
-                        <img src="{{ $card['owner']['avatar'] }}" alt="" width="32" height="32" class="w-8 h-8 rounded-full object-cover ring-2 ring-white/60">
-                    @else
-                        <span class="w-8 h-8 rounded-full pl-glass text-xs font-bold flex items-center justify-center">{{ mb_substr($card['owner']['name'] ?: '?', 0, 1) }}</span>
-                    @endif
-                    <span>{{ __('quran.playlists.by') }} <strong class="text-white">{{ $card['owner']['name'] }}</strong></span>
-                </div>
 
                 {{-- Reciters (linked chips) --}}
                 @if ($reciters)
                     @php $chipLimit = 4; @endphp
-                    <ul class="mt-3.5 flex flex-wrap gap-2" aria-label="{{ __('quran.public.reciters') }}" x-data="{ all: false }">
+                    <ul class="mt-3 hidden sm:flex flex-wrap gap-2" aria-label="{{ __('quran.public.reciters') }}" x-data="{ all: false }">
                         @foreach ($reciters as $ri => $r)
                             <li @if ($ri >= $chipLimit) x-show="all" x-cloak @endif>
                                 <a href="{{ $r['url'] }}"
@@ -133,7 +130,7 @@
                 @endif
 
                 {{-- Actions: one primary, the rest glass --}}
-                <div class="mt-5 flex flex-wrap items-center gap-2.5">
+                <div class="mt-4 flex flex-wrap items-center gap-2.5">
                     <button type="button" @click="toggleAll()" :disabled="!playable.length"
                             class="inline-flex items-center gap-2 h-12 px-6 rounded-2xl bg-white text-[#0056b3] font-bold shadow-lg transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80">
                         <i data-lucide="play" class="w-5 h-5 fill-current {{ $isRtl ? '-scale-x-100' : '' }}" x-show="!listPlaying"></i>
@@ -143,6 +140,30 @@
 
                     @if ($playlist->is_public)
                         <x-site.share-button :url="$shareUrl" :title="$playlist->name" :text="$playlist->description" variant="glass" />
+                    @endif
+
+                    {{-- Phones: the reciters live behind a button instead of a chip row, keeping the hero short --}}
+                    @if ($reciters)
+                        <div class="relative sm:hidden" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false">
+                            <button type="button" @click="open = !open" :aria-expanded="open" aria-haspopup="menu"
+                                    class="inline-flex items-center gap-1.5 h-11 px-3.5 rounded-xl pl-glass-btn text-sm font-semibold text-white transition-[background-color,transform] duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80">
+                                <i data-lucide="mic" class="w-4 h-4"></i>
+                                <span class="tabular-nums">{{ $num(count($reciters)) }}</span>
+                                <i data-lucide="chevron-down" class="w-4 h-4 transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                            </button>
+                            <ul x-show="open" x-cloak x-transition.origin.top role="menu" aria-label="{{ __('quran.public.reciters') }}"
+                                class="absolute z-20 top-full mt-2 start-0 w-64 max-h-72 overflow-y-auto rounded-2xl bg-white dark:bg-zinc-900 shadow-2xl border border-zinc-200/80 dark:border-white/10 p-1.5">
+                                @foreach ($reciters as $r)
+                                    <li>
+                                        <a href="{{ $r['url'] }}" role="menuitem"
+                                           class="flex items-center gap-3 h-11 px-2 rounded-xl text-sm font-semibold text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors">
+                                            <x-site.reciter-avatar :name="$r['name']" :image="$r['image']" size="w-8 h-8" text="text-[8px]" :compact="true" />
+                                            <span class="truncate">{{ $r['name'] }}</span>
+                                        </a>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
                     @endif
 
                     @if ($isOwner)
@@ -193,21 +214,12 @@
                     @endif
                 </div>
 
-                {{-- Bare divided figures --}}
-                <dl class="mt-6 grid {{ $statCols }} max-w-lg divide-x divide-white/25 {{ $isRtl ? 'divide-x-reverse' : '' }}">
-                    @foreach ($stats as $i => $stat)
-                        <div class="{{ $i === 0 ? '' : 'ps-4 sm:ps-5' }} {{ $i === count($stats) - 1 ? '' : 'pe-4 sm:pe-5' }} min-w-0">
-                            <dd class="text-xl sm:text-2xl font-black tabular-nums leading-none truncate">{{ $stat['value'] }}</dd>
-                            <dt class="mt-1.5 text-xs sm:text-sm text-white/75">{{ $stat['label'] }}</dt>
-                        </div>
-                    @endforeach
-                </dl>
             </div>
 
             {{-- Glass collage: reciter portraits, each a link --}}
-            <div class="pl-in-2 hidden lg:block justify-self-end w-full max-w-[19rem]">
-                <div class="rounded-3xl pl-glass p-4">
-                    <div class="grid grid-cols-2 gap-3" aria-label="{{ __('quran.public.reciters') }}">
+            <div class="pl-in-2 hidden lg:block justify-self-end w-full max-w-[15rem]">
+                <div class="rounded-3xl pl-glass p-3">
+                    <div class="grid grid-cols-2 gap-2.5" aria-label="{{ __('quran.public.reciters') }}">
                         @foreach (array_slice($reciters, 0, count($reciters) > 4 ? 3 : 4) as $i => $r)
                             <a href="{{ $r['url'] }}" title="{{ $r['name'] }}"
                                class="group block aspect-square rounded-2xl overflow-hidden ring-1 ring-white/20 transition-transform duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 {{ count($reciters) === 1 ? 'col-span-2 aspect-[2/1]' : '' }}">
@@ -242,13 +254,17 @@
                 <h2 id="pl-tracks-title" class="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                     <i data-lucide="list-music" class="w-5 h-5 text-primary"></i>{{ __('quran.playlists.tracks_title') }}
                 </h2>
-                <p class="text-sm text-zinc-500 dark:text-zinc-400 tabular-nums">
-                    {{ __('quran.playlists.surahs_count', ['count' => $num(count($tracks))]) }}
+                <dl class="flex items-center gap-x-4 sm:gap-x-6 text-sm tabular-nums">
+                    @foreach ($stats as $stat)
+                        <div class="flex items-baseline gap-1.5">
+                            <dd class="text-lg sm:text-xl font-black text-zinc-900 dark:text-white leading-none">{{ $stat['value'] }}</dd>
+                            <dt class="text-xs text-zinc-500 dark:text-zinc-400">{{ $stat['label'] }}</dt>
+                        </div>
+                    @endforeach
                     @if ($playableCount < count($tracks))
-                        <span aria-hidden="true" class="mx-1">·</span>
-                        <span class="text-amber-700 dark:text-amber-300">{{ __('quran.playlists.needs_reciter_count', ['count' => $num(count($tracks) - $playableCount)]) }}</span>
+                        <div class="text-xs text-amber-700 dark:text-amber-300">{{ __('quran.playlists.needs_reciter_count', ['count' => $num(count($tracks) - $playableCount)]) }}</div>
                     @endif
-                </p>
+                </dl>
             </div>
 
             <ol class="divide-y divide-zinc-100 dark:divide-white/10" role="list">
