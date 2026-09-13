@@ -309,9 +309,16 @@ final class QuranController extends Controller
         $playlists = Cache::remember(QuranCacheKeys::playlistScoped('home:'.$locale), 600, function () use ($locale): array {
             $repo = app(PlaylistRepository::class);
 
+            $featured = $repo->featured(1)->map(fn ($p) => PlaylistCard::from($p, $locale))->first();
+
             return [
-                'featured' => $repo->featured(1)->map(fn ($p) => PlaylistCard::from($p, $locale))->first(),
-                'latest' => $repo->latestPublic(3)->map(fn ($p) => PlaylistCard::from($p, $locale))->all(),
+                'featured' => $featured,
+                // The featured playlist already has the wide slot; don't repeat it in the row.
+                'latest' => $repo->latestPublic(4)
+                    ->reject(fn ($p) => $p->slug === ($featured['slug'] ?? null))
+                    ->take(3)
+                    ->map(fn ($p) => PlaylistCard::from($p, $locale))
+                    ->values()->all(),
             ];
         });
 
