@@ -28,7 +28,7 @@
 
 <a href="{{ $card['url'] }}"
    style="--i: {{ (int) $index }}"
-   {{ $attributes->merge(['class' => 'pl-card group relative flex '.($wide ? 'flex-col md:grid md:grid-cols-[2fr_3fr]' : 'flex-col').' overflow-hidden rounded-3xl border border-zinc-200/70 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-[transform,box-shadow] duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_24px_48px_-24px_rgba(0,86,179,0.35)] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2']) }}>
+   {{ $attributes->merge(['class' => 'pl-card font-[\'Cairo\'] group relative flex '.($wide ? 'flex-col md:grid md:grid-cols-[2fr_3fr]' : 'flex-col').' overflow-hidden rounded-3xl border border-zinc-200/70 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-[transform,box-shadow] duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_24px_48px_-24px_rgba(0,86,179,0.35)] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2']) }}>
 
     {{-- Cover --}}
     <div class="relative overflow-hidden {{ $wide ? 'aspect-[16/10] md:aspect-auto md:min-h-[260px]' : 'aspect-[16/10]' }}" style="background: {{ $cover }}">

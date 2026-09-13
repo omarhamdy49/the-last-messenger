@@ -144,6 +144,14 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h9M4 12h9M4 18h6"/><circle cx="18" cy="16" r="3.2"/><path stroke-linecap="round" d="m20.4 18.4 1.6 1.6"/></svg>
                 </button>
 
+                {{-- Playlist mode: the reader (verse following, reciter switching) is one tap away --}}
+                <a x-show="$store.audioPlayer.playlist && $store.audioPlayer.track?.readerUrl" x-cloak
+                   :href="$store.audioPlayer.track?.readerUrl"
+                   class="{{ $iconBtn }} ms-2 sm:ms-3"
+                   title="{{ __('quran.playlists.open_reader') }}" aria-label="{{ __('quran.playlists.open_reader') }}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5zM20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5z"/></svg>
+                </a>
+
                 <button @click="$store.audioPlayer.cycleSpeed()"
                         class="px-2 h-8 rounded-lg text-xs font-bold tabular-nums transition-colors flex-shrink-0 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                         x-text="$store.audioPlayer.rate + '×'" title="{{ __('quran.public.playback_speed') }}"
@@ -273,10 +281,16 @@
                 try {
                     const saved = JSON.parse(localStorage.getItem('sitePlayerTrack') || 'null');
                     if (saved && saved.url) {
-                        this.track = { url: saved.url, title: saved.title, subtitle: saved.subtitle };
+                        this.track = { url: saved.url, title: saved.title, subtitle: saved.subtitle, readerUrl: saved.readerUrl || null };
                         this._ensureAudio();
                         this.audio.currentTime = saved.currentTime || 0;
                         this.currentTime = saved.currentTime || 0;
+                        // A playlist queue is restored too, so prev/next keep working on
+                        // the next page — but only while its current entry is the saved track.
+                        const q = JSON.parse(localStorage.getItem('sitePlayerPlaylist') || 'null');
+                        if (q && Array.isArray(q.list) && q.list[q.index]?.url === saved.url) {
+                            this.playlist = q.list; this.playlistIndex = q.index;
+                        }
                     }
                 } catch (e) { /* ignore corrupt state */ }
                 if (this.volume > 0) { this._lastVolume = this.volume; }
@@ -339,7 +353,7 @@
             _playListed(autoplay) {
                 const t = this.playlist[this.playlistIndex];
                 this._teardown();
-                this.track = { url: t.url, title: t.title || '', subtitle: t.subtitle || '' };
+                this.track = { url: t.url, title: t.title || '', subtitle: t.subtitle || '', readerUrl: t.readerUrl || null };
                 this.currentTime = 0; this.duration = 0;
                 this._ensureAudio();
                 this._persist();
@@ -837,6 +851,7 @@
                 this.queue = null; this.queueIndex = 0; this._preload = null;
                 this.playlist = null; this.playlistIndex = 0;
                 localStorage.removeItem('sitePlayerTrack');
+                localStorage.removeItem('sitePlayerPlaylist');
             },
 
             get progress() { return this.duration ? (this.currentTime / this.duration) * 100 : 0; },
@@ -877,7 +892,11 @@
                 this.audio = a;
             },
             _teardown() { this.ayahAtTime = null; if (this.audio) { this.audio.pause(); this.audio.src = ''; this.audio = null; } },
-            _persist() { if (this.track) { localStorage.setItem('sitePlayerTrack', JSON.stringify({ ...this.track, currentTime: this.currentTime })); } },
+            _persist() {
+                if (this.track) { localStorage.setItem('sitePlayerTrack', JSON.stringify({ ...this.track, currentTime: this.currentTime })); }
+                if (this.playlist) { localStorage.setItem('sitePlayerPlaylist', JSON.stringify({ list: this.playlist, index: this.playlistIndex })); }
+                else { localStorage.removeItem('sitePlayerPlaylist'); }
+            },
             _persistSoon() { if (this._saveTimer) { return; } this._saveTimer = setTimeout(() => { this._saveTimer = null; this._persist(); }, 2000); },
         });
     });

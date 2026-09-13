@@ -696,6 +696,12 @@ return [
         'how_1' => 'Pick your favourite reciters',
         'how_2' => 'Choose the whole Quran or specific surahs',
         'how_3' => 'Review the mix, save, and share the link',
+        'surah_unit' => 'surahs',
+        'reciter_unit' => 'reciters',
+        'total_duration' => 'Duration',
+        'tracks_title' => 'Surahs',
+        'needs_reciter_count' => ':count need a reciter',
+        'show_less' => 'Show less',
         'recording_variant' => 'Recording',
     ],
     // ------------------------------------------------------------------
