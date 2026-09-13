@@ -368,7 +368,11 @@ function playlistWizard(props) {
             window.addEventListener('beforeunload', (e) => {
                 if (this.dirty && !this.saving) { e.preventDefault(); e.returnValue = ''; }
             });
-            this.$watch('step', () => this.$nextTick(() => window.lucide?.createIcons()));
+            this.$watch('step', () => {
+                // A new step starts at the top, whatever the previous one scrolled to.
+                window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+                this.$nextTick(() => window.lucide?.createIcons());
+            });
             this.$watch('loading', () => this.$nextTick(() => window.lucide?.createIcons()));
             if (this.editing) { this.step = 3; this.preview(false); }
         },
