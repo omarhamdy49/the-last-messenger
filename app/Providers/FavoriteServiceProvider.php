@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Domain\Media\Models\MediaProgram;
+use App\Domain\Quran\Models\ReciterProfile;
 use App\Domain\Quran\Models\Verse;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Shared\Contracts\FavorableRegistryInterface;
@@ -42,6 +43,7 @@ final class FavoriteServiceProvider extends ServiceProvider
             $registry->register(FavorableType::QURAN, Verse::class, $this->quranMapper());
             $registry->register(FavorableType::SEERAH, SeerahEvent::class, $this->seerahMapper());
             $registry->register(FavorableType::MEDIA, MediaProgram::class, $this->mediaMapper());
+            $registry->register(FavorableType::RECITER, ReciterProfile::class, $this->reciterMapper());
 
             return $registry;
         });
@@ -58,6 +60,7 @@ final class FavoriteServiceProvider extends ServiceProvider
             $repository->eagerLoadFor(Verse::class, ['translations', 'surah']);
             $repository->eagerLoadFor(SeerahEvent::class, ['translations']);
             $repository->eagerLoadFor(MediaProgram::class, ['translations']);
+            $repository->eagerLoadFor(ReciterProfile::class, ['translations']);
         }
     }
 
@@ -192,6 +195,21 @@ final class FavoriteServiceProvider extends ServiceProvider
                 'url' => Route::has('public.media.program')
                     ? route('public.media.program', $model->slug)
                     : null,
+            ];
+        };
+    }
+
+    /**
+     * @return callable(Model, string): array{title: string, excerpt: ?string, url: ?string}
+     */
+    private function reciterMapper(): callable
+    {
+        return static function (Model $model, string $locale): array {
+            /** @var ReciterProfile $model */
+            return [
+                'title' => $model->displayName($locale),
+                'excerpt' => $model->country ? country_name($model->country, $locale) : null,
+                'url' => Route::has('public.quran.reciter') ? route('public.quran.reciter', $model->slug) : null,
             ];
         };
     }

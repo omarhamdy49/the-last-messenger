@@ -68,6 +68,7 @@ return [
     'type_quran' => 'آيات',
     'type_seerah' => 'أحداث السيرة',
     'type_media' => 'برامج مرئية',
+    'type_reciter' => 'القرّاء',
     'type_unknown' => 'غير معروف',
 
     // Bookmark display references

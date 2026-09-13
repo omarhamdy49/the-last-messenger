@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Web;
 
+use App\Domain\Quran\Models\ReciterProfile;
 use App\Domain\Seerah\Models\SeerahEvent;
+use App\Domain\Shared\Enums\FavorableType;
+use App\Domain\Shared\Services\FavoriteService;
 use App\Models\Favorite;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -262,5 +265,24 @@ final class ProfileFavoritesTest extends TestCase
             'id' => $favoriteId,
             'user_id' => $userA->id,
         ]);
+    }
+
+    // ---------------------------------------------------------------------
+    // Reciter profiles (Quran) are bookmarkable
+    // ---------------------------------------------------------------------
+
+    public function test_user_can_favorite_a_reciter_profile(): void
+    {
+        $profile = ReciterProfile::query()->create(['identity_key' => 't:husary', 'slug' => 'husary', 'is_active' => true]);
+        $profile->translations()->create(['locale' => 'ar', 'name' => 'الحصري']);
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson(route('public.favorites.store'), ['type' => 'reciter', 'id' => $profile->id])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('favorites', ['user_id' => $user->id, 'favorable_id' => $profile->id]);
+        $this->actingAs($user)->get(route('public.favorites'))->assertOk()->assertSee('الحصري');
+        $this->assertContains($profile->id, app(FavoriteService::class)->favoritedContentIds($user, FavorableType::RECITER));
     }
 }
