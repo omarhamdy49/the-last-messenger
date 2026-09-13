@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Admin\Quran\AiInquiryController;
+use App\Http\Controllers\Admin\Quran\PlaylistController;
 use App\Http\Controllers\Admin\Quran\RecitationController;
 use App\Http\Controllers\Admin\Quran\ReciterController;
 use App\Http\Controllers\Admin\Quran\ReciterProfileController;
@@ -151,3 +152,14 @@ Route::resource('revelation-contexts', RevelationContextController::class)->name
     'update' => 'admin.revelation-contexts.update',
     'destroy' => 'admin.revelation-contexts.destroy',
 ]);
+
+// Visitor-built reciter playlists (moderation). `{playlist}` is the numeric id:
+// the model's route key is the public slug, so no implicit binding here.
+Route::prefix('playlists')->name('admin.playlists.')->controller(PlaylistController::class)->group(function (): void {
+    Route::get('/', 'index')->name('index');
+    Route::post('/bulk-unpublish', 'bulkUnpublish')->name('bulk-unpublish');
+    Route::get('/{playlist}/edit', 'edit')->whereNumber('playlist')->name('edit');
+    Route::put('/{playlist}', 'update')->whereNumber('playlist')->name('update');
+    Route::delete('/{playlist}', 'destroy')->whereNumber('playlist')->name('destroy');
+    Route::post('/{playlist}/toggle/{field}', 'toggle')->whereNumber('playlist')->whereIn('field', ['public', 'featured'])->name('toggle');
+});

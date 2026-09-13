@@ -54,6 +54,7 @@
         'tafsir-resources' => 'quran',
         'revelation-contexts' => 'quran',
         'ai-inquiries'    => 'quran',
+        'playlists'       => 'quran',
         'media-programs'  => 'media',
         'media-episodes'  => 'media',
         'media-categories' => 'media',
@@ -482,7 +483,7 @@
             <div>
                 <button @click="toggleSubmenu('quran')"
                         :class="openSubmenu === 'quran' ||
-                                ['quran','surahs','verses','tafseer','reciters','translation-resources','tafsir-resources','revelation-contexts','ai-inquiries'].includes(activeMenu) ?
+                                ['quran','surahs','verses','tafseer','reciters','reciter-profiles','translation-resources','tafsir-resources','revelation-contexts','ai-inquiries','playlists'].includes(activeMenu) ?
                             'bg-gradient-primary text-white shadow-lg' :
                             (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
                         class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
@@ -532,6 +533,15 @@
                        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
                         <i data-lucide="users" class="w-4 h-4"></i>
                         <span>{{ __('quran.recordings.profiles') }}</span>
+                    </a>
+                    <a href="{{ route('admin.playlists.index') }}"
+                       @click="activeMenu = 'playlists'"
+                       :class="isActive('playlists') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="list-music" class="w-4 h-4"></i>
+                        <span>{{ __('quran.playlists_admin.title') }}</span>
                     </a>
                     <a href="{{ route('admin.reciters.index', ['recordings' => 1]) }}"
                        @click="activeMenu = 'reciters'"
