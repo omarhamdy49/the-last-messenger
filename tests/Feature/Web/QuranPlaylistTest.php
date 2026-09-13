@@ -225,4 +225,23 @@ final class QuranPlaylistTest extends TestCase
     {
         $this->get(route('public.quran'))->assertOk()->assertSee(route('public.quran.playlists.index'), false);
     }
+
+    public function test_items_are_stored_and_listed_in_surah_order_whatever_order_was_sent(): void
+    {
+        $surahs = $this->surahs(5);
+        [$a] = $this->person('a', $surahs);
+        $preview = app(PlaylistService::class)->assign([$a], $surahs)->items;
+        $shuffled = [5 => $preview[5], 2 => $preview[2], 4 => $preview[4], 1 => $preview[1], 3 => $preview[3]];
+
+        $res = $this->actingAs(User::factory()->create())
+            ->postJson(route('public.quran.playlists.store'), ['name' => 'ترتيب', 'scope' => 'custom', 'items' => $shuffled, 'is_public' => true])
+            ->assertCreated();
+
+        $playlist = Playlist::query()->firstOrFail();
+        $this->assertSame([1, 2, 3, 4, 5], $playlist->items->pluck('surah_id')->all());
+        $this->assertSame([1, 2, 3, 4, 5], array_column(app(PlaylistService::class)->tracks($playlist, 'ar'), 'surah'));
+        $html = $this->get($res->json('redirect'))->assertOk()->getContent();
+        $this->assertLessThan(strpos($html, 'س2'), strpos($html, 'س1'));
+        $this->assertLessThan(strpos($html, 'س5'), strpos($html, 'س4'));
+    }
 }

@@ -6,12 +6,14 @@ namespace App\Http\Controllers\Admin\Quran;
 
 use App\Domain\Quran\DTOs\PlaylistData;
 use App\Domain\Quran\Models\Playlist;
+use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Repositories\PlaylistRepository;
 use App\Domain\Quran\Services\PlaylistService;
 use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Quran\UpdatePlaylistRequest;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -55,10 +57,32 @@ final class PlaylistController extends Controller
             'items.reciter.profile.translations:id,profile_id,locale,name',
         ])->findOrFail($playlist);
 
+        $locale = app()->getLocale();
+        $coverage = $this->service->coverage($model->items->pluck('surah_id')->all());
+
         return view('admin.playlists.edit', [
             'playlist' => $model,
-            'coverage' => $this->service->coverage($model->items->pluck('surah_id')->all()),
+            // Rows the Alpine editor starts with; recordings for a newly added surah are fetched lazily.
+            'rows' => $model->items->map(fn ($item) => [
+                'surah' => $item->surah_id,
+                'name' => $item->surah?->getDisplayName($locale) ?? (string) $item->surah_id,
+                'verses' => $item->surah?->verses_count,
+                'recording' => $item->reciter_id,
+                'options' => $coverage[$item->surah_id] ?? [],
+            ])->values()->all(),
+            'surahs' => Surah::query()->orderBy('id')->get(['id', 'name_ar', 'name_en', 'verses_count'])
+                ->map(fn (Surah $s) => ['id' => $s->id, 'name' => $s->getDisplayName($locale), 'verses' => $s->verses_count])->all(),
         ]);
+    }
+
+    /**
+     * Playable recordings for one surah — the "add surah" picker loads these on demand.
+     */
+    public function coverage(int $surah): JsonResponse
+    {
+        abort_unless($surah >= 1 && $surah <= 114, 404);
+
+        return response()->json(['options' => $this->service->coverage([$surah])[$surah] ?? []]);
     }
 
     public function update(UpdatePlaylistRequest $request, int $playlist): RedirectResponse
@@ -66,19 +90,17 @@ final class PlaylistController extends Controller
         $model = Playlist::query()->with('items')->findOrFail($playlist);
         $old = $model->toArray();
 
-        // Only surahs already on the playlist can be re-assigned here; adding
-        // surahs is the owner's job through the wizard.
-        $items = $model->items->pluck('reciter_id', 'surah_id')->all();
-        foreach ($request->items() as $surah => $recording) {
-            if (array_key_exists($surah, $items)) {
-                $items[$surah] = $recording;
-            }
+        // The posted rows are the whole list: a row left out is removed, a new
+        // surah is added. Recordings without playable audio are kept as "needs a reciter".
+        $items = $request->items();
+        foreach ($this->service->invalidPairs($items) as $bad) {
+            $items[$bad['surah']] = null;
         }
 
         $this->service->update($model, new PlaylistData(
             trim($request->validated('name')),
             $request->validated('description') ?: null,
-            $model->scope,
+            count($items) === 114 ? 'full' : 'custom',
             $items,
             $request->boolean('is_public'),
         ));

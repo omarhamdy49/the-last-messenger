@@ -6,6 +6,10 @@ namespace Tests\Feature\Admin;
 
 use App\Domain\Quran\DTOs\PlaylistData;
 use App\Domain\Quran\Models\Playlist;
+use App\Domain\Quran\Models\Recitation;
+use App\Domain\Quran\Models\Reciter;
+use App\Domain\Quran\Models\ReciterProfile;
+use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Services\PlaylistService;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -82,5 +86,33 @@ final class PlaylistAdminTest extends TestCase
 
         $this->assertSame(0, Playlist::query()->where('is_public', true)->count());
         $this->assertFalse($a->fresh()->is_featured);
+    }
+
+    public function test_admin_can_add_and_remove_surahs_and_rows_stay_in_surah_order(): void
+    {
+        foreach ([1, 2, 3] as $i) {
+            Surah::query()->forceCreate(['id' => $i, 'revelation_place' => 'makkah', 'revelation_order' => $i, 'bismillah_pre' => true, 'name_ar' => 'س'.$i, 'name_en' => 'S'.$i, 'transliteration' => 'S'.$i, 'verses_count' => 3]);
+        }
+        $profile = ReciterProfile::query()->create(['identity_key' => 't:a', 'slug' => 'a', 'is_active' => true]);
+        $profile->translations()->create(['locale' => 'ar', 'name' => 'قارئ أ']);
+        $recording = Reciter::query()->create(['slug' => 'a-rec', 'profile_id' => $profile->id, 'kind' => 'recitation', 'is_active' => true]);
+        $recording->translations()->create(['locale' => 'ar', 'name' => 'a', 'is_ready' => true]);
+        foreach ([1, 3] as $surah) {
+            Recitation::query()->create(['reciter_id' => $recording->id, 'surah_id' => $surah, 'audio_url' => "https://cdn.test/{$surah}.mp3", 'format' => 'mp3']);
+        }
+        $playlist = app(PlaylistService::class)->create(User::factory()->create(), new PlaylistData('x', null, 'custom', [1 => $recording->id, 2 => null], true));
+        $admin = $this->createAdminUser();
+
+        $this->actingAs($admin)->get(route('admin.playlists.edit', $playlist->id))->assertOk()->assertSee(__('quran.playlists_admin.add_surah'));
+        $this->actingAs($admin)->getJson(route('admin.playlists.coverage', 3))->assertOk()->assertJsonPath('options.0.id', $recording->id);
+
+        // Drop surah 2, add surah 3 — posted out of order on purpose.
+        $this->actingAs($admin)
+            ->put(route('admin.playlists.update', $playlist->id), ['name' => 'قائمة', 'is_public' => 1, 'items' => [3 => $recording->id, 1 => $recording->id]])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('admin.playlists.edit', $playlist->id));
+
+        $this->assertSame([1 => $recording->id, 3 => $recording->id], $playlist->fresh()->items->pluck('reciter_id', 'surah_id')->all());
+        $this->assertSame(2, $playlist->fresh()->items_count);
     }
 }

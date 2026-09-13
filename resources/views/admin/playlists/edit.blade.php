@@ -71,49 +71,86 @@
             </div>
         </section>
 
-        <!-- Items -->
-        <section class="rounded-2xl border overflow-hidden" :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            <div class="px-6 py-4 border-b" :class="darkMode ? 'border-gray-800' : 'border-gray-100'">
-                <h2 class="text-lg font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $t('items_title') }}</h2>
-                <p class="text-sm mt-1" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">{{ $t('items_hint') }}</p>
-            </div>
-            @if ($playlist->items->count())
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead :class="darkMode ? 'bg-gray-800/60 text-gray-300' : 'bg-gray-50 text-gray-600'">
-                            <tr>
-                                <th scope="col" class="px-4 py-3 text-start font-semibold w-16">#</th>
-                                <th scope="col" class="px-4 py-3 text-start font-semibold">{{ $t('col_surah') }}</th>
-                                <th scope="col" class="px-4 py-3 text-start font-semibold">{{ $t('col_recording') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y" :class="darkMode ? 'divide-gray-800' : 'divide-gray-100'">
-                            @foreach ($playlist->items as $item)
-                                @php $options = $coverage[$item->surah_id] ?? []; @endphp
-                                <tr class="{{ $item->reciter_id ? '' : 'bg-amber-50 dark:bg-amber-900/10' }}">
-                                    <td class="px-4 py-3 tabular-nums font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ $num($item->surah_id) }}</td>
-                                    <td class="px-4 py-3" :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
-                                        {{ $item->surah?->getDisplayName($locale) }}
-                                        <span class="block text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ __('quran.playlists.verses', ['count' => $num($item->surah?->verses_count ?? 0)]) }}</span>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <label for="item-{{ $item->surah_id }}" class="sr-only">{{ $t('col_recording') }}</label>
-                                        <select id="item-{{ $item->surah_id }}" name="items[{{ $item->surah_id }}]" class="{{ $inputClass }} max-w-md" :class="{{ $inputTheme }}">
-                                            <option value="">{{ $t('no_recording') }}</option>
-                                            @foreach ($options as $opt)
-                                                <option value="{{ $opt['id'] }}" @selected((int) old('items.'.$item->surah_id, $item->reciter_id) === $opt['id'])>{{ $opt['label'] }}</option>
-                                            @endforeach
-                                        </select>
-                                        @error('items.'.$item->surah_id)<p class="mt-1 text-xs text-red-500">{{ $message }}</p>@enderror
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+        <!-- Items: Alpine-managed rows. A removed row is simply not posted; rows always stay in surah order. -->
+        <section class="rounded-2xl border overflow-hidden" :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'"
+                 x-data="playlistItems(@js($rows), @js($surahs), @js(route('admin.playlists.coverage', ['surah' => '__S__'])))">
+            <div class="px-6 py-4 border-b flex flex-wrap items-start justify-between gap-3" :class="darkMode ? 'border-gray-800' : 'border-gray-100'">
+                <div>
+                    <h2 class="text-lg font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $t('items_title') }}</h2>
+                    <p class="text-sm mt-1" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">{{ $t('items_hint') }}</p>
                 </div>
-            @else
-                <p class="px-6 py-10 text-center text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">{{ $t('empty_title') }}</p>
-            @endif
+                <span class="px-3 py-1 rounded-full text-xs font-bold tabular-nums" :class="darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-gray-700'"
+                      x-text="@js($t('rows_count', ['count' => ':count'])).replace(':count', fmt(rows.length))"></span>
+            </div>
+
+            {{-- Add surah --}}
+            <div class="px-6 py-4 border-b grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 items-end" :class="darkMode ? 'border-gray-800 bg-gray-900/30' : 'border-gray-100 bg-gray-50/60'">
+                <div>
+                    <label for="add-surah" class="block text-sm font-medium mb-2" :class="{{ $labelTheme }}">{{ $t('add_surah') }}</label>
+                    <select id="add-surah" x-model.number="addSurah" @change="loadOptions()" class="{{ $inputClass }}" :class="{{ $inputTheme }}" :disabled="!available.length">
+                        <option value="" x-text="available.length ? @js($t('pick_surah')) : @js($t('all_added'))"></option>
+                        <template x-for="s in available" :key="s.id">
+                            <option :value="s.id" x-text="`${fmt(s.id)} · ${s.name}`"></option>
+                        </template>
+                    </select>
+                </div>
+                <div>
+                    <label for="add-recording" class="block text-sm font-medium mb-2" :class="{{ $labelTheme }}">{{ $t('pick_recording') }}</label>
+                    <select id="add-recording" x-model.number="addRecording" class="{{ $inputClass }}" :class="{{ $inputTheme }}" :disabled="!addSurah || loading">
+                        <option value="" x-text="loading ? @js($t('loading')) : (addSurah && !addOptions.length ? @js($t('no_options')) : @js($t('no_recording')))"></option>
+                        <template x-for="o in addOptions" :key="o.id">
+                            <option :value="o.id" x-text="o.label"></option>
+                        </template>
+                    </select>
+                </div>
+                <button type="button" @click="add()" :disabled="!addSurah || loading"
+                        class="h-[46px] px-5 rounded-xl font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow flex items-center gap-2 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent">
+                    <i data-lucide="plus" class="w-4 h-4"></i>{{ $t('add') }}
+                </button>
+            </div>
+
+            <div class="overflow-x-auto" x-show="rows.length">
+                <table class="w-full text-sm">
+                    <thead :class="darkMode ? 'bg-gray-800/60 text-gray-300' : 'bg-gray-50 text-gray-600'">
+                        <tr>
+                            <th scope="col" class="px-4 py-3 text-start font-semibold w-16">#</th>
+                            <th scope="col" class="px-4 py-3 text-start font-semibold">{{ $t('col_surah') }}</th>
+                            <th scope="col" class="px-4 py-3 text-start font-semibold">{{ $t('col_recording') }}</th>
+                            <th scope="col" class="px-4 py-3 text-end font-semibold w-24">{{ $t('col_actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y" :class="darkMode ? 'divide-gray-800' : 'divide-gray-100'">
+                        <template x-for="row in rows" :key="row.surah">
+                            <tr :class="!row.recording ? 'bg-amber-50 dark:bg-amber-900/10' : ''">
+                                <td class="px-4 py-3 tabular-nums font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'" x-text="fmt(row.surah)"></td>
+                                <td class="px-4 py-3" :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
+                                    <span x-text="row.name"></span>
+                                    <span class="block text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'" x-text="@js(__('quran.playlists.verses', ['count' => ':count'])).replace(':count', fmt(row.verses ?? 0))"></span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <label :for="`item-${row.surah}`" class="sr-only">{{ $t('col_recording') }}</label>
+                                    <select :id="`item-${row.surah}`" :name="`items[${row.surah}]`" x-model.number="row.recording" class="{{ $inputClass }} max-w-md" :class="{{ $inputTheme }}">
+                                        <option value="">{{ $t('no_recording') }}</option>
+                                        <template x-for="o in row.options" :key="o.id">
+                                            <option :value="o.id" :selected="row.recording === o.id" x-text="o.label"></option>
+                                        </template>
+                                    </select>
+                                </td>
+                                <td class="px-4 py-3 text-end">
+                                    <button type="button" @click="remove(row.surah)"
+                                            class="w-9 h-9 rounded-lg inline-flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-red-300"
+                                            :title="@js($t('remove'))" :aria-label="`${@js($t('remove'))} ${row.name}`">
+                                        <i data-lucide="x" class="w-4 h-4"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+            <p x-show="!rows.length" x-cloak class="px-6 py-10 text-center text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">{{ $t('empty_title') }}</p>
+            {{-- An empty list still posts `items` so the controller clears the rows instead of ignoring the field. --}}
+            <template x-if="!rows.length"><input type="hidden" name="items" value=""></template>
         </section>
     </div>
 
@@ -155,3 +192,36 @@
     </button>
 </form>
 @endsection
+
+@push('scripts')
+<script>
+    function playlistItems(rows, surahs, coverageUrl) {
+        const fmt = (n) => @js(app()->getLocale()) === 'ar' ? String(n).replace(/[0-9]/g, d => '٠١٢٣٤٥٦٧٨٩'[d]) : String(n);
+        const bySurah = (a, b) => a.surah - b.surah;
+        return {
+            rows: [...rows].sort(bySurah), surahs, fmt,
+            addSurah: '', addRecording: '', addOptions: [], loading: false,
+            get available() { const used = new Set(this.rows.map(r => r.surah)); return this.surahs.filter(s => !used.has(s.id)); },
+            async loadOptions() {
+                this.addOptions = []; this.addRecording = '';
+                if (!this.addSurah) return;
+                this.loading = true;
+                try {
+                    const res = await fetch(coverageUrl.replace('__S__', this.addSurah), { headers: { Accept: 'application/json' } });
+                    this.addOptions = res.ok ? (await res.json()).options : [];
+                } catch (e) { this.addOptions = []; }
+                finally { this.loading = false; }
+            },
+            add() {
+                const s = this.surahs.find(x => x.id === this.addSurah);
+                if (!s || this.rows.some(r => r.surah === s.id)) return;
+                // Always in mushaf order, whatever order the admin adds them in.
+                this.rows = [...this.rows, { surah: s.id, name: s.name, verses: s.verses, recording: this.addRecording || null, options: this.addOptions }].sort(bySurah);
+                this.addSurah = ''; this.addRecording = ''; this.addOptions = [];
+                this.$nextTick(() => window.lucide?.createIcons());
+            },
+            remove(surah) { this.rows = this.rows.filter(r => r.surah !== surah); },
+        };
+    }
+</script>
+@endpush

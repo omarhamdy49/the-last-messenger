@@ -158,6 +158,7 @@ Route::resource('revelation-contexts', RevelationContextController::class)->name
 Route::prefix('playlists')->name('admin.playlists.')->controller(PlaylistController::class)->group(function (): void {
     Route::get('/', 'index')->name('index');
     Route::post('/bulk-unpublish', 'bulkUnpublish')->name('bulk-unpublish');
+    Route::get('/coverage/{surah}', 'coverage')->whereNumber('surah')->name('coverage');
     Route::get('/{playlist}/edit', 'edit')->whereNumber('playlist')->name('edit');
     Route::put('/{playlist}', 'update')->whereNumber('playlist')->name('update');
     Route::delete('/{playlist}', 'destroy')->whereNumber('playlist')->name('destroy');
