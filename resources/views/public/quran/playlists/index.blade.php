@@ -1,6 +1,6 @@
 @extends('layouts.public')
 
-@section('title', __('quran.playlists.title').' | '.__('quran.public.title'))
+@section('title', __('quran.playlists.title').' | '.__('quran.public.page_title'))
 @section('meta_description', __('quran.playlists.subtitle'))
 
 @push('head')
@@ -25,7 +25,7 @@
 
     {{-- Breadcrumb --}}
     <nav class="mb-6 text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2" aria-label="breadcrumb">
-        <a href="{{ route('public.quran') }}" class="hover:text-primary transition-colors">{{ __('quran.public.title') }}</a>
+        <a href="{{ route('public.quran') }}" class="hover:text-primary transition-colors">{{ __('quran.public.page_title') }}</a>
         <i data-lucide="{{ $isRtl ? 'chevron-left' : 'chevron-right' }}" class="w-4 h-4"></i>
         <span class="text-zinc-900 dark:text-white font-semibold">{{ __('quran.playlists.title') }}</span>
     </nav>
