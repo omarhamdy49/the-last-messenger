@@ -12,6 +12,7 @@ use App\Domain\Quran\Repositories\SurahRepositoryInterface;
 use App\Domain\Quran\Repositories\VerseRepositoryInterface;
 use App\Domain\Shared\Services\BaseService;
 use App\Exceptions\Domain\ResourceNotFoundException;
+use BadMethodCallException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -484,12 +485,7 @@ class QuranService extends BaseService
      */
     public function importTranslations(array $data, bool $truncate = false): array
     {
-        // TODO: Implement additional translation import from separate translation files
-        return [
-            'total' => 0,
-            'created' => 0,
-            'failed' => 0,
-        ];
+        throw new BadMethodCallException('Generic JSON translation import is unsupported. Use quran:import-translation {edition} to import a catalog edition with verse alignment.');
     }
 
     /**
@@ -500,12 +496,7 @@ class QuranService extends BaseService
      */
     public function importTafsir(array $data, bool $truncate = false): array
     {
-        // TODO: Implement tafsir import from separate tafsir files
-        return [
-            'total' => 0,
-            'created' => 0,
-            'failed' => 0,
-        ];
+        throw new BadMethodCallException('Generic JSON tafsir import is unsupported. Use quran:import-tafsir {tafsirId} to import a Quran.com tafsir resource.');
     }
 
     /**
@@ -516,12 +507,7 @@ class QuranService extends BaseService
      */
     public function importReciters(array $data, bool $truncate = false): array
     {
-        // TODO: Implement reciter import from separate files
-        return [
-            'total' => 0,
-            'created' => 0,
-            'failed' => 0,
-        ];
+        throw new BadMethodCallException('Generic JSON reciter import is unsupported. Use quran:import-reciters to import the supported reciter catalog.');
     }
 
     /**
