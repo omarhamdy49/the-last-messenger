@@ -7,10 +7,12 @@ namespace App\Domain\Quran\Services;
 use App\Domain\Quran\DTOs\AssignmentResult;
 use App\Domain\Quran\DTOs\PlaylistData;
 use App\Domain\Quran\Models\Playlist;
-use App\Domain\Quran\Repositories\PlaylistRepository;
+use App\Domain\Quran\Models\PlaylistItem;
+use App\Domain\Quran\Models\Recitation;
+use App\Domain\Quran\Models\ReciterProfile;
 use App\Models\User;
-use Illuminate\Database\Query\Builder;
-use Illuminate\Database\Query\JoinClause;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Random\Randomizer;
 
@@ -18,24 +20,26 @@ final class PlaylistService
 {
     private readonly Randomizer $rng;
 
-    public function __construct(private readonly PlaylistRepository $repo, ?Randomizer $rng = null)
+    public function __construct(?Randomizer $rng = null)
     {
         // Injectable so tests can seed it; production uses the secure default.
         $this->rng = $rng ?? new Randomizer;
     }
 
     /**
-     * Recitations that actually play: active recitation-kind recordings whose
-     * audio source is active — the same rule the public reciter page applies.
+     * Playable recitations for the given surahs, with the recording's person.
+     *
+     * @param  list<int>  $surahIds
+     * @return Collection<int, Recitation>
      */
-    private function playable(): Builder
+    private function playableFor(array $surahIds, ?callable $constrain = null): Collection
     {
-        return DB::table('quran_recitations as rc')
-            ->join('quran_reciters as r', 'r.id', '=', 'rc.reciter_id')
-            ->join('quran_recording_sources as s', 's.id', '=', 'rc.source_id')
-            ->where('r.kind', 'recitation')
-            ->where('r.is_active', true)
-            ->where('s.is_active', true);
+        return Recitation::query()
+            ->playable()
+            ->whereIn('surah_id', $surahIds)
+            ->when($constrain, fn (Builder $q) => $constrain($q))
+            ->with('reciter:id,profile_id,display_order,style,riwayah,slug')
+            ->get(['id', 'reciter_id', 'surah_id']);
     }
 
     /**
@@ -60,24 +64,23 @@ final class PlaylistService
             return new AssignmentResult([], $surahIds, []);
         }
 
-        $rows = $this->playable()
-            ->whereIn('r.profile_id', $profileIds)
-            ->whereIn('rc.surah_id', $surahIds)
-            ->orderBy('r.display_order')->orderBy('r.id')
-            ->get(['r.profile_id', 'rc.reciter_id', 'rc.surah_id']);
+        $recitations = $this->playableFor(
+            $surahIds,
+            fn (Builder $q) => $q->whereHas('reciter', fn (Builder $r) => $r->whereIn('profile_id', $profileIds)),
+        );
 
         // surahId => profileId => list<recordingId>, recordings in display order.
         $alternatives = [];
-        foreach ($rows as $row) {
-            $list = &$alternatives[(int) $row->surah_id][(int) $row->profile_id];
-            $list ??= [];
-            if (! in_array((int) $row->reciter_id, $list, true)) {
-                $list[] = (int) $row->reciter_id;
+        foreach ($recitations->sortBy([['reciter.display_order', 'asc'], ['reciter_id', 'asc']]) as $recitation) {
+            $bucket = &$alternatives[$recitation->surah_id][$recitation->reciter->profile_id];
+            $bucket ??= [];
+            if (! in_array($recitation->reciter_id, $bucket, true)) {
+                $bucket[] = $recitation->reciter_id;
             }
-            unset($list);
+            unset($bucket);
         }
 
-        $defaults = DB::table('quran_reciter_profiles')->whereIn('id', $profileIds)->pluck('default_recording_id', 'id');
+        $defaults = ReciterProfile::query()->whereKey($profileIds)->pluck('default_recording_id', 'id');
 
         $items = [];
         $uncovered = [];
@@ -130,11 +133,8 @@ final class PlaylistService
             return [];
         }
 
-        $valid = $this->playable()
-            ->whereIn('rc.reciter_id', array_values($pairs))
-            ->whereIn('rc.surah_id', array_keys($pairs))
-            ->get(['rc.surah_id', 'rc.reciter_id'])
-            ->map(fn ($row) => $row->surah_id.':'.$row->reciter_id)
+        $valid = $this->playableFor(array_keys($pairs), fn (Builder $q) => $q->whereIn('reciter_id', array_values($pairs)))
+            ->map(fn (Recitation $r) => $r->surah_id.':'.$r->reciter_id)
             ->flip();
 
         $bad = [];
@@ -150,8 +150,7 @@ final class PlaylistService
     public function create(User $user, PlaylistData $data): Playlist
     {
         return DB::transaction(function () use ($user, $data): Playlist {
-            $playlist = Playlist::query()->create([
-                'user_id' => $user->id,
+            $playlist = $user->quranPlaylists()->create([
                 'name' => $data->name,
                 'description' => $data->description,
                 'scope' => $data->scope,
@@ -179,24 +178,22 @@ final class PlaylistService
     }
 
     /**
+     * Replace all items atomically (caller holds the transaction): one delete, one bulk insert.
+     *
      * @param  array<int, int|null>  $items
      */
     private function replaceItems(Playlist $playlist, array $items): void
     {
-        $playlist->items()->delete();
         ksort($items);
-        $rows = [];
-        foreach ($items as $surah => $recording) {
-            $rows[] = [
-                'playlist_id' => $playlist->id,
-                'surah_id' => (int) $surah,
-                'reciter_id' => $recording !== null && $recording !== '' ? (int) $recording : null,
-            ];
-        }
-        if ($rows !== []) {
-            DB::table('quran_playlist_items')->insert($rows);
-        }
-        $playlist->forceFill(['items_count' => count($rows)])->save();
+        $rows = collect($items)->map(fn ($recording, int $surah): array => [
+            'playlist_id' => $playlist->id,
+            'surah_id' => $surah,
+            'reciter_id' => $recording !== null && $recording !== '' ? (int) $recording : null,
+        ])->values();
+
+        $playlist->items()->delete();
+        PlaylistItem::query()->insert($rows->all());
+        $playlist->forceFill(['items_count' => $rows->count()])->save();
     }
 
     public function delete(Playlist $playlist): void
@@ -216,8 +213,8 @@ final class PlaylistService
 
     public function recordPlay(Playlist $playlist): void
     {
-        // Query-builder increment: no model event, so listings are not re-cached per play.
-        Playlist::query()->whereKey($playlist->id)->increment('plays_count');
+        // Quiet: no model event, so listings are not re-cached on every play.
+        $playlist->incrementQuietly('plays_count');
     }
 
     /**
@@ -233,25 +230,15 @@ final class PlaylistService
         }
         $locale = app()->getLocale();
 
-        $rows = $this->playable()
-            ->leftJoin('quran_reciter_profile_translations as t', fn (JoinClause $j) => $j->on('t.profile_id', '=', 'r.profile_id')->where('t.locale', $locale))
-            ->leftJoin('quran_reciter_profile_translations as ta', fn (JoinClause $j) => $j->on('ta.profile_id', '=', 'r.profile_id')->where('ta.locale', 'ar'))
-            ->whereIn('rc.surah_id', $surahIds)
-            ->orderBy('r.display_order')->orderBy('r.id')
-            ->get(['rc.surah_id', 'r.id', 'r.style', 'r.riwayah', DB::raw('COALESCE(t.name, ta.name, r.slug) AS name')]);
-
-        $out = [];
-        $seen = [];
-        foreach ($rows as $row) {
-            $key = $row->surah_id.':'.$row->id;
-            if (isset($seen[$key])) {
-                continue;
-            }
-            $seen[$key] = true;
-            $suffix = $row->riwayah ? ' · '.$row->riwayah : ($row->style ? ' · '.__('quran.recordings.'.$row->style) : '');
-            $out[(int) $row->surah_id][] = ['id' => (int) $row->id, 'label' => $row->name.$suffix];
-        }
-
-        return $out;
+        return $this->playableFor($surahIds)
+            ->load('reciter.profile:id', 'reciter.profile.translations:id,profile_id,locale,name')
+            ->sortBy([['reciter.display_order', 'asc'], ['reciter_id', 'asc']])
+            ->unique(fn (Recitation $r) => $r->surah_id.':'.$r->reciter_id)
+            ->groupBy('surah_id')
+            ->map(fn (Collection $group) => $group->map(fn (Recitation $r) => [
+                'id' => $r->reciter_id,
+                'label' => ($r->reciter->profile?->displayName($locale) ?? $r->reciter->slug).' · '.$r->reciter->recordingLabel($locale),
+            ])->values()->all())
+            ->all();
     }
 }

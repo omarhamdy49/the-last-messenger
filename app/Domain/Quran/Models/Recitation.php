@@ -7,6 +7,7 @@ namespace App\Domain\Quran\Models;
 use App\Domain\Quran\Services\Audio\RecordingSourceService;
 use App\Domain\Quran\Services\QuranCacheKeys;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -79,6 +80,18 @@ class Recitation extends Model
     public function source(): BelongsTo
     {
         return $this->belongsTo(RecordingSource::class);
+    }
+
+    /**
+     * Scope: recitations that actually play — an active recitation-kind
+     * recording whose audio source is active. The single "has audio" rule
+     * shared by the reciter page and playlists.
+     */
+    public function scopePlayable(Builder $query): Builder
+    {
+        return $query
+            ->whereHas('reciter', fn (Builder $r) => $r->active()->recitationsOnly())
+            ->whereHas('source', fn (Builder $s) => $s->where('is_active', true));
     }
 
     /**

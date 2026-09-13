@@ -8,7 +8,6 @@ use App\Domain\Quran\Models\Recitation;
 use App\Domain\Quran\Models\Reciter;
 use App\Domain\Quran\Models\ReciterProfile;
 use App\Domain\Quran\Models\Surah;
-use App\Domain\Quran\Repositories\PlaylistRepository;
 use App\Domain\Quran\Services\PlaylistService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -61,7 +60,7 @@ final class PlaylistAssignmentTest extends TestCase
 
     private function service(int $seed = 7): PlaylistService
     {
-        return new PlaylistService(app(PlaylistRepository::class), new Randomizer(new Mt19937($seed)));
+        return new PlaylistService(new Randomizer(new Mt19937($seed)));
     }
 
     public function test_assignment_is_balanced_across_full_coverage(): void
