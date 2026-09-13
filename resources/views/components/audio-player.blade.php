@@ -301,7 +301,7 @@
             // Set up the reciter list for the current surah page. The user's saved
             // reciter (siteReciterId) wins so their choice sticks across surahs;
             // the page default and the first reciter are fallbacks.
-            configure({ reciters, reciterId, surah, urlBase }) {
+            configure({ reciters, reciterId, surah, urlBase, force = false }) {
                 this.reciters = Array.isArray(reciters) ? reciters : [];
                 this.surahMeta = surah || null;
                 this.surahUrlBase = urlBase || null;
@@ -311,8 +311,11 @@
                 this.playlist = null; this.playlistIndex = 0;
                 const stored = parseInt(localStorage.getItem('siteReciterId') ?? '', 10);
                 const valid = (id) => this.reciters.some((r) => r.id === id);
-                this.reciterId = valid(stored) ? stored
-                    : (valid(reciterId) ? reciterId : (this.reciters[0]?.id ?? null));
+                // `force` (a playlist hand-off via ?reciter=) wins over the stored
+                // choice for this page only; the stored preference is not touched.
+                this.reciterId = (force && valid(reciterId)) ? reciterId
+                    : (valid(stored) ? stored
+                        : (valid(reciterId) ? reciterId : (this.reciters[0]?.id ?? null)));
                 // init() may have restored a paused whole-surah track from a previous
                 // visit. Resuming it goes straight through toggle(), never through
                 // playSurah(), so this is the only place those timings get asked for.
