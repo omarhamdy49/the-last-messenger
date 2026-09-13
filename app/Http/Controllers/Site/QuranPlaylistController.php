@@ -56,7 +56,7 @@ final class QuranPlaylistController extends Controller
                 ->distinct()->count('profile_id'),
         ]);
 
-        $playlists = $this->repo->gallery($search ?: null, $sort);
+        $playlists = $this->repo->gallery($search ?: null, $sort, $request->user());
         $playlists->getCollection()->transform(fn (Playlist $p) => PlaylistCard::from($p, $locale));
 
         return view('public.quran.playlists.index', [

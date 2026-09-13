@@ -39,10 +39,14 @@ final class PlaylistRepository
         return Playlist::query()->where('user_id', $user->id)->count();
     }
 
-    public function gallery(?string $search, string $sort, int $perPage = 24): LengthAwarePaginator
+    /**
+     * Public playlists, plus the viewer's own private ones (they render with a
+     * "private" badge) so the gallery is also the signed-in user's library.
+     */
+    public function gallery(?string $search, string $sort, ?User $viewer = null, int $perPage = 24): LengthAwarePaginator
     {
         return $this->base()
-            ->where('is_public', true)
+            ->visibleTo($viewer)
             ->when($search, fn (Builder $q) => $q->where('name', 'like', '%'.$search.'%'))
             ->when($sort === 'plays', fn (Builder $q) => $q->orderByDesc('plays_count'), fn (Builder $q) => $q->latest('id'))
             ->paginate($perPage)

@@ -165,7 +165,7 @@ final class QuranPlaylistTest extends TestCase
         $this->assertSame(1, $playlist->fresh()->plays_count);
     }
 
-    public function test_gallery_lists_only_public_playlists(): void
+    public function test_gallery_lists_public_playlists_plus_the_viewers_own_private_ones(): void
     {
         $surahs = $this->surahs(1);
         [, $recA] = $this->person('a', $surahs);
@@ -174,6 +174,8 @@ final class QuranPlaylistTest extends TestCase
         $this->makePlaylist($owner, [1 => $recA], false, 'سرية جدًا');
 
         $this->get(route('public.quran.playlists.index'))->assertOk()->assertSee('عامة جدًا')->assertDontSee('سرية جدًا');
+        $this->actingAs(User::factory()->create())->get(route('public.quran.playlists.index'))->assertOk()->assertDontSee('سرية جدًا');
+        $this->actingAs($owner)->get(route('public.quran.playlists.index'))->assertOk()->assertSee('سرية جدًا')->assertSee(__('quran.playlists.private'));
     }
 
     // ------------------------------------------------------------ owner actions
