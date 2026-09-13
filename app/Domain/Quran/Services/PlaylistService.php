@@ -211,12 +211,6 @@ final class PlaylistService
         $playlist->forceFill(['is_featured' => $on])->save();
     }
 
-    public function recordPlay(Playlist $playlist): void
-    {
-        // Quiet: no model event, so listings are not re-cached on every play.
-        $playlist->incrementQuietly('plays_count');
-    }
-
     /**
      * Every playable recording per surah, labelled for the admin editor.
      *

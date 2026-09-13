@@ -11,8 +11,10 @@ use App\Domain\Quran\Models\Reciter;
 use App\Domain\Quran\Models\ReciterProfile;
 use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Services\PlaylistService;
+use App\Jobs\RecordPlaylistPlayJob;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -166,8 +168,57 @@ final class QuranPlaylistTest extends TestCase
         $playlist = $this->makePlaylist(User::factory()->create(), [1 => $recA], true, 'قائمة الفجر');
 
         $this->get(route('public.quran.playlists.show', $playlist->slug))->assertOk()->assertSee('قائمة الفجر');
+        // QUEUE_CONNECTION=sync in tests: the tracking job runs inline, end to end.
         $this->post(route('public.quran.playlists.plays', $playlist->slug))->assertOk();
         $this->assertSame(1, $playlist->fresh()->plays_count);
+    }
+
+    public function test_play_is_queued_on_tracking_and_deduped_per_visitor(): void
+    {
+        $surahs = $this->surahs(1);
+        [, $recA] = $this->person('a', $surahs);
+        $playlist = $this->makePlaylist(User::factory()->create(), [1 => $recA], true);
+        Queue::fake();
+
+        $listener = User::factory()->create();
+        $this->actingAs($listener)->postJson(route('public.quran.playlists.plays', $playlist->slug))->assertOk();
+        $this->actingAs($listener)->postJson(route('public.quran.playlists.plays', $playlist->slug))->assertOk();
+
+        Queue::assertPushedOn('tracking', RecordPlaylistPlayJob::class);
+        Queue::assertPushed(RecordPlaylistPlayJob::class, 1);
+        // Nothing was written on the request path.
+        $this->assertSame(0, $playlist->fresh()->plays_count);
+
+        // A different visitor is counted separately.
+        $this->actingAs(User::factory()->create())->postJson(route('public.quran.playlists.plays', $playlist->slug))->assertOk();
+        Queue::assertPushed(RecordPlaylistPlayJob::class, 2);
+    }
+
+    public function test_play_job_increments_and_tolerates_a_deleted_playlist(): void
+    {
+        $surahs = $this->surahs(1);
+        [, $recA] = $this->person('a', $surahs);
+        $playlist = $this->makePlaylist(User::factory()->create(), [1 => $recA], true);
+
+        (new RecordPlaylistPlayJob($playlist->id))->handle();
+        (new RecordPlaylistPlayJob($playlist->id))->handle();
+        $this->assertSame(2, $playlist->fresh()->plays_count);
+
+        $id = $playlist->id;
+        $playlist->delete();
+        (new RecordPlaylistPlayJob($id))->handle(); // no row, no exception
+        $this->assertDatabaseMissing('quran_playlists', ['id' => $id]);
+    }
+
+    public function test_private_playlist_play_is_404_and_not_queued(): void
+    {
+        $surahs = $this->surahs(1);
+        [, $recA] = $this->person('a', $surahs);
+        $playlist = $this->makePlaylist(User::factory()->create(), [1 => $recA], false);
+        Queue::fake();
+
+        $this->postJson(route('public.quran.playlists.plays', $playlist->slug))->assertNotFound();
+        Queue::assertNothingPushed();
     }
 
     public function test_gallery_lists_public_playlists_plus_the_viewers_own_private_ones(): void

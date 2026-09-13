@@ -111,6 +111,15 @@ final class QuranCacheKeys
         return 'playlists:v'.((int) Cache::get(self::PLAYLIST_VERSION_KEY, 0)).':'.$key;
     }
 
+    /**
+     * One counted play per visitor per playlist per window. Not cached content:
+     * deliberately outside the versioned family so flushPlaylists() never resets it.
+     */
+    public static function playlistPlayDedupe(int $playlistId, string $visitorHash): string
+    {
+        return "playlist_play_dedupe_{$playlistId}_{$visitorHash}";
+    }
+
     // -----------------------------------------------------------------------
     // Surah keys (SurahRepository)
     // -----------------------------------------------------------------------

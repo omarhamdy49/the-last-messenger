@@ -12,6 +12,7 @@ use App\Domain\Quran\Models\ReciterProfile;
 use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Repositories\PlaylistRepository;
 use App\Domain\Quran\Services\PlaylistCard;
+use App\Domain\Quran\Services\PlaylistPlayRecorder;
 use App\Domain\Quran\Services\PlaylistService;
 use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Shared\Enums\FavorableType;
@@ -38,6 +39,7 @@ final class QuranPlaylistController extends Controller
         private readonly PlaylistRepository $repo,
         private readonly PlaylistService $service,
         private readonly FavoriteService $favorites,
+        private readonly PlaylistPlayRecorder $plays,
     ) {}
 
     public function index(Request $request): View
@@ -142,7 +144,7 @@ final class QuranPlaylistController extends Controller
     public function plays(Request $request, string $slug): JsonResponse
     {
         $playlist = $this->repo->findBySlugVisibleTo($slug, $request->user()) ?? abort(404);
-        $this->service->recordPlay($playlist);
+        $this->plays->record($playlist, $request);
 
         return response()->json(['success' => true]);
     }
