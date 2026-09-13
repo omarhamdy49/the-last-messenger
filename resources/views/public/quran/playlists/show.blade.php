@@ -370,8 +370,21 @@
                             @endif
                         </div>
 
-                        {{-- Duration (desktop column) --}}
-                        <span class="hidden sm:block text-sm text-gray-500 dark:text-gray-400 tabular-nums w-14 text-end">{{ $fmtDur($t['duration']) ?? '—' }}</span>
+                        {{-- Play / pause (desktop column). Recitations carry no stored duration yet, so this
+                             slot is the row's transport control; a known duration shows beside it. --}}
+                        <div class="hidden sm:flex items-center justify-end gap-2">
+                            @if ($t['duration'])
+                                <span class="text-sm text-gray-500 dark:text-gray-400 tabular-nums">{{ $fmtDur($t['duration']) }}</span>
+                            @endif
+                            <button type="button" @disabled(! $hasAudio)
+                                    @click="isActive({{ $i }}) ? $store.audioPlayer.toggle() : playAt({{ $i }})"
+                                    class="w-10 h-10 rounded-full flex items-center justify-center transition-[background-color,color,transform] duration-200 active:scale-[0.95] disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                                    :class="isActive({{ $i }}) ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-sm' : 'text-gray-500 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-primary'"
+                                    :aria-label="(isActive({{ $i }}) && $store.audioPlayer.playing ? @js(__('quran.public.pause')) : @js(__('quran.playlists.play'))) + ' ' + @js($t['surahName'])">
+                                <i data-lucide="play" class="w-4 h-4 fill-current {{ $isRtl ? '-scale-x-100' : '' }}" x-show="!(isActive({{ $i }}) && $store.audioPlayer.playing)"></i>
+                                <i data-lucide="pause" class="w-4 h-4 fill-current" x-show="isActive({{ $i }}) && $store.audioPlayer.playing" x-cloak></i>
+                            </button>
+                        </div>
 
                         {{-- Trailing: duration on phones + reader link --}}
                         <div class="flex items-center gap-1 justify-self-end">
@@ -444,8 +457,14 @@ function playlistPage() {
         // Hero button: starts the list, or pauses/resumes it once it is the loaded list.
         toggleAll() {
             const p = this.$store.audioPlayer;
-            const loaded = !!p.track?.url && this.tracks.some(t => t.url === p.track.url);
-            if (loaded) { p.toggle(); return; }
+            const list = this.playable;
+            const idx = list.findIndex(t => t.url === p.track?.url);
+            if (idx >= 0) {
+                // Loaded from this list: make sure the list is attached, then toggle.
+                if (!p.hasPlaylistNav()) { p.adoptPlaylist(list, idx); }
+                p.toggle();
+                return;
+            }
             this.playAt(0);
         },
         // Row: always (re)starts that surah — never a toggle, so the first row is not special.
@@ -456,7 +475,11 @@ function playlistPage() {
             const target = this.tracks[i]?.url;
             const idx = Math.max(0, list.findIndex(t => t.url === target));
             // setPlaylist() toggles when the tapped track is the loaded one; a tap on a row means "play it".
-            if (p.track?.url === target) { if (!p.playing) { p.toggle(); } return; }
+            if (p.track?.url === target) {
+                if (!p.hasPlaylistNav()) { p.adoptPlaylist(list, idx); }
+                if (!p.playing) { p.toggle(); }
+                return;
+            }
             p.setPlaylist(list, idx);
             if (!this.counted) {
                 this.counted = true;

@@ -150,9 +150,11 @@ final class QuranPlaylistController extends Controller
     }
 
     /**
-     * Wizard preview-play: redirect to the playable audio for one (surah, recording).
+     * The playable audio for one (surah, recording): a redirect for the wizard's
+     * preview play, or `{url}` as JSON for the player's in-place surah stepping
+     * (so the loaded track carries the real file URL, same as the reader).
      */
-    public function audio(int $surah, int $recording): RedirectResponse
+    public function audio(Request $request, int $surah, int $recording): JsonResponse|RedirectResponse
     {
         $url = Recitation::query()->playable()
             ->where('surah_id', $surah)->where('reciter_id', $recording)
@@ -160,7 +162,9 @@ final class QuranPlaylistController extends Controller
             ->sortBy(fn (Recitation $r) => $r->source->priority)
             ->first()?->audio_url ?? abort(404);
 
-        return redirect()->away($url);
+        return $request->expectsJson()
+            ? response()->json(['url' => $url])
+            : redirect()->away($url);
     }
 
     // ------------------------------------------------------------------ helpers

@@ -59,12 +59,12 @@
             {{-- Transport --}}
             <div class="flex items-center gap-0.5 sm:gap-1 flex-shrink-0" dir="ltr">
                 {{-- Previous: the previous surah's page, or the previous playlist track --}}
-                <button x-show="$store.audioPlayer.hasStepNav()"
+                <button x-show="$store.audioPlayer.hasStepNav()" x-cloak
                         @click="$store.audioPlayer.step(-1)"
                         :disabled="!$store.audioPlayer.canStep(-1)"
                         class="{{ $iconBtn }}"
-                        :title="$store.audioPlayer.hasSurahNav() ? '{{ __('quran.public.previous_surah') }}' : '{{ __('quran.public.previous_track') }}'"
-                        :aria-label="$store.audioPlayer.hasSurahNav() ? '{{ __('quran.public.previous_surah') }}' : '{{ __('quran.public.previous_track') }}'">
+                        :title="$store.audioPlayer.navMode() !== 'playlist' ? '{{ __('quran.public.previous_surah') }}' : '{{ __('quran.public.previous_track') }}'"
+                        :aria-label="$store.audioPlayer.navMode() !== 'playlist' ? '{{ __('quran.public.previous_surah') }}' : '{{ __('quran.public.previous_track') }}'">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M7 5h2v14H7zM19 5v14l-9.5-7z"/></svg>
                 </button>
 
@@ -97,12 +97,12 @@
                 </button>
 
                 {{-- Next --}}
-                <button x-show="$store.audioPlayer.hasStepNav()"
+                <button x-show="$store.audioPlayer.hasStepNav()" x-cloak
                         @click="$store.audioPlayer.step(1)"
                         :disabled="!$store.audioPlayer.canStep(1)"
                         class="{{ $iconBtn }}"
-                        :title="$store.audioPlayer.hasSurahNav() ? '{{ __('quran.public.next_surah') }}' : '{{ __('quran.public.next_track') }}'"
-                        :aria-label="$store.audioPlayer.hasSurahNav() ? '{{ __('quran.public.next_surah') }}' : '{{ __('quran.public.next_track') }}'">
+                        :title="$store.audioPlayer.navMode() !== 'playlist' ? '{{ __('quran.public.next_surah') }}' : '{{ __('quran.public.next_track') }}'"
+                        :aria-label="$store.audioPlayer.navMode() !== 'playlist' ? '{{ __('quran.public.next_surah') }}' : '{{ __('quran.public.next_track') }}'">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M15 5h2v14h-2zM5 5v14l9.5-7z"/></svg>
                 </button>
 
@@ -156,8 +156,8 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 2l4 4-4 4"/><path stroke-linecap="round" stroke-linejoin="round" d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
                 </button>
 
-                {{-- Playlist mode: the reader (verse following, reciter switching) is one tap away --}}
-                <a x-show="$store.audioPlayer.playlist && $store.audioPlayer.track?.readerUrl" x-cloak
+                {{-- Off the reader: verse following and reciter switching are one tap away --}}
+                <a x-show="$store.audioPlayer.track?.readerUrl && !$store.audioPlayer.surahMeta" x-cloak
                    :href="$store.audioPlayer.track?.readerUrl"
                    class="{{ $iconBtn }} ms-2 sm:ms-3"
                    title="{{ __('quran.playlists.open_reader') }}" aria-label="{{ __('quran.playlists.open_reader') }}">
@@ -260,6 +260,10 @@
             playlist: null,
             playlistIndex: 0,
 
+            // Surah names for in-place surah stepping off the reader: [number] -> nameAr.
+            // Loaded once from the site's surah list and kept for the session.
+            _surahNames: null,
+
             // Reciter switching (configured per surah page)
             reciters: [],           // [{ id, nameAr, nameEn, surahAudioUrl, verse_audio_template }]
             reciterId: null,
@@ -296,7 +300,7 @@
                 try {
                     const saved = JSON.parse(localStorage.getItem('sitePlayerTrack') || 'null');
                     if (saved && saved.url) {
-                        this.track = { url: saved.url, title: saved.title, subtitle: saved.subtitle, readerUrl: saved.readerUrl || null };
+                        this.track = { url: saved.url, title: saved.title, subtitle: saved.subtitle, readerUrl: saved.readerUrl || null, surah: saved.surah || null };
                         this._ensureAudio();
                         this.audio.currentTime = saved.currentTime || 0;
                         this.currentTime = saved.currentTime || 0;
@@ -337,7 +341,8 @@
                 // A queue belongs to the surah that built it, and so do timings.
                 this.queue = null; this.queueIndex = 0; this._preload = null;
                 this.timings = null; this.ayahAtTime = null; this._timingsReq++;
-                this.playlist = null; this.playlistIndex = 0;
+                // An active playlist survives opening the reader (e.g. "open in reader"
+                // from a playlist): it is only replaced once this page plays its own surah.
                 const stored = parseInt(localStorage.getItem('siteReciterId') ?? '', 10);
                 const valid = (id) => this.reciters.some((r) => r.id === id);
                 // `force` (a playlist hand-off via ?reciter=) wins over the stored
@@ -365,6 +370,19 @@
                 this._playListed(true);
             },
 
+            // Attach a list to the track that is already loaded (a resume from a
+            // playlist page after the saved queue was lost) without touching playback.
+            // Re-establishes prev/next, auto-next and the reader link.
+            adoptPlaylist(tracks, index) {
+                const list = (Array.isArray(tracks) ? tracks : []).filter((t) => t?.url);
+                if (!list.length || !this.track || list[index]?.url !== this.track.url) { return false; }
+                this.playlist = list; this.playlistIndex = index;
+                this.surahMeta = null; this.surahUrlBase = null;
+                this.track = { ...this.track, title: list[index].title || this.track.title, subtitle: list[index].subtitle || this.track.subtitle, readerUrl: list[index].readerUrl || this.track.readerUrl || null };
+                this._persist();
+                return true;
+            },
+
             _playListed(autoplay) {
                 const t = this.playlist[this.playlistIndex];
                 this._teardown();
@@ -388,6 +406,17 @@
                 if (chosen) { this.selectReciter(chosen.id); }
             },
             currentReciter() { return this.reciters.find((r) => r.id === this.reciterId) || null; },
+            // What a reader-played track remembers about itself, so prev/next and
+            // auto-next keep working after the listener leaves the reader.
+            _surahRef() {
+                const number = this.surahMeta?.number;
+                if (!number || !this.reciterId) { return null; }
+                return { number, reciterId: this.reciterId };
+            },
+            _readerUrl() {
+                const ref = this._surahRef();
+                return ref && this.surahUrlBase ? `${this.surahUrlBase}/${ref.number}?reciter=${ref.reciterId}` : null;
+            },
             reciterName() { const r = this.currentReciter(); return r ? (r.nameAr || r.nameEn || '') : ''; },
             surahUrl() { const r = this.currentReciter(); return r ? r.surahAudioUrl : null; },
 
@@ -427,8 +456,9 @@
             // duration is actually known.
             _playWhole(url, at, autoplay) {
                 this.queue = null;
+                this.playlist = null; this.playlistIndex = 0;
                 this._teardown();
-                this.track = { url, title: this.surahMeta?.nameAr || this.track?.title || '', subtitle: this.reciterName() };
+                this.track = { url, title: this.surahMeta?.nameAr || this.track?.title || '', subtitle: this.reciterName(), surah: this._surahRef(), readerUrl: this._readerUrl() };
                 this.currentTime = 0; this.duration = 0;
                 this._ensureAudio();
                 this.audio.addEventListener('loadedmetadata', () => {
@@ -622,7 +652,7 @@
                     this.queue = null;
                     this._loadTimings();
                     if (restart && this.track?.url === url) { this.restart(); return; }
-                    this.play({ url, title: this.surahMeta?.nameAr || '', subtitle: this.reciterName() });
+                    this.play({ url, title: this.surahMeta?.nameAr || '', subtitle: this.reciterName(), surah: this._surahRef(), readerUrl: this._readerUrl() });
                     return;
                 }
 
@@ -630,7 +660,7 @@
                 if (!queue) {
                     // Follow-along asked for verses this reciter can't supply.
                     const whole = this.surahUrl();
-                    if (whole) { this.queue = null; this.play({ url: whole, title: this.surahMeta?.nameAr || '', subtitle: this.reciterName() }); return; }
+                    if (whole) { this.queue = null; this.play({ url: whole, title: this.surahMeta?.nameAr || '', subtitle: this.reciterName(), surah: this._surahRef(), readerUrl: this._readerUrl() }); return; }
                     window.toast?.('{{ __('quran.public.audio_unavailable') }}', 'error');
 
                     return;
@@ -687,8 +717,9 @@
             // Load the queued ayah. autoplay=false is used when only re-pointing
             // the source (e.g. a reciter switch while paused).
             _playQueued(autoplay) {
+                this.playlist = null; this.playlistIndex = 0;
                 this._teardown();
-                this.track = { url: this.queue[this.queueIndex], title: this.surahMeta?.nameAr || '', subtitle: this._subtitle() };
+                this.track = { url: this.queue[this.queueIndex], title: this.surahMeta?.nameAr || '', subtitle: this._subtitle(), surah: this._surahRef(), readerUrl: this._readerUrl() };
                 this.currentTime = 0; this.duration = 0;
                 this._ensureAudio();
                 this._persist();
@@ -748,7 +779,7 @@
                 if (this.track && this.track.url === trackData.url) { this.toggle(); return; }
                 this.playlist = null; this.playlistIndex = 0;
                 this._teardown();
-                this.track = { url: trackData.url, title: trackData.title || '', subtitle: trackData.subtitle || '' };
+                this.track = { url: trackData.url, title: trackData.title || '', subtitle: trackData.subtitle || '', surah: trackData.surah || null, readerUrl: trackData.readerUrl || null };
                 this.currentTime = 0; this.duration = 0;
                 this._ensureAudio();
                 this._persist();
@@ -790,25 +821,88 @@
                 this.audio.play().catch(() => {});
             },
 
-            // Prev/next. Surah context wins — the player bar lives on the surah
-            // page, so moving a surah means moving the page too. Otherwise a
-            // playlist walks in place. Neither: the buttons are hidden.
+            // Prev/next follow the audio that is loaded, not the page it was started on:
+            //   'playlist'      the loaded track is the current entry of a playlist -> walk it in place
+            //   'surahPage'     on a surah reader                                 -> move the page
+            //   'surahInPlace'  a reader-played surah, now on any other page      -> next surah, same recording, in place
+            //   null            a standalone track                                -> no prev/next
+            navMode() {
+                if (!this.track) { return null; }
+                if ((this.playlist?.length || 0) > 1 && this.playlist[this.playlistIndex]?.url === this.track.url) { return 'playlist'; }
+                if (this.hasSurahNav()) { return 'surahPage'; }
+                if (this.track.surah?.number && this.track.surah?.reciterId) { return 'surahInPlace'; }
+                return null;
+            },
             hasSurahNav() { return !!(this.surahUrlBase && this.surahMeta?.number); },
-            hasPlaylistNav() { return (this.playlist?.length || 0) > 1; },
-            hasStepNav() { return this.hasSurahNav() || this.hasPlaylistNav(); },
+            hasPlaylistNav() { return this.navMode() === 'playlist'; },
+            hasStepNav() { return this.navMode() !== null; },
             canStep(delta) {
-                if (this.hasSurahNav()) {
-                    const n = (this.surahMeta?.number || 0) + delta;
-                    return n >= 1 && n <= 114;
+                switch (this.navMode()) {
+                    case 'playlist': {
+                        const i = this.playlistIndex + delta;
+                        return i >= 0 && i < this.playlist.length;
+                    }
+                    case 'surahPage': {
+                        const n = this.surahMeta.number + delta;
+                        return n >= 1 && n <= 114;
+                    }
+                    case 'surahInPlace': {
+                        const n = this.track.surah.number + delta;
+                        return n >= 1 && n <= 114;
+                    }
+                    default: return false;
                 }
-                const i = this.playlistIndex + delta;
-                return this.hasPlaylistNav() && i >= 0 && i < this.playlist.length;
             },
             step(delta) {
                 if (!this.canStep(delta)) { return; }
-                if (this.hasSurahNav()) { this.gotoSurah(delta); return; }
-                this.playlistIndex += delta;
-                this._playListed(true);
+                switch (this.navMode()) {
+                    case 'playlist': this.playlistIndex += delta; this._playListed(true); return;
+                    case 'surahPage': this.gotoSurah(delta); return;
+                    case 'surahInPlace': this._playSurahInPlace(this.track.surah.number + delta, this.track.surah.reciterId, delta); return;
+                }
+            },
+
+            // Next/previous surah with the same recording, without leaving the page.
+            // The server resolves the playable file (lowest-priority active source); a
+            // surah that recording lacks is skipped in the direction of travel.
+            async _playSurahInPlace(number, reciterId, delta, skips = 0) {
+                if (number < 1 || number > 114 || skips > 10) { this.audio?.pause(); return; }
+                const subtitle = this.track?.subtitle || '';
+                let url = null;
+                try {
+                    const res = await fetch(`{{ url('/quran/playlists/audio') }}/${number}/${reciterId}`, { headers: { Accept: 'application/json' } });
+                    url = res.ok ? (await res.json()).url : null;
+                } catch (e) { url = null; }
+                if (!url) { return this._playSurahInPlace(number + delta, reciterId, delta, skips + 1); }
+
+                const names = await this._loadSurahNames();
+                this.queue = null; this._preload = null;
+                this._teardown();
+                this.track = {
+                    url,
+                    title: names?.[number] || `{{ __('quran.nav.surah') }} ${number}`,
+                    subtitle,
+                    surah: { number, reciterId },
+                    readerUrl: `{{ url('/quran/surah') }}/${number}?reciter=${reciterId}`,
+                };
+                this.currentTime = 0; this.duration = 0;
+                this._ensureAudio();
+                this._persist();
+                this.audio.play().catch(() => {});
+            },
+
+            async _loadSurahNames() {
+                if (this._surahNames) { return this._surahNames; }
+                try {
+                    const cached = JSON.parse(sessionStorage.getItem('siteSurahNames') || 'null');
+                    if (cached) { return (this._surahNames = cached); }
+                    const res = await fetch(`{{ route('public.quran.surahs.json') }}`, { headers: { Accept: 'application/json' } });
+                    const data = res.ok ? await res.json() : null;
+                    const names = {};
+                    (data?.surahs || []).forEach((x) => { names[x.number] = x.nameAr; });
+                    sessionStorage.setItem('siteSurahNames', JSON.stringify(names));
+                    return (this._surahNames = names);
+                } catch (e) { return null; }
             },
 
             // The flag tells the next page's boot() to resume playback with the

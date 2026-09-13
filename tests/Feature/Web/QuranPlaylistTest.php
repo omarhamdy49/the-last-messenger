@@ -300,4 +300,14 @@ final class QuranPlaylistTest extends TestCase
         $this->assertLessThan(strpos($html, 'س2'), strpos($html, 'س1'));
         $this->assertLessThan(strpos($html, 'س5'), strpos($html, 'س4'));
     }
+
+    public function test_audio_endpoint_redirects_or_returns_json_and_404s_without_audio(): void
+    {
+        $this->surahs(2);
+        [, $recA] = $this->person('a', [1]);
+
+        $this->get(route('public.quran.playlists.audio', [1, $recA]))->assertRedirect('https://cdn.test/a/1.mp3');
+        $this->getJson(route('public.quran.playlists.audio', [1, $recA]))->assertOk()->assertExactJson(['url' => 'https://cdn.test/a/1.mp3']);
+        $this->getJson(route('public.quran.playlists.audio', [2, $recA]))->assertNotFound();
+    }
 }
