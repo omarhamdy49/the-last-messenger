@@ -324,6 +324,7 @@ return [
         // this toggle, so the label now names what it actually does — swap the one
         // whole-surah recording for chained per-verse files, which pause after
         // every ayah.
+        'auto_next' => 'Auto-play next',
         'follow_verses' => 'Play verse by verse',
         'listen_from_here' => 'Listen from here',
         'rewind_5' => 'Back 5 seconds',
@@ -702,6 +703,10 @@ return [
         'tracks_title' => 'Surahs',
         'needs_reciter_count' => ':count need a reciter',
         'show_less' => 'Show less',
+        'more' => 'More',
+        'delete_title' => 'Delete this playlist?',
+        'cancel' => 'Cancel',
+        'delete_confirm_btn' => 'Yes, delete',
         'recording_variant' => 'Recording',
     ],
     // ------------------------------------------------------------------

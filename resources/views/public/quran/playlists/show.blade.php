@@ -93,7 +93,7 @@
 
                 <h1 class="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.2] text-start break-words">{{ $playlist->name }}</h1>
                 @if ($playlist->description)
-                    <p class="mt-4 text-base sm:text-lg text-white/85 leading-relaxed max-w-[52ch]">{{ $playlist->description }}</p>
+                    <p class="mt-4 text-base sm:text-lg text-white/85 leading-relaxed max-w-[52ch]">{!! $playlist->description !!}</p>
                 @endif
 
                 {{-- Owner --}}
@@ -108,10 +108,10 @@
 
                 {{-- Reciters (linked chips) --}}
                 @if ($reciters)
-                    @php $chipLimit = 8; @endphp
+                    @php $chipLimit = 4; @endphp
                     <ul class="mt-5 flex flex-wrap gap-2" aria-label="{{ __('quran.public.reciters') }}" x-data="{ all: false }">
                         @foreach ($reciters as $ri => $r)
-                            <li @if ($ri >= $chipLimit) x-show="all" x-cloak x-transition.opacity @endif>
+                            <li @if ($ri >= $chipLimit) x-show="all" x-cloak @endif>
                                 <a href="{{ $r['url'] }}"
                                    class="inline-flex items-center gap-2 ps-1 pe-3 py-1 rounded-full pl-glass-btn text-sm font-semibold text-white transition-[background-color,transform] duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80">
                                     <x-site.reciter-avatar :name="$r['name']" :image="$r['image']" size="w-7 h-7" text="text-[7px]" :compact="true" ring="ring-2 ring-white/70" />
@@ -146,24 +146,50 @@
                     @endif
 
                     @if ($isOwner)
-                        <a href="{{ route('public.quran.playlists.edit', $playlist->slug) }}"
-                           class="inline-flex items-center gap-2 h-11 px-4 rounded-xl pl-glass-btn text-sm font-semibold text-white transition-[background-color,transform] duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80">
-                            <i data-lucide="pencil" class="w-4 h-4"></i>{{ __('quran.playlists.edit') }}
-                        </a>
                         <button type="button" @click="toggleVisibility()" :disabled="visibilityPending"
                                 class="inline-flex items-center gap-2 h-11 px-4 rounded-xl pl-glass-btn text-sm font-semibold text-white transition-[background-color,transform] duration-200 active:scale-[0.98] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80">
                             <i :data-lucide="isPublic ? 'eye-off' : 'globe'" class="w-4 h-4"></i>
                             <span x-text="isPublic ? @js(__('quran.playlists.make_private')) : @js(__('quran.playlists.make_public'))"></span>
                         </button>
-                        <form method="POST" action="{{ route('public.quran.playlists.destroy', $playlist->slug) }}"
-                              @submit="if (!confirm(@js(__('quran.playlists.delete_confirm')))) $event.preventDefault()">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit"
-                                    class="inline-flex items-center gap-2 h-11 px-3 rounded-xl text-sm font-semibold text-white/80 hover:text-white hover:bg-rose-500/30 transition-colors active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80">
-                                <i data-lucide="trash-2" class="w-4 h-4"></i>{{ __('quran.playlists.delete') }}
+
+                        {{-- More: edit / delete. Delete asks inline (a toast-like step) instead of a blocking confirm(). --}}
+                        <div class="relative" x-data="{ open: false, confirming: false }" @click.outside="open = false; confirming = false" @keydown.escape.window="open = false; confirming = false">
+                            <button type="button" @click="open = !open; confirming = false" :aria-expanded="open" aria-haspopup="menu"
+                                    class="w-11 h-11 rounded-xl pl-glass-btn text-white flex items-center justify-center transition-[background-color,transform] duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                                    aria-label="{{ __('quran.playlists.more') }}" title="{{ __('quran.playlists.more') }}">
+                                <i data-lucide="more-vertical" class="w-5 h-5"></i>
                             </button>
-                        </form>
+                            <div x-show="open" x-cloak x-transition.origin.top
+                                 class="absolute z-20 top-full mt-2 start-0 w-64 rounded-2xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xl border border-zinc-200/80 dark:border-white/10 p-1.5" role="menu">
+                                <template x-if="!confirming">
+                                    <div>
+                                        <a href="{{ route('public.quran.playlists.edit', $playlist->slug) }}" role="menuitem"
+                                           class="flex items-center gap-3 h-11 px-3 rounded-xl text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors">
+                                            <i data-lucide="pencil" class="w-4 h-4 text-primary"></i>{{ __('quran.playlists.edit') }}
+                                        </a>
+                                        <button type="button" role="menuitem" @click="confirming = true; $nextTick(() => window.lucide?.createIcons())"
+                                                class="w-full flex items-center gap-3 h-11 px-3 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>{{ __('quran.playlists.delete') }}
+                                        </button>
+                                    </div>
+                                </template>
+                                <template x-if="confirming">
+                                    <div class="p-2" role="alertdialog" aria-live="polite">
+                                        <p class="text-sm font-bold">{{ __('quran.playlists.delete_title') }}</p>
+                                        <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{{ __('quran.playlists.delete_confirm') }}</p>
+                                        <div class="mt-3 grid grid-cols-2 gap-2">
+                                            <button type="button" @click="open = false; confirming = false"
+                                                    class="h-10 rounded-xl text-sm font-semibold bg-zinc-100 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/15 transition-colors">{{ __('quran.playlists.cancel') }}</button>
+                                            <button type="button" @click="destroy()" :disabled="deleting"
+                                                    class="h-10 rounded-xl text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-60 transition-colors flex items-center justify-center gap-1.5">
+                                                <i data-lucide="loader-2" class="w-4 h-4 animate-spin" x-show="deleting" x-cloak></i>
+                                                {{ __('quran.playlists.delete_confirm_btn') }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
                     @endif
                 </div>
 
@@ -228,7 +254,7 @@
             <ol class="divide-y divide-zinc-100 dark:divide-white/10" role="list">
                 @foreach ($tracks as $i => $t)
                     <li style="--i: {{ $i }}"
-                        class="pl-row relative grid grid-cols-[auto_1fr_auto] sm:grid-cols-[auto_1fr_minmax(200px,1.2fr)_auto_auto] gap-x-3 sm:gap-x-5 gap-y-2 items-center px-3 sm:px-5 py-3 transition-colors"
+                        class="pl-row relative grid grid-cols-[auto_1fr_auto] sm:grid-cols-[auto_1fr_minmax(200px,1.2fr)_auto_auto] gap-x-3 sm:gap-x-5 gap-y-1.5 sm:gap-y-2 items-center px-3 sm:px-5 py-3.5 sm:py-3 transition-colors"
                         :class="isActive({{ $i }}) ? 'bg-primary/[0.06] dark:bg-primary/10' : 'hover:bg-zinc-50 dark:hover:bg-white/[0.03]'">
                         {{-- active accent bar --}}
                         <span class="absolute inset-y-2 start-0 w-1 rounded-e-full bg-gradient-to-b from-[#0056b3] to-[#218838] transition-opacity" :class="isActive({{ $i }}) ? 'opacity-100' : 'opacity-0'" aria-hidden="true"></span>
@@ -256,11 +282,11 @@
                         </div>
 
                         {{-- reciter (mobile: second line) --}}
-                        <div class="col-span-3 sm:col-span-1 ps-14 sm:ps-0 min-w-0">
+                        <div class="col-span-3 sm:col-span-1 ps-14 sm:ps-0 min-w-0 order-4 sm:order-none">
                             @if ($t['recording'])
-                                <a href="{{ $t['reciterUrl'] ?? '#' }}" class="group/r inline-flex items-center gap-2.5 max-w-full rounded-xl -m-1 p-1 hover:bg-white dark:hover:bg-zinc-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60">
-                                    <x-site.reciter-avatar :name="$t['reciterName'] ?? '?'" :image="$t['reciterImage']" size="w-9 h-9" text="text-[8px]" :compact="true" class="shrink-0" />
-                                    <span class="min-w-0">
+                                <a href="{{ $t['reciterUrl'] ?? '#' }}" class="group/r inline-flex items-center gap-2 sm:gap-2.5 max-w-full rounded-xl -m-1 p-1 hover:bg-white dark:hover:bg-zinc-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60">
+                                    <x-site.reciter-avatar :name="$t['reciterName'] ?? '?'" :image="$t['reciterImage']" size="w-7 h-7 sm:w-9 sm:h-9" text="text-[7px] sm:text-[8px]" :compact="true" class="shrink-0" />
+                                    <span class="min-w-0 sm:block flex items-baseline gap-x-1.5 flex-wrap">
                                         <span class="block text-sm font-semibold text-zinc-800 dark:text-zinc-100 truncate group-hover/r:text-primary transition-colors">{{ $t['reciterName'] }}</span>
                                         <span class="block text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{{ $t['recordingLabel'] }}</span>
                                     </span>
@@ -277,7 +303,7 @@
 
                         {{-- reader link --}}
                         <a href="{{ $t['readerUrl'] }}"
-                           class="w-11 h-11 rounded-full flex items-center justify-center text-zinc-500 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-primary transition-colors justify-self-end focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                           class="w-11 h-11 rounded-full flex items-center justify-center text-zinc-500 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-primary transition-colors justify-self-end order-3 sm:order-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                            aria-label="{{ __('quran.playlists.open_reader') }} — {{ $t['surahName'] }}" title="{{ __('quran.playlists.open_reader') }}">
                             <i data-lucide="book-open" class="w-4 h-4"></i>
                         </a>
@@ -302,6 +328,8 @@ function playlistPage() {
         playsUrl: @js(route('public.quran.playlists.plays', $playlist->slug)),
         counted: false,
         visibilityPending: false,
+        deleting: false,
+        destroyUrl: @js(route('public.quran.playlists.destroy', $playlist->slug)),
 
         init() {
             this.$watch('isPublic', () => this.$nextTick(() => window.lucide?.createIcons()));
@@ -331,6 +359,23 @@ function playlistPage() {
                     method: 'POST',
                     headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' },
                 }).catch(() => {});
+            }
+        },
+        async destroy() {
+            if (this.deleting) return;
+            this.deleting = true;
+            try {
+                const res = await fetch(this.destroyUrl, {
+                    method: 'DELETE',
+                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' },
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error('delete_failed');
+                this.$store.toast?.push(@js(__('quran.playlists.deleted')), 'success');
+                window.location.href = data.redirect || @js(route('public.profile').'#playlists');
+            } catch (e) {
+                this.deleting = false;
+                this.$store.toast?.push(@js(__('quran.playlists.error')), 'error');
             }
         },
         async toggleVisibility() {

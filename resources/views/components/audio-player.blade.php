@@ -144,6 +144,18 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h9M4 12h9M4 18h6"/><circle cx="18" cy="16" r="3.2"/><path stroke-linecap="round" d="m20.4 18.4 1.6 1.6"/></svg>
                 </button>
 
+                {{-- Auto-play next (surah or playlist track) — shown wherever there is a next --}}
+                <button x-show="$store.audioPlayer.hasStepNav()"
+                        @click="$store.audioPlayer.toggleAutoNext()"
+                        class="{{ $iconBtnBase }} ms-2 sm:ms-3"
+                        :class="$store.audioPlayer.autoNext
+                            ? 'text-white bg-gradient-to-r from-[#0056b3] to-[#218838]'
+                            : '{{ $iconBtnTheme }}'"
+                        :aria-pressed="$store.audioPlayer.autoNext"
+                        title="{{ __('quran.public.auto_next') }}" aria-label="{{ __('quran.public.auto_next') }}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 2l4 4-4 4"/><path stroke-linecap="round" stroke-linejoin="round" d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+                </button>
+
                 {{-- Playlist mode: the reader (verse following, reciter switching) is one tap away --}}
                 <a x-show="$store.audioPlayer.playlist && $store.audioPlayer.track?.readerUrl" x-cloak
                    :href="$store.audioPlayer.track?.readerUrl"
@@ -258,6 +270,9 @@
             // whole-surah recording exists, so the page can highlight the ayah
             // being recited. Off by default — the single file is gapless.
             follow: localStorage.getItem('siteFollowVerses') === '1',
+            // Auto-play the next surah/track when one ends. Default on; the
+            // listener can switch it off from the player on any page.
+            autoNext: localStorage.getItem('sitePlayerAutoNext') !== '0',
 
             // Verse-chaining fallback. Only a fraction of reciters have a
             // whole-surah recording; the rest play a surah by queueing their
@@ -567,6 +582,11 @@
                 return shares[ayah - 2] ?? 0;
             },
 
+            toggleAutoNext() {
+                this.autoNext = !this.autoNext;
+                localStorage.setItem('sitePlayerAutoNext', this.autoNext ? '1' : '0');
+            },
+
             toggleFollow() {
                 this.follow = !this.follow;
                 localStorage.setItem('siteFollowVerses', this.follow ? '1' : '0');
@@ -873,11 +893,12 @@
                 a.addEventListener('pause', () => { this.playing = false; this._persist(); });
                 a.addEventListener('ended', () => {
                     if (this.audio !== a) { return; }
-                    // In queue mode the surah continues into the next ayah; in a
-                    // playlist it rolls into the next track. A surah page does NOT
-                    // auto-navigate — that would move the page under the listener.
+                    // In queue mode the surah continues into the next ayah. Then,
+                    // with auto-next on, a playlist rolls into its next track and a
+                    // surah page moves on to the next surah (the flag makes the next
+                    // page resume with the same reciter).
                     if (this._advance()) { return; }
-                    if (this.hasPlaylistNav() && this.canStep(1)) { this.step(1); return; }
+                    if (this.autoNext && this.hasStepNav() && this.canStep(1)) { this.step(1); return; }
                     this.playing = false; this.currentTime = 0; this._persist();
                 });
                 // everyayah is missing the odd ayah file for some reciters; skip
