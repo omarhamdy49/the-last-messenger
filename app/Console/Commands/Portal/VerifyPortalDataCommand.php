@@ -37,7 +37,11 @@ class VerifyPortalDataCommand extends Command
         'quran_verse_translations' => ['verse_id' => 'quran_verses', 'resource_id' => 'quran_translation_resources'],
         'quran_verse_tafsirs' => ['verse_id' => 'quran_verses', 'resource_id' => 'quran_tafsir_resources'],
         'reciter_translations' => ['reciter_id' => 'quran_reciters'],
-        'quran_recitations' => ['reciter_id' => 'quran_reciters', 'verse_id' => 'quran_verses'],
+        'quran_reciter_profile_translations' => ['profile_id' => 'quran_reciter_profiles'],
+        'quran_reciter_aliases' => ['recording_id' => 'quran_reciters'],
+        'quran_reciters' => ['profile_id' => 'quran_reciter_profiles'],
+        'quran_recording_sources' => ['recording_id' => 'quran_reciters'],
+        'quran_recitations' => ['reciter_id' => 'quran_reciters', 'source_id' => 'quran_recording_sources', 'surah_id' => 'quran_surahs'],
         'quran_revelation_contexts' => ['surah_id' => 'quran_surahs'],
         'quran_revelation_context_translations' => ['revelation_context_id' => 'quran_revelation_contexts'],
 

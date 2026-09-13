@@ -6,6 +6,7 @@ namespace App\Domain\Quran\Repositories;
 
 use App\Domain\Quran\Models\Reciter;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 
 /**
@@ -99,6 +100,11 @@ interface ReciterRepositoryInterface
     public function countRecitations(Reciter $reciter): int;
 
     /**
+     * All recordings of a profile with `surahs_with_audio` (distinct surahs).
+     */
+    public function getProfileRecordings(int $profileId): EloquentCollection;
+
+    /**
      * Get paginated reciters with search/filter support (admin list)
      *
      * @param  array{search?: string, country?: string, style?: string}  $filters
@@ -123,7 +129,7 @@ interface ReciterRepositoryInterface
      * Get reciters whose image paths need to be cleaned up for a set of IDs
      *
      * @param  array<int>  $ids
-     * @return \Illuminate\Database\Eloquent\Collection<int, Reciter>
+     * @return EloquentCollection<int, Reciter>
      */
-    public function getByIds(array $ids): \Illuminate\Database\Eloquent\Collection;
+    public function getByIds(array $ids): EloquentCollection;
 }

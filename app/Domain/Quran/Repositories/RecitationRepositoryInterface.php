@@ -22,7 +22,7 @@ interface RecitationRepositoryInterface
      *
      * @return Collection<int, Recitation>
      */
-    public function getByReciterKeyedBySurah(int $reciterId): Collection;
+    public function getByReciterKeyedBySurah(int $reciterId, ?int $sourceId = null): Collection;
 
     /**
      * Get all 114 surahs ordered by surah number (id),

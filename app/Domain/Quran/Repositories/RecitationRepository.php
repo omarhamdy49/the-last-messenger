@@ -25,12 +25,13 @@ class RecitationRepository implements RecitationRepositoryInterface
      *
      * @return Collection<int, Recitation>
      */
-    public function getByReciterKeyedBySurah(int $reciterId): Collection
+    public function getByReciterKeyedBySurah(int $reciterId, ?int $sourceId = null): Collection
     {
         return Recitation::query()
             ->select([
                 'id',
                 'reciter_id',
+                'source_id',
                 'surah_id',
                 'audio_url',
                 'format',
@@ -39,6 +40,7 @@ class RecitationRepository implements RecitationRepositoryInterface
                 'file_size_kb',
             ])
             ->where('reciter_id', $reciterId)
+            ->when($sourceId, fn ($q) => $q->where('source_id', $sourceId))
             ->get()
             ->keyBy('surah_id');
     }
@@ -72,12 +74,23 @@ class RecitationRepository implements RecitationRepositoryInterface
      */
     public function getSurahAudioUrls(int $surahNumber): array
     {
-        return Cache::remember(QuranCacheKeys::publicSurahAudioUrls($surahNumber), 86400, fn (): array => Recitation::query()
-            ->where('surah_id', $surahNumber)
-            ->select(['reciter_id', 'audio_url'])
-            ->get()
-            ->pluck('audio_url', 'reciter_id')
-            ->all());
+        return array_map(fn (array $audio) => $audio['url'], $this->getSurahAudioSources($surahNumber));
+    }
+
+    /** @return array<int, array{url: string, source_id: int, revision: int}> */
+    public function getSurahAudioSources(int $surahNumber): array
+    {
+        return Cache::remember(QuranCacheKeys::publicSurahAudioUrls($surahNumber).':sources', 86400, function () use ($surahNumber): array {
+            $rows = Recitation::query()->where('surah_id', $surahNumber)
+                ->whereHas('source', fn ($q) => $q->where('is_active', true))
+                ->with('source')->orderBy('id')->get();
+            $result = [];
+            foreach ($rows->sortBy(fn ($row) => $row->source->priority) as $row) {
+                $result[$row->reciter_id] ??= ['url' => $row->audio_url, 'source_id' => $row->source_id, 'revision' => $row->source->revision];
+            }
+
+            return $result;
+        });
     }
 
     /**
@@ -89,6 +102,7 @@ class RecitationRepository implements RecitationRepositoryInterface
             ->select([
                 'id',
                 'reciter_id',
+                'source_id',
                 'surah_id',
                 'audio_url',
                 'format',

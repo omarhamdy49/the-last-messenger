@@ -39,14 +39,15 @@ class RecitationService
      *     recitation: Recitation|null
      * }>
      */
-    public function getReciterSurahs(int $reciterId): Collection
+    public function getReciterSurahs(int $reciterId, ?int $sourceId = null): Collection
     {
         $surahs = $this->recitationRepository->getAllSurahs();
-        $recitations = $this->recitationRepository->getByReciterKeyedBySurah($reciterId);
+        $recitations = $this->recitationRepository->getByReciterKeyedBySurah($reciterId, $sourceId);
 
         return $surahs->map(fn ($surah) => [
             'surah_id' => $surah->id,
-            'number' => $surah->revelation_order,
+            // quran_surahs.id is the canonical mushaf number; revelation_order is chronology.
+            'number' => $surah->id,
             'name_ar' => $surah->name_ar,
             'name_en' => $surah->name_en,
             'transliteration' => $surah->transliteration,
@@ -56,11 +57,61 @@ class RecitationService
     }
 
     /**
-     * Number of surahs that already have a recitation for this reciter.
+     * Filter + page the 114-row surah list for the admin recording page.
+     *
+     * ponytail: filters in memory over the fixed 114 rows (2 queries); move to SQL if
+     * the list ever stops being bounded.
+     *
+     * @param  'all'|'with_audio'|'missing'  $status
+     * @return array{rows: Collection, total: int, with_audio: int, missing: int, next_page: int|null}
      */
-    public function countWithAudio(int $reciterId): int
+    public function paginateReciterSurahs(int $reciterId, ?int $sourceId, ?string $term, string $status, int $page, int $perPage): array
     {
-        return $this->recitationRepository->getByReciterKeyedBySurah($reciterId)->count();
+        $rows = $this->getReciterSurahs($reciterId, $sourceId);
+        $term = trim((string) $term);
+
+        if ($term !== '') {
+            $needle = mb_strtolower($term);
+            $rows = $rows->filter(fn (array $row) => ctype_digit($term)
+                ? $row['number'] === (int) $term
+                : str_contains(mb_strtolower($row['name_ar'].' '.$row['name_en'].' '.$row['transliteration']), $needle));
+        }
+
+        $withAudio = $rows->whereNotNull('recitation')->count();
+        $missing = $rows->count() - $withAudio;
+
+        $rows = match ($status) {
+            'with_audio' => $rows->whereNotNull('recitation'),
+            'missing' => $rows->whereNull('recitation'),
+            default => $rows,
+        };
+
+        $total = $rows->count();
+
+        return [
+            'rows' => $rows->forPage($page, $perPage)->values(),
+            'total' => $total,
+            'with_audio' => $withAudio,
+            'missing' => $missing,
+            'next_page' => $page * $perPage < $total ? $page + 1 : null,
+        ];
+    }
+
+    /**
+     * Coverage figures for the recording hero: surahs with audio and their total length.
+     *
+     * @return array{surahs: int, with_audio: int, duration_seconds: int}
+     */
+    public function coverageStats(int $reciterId): array
+    {
+        $rows = $this->getReciterSurahs($reciterId);
+        $recitations = $rows->pluck('recitation')->filter();
+
+        return [
+            'surahs' => $rows->count(),
+            'with_audio' => $recitations->count(),
+            'duration_seconds' => (int) $recitations->sum('duration_seconds'),
+        ];
     }
 
     /**

@@ -5,7 +5,8 @@
 
 import Alpine from 'alpinejs';
 import collapse from '@alpinejs/collapse';
-import { createIcons } from 'lucide';
+import { createIcons as renderLucideIcons, icons } from 'lucide';
+const createIcons = (options = {}) => renderLucideIcons({ icons, ...options });
 import Chart from 'chart.js/auto';
 
 // Import admin store

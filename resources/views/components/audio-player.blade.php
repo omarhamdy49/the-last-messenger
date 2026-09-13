@@ -133,7 +133,7 @@
                      possible: a surah page, reciter with per-verse files. --}}
                 {{-- ms-*: the options cluster butts up against the transport, and the
                      start side is the facing one in both LTR and RTL. --}}
-                <button x-show="$store.audioPlayer.surahMeta && $store.audioPlayer.currentReciter()?.everyayah_folder"
+                <button x-show="$store.audioPlayer.surahMeta && $store.audioPlayer.currentReciter()?.verse_audio_template"
                         @click="$store.audioPlayer.toggleFollow()"
                         class="{{ $iconBtnBase }} ms-2 sm:ms-3"
                         :class="$store.audioPlayer.follow
@@ -172,16 +172,16 @@
                     </button>
                     <div x-show="$store.audioPlayer.reciterOpen" x-cloak x-transition.opacity
                          class="absolute bottom-full end-0 mb-2 w-56 max-h-72 overflow-y-auto rounded-xl border shadow-2xl py-1 {{ $surface }} border-gray-200 dark:border-gray-700" role="listbox">
-                        <template x-for="r in $store.audioPlayer.reciters" :key="r.id">
-                            <button @click="$store.audioPlayer.selectReciter(r.id)" role="option"
-                                    class="w-full text-start px-3 py-2 text-sm transition-colors flex items-center justify-between gap-2"
-                                    :class="r.id === $store.audioPlayer.reciterId
-                                        ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white'
-                                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800'">
-                                <span class="truncate font-['Amiri']" x-text="r.nameAr || r.nameEn"></span>
-                                <svg x-show="r.id === $store.audioPlayer.reciterId" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                            </button>
-                        </template>
+                        <label class="block p-2 text-sm">{{ __('quran.public.reciter') }}
+                            <select class="w-full rounded border-gray-300 dark:bg-gray-800" :value="$store.audioPlayer.currentReciter()?.profileId || $store.audioPlayer.reciterId" @change="$store.audioPlayer.selectPerson(Number($event.target.value))">
+                                <template x-for="person in $store.audioPlayer.personOptions()" :key="person.id"><option :value="person.id" x-text="person.name"></option></template>
+                            </select>
+                        </label>
+                        <label class="block p-2 text-sm" x-show="$store.audioPlayer.recordingOptions().length > 1">{{ __('quran.recordings.choose') }}
+                            <select class="w-full rounded border-gray-300 dark:bg-gray-800" :value="$store.audioPlayer.reciterId" @change="$store.audioPlayer.selectReciter(Number($event.target.value))">
+                                <template x-for="r in $store.audioPlayer.recordingOptions()" :key="r.id"><option :value="r.id" x-text="r.recordingLabel || r.nameAr || r.nameEn"></option></template>
+                            </select>
+                        </label>
                     </div>
                 </div>
 
@@ -241,7 +241,7 @@
             playlistIndex: 0,
 
             // Reciter switching (configured per surah page)
-            reciters: [],           // [{ id, nameAr, nameEn, surahAudioUrl, everyayah_folder }]
+            reciters: [],           // [{ id, nameAr, nameEn, surahAudioUrl, verse_audio_template }]
             reciterId: null,
             surahMeta: null,        // { nameAr, number, versesCount }
             surahUrlBase: null,     // e.g. https://site/quran/surah — enables surah transport
@@ -343,6 +343,18 @@
                 if (autoplay) { this.audio.play().catch(() => {}); }
             },
 
+            personOptions() {
+                return [...new Map(this.reciters.map(r => [r.profileId || r.id, { id: r.profileId || r.id, name: r.profileName || r.nameAr || r.nameEn }])).values()];
+            },
+            recordingOptions() {
+                const current = this.currentReciter();
+                return this.reciters.filter(r => (r.profileId || r.id) === (current?.profileId || current?.id));
+            },
+            selectPerson(id) {
+                const choices = this.reciters.filter(r => (r.profileId || r.id) === id);
+                const chosen = choices.find(r => r.isDefault) || choices[0];
+                if (chosen) { this.selectReciter(chosen.id); }
+            },
             currentReciter() { return this.reciters.find((r) => r.id === this.reciterId) || null; },
             reciterName() { const r = this.currentReciter(); return r ? (r.nameAr || r.nameEn || '') : ''; },
             surahUrl() { const r = this.currentReciter(); return r ? r.surahAudioUrl : null; },
@@ -350,10 +362,10 @@
             // everyayah lays per-verse audio out as {folder}/{SSS}{AAA}.mp3.
             _verseQueue(reciter) {
                 const surah = this.surahMeta;
-                if (!reciter?.everyayah_folder || !surah?.number || !surah?.versesCount) { return null; }
+                if (!reciter?.verse_audio_template || !surah?.number || !surah?.versesCount) { return null; }
                 const s = String(surah.number).padStart(3, '0');
                 return Array.from({ length: surah.versesCount }, (_, i) =>
-                    `https://everyayah.com/data/${reciter.everyayah_folder}/${s}${String(i + 1).padStart(3, '0')}.mp3`);
+                    reciter.verse_audio_template.replace('{surah}', s).replace('{ayah}', String(i + 1).padStart(3, '0')));
             },
 
             // Subtitle carries the ayah position, since in queue mode the progress
@@ -377,7 +389,7 @@
 
             // Queue mode is forced by follow-along, and is the only option for a
             // reciter with no whole-surah recording.
-            _preferQueue() { return this.follow && !!this.currentReciter()?.everyayah_folder; },
+            _preferQueue() { return this.follow && !!this.currentReciter()?.verse_audio_template; },
 
             // Load the whole-surah file and start at at(duration), once the
             // duration is actually known.
@@ -415,7 +427,9 @@
                     return Promise.resolve();
                 }
 
-                const key = `${surah}:${id}`;
+                const source = this.currentReciter()?.sourceId;
+                const revision = this.currentReciter()?.sourceRevision;
+                const key = `${surah}:${id}:${source}:${revision}`;
                 const cached = this._timingsCache[key];
                 if (cached) { this._useTimings(cached, token); return Promise.resolve(); }
 
@@ -426,7 +440,7 @@
                 // asks again for the same reciter before the first has landed.
                 let req = this._timingsPending[key];
                 if (!req) {
-                    req = fetch(`${this.surahUrlBase}/${surah}/timings/${id}`, { headers: { Accept: 'application/json' } })
+                    req = fetch(`${this.surahUrlBase}/${surah}/timings/${id}${source ? `?source=${source}&revision=${revision}` : ''}`, { headers: { Accept: 'application/json' } })
                         .then((r) => (r.ok ? r.json() : null))
                         .then((data) => (Array.isArray(data?.ayahs) ? data.ayahs : []))
                         // Highlighting is progressive enhancement: a failed fetch

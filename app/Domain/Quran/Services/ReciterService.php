@@ -7,6 +7,7 @@ namespace App\Domain\Quran\Services;
 use App\Domain\Quran\DTOs\CreateReciterData;
 use App\Domain\Quran\DTOs\UpdateReciterData;
 use App\Domain\Quran\Models\Reciter;
+use App\Domain\Quran\Models\ReciterProfile;
 use App\Domain\Quran\Repositories\ReciterRepositoryInterface;
 use App\Domain\Shared\Services\PublicImageService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -108,12 +109,14 @@ class ReciterService
         $source = $data->profileImage ?? $data->profileImageId;
         $profileImagePath = $source !== null
             ? ($this->uploadProfileImage($source) ?: null)
-            : null;
+            : $data->profileImageUrl;
 
         return $this->reciterRepository->create([
             'name' => $data->name,
             'description' => $data->description,
             'slug' => $slug,
+            'profile_id' => $data->profileId,
+            'riwayah' => $data->riwayah,
             'country' => $data->country,
             'style' => $data->style,
             'profile_image' => $profileImagePath,
@@ -135,6 +138,13 @@ class ReciterService
             'is_featured' => $data->isFeatured,
         ];
 
+        if ($data->profileId !== null) {
+            $payload['profile_id'] = $data->profileId;
+        }
+        if ($data->riwayah !== null) {
+            $payload['riwayah'] = $data->riwayah;
+        }
+
         if ($data->displayOrder !== null) {
             $payload['display_order'] = $data->displayOrder;
         }
@@ -146,18 +156,38 @@ class ReciterService
             $payload['slug'] = $data->slug;
         }
 
-        // Handle profile image: a fresh upload or a media-library pick.
-        $source = $data->profileImage ?? $data->profileImageId;
-        if ($source !== null) {
-            if ($reciter->profile_image) {
-                $this->deleteProfileImage($reciter->profile_image);
-            }
-            $payload['profile_image'] = $this->uploadProfileImage($source);
+        $image = $this->resolveImage($data->profileImage ?? $data->profileImageId, $data->profileImageUrl, $data->removeProfileImage, $reciter->profile_image);
+        if ($image !== false) {
+            $payload['profile_image'] = $image;
         }
 
         $this->reciterRepository->update($reciter, $payload);
 
         return $reciter->fresh();
+    }
+
+    /**
+     * Applies a <x-admin.image-upload> submission to a stored image column — shared by
+     * recordings and reciter profiles. Precedence: a fresh upload or media-library pick,
+     * then a changed external URL, then an explicit removal; anything else keeps the
+     * current image. A replaced local file is deleted only when nothing else uses it.
+     *
+     * @return string|false|null the new column value, or false to keep the current one
+     */
+    public function resolveImage(UploadedFile|int|null $source, ?string $url, bool $remove, ?string $current): string|false|null
+    {
+        $new = match (true) {
+            $source !== null => $this->uploadProfileImage($source) ?: false,
+            $url !== null && $url !== $current => $url,
+            $remove && $url === null => null,
+            default => false,
+        };
+
+        if ($new !== false && $current) {
+            $this->deleteUnsharedImage($current);
+        }
+
+        return $new;
     }
 
     /**
@@ -167,7 +197,7 @@ class ReciterService
     {
         // Delete profile image if exists
         if ($reciter->profile_image) {
-            $this->deleteProfileImage($reciter->profile_image);
+            $this->deleteUnsharedImage($reciter->profile_image);
         }
 
         return $this->reciterRepository->delete($reciter);
@@ -186,7 +216,7 @@ class ReciterService
 
         foreach ($reciters as $reciter) {
             if ($reciter->profile_image) {
-                $this->deleteProfileImage($reciter->profile_image);
+                $this->deleteUnsharedImage($reciter->profile_image);
             }
         }
 
@@ -246,6 +276,14 @@ class ReciterService
     }
 
     /**
+     * Sibling recordings (including this one) of the recording's profile.
+     */
+    public function profileRecordings(Reciter $reciter): Collection
+    {
+        return $reciter->profile_id ? $this->reciterRepository->getProfileRecordings($reciter->profile_id) : collect([$reciter]);
+    }
+
+    /**
      * Search reciters by name
      */
     public function search(string $query): Collection
@@ -261,6 +299,18 @@ class ReciterService
     private function uploadProfileImage(UploadedFile|int $source): string
     {
         return $this->images->store($source, 'reciters/profiles', 'reciters') ?? '';
+    }
+
+    /**
+     * Grouping copies a recording's image path onto its profile (and sibling
+     * recordings), so a path can back several rows. Only the last user deletes it.
+     */
+    private function deleteUnsharedImage(string $path): void
+    {
+        $uses = Reciter::where('profile_image', $path)->count() + ReciterProfile::where('profile_image', $path)->count();
+        if ($uses <= 1) {
+            $this->deleteProfileImage($path);
+        }
     }
 
     /**

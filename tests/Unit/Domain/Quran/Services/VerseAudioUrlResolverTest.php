@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Tests\Unit\Domain\Quran\Services;
 
 use App\Domain\Quran\Models\Reciter;
+use App\Domain\Quran\Models\RecordingSource;
 use App\Domain\Quran\Services\VerseAudioUrlResolver;
 use InvalidArgumentException;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class VerseAudioUrlResolverTest extends TestCase
 {
@@ -35,7 +36,7 @@ class VerseAudioUrlResolverTest extends TestCase
 
     public function test_resolves_from_reciter_model(): void
     {
-        $reciter = new Reciter(['everyayah_folder' => 'Abdul_Basit_Murattal_192kbps']);
+        $reciter = (new Reciter)->setRelation('sources', collect([new RecordingSource(['kind' => 'ayah', 'provider' => 'everyayah', 'is_active' => true, 'base_url' => 'https://everyayah.com/data', 'metadata' => ['folder' => 'Abdul_Basit_Murattal_192kbps']])]));
 
         $url = $this->resolver->resolve($reciter, 2, 255);
 
@@ -44,7 +45,7 @@ class VerseAudioUrlResolverTest extends TestCase
 
     public function test_returns_null_when_reciter_has_no_everyayah_folder(): void
     {
-        $reciter = new Reciter(['everyayah_folder' => null]);
+        $reciter = (new Reciter)->setRelation('sources', collect());
 
         $this->assertNull($this->resolver->resolve($reciter, 1, 1));
     }

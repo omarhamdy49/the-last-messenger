@@ -32,6 +32,17 @@
 @section('content')
 <form action="{{ route('admin.reciters.store') }}" method="POST" enctype="multipart/form-data" x-data="{ activeTab: 'ar' }">
     @csrf
+    <div class="p-5 mb-5 rounded-xl border border-gray-200 dark:border-gray-700 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label>{{ __('quran.recordings.profile') }}
+            <select name="profile_id" class="block w-full rounded border-gray-300 dark:bg-gray-800">
+                <option value="">{{ __('quran.recordings.new_person') }}</option>
+                @foreach(\App\Domain\Quran\Models\ReciterProfile::with('translations')->orderBy('id')->get() as $profile)
+                <option value="{{ $profile->id }}" @selected((int) old('profile_id', $reciter->profile_id ?? request('profile_id')) === $profile->id)>{{ $profile->displayName(app()->getLocale()) }}</option>
+                @endforeach
+            </select>
+        </label>
+        <label>{{ __('quran.recordings.riwayah') }}<input name="riwayah" value="{{ old('riwayah', $reciter->riwayah ?? '') }}" class="block w-full rounded border-gray-300 dark:bg-gray-800"></label>
+    </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -156,9 +167,9 @@
                                 class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                                 :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
                             <option value="">اختر الأسلوب</option>
-                            <option value="مرتل" {{ old('style') == 'مرتل' ? 'selected' : '' }}>مرتل</option>
-                            <option value="مجود" {{ old('style') == 'مجود' ? 'selected' : '' }}>مجود</option>
-                            <option value="معلم" {{ old('style') == 'معلم' ? 'selected' : '' }}>معلم</option>
+                            @foreach(['murattal', 'mujawwad', 'muallim'] as $styleOption)
+                                <option value="{{ $styleOption }}" @selected(old('style', null) === $styleOption)>{{ __('quran.recordings.'.$styleOption) }}</option>
+                            @endforeach
                         </select>
                         @error('style')
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
@@ -198,11 +209,11 @@
                 <x-admin.image-upload
                     name="profile_image"
                     idName="profile_image_id"
+                    urlName="profile_image_url"
                     aspectClass="aspect-square"
                     placeholderIcon="mic"
                     maxSize="10MB"
                     formats="JPG, PNG, WebP"
-                    :mediaLibrary="false"
                 />
             </div>
 
@@ -256,6 +267,9 @@
         </div>
     </div>
 </form>
+
+{{-- Media Picker Modal (image input "library" option) --}}
+<x-admin.media-picker-modal />
 @endsection
 
 @push('scripts')

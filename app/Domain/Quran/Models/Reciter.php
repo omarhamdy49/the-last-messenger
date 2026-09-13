@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Models;
 
+use App\Domain\Quran\Services\Audio\RecordingSourceService;
+use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Shared\Traits\HasLocalizedContent;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -21,9 +25,6 @@ use Illuminate\Support\Str;
  * @property array|null $description
  * @property string|null $style
  * @property string|null $riwayah
- * @property string|null $everyayah_folder
- * @property int|null $mp3quran_read_id
- * @property string|null $mp3quran_folder
  * @property string|null $country
  * @property string|null $profile_image
  * @property bool $is_featured
@@ -49,12 +50,10 @@ class Reciter extends Model
      */
     protected $fillable = [
         'slug',
+        'profile_id',
         'kind',
         'style',
         'riwayah',
-        'everyayah_folder',
-        'mp3quran_read_id',
-        'mp3quran_folder',
         'country',
         'profile_image',
         'is_featured',
@@ -69,7 +68,6 @@ class Reciter extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'mp3quran_read_id' => 'integer',
         'is_featured' => 'boolean',
         'is_active' => 'boolean',
         'display_order' => 'integer',
@@ -99,12 +97,43 @@ class Reciter extends Model
     {
         parent::boot();
 
+        static::saved(function (self $recording): void {
+            if ($recording->wasChanged('slug') && $recording->getOriginal('slug')) {
+                DB::table('quran_reciter_aliases')->updateOrInsert(['slug' => $recording->getOriginal('slug')], ['recording_id' => $recording->id, 'created_at' => now(), 'updated_at' => now()]);
+            }
+            QuranCacheKeys::flushReciters();
+        });
+
         static::creating(function ($reciter) {
             if (empty($reciter->slug)) {
                 $name = $reciter->getTranslation('name', 'en') ?? $reciter->getTranslation('name', 'ar');
                 $reciter->slug = Str::slug($name);
             }
         });
+    }
+
+    protected $with = ['sources'];
+
+    public function profile(): BelongsTo
+    {
+        return $this->belongsTo(ReciterProfile::class, 'profile_id');
+    }
+
+    public function recordingLabel(string $locale): string
+    {
+        $style = $this->style ? __('quran.recordings.'.$this->style, [], $locale) : __('quran.recordings.unspecified', [], $locale);
+
+        return $style.($this->riwayah ? ' · '.$this->riwayah : '');
+    }
+
+    public function sources(): HasMany
+    {
+        return $this->hasMany(RecordingSource::class, 'recording_id');
+    }
+
+    public function verseTemplate(): ?string
+    {
+        return app(RecordingSourceService::class)->verseTemplate($this);
     }
 
     /**

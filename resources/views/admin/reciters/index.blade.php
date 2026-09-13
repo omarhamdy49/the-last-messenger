@@ -83,6 +83,8 @@
          class="mb-6 p-6 rounded-2xl border"
          :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
         <form method="GET" action="{{ route('admin.reciters.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {{-- Without this flag the index redirects to the profiles list. --}}
+            <input type="hidden" name="recordings" value="1">
             <!-- Search -->
             <div>
                 <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -132,7 +134,7 @@
 
             <!-- Filter Actions -->
             <div class="flex items-end gap-3">
-                <a href="{{ route('admin.reciters.index') }}"
+                <a href="{{ route('admin.reciters.index', ['recordings' => 1]) }}"
                    class="px-4 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 border-2"
                    :class="darkMode ? 'border-gray-700 text-gray-400 hover:bg-gray-800' : 'border-gray-300 text-gray-600 hover:bg-gray-100'">
                     {{ __('admin.reset_filters') }}
@@ -155,16 +157,13 @@
                 <div class="p-5 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
                     <!-- Reciter Image/Avatar -->
                     <div class="flex-shrink-0">
-                        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2"
+                        @php($imageUrl = $reciter->profile_image_url ?? $reciter->profile?->profile_image_url)
+                        <div class="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center"
                              :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
-                            @if($reciter->profile_image)
-                                <img src="{{ asset('storage/' . $reciter->profile_image) }}"
-                                     alt="{{ $reciter->getTranslation('name', 'ar') }}"
-                                     class="w-full h-full object-cover">
-                            @else
-                                <div class="w-full h-full bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center">
-                                    <i data-lucide="mic" class="w-8 h-8 text-white/50"></i>
-                                </div>
+                            <i data-lucide="mic" class="w-8 h-8 text-white/50" aria-hidden="true"></i>
+                            @if($imageUrl)
+                                <img src="{{ $imageUrl }}" alt="{{ $reciter->getTranslation('name', app()->getLocale()) ?? $reciter->getTranslation('name', 'ar') }}"
+                                     loading="lazy" onerror="this.remove()" class="absolute inset-0 w-full h-full object-cover">
                             @endif
                         </div>
 

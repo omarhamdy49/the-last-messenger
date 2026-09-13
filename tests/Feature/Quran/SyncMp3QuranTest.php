@@ -7,6 +7,7 @@ namespace Tests\Feature\Quran;
 use App\Domain\Quran\Models\Recitation;
 use App\Domain\Quran\Models\Reciter;
 use App\Domain\Quran\Models\ReciterTranslation;
+use App\Domain\Quran\Services\Audio\RecordingSourceService;
 use App\Domain\Quran\Services\ReciterNameMatcher;
 use App\Domain\Shared\Services\ArtisanCommandService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -70,8 +71,8 @@ class SyncMp3QuranTest extends TestCase
         $this->artisan('quran:sync-mp3quran')->assertSuccessful();
 
         $reciter->refresh();
-        $this->assertSame(53, $reciter->mp3quran_read_id);
-        $this->assertSame(self::BASIT, $reciter->mp3quran_folder);
+        $this->assertSame('53', $reciter->sources->firstWhere('provider', 'mp3quran')?->external_timing_id);
+        $this->assertSame(self::BASIT, $reciter->sources->firstWhere('provider', 'mp3quran')?->base_url);
 
         $this->assertSame(3, Recitation::where('reciter_id', $reciter->id)->count());
         $this->assertSame(
@@ -98,7 +99,7 @@ class SyncMp3QuranTest extends TestCase
             Recitation::where(['reciter_id' => $reciter->id, 'surah_id' => 1])->value('audio_url'),
         );
         // That folder has no timing data, so there is no read id to record.
-        $this->assertNull($reciter->refresh()->mp3quran_read_id);
+        $this->assertNull($reciter->refresh()->sources->firstWhere('provider', 'mp3quran')?->external_timing_id);
     }
 
     public function test_a_dry_run_writes_nothing(): void
@@ -112,8 +113,8 @@ class SyncMp3QuranTest extends TestCase
             ->assertSuccessful();
 
         $this->assertSame(0, Recitation::count());
-        $this->assertNull($reciter->refresh()->mp3quran_read_id);
-        $this->assertNull($reciter->mp3quran_folder);
+        $this->assertNull($reciter->refresh()->sources->firstWhere('provider', 'mp3quran')?->external_timing_id);
+        $this->assertNull($reciter->sources->firstWhere('provider', 'mp3quran')?->base_url);
     }
 
     public function test_a_second_run_changes_nothing(): void
@@ -253,7 +254,7 @@ class SyncMp3QuranTest extends TestCase
             ->assertSuccessful();
 
         $this->assertSame(0, Recitation::count());
-        $this->assertSame(0, Reciter::whereNotNull('mp3quran_folder')->count());
+        $this->assertSame(0, Reciter::whereHas('sources', fn ($q) => $q->where('provider', 'mp3quran'))->count());
     }
 
     public function test_map_resolves_an_ambiguous_reciter_by_hand(): void
@@ -265,8 +266,8 @@ class SyncMp3QuranTest extends TestCase
         $this->artisan('quran:sync-mp3quran', ['--map' => ["{$reciter->id}:123"]])->assertSuccessful();
 
         $reciter->refresh();
-        $this->assertSame(123, $reciter->mp3quran_read_id);
-        $this->assertSame('https://server8.mp3quran.net/afs/', $reciter->mp3quran_folder);
+        $this->assertSame('123', $reciter->sources->firstWhere('provider', 'mp3quran')?->external_timing_id);
+        $this->assertSame('https://server8.mp3quran.net/afs/', $reciter->sources->firstWhere('provider', 'mp3quran')?->base_url);
         $this->assertSame(3, Recitation::where('reciter_id', $reciter->id)->count());
     }
 
@@ -296,7 +297,7 @@ class SyncMp3QuranTest extends TestCase
         $this->artisan('quran:sync-mp3quran')->assertFailed();
 
         $this->assertSame(0, Recitation::count());
-        $this->assertNull($reciter->refresh()->mp3quran_folder);
+        $this->assertNull($reciter->refresh()->sources->firstWhere('provider', 'mp3quran')?->base_url);
     }
 
     // ------------------------------------------------------------------
@@ -314,7 +315,7 @@ class SyncMp3QuranTest extends TestCase
         $this->assertSame(6, Reciter::count());
         $this->assertSame(18, Recitation::count());
 
-        $murattal = Reciter::where('mp3quran_folder', self::BASIT)->sole();
+        $murattal = Reciter::whereHas('sources', fn ($q) => $q->where('base_url', self::BASIT))->sole();
         // Written the way the rest of our catalogue writes it, not the way
         // mp3quran does — see houseSpelling().
         $this->assertSame('عبد الباسط عبد الصمد (مرتل)', $murattal->getDisplayName('ar'));
@@ -322,23 +323,23 @@ class SyncMp3QuranTest extends TestCase
         $this->assertSame('murattal', $murattal->style);
         $this->assertSame("Hafs 'an 'Asim", $murattal->riwayah);
         $this->assertSame('recitation', $murattal->kind);
-        $this->assertSame(53, $murattal->mp3quran_read_id);
+        $this->assertSame('53', $murattal->sources->firstWhere('provider', 'mp3quran')?->external_timing_id);
         $this->assertSame(3, $murattal->recitations()->count());
 
         // A style suffix only where there is something to tell apart.
         $this->assertSame(
             'مشاري العفاسي',
-            Reciter::where('mp3quran_folder', 'https://server8.mp3quran.net/afs/')->sole()->getDisplayName('ar'),
+            Reciter::whereHas('sources', fn ($q) => $q->where('base_url', 'https://server8.mp3quran.net/afs/'))->sole()->getDisplayName('ar'),
         );
 
         // Riwayah wins over style as the disambiguator, as it already does for
         // عبد الباسط عبد الصمد (ورش) in our own catalogue.
-        $warsh = Reciter::where('mp3quran_folder', self::BASIT.'Rewayat-Warsh-A-n-Nafi/')->sole();
+        $warsh = Reciter::whereHas('sources', fn ($q) => $q->where('base_url', self::BASIT.'Rewayat-Warsh-A-n-Nafi/'))->sole();
         $this->assertSame('عبد الباسط عبد الصمد (ورش)', $warsh->getDisplayName('ar'));
         $this->assertSame('Abdulbasit Abdulsamad (Warsh)', $warsh->getDisplayName('en'));
         $this->assertSame("Warsh 'an Nafi'", $warsh->riwayah);
 
-        $mujawwad = Reciter::where('mp3quran_folder', self::BASIT.'Almusshaf-Al-Mojawwad/')->sole();
+        $mujawwad = Reciter::whereHas('sources', fn ($q) => $q->where('base_url', self::BASIT.'Almusshaf-Al-Mojawwad/'))->sole();
         $this->assertSame('mujawwad', $mujawwad->style);
         // A mujawwad mushaf is a Hafs recording however mp3quran files it.
         $this->assertSame("Hafs 'an 'Asim", $mujawwad->riwayah);
@@ -385,12 +386,12 @@ class SyncMp3QuranTest extends TestCase
 
         $this->artisan('quran:sync-mp3quran', ['--import-new' => true])->assertSuccessful();
 
-        $khalaf = Reciter::where('mp3quran_folder', 'https://server14.mp3quran.net/khalf/')->sole();
+        $khalaf = Reciter::whereHas('sources', fn ($q) => $q->where('base_url', 'https://server14.mp3quran.net/khalf/'))->sole();
         $this->assertSame('عبد الله الخلف', $khalaf->getDisplayName('ar'));
-        $this->assertSame(244, $khalaf->mp3quran_read_id);
+        $this->assertSame('244', $khalaf->sources->firstWhere('provider', 'mp3quran')?->external_timing_id);
         $this->assertTrue($khalaf->is_active);
         $this->assertSame(3, $khalaf->recitations()->count());
-        $this->assertSame('عبد الباسط عبد الصمد (مرتل)', Reciter::where('mp3quran_folder', self::BASIT)->sole()->getDisplayName('ar'));
+        $this->assertSame('عبد الباسط عبد الصمد (مرتل)', Reciter::whereHas('sources', fn ($q) => $q->where('base_url', self::BASIT))->sole()->getDisplayName('ar'));
     }
 
     public function test_import_new_is_idempotent(): void
@@ -424,7 +425,7 @@ class SyncMp3QuranTest extends TestCase
             ->assertSuccessful();
 
         $this->assertSame(5, Reciter::count());
-        $this->assertSame(0, Reciter::where('mp3quran_folder', 'https://server8.mp3quran.net/afs/')->count());
+        $this->assertSame(0, Reciter::whereHas('sources', fn ($q) => $q->where('base_url', 'https://server8.mp3quran.net/afs/'))->count());
     }
 
     public function test_import_new_never_reuses_a_slug(): void
@@ -436,7 +437,7 @@ class SyncMp3QuranTest extends TestCase
 
         $this->artisan('quran:sync-mp3quran', ['--import-new' => true])->assertSuccessful();
 
-        $imported = Reciter::where('mp3quran_folder', 'https://server8.mp3quran.net/afs/')->sole();
+        $imported = Reciter::whereHas('sources', fn ($q) => $q->where('base_url', 'https://server8.mp3quran.net/afs/'))->sole();
         $this->assertSame('mishary-alafasi-123', $imported->slug, 'A collision is settled by the recording id, not a counter.');
         $this->assertSame('mishary-alafasi', $squatter->refresh()->slug);
         $this->assertSame(Reciter::count(), Reciter::distinct()->count('slug'));
@@ -463,7 +464,7 @@ class SyncMp3QuranTest extends TestCase
     {
         $this->seedSurahs();
         $reciter = $this->makeReciter('abdul-basit-murattal', 'عبد الباسط عبد الصمد (مرتل)');
-        $reciter->forceFill([
+        $this->configureSources($reciter, [
             'mp3quran_folder' => self::BASIT,
             'mp3quran_read_id' => 53,
             'everyayah_folder' => 'AbdulSamad_64kbps_QuranExplorer.Com',
@@ -472,20 +473,20 @@ class SyncMp3QuranTest extends TestCase
             'is_featured' => true,
             'is_active' => true,
             'display_order' => 7,
-        ])->save();
+        ]);
         $this->seedExistingAudio($reciter, 'https://download.quranicaudio.com/basit/001.mp3');
         $this->fakeApi();
 
         $this->artisan('quran:sync-mp3quran', ['--fresh' => true, '--force' => true])
-            ->expectsOutputToContain('Deleting 1 reciters')
+            ->expectsOutputToContain('preserving IDs')
             ->assertSuccessful();
 
-        $rebuilt = Reciter::where('mp3quran_folder', self::BASIT)->sole();
-        $this->assertNotSame($reciter->id, $rebuilt->id, 'The row is rebuilt, not updated.');
+        $rebuilt = Reciter::whereHas('sources', fn ($q) => $q->where('base_url', self::BASIT))->sole();
+        $this->assertSame($reciter->id, $rebuilt->id, 'Refresh preserves saved recording IDs.');
 
         // Curated and everyayah data survives the rebuild...
         $this->assertSame('abdul-basit-murattal', $rebuilt->slug);
-        $this->assertSame('AbdulSamad_64kbps_QuranExplorer.Com', $rebuilt->everyayah_folder);
+        $this->assertSame('AbdulSamad_64kbps_QuranExplorer.Com', $rebuilt->sources->firstWhere('kind', 'ayah')?->metadata['folder']);
         $this->assertSame('https://commons.example/basit.jpg', $rebuilt->profile_image);
         $this->assertSame('EG', $rebuilt->country);
         $this->assertTrue($rebuilt->is_featured);
@@ -504,41 +505,39 @@ class SyncMp3QuranTest extends TestCase
         // A recited translation and an everyayah-only qari: neither exists on
         // mp3quran, so deleting them would be a one-way loss.
         $translation = $this->makeReciter('besim-korkut-bosnian', 'Besim Korkut (Bosnian)');
-        $translation->forceFill(['kind' => 'translation', 'everyayah_folder' => 'Bosnian'])->save();
+        $this->configureSources($translation, ['kind' => 'translation', 'everyayah_folder' => 'Bosnian']);
         $this->seedExistingAudio($translation, 'https://everyayah.com/bosnian/001.mp3');
 
         // Something for --fresh to actually rebuild, so the run reports scope.
-        $this->makeReciter('abdul-basit-murattal', 'عبد الباسط عبد الصمد (مرتل)')
-            ->forceFill(['mp3quran_folder' => self::BASIT, 'mp3quran_read_id' => 53])
-            ->save();
+        $this->configureSources($this->makeReciter('abdul-basit-murattal', 'عبد الباسط عبد الصمد (مرتل)'), ['mp3quran_folder' => self::BASIT, 'mp3quran_read_id' => 53]);
 
         $this->fakeApi();
 
         $this->artisan('quran:sync-mp3quran', ['--fresh' => true, '--force' => true])
-            ->expectsOutputToContain('1 reciters are not from mp3quran and are left alone')
+            ->expectsOutputToContain('preserving IDs')
             ->assertSuccessful();
 
         $this->assertTrue($translation->refresh()->exists);
-        $this->assertSame('Bosnian', $translation->everyayah_folder);
+        $this->assertSame('Bosnian', $translation->sources->firstWhere('kind', 'ayah')?->metadata['folder']);
         $this->assertSame(
             'https://everyayah.com/bosnian/001.mp3',
             Recitation::where(['reciter_id' => $translation->id, 'surah_id' => 1])->value('audio_url'),
         );
     }
 
-    public function test_fresh_deletes_child_rows_with_their_reciter(): void
+    public function test_fresh_preserves_recording_and_translation_identity(): void
     {
         $this->seedSurahs();
         $reciter = $this->makeReciter('abdul-basit-murattal', 'عبد الباسط عبد الصمد (مرتل)');
-        $reciter->forceFill(['mp3quran_folder' => self::BASIT, 'mp3quran_read_id' => 53])->save();
+        $this->configureSources($reciter, ['mp3quran_folder' => self::BASIT, 'mp3quran_read_id' => 53]);
         $this->seedExistingAudio($reciter, 'https://download.quranicaudio.com/basit/001.mp3');
         $this->fakeApi();
 
         $this->artisan('quran:sync-mp3quran', ['--fresh' => true, '--force' => true])->assertSuccessful();
 
-        $this->assertSame(0, Recitation::where('reciter_id', $reciter->id)->count());
-        $this->assertSame(0, ReciterTranslation::where('reciter_id', $reciter->id)->count());
-        $this->assertSame(0, Reciter::where('id', $reciter->id)->count());
+        $this->assertSame(3, Recitation::where('reciter_id', $reciter->id)->count());
+        $this->assertGreaterThan(0, ReciterTranslation::where('reciter_id', $reciter->id)->count());
+        $this->assertSame(1, Reciter::where('id', $reciter->id)->count());
         // Every surviving child belongs to a reciter that still exists.
         $this->assertSame(0, Recitation::whereNotIn('reciter_id', Reciter::query()->select('id'))->count());
         $this->assertSame(0, ReciterTranslation::whereNotIn('reciter_id', Reciter::query()->select('id'))->count());
@@ -554,9 +553,7 @@ class SyncMp3QuranTest extends TestCase
         $this->seedSurahs();
 
         foreach (['abdul-basit-murattal' => 'عبد الباسط عبد الصمد (مرتل)', 'abdulsamad-quranexplorercom' => 'عبد الباسط عبد الصمد'] as $slug => $name) {
-            $this->makeReciter($slug, $name)
-                ->forceFill(['mp3quran_folder' => self::BASIT, 'mp3quran_read_id' => 53])
-                ->save();
+            $this->configureSources($this->makeReciter($slug, $name), ['mp3quran_folder' => self::BASIT, 'mp3quran_read_id' => 53]);
         }
 
         $this->fakeApi();
@@ -565,13 +562,13 @@ class SyncMp3QuranTest extends TestCase
 
         $this->assertEqualsCanonicalizing(
             ['abdul-basit-murattal', 'abdulsamad-quranexplorercom'],
-            Reciter::where('mp3quran_folder', self::BASIT)->pluck('slug')->all(),
+            Reciter::whereHas('sources', fn ($q) => $q->where('base_url', self::BASIT))->pluck('slug')->all(),
         );
         // Scoped by reciter: a LIKE on the folder would also catch the Warsh
         // and mujawwad recordings, which live in subfolders of it.
         $this->assertSame(6, Recitation::whereIn(
             'reciter_id',
-            Reciter::where('mp3quran_folder', self::BASIT)->select('id'),
+            Reciter::whereHas('sources', fn ($q) => $q->where('base_url', self::BASIT))->select('id'),
         )->count());
     }
 
@@ -579,17 +576,31 @@ class SyncMp3QuranTest extends TestCase
     {
         $this->seedSurahs();
         $reciter = $this->makeReciter('abdul-basit-murattal', 'عبد الباسط عبد الصمد (مرتل)');
-        $reciter->forceFill(['mp3quran_folder' => self::BASIT, 'mp3quran_read_id' => 53])->save();
+        $this->configureSources($reciter, ['mp3quran_folder' => self::BASIT, 'mp3quran_read_id' => 53]);
         $this->seedExistingAudio($reciter, 'https://download.quranicaudio.com/basit/001.mp3');
         $this->fakeApi();
 
         $this->artisan('quran:sync-mp3quran', ['--fresh' => true, '--dry-run' => true])
-            ->expectsOutputToContain('Would delete 1 reciters')
+            ->expectsOutputToContain('preserving IDs')
             ->assertSuccessful();
 
         $this->assertSame(1, Reciter::count());
         $this->assertSame(1, Recitation::count());
         $this->assertSame($reciter->id, Reciter::sole()->id);
+    }
+
+    private function configureSources(Reciter $reciter, array $attributes): void
+    {
+        $folder = $attributes['mp3quran_folder'] ?? null;
+        if ($folder) {
+            $reciter->sources()->create(['provider' => 'mp3quran', 'kind' => 'surah', 'source_key' => 'fixture', 'base_url' => $folder, 'external_timing_id' => $attributes['mp3quran_read_id'] ?? null]);
+        }
+        if (isset($attributes['everyayah_folder'])) {
+            app(RecordingSourceService::class)->verseSource($reciter, $attributes['everyayah_folder']);
+        }
+        unset($attributes['mp3quran_folder'], $attributes['mp3quran_read_id'], $attributes['everyayah_folder']);
+        $reciter->forceFill($attributes)->save();
+        $reciter->refresh();
     }
 
     private function fakeApi(int $audioStatus = 200): void

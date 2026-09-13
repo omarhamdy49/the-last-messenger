@@ -30,6 +30,8 @@ class StoreReciterRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'profile_id' => ['nullable', 'integer', 'exists:quran_reciter_profiles,id'],
+            'riwayah' => ['nullable', 'string', 'max:100'],
             // Multi-language name (required for ar and en)
             'name.ar' => [
                 'required',
@@ -91,6 +93,8 @@ class StoreReciterRequest extends FormRequest
                 'max:255',
                 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
                 'unique:quran_reciters,slug',
+                'unique:quran_reciter_aliases,slug',
+                'unique:quran_reciter_profiles,slug',
             ],
 
             // Country
@@ -103,15 +107,8 @@ class StoreReciterRequest extends FormRequest
             // Recitation style
             'style' => [
                 'nullable',
-                Rule::in([
-                    'Tajweed',
-                    'Qaloon',
-                    'Warsh',
-                    'Hafs',
-                    'Kalon',
-                    'Duri',
-                    'Kasai',
-                ]),
+                // Must match what imports store and quran.recordings.* translates.
+                Rule::in(['murattal', 'mujawwad', 'muallim']),
             ],
 
             // Profile image
@@ -123,6 +120,10 @@ class StoreReciterRequest extends FormRequest
             ],
 
             'profile_image_id' => ['nullable', 'integer', 'exists:media,id'],
+
+            // External image (fits the varchar(255) column); used when no file/library pick.
+            'profile_image_url' => ['nullable', 'string', 'max:255', 'url:http,https'],
+            'remove_profile_image' => ['nullable', 'boolean'],
 
             // Featured status
             'is_featured' => [
@@ -157,6 +158,8 @@ class StoreReciterRequest extends FormRequest
             'profile_image.image' => 'الملف يجب أن يكون صورة',
             'profile_image.mimes' => 'الصورة يجب أن تكون بصيغة jpeg أو png أو webp',
             'profile_image.max' => 'حجم الصورة يجب ألا يتجاوز 10 ميجابايت',
+            'profile_image_url.url' => 'رابط الصورة يجب أن يكون رابطاً صحيحاً يبدأ بـ ‎http://‎ أو ‎https://‎',
+            'profile_image_url.max' => 'رابط الصورة يجب ألا يتجاوز 255 حرفاً',
             'display_order.integer' => 'ترتيب العرض يجب أن يكون رقماً صحيحاً',
             'display_order.min' => 'ترتيب العرض يجب أن يكون صفر أو أكبر',
         ];

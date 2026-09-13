@@ -66,7 +66,7 @@
                         @endif
                         @if ($reciter['style'])
                             <span class="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm text-white text-sm font-semibold px-4 py-1.5 rounded-full">
-                                <i data-lucide="mic" class="w-4 h-4"></i>{{ $reciter['style'] }}
+                                <i data-lucide="mic" class="w-4 h-4" aria-hidden="true"></i>{{ $reciter['style'] }}
                             </span>
                         @endif
                         @if ($reciter['riwayah'])
@@ -97,6 +97,7 @@
             </section>
         @endif
 
+        <x-quran.recording-switcher :variants="$recordingVariants" :selected-id="$selectedRecordingId" :slug="$canonicalSlug" />
         {{-- Recitations --}}
         <section>
             <h2 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-3">

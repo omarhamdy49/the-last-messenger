@@ -1,5 +1,7 @@
 # Execution task list — grouped by phase
 
+Quran audio provider independence and canonical reciter grouping have a dedicated [phased implementation checklist](QURAN-AUDIO-REFACTOR-TASKS.md), ordered provider work first, then reciter grouping. Its phase IDs are separate from the module-enhancement phases below.
+
 Derived from [MODULE-ENHANCEMENT-PLAN-2026-08-17.md](MODULE-ENHANCEMENT-PLAN-2026-08-17.md).
 Each task carries its plan ID, the files it touches, an effort estimate, and a
 **done-when** that is checkable rather than a matter of opinion.

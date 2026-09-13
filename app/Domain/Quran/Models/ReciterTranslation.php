@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Models;
 
+use App\Domain\Quran\Services\ReciterGroupingService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -46,6 +47,16 @@ class ReciterTranslation extends Model
     protected $casts = [
         'is_ready' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        static::saved(function (self $translation): void {
+            $recording = Reciter::with('translations')->find($translation->reciter_id);
+            if ($recording) {
+                app(ReciterGroupingService::class)->attach($recording);
+            }
+        });
+    }
 
     /**
      * Get the parent Reciter model

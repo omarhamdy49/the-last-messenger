@@ -235,4 +235,25 @@ return [
     'sort_desc' => 'تنازلي',
     'newest_first' => 'الأحدث أولاً',
     'oldest_first' => 'الأقدم أولاً',
+
+    // Shared <x-admin.image-upload> (upload / library / external URL)
+    'image_input' => [
+        'browse' => 'المكتبة',
+        'upload' => 'رفع',
+        'url' => 'رابط خارجي',
+        'url_label' => 'رابط الصورة',
+        'url_placeholder' => '‎https://‎example.com/image.jpg',
+        'preview' => 'معاينة',
+        'apply' => 'استخدام',
+        'loading' => 'جارٍ تحميل المعاينة…',
+        'error' => 'تعذّر تحميل صورة من هذا الرابط. تأكد أن الرابط يشير إلى صورة مباشرة ويبدأ بـ ‎https://‎',
+        'invalid' => 'أدخل رابطاً صحيحاً يبدأ بـ ‎http://‎ أو ‎https://‎',
+        'remove' => 'إزالة الصورة',
+        'source_url' => 'من رابط خارجي',
+        'source_file' => 'ملف جديد',
+        'source_library' => 'من المكتبة',
+        'source_current' => 'الصورة الحالية',
+        'empty' => 'لا توجد صورة',
+        'open' => 'فتح في تبويب جديد',
+    ],
 ];

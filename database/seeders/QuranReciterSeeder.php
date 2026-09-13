@@ -7,6 +7,7 @@ namespace Database\Seeders;
 use App\Domain\Quran\Models\Recitation;
 use App\Domain\Quran\Models\Reciter;
 use App\Domain\Quran\Models\Surah;
+use App\Domain\Quran\Services\Audio\RecordingSourceService;
 use Illuminate\Database\Seeder;
 
 /**
@@ -21,7 +22,7 @@ use Illuminate\Database\Seeder;
  *   reciter, file name = zero-padded surah number.
  * - Per-verse audio (NOT stored): resolved dynamically from everyayah.com via
  *   App\Domain\Quran\Services\VerseAudioUrlResolver using the
- *   `everyayah_folder` column seeded here.
+ *   `verse_folder` column seeded here.
  *
  * Idempotent: reciters keyed by slug, translations by (reciter_id, locale),
  * recitations upserted on the (reciter_id, surah_id, format) unique index.
@@ -48,7 +49,6 @@ class QuranReciterSeeder extends Seeder
                 [
                     'style' => $definition['style'],
                     'riwayah' => "Hafs 'an 'Asim",
-                    'everyayah_folder' => $definition['everyayah_folder'],
                     'country' => $definition['country'],
                     'is_featured' => $definition['is_featured'],
                     'is_active' => true,
@@ -56,6 +56,8 @@ class QuranReciterSeeder extends Seeder
                     'followers_count' => $definition['followers_count'],
                 ]
             );
+
+            app(RecordingSourceService::class)->verseSource($reciter, $definition['verse_folder']);
 
             $reciter->syncTranslations([
                 'name' => $definition['name'],
@@ -80,10 +82,12 @@ class QuranReciterSeeder extends Seeder
      */
     private function seedRecitations(Reciter $reciter, string $surahAudioBase, array $surahIds): int
     {
+        $source = app(RecordingSourceService::class)->sourceForUrl($reciter->id, rtrim($surahAudioBase, '/').'/001.mp3');
         $now = now();
 
         $rows = array_map(fn (int $surahId): array => [
             'reciter_id' => $reciter->id,
+            'source_id' => $source->id,
             'surah_id' => $surahId,
             'audio_url' => sprintf('%s/%03d.mp3', rtrim($surahAudioBase, '/'), $surahId),
             'format' => 'mp3',
@@ -94,7 +98,7 @@ class QuranReciterSeeder extends Seeder
 
         return Recitation::upsert(
             $rows,
-            ['reciter_id', 'surah_id', 'format'],
+            ['source_id', 'surah_id', 'format'],
             ['audio_url', 'quality', 'updated_at']
         );
     }
@@ -122,7 +126,7 @@ class QuranReciterSeeder extends Seeder
                 'is_featured' => true,
                 'display_order' => 1,
                 'followers_count' => 12500000,
-                'everyayah_folder' => 'Alafasy_128kbps',
+                'verse_folder' => 'Alafasy_128kbps',
                 'surah_audio_base' => 'https://server8.mp3quran.net/afs',
             ],
             [
@@ -137,7 +141,7 @@ class QuranReciterSeeder extends Seeder
                 'is_featured' => true,
                 'display_order' => 2,
                 'followers_count' => 6800000,
-                'everyayah_folder' => 'Abdul_Basit_Murattal_192kbps',
+                'verse_folder' => 'Abdul_Basit_Murattal_192kbps',
                 'surah_audio_base' => 'https://server7.mp3quran.net/basit',
             ],
             [
@@ -152,7 +156,7 @@ class QuranReciterSeeder extends Seeder
                 'is_featured' => false,
                 'display_order' => 3,
                 'followers_count' => 3400000,
-                'everyayah_folder' => 'Abdul_Basit_Mujawwad_128kbps',
+                'verse_folder' => 'Abdul_Basit_Mujawwad_128kbps',
                 'surah_audio_base' => 'https://download.quranicaudio.com/quran/abdulbaset_mujawwad',
             ],
             [
@@ -167,7 +171,7 @@ class QuranReciterSeeder extends Seeder
                 'is_featured' => false,
                 'display_order' => 4,
                 'followers_count' => 4200000,
-                'everyayah_folder' => 'Husary_128kbps',
+                'verse_folder' => 'Husary_128kbps',
                 'surah_audio_base' => 'https://server13.mp3quran.net/husr',
             ],
             [
@@ -182,7 +186,7 @@ class QuranReciterSeeder extends Seeder
                 'is_featured' => false,
                 'display_order' => 5,
                 'followers_count' => 3900000,
-                'everyayah_folder' => 'Minshawy_Murattal_128kbps',
+                'verse_folder' => 'Minshawy_Murattal_128kbps',
                 'surah_audio_base' => 'https://server10.mp3quran.net/minsh',
             ],
             [
@@ -197,7 +201,7 @@ class QuranReciterSeeder extends Seeder
                 'is_featured' => true,
                 'display_order' => 6,
                 'followers_count' => 9800000,
-                'everyayah_folder' => 'Abdurrahmaan_As-Sudais_192kbps',
+                'verse_folder' => 'Abdurrahmaan_As-Sudais_192kbps',
                 'surah_audio_base' => 'https://server11.mp3quran.net/sds',
             ],
             [
@@ -212,7 +216,7 @@ class QuranReciterSeeder extends Seeder
                 'is_featured' => false,
                 'display_order' => 7,
                 'followers_count' => 4600000,
-                'everyayah_folder' => 'Saood_ash-Shuraym_128kbps',
+                'verse_folder' => 'Saood_ash-Shuraym_128kbps',
                 'surah_audio_base' => 'https://server7.mp3quran.net/shur',
             ],
             [
@@ -227,7 +231,7 @@ class QuranReciterSeeder extends Seeder
                 'is_featured' => false,
                 'display_order' => 8,
                 'followers_count' => 5400000,
-                'everyayah_folder' => 'Ghamadi_40kbps',
+                'verse_folder' => 'Ghamadi_40kbps',
                 'surah_audio_base' => 'https://server7.mp3quran.net/s_gmd',
             ],
             [
@@ -242,7 +246,7 @@ class QuranReciterSeeder extends Seeder
                 'is_featured' => false,
                 'display_order' => 9,
                 'followers_count' => 2900000,
-                'everyayah_folder' => 'Abu_Bakr_Ash-Shaatree_128kbps',
+                'verse_folder' => 'Abu_Bakr_Ash-Shaatree_128kbps',
                 'surah_audio_base' => 'https://server11.mp3quran.net/shatri',
             ],
             [
@@ -257,7 +261,7 @@ class QuranReciterSeeder extends Seeder
                 'is_featured' => false,
                 'display_order' => 10,
                 'followers_count' => 2100000,
-                'everyayah_folder' => 'Hani_Rifai_192kbps',
+                'verse_folder' => 'Hani_Rifai_192kbps',
                 'surah_audio_base' => 'https://server8.mp3quran.net/hani',
             ],
             [
@@ -272,7 +276,7 @@ class QuranReciterSeeder extends Seeder
                 'is_featured' => false,
                 'display_order' => 11,
                 'followers_count' => 7200000,
-                'everyayah_folder' => 'MaherAlMuaiqly128kbps',
+                'verse_folder' => 'MaherAlMuaiqly128kbps',
                 'surah_audio_base' => 'https://server12.mp3quran.net/maher',
             ],
         ];

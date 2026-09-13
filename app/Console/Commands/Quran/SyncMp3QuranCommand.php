@@ -7,7 +7,8 @@ namespace App\Console\Commands\Quran;
 use App\Domain\Quran\Infrastructure\Mp3Quran\Mp3QuranCatalogue;
 use App\Domain\Quran\Models\Recitation;
 use App\Domain\Quran\Models\Reciter;
-use App\Domain\Quran\Models\ReciterTranslation;
+use App\Domain\Quran\Models\RecordingSource;
+use App\Domain\Quran\Services\Audio\RecordingSourceService;
 use App\Domain\Quran\Services\Mp3QuranReciterImporter;
 use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Quran\Services\ReciterNameMatcher;
@@ -53,7 +54,7 @@ class SyncMp3QuranCommand extends Command
         {--dry-run : Preview only — list every change and write nothing}
         {--import-new : Also add every mp3quran recording we do not have yet as a new, publicly visible reciter}
         {--inactive : Import new reciters hidden from the public site, for review before publishing}
-        {--fresh : Delete the reciters imported from mp3quran and rebuild them from scratch. Portraits, ordering, featured flags, slugs and per-verse audio folders are preserved; anything an admin added that mp3quran does not know is not. Implies --import-new}
+        {--fresh : Reconcile existing recordings in place, preserving IDs, metadata and sources. Implies --import-new}
         {--keep-existing : Keep surahs that already have audio instead of switching them to mp3quran}
         {--only= : Limit the run to these reciter ids, comma separated (blank = all reciters)}
         {--map=* : Resolve a reciter the matcher was unsure about, as reciterId:mp3quranReadId (comma separated for several)}
@@ -112,17 +113,9 @@ class SyncMp3QuranCommand extends Command
             return self::FAILURE;
         }
 
-        if ($fresh && ! $dryRun && ! $this->confirmToProceed('Deleting every reciter imported from mp3quran')) {
-            return self::FAILURE;
-        }
-
-        $preserved = $fresh ? $this->freshen($catalogue, $dryRun) : [];
-
+        $preserved = [];
         if ($fresh) {
-            // Everything mapped is gone (or would be); the loop below has
-            // nothing left to reconcile and the import rebuilds from the
-            // snapshot. Filtered in a dry run too, so the preview matches.
-            $reciters = $reciters->whereNull('mp3quran_folder');
+            $this->info('--fresh reconciles recordings in place, preserving IDs, metadata and sources.');
         }
 
         $summary = [];
@@ -186,8 +179,8 @@ class SyncMp3QuranCommand extends Command
             $kept += $untouched;
             $newRows = count($writes) - $overwrites;
 
-            $mappingStale = $reciter->mp3quran_read_id !== $readId
-                || $reciter->mp3quran_folder !== $moshaf['server'];
+            $mappingStale = ($reciter->sources->firstWhere('base_url', $moshaf['server'])?->external_timing_id) !== ($readId === null ? null : (string) $readId)
+                || ! $reciter->sources->contains('external_recording_id', (string) $moshaf['id']);
 
             if ($writes === [] && ! $mappingStale) {
                 $summary[] = [$reciter->slug, $moshaf['name'], (string) ($readId ?? '—'), 'up to date', '0', '0'];
@@ -226,15 +219,15 @@ class SyncMp3QuranCommand extends Command
             }
 
             DB::transaction(function () use ($reciter, $moshaf, $readId, $writes) {
-                $reciter->forceFill([
-                    'mp3quran_read_id' => $readId,
-                    'mp3quran_folder' => $moshaf['server'],
-                ])->save();
+                $source = app(RecordingSourceService::class)->catalogueSource($reciter, $moshaf, $readId);
 
+                foreach (Mp3QuranCatalogue::audioUrls($moshaf) as $surahId => $url) {
+                    Recitation::where('reciter_id', $reciter->id)->where('surah_id', $surahId)->where('audio_url', $url)->update(['source_id' => $source->id]);
+                }
                 foreach ($writes as $surahId => $url) {
                     Recitation::updateOrCreate(
                         ['reciter_id' => $reciter->id, 'surah_id' => $surahId, 'format' => 'mp3'],
-                        ['audio_url' => $url],
+                        ['audio_url' => $url, 'source_id' => $source->id],
                     );
                 }
             });
@@ -259,83 +252,6 @@ class SyncMp3QuranCommand extends Command
     }
 
     /**
-     * Delete the reciters this command imported, keeping a snapshot of
-     * everything mp3quran cannot tell us again.
-     *
-     * Scope is deliberately "has an mp3quran folder" and nothing wider. The
-     * rest of the table — recited translations, qaris that only exist in the
-     * everyayah catalogue — could not be rebuilt from this API, so a rebuild
-     * that removed them would be a one-way loss.
-     *
-     * @return array<string, list<array<string, mixed>>> folder => preserved columns,
-     *                                                   a list because two of our
-     *                                                   rows can share one recording
-     */
-    private function freshen(Mp3QuranCatalogue $catalogue, bool $dryRun): array
-    {
-        // Only delete a reciter whose recording is still in the catalogue and
-        // still answering. Anything else could not be rebuilt, and a rebuild
-        // that loses rows is worse than one that leaves them alone.
-        $targets = Reciter::query()
-            ->whereNotNull('mp3quran_folder')
-            ->with('translations')
-            ->get();
-
-        $stranded = $targets->filter(function (Reciter $reciter) use ($catalogue) {
-            $moshaf = collect($catalogue->moshafs())->firstWhere('server', $reciter->mp3quran_folder);
-
-            return $moshaf === null || $this->probe($moshaf) !== null;
-        });
-
-        if ($stranded->isNotEmpty()) {
-            $this->warn($stranded->count().' mapped reciters are not rebuildable right now (recording gone from the catalogue or unreachable) and are being left as they are: '.$stranded->pluck('slug')->implode(', '));
-            $targets = $targets->reject(fn (Reciter $reciter) => $stranded->contains($reciter));
-        }
-
-        if ($targets->isEmpty()) {
-            $this->line('Nothing to rebuild — no reciter is mapped to mp3quran yet.');
-
-            return [];
-        }
-
-        $ids = $targets->pluck('id')->all();
-        $preserved = [];
-
-        foreach ($targets as $reciter) {
-            $preserved[$reciter->mp3quran_folder][] = Mp3QuranReciterImporter::snapshot($reciter);
-        }
-
-        $recitations = Recitation::query()->whereIn('reciter_id', $ids)->count();
-        $translations = ReciterTranslation::query()->whereIn('reciter_id', $ids)->count();
-        $untouched = Reciter::query()->whereNull('mp3quran_folder')->count();
-
-        $this->warn(sprintf(
-            '%s %d reciters, %d recitation rows and %d translations.',
-            $dryRun ? 'Would delete' : 'Deleting',
-            count($ids),
-            $recitations,
-            $translations,
-        ));
-        $this->line('Kept and re-applied by folder: slug, portrait, country, featured flag, display order, follower count, per-verse (everyayah) folder and translations.');
-        $this->line('Lost: anything else an admin edited by hand on those rows.');
-        $this->line("{$untouched} reciters are not from mp3quran and are left alone — this command could not rebuild them.");
-
-        if (! $dryRun) {
-            // Children first: both FKs cascade today, but an ordered delete
-            // does not depend on that staying true.
-            DB::transaction(function () use ($ids) {
-                Recitation::query()->whereIn('reciter_id', $ids)->delete();
-                ReciterTranslation::query()->whereIn('reciter_id', $ids)->delete();
-                Reciter::query()->whereIn('id', $ids)->delete();
-            });
-
-            QuranCacheKeys::flushReciters();
-        }
-
-        return $preserved;
-    }
-
-    /**
      * Add every recording in the catalogue we do not already have, one reciter
      * row per recording.
      *
@@ -347,7 +263,7 @@ class SyncMp3QuranCommand extends Command
      */
     private function importNew(Mp3QuranCatalogue $catalogue, array $preserved, bool $dryRun): array
     {
-        $known = Reciter::query()->whereNotNull('mp3quran_folder')->pluck('mp3quran_folder')->flip()->all();
+        $known = RecordingSource::where('provider', 'mp3quran')->where('kind', 'surah')->pluck('base_url')->flip()->all();
 
         // In a --fresh dry run the rows are still there; treat them as gone so
         // the preview matches what a real run would do.
@@ -429,6 +345,16 @@ class SyncMp3QuranCommand extends Command
             }
 
             return [$moshaf, 'manual'];
+        }
+
+        foreach ($reciter->sources as $source) {
+            if ($source->provider === 'mp3quran') {
+                $mapped = $source->external_recording_id ? $catalogue->moshaf((int) $source->external_recording_id) : null;
+                $mapped ??= collect($catalogue->moshafs())->firstWhere('server', $source->base_url);
+                if ($mapped !== null) {
+                    return [$mapped, 'stored source'];
+                }
+            }
         }
 
         if (ReciterNameMatcher::normalize($name) === '') {

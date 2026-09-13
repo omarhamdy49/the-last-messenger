@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Http\Controllers\Admin\Quran\AiInquiryController;
 use App\Http\Controllers\Admin\Quran\RecitationController;
 use App\Http\Controllers\Admin\Quran\ReciterController;
+use App\Http\Controllers\Admin\Quran\ReciterProfileController;
+use App\Http\Controllers\Admin\Quran\RecordingSourceController;
 use App\Http\Controllers\Admin\Quran\RevelationContextController;
 use App\Http\Controllers\Admin\Quran\SurahController;
 use App\Http\Controllers\Admin\Quran\TafseerController;
@@ -56,13 +58,34 @@ Route::resource('verses', VerseController::class)->names([
 ]);
 
 // Reciter Routes
+Route::prefix('reciter-profiles')->name('admin.reciter-profiles.')->controller(ReciterProfileController::class)->group(function (): void {
+    // Static segments first, then {profile} routes.
+    Route::get('/', 'index')->name('index');
+    Route::get('/create', 'create')->name('create');
+    Route::post('/', 'store')->name('store');
+    Route::get('/{profile}/edit', 'edit')->whereNumber('profile')->name('edit');
+    Route::put('/{profile}', 'update')->whereNumber('profile')->name('update');
+    Route::delete('/{profile}', 'destroy')->whereNumber('profile')->name('destroy');
+    Route::post('/{profile}/toggle/{field}', 'toggle')->whereNumber('profile')->whereIn('field', ['active', 'featured'])->name('toggle');
+    Route::post('/{profile}/recordings', 'attach')->whereNumber('profile')->name('recordings.attach');
+    Route::delete('/{profile}/recordings/{recording}', 'detach')->whereNumber(['profile', 'recording'])->name('recordings.detach');
+    Route::post('/{profile}/recordings/{recording}/default', 'setDefault')->whereNumber(['profile', 'recording'])->name('recordings.default');
+});
+
 Route::prefix('reciters')->group(function (): void {
+    Route::get('/{reciter}/sources', [RecordingSourceController::class, 'index'])->whereNumber('reciter')->name('admin.reciters.sources.index');
+    Route::post('/{reciter}/sources', [RecordingSourceController::class, 'store'])->whereNumber('reciter')->name('admin.reciters.sources.store');
+    Route::put('/{reciter}/sources/{source}', [RecordingSourceController::class, 'update'])->whereNumber(['reciter', 'source'])->name('admin.reciters.sources.update');
+    Route::delete('/{reciter}/sources/{source}', [RecordingSourceController::class, 'destroy'])->whereNumber(['reciter', 'source'])->name('admin.reciters.sources.destroy');
     Route::get('/search', [ReciterController::class, 'search'])->name('admin.reciters.search');
     Route::post('/bulk-delete', [ReciterController::class, 'bulkDelete'])->name('admin.reciters.bulk-delete');
     Route::post('/reorder', [ReciterController::class, 'reorder'])->name('admin.reciters.reorder');
     Route::post('/{id}/toggle-featured', [ReciterController::class, 'toggleFeatured'])->name('admin.reciters.toggle-featured');
 
     // Per-surah audio recordings (recitations) nested under a reciter
+    Route::get('/{reciter}/recitations', [ReciterController::class, 'recitations'])
+        ->whereNumber('reciter')
+        ->name('admin.reciters.recitations.index');
     Route::post('/{reciter}/recitations', [RecitationController::class, 'store'])
         ->whereNumber('reciter')
         ->name('admin.reciters.recitations.store');

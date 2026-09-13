@@ -11,8 +11,10 @@ use App\Domain\Quran\Application\Queries\AskQuranQuery;
 use App\Domain\Quran\Application\Queries\ListRevelationContextsQuery;
 use App\Domain\Quran\Exceptions\MonthlyQuotaExceededException;
 use App\Domain\Quran\Models\Reciter;
+use App\Domain\Quran\Models\ReciterProfile;
 use App\Domain\Quran\Repositories\AiInquiryQuotaRepositoryInterface;
 use App\Domain\Quran\Repositories\AiInquiryRepositoryInterface;
+use App\Domain\Quran\Repositories\RecitationRepository;
 use App\Domain\Quran\Services\AnswerHtmlRenderer;
 use App\Domain\Quran\Services\AnswerVerseLinker;
 use App\Domain\Quran\Services\AyahTimingService;
@@ -20,6 +22,7 @@ use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Quran\Services\QuranInquirySearchService;
 use App\Domain\Quran\Services\QuranQueryService;
 use App\Domain\Quran\Services\QuranReaderService;
+use App\Domain\Quran\Services\ReciterDirectoryService;
 use App\Domain\Quran\Services\ReciterService;
 use App\Domain\Quran\Services\VerseAudioUrlResolver;
 use App\Http\Controllers\Controller;
@@ -28,8 +31,10 @@ use App\Http\Support\QuestionSanitizer;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
@@ -455,7 +460,8 @@ final class QuranController extends Controller
                         // name next to an Arabic one is dead weight inlined into
                         // every surah page — and the catalogue is ~250 reciters.
                         'nameEn' => $nameAr === '' ? $r->getDisplayName('en') : null,
-                        'everyayah_folder' => $r->everyayahFolder,
+                        'verse_audio_template' => $r->verseAudioTemplate,
+                        'slug' => $r->slug,
                     ];
                 })->values()->all();
 
@@ -479,7 +485,20 @@ final class QuranController extends Controller
                     return strcmp($key($a), $key($b));
                 });
 
-                return $reciters;
+                $models = Reciter::with('profile.translations')->whereIn('id', array_column($reciters, 'id'))->get()->keyBy('id');
+
+                return array_values(array_filter(array_map(function ($row) use ($models) {
+                    $profile = $models[$row['id']]?->profile;
+                    if ($profile && ! $profile->is_active) {
+                        return null;
+                    }
+                    $row['profileId'] = $profile?->id ?? $row['id'];
+                    $row['profileName'] = $profile?->displayName(app()->getLocale()) ?? $row['nameAr'];
+                    $row['recordingLabel'] = $models[$row['id']]->recordingLabel(app()->getLocale());
+                    $row['isDefault'] = $profile?->default_recording_id === $row['id'];
+
+                    return $row;
+                }, $reciters)));
             } catch (Throwable $e) {
                 report($e);
 
@@ -489,9 +508,12 @@ final class QuranController extends Controller
 
         // Attach each reciter's per-surah audio URL so the dropdown can switch the
         // surah-level player (per-verse audio uses the everyayah resolver instead).
-        $surahAudioUrls = $this->getSurahAudioUrls($payload['surah']['number']);
+        $surahAudioUrls = app(RecitationRepository::class)->getSurahAudioSources($payload['surah']['number']);
         $reciters = array_map(function (array $reciter) use ($surahAudioUrls) {
-            $reciter['surahAudioUrl'] = $surahAudioUrls[$reciter['id']] ?? null;
+            $audio = $surahAudioUrls[$reciter['id']] ?? null;
+            $reciter['surahAudioUrl'] = $audio['url'] ?? null;
+            $reciter['sourceId'] = $audio['source_id'] ?? null;
+            $reciter['sourceRevision'] = $audio['revision'] ?? null;
 
             return $reciter;
         }, $reciters);
@@ -694,61 +716,7 @@ final class QuranController extends Controller
     {
         $locale = app()->getLocale();
 
-        $recitersData = Cache::remember(QuranCacheKeys::publicReciters($locale), 3600, function () use ($locale): array {
-            try {
-                $all = $this->reciterService->getFeatured();
-                $featured = collect($all)->take(3);
-
-                $allReciters = $this->quranQueryService->listReciters(
-                    perPage: self::RECITER_PAGE,
-                    activeOnly: true,
-                    locale: $locale,
-                    // Recited translations share this table but are not qaris;
-                    // the public reciters page lists reciters only.
-                    kind: 'recitation',
-                );
-
-                // listReciters returns a paginator; collect($all) would serialize its
-                // meta array (current_page, ...) and silently yield zero reciters.
-                $items = $allReciters instanceof LengthAwarePaginator
-                    ? collect($allReciters->items())
-                    : collect($allReciters);
-
-                $mapReciter = fn ($r) => [
-                    'id' => $r->id,
-                    'nameAr' => $r->getDisplayName('ar'),
-                    'nameEn' => $r->getDisplayName('en'),
-                    'country' => $r->country,
-                    'countryFlag' => country_flag($r->country),
-                    'countryName' => country_name($r->country, $locale),
-                    'style' => $r->style,
-                    'isFeatured' => $r->isFeatured,
-                    'followersCount' => $r->recitationsCount, // recitations_count available
-                    'profileImage' => $r->profileImage,
-                    'description' => $r->getDescription('ar'),
-                    'slug' => $r->slug,
-                    'recitationsCount' => $r->recitationsCount,
-                ];
-
-                return [
-                    'featured' => $items
-                        ->filter(fn ($r) => $r->isFeatured)
-                        ->take(3)
-                        ->map($mapReciter)
-                        ->values()
-                        ->all(),
-                    'all' => $items
-                        ->map($mapReciter)
-                        ->values()
-                        ->all(),
-                    'total' => $items->count(),
-                ];
-            } catch (Throwable $e) {
-                report($e);
-
-                return ['featured' => [], 'all' => [], 'total' => 0];
-            }
-        });
+        $recitersData = app(ReciterDirectoryService::class)->listing($locale);
 
         return view('public.quran.reciters', [
             'featuredReciters' => $recitersData['featured'],
@@ -760,20 +728,38 @@ final class QuranController extends Controller
     /**
      * Single reciter profile — bio, meta chips, and per-surah recitations.
      */
-    public function reciter(string $slug): View
+    public function reciter(string $slug): View|RedirectResponse
     {
-        $reciter = Reciter::query()->active()->where('slug', $slug)
-            ->with('translations')->first();
+        $profile = ReciterProfile::visible()->where('slug', $slug)->with('translations')->first();
+        if (! $profile) {
+            $aliasId = DB::table('quran_reciter_aliases')->where('slug', $slug)->value('recording_id');
+            $legacy = Reciter::active()->recitationsOnly()->with('profile')->where(function ($q) use ($slug, $aliasId): void {
+                $q->where('slug', $slug);
+                if ($aliasId) {
+                    $q->orWhere('id', $aliasId);
+                }
+            })->first();
+            abort_unless($legacy?->profile?->is_active, 404);
 
-        if ($reciter === null) {
-            abort(404);
+            return redirect()->route('public.quran.reciter', ['slug' => $legacy->profile->slug, 'recording' => $legacy->id], 301);
         }
+        $variants = $profile->recordings()->active()->recitationsOnly()->with('translations')
+            // Distinct surahs, not rows: a surah can have audio from several sources.
+            ->withCount(['recitations as surahs_count' => fn ($q) => $q->whereHas('source', fn ($s) => $s->where('is_active', true))->select(DB::raw('count(distinct surah_id)'))])
+            ->orderBy('display_order')->orderBy('id')->get();
+        $selectedId = request()->filled('recording') ? request()->integer('recording') : $profile->default_recording_id;
+        $reciter = $variants->firstWhere('id', $selectedId);
+        abort_if(request()->filled('recording') && ! $reciter, 404);
+        $reciter ??= $variants->first();
+        abort_unless($reciter, 404);
 
         $locale = app()->getLocale();
 
         $recitations = $reciter->recitations()
-            ->with('surah')
+            ->whereHas('source', fn ($q) => $q->where('is_active', true))
+            ->with(['surah', 'source'])
             ->get()
+            ->sortBy(fn ($recitation) => $recitation->source->priority)->unique('surah_id')
             ->sortBy(fn ($recitation) => $recitation->surah?->id ?? PHP_INT_MAX)
             ->map(fn ($recitation): array => [
                 'surah_number' => $recitation->surah?->id,
@@ -783,18 +769,21 @@ final class QuranController extends Controller
 
         return view('public.quran.reciter', [
             'reciter' => [
-                'name' => $reciter->getDisplayName($locale),
-                'description' => $reciter->getDescriptionText($locale),
-                'image' => $reciter->profile_image_url,
-                'country' => $reciter->country,
-                'country_flag' => country_flag($reciter->country),
-                'country_name' => country_name($reciter->country, $locale),
-                'style' => $reciter->style,
+                'name' => $profile->displayName($locale),
+                'description' => $profile->description($locale),
+                'image' => $profile->profile_image_url,
+                'country' => $profile->country,
+                'country_flag' => country_flag($profile->country),
+                'country_name' => country_name($profile->country, $locale),
+                'style' => $reciter->style ? __('quran.recordings.'.$reciter->style) : null,
                 'riwayah' => $reciter->riwayah,
-                'is_featured' => (bool) $reciter->is_featured,
-                'followers_count' => (int) $reciter->followers_count,
+                'is_featured' => (bool) $profile->is_featured,
+                'followers_count' => (int) $profile->followers_count,
             ],
             'recitations' => $recitations,
+            'recordingVariants' => $variants,
+            'selectedRecordingId' => $reciter->id,
+            'canonicalSlug' => $profile->slug,
         ]);
     }
 
@@ -1037,6 +1026,6 @@ final class QuranController extends Controller
             abort(404);
         }
 
-        return response()->json($this->ayahTimingService->forSurah($surahNumber, $reciterId));
+        return response()->json($this->ayahTimingService->forSurah($surahNumber, $reciterId, request()->filled('source') ? request()->integer('source') : null, request()->filled('revision') ? request()->integer('revision') : null));
     }
 }

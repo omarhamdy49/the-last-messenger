@@ -52,8 +52,12 @@ class ReciterController extends Controller
      *
      * GET /su/portal/v1/admin/reciters
      */
-    public function index(Request $request): View|JsonResponse
+    public function index(Request $request): View|JsonResponse|RedirectResponse
     {
+        if (! $request->boolean('recordings') && ! $request->expectsJson()) {
+            return redirect()->route('admin.reciter-profiles.index', $request->only('search'));
+        }
+
         $perPage = $request->integer('per_page', 50);
         $filters = [
             'search' => $request->input('search'),
@@ -149,16 +153,68 @@ class ReciterController extends Controller
      *
      * GET /su/portal/v1/admin/reciters/{id}
      */
-    public function show(int $id): View
+    public function show(Request $request, int $id): View
     {
-        $reciter = $this->reciterService->findOrFail($id);
-        $recitationsCount = $this->reciterService->countRecitations($reciter);
+        $reciter = $this->reciterService->findOrFail($id)->loadMissing('profile.translations');
+        $selectedSource = $this->surahSourceId($reciter, $request->integer('source') ?: null);
 
-        // All 114 surahs merged with this reciter's recitation (when present),
-        // built in two queries (surahs + recitations) and merged in PHP.
-        $surahs = $this->recitationService->getReciterSurahs($reciter->id);
+        // The surah list itself is lazy-loaded from recitations(); only the hero figures are built here.
+        $stats = $this->recitationService->coverageStats($reciter->id);
+        $recordings = $this->reciterService->profileRecordings($reciter);
 
-        return view('admin.reciters.show', compact('reciter', 'recitationsCount', 'surahs'));
+        return view('admin.reciters.show', compact('reciter', 'selectedSource', 'stats', 'recordings'));
+    }
+
+    /**
+     * One page of the recording's surah audio list, rendered as row HTML.
+     *
+     * GET /su/portal/v1/admin/reciters/{reciter}/recitations
+     */
+    public function recitations(Request $request, int $reciter): JsonResponse
+    {
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'status' => ['nullable', 'in:all,with_audio,missing'],
+            'source' => ['nullable', 'integer'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+
+        $recording = $this->reciterService->findOrFail($reciter);
+        $sourceId = $this->surahSourceId($recording, isset($validated['source']) ? (int) $validated['source'] : null);
+
+        $result = $this->recitationService->paginateReciterSurahs(
+            $recording->id,
+            $sourceId,
+            $validated['q'] ?? null,
+            $validated['status'] ?? 'all',
+            (int) ($validated['page'] ?? 1),
+            (int) ($validated['per_page'] ?? 20),
+        );
+
+        return response()->json([
+            'html' => view('admin.reciters.partials.recitation-rows', [
+                'rows' => $result['rows'],
+                'reciter' => $recording,
+                'selectedSource' => $sourceId,
+            ])->render(),
+            'next_page' => $result['next_page'],
+            'total' => $result['total'],
+            'with_audio' => $result['with_audio'],
+            'missing' => $result['missing'],
+        ]);
+    }
+
+    /**
+     * A source filter must be one of this recording's surah-kind sources (404 otherwise).
+     */
+    private function surahSourceId(Reciter $reciter, ?int $sourceId): ?int
+    {
+        if ($sourceId) {
+            $reciter->sources()->where('kind', 'surah')->findOrFail($sourceId);
+        }
+
+        return $sourceId;
     }
 
     /**

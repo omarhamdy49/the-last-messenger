@@ -128,7 +128,7 @@
         get filteredReciters() {
             let r = this.allReciters;
             if (this.filterStyle !== 'all') {
-                r = r.filter(x => x.style === this.filterStyle);
+                r = r.filter(x => (x.styles || [x.style]).includes(this.filterStyle));
             }
             if (this.searchQuery) {
                 const q = this.searchQuery.toLowerCase();
@@ -136,6 +136,7 @@
                     (x.nameAr && x.nameAr.includes(this.searchQuery)) ||
                     (x.nameEn && x.nameEn.toLowerCase().includes(q)) ||
                     (x.country && x.country.toLowerCase().includes(q)) ||
+                    (x.aliases && x.aliases.toLowerCase().includes(q)) ||
                     (x.countryName && x.countryName.includes(this.searchQuery))
                 );
             }

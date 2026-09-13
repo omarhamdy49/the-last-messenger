@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Quran;
 
+use App\Domain\Quran\Models\Recitation;
 use App\Domain\Quran\Models\Reciter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
@@ -268,11 +269,13 @@ class SurahAyahTimingsTest extends TestCase
         $reciter = Reciter::create([
             'slug' => 'abdul-basit-murattal',
             'kind' => 'recitation',
-            'mp3quran_read_id' => $readId,
-            'mp3quran_folder' => $readId === null ? null : 'https://server7.mp3quran.net/basit/',
             'is_active' => true,
         ]);
 
+        $source = $reciter->sources()->create(['provider' => 'mp3quran', 'kind' => 'surah', 'source_key' => 'fixture', 'external_timing_id' => $readId, 'base_url' => 'https://server7.mp3quran.net/basit/']);
+        foreach (array_keys(self::AYAH_COUNTS) as $surah) {
+            Recitation::create(['reciter_id' => $reciter->id, 'source_id' => $source->id, 'surah_id' => $surah, 'format' => 'mp3', 'audio_url' => sprintf('https://server7.mp3quran.net/basit/%03d.mp3', $surah)]);
+        }
         $reciter->syncTranslations(['name' => ['ar' => 'عبد الباسط عبد الصمد']]);
 
         return $reciter->refresh();

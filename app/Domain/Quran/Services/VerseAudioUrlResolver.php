@@ -40,11 +40,15 @@ final class VerseAudioUrlResolver
      */
     public function resolve(Reciter $reciter, int $surahNumber, int $verseNumber): ?string
     {
-        if (empty($reciter->everyayah_folder)) {
+        $template = $reciter->verseTemplate();
+        if ($template === null) {
             return null;
         }
+        if ($surahNumber < 1 || $surahNumber > 114 || $verseNumber < 1) {
+            throw new InvalidArgumentException('Invalid surah or verse number.');
+        }
 
-        return $this->resolveForFolder($reciter->everyayah_folder, $surahNumber, $verseNumber);
+        return str_replace(['{surah}', '{ayah}'], [sprintf('%03d', $surahNumber), sprintf('%03d', $verseNumber)], $template);
     }
 
     /**

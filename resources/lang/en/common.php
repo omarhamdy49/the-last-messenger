@@ -235,4 +235,25 @@ return [
     'sort_desc' => 'Descending',
     'newest_first' => 'Newest First',
     'oldest_first' => 'Oldest First',
+
+    // Shared <x-admin.image-upload> (upload / library / external URL)
+    'image_input' => [
+        'browse' => 'Library',
+        'upload' => 'Upload',
+        'url' => 'External URL',
+        'url_label' => 'Image URL',
+        'url_placeholder' => 'https://example.com/image.jpg',
+        'preview' => 'Preview',
+        'apply' => 'Use',
+        'loading' => 'Loading preview…',
+        'error' => 'Could not load an image from this URL. Make sure it points directly to an image and starts with https://',
+        'invalid' => 'Enter a valid URL starting with http:// or https://',
+        'remove' => 'Remove image',
+        'source_url' => 'External URL',
+        'source_file' => 'New file',
+        'source_library' => 'From library',
+        'source_current' => 'Current image',
+        'empty' => 'No image',
+        'open' => 'Open in new tab',
+    ],
 ];

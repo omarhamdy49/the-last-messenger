@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Services;
 
-use App\Domain\Quran\Models\Reciter;
+use App\Domain\Quran\Models\Recitation;
+use App\Domain\Quran\Models\RecordingSource;
 use App\Domain\Quran\Models\Surah;
+use App\Domain\Quran\Repositories\RecitationRepository;
+use App\Domain\Quran\Services\Audio\RecordingSourceService;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Throwable;
@@ -18,7 +20,7 @@ use Throwable;
  * The player has one MP3 per surah and needs to know which ayah is being
  * recited at any moment. mp3quran publishes that for the recordings Phase 1
  * adopted, keyed by the recording's `read` id — which is why a reciter without
- * an `mp3quran_read_id` has no timings and never will: the times only describe
+ * a source timing reference has no timings: the times only describe
  * mp3quran's own audio.
  *
  * Everything degrades to an empty list. Highlighting is progressive
@@ -26,8 +28,6 @@ use Throwable;
  */
 final class AyahTimingService
 {
-    private const ENDPOINT = 'https://www.mp3quran.net/api/v3/ayat_timing';
-
     /** Timings for a published recording never change. */
     private const HIT_TTL = 30 * 24 * 3600;
 
@@ -37,34 +37,38 @@ final class AyahTimingService
     /**
      * @return array{surah: int, reciter_id: int, ayahs: list<array{int, int, int}>}
      */
-    public function forSurah(int $surahNumber, int $reciterId): array
+    public function forSurah(int $surahNumber, int $reciterId, ?int $sourceId = null, ?int $revision = null): array
     {
         return [
             'surah' => $surahNumber,
             'reciter_id' => $reciterId,
-            'ayahs' => $this->ayahs($surahNumber, $reciterId),
+            'ayahs' => $this->ayahs($surahNumber, $reciterId, $sourceId, $revision),
         ];
     }
 
     /**
      * @return list<array{int, int, int}>
      */
-    private function ayahs(int $surahNumber, int $reciterId): array
+    private function ayahs(int $surahNumber, int $reciterId, ?int $sourceId, ?int $revision): array
     {
-        $readId = Reciter::query()->whereKey($reciterId)->value('mp3quran_read_id');
-
-        if ($readId === null) {
+        if ($sourceId === null) {
+            $sourceId = app(RecitationRepository::class)->getSurahAudioSources($surahNumber)[$reciterId]['source_id'] ?? null;
+        }
+        $source = $sourceId ? RecordingSource::where('recording_id', $reciterId)->where('is_active', true)->find($sourceId) : null;
+        if (! $source || $source->external_timing_id === null || ($revision !== null && $source->revision !== $revision)) {
             return [];
         }
-
-        $key = QuranCacheKeys::surahAyahTimings($surahNumber, $reciterId);
+        if (! Recitation::where('source_id', $source->id)->where('surah_id', $surahNumber)->exists()) {
+            return [];
+        }
+        $key = QuranCacheKeys::reciterScoped("timings:source:{$source->id}:{$source->revision}:{$surahNumber}");
         $cached = Cache::get($key);
 
         if (is_array($cached)) {
             return $cached;
         }
 
-        $ayahs = $this->fetch($surahNumber, (int) $readId);
+        $ayahs = $this->fetch($surahNumber, $source);
 
         Cache::put($key, $ayahs, $ayahs === [] ? self::MISS_TTL : self::HIT_TTL);
 
@@ -74,23 +78,11 @@ final class AyahTimingService
     /**
      * @return list<array{int, int, int}> [ayah, startMs, endMs]; empty on any failure
      */
-    private function fetch(int $surahNumber, int $readId): array
+    private function fetch(int $surahNumber, RecordingSource $source): array
     {
         try {
-            $response = Http::timeout(10)->retry(2, 500, throw: false)
-                ->get(self::ENDPOINT, ['surah' => $surahNumber, 'read' => $readId]);
-
-            if (! $response->successful()) {
-                throw new RuntimeException(
-                    "mp3quran ayat_timing surah={$surahNumber} read={$readId}: HTTP {$response->status()}"
-                );
-            }
-
-            $rows = $response->json();
-
-            if (! is_array($rows)) {
-                throw new RuntimeException("mp3quran ayat_timing surah={$surahNumber} read={$readId}: body is not JSON.");
-            }
+            $readId = (int) $source->external_timing_id;
+            $rows = app(RecordingSourceService::class)->adapter($source)->timings($source, $surahNumber);
 
             $ayahs = [];
 

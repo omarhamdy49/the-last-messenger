@@ -49,6 +49,7 @@
         'verses'          => 'quran',
         'tafseer'         => 'quran',
         'reciters'        => 'quran',
+        'reciter-profiles' => 'quran',
         'translation-resources' => 'quran',
         'tafsir-resources' => 'quran',
         'revelation-contexts' => 'quran',
@@ -523,14 +524,23 @@
                         <i data-lucide="message-square-text" class="w-4 h-4"></i>
                         <span>{{ __('quran.tafseer.title') }}</span>
                     </a>
-                    <a href="{{ route('admin.reciters.index') }}"
+                    <a href="{{ route('admin.reciter-profiles.index') }}"
+                       @click="activeMenu = 'reciter-profiles'"
+                       :class="isActive('reciter-profiles') ?
+                           'text-accent font-semibold' :
+                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                        <span>{{ __('quran.recordings.profiles') }}</span>
+                    </a>
+                    <a href="{{ route('admin.reciters.index', ['recordings' => 1]) }}"
                        @click="activeMenu = 'reciters'"
                        :class="isActive('reciters') ?
                            'text-accent font-semibold' :
                            (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
                        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
-                        <i data-lucide="mic" class="w-4 h-4"></i>
-                        <span>{{ __('quran.reciters.title') }}</span>
+                        <i data-lucide="disc-3" class="w-4 h-4"></i>
+                        <span>{{ __('quran.recordings.recordings') }}</span>
                     </a>
                     <a href="{{ route('admin.translation-resources.index') }}"
                        @click="activeMenu = 'translation-resources'"

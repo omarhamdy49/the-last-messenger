@@ -32,7 +32,7 @@ final readonly class ReciterDTO implements JsonSerializable
         public int $recitationsCount,
         public ?string $createdAt,
         public ?string $updatedAt,
-        public ?string $everyayahFolder = null,
+        public ?string $verseAudioTemplate = null,
         public string $kind = 'recitation',
     ) {}
 
@@ -53,10 +53,10 @@ final readonly class ReciterDTO implements JsonSerializable
             isFeatured: $reciter->is_featured ?? false,
             isActive: $reciter->is_active ?? true,
             displayOrder: $reciter->display_order ?? 0,
-            recitationsCount: 0, // TODO: Add when recitations relation exists
+            recitationsCount: (int) ($reciter->recitations_count ?? 0),
             createdAt: $reciter->created_at?->toIso8601String(),
             updatedAt: $reciter->updated_at?->toIso8601String(),
-            everyayahFolder: $reciter->everyayah_folder,
+            verseAudioTemplate: $reciter->verseTemplate(),
             kind: $reciter->kind ?? 'recitation',
         );
     }
@@ -96,7 +96,7 @@ final readonly class ReciterDTO implements JsonSerializable
             'recitations_count' => $this->recitationsCount,
             'created_at' => $this->createdAt,
             'updated_at' => $this->updatedAt,
-            'everyayah_folder' => $this->everyayahFolder,
+            'verse_audio_template' => $this->verseAudioTemplate,
             'kind' => $this->kind,
         ];
     }

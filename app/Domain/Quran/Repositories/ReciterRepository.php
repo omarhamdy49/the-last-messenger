@@ -261,6 +261,18 @@ class ReciterRepository implements ReciterRepositoryInterface
         return Recitation::where('reciter_id', $reciter->id)->count();
     }
 
+    public function getProfileRecordings(int $profileId): EloquentCollection
+    {
+        return Reciter::query()
+            ->without('sources')
+            ->select(['id', 'profile_id', 'style', 'riwayah', 'is_active', 'display_order'])
+            ->where('profile_id', $profileId)
+            ->withCount(['recitations as surahs_with_audio' => fn ($q) => $q->select(DB::raw('count(distinct surah_id)'))])
+            ->orderBy('display_order')
+            ->orderBy('id')
+            ->get();
+    }
+
     /**
      * Get paginated reciters with search/filter support (admin list).
      *
@@ -277,15 +289,16 @@ class ReciterRepository implements ReciterRepositoryInterface
                 'slug',
                 'country',
                 'style',
-                'everyayah_folder',
                 'profile_image',
+                'profile_id',
                 'is_featured',
                 'is_active',
                 'display_order',
                 'created_at',
                 'updated_at',
             ])
-            ->with(['translations:reciter_id,locale,name,description,is_ready'])
+            // The admin list falls back to the person's portrait when a recording has none.
+            ->with(['translations:reciter_id,locale,name,description,is_ready', 'profile:id,profile_image'])
             ->orderBy('display_order')
             ->orderByDesc('created_at');
 

@@ -29,6 +29,10 @@ final class CreateReciterData
         public readonly ?int $profileImageId,
         public readonly bool $isFeatured,
         public readonly int $displayOrder,
+        public readonly ?int $profileId = null,
+        public readonly ?string $riwayah = null,
+        public readonly ?string $profileImageUrl = null,
+        public readonly bool $removeProfileImage = false,
     ) {}
 
     /**
@@ -44,8 +48,12 @@ final class CreateReciterData
             slug: $validated['slug'] ?? null,
             country: $validated['country'] ?? null,
             style: $validated['style'] ?? null,
+            profileId: isset($validated['profile_id']) ? (int) $validated['profile_id'] : null,
+            riwayah: $validated['riwayah'] ?? null,
             profileImage: $request->hasFile('profile_image') ? $request->file('profile_image') : null,
             profileImageId: (int) ($request->input('profile_image_id') ?: 0) ?: null,
+            profileImageUrl: ($validated['profile_image_url'] ?? null) ?: null,
+            removeProfileImage: $request->boolean('remove_profile_image'),
             isFeatured: $request->boolean('is_featured'),
             displayOrder: (int) ($validated['display_order'] ?? 0),
         );

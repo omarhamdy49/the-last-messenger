@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Models;
 
+use App\Domain\Quran\Services\Audio\RecordingSourceService;
+use App\Domain\Quran\Services\QuranCacheKeys;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -36,6 +38,7 @@ class Recitation extends Model
      */
     protected $fillable = [
         'reciter_id',
+        'source_id',
         'surah_id',
         'audio_url',
         'format',
@@ -53,6 +56,30 @@ class Recitation extends Model
         'duration_seconds' => 'integer',
         'file_size_kb' => 'integer',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $audio): void {
+            if (! $audio->source_id || ($audio->isDirty('audio_url') && ! $audio->isDirty('source_id'))) {
+                $audio->source_id = app(RecordingSourceService::class)
+                    ->sourceForUrl((int) $audio->reciter_id, $audio->audio_url)->id;
+            }
+            $source = RecordingSource::findOrFail($audio->source_id);
+            if ($source->recording_id !== (int) $audio->reciter_id || $source->kind !== 'surah') {
+                throw new \InvalidArgumentException('Audio source does not belong to this recording.');
+            }
+            if ($audio->exists && $audio->isDirty('audio_url')) {
+                $source->increment('revision');
+            }
+        });
+        static::saved(fn () => QuranCacheKeys::flushReciters());
+        static::deleted(fn () => QuranCacheKeys::flushReciters());
+    }
+
+    public function source(): BelongsTo
+    {
+        return $this->belongsTo(RecordingSource::class);
+    }
 
     /**
      * Get the reciter that owns this recitation.

@@ -7,6 +7,7 @@ namespace App\Domain\Quran\Services;
 use App\Domain\Quran\Infrastructure\Mp3Quran\Mp3QuranCatalogue;
 use App\Domain\Quran\Models\Recitation;
 use App\Domain\Quran\Models\Reciter;
+use App\Domain\Quran\Services\Audio\RecordingSourceService;
 use Illuminate\Support\Str;
 
 /**
@@ -110,9 +111,6 @@ final class Mp3QuranReciterImporter
             'kind' => $kept['kind'] ?? 'recitation',
             'style' => $kept['style'] ?? $preview['style'],
             'riwayah' => $kept['riwayah'] ?? $preview['riwayah'],
-            'everyayah_folder' => $kept['everyayah_folder'] ?? null,
-            'mp3quran_read_id' => $this->catalogue->readIdFor($moshaf['server']),
-            'mp3quran_folder' => $moshaf['server'],
             'country' => $kept['country'] ?? null,
             'profile_image' => $kept['profile_image'] ?? null,
             'is_featured' => $kept['is_featured'] ?? false,
@@ -122,6 +120,8 @@ final class Mp3QuranReciterImporter
             'display_order' => $kept['display_order'] ?? 0,
             'followers_count' => $kept['followers_count'] ?? 0,
         ]);
+
+        $source = app(RecordingSourceService::class)->catalogueSource($reciter, $moshaf, $this->catalogue->readIdFor($moshaf['server']));
 
         $reciter->syncTranslations($kept['translations'] ?? [
             'name' => array_filter([
@@ -136,6 +136,7 @@ final class Mp3QuranReciterImporter
         foreach (Mp3QuranCatalogue::audioUrls($moshaf) as $surahId => $url) {
             $rows[] = [
                 'reciter_id' => $reciter->id,
+                'source_id' => $source->id,
                 'surah_id' => $surahId,
                 'audio_url' => $url,
                 'format' => 'mp3',
@@ -170,7 +171,6 @@ final class Mp3QuranReciterImporter
             'kind' => $reciter->kind,
             'style' => $reciter->style,
             'riwayah' => $reciter->riwayah,
-            'everyayah_folder' => $reciter->everyayah_folder,
             'country' => $reciter->country,
             'profile_image' => $reciter->profile_image,
             'is_featured' => $reciter->is_featured,

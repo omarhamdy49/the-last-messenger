@@ -6,9 +6,9 @@ namespace App\Console\Commands\Quran;
 
 use App\Domain\Quran\Models\Reciter;
 use App\Domain\Quran\Models\ReciterTranslation;
+use App\Domain\Quran\Services\Audio\RecordingSourceService;
 use App\Domain\Quran\Services\QuranCacheKeys;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Throwable;
@@ -140,7 +140,7 @@ class ImportQuranRecitersCommand extends Command
         }
 
         if ($this->option('fresh')) {
-            $this->truncate();
+            $this->warn('--fresh now reconciles existing catalogue IDs; existing recordings and sources are retained.');
         }
 
         $counts = ['recitation' => 0, 'translation' => 0];
@@ -165,12 +165,13 @@ class ImportQuranRecitersCommand extends Command
                 'kind' => $kind,
                 'style' => $this->style($entry['name'].' '.$subfolder),
                 'riwayah' => $this->riwayah($subfolder, $kind),
-                'everyayah_folder' => $subfolder,
                 'is_active' => true,
                 'is_featured' => in_array($id, self::FEATURED, true),
                 'display_order' => ($pos = array_search($id, self::FEATURED, true)) === false ? 100 + $id : $pos + 1,
                 'followers_count' => 0,
             ])->save();
+
+            app(RecordingSourceService::class)->verseSource($reciter, $subfolder);
 
             $nameAr = self::NAMES_AR[$id] ?? null;
 
@@ -280,16 +281,5 @@ class ImportQuranRecitersCommand extends Command
         $name = str_replace('_', ' ', $name);
 
         return trim(preg_replace('/\s+/', ' ', $name) ?? $name);
-    }
-
-    private function truncate(): void
-    {
-        $this->warn('Wiping quran_recitations, reciter_translations and quran_reciters…');
-
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
-        DB::table('quran_recitations')->truncate();
-        DB::table('reciter_translations')->truncate();
-        DB::table('quran_reciters')->truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
     }
 }

@@ -385,7 +385,7 @@
     $translationResourcesJson = json_encode($translationResources ?? [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
     $isMakki = ($surah['type'] ?? '') === 'makki';
     // Default reciter: Al-Husary (murattal); first in the list as fallback.
-    $defaultReciterId = collect($reciters)->firstWhere('everyayah_folder', 'Husary_128kbps')['id']
+    $defaultReciterId = collect($reciters)->firstWhere('slug', config('quran-audio.default_recording_slug'))['id']
         ?? ($reciters[0]['id'] ?? 0);
 @endphp
 
@@ -945,13 +945,14 @@
                             </div>
                             <div x-show="reciters.length > 1" class="mt-3">
                                 <p class="mushaf-pop-title">{{ __('quran.public.reciter') }}</p>
-                                <select :value="$store.audioPlayer.reciterId"
-                                        @change="$store.audioPlayer.selectReciter(parseInt($event.target.value))"
-                                        class="mushaf-pop-select">
-                                    @foreach($reciters as $r)
-                                    <option value="{{ $r['id'] }}">{{ $r['nameAr'] ?: $r['nameEn'] }}</option>
-                                    @endforeach
+                                <select :value="$store.audioPlayer.currentReciter()?.profileId || $store.audioPlayer.reciterId" @change="$store.audioPlayer.selectPerson(Number($event.target.value))" class="w-full rounded-lg border-gray-300 dark:bg-gray-800">
+                                    <template x-for="person in $store.audioPlayer.personOptions()" :key="person.id"><option :value="person.id" x-text="person.name"></option></template>
                                 </select>
+                                <label class="block mt-3" x-show="$store.audioPlayer.recordingOptions().length > 1">{{ __('quran.recordings.choose') }}
+                                    <select :value="$store.audioPlayer.reciterId" @change="$store.audioPlayer.selectReciter(Number($event.target.value))" class="w-full rounded-lg border-gray-300 dark:bg-gray-800">
+                                        <template x-for="r in $store.audioPlayer.recordingOptions()" :key="r.id"><option :value="r.id" x-text="r.recordingLabel || r.nameAr || r.nameEn"></option></template>
+                                    </select>
+                                </label>
                             </div>
                         </div>
                     </div>

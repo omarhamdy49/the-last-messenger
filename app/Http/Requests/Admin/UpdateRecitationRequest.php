@@ -45,6 +45,7 @@ class UpdateRecitationRequest extends FormRequest
 
         return [
             'reciter_id' => ['required', 'integer', 'exists:quran_reciters,id'],
+            'source_id' => ['nullable', 'integer', Rule::exists('quran_recording_sources', 'id')->where('recording_id', $reciterId)->where('kind', 'surah')],
             'surah_id' => [
                 'required',
                 'integer',
@@ -53,6 +54,7 @@ class UpdateRecitationRequest extends FormRequest
                     ->ignore($recitationId)
                     ->where(fn ($query) => $query
                         ->where('reciter_id', $reciterId)
+                        ->when($this->filled('source_id'), fn ($q) => $q->where('source_id', $this->integer('source_id')))
                         ->where('format', $this->input('format'))
                     ),
             ],
