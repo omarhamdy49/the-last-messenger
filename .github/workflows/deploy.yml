@@ -127,8 +127,11 @@ jobs:
       # No explicit `artisan migrate` here: every test class uses RefreshDatabase,
       # which migrates the fresh database itself on first use. Running it twice
       # was pure cost.
+      # phpunit directly, not `php artisan test`: the artisan wrapper passes its own
+      # --configuration, so a second one is refused ("cannot be used more than once")
+      # and the step exits 1 with every test green.
       - name: 🧪 Run critical tests
-        run: php artisan test --testsuite=Critical --stop-on-failure
+        run: vendor/bin/phpunit -c phpunit.critical.xml --stop-on-failure
 
   # ── Gate: code style (baseline cleared 13 Sep 2026) ─────────────────────────
   style:

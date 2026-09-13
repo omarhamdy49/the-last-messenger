@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The deploy gate (.github/workflows/deploy.yml): the tests whose failure means
+  production must not ship — auth/authorization boundaries, public visibility,
+  API security, every admin + API route rendering, and the pure unit layer.
+  Kept to what runs in seconds (~20s vs ~5 minutes for the full suite).
+
+  This lives in its own file rather than as a third <testsuite> in phpunit.xml on
+  purpose. PHPUnit refuses to add a file to two suites in the same configuration
+  and emits a "Cannot add file … as it was already added to test suite" runner
+  warning for each one; a run carrying warnings exits 1 even when every test
+  passes, which made `php artisan test` permanently red. Separate configs, no
+  overlap, honest exit codes.
+
+  The full suite is NOT run by CI — run `php artisan test` locally before pushing
+  anything this subset does not cover.
+
+  Add a file here only when a red result should block a deploy. The <php> block
+  must stay in sync with phpunit.xml.
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Critical">
+            <directory>tests/Unit</directory>
+            <directory>tests/Feature/Security</directory>
+            <file>tests/Feature/PublicVisibilityGatingTest.php</file>
+            <file>tests/Feature/LocaleConfigurationTest.php</file>
+            <file>tests/Feature/Admin/AdminAuthorizationTest.php</file>
+            <file>tests/Feature/Admin/AdminAuthSeparationTest.php</file>
+            <file>tests/Feature/Admin/UserRoleAuthorizationTest.php</file>
+            <file>tests/Feature/Admin/AdminRouteSmokeTest.php</file>
+            <file>tests/Feature/Api/ApiSecurityBoundaryTest.php</file>
+            <file>tests/Feature/Api/ApiRouteSmokeTest.php</file>
+            <file>tests/Feature/Api/AuthTest.php</file>
+            <file>tests/Feature/Api/ShippedBugRegressionTest.php</file>
+            <file>tests/Feature/Web/AuthWebTest.php</file>
+            <file>tests/Feature/Web/ProfileSecurityTest.php</file>
+            <file>tests/Feature/Web/ProfileFavoritesTest.php</file>
+            <file>tests/Feature/Web/QuranPlaylistTest.php</file>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+    </source>
+    <php>
+        <!-- The 437-test suite peaks just past PHP's default 128M. -->
+        <ini name="memory_limit" value="512M"/>
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="BROADCAST_CONNECTION" value="null"/>
+        <env name="CACHE_STORE" value="array"/>
+        <env name="DB_CONNECTION" value="mysql"/>
+        <env name="DB_DATABASE" value="the_last_messenger_test"/>
+        <env name="MAIL_MAILER" value="array"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="PULSE_ENABLED" value="false"/>
+        <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="LOG_CHANNEL" value="stderr"/>
+    </php>
+</phpunit>
