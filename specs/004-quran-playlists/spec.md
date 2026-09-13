@@ -268,11 +268,10 @@ sticky bottom action bar; `beforeunload` guard while dirty; back always availabl
 Compact card list (name, meta, public badge, play, edit) + dashed "قائمة جديدة" tile; empty
 state points to the wizard.
 
-### 4.5 Quran home section
+### 4.5 Quran home entry
 
-"قوائم الاستماع": featured playlist (if any) as a wide row, then up to 3 latest public as cards,
-"عرض الكل" link, and the CTA. Section hidden entirely when there are no public playlists and
-the visitor is a guest.
+The Quran page embeds nothing: a single "قوائم الاستماع" button in the hero (next to the
+reciters button) links to the standalone gallery. Decided with the user on 2026-09-13.
 
 ### 4.6 Admin
 

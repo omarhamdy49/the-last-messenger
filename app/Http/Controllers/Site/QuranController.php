@@ -14,12 +14,10 @@ use App\Domain\Quran\Models\Reciter;
 use App\Domain\Quran\Models\ReciterProfile;
 use App\Domain\Quran\Repositories\AiInquiryQuotaRepositoryInterface;
 use App\Domain\Quran\Repositories\AiInquiryRepositoryInterface;
-use App\Domain\Quran\Repositories\PlaylistRepository;
 use App\Domain\Quran\Repositories\RecitationRepository;
 use App\Domain\Quran\Services\AnswerHtmlRenderer;
 use App\Domain\Quran\Services\AnswerVerseLinker;
 use App\Domain\Quran\Services\AyahTimingService;
-use App\Domain\Quran\Services\PlaylistCard;
 use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Quran\Services\QuranInquirySearchService;
 use App\Domain\Quran\Services\QuranQueryService;
@@ -305,24 +303,7 @@ final class QuranController extends Controller
             'madani' => 28,
         ];
 
-        $locale = app()->getLocale();
-        $playlists = Cache::remember(QuranCacheKeys::playlistScoped('home:'.$locale), 600, function () use ($locale): array {
-            $repo = app(PlaylistRepository::class);
-
-            $featured = $repo->featured(1)->map(fn ($p) => PlaylistCard::from($p, $locale))->first();
-
-            return [
-                'featured' => $featured,
-                // The featured playlist already has the wide slot; don't repeat it in the row.
-                'latest' => $repo->latestPublic(4)
-                    ->reject(fn ($p) => $p->slug === ($featured['slug'] ?? null))
-                    ->take(3)
-                    ->map(fn ($p) => PlaylistCard::from($p, $locale))
-                    ->values()->all(),
-            ];
-        });
-
-        return view('public.quran.index', compact('surahs', 'stats', 'playlists'));
+        return view('public.quran.index', compact('surahs', 'stats'));
     }
 
     /**

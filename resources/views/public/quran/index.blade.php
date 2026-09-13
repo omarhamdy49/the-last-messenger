@@ -278,6 +278,11 @@
                             <i data-lucide="mic" class="w-5 h-5"></i>
                             <span>{{ __('quran.public.reciters_hero_title') }}</span>
                         </a>
+                        <a href="{{ route('public.quran.playlists.index') }}"
+                           class="group inline-flex items-center gap-3 px-7 py-4 rounded-2xl glass text-white font-bold text-base border border-white/25 hover:bg-white/20 hover:-translate-y-0.5 active:scale-[0.98] transition-all">
+                            <i data-lucide="list-music" class="w-5 h-5"></i>
+                            <span>{{ __('quran.playlists.title') }}</span>
+                        </a>
                     </div>
                     <p class="mt-3 text-sm text-white/80 max-w-xl mx-auto">{{ __('quran.public.ask_hero_subtitle') }}</p>
                 </div>
@@ -303,60 +308,6 @@
                 </div>
             </div>
         </div>
-
-        {{-- ============================================================ --}}
-        {{-- LISTENING PLAYLISTS — entry point to the reciter playlists --}}
-        {{-- ============================================================ --}}
-        @php $plCreateUrl = auth()->check() ? route('public.quran.playlists.create') : route('public.login'); @endphp
-        @if (($playlists['featured'] ?? null) || ! empty($playlists['latest']) || auth()->check())
-            <section class="mb-10" aria-labelledby="pl-home-title">
-                <div class="grid md:grid-cols-[1fr_auto] items-end gap-4 mb-5">
-                    <div>
-                        <h2 id="pl-home-title" class="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white flex items-center gap-3">
-                            <span class="w-1 h-7 rounded-full bg-gradient-to-b from-[#0056b3] to-[#218838]"></span>
-                            {{ __('quran.playlists.home_title') }}
-                        </h2>
-                        <p class="mt-1.5 text-sm text-gray-600 dark:text-gray-300 max-w-[60ch]">{{ __('quran.playlists.home_subtitle') }}</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <a href="{{ route('public.quran.playlists.index') }}"
-                           class="inline-flex items-center gap-1.5 h-11 px-4 rounded-full text-sm font-semibold text-primary border border-primary/30 hover:bg-primary/5 transition-colors">
-                            {{ __('quran.playlists.view_all') }}
-                            <i data-lucide="{{ in_array(app()->getLocale(), ['ar', 'ur'], true) ? 'arrow-left' : 'arrow-right' }}" class="w-4 h-4"></i>
-                        </a>
-                        <a href="{{ $plCreateUrl }}"
-                           @if (! auth()->check()) @click.prevent="$dispatch('open-login')" @endif
-                           class="inline-flex items-center gap-2 h-11 px-5 rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] text-white text-sm font-bold shadow-sm transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.98]">
-                            <i data-lucide="list-plus" class="w-4 h-4"></i>{{ __('quran.playlists.create') }}
-                        </a>
-                    </div>
-                </div>
-
-                @if (($playlists['featured'] ?? null) || ! empty($playlists['latest']))
-                    <div class="grid gap-5 {{ ($playlists['featured'] ?? null) ? 'lg:grid-cols-[2fr_3fr]' : '' }}">
-                        @if ($playlists['featured'] ?? null)
-                            <x-site.playlist-card :card="$playlists['featured']" size="wide" />
-                        @endif
-                        @if (! empty($playlists['latest']))
-                            <div class="grid sm:grid-cols-3 gap-4">
-                                @foreach ($playlists['latest'] as $i => $card)
-                                    <x-site.playlist-card :card="$card" :index="$i" />
-                                @endforeach
-                            </div>
-                        @endif
-                    </div>
-                @else
-                    <a href="{{ route('public.quran.playlists.create') }}"
-                       class="flex items-center gap-4 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 p-6 text-gray-600 dark:text-gray-300 hover:border-primary hover:text-primary transition-colors">
-                        <span class="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center"><i data-lucide="list-music" class="w-6 h-6"></i></span>
-                        <span>
-                            <span class="block font-bold">{{ __('quran.playlists.empty') }}</span>
-                            <span class="block text-sm">{{ __('quran.playlists.empty_hint') }}</span>
-                        </span>
-                    </a>
-                @endif
-            </section>
-        @endif
 
         {{-- ============================================================ --}}
         {{-- CONTROLS TOOLBAR (premium unified panel) --}}

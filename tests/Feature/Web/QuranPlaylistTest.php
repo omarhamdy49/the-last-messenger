@@ -219,12 +219,8 @@ final class QuranPlaylistTest extends TestCase
         $this->actingAs($owner)->get(route('public.profile'))->assertOk()->assertSee('قائمة الفجر');
     }
 
-    public function test_quran_home_shows_public_playlists_section(): void
+    public function test_quran_home_links_to_the_playlists_page(): void
     {
-        $surahs = $this->surahs(1);
-        [, $recA] = $this->person('a', $surahs);
-        $this->makePlaylist(User::factory()->create(), [1 => $recA], true, 'قائمة المغرب');
-
-        $this->get(route('public.quran'))->assertOk()->assertSee('قائمة المغرب');
+        $this->get(route('public.quran'))->assertOk()->assertSee(route('public.quran.playlists.index'), false);
     }
 }
