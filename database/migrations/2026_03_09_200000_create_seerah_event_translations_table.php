@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -28,7 +29,7 @@ return new class extends Migration
 
         // Add FULLTEXT index (MySQL-specific)
         if (config('database.default') === 'mysql') {
-            \Illuminate\Support\Facades\DB::statement(
+            DB::statement(
                 'ALTER TABLE seerah_event_translations ADD FULLTEXT fulltext_title_description (title, description)'
             );
         }

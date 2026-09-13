@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
 /**
  * MediaEpisode Factory
  *
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Domain\Media\Models\MediaEpisode>
+ * @extends Factory<MediaEpisode>
  */
 class MediaEpisodeFactory extends Factory
 {

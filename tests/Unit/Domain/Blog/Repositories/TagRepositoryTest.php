@@ -7,6 +7,7 @@ namespace Tests\Unit\Domain\Blog\Repositories;
 use App\Domain\Blog\Models\Tag;
 use App\Domain\Blog\Models\TagTranslation;
 use App\Domain\Blog\Repositories\TagRepository;
+use App\Models\Article;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -28,7 +29,7 @@ final class TagRepositoryTest extends TestCase
     {
         parent::setUp();
 
-        $this->repository = new TagRepository();
+        $this->repository = new TagRepository;
     }
 
     private function createTag(string $slug, int $usageCount = 0): Tag
@@ -48,9 +49,9 @@ final class TagRepositoryTest extends TestCase
         return $tag;
     }
 
-    private function createArticle(string $slug): \App\Models\Article
+    private function createArticle(string $slug): Article
     {
-        return \App\Models\Article::create([
+        return Article::create([
             'slug' => $slug,
             'status' => 'published',
             'featured_image' => null,
@@ -60,7 +61,7 @@ final class TagRepositoryTest extends TestCase
         ]);
     }
 
-    private function attachTagToArticle(Tag $tag, \App\Models\Article $article): void
+    private function attachTagToArticle(Tag $tag, Article $article): void
     {
         DB::table('taggables')->insert([
             'tag_id' => $tag->id,

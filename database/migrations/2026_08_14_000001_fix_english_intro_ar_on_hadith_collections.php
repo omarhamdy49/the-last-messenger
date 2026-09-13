@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domain\Hadith\Services\HadithBrowseService;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
@@ -41,7 +42,7 @@ return new class extends Migration
             DB::table('hadith_collections')->where('slug', $slug)->update(['intro_ar' => $intro]);
         }
 
-        \App\Domain\Hadith\Services\HadithBrowseService::forget();
+        HadithBrowseService::forget();
     }
 
     public function down(): void
