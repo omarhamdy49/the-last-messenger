@@ -6,13 +6,13 @@ namespace App\Jobs;
 
 use App\Domain\Shared\Models\BulkOperation;
 use App\Domain\Shared\Services\BulkOperationService;
+use App\Notifications\BulkOperationFinished;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 /**
@@ -70,9 +70,8 @@ class ProcessBulkOperation implements ShouldQueue
                 'duration' => $this->operation->getDuration(),
             ]);
 
-            // Send notification if enabled
-            if ($this->operation->notify_on_completion) {
-                $this->sendCompletionNotification();
+            if ($this->operation->notify_on_completion && ! $this->operation->dry_run) {
+                $this->sendNotification();
             }
         } catch (Throwable $e) {
             Log::error('Bulk operation processing failed', [
@@ -83,11 +82,7 @@ class ProcessBulkOperation implements ShouldQueue
 
             $this->operation->markAsFailed($e->getMessage());
 
-            // Send failure notification
-            if ($this->operation->notify_on_completion) {
-                $this->sendFailureNotification($e->getMessage());
-            }
-
+            // Retries may still succeed. Notify only from failed() after exhaustion.
             throw $e;
         }
     }
@@ -97,6 +92,9 @@ class ProcessBulkOperation implements ShouldQueue
      */
     public function failed(Throwable $exception): void
     {
+        // Queue workers may invoke this on a freshly deserialized job instance.
+        $this->operation->refresh();
+
         Log::error('process_bulk_operation.failed', [
             'job' => static::class,
             'operation_id' => $this->operation->id,
@@ -109,56 +107,29 @@ class ProcessBulkOperation implements ShouldQueue
 
         // Send failure notification
         if ($this->operation->notify_on_completion) {
-            $this->sendFailureNotification($exception->getMessage());
+            $this->sendNotification();
         }
     }
 
     /**
-     * Send completion notification
+     * Queue a snapshot so mail delivery cannot re-run a completed operation.
      */
-    private function sendCompletionNotification(): void
+    private function sendNotification(): void
     {
         try {
             $user = $this->operation->creator;
 
             if ($user && $user->email) {
-                // TODO: Implement email notification
-                // Mail::to($user->email)->send(new BulkOperationCompletedMail($this->operation));
+                $user->notify(BulkOperationFinished::forOperation($this->operation, $user->getPreferredLanguage()));
 
-                Log::info('Bulk operation completion notification sent', [
+                Log::info('Bulk operation notification queued', [
                     'operation_id' => $this->operation->id,
                     'user_id' => $user->id,
-                    'email' => $user->email,
                 ]);
             }
         } catch (Throwable $e) {
-            Log::error('Failed to send completion notification', [
-                'operation_id' => $this->operation->id,
-                'error' => $e->getMessage(),
-            ]);
-        }
-    }
-
-    /**
-     * Send failure notification
-     */
-    private function sendFailureNotification(string $errorMessage): void
-    {
-        try {
-            $user = $this->operation->creator;
-
-            if ($user && $user->email) {
-                // TODO: Implement email notification
-                // Mail::to($user->email)->send(new BulkOperationFailedMail($this->operation, $errorMessage));
-
-                Log::info('Bulk operation failure notification sent', [
-                    'operation_id' => $this->operation->id,
-                    'user_id' => $user->id,
-                    'email' => $user->email,
-                ]);
-            }
-        } catch (Throwable $e) {
-            Log::error('Failed to send failure notification', [
+            report($e);
+            Log::error('Failed to queue bulk operation notification', [
                 'operation_id' => $this->operation->id,
                 'error' => $e->getMessage(),
             ]);
@@ -176,7 +147,7 @@ class ProcessBulkOperation implements ShouldQueue
             'bulk-operation',
             'operation:'.$this->operation->id,
             'module:'.$this->operation->module,
-            'type:'.$this->operation->operation_type,
+            'type:'.$this->operation->operation_type->value,
         ];
     }
 }

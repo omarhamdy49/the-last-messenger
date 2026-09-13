@@ -44,7 +44,8 @@ class BulkOperationController extends Controller
                 itemIds: $request->input('item_ids'),
                 userId: $request->user()->id,
                 parameters: $request->input('parameters', []),
-                dryRun: $request->boolean('dry_run', false)
+                dryRun: $request->boolean('dry_run', false),
+                notifyOnCompletion: $request->boolean('notify_on_completion', false),
             );
 
             Log::info('Bulk operation created', [

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Domain\Shared\Enums\BulkOperationStatusEnum;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -42,7 +43,7 @@ class BulkOperationResource extends JsonResource
             ],
             'parameters' => $this->parameters,
             'result_data' => $this->when($this->isComplete(), $this->result_data),
-            'error_log' => $this->when($this->failed_count > 0, $this->error_log),
+            'error_log' => $this->when($this->failed_count > 0 || $this->status === BulkOperationStatusEnum::FAILED, $this->error_log),
             'dry_run' => $this->dry_run,
             'notify_on_completion' => $this->notify_on_completion,
             'duration' => $this->getDuration(),
