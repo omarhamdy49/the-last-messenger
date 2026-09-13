@@ -35,6 +35,9 @@ final class QuranCacheKeys
     /** Kept as-is: ReciterRepository has used this counter since before the scopes existed. */
     private const RECITER_VERSION_KEY = 'reciters:version';
 
+    /** Playlist listings (gallery, featured, home section, profile tab). */
+    private const PLAYLIST_VERSION_KEY = 'playlists:version';
+
     // -----------------------------------------------------------------------
     // Invalidation
     // -----------------------------------------------------------------------
@@ -58,6 +61,15 @@ final class QuranCacheKeys
     public static function flushReciters(): void
     {
         self::bump(self::RECITER_VERSION_KEY);
+    }
+
+    /**
+     * Invalidate every cached playlist listing. Play counts do not call this:
+     * they are eventually consistent in listings.
+     */
+    public static function flushPlaylists(): void
+    {
+        self::bump(self::PLAYLIST_VERSION_KEY);
     }
 
     public static function contentVersion(): int
@@ -89,6 +101,14 @@ final class QuranCacheKeys
     public static function reciterScoped(string $key): string
     {
         return 'reciters:v'.self::reciterVersion().':'.$key;
+    }
+
+    /**
+     * Prefix a key with the current playlist version.
+     */
+    public static function playlistScoped(string $key): string
+    {
+        return 'playlists:v'.((int) Cache::get(self::PLAYLIST_VERSION_KEY, 0)).':'.$key;
     }
 
     // -----------------------------------------------------------------------
