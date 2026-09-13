@@ -6,10 +6,10 @@
 @push('head')
 <style>
     .eq-bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }
-    .eq-bars span { width: 3px; border-radius: 2px; background: currentColor; animation: eqBounce 1s ease-in-out infinite; }
+    .eq-bars span { width: 3px; border-radius: 2px; background: currentColor; animation: eqLevel 1s ease-in-out infinite; }
     .eq-bars span:nth-child(2) { animation-delay: .2s; }
     .eq-bars span:nth-child(3) { animation-delay: .4s; }
-    @keyframes eqBounce { 0%, 100% { height: 4px; } 50% { height: 14px; } }
+    @keyframes eqLevel { 0%, 100% { height: 4px; } 50% { height: 14px; } }
     @keyframes plFadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
     .pl-in { animation: plFadeUp .5s cubic-bezier(.16,1,.3,1) both; }
     .pl-in-2 { animation: plFadeUp .5s cubic-bezier(.16,1,.3,1) .12s both; }
@@ -18,7 +18,15 @@
     .pl-glass { background: rgba(255,255,255,.10); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,.22); box-shadow: inset 0 1px 0 rgba(255,255,255,.28); }
     .pl-glass-btn { background: rgba(255,255,255,.12); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.25); }
     .pl-glass-btn:hover { background: rgba(255,255,255,.2); }
-    @media (prefers-reduced-motion: reduce) { .eq-bars span { animation: none; height: 10px; } .pl-in, .pl-in-2, .pl-row { animation: none; } }
+    /* Living cover: a second brand gradient (accent → primary → secondary) whose opacity breathes
+       while this playlist is playing. Opacity only, so it stays on the compositor. */
+    .pl-cover-alt { background: linear-gradient(225deg, #64CCC5 0%, #0056b3 50%, #218838 100%); opacity: 0; transition: opacity 1.2s ease; }
+    .pl-cover-alt.pl-breathing { animation: plBreathe 12s ease-in-out infinite; }
+    @keyframes plBreathe { 0%, 100% { opacity: 0; } 50% { opacity: .78; } }
+    /* Now-playing bar: enters from under the site header */
+    .pl-now { transition: transform .35s cubic-bezier(.16,1,.3,1), opacity .35s ease; }
+    .pl-now[hidden] { display: none; }
+    @media (prefers-reduced-motion: reduce) { .eq-bars span { animation: none; height: 10px; } .pl-in, .pl-in-2, .pl-row { animation: none; } .pl-cover-alt.pl-breathing { animation: none; opacity: .4; } .pl-now { transition: none; } }
 </style>
 @endpush
 
@@ -51,19 +59,20 @@
 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
 
     {{-- Breadcrumb --}}
-    <nav class="mb-5 text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2 flex-wrap" aria-label="breadcrumb">
+    <nav class="mb-5 text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 flex-wrap" aria-label="breadcrumb">
         <a href="{{ route('public.quran') }}" class="hover:text-primary transition-colors">{{ __('quran.public.page_title') }}</a>
         <i data-lucide="{{ $isRtl ? 'chevron-left' : 'chevron-right' }}" class="w-4 h-4"></i>
         <a href="{{ route('public.quran.playlists.index') }}" class="hover:text-primary transition-colors">{{ __('quran.playlists.title') }}</a>
         <i data-lucide="{{ $isRtl ? 'chevron-left' : 'chevron-right' }}" class="w-4 h-4"></i>
-        <span class="text-zinc-900 dark:text-white font-semibold truncate max-w-[18rem]">{{ $playlist->name }}</span>
+        <span class="text-gray-900 dark:text-white font-semibold truncate max-w-[18rem]">{{ $playlist->name }}</span>
     </nav>
 
     {{-- ============================ HERO: the playlist's own tint, copy | glass collage ============================ --}}
     {{-- No overflow clipping on the header itself: the reciters/more dropdowns must escape it.
          Everything decorative is clipped inside its own layer. --}}
-    <header class="relative rounded-3xl shadow-2xl mb-8 sm:mb-10 text-white">
+    <header class="relative rounded-3xl shadow-2xl mb-6 sm:mb-8 text-white" x-ref="hero">
         <div class="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none" aria-hidden="true" style="background: linear-gradient(135deg, #0056b3 0%, #116a53 55%, #218838 100%)">
+            <div class="pl-cover-alt absolute inset-0" :class="listPlaying ? 'pl-breathing' : ''"></div>
             <div class="absolute inset-0 opacity-10">
                 <div class="absolute inset-0" style="background-image: url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.4\"%3E%3Cpath d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
             </div>
@@ -154,11 +163,11 @@
                                 <i data-lucide="chevron-down" class="w-4 h-4 transition-transform" :class="open ? 'rotate-180' : ''"></i>
                             </button>
                             <ul x-show="open" x-cloak x-transition.origin.top role="menu" aria-label="{{ __('quran.public.reciters') }}"
-                                class="absolute z-20 top-full mt-2 start-0 w-64 max-h-72 overflow-y-auto rounded-2xl bg-white dark:bg-zinc-900 shadow-2xl border border-zinc-200/80 dark:border-white/10 p-1.5">
+                                class="absolute z-20 top-full mt-2 start-0 w-64 max-h-72 overflow-y-auto rounded-2xl bg-white dark:bg-gray-900 shadow-2xl border border-gray-200/80 dark:border-white/10 p-1.5">
                                 @foreach ($reciters as $r)
                                     <li>
                                         <a href="{{ $r['url'] }}" role="menuitem"
-                                           class="flex items-center gap-3 h-11 px-2 rounded-xl text-sm font-semibold text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors">
+                                           class="flex items-center gap-3 h-11 px-2 rounded-xl text-sm font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
                                             <x-site.reciter-avatar :name="$r['name']" :image="$r['image']" size="w-8 h-8" text="text-[8px]" :compact="true" />
                                             <span class="truncate">{{ $r['name'] }}</span>
                                         </a>
@@ -183,11 +192,11 @@
                                 <i data-lucide="more-vertical" class="w-5 h-5"></i>
                             </button>
                             <div x-show="open" x-cloak x-transition.origin.top
-                                 class="absolute z-20 top-full mt-2 start-0 w-64 rounded-2xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xl border border-zinc-200/80 dark:border-white/10 p-1.5" role="menu">
+                                 class="absolute z-20 top-full mt-2 start-0 w-64 rounded-2xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-2xl border border-gray-200/80 dark:border-white/10 p-1.5" role="menu">
                                 <template x-if="!confirming">
                                     <div>
                                         <a href="{{ route('public.quran.playlists.edit', $playlist->slug) }}" role="menuitem"
-                                           class="flex items-center gap-3 h-11 px-3 rounded-xl text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors">
+                                           class="flex items-center gap-3 h-11 px-3 rounded-xl text-sm font-semibold hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
                                             <i data-lucide="pencil" class="w-4 h-4 text-primary"></i>{{ __('quran.playlists.edit') }}
                                         </a>
                                         <button type="button" role="menuitem" @click="confirming = true; $nextTick(() => window.lucide?.createIcons())"
@@ -199,10 +208,10 @@
                                 <template x-if="confirming">
                                     <div class="p-2" role="alertdialog" aria-live="polite">
                                         <p class="text-sm font-bold">{{ __('quran.playlists.delete_title') }}</p>
-                                        <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{{ __('quran.playlists.delete_confirm') }}</p>
+                                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('quran.playlists.delete_confirm') }}</p>
                                         <div class="mt-3 grid grid-cols-2 gap-2">
                                             <button type="button" @click="open = false; confirming = false"
-                                                    class="h-10 rounded-xl text-sm font-semibold bg-zinc-100 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/15 transition-colors">{{ __('quran.playlists.cancel') }}</button>
+                                                    class="h-10 rounded-xl text-sm font-semibold bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 transition-colors">{{ __('quran.playlists.cancel') }}</button>
                                             <button type="button" @click="destroy()" :disabled="deleting"
                                                     class="h-10 rounded-xl text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-60 transition-colors flex items-center justify-center gap-1.5">
                                                 <i data-lucide="loader-2" class="w-4 h-4 animate-spin" x-show="deleting" x-cloak></i>
@@ -249,18 +258,54 @@
         </div>
     </header>
 
+    {{-- ============================ NOW PLAYING (sticky once the hero scrolls away) ============================ --}}
+    <div class="pl-now sticky z-30 mb-4" :style="`top:${stickyTop}px`"
+         x-show="heroOut && current" x-cloak
+         x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0 -translate-y-2"
+         role="region" aria-label="{{ __('quran.playlists.now_playing') }}">
+        <div class="relative overflow-hidden rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white/85 dark:bg-gray-900/85 backdrop-blur-xl shadow-[0_12px_32px_-16px_rgba(0,86,179,0.35)] ps-2 pe-2 sm:pe-3 py-2 flex items-center gap-3">
+            <template x-if="current?.reciterImage">
+                <img :src="current.reciterImage" alt="" class="w-11 h-11 rounded-xl object-cover shrink-0">
+            </template>
+            <template x-if="!current?.reciterImage">
+                <span class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#0056b3] to-[#218838] text-white text-[9px] font-bold flex items-center justify-center text-center px-1 shrink-0 leading-tight" x-text="(current?.reciterName || '').split(' ')[0]"></span>
+            </template>
+            <div class="min-w-0 flex-1">
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('quran.playlists.now_playing') }}</p>
+                <p class="font-bold text-gray-900 dark:text-white truncate leading-tight"><span x-text="current?.surahName"></span><span class="font-normal text-gray-500 dark:text-gray-400 text-sm"> · <span x-text="current?.reciterName"></span></span></p>
+            </div>
+            <div class="flex items-center gap-1 shrink-0" dir="ltr">
+                <button type="button" @click="$store.audioPlayer.step(-1)" :disabled="!$store.audioPlayer.canStep(-1)"
+                        class="w-10 h-10 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        aria-label="{{ __('quran.public.previous_track') }}"><i data-lucide="skip-back" class="w-4 h-4 fill-current"></i></button>
+                <button type="button" @click="$store.audioPlayer.toggle()"
+                        class="w-11 h-11 rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] text-white flex items-center justify-center shadow-md transition-transform active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        :aria-label="$store.audioPlayer.playing ? @js(__('quran.public.pause')) : @js(__('quran.playlists.play'))">
+                    <i data-lucide="play" class="w-5 h-5 fill-current" x-show="!$store.audioPlayer.playing"></i>
+                    <i data-lucide="pause" class="w-5 h-5 fill-current" x-show="$store.audioPlayer.playing" x-cloak></i>
+                </button>
+                <button type="button" @click="$store.audioPlayer.step(1)" :disabled="!$store.audioPlayer.canStep(1)"
+                        class="w-10 h-10 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        aria-label="{{ __('quran.public.next_track') }}"><i data-lucide="skip-forward" class="w-4 h-4 fill-current"></i></button>
+            </div>
+            {{-- accent progress line --}}
+            <span class="absolute bottom-0 start-0 h-[3px] bg-accent transition-[width] duration-500 ease-linear" :style="`width:${progress}%`" aria-hidden="true"></span>
+        </div>
+    </div>
+
     {{-- ============================ TRACK LIST ============================ --}}
     @if (count($tracks))
-        <section class="rounded-3xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-zinc-900 overflow-hidden" aria-labelledby="pl-tracks-title">
-            <div class="px-4 sm:px-6 py-4 border-b border-zinc-100 dark:border-white/10 flex flex-wrap items-center justify-between gap-3">
-                <h2 id="pl-tracks-title" class="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+        <section class="rounded-3xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-gray-900 overflow-hidden" aria-labelledby="pl-tracks-title">
+            <div class="px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-white/10 flex flex-wrap items-center justify-between gap-3">
+                <h2 id="pl-tracks-title" class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     <i data-lucide="list-music" class="w-5 h-5 text-primary"></i>{{ __('quran.playlists.tracks_title') }}
                 </h2>
                 <dl class="flex items-center gap-x-4 sm:gap-x-6 text-sm tabular-nums">
                     @foreach ($stats as $stat)
                         <div class="flex items-baseline gap-1.5">
-                            <dd class="text-lg sm:text-xl font-black text-zinc-900 dark:text-white leading-none">{{ $stat['value'] }}</dd>
-                            <dt class="text-xs text-zinc-500 dark:text-zinc-400">{{ $stat['label'] }}</dt>
+                            <dd class="text-lg sm:text-xl font-black text-gray-900 dark:text-white leading-none">{{ $stat['value'] }}</dd>
+                            <dt class="text-xs text-gray-500 dark:text-gray-400">{{ $stat['label'] }}</dt>
                         </div>
                     @endforeach
                     @if ($playableCount < count($tracks))
@@ -269,17 +314,17 @@
                 </dl>
             </div>
 
-            <ol class="divide-y divide-zinc-100 dark:divide-white/10" role="list">
+            <ol class="divide-y divide-gray-100 dark:divide-white/10" role="list">
                 @foreach ($tracks as $i => $t)
                     @php $hasAudio = (bool) $t['url']; @endphp
                     <li style="--i: {{ $i }}"
                         class="pl-row relative grid grid-cols-[auto_1fr_auto] sm:grid-cols-[auto_1fr_minmax(200px,1.2fr)_auto_auto] gap-x-3 sm:gap-x-5 items-center px-3 sm:px-5 py-2.5 sm:py-3 transition-colors"
-                        :class="isActive({{ $i }}) ? 'bg-primary/[0.06] dark:bg-primary/10' : 'hover:bg-zinc-50 dark:hover:bg-white/[0.03]'">
+                        :class="isActive({{ $i }}) ? 'bg-primary/[0.06] dark:bg-primary/10' : 'hover:bg-gray-50 dark:hover:bg-white/[0.03]'">
                         <span class="absolute inset-y-2 start-0 w-1 rounded-e-full bg-gradient-to-b from-[#0056b3] to-[#218838] transition-opacity" :class="isActive({{ $i }}) ? 'opacity-100' : 'opacity-0'" aria-hidden="true"></span>
 
                         {{-- Artwork tile: the reciter's portrait, surah number badge, play/equalizer overlay --}}
                         <button type="button" @click="playAt({{ $i }})" @disabled(! $hasAudio)
-                                class="group/t relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-zinc-100 dark:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed"
+                                class="group/t relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-gray-100 dark:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed"
                                 aria-label="{{ __('quran.playlists.play') }} {{ $t['surahName'] }}">
                             @if ($t['recording'])
                                 <x-site.reciter-avatar :name="$t['reciterName'] ?? '?'" :image="$t['reciterImage']" size="w-full h-full" shape="rounded-none" text="text-[8px]" :compact="true" />
@@ -288,20 +333,20 @@
                             @endif
                             <span class="absolute inset-0 flex items-center justify-center text-white transition-opacity duration-200"
                                   :class="isActive({{ $i }}) ? 'bg-gradient-to-br from-[#0056b3]/80 to-[#218838]/80 opacity-100' : 'bg-black/35 opacity-0 group-hover/t:opacity-100 group-focus-visible/t:opacity-100'">
-                                <span x-show="isActive({{ $i }}) && $store.audioPlayer.playing" x-cloak class="eq-bars" aria-hidden="true"><span></span><span></span><span></span></span>
+                                <span x-show="isActive({{ $i }}) && $store.audioPlayer.playing" x-cloak class="eq-bars text-accent" aria-hidden="true"><span></span><span></span><span></span></span>
                                 <i data-lucide="play" class="w-4 h-4 fill-current {{ $isRtl ? '-scale-x-100' : '' }}" x-show="!(isActive({{ $i }}) && $store.audioPlayer.playing)"></i>
                             </span>
                             <span class="absolute bottom-0 start-0 min-w-[20px] h-[18px] px-1 rounded-te-lg text-[10px] font-bold tabular-nums flex items-center justify-center transition-colors"
-                                  :class="isActive({{ $i }}) ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white' : 'bg-white/95 text-zinc-800 dark:bg-zinc-900/95 dark:text-zinc-100'">{{ $num($t['surah']) }}</span>
+                                  :class="isActive({{ $i }}) ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white' : 'bg-white/95 text-gray-800 dark:bg-gray-900/95 dark:text-gray-100'">{{ $num($t['surah']) }}</span>
                         </button>
 
                         {{-- Title + subtitle: tap plays. Phones show the reciter here; desktop has its own column. --}}
                         <button type="button" @click="playAt({{ $i }})" @disabled(! $hasAudio)
-                                class="min-w-0 text-start rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-default">
-                            <span class="block font-bold text-[15px] sm:text-base truncate transition-colors" :class="isActive({{ $i }}) ? 'text-primary' : 'text-zinc-900 dark:text-white'">{{ $t['surahName'] }}</span>
-                            <span class="block text-xs text-zinc-500 dark:text-zinc-400 truncate tabular-nums">
+                                class="min-w-0 text-start rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-default">
+                            <span class="block font-bold text-[15px] sm:text-base truncate transition-colors" :class="isActive({{ $i }}) ? 'text-primary' : 'text-gray-900 dark:text-white'">{{ $t['surahName'] }}</span>
+                            <span class="block text-xs text-gray-500 dark:text-gray-400 truncate tabular-nums">
                                 @if ($t['recording'])
-                                    <span class="sm:hidden">{{ $t['reciterName'] }}<span class="text-zinc-400 dark:text-zinc-500"> · {{ $t['recordingLabel'] }}</span></span>
+                                    <span class="sm:hidden">{{ $t['reciterName'] }}<span class="text-gray-400 dark:text-gray-500"> · {{ $t['recordingLabel'] }}</span></span>
                                 @else
                                     <span class="sm:hidden text-amber-700 dark:text-amber-300">{{ __('quran.playlists.needs_reciter') }}</span>
                                 @endif
@@ -312,10 +357,10 @@
                         {{-- Reciter (desktop column, linked) --}}
                         <div class="hidden sm:block min-w-0">
                             @if ($t['recording'])
-                                <a href="{{ $t['reciterUrl'] ?? '#' }}" class="group/r inline-flex items-center gap-2.5 max-w-full rounded-xl -m-1 p-1 hover:bg-white dark:hover:bg-zinc-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60">
+                                <a href="{{ $t['reciterUrl'] ?? '#' }}" class="group/r inline-flex items-center gap-2.5 max-w-full rounded-xl -m-1 p-1 hover:bg-white dark:hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
                                     <span class="min-w-0">
-                                        <span class="block text-sm font-semibold text-zinc-800 dark:text-zinc-100 truncate group-hover/r:text-primary transition-colors">{{ $t['reciterName'] }}</span>
-                                        <span class="block text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{{ $t['recordingLabel'] }}</span>
+                                        <span class="block text-sm font-semibold text-gray-800 dark:text-gray-100 truncate group-hover/r:text-primary transition-colors">{{ $t['reciterName'] }}</span>
+                                        <span class="block text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ $t['recordingLabel'] }}</span>
                                     </span>
                                 </a>
                             @else
@@ -326,15 +371,15 @@
                         </div>
 
                         {{-- Duration (desktop column) --}}
-                        <span class="hidden sm:block text-sm text-zinc-500 dark:text-zinc-400 tabular-nums w-14 text-end">{{ $fmtDur($t['duration']) ?? '—' }}</span>
+                        <span class="hidden sm:block text-sm text-gray-500 dark:text-gray-400 tabular-nums w-14 text-end">{{ $fmtDur($t['duration']) ?? '—' }}</span>
 
                         {{-- Trailing: duration on phones + reader link --}}
                         <div class="flex items-center gap-1 justify-self-end">
                             @if ($t['duration'])
-                                <span class="sm:hidden text-[11px] text-zinc-400 dark:text-zinc-500 tabular-nums">{{ $fmtDur($t['duration']) }}</span>
+                                <span class="sm:hidden text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">{{ $fmtDur($t['duration']) }}</span>
                             @endif
                             <a href="{{ $t['readerUrl'] }}"
-                               class="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-zinc-400 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                               class="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                                aria-label="{{ __('quran.playlists.open_reader') }} — {{ $t['surahName'] }}" title="{{ __('quran.playlists.open_reader') }}">
                                 <i data-lucide="book-open" class="w-4 h-4"></i>
                             </a>
@@ -361,10 +406,29 @@ function playlistPage() {
         counted: false,
         visibilityPending: false,
         deleting: false,
+        heroOut: false,
+        stickyTop: 80,
         destroyUrl: @js(route('public.quran.playlists.destroy', $playlist->slug)),
 
         init() {
             this.$watch('isPublic', () => this.$nextTick(() => window.lucide?.createIcons()));
+            // The now-playing bar takes over when the hero leaves the viewport; it sits under the site header.
+            const header = document.querySelector('header'); // the site header precedes the hero in the DOM
+            this.stickyTop = (header?.getBoundingClientRect().height || 72) + 8;
+            if ('IntersectionObserver' in window && this.$refs.hero) {
+                new IntersectionObserver(([e]) => { this.heroOut = !e.isIntersecting; }, { rootMargin: `-${this.stickyTop}px 0px 0px 0px`, threshold: 0 }).observe(this.$refs.hero);
+            }
+            this.$watch('heroOut', () => this.$nextTick(() => window.lucide?.createIcons()));
+            this.$watch('current', () => this.$nextTick(() => window.lucide?.createIcons()));
+        },
+        // The list's track that is loaded in the shared player, if any.
+        get current() {
+            const url = this.$store.audioPlayer.track?.url;
+            return url ? (this.tracks.find(t => t.url === url) || null) : null;
+        },
+        get progress() {
+            const p = this.$store.audioPlayer;
+            return p.duration ? Math.min(100, (p.currentTime / p.duration) * 100) : 0;
         },
         get playable() {
             return this.tracks.filter(t => t.url).map(t => ({ url: t.url, title: t.surahName, subtitle: t.reciterName || '', readerUrl: t.readerUrl }));

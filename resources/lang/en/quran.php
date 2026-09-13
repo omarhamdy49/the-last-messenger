@@ -707,6 +707,7 @@ return [
         'delete_title' => 'Delete this playlist?',
         'cancel' => 'Cancel',
         'delete_confirm_btn' => 'Yes, delete',
+        'now_playing' => 'Now playing',
         'recording_variant' => 'Recording',
     ],
     // ------------------------------------------------------------------
