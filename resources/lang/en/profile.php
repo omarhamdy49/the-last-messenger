@@ -69,6 +69,8 @@ return [
     'type_seerah' => 'Seerah events',
     'type_media' => 'Media programs',
     'type_reciter' => 'Reciters',
+    'add_bookmark' => 'Save reciter to bookmarks',
+    'remove_bookmark' => 'Remove reciter from bookmarks',
     'type_unknown' => 'Unknown',
 
     // Bookmark display references

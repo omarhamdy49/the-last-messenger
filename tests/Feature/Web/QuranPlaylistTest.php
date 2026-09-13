@@ -197,4 +197,34 @@ final class QuranPlaylistTest extends TestCase
         $this->actingAs($owner)->deleteJson(route('public.quran.playlists.destroy', $playlist->slug))->assertOk();
         $this->assertDatabaseMissing('quran_playlists', ['id' => $playlist->id]);
     }
+
+    // ------------------------------------------------------------ entry points
+
+    public function test_reader_accepts_reciter_query_and_ignores_invalid(): void
+    {
+        $surahs = $this->surahs(1);
+        [, $recA] = $this->person('a', $surahs);
+
+        $this->get(route('public.quran.surah', 1).'?reciter='.$recA)->assertOk()->assertViewHas('forcedReciterId', $recA);
+        $this->get(route('public.quran.surah', 1).'?reciter=999999')->assertOk()->assertViewHas('forcedReciterId', null);
+    }
+
+    public function test_profile_lists_own_playlists(): void
+    {
+        $surahs = $this->surahs(1);
+        [, $recA] = $this->person('a', $surahs);
+        $owner = User::factory()->create();
+        $this->makePlaylist($owner, [1 => $recA], false, 'قائمة الفجر');
+
+        $this->actingAs($owner)->get(route('public.profile'))->assertOk()->assertSee('قائمة الفجر');
+    }
+
+    public function test_quran_home_shows_public_playlists_section(): void
+    {
+        $surahs = $this->surahs(1);
+        [, $recA] = $this->person('a', $surahs);
+        $this->makePlaylist(User::factory()->create(), [1 => $recA], true, 'قائمة المغرب');
+
+        $this->get(route('public.quran'))->assertOk()->assertSee('قائمة المغرب');
+    }
 }

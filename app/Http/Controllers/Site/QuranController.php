@@ -14,10 +14,12 @@ use App\Domain\Quran\Models\Reciter;
 use App\Domain\Quran\Models\ReciterProfile;
 use App\Domain\Quran\Repositories\AiInquiryQuotaRepositoryInterface;
 use App\Domain\Quran\Repositories\AiInquiryRepositoryInterface;
+use App\Domain\Quran\Repositories\PlaylistRepository;
 use App\Domain\Quran\Repositories\RecitationRepository;
 use App\Domain\Quran\Services\AnswerHtmlRenderer;
 use App\Domain\Quran\Services\AnswerVerseLinker;
 use App\Domain\Quran\Services\AyahTimingService;
+use App\Domain\Quran\Services\PlaylistCard;
 use App\Domain\Quran\Services\QuranCacheKeys;
 use App\Domain\Quran\Services\QuranInquirySearchService;
 use App\Domain\Quran\Services\QuranQueryService;
@@ -25,6 +27,8 @@ use App\Domain\Quran\Services\QuranReaderService;
 use App\Domain\Quran\Services\ReciterDirectoryService;
 use App\Domain\Quran\Services\ReciterService;
 use App\Domain\Quran\Services\VerseAudioUrlResolver;
+use App\Domain\Shared\Enums\FavorableType;
+use App\Domain\Shared\Services\FavoriteService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Site\AskQuranRequest;
 use App\Http\Support\QuestionSanitizer;
@@ -301,7 +305,17 @@ final class QuranController extends Controller
             'madani' => 28,
         ];
 
-        return view('public.quran.index', compact('surahs', 'stats'));
+        $locale = app()->getLocale();
+        $playlists = Cache::remember(QuranCacheKeys::playlistScoped('home:'.$locale), 600, function () use ($locale): array {
+            $repo = app(PlaylistRepository::class);
+
+            return [
+                'featured' => $repo->featured(1)->map(fn ($p) => PlaylistCard::from($p, $locale))->first(),
+                'latest' => $repo->latestPublic(3)->map(fn ($p) => PlaylistCard::from($p, $locale))->all(),
+            ];
+        });
+
+        return view('public.quran.index', compact('surahs', 'stats', 'playlists'));
     }
 
     /**
@@ -520,6 +534,12 @@ final class QuranController extends Controller
 
         $firstRecitationUrl = $reciters[0]['surahAudioUrl'] ?? null;
 
+        // Playlist hand-off: ?reciter=<recording id> selects that recording for this
+        // visit only (the player's stored preference is left alone). Unknown ids
+        // fall through to the normal default.
+        $forced = $request->integer('reciter');
+        $forcedReciterId = $forced > 0 && in_array($forced, array_column($reciters, 'id'), true) ? $forced : null;
+
         $prevSurah = $surahNumber > 1 ? $surahNumber - 1 : null;
         $nextSurah = $surahNumber < 114 ? $surahNumber + 1 : null;
 
@@ -537,6 +557,7 @@ final class QuranController extends Controller
         return view('public.quran.surah', array_merge($payload, [
             'mushaf' => $this->getMushafLayout($surahNumber),
             'reciters' => $reciters,
+            'forcedReciterId' => $forcedReciterId,
             'firstRecitationUrl' => $firstRecitationUrl,
             'tafsirResources' => $this->getTafsirResources($locale),
             'translationResources' => $translationResources,
@@ -769,6 +790,8 @@ final class QuranController extends Controller
 
         return view('public.quran.reciter', [
             'reciter' => [
+                'id' => $profile->id,
+                'isSaved' => auth()->check() && app(FavoriteService::class)->isFavorited(auth()->user(), FavorableType::RECITER, $profile->id),
                 'name' => $profile->displayName($locale),
                 'description' => $profile->description($locale),
                 'image' => $profile->profile_image_url,

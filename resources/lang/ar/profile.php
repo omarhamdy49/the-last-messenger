@@ -69,6 +69,8 @@ return [
     'type_seerah' => 'أحداث السيرة',
     'type_media' => 'برامج مرئية',
     'type_reciter' => 'القرّاء',
+    'add_bookmark' => 'حفظ القارئ في المحفوظات',
+    'remove_bookmark' => 'إزالة القارئ من المحفوظات',
     'type_unknown' => 'غير معروف',
 
     // Bookmark display references
