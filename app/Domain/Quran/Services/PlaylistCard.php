@@ -30,7 +30,11 @@ final class PlaylistCard
             'isFeatured' => $playlist->is_featured,
             'scope' => $playlist->scope,
             'reciters' => $playlist->reciterProfiles()
-                ->map(fn (ReciterProfile $p) => ['name' => $p->displayName($locale), 'image' => $p->profile_image_url])
+                ->map(fn (ReciterProfile $p) => [
+                    'name' => $p->displayName($locale),
+                    'image' => $p->profile_image_url,
+                    'url' => route('public.quran.reciter', $p->slug),
+                ])
                 ->all(),
         ];
     }

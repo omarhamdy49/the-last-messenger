@@ -103,11 +103,7 @@
                             <div class="absolute inset-0 flex items-end p-4">
                                 <div class="flex {{ $isRtl ? 'space-x-reverse' : '' }} -space-x-4">
                                     @foreach ($fr as $i => $r)
-                                        @if ($r['image'])
-                                            <img src="{{ $r['image'] }}" alt="{{ $r['name'] }}" width="64" height="64" class="w-16 h-16 rounded-full object-cover ring-[3px] ring-white/90 shadow-lg">
-                                        @else
-                                            <span class="w-16 h-16 rounded-full ring-[3px] ring-white/90 bg-white/20 backdrop-blur-sm text-white text-xl font-bold flex items-center justify-center shadow-lg" title="{{ $r['name'] }}">{{ mb_substr($r['name'], 0, 1) }}</span>
-                                        @endif
+                                        <x-site.reciter-avatar :name="$r['name']" :image="$r['image']" size="w-16 h-16" text="text-[11px]" ring="ring-[3px] ring-white/90 shadow-lg" />
                                     @endforeach
                                 </div>
                             </div>

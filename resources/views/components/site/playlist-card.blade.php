@@ -57,13 +57,7 @@
         <div class="absolute bottom-4 start-4 flex items-center">
             <div class="flex {{ $isRtl ? 'space-x-reverse' : '' }} -space-x-3">
                 @forelse ($shown as $r)
-                    @if ($r['image'])
-                        <img src="{{ $r['image'] }}" alt="{{ $r['name'] }}" loading="lazy" width="48" height="48"
-                             class="{{ $wide ? 'w-14 h-14' : 'w-12 h-12' }} rounded-full object-cover ring-[3px] ring-white/90 bg-zinc-100 shadow-md">
-                    @else
-                        <span class="{{ $wide ? 'w-14 h-14 text-lg' : 'w-12 h-12 text-base' }} rounded-full ring-[3px] ring-white/90 bg-white/20 backdrop-blur-sm text-white font-bold flex items-center justify-center shadow-md"
-                              title="{{ $r['name'] }}">{{ mb_substr($r['name'], 0, 1) }}</span>
-                    @endif
+                    <x-site.reciter-avatar :name="$r['name']" :image="$r['image']" :size="$wide ? 'w-14 h-14' : 'w-12 h-12'" :text="$wide ? 'text-[10px]' : 'text-[9px]'" ring="ring-[3px] ring-white/90 shadow-md" />
                 @empty
                     <span class="w-12 h-12 rounded-full ring-[3px] ring-white/90 bg-white/20 flex items-center justify-center text-white/80">
                         <i data-lucide="mic-off" class="w-5 h-5"></i>

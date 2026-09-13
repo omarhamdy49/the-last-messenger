@@ -275,6 +275,7 @@ final class PlaylistService
                 'recording' => $item->reciter_id,
                 'reciterName' => $profile?->displayName($locale),
                 'reciterImage' => $profile?->profile_image_url,
+                'reciterUrl' => $profile ? route('public.quran.reciter', $profile->slug) : null,
                 'recordingLabel' => $item->reciter?->recordingLabel($locale),
                 'url' => $recitation?->audio_url,
                 'duration' => $recitation?->duration_seconds,

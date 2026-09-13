@@ -89,13 +89,12 @@
             @if ($reciters)
                 <ul class="mt-4 flex flex-wrap gap-2" aria-label="{{ __('quran.public.reciters') }}">
                     @foreach ($reciters as $r)
-                        <li class="inline-flex items-center gap-2 ps-1 pe-3 py-1 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-sm font-semibold text-zinc-800 dark:text-zinc-100">
-                            @if ($r['image'])
-                                <img src="{{ $r['image'] }}" alt="" width="24" height="24" class="w-6 h-6 rounded-full object-cover">
-                            @else
-                                <span class="w-6 h-6 rounded-full bg-gradient-to-br from-[#0056b3] to-[#218838] text-white text-[11px] font-bold flex items-center justify-center">{{ mb_substr($r['name'], 0, 1) }}</span>
-                            @endif
-                            {{ $r['name'] }}
+                        <li>
+                            <a href="{{ $r['url'] }}"
+                               class="inline-flex items-center gap-2 ps-1 pe-3 py-1 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-sm font-semibold text-zinc-800 dark:text-zinc-100 hover:border-primary hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60">
+                                <x-site.reciter-avatar :name="$r['name']" :image="$r['image']" size="w-6 h-6" text="text-[7px]" :compact="true" />
+                                {{ $r['name'] }}
+                            </a>
                         </li>
                     @endforeach
                 </ul>
@@ -138,15 +137,12 @@
         </div>
 
         {{-- Portrait collage (overlapped tiles) --}}
-        <div class="pl-collage relative hidden md:grid grid-cols-2 gap-3 max-w-sm justify-self-end w-full" aria-hidden="true">
+        <div class="pl-collage relative hidden md:grid grid-cols-2 gap-3 max-w-sm justify-self-end w-full" aria-label="{{ __('quran.public.reciters') }}">
             @foreach (array_slice($reciters, 0, 4) as $i => $r)
-                <div style="--i: {{ $i }}" class="aspect-square rounded-3xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 shadow-[0_20px_40px_-24px_rgba(0,86,179,0.35)] {{ $i % 2 === 1 ? 'mt-8' : '' }}">
-                    @if ($r['image'])
-                        <img src="{{ $r['image'] }}" alt="" loading="lazy" class="w-full h-full object-cover">
-                    @else
-                        <span class="pl-initial w-full h-full flex items-center justify-center text-5xl font-black text-white bg-gradient-to-br from-[#0056b3] to-[#218838]">{{ mb_substr($r['name'], 0, 1) }}</span>
-                    @endif
-                </div>
+                <a href="{{ $r['url'] }}" title="{{ $r['name'] }}" style="--i: {{ $i }}"
+                   class="block aspect-square rounded-3xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 shadow-[0_20px_40px_-24px_rgba(0,86,179,0.35)] transition-transform duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 {{ $i % 2 === 1 ? 'mt-8' : '' }}">
+                    <x-site.reciter-avatar :name="$r['name']" :image="$r['image']" size="w-full h-full" shape="rounded-none" text="text-2xl lg:text-3xl font-black px-4" class="pl-initial" />
+                </a>
             @endforeach
             @if (count($reciters) === 0)
                 <div class="col-span-2 aspect-[4/3] rounded-3xl bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center text-white/80">
@@ -176,15 +172,13 @@
 
                     <div class="col-span-3 sm:col-span-1 flex items-center gap-2 min-w-0 sm:min-w-[180px]">
                         @if ($t['recording'])
-                            @if ($t['reciterImage'])
-                                <img src="{{ $t['reciterImage'] }}" alt="" width="32" height="32" loading="lazy" class="w-8 h-8 rounded-full object-cover shrink-0">
-                            @else
-                                <span class="w-8 h-8 rounded-full bg-gradient-to-br from-[#0056b3] to-[#218838] text-white text-xs font-bold flex items-center justify-center shrink-0">{{ mb_substr($t['reciterName'] ?? '?', 0, 1) }}</span>
-                            @endif
-                            <span class="min-w-0">
-                                <span class="block text-sm font-semibold text-zinc-800 dark:text-zinc-100 truncate">{{ $t['reciterName'] }}</span>
-                                <span class="block text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{{ $t['recordingLabel'] }}</span>
-                            </span>
+                            <a href="{{ $t['reciterUrl'] ?? '#' }}" class="group/r flex items-center gap-2 min-w-0 rounded-lg -m-1 p-1 hover:bg-white dark:hover:bg-zinc-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60">
+                                <x-site.reciter-avatar :name="$t['reciterName'] ?? '?'" :image="$t['reciterImage']" size="w-8 h-8" text="text-[8px]" :compact="true" class="shrink-0" />
+                                <span class="min-w-0">
+                                    <span class="block text-sm font-semibold text-zinc-800 dark:text-zinc-100 truncate group-hover/r:text-primary transition-colors">{{ $t['reciterName'] }}</span>
+                                    <span class="block text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{{ $t['recordingLabel'] }}</span>
+                                </span>
+                            </a>
                         @else
                             <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300">
                                 <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>{{ __('quran.playlists.needs_reciter') }}
