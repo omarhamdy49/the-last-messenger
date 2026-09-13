@@ -118,7 +118,7 @@ class DashboardService
             self::CACHE_TTL,
             function () use ($limit): Collection {
                 try {
-                    return AdminLog::with('user:id,name,avatar')
+                    return AdminLog::with('user:id,name,avatar_path')
                         ->select(['id', 'user_id', 'action', 'model_type', 'model_id', 'new_values', 'created_at'])
                         ->orderBy('created_at', 'desc')
                         ->limit($limit)
@@ -127,7 +127,7 @@ class DashboardService
                             'id' => $log->id,
                             'user' => [
                                 'name' => $log->user?->name ?? 'Unknown User',
-                                'avatar' => $log->user?->avatar ?? null,
+                                'avatar' => $log->user?->avatarUrl(),
                             ],
                             'action' => $log->action,
                             'model' => class_basename($log->model_type ?? 'Unknown'),
