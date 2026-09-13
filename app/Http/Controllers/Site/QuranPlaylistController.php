@@ -58,7 +58,7 @@ final class QuranPlaylistController extends Controller
                 ->distinct()->count('profile_id'),
         ]);
 
-        $playlists = $this->repo->gallery($search ?: null, $sort, $request->user());
+        $playlists = $this->repo->gallery($search ?: null, $sort, $request->user()?->id);
         $playlists->getCollection()->transform(fn (Playlist $p) => PlaylistCard::from($p, $locale));
 
         return view('public.quran.playlists.index', [
@@ -77,7 +77,7 @@ final class QuranPlaylistController extends Controller
 
     public function edit(Request $request, string $slug): View
     {
-        $playlist = $this->repo->findOwnedBySlug($slug, $request->user()) ?? abort(404);
+        $playlist = $this->repo->findOwnedBySlug($slug, $request->user()->id) ?? abort(404);
 
         return view('public.quran.playlists.wizard', $this->wizardProps($request, $playlist));
     }
@@ -91,17 +91,17 @@ final class QuranPlaylistController extends Controller
 
     public function store(StorePlaylistRequest $request): JsonResponse|RedirectResponse
     {
-        if ($this->repo->countForUser($request->user()) >= self::PER_USER_CAP) {
+        if ($this->repo->countForUser($request->user()->id) >= self::PER_USER_CAP) {
             return $this->fail($request, __('quran.playlists.cap_reached', ['max' => self::PER_USER_CAP]), 'name');
         }
-        $playlist = $this->service->create($request->user(), $request->toData());
+        $playlist = $this->service->create($request->user()->id, $request->toData());
 
         return $this->done($request, $playlist, __('quran.playlists.created'), 201);
     }
 
     public function update(StorePlaylistRequest $request, string $slug): JsonResponse|RedirectResponse
     {
-        $playlist = $this->repo->findOwnedBySlug($slug, $request->user()) ?? abort(404);
+        $playlist = $this->repo->findOwnedBySlug($slug, $request->user()->id) ?? abort(404);
         $this->service->update($playlist, $request->toData());
 
         return $this->done($request, $playlist, __('quran.playlists.updated'));
@@ -109,7 +109,7 @@ final class QuranPlaylistController extends Controller
 
     public function show(Request $request, string $slug): View
     {
-        $playlist = $this->repo->findBySlugVisibleTo($slug, $request->user()) ?? abort(404);
+        $playlist = $this->repo->findBySlugVisibleTo($slug, $request->user()?->id) ?? abort(404);
         $locale = app()->getLocale();
 
         return view('public.quran.playlists.show', [
@@ -122,7 +122,7 @@ final class QuranPlaylistController extends Controller
 
     public function visibility(Request $request, string $slug): JsonResponse|RedirectResponse
     {
-        $playlist = $this->repo->findOwnedBySlug($slug, $request->user()) ?? abort(404);
+        $playlist = $this->repo->findOwnedBySlug($slug, $request->user()->id) ?? abort(404);
         $on = $request->boolean('is_public');
         $this->service->setPublic($playlist, $on);
 
@@ -133,7 +133,7 @@ final class QuranPlaylistController extends Controller
 
     public function destroy(Request $request, string $slug): JsonResponse|RedirectResponse
     {
-        $playlist = $this->repo->findOwnedBySlug($slug, $request->user()) ?? abort(404);
+        $playlist = $this->repo->findOwnedBySlug($slug, $request->user()->id) ?? abort(404);
         $this->service->delete($playlist);
 
         return $request->expectsJson()
@@ -143,7 +143,7 @@ final class QuranPlaylistController extends Controller
 
     public function plays(Request $request, string $slug): JsonResponse
     {
-        $playlist = $this->repo->findBySlugVisibleTo($slug, $request->user()) ?? abort(404);
+        $playlist = $this->repo->findBySlugVisibleTo($slug, $request->user()?->id) ?? abort(404);
         $this->plays->record($playlist, $request);
 
         return response()->json(['success' => true]);
@@ -213,7 +213,7 @@ final class QuranPlaylistController extends Controller
             'surahs' => $surahs,
             'initial' => $initial,
             'playlist' => $playlist,
-            'count' => $this->repo->countForUser($request->user()),
+            'count' => $this->repo->countForUser($request->user()->id),
             'cap' => self::PER_USER_CAP,
         ];
     }

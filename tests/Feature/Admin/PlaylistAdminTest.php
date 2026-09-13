@@ -27,7 +27,7 @@ final class PlaylistAdminTest extends TestCase
 
     private function playlist(bool $public = true, string $name = 'قائمة للاختبار'): Playlist
     {
-        return app(PlaylistService::class)->create(User::factory()->create(), new PlaylistData($name, null, 'full', [], $public));
+        return app(PlaylistService::class)->create(User::factory()->create()->id, new PlaylistData($name, null, 'full', [], $public));
     }
 
     public function test_guest_is_redirected(): void
@@ -56,6 +56,19 @@ final class PlaylistAdminTest extends TestCase
 
         $this->actingAs($admin)->post(route('admin.playlists.toggle', [$playlist->id, 'featured']))->assertRedirect();
         $this->assertTrue($playlist->fresh()->is_featured);
+    }
+
+    public function test_admin_can_search_playlists_by_owner_email(): void
+    {
+        $matching = $this->playlist(name: 'Matching playlist');
+        $matching->owner->update(['email' => 'playlist-owner@example.test']);
+        $this->playlist(name: 'Unrelated playlist');
+
+        $this->actingAs($this->createAdminUser())
+            ->get(route('admin.playlists.index', ['search' => 'playlist-owner@example.test']))
+            ->assertOk()
+            ->assertSee('Matching playlist')
+            ->assertDontSee('Unrelated playlist');
     }
 
     public function test_admin_can_rename_and_delete(): void
@@ -100,7 +113,7 @@ final class PlaylistAdminTest extends TestCase
         foreach ([1, 3] as $surah) {
             Recitation::query()->create(['reciter_id' => $recording->id, 'surah_id' => $surah, 'audio_url' => "https://cdn.test/{$surah}.mp3", 'format' => 'mp3']);
         }
-        $playlist = app(PlaylistService::class)->create(User::factory()->create(), new PlaylistData('x', null, 'custom', [1 => $recording->id, 2 => null], true));
+        $playlist = app(PlaylistService::class)->create(User::factory()->create()->id, new PlaylistData('x', null, 'custom', [1 => $recording->id, 2 => null], true));
         $admin = $this->createAdminUser();
 
         $this->actingAs($admin)->get(route('admin.playlists.edit', $playlist->id))->assertOk()->assertSee(__('quran.playlists_admin.add_surah'));

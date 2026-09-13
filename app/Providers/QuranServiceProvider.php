@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\Quran\Events\PlaylistPlayed;
 use App\Domain\Quran\Infrastructure\Llm\ChatClientInterface;
 use App\Domain\Quran\Infrastructure\Llm\FallbackChatClient;
 use App\Domain\Quran\Infrastructure\Llm\OpenAiCompatChatClient;
 use App\Domain\Quran\Infrastructure\Mcp\QuranMcpClient;
 use App\Domain\Quran\Infrastructure\Mcp\QuranMcpClientInterface;
+use App\Domain\Quran\Models\Playlist;
 use App\Domain\Quran\Repositories\AiInquiryQuotaRepository;
 use App\Domain\Quran\Repositories\AiInquiryQuotaRepositoryInterface;
 use App\Domain\Quran\Repositories\AiInquiryRepository;
@@ -31,10 +33,28 @@ use App\Domain\Quran\Repositories\VerseRepository;
 use App\Domain\Quran\Repositories\VerseRepositoryInterface;
 use App\Domain\Quran\Services\QuranPublicVisibility;
 use App\Domain\Shared\Contracts\PublicVisibilityProviderInterface;
+use App\Jobs\RecordPlaylistPlayJob;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 class QuranServiceProvider extends ServiceProvider
 {
+    public function boot(): void
+    {
+        // Compose cross-boundary relations here so neither model imports the other.
+        Playlist::resolveRelationUsing('owner', fn (Playlist $playlist): BelongsTo => $playlist
+            ->belongsTo(User::class, 'user_id', 'id', 'owner'));
+        User::resolveRelationUsing('quranPlaylists', fn (User $user): HasMany => $user
+            ->hasMany(Playlist::class, 'user_id', 'id'));
+
+        Event::listen(PlaylistPlayed::class, function (PlaylistPlayed $event): void {
+            RecordPlaylistPlayJob::dispatch($event->playlistId);
+        });
+    }
+
     public function register(): void
     {
         $this->app->singleton(QuranPublicVisibility::class);

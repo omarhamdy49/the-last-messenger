@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Quran\Models;
 
 use App\Domain\Quran\Services\QuranCacheKeys;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -51,11 +49,6 @@ class Playlist extends Model
         return 'slug';
     }
 
-    public function owner(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'user_id');
-    }
-
     public function items(): HasMany
     {
         return $this->hasMany(PlaylistItem::class, 'playlist_id')->orderBy('surah_id');
@@ -64,12 +57,12 @@ class Playlist extends Model
     /**
      * Public, or owned by the given user.
      */
-    public function scopeVisibleTo(Builder $query, ?User $user): Builder
+    public function scopeVisibleTo(Builder $query, ?int $userId): Builder
     {
-        return $query->where(function (Builder $q) use ($user): void {
+        return $query->where(function (Builder $q) use ($userId): void {
             $q->where('is_public', true);
-            if ($user) {
-                $q->orWhere('user_id', $user->id);
+            if ($userId !== null) {
+                $q->orWhere('user_id', $userId);
             }
         });
     }

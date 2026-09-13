@@ -70,7 +70,7 @@ final class QuranPlaylistTest extends TestCase
 
     private function makePlaylist(User $owner, array $items, bool $public, string $name = 'ختمتي'): Playlist
     {
-        return app(PlaylistService::class)->create($owner, new PlaylistData($name, null, 'custom', $items, $public));
+        return app(PlaylistService::class)->create($owner->id, new PlaylistData($name, null, 'custom', $items, $public));
     }
 
     /** @param list<int> $profiles */

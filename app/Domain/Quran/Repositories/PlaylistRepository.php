@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Domain\Quran\Repositories;
 
 use App\Domain\Quran\Models\Playlist;
-use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -29,24 +28,24 @@ final class PlaylistRepository
         return Playlist::query()->with(self::WITH);
     }
 
-    public function forUser(User $user): Collection
+    public function forUser(int $userId): Collection
     {
-        return $this->base()->where('user_id', $user->id)->latest('id')->get();
+        return $this->base()->where('user_id', $userId)->latest('id')->get();
     }
 
-    public function countForUser(User $user): int
+    public function countForUser(int $userId): int
     {
-        return Playlist::query()->where('user_id', $user->id)->count();
+        return Playlist::query()->where('user_id', $userId)->count();
     }
 
     /**
      * Public playlists, plus the viewer's own private ones (they render with a
      * "private" badge) so the gallery is also the signed-in user's library.
      */
-    public function gallery(?string $search, string $sort, ?User $viewer = null, int $perPage = 24): LengthAwarePaginator
+    public function gallery(?string $search, string $sort, ?int $viewerId = null, int $perPage = 24): LengthAwarePaginator
     {
         return $this->base()
-            ->visibleTo($viewer)
+            ->visibleTo($viewerId)
             ->when($search, fn (Builder $q) => $q->where('name', 'like', '%'.$search.'%'))
             ->when($sort === 'plays', fn (Builder $q) => $q->orderByDesc('plays_count'), fn (Builder $q) => $q->latest('id'))
             ->paginate($perPage)
@@ -65,15 +64,15 @@ final class PlaylistRepository
     }
 
     /** The 404 boundary for show/play. */
-    public function findBySlugVisibleTo(string $slug, ?User $user): ?Playlist
+    public function findBySlugVisibleTo(string $slug, ?int $userId): ?Playlist
     {
-        return $this->base()->where('slug', $slug)->visibleTo($user)->first();
+        return $this->base()->where('slug', $slug)->visibleTo($userId)->first();
     }
 
     /** The 404 boundary for edit/update/destroy/visibility. */
-    public function findOwnedBySlug(string $slug, User $user): ?Playlist
+    public function findOwnedBySlug(string $slug, int $userId): ?Playlist
     {
-        return $this->base()->where('slug', $slug)->where('user_id', $user->id)->first();
+        return $this->base()->where('slug', $slug)->where('user_id', $userId)->first();
     }
 
     /**

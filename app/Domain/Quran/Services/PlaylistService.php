@@ -10,7 +10,6 @@ use App\Domain\Quran\Models\Playlist;
 use App\Domain\Quran\Models\PlaylistItem;
 use App\Domain\Quran\Models\Recitation;
 use App\Domain\Quran\Models\ReciterProfile;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -147,10 +146,11 @@ final class PlaylistService
         return $bad;
     }
 
-    public function create(User $user, PlaylistData $data): Playlist
+    public function create(int $userId, PlaylistData $data): Playlist
     {
-        return DB::transaction(function () use ($user, $data): Playlist {
-            $playlist = $user->quranPlaylists()->create([
+        return DB::transaction(function () use ($userId, $data): Playlist {
+            $playlist = Playlist::query()->create([
+                'user_id' => $userId,
                 'name' => $data->name,
                 'description' => $data->description,
                 'scope' => $data->scope,

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Domain\Quran\Models\Playlist;
 use App\Notifications\Site\VerifyEmailNotification;
 use Carbon\Carbon;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -99,14 +98,6 @@ class User extends Authenticatable implements MustVerifyEmail
     public function favorites(): HasMany
     {
         return $this->hasMany(Favorite::class);
-    }
-
-    /**
-     * Reciter playlists this visitor built (Quran module).
-     */
-    public function quranPlaylists(): HasMany
-    {
-        return $this->hasMany(Playlist::class, 'user_id');
     }
 
     /**

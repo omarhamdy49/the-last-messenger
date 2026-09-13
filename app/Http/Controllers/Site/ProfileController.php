@@ -70,7 +70,7 @@ final class ProfileController extends Controller
         );
 
         $playlists = $this->safe(
-            fn (): array => $this->playlists->forUser($user)->map(fn ($p) => PlaylistCard::from($p, $locale))->all(),
+            fn (): array => $this->playlists->forUser($user->id)->map(fn ($p) => PlaylistCard::from($p, $locale))->all(),
             [],
         );
 
