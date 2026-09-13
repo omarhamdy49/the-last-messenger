@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Site;
 
 use App\Domain\Quran\Models\Playlist;
+use App\Domain\Quran\Models\PlaylistItem;
 use App\Domain\Quran\Models\Recitation;
+use App\Domain\Quran\Models\Reciter;
 use App\Domain\Quran\Models\ReciterProfile;
 use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Repositories\PlaylistRepository;
@@ -49,6 +51,9 @@ final class QuranPlaylistController extends Controller
         $totals = Cache::remember(QuranCacheKeys::playlistScoped('totals'), 600, fn (): array => [
             'public' => Playlist::query()->where('is_public', true)->count(),
             'plays' => (int) Playlist::query()->where('is_public', true)->sum('plays_count'),
+            'reciters' => Reciter::query()
+                ->whereIn('id', PlaylistItem::query()->select('reciter_id')->whereHas('playlist', fn ($q) => $q->where('is_public', true)))
+                ->distinct()->count('profile_id'),
         ]);
 
         $playlists = $this->repo->gallery($search ?: null, $sort);

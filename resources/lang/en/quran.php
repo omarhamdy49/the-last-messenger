@@ -690,6 +690,12 @@ return [
         'edit_title' => 'Edit playlist',
         'create_title' => 'New listening playlist',
         'loading_preview' => 'Assigning surahs…',
+        'totals_reciters' => 'reciters featured',
+        'results_count' => ':count playlists',
+        'how_title' => 'How playlists work',
+        'how_1' => 'Pick your favourite reciters',
+        'how_2' => 'Choose the whole Quran or specific surahs',
+        'how_3' => 'Review the mix, save, and share the link',
         'recording_variant' => 'Recording',
     ],
     // ------------------------------------------------------------------
