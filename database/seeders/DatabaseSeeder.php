@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Main Database Seeder
@@ -50,8 +51,8 @@ class DatabaseSeeder extends Seeder
         // Topics auto-curate from EXISTING Quran/Hadith/Article content, so only
         // run once that content has been imported. Otherwise it would create empty
         // topics. Always runnable standalone via: php artisan db:seed --class=TopicSeeder
-        if (\Illuminate\Support\Facades\DB::table('quran_verse_translations')->exists()
-            && \Illuminate\Support\Facades\DB::table('hadith_texts')->exists()) {
+        if (DB::table('quran_verse_translations')->exists()
+            && DB::table('hadith_texts')->exists()) {
             $this->call(TopicSeeder::class);
         }
 

@@ -278,6 +278,11 @@
                             <i data-lucide="mic" class="w-5 h-5"></i>
                             <span>{{ __('quran.public.reciters_hero_title') }}</span>
                         </a>
+                        <a href="{{ route('public.quran.playlists.index') }}"
+                           class="group inline-flex items-center gap-3 px-7 py-4 rounded-2xl glass text-white font-bold text-base border border-white/25 hover:bg-white/20 hover:-translate-y-0.5 active:scale-[0.98] transition-all">
+                            <i data-lucide="list-music" class="w-5 h-5"></i>
+                            <span>{{ __('quran.playlists.title') }}</span>
+                        </a>
                     </div>
                     <p class="mt-3 text-sm text-white/80 max-w-xl mx-auto">{{ __('quran.public.ask_hero_subtitle') }}</p>
                 </div>

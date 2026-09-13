@@ -65,6 +65,7 @@ class BulkOperationService extends BaseService
         int $userId,
         array $parameters = [],
         bool $dryRun = false,
+        bool $notifyOnCompletion = false,
     ): BulkOperation {
         $operation = $this->repository->create([
             'operation_type' => $operationType,
@@ -75,6 +76,7 @@ class BulkOperationService extends BaseService
             'parameters' => $parameters,
             'created_by' => $userId,
             'dry_run' => $dryRun,
+            'notify_on_completion' => $notifyOnCompletion,
         ]);
 
         $this->adminLogger->logCustomAction(
@@ -91,10 +93,10 @@ class BulkOperationService extends BaseService
         if (count($itemIds) > self::QUEUE_THRESHOLD) {
             ProcessBulkOperation::dispatch($operation);
         } else {
-            $this->processOperation($operation);
+            ProcessBulkOperation::dispatchSync($operation);
         }
 
-        return $operation;
+        return $operation->refresh();
     }
 
     /**
@@ -111,7 +113,7 @@ class BulkOperationService extends BaseService
         $operation->markAsStarted();
 
         try {
-            $operationType = BulkOperationTypeEnum::from($operation->operation_type);
+            $operationType = $operation->operation_type;
 
             if ($operationType === BulkOperationTypeEnum::EXPORT) {
                 $this->processExport($operation);
@@ -235,7 +237,7 @@ class BulkOperationService extends BaseService
 
         foreach ($chunks as $chunk) {
             $result = $handler->handle(
-                $operation->operation_type,
+                $operation->operation_type->value,
                 $chunk,
                 $operation->parameters ?? [],
             );

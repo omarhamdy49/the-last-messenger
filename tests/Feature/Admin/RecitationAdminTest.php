@@ -51,11 +51,20 @@ final class RecitationAdminTest extends TestCase
 
         $this->get(route('admin.reciters.show', $reciter->id))
             ->assertOk()
-            ->assertSee('الكوثر')
-            ->assertSee('الفاتحة')
-            ->assertSee(__('quran.recitations.section_title'))
-            ->assertSee(__('quran.recitations.has_audio'))
-            ->assertSee(__('quran.recitations.no_audio'));
+            ->assertSee(__('quran.reciter_admin.list_title'));
+
+        // Rows are loaded from the paginated endpoint after the page shell renders.
+        $response = $this->getJson(route('admin.reciters.recitations.index', $reciter->id))
+            ->assertOk()
+            ->assertJsonPath('total', 2)
+            ->assertJsonPath('with_audio', 1)
+            ->assertJsonPath('missing', 1);
+
+        $html = $response->json('html');
+        $this->assertStringContainsString('الكوثر', $html);
+        $this->assertStringContainsString('الفاتحة', $html);
+        $this->assertStringContainsString(__('quran.recitations.has_audio'), $html);
+        $this->assertStringContainsString(__('quran.recitations.no_audio'), $html);
     }
 
     public function test_admin_can_store_a_recitation(): void

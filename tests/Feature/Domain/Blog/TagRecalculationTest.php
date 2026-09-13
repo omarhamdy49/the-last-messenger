@@ -28,7 +28,7 @@ final class TagRecalculationTest extends TestCase
     {
         parent::setUp();
         $this->withoutVite();
-        $this->repository = new TagRepository();
+        $this->repository = new TagRepository;
     }
 
     private function createTag(string $slug, int $usageCount = 0): Tag

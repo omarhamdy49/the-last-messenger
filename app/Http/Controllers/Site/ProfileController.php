@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Site;
 
+use App\Domain\Quran\Repositories\PlaylistRepository;
+use App\Domain\Quran\Services\PlaylistCard;
 use App\Domain\Shared\Services\FavoriteService;
 use App\Domain\Shared\Services\InteractionService;
 use App\Http\Controllers\Controller;
@@ -32,6 +34,7 @@ final class ProfileController extends Controller
     public function __construct(
         private readonly InteractionService $interactions,
         private readonly FavoriteService $favorites,
+        private readonly PlaylistRepository $playlists,
     ) {}
 
     /**
@@ -66,8 +69,14 @@ final class ProfileController extends Controller
             collect(),
         );
 
+        $playlists = $this->safe(
+            fn (): array => $this->playlists->forUser($user)->map(fn ($p) => PlaylistCard::from($p, $locale))->all(),
+            [],
+        );
+
         return view('public.profile.index', [
             'user' => $user,
+            'playlists' => $playlists,
             'engagement' => $engagement,
             'activity' => $activity,
             'bookmarkCounts' => $bookmarkCounts,

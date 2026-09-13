@@ -6,8 +6,10 @@ namespace App\Providers;
 
 use App\Domain\Blog\Services\ArticleExportAdapter;
 use App\Domain\Blog\Services\BlogDashboardStatsProvider;
+use App\Domain\Hadith\Services\HadithDashboardStatsProvider;
 use App\Domain\Media\Services\MediaDashboardStatsProvider;
 use App\Domain\Media\Services\MediaProgramExportAdapter;
+use App\Domain\People\Services\PeopleDashboardStatsProvider;
 use App\Domain\Quran\Services\QuranDashboardStatsProvider;
 use App\Domain\Quran\Services\QuranReciterExportAdapter;
 use App\Domain\Quran\Services\QuranSurahExportAdapter;
@@ -37,6 +39,8 @@ class AppServiceProvider extends ServiceProvider
     {
         $statsProviders = [
             new BlogDashboardStatsProvider,
+            new HadithDashboardStatsProvider,
+            new PeopleDashboardStatsProvider,
             new QuranDashboardStatsProvider,
             new SeerahDashboardStatsProvider,
             new MediaDashboardStatsProvider,

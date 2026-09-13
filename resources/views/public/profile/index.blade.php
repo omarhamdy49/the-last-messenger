@@ -20,6 +20,7 @@
     $tabs = [
         ['id' => 'dashboard', 'label' => __('profile.tab_dashboard'), 'icon' => 'layout-dashboard'],
         ['id' => 'bookmarks', 'label' => __('profile.tab_bookmarks'), 'icon' => 'bookmark'],
+        ['id' => 'playlists', 'label' => __('quran.playlists.my'),      'icon' => 'list-music'],
         ['id' => 'progress',  'label' => __('profile.tab_progress'),  'icon' => 'trending-up'],
         ['id' => 'activity',  'label' => __('profile.tab_activity'),  'icon' => 'activity'],
         ['id' => 'settings',  'label' => __('profile.tab_settings'),  'icon' => 'settings'],
@@ -274,6 +275,38 @@
         </div>
     </section>
 
+    {{-- ============================ PLAYLISTS ============================ --}}
+    <section x-show="activeTab === 'playlists'" x-cloak>
+        <div class="card-premium rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white">{{ __('quran.playlists.my') }}</h2>
+                <a href="{{ route('public.quran.playlists.create') }}"
+                   class="inline-flex items-center gap-2 h-11 px-5 rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] text-white text-sm font-bold shadow-sm transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.98]">
+                    <i data-lucide="list-plus" class="w-4 h-4"></i>{{ __('quran.playlists.new') }}
+                </a>
+            </div>
+            @if (count($playlists))
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                    @foreach ($playlists as $i => $card)
+                        <x-site.playlist-card :card="$card" :index="$i" />
+                    @endforeach
+                    <a href="{{ route('public.quran.playlists.create') }}"
+                       class="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 p-6 min-h-[160px] text-gray-500 dark:text-gray-400 hover:border-primary hover:text-primary transition-colors">
+                        <i data-lucide="plus" class="w-6 h-6"></i>
+                        <span class="text-sm font-semibold">{{ __('quran.playlists.new') }}</span>
+                    </a>
+                </div>
+            @else
+                <x-site.empty-state icon="list-music" :title="__('quran.playlists.empty_mine')" :message="__('quran.playlists.empty_mine_hint')" class="py-10">
+                    <a href="{{ route('public.quran.playlists.create') }}"
+                       class="inline-flex items-center gap-2 h-11 px-5 rounded-full text-sm font-semibold text-primary border border-primary/30 hover:bg-primary/5 transition-colors">
+                        <i data-lucide="list-plus" class="w-4 h-4"></i>{{ __('quran.playlists.create') }}
+                    </a>
+                </x-site.empty-state>
+            @endif
+        </div>
+    </section>
+
     {{-- ============================ SETTINGS ============================ --}}
     <section x-show="activeTab === 'settings'" x-cloak class="space-y-6">
         {{-- Account settings --}}
@@ -448,7 +481,7 @@
             deleteModalOpen: false,
             deletingAccount: false,
             deleteConfirmText: '',
-            validTabs: ['dashboard', 'bookmarks', 'progress', 'activity', 'settings'],
+            validTabs: ['dashboard', 'bookmarks', 'playlists', 'progress', 'activity', 'settings'],
             init() {
                 // Honour a #fragment (e.g. redirect after settings save) or a saved tab.
                 const fragment = (window.location.hash || '').replace('#', '');

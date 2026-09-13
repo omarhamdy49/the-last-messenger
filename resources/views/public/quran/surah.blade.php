@@ -413,6 +413,8 @@
         {{-- Page default only; the shared audioPlayer store owns the live choice
              (a stored siteReciterId wins over this in configure()). --}}
         selectedReciterId: {{ $defaultReciterId }},
+        {{-- Playlist hand-off (?reciter=): wins over the stored choice for this visit only. --}}
+        forcedReciterId: {{ $forcedReciterId ?? 'null' }},
 
         // Surah info + lazy switcher modals (opened from the floating rail)
         infoOpen: false,
@@ -464,7 +466,8 @@
             // button + reciter picker route through the global audioPlayer store).
             this.$store.audioPlayer.configure({
                 reciters: this.reciters,
-                reciterId: this.selectedReciterId,
+                reciterId: this.forcedReciterId ?? this.selectedReciterId,
+                force: this.forcedReciterId !== null,
                 // number + versesCount let the player chain per-verse audio for
                 // reciters that have no whole-surah recording.
                 surah: {

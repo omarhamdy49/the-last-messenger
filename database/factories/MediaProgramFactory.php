@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 /**
  * MediaProgram Factory
  *
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Domain\Media\Models\MediaProgram>
+ * @extends Factory<MediaProgram>
  */
 class MediaProgramFactory extends Factory
 {

@@ -57,7 +57,20 @@
 
                 {{-- Name + chips --}}
                 <div class="min-w-0">
-                    <h1 class="text-3xl sm:text-5xl font-black text-white mb-4 leading-tight">{{ $reciter['name'] }}</h1>
+                    <div class="flex items-center justify-center sm:justify-start gap-4 mb-4">
+                        <h1 class="text-3xl sm:text-5xl font-black text-white leading-tight">{{ $reciter['name'] }}</h1>
+                        {{-- Favourite (bookmark) toggle — same optimistic pattern as media pages --}}
+                        <button type="button"
+                                x-data="reciterSave()"
+                                @click="toggleSave()"
+                                :aria-pressed="saved"
+                                :disabled="savePending"
+                                :title="saved ? @js(__('profile.remove_bookmark')) : @js(__('profile.add_bookmark'))"
+                                :aria-label="saved ? @js(__('profile.remove_bookmark')) : @js(__('profile.add_bookmark'))"
+                                class="shrink-0 w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white flex items-center justify-center transition-[background-color,transform] duration-200 active:scale-[0.95] disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
+                            <i data-lucide="heart" class="w-5 h-5 transition-transform duration-200" :class="saved ? 'fill-current scale-110' : ''"></i>
+                        </button>
+                    </div>
                     <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
                         @if ($reciter['country'])
                             <span class="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm text-white text-sm font-semibold px-4 py-1.5 rounded-full">
@@ -163,3 +176,46 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    function reciterSave() {
+        return {
+            isAuthenticated: @json(auth()->check()),
+            loginUrl: @js(route('public.login')),
+            profileId: {{ (int) $reciter['id'] }},
+            storeUrl: @js(route('public.favorites.store')),
+            destroyUrl: @js(route('public.favorites.destroy')),
+            saved: @json((bool) $reciter['isSaved']),
+            savePending: false,
+
+            async toggleSave() {
+                if (!this.isAuthenticated) { window.location.href = this.loginUrl; return; }
+                if (this.savePending) return;
+                const adding = !this.saved;
+                this.saved = adding; // optimistic
+                this.savePending = true;
+                try {
+                    const response = await fetch(adding ? this.storeUrl : this.destroyUrl, {
+                        method: adding ? 'POST' : 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                        },
+                        body: JSON.stringify({ type: 'reciter', id: this.profileId }),
+                    });
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok || payload.success === false) throw new Error('favorite_failed');
+                    if (this.$store.toast && payload.message) this.$store.toast.push(payload.message, 'success');
+                } catch (e) {
+                    this.saved = !adding; // roll back
+                    if (this.$store.toast) this.$store.toast.push(@js(__('quran.playlists.error')), 'error');
+                } finally {
+                    this.savePending = false;
+                }
+            },
+        };
+    }
+</script>
+@endpush

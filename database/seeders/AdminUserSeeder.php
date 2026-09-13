@@ -38,7 +38,6 @@ class AdminUserSeeder extends Seeder
             passwordEnv: 'ADMIN_PASSWORD',
         );
 
-
         $this->command->newLine();
         $this->command->info('✅ Admin users ready.');
         $this->displayGeneratedCredentials();

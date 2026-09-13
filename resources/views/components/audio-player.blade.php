@@ -144,6 +144,26 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h9M4 12h9M4 18h6"/><circle cx="18" cy="16" r="3.2"/><path stroke-linecap="round" d="m20.4 18.4 1.6 1.6"/></svg>
                 </button>
 
+                {{-- Auto-play next (surah or playlist track) — shown wherever there is a next --}}
+                <button x-show="$store.audioPlayer.hasStepNav()"
+                        @click="$store.audioPlayer.toggleAutoNext()"
+                        class="{{ $iconBtnBase }} ms-2 sm:ms-3"
+                        :class="$store.audioPlayer.autoNext
+                            ? 'text-white bg-gradient-to-r from-[#0056b3] to-[#218838]'
+                            : '{{ $iconBtnTheme }}'"
+                        :aria-pressed="$store.audioPlayer.autoNext"
+                        title="{{ __('quran.public.auto_next') }}" aria-label="{{ __('quran.public.auto_next') }}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 2l4 4-4 4"/><path stroke-linecap="round" stroke-linejoin="round" d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+                </button>
+
+                {{-- Playlist mode: the reader (verse following, reciter switching) is one tap away --}}
+                <a x-show="$store.audioPlayer.playlist && $store.audioPlayer.track?.readerUrl" x-cloak
+                   :href="$store.audioPlayer.track?.readerUrl"
+                   class="{{ $iconBtn }} ms-2 sm:ms-3"
+                   title="{{ __('quran.playlists.open_reader') }}" aria-label="{{ __('quran.playlists.open_reader') }}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5zM20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5z"/></svg>
+                </a>
+
                 <button @click="$store.audioPlayer.cycleSpeed()"
                         class="px-2 h-8 rounded-lg text-xs font-bold tabular-nums transition-colors flex-shrink-0 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                         x-text="$store.audioPlayer.rate + '×'" title="{{ __('quran.public.playback_speed') }}"
@@ -250,6 +270,9 @@
             // whole-surah recording exists, so the page can highlight the ayah
             // being recited. Off by default — the single file is gapless.
             follow: localStorage.getItem('siteFollowVerses') === '1',
+            // Auto-play the next surah/track when one ends. Default on; the
+            // listener can switch it off from the player on any page.
+            autoNext: localStorage.getItem('sitePlayerAutoNext') !== '0',
 
             // Verse-chaining fallback. Only a fraction of reciters have a
             // whole-surah recording; the rest play a surah by queueing their
@@ -273,10 +296,16 @@
                 try {
                     const saved = JSON.parse(localStorage.getItem('sitePlayerTrack') || 'null');
                     if (saved && saved.url) {
-                        this.track = { url: saved.url, title: saved.title, subtitle: saved.subtitle };
+                        this.track = { url: saved.url, title: saved.title, subtitle: saved.subtitle, readerUrl: saved.readerUrl || null };
                         this._ensureAudio();
                         this.audio.currentTime = saved.currentTime || 0;
                         this.currentTime = saved.currentTime || 0;
+                        // A playlist queue is restored too, so prev/next keep working on
+                        // the next page — but only while its current entry is the saved track.
+                        const q = JSON.parse(localStorage.getItem('sitePlayerPlaylist') || 'null');
+                        if (q && Array.isArray(q.list) && q.list[q.index]?.url === saved.url) {
+                            this.playlist = q.list; this.playlistIndex = q.index;
+                        }
                     }
                 } catch (e) { /* ignore corrupt state */ }
                 if (this.volume > 0) { this._lastVolume = this.volume; }
@@ -301,7 +330,7 @@
             // Set up the reciter list for the current surah page. The user's saved
             // reciter (siteReciterId) wins so their choice sticks across surahs;
             // the page default and the first reciter are fallbacks.
-            configure({ reciters, reciterId, surah, urlBase }) {
+            configure({ reciters, reciterId, surah, urlBase, force = false }) {
                 this.reciters = Array.isArray(reciters) ? reciters : [];
                 this.surahMeta = surah || null;
                 this.surahUrlBase = urlBase || null;
@@ -311,8 +340,11 @@
                 this.playlist = null; this.playlistIndex = 0;
                 const stored = parseInt(localStorage.getItem('siteReciterId') ?? '', 10);
                 const valid = (id) => this.reciters.some((r) => r.id === id);
-                this.reciterId = valid(stored) ? stored
-                    : (valid(reciterId) ? reciterId : (this.reciters[0]?.id ?? null));
+                // `force` (a playlist hand-off via ?reciter=) wins over the stored
+                // choice for this page only; the stored preference is not touched.
+                this.reciterId = (force && valid(reciterId)) ? reciterId
+                    : (valid(stored) ? stored
+                        : (valid(reciterId) ? reciterId : (this.reciters[0]?.id ?? null)));
                 // init() may have restored a paused whole-surah track from a previous
                 // visit. Resuming it goes straight through toggle(), never through
                 // playSurah(), so this is the only place those timings get asked for.
@@ -336,7 +368,7 @@
             _playListed(autoplay) {
                 const t = this.playlist[this.playlistIndex];
                 this._teardown();
-                this.track = { url: t.url, title: t.title || '', subtitle: t.subtitle || '' };
+                this.track = { url: t.url, title: t.title || '', subtitle: t.subtitle || '', readerUrl: t.readerUrl || null };
                 this.currentTime = 0; this.duration = 0;
                 this._ensureAudio();
                 this._persist();
@@ -548,6 +580,11 @@
                 if (!shares || ayah <= 1) { return 0; }
 
                 return shares[ayah - 2] ?? 0;
+            },
+
+            toggleAutoNext() {
+                this.autoNext = !this.autoNext;
+                localStorage.setItem('sitePlayerAutoNext', this.autoNext ? '1' : '0');
             },
 
             toggleFollow() {
@@ -834,6 +871,7 @@
                 this.queue = null; this.queueIndex = 0; this._preload = null;
                 this.playlist = null; this.playlistIndex = 0;
                 localStorage.removeItem('sitePlayerTrack');
+                localStorage.removeItem('sitePlayerPlaylist');
             },
 
             get progress() { return this.duration ? (this.currentTime / this.duration) * 100 : 0; },
@@ -849,17 +887,22 @@
                 const a = new Audio(this.track.url);
                 a.volume = this.volume;
                 a.playbackRate = this.rate;
-                a.addEventListener('loadedmetadata', () => { this.duration = a.duration || 0; });
-                a.addEventListener('timeupdate', () => { this.currentTime = a.currentTime; this._syncTimedAyah(a.currentTime); this._persistSoon(); });
-                a.addEventListener('play', () => { this.playing = true; });
-                a.addEventListener('pause', () => { this.playing = false; this._persist(); });
+                // Every listener checks it still owns the store: _teardown() pauses and
+                // blanks the outgoing element, and its `pause` lands asynchronously —
+                // after the next track's `play` — so without the guard a track change
+                // shows "paused" (and hides the row equalizer) while audio is playing.
+                a.addEventListener('loadedmetadata', () => { if (this.audio !== a) { return; } this.duration = a.duration || 0; });
+                a.addEventListener('timeupdate', () => { if (this.audio !== a) { return; } this.currentTime = a.currentTime; this._syncTimedAyah(a.currentTime); this._persistSoon(); });
+                a.addEventListener('play', () => { if (this.audio !== a) { return; } this.playing = true; });
+                a.addEventListener('pause', () => { if (this.audio !== a) { return; } this.playing = false; this._persist(); });
                 a.addEventListener('ended', () => {
                     if (this.audio !== a) { return; }
-                    // In queue mode the surah continues into the next ayah; in a
-                    // playlist it rolls into the next track. A surah page does NOT
-                    // auto-navigate — that would move the page under the listener.
+                    // In queue mode the surah continues into the next ayah. Then,
+                    // with auto-next on, a playlist rolls into its next track and a
+                    // surah page moves on to the next surah (the flag makes the next
+                    // page resume with the same reciter).
                     if (this._advance()) { return; }
-                    if (this.hasPlaylistNav() && this.canStep(1)) { this.step(1); return; }
+                    if (this.autoNext && this.hasStepNav() && this.canStep(1)) { this.step(1); return; }
                     this.playing = false; this.currentTime = 0; this._persist();
                 });
                 // everyayah is missing the odd ayah file for some reciters; skip
@@ -874,7 +917,11 @@
                 this.audio = a;
             },
             _teardown() { this.ayahAtTime = null; if (this.audio) { this.audio.pause(); this.audio.src = ''; this.audio = null; } },
-            _persist() { if (this.track) { localStorage.setItem('sitePlayerTrack', JSON.stringify({ ...this.track, currentTime: this.currentTime })); } },
+            _persist() {
+                if (this.track) { localStorage.setItem('sitePlayerTrack', JSON.stringify({ ...this.track, currentTime: this.currentTime })); }
+                if (this.playlist) { localStorage.setItem('sitePlayerPlaylist', JSON.stringify({ list: this.playlist, index: this.playlistIndex })); }
+                else { localStorage.removeItem('sitePlayerPlaylist'); }
+            },
             _persistSoon() { if (this._saveTimer) { return; } this._saveTimer = setTimeout(() => { this._saveTimer = null; this._persist(); }, 2000); },
         });
     });

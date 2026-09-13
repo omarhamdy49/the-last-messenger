@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 /**
  * SeerahEvent Factory
  *
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Domain\Seerah\Models\SeerahEvent>
+ * @extends Factory<SeerahEvent>
  */
 class SeerahEventFactory extends Factory
 {

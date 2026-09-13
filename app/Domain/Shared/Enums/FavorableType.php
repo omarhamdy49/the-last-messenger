@@ -26,6 +26,7 @@ enum FavorableType: string
     case QURAN = 'quran';
     case SEERAH = 'seerah';
     case MEDIA = 'media';
+    case RECITER = 'reciter';
 
     /**
      * The Lucide icon name used to represent this type in the UI.
@@ -38,6 +39,7 @@ enum FavorableType: string
             self::QURAN => 'book-marked',
             self::SEERAH => 'map-pin',
             self::MEDIA => 'monitor-play',
+            self::RECITER => 'mic',
         };
     }
 

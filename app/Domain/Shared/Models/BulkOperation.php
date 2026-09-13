@@ -205,7 +205,7 @@ class BulkOperation extends Model
 
         $endTime = $this->completed_at ?? now();
 
-        return $this->started_at->diffInSeconds($endTime);
+        return (int) $this->started_at->diffInSeconds($endTime);
     }
 
     /**
@@ -214,8 +214,8 @@ class BulkOperation extends Model
     public function canBeCancelled(): bool
     {
         return in_array($this->status, [
-            BulkOperationStatusEnum::PENDING->value,
-            BulkOperationStatusEnum::PROCESSING->value,
+            BulkOperationStatusEnum::PENDING,
+            BulkOperationStatusEnum::PROCESSING,
         ], true);
     }
 
@@ -224,12 +224,7 @@ class BulkOperation extends Model
      */
     public function isComplete(): bool
     {
-        return in_array($this->status, [
-            BulkOperationStatusEnum::COMPLETED->value,
-            BulkOperationStatusEnum::PARTIALLY_COMPLETED->value,
-            BulkOperationStatusEnum::FAILED->value,
-            BulkOperationStatusEnum::CANCELLED->value,
-        ], true);
+        return $this->status->isFinal();
     }
 
     /**
