@@ -11,6 +11,30 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
+        <!-- Deploy gate (.github/workflows/deploy.yml): the tests whose failure means
+             production must not ship — auth/authorization boundaries, public
+             visibility, API security, every admin + API route rendering, and the
+             pure unit layer. Kept to what runs in seconds; the full suite still runs
+             on every push as its own non-blocking job. Add a file here only when a
+             red result should block a deploy. -->
+        <testsuite name="Critical">
+            <directory>tests/Unit</directory>
+            <directory>tests/Feature/Security</directory>
+            <file>tests/Feature/PublicVisibilityGatingTest.php</file>
+            <file>tests/Feature/LocaleConfigurationTest.php</file>
+            <file>tests/Feature/Admin/AdminAuthorizationTest.php</file>
+            <file>tests/Feature/Admin/AdminAuthSeparationTest.php</file>
+            <file>tests/Feature/Admin/UserRoleAuthorizationTest.php</file>
+            <file>tests/Feature/Admin/AdminRouteSmokeTest.php</file>
+            <file>tests/Feature/Api/ApiSecurityBoundaryTest.php</file>
+            <file>tests/Feature/Api/ApiRouteSmokeTest.php</file>
+            <file>tests/Feature/Api/AuthTest.php</file>
+            <file>tests/Feature/Api/ShippedBugRegressionTest.php</file>
+            <file>tests/Feature/Web/AuthWebTest.php</file>
+            <file>tests/Feature/Web/ProfileSecurityTest.php</file>
+            <file>tests/Feature/Web/ProfileFavoritesTest.php</file>
+            <file>tests/Feature/Web/QuranPlaylistTest.php</file>
+        </testsuite>
     </testsuites>
     <source>
         <include>

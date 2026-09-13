@@ -1,4 +1,6 @@
-# One workflow, two jobs. This file used to be Deploy-only, with architecture
+# One workflow: three fast gates (architecture, critical tests, Pint) the deploy
+# needs, plus a full-suite report that runs alongside without holding it.
+# Originally: This file used to be Deploy-only, with architecture
 # checks in a separate deptrac.yml that ran in PARALLEL on the same push — so a
 # deploy could ship code that failed the architecture gate, and a push showed up
 # as one or two runs depending on whether it touched `app/**`. The gate is now a
@@ -33,18 +35,15 @@ jobs:
           tools: composer:v2
           coverage: none
 
-      - name: 🗂️ Locate composer cache
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
-
-      - name: ♻️ Cache composer downloads
+      - name: ♻️ Cache vendor
+        id: vendor-cache
         uses: actions/cache@v5
         with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-
+          path: vendor
+          key: ${{ runner.os }}-php85-vendor-${{ hashFiles('**/composer.lock') }}
 
       - name: 📦 Install dependencies
+        if: steps.vendor-cache.outputs.cache-hit != 'true'
         run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
 
       # Matches the documented local gate (`composer deptrac`). We do NOT pass
@@ -55,17 +54,20 @@ jobs:
       - name: 🧭 Run deptrac
         run: composer deptrac
 
-  # ── Gate: the test suite ────────────────────────────────────────────────────
-  # Added 17 Aug 2026. Before this, `architecture` was the ONLY gate: 900+ tests
-  # existed and CI never ran them, so a regression could merge to main and deploy
-  # with no automated verification beyond "composer install and npm run build
-  # succeeded". Nine tests had been red on main for some time, unnoticed.
+  # ── Gate: critical tests (seconds, blocks deploy) ───────────────────────────
+  # The full suite is ~1,270 tests and took ~5 minutes per push, most of it in
+  # composer install, a second migration pass and tests that guard editorial
+  # detail rather than production safety. The deploy now waits only for the
+  # `Critical` suite in phpunit.xml: auth/authorization boundaries, public
+  # visibility, API security, admin/API route smoke, and the unit layer. The
+  # full suite still runs on every push in `test-full` below, but does not
+  # hold the deploy.
   #
   # MySQL 8 service rather than SQLite: phpunit.xml pins DB_CONNECTION=mysql, and
   # this codebase's bug classes (JSON_EXTRACT, FULLTEXT, dropped columns,
   # whereDate sargability) are MySQL-specific and invisible under SQLite.
   test:
-    name: 🧪 Test suite
+    name: 🧪 Critical tests
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -77,9 +79,9 @@ jobs:
           - 3306:3306
         options: >-
           --health-cmd="mysqladmin ping --silent"
-          --health-interval=5s
+          --health-interval=2s
           --health-timeout=3s
-          --health-retries=20
+          --health-retries=30
     env:
       DB_CONNECTION: mysql
       DB_HOST: 127.0.0.1
@@ -99,34 +101,90 @@ jobs:
           tools: composer:v2
           coverage: none
 
-      - name: 🗂️ Locate composer cache
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
-
-      - name: ♻️ Cache composer downloads
+      # The whole vendor tree is cached on composer.lock, so a push that does not
+      # change dependencies skips `composer install` entirely (restore is seconds).
+      - name: ♻️ Cache vendor
+        id: vendor-cache
         uses: actions/cache@v5
         with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-
+          path: vendor
+          key: ${{ runner.os }}-php85-vendor-${{ hashFiles('**/composer.lock') }}
 
       - name: 📦 Install dependencies
+        if: steps.vendor-cache.outputs.cache-hit != 'true'
         run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
 
       # .env.example ships DB_CONNECTION=sqlite for local dev. The job-level env above
       # already wins (phpdotenv is immutable and will not override a real env var), but
-      # write it into .env too so `artisan migrate` cannot silently pick sqlite if that
-      # ever changes.
+      # write it into .env too so nothing can silently pick sqlite if that ever changes.
       - name: ⚙️ Prepare environment
         run: |
           cp .env.example .env
           sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=mysql/' .env
           php artisan key:generate
 
-      - name: 🗄️ Migrate
-        run: php artisan migrate --force --no-interaction
+      # No explicit `artisan migrate` here: every test class uses RefreshDatabase,
+      # which migrates the fresh database itself on first use. Running it twice
+      # was pure cost.
+      - name: 🧪 Run critical tests
+        run: php artisan test --testsuite=Critical --stop-on-failure
 
-      - name: 🧪 Run tests
+  # ── Report: full suite (every push, does not block deploy) ──────────────────
+  # Same environment as the gate. Red here is a real regression to fix, but it
+  # surfaces as a failed check on the commit/PR rather than a held deploy.
+  test-full:
+    name: 🧪 Full suite (non-blocking)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_DATABASE: the_last_messenger_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=2s
+          --health-timeout=3s
+          --health-retries=30
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: the_last_messenger_test
+      DB_USERNAME: root
+      DB_PASSWORD: ''
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v5
+
+      - name: 🐘 Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, xml, curl, zip, gd, bcmath, intl, redis, mysql
+          tools: composer:v2
+          coverage: none
+
+      - name: ♻️ Cache vendor
+        id: vendor-cache
+        uses: actions/cache@v5
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php85-vendor-${{ hashFiles('**/composer.lock') }}
+
+      - name: 📦 Install dependencies
+        if: steps.vendor-cache.outputs.cache-hit != 'true'
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - name: ⚙️ Prepare environment
+        run: |
+          cp .env.example .env
+          sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=mysql/' .env
+          php artisan key:generate
+
+      - name: 🧪 Run full suite
         run: php artisan test
 
   # ── Gate: code style (baseline cleared 13 Sep 2026) ─────────────────────────
@@ -144,7 +202,15 @@ jobs:
           tools: composer:v2
           coverage: none
 
+      - name: ♻️ Cache vendor
+        id: vendor-cache
+        uses: actions/cache@v5
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php85-vendor-${{ hashFiles('**/composer.lock') }}
+
       - name: 📦 Install dependencies
+        if: steps.vendor-cache.outputs.cache-hit != 'true'
         run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
 
       - name: 🎨 Check formatting
