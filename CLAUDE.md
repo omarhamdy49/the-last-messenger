@@ -376,6 +376,13 @@ published, so a bare `where('is_published', true)` will serve hidden content.
 - `Enums/RevelationPlace` is the single source of truth for `makkah|madinah`; use
   `RevelationPlace::fromExternal()` when importing (datasets say Meccan/Medina/…)
 - Verse identity is `verse_key` in `"surah:verse"` form (e.g. `"2:255"`)
+- **Reciter playlists** (visitor-built, shareable): `quran_playlists` / `quran_playlist_items`,
+  `Models/{Playlist,PlaylistItem}`, `PlaylistRepository`, `PlaylistService::assign()`
+  (balanced-random surah → recording; `Recitation::playable()` is the "has audio" rule).
+  Site routes `public.quran.playlists.*` (`/quran/playlists`, slug = 12-char random),
+  admin `admin.playlists.*`. `Playlist::scopeVisibleTo()` is the only visibility rule —
+  private playlists 404. Reader accepts `?reciter=<recording id>` (player `configure({force})`).
+  Reciter people are bookmarkable via `FavorableType::RECITER`. Spec: `specs/004-quran-playlists/`.
 
 **Key Files:**
 - `app/Domain/Quran/` — full domain structure
