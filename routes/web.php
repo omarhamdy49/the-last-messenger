@@ -16,6 +16,7 @@ use App\Http\Controllers\Site\PageController;
 use App\Http\Controllers\Site\PasswordResetController;
 use App\Http\Controllers\Site\ProfileController;
 use App\Http\Controllers\Site\QuranController;
+use App\Http\Controllers\Site\QuranPlaylistController;
 use App\Http\Controllers\Site\SahabaController;
 use App\Http\Controllers\Site\SearchController;
 use App\Http\Controllers\Site\SeerahController;
@@ -36,6 +37,24 @@ Route::get('/quran', [QuranController::class, 'index'])->name('public.quran');
 Route::get('/quran/surahs', [QuranController::class, 'surahsJson'])->name('public.quran.surahs.json');
 Route::get('/quran/reciters', [QuranController::class, 'reciters'])->name('public.quran.reciters');
 Route::get('/quran/reciters/{slug}', [QuranController::class, 'reciter'])->name('public.quran.reciter');
+// Reciter playlists. Static segments (new, preview, audio) are declared before
+// `{slug}`, and the slug is constrained to the 12-char random form.
+Route::get('/quran/playlists', [QuranPlaylistController::class, 'index'])->name('public.quran.playlists.index');
+Route::get('/quran/playlists/new', [QuranPlaylistController::class, 'create'])->middleware('auth')->name('public.quran.playlists.create');
+Route::post('/quran/playlists/preview', [QuranPlaylistController::class, 'preview'])->middleware(['auth', 'throttle:30,1'])->name('public.quran.playlists.preview');
+Route::get('/quran/playlists/audio/{surah}/{recording}', [QuranPlaylistController::class, 'audio'])
+    ->whereNumber(['surah', 'recording'])->name('public.quran.playlists.audio');
+Route::post('/quran/playlists', [QuranPlaylistController::class, 'store'])->middleware('auth')->name('public.quran.playlists.store');
+Route::prefix('/quran/playlists/{slug}')->where(['slug' => '[a-z0-9]{12}'])->controller(QuranPlaylistController::class)->group(function (): void {
+    Route::get('/', 'show')->name('public.quran.playlists.show');
+    Route::post('/plays', 'plays')->middleware('throttle:10,1')->name('public.quran.playlists.plays');
+    Route::middleware('auth')->group(function (): void {
+        Route::get('/edit', 'edit')->name('public.quran.playlists.edit');
+        Route::put('/', 'update')->name('public.quran.playlists.update');
+        Route::delete('/', 'destroy')->name('public.quran.playlists.destroy');
+        Route::patch('/visibility', 'visibility')->name('public.quran.playlists.visibility');
+    });
+});
 Route::get('/quran/live', [QuranController::class, 'live'])->name('public.quran.live');
 Route::get('/quran/asbab-al-nuzul', [QuranController::class, 'asbab'])->name('public.quran.asbab');
 // "Ask the Quran" inquiry search (canonical verse retrieval, no LLM).

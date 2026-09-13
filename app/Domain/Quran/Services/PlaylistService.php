@@ -241,4 +241,45 @@ final class PlaylistService
             ])->values()->all())
             ->all();
     }
+
+    /**
+     * Player-ready rows for a loaded playlist. One recitation query for all
+     * items; per (recording, surah) the lowest-priority active source wins,
+     * same as the surah reader.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function tracks(Playlist $playlist, string $locale): array
+    {
+        $items = $playlist->items;
+        $assigned = $items->whereNotNull('reciter_id');
+
+        $audio = $assigned->isEmpty() ? collect() : Recitation::query()
+            ->playable()
+            ->whereIn('surah_id', $assigned->pluck('surah_id'))
+            ->whereIn('reciter_id', $assigned->pluck('reciter_id'))
+            ->with('source:id,priority')
+            ->get(['id', 'reciter_id', 'source_id', 'surah_id', 'audio_url', 'duration_seconds'])
+            ->sortBy(fn (Recitation $r) => $r->source->priority)
+            ->unique(fn (Recitation $r) => $r->reciter_id.':'.$r->surah_id) // first = lowest priority
+            ->keyBy(fn (Recitation $r) => $r->reciter_id.':'.$r->surah_id);
+
+        return $items->map(function (PlaylistItem $item) use ($audio, $locale): array {
+            $recitation = $item->reciter_id ? $audio->get($item->reciter_id.':'.$item->surah_id) : null;
+            $profile = $item->reciter?->profile;
+
+            return [
+                'surah' => $item->surah_id,
+                'surahName' => $item->surah?->getDisplayName($locale) ?? '',
+                'verses' => $item->surah?->verses_count,
+                'recording' => $item->reciter_id,
+                'reciterName' => $profile?->displayName($locale),
+                'reciterImage' => $profile?->profile_image_url,
+                'recordingLabel' => $item->reciter?->recordingLabel($locale),
+                'url' => $recitation?->audio_url,
+                'duration' => $recitation?->duration_seconds,
+                'readerUrl' => route('public.quran.surah', $item->surah_id).($item->reciter_id ? '?reciter='.$item->reciter_id : ''),
+            ];
+        })->values()->all();
+    }
 }
