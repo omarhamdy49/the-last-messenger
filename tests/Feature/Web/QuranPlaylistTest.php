@@ -151,7 +151,12 @@ final class QuranPlaylistTest extends TestCase
 
         $this->get(route('public.quran.playlists.show', $playlist->slug))->assertNotFound();
         $this->actingAs(User::factory()->create())->get(route('public.quran.playlists.show', $playlist->slug))->assertNotFound();
-        $this->actingAs($owner)->get(route('public.quran.playlists.show', $playlist->slug))->assertOk();
+        $this->actingAs($owner)->get(route('public.quran.playlists.show', $playlist->slug))
+            ->assertOk()
+            // Owner controls: the more-menu with edit + inline delete confirmation.
+            ->assertSee(__('quran.playlists.more'))
+            ->assertSee(route('public.quran.playlists.edit', $playlist->slug), false)
+            ->assertSee(__('quran.playlists.delete_confirm_btn'));
     }
 
     public function test_public_playlist_is_visible_to_guest_and_plays_increment(): void

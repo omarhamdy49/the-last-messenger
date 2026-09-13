@@ -68,12 +68,12 @@
             <div class="absolute inset-0" style="background-image: url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.4\"%3E%3Cpath d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
         </div>
         <div class="absolute -top-24 -end-24 w-96 h-96 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
-        <span aria-hidden="true" class="absolute -bottom-6 start-6 text-[120px] sm:text-[160px] leading-none font-black tabular-nums text-white/[0.07] select-none pointer-events-none">{{ $num($card['items']) }}</span>
+        <span aria-hidden="true" class="absolute -bottom-5 start-6 text-[96px] sm:text-[128px] leading-none font-black tabular-nums text-white/[0.07] select-none pointer-events-none">{{ $num($card['items']) }}</span>
 
-        <div class="relative grid lg:grid-cols-[1.15fr_0.85fr] gap-8 lg:gap-14 items-center px-6 sm:px-10 lg:px-14 py-10 sm:py-14">
+        <div class="relative grid lg:grid-cols-[1.15fr_0.85fr] gap-8 lg:gap-14 items-center px-6 sm:px-10 lg:px-12 py-7 sm:py-9">
             {{-- Copy --}}
             <div class="pl-in min-w-0">
-                <div class="flex flex-wrap items-center gap-2 mb-4">
+                <div class="flex flex-wrap items-center gap-2 mb-3">
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold pl-glass">
                         @if ($playlist->is_public)
                             <i data-lucide="globe" class="w-3.5 h-3.5"></i>{{ __('quran.playlists.public') }}
@@ -91,13 +91,13 @@
                     </span>
                 </div>
 
-                <h1 class="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.2] text-start break-words">{{ $playlist->name }}</h1>
+                <h1 class="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-[1.2] text-start break-words">{{ $playlist->name }}</h1>
                 @if ($playlist->description)
-                    <p class="mt-4 text-base sm:text-lg text-white/85 leading-relaxed max-w-[52ch]">{!! $playlist->description !!}</p>
+                    <p class="mt-2.5 text-sm sm:text-base text-white/85 leading-relaxed max-w-[52ch] line-clamp-2">{{ $playlist->description }}</p>
                 @endif
 
                 {{-- Owner --}}
-                <div class="mt-5 inline-flex items-center gap-2.5 text-sm text-white/85">
+                <div class="mt-3 inline-flex items-center gap-2.5 text-sm text-white/85">
                     @if ($card['owner']['avatar'])
                         <img src="{{ $card['owner']['avatar'] }}" alt="" width="32" height="32" class="w-8 h-8 rounded-full object-cover ring-2 ring-white/60">
                     @else
@@ -109,7 +109,7 @@
                 {{-- Reciters (linked chips) --}}
                 @if ($reciters)
                     @php $chipLimit = 4; @endphp
-                    <ul class="mt-5 flex flex-wrap gap-2" aria-label="{{ __('quran.public.reciters') }}" x-data="{ all: false }">
+                    <ul class="mt-3.5 flex flex-wrap gap-2" aria-label="{{ __('quran.public.reciters') }}" x-data="{ all: false }">
                         @foreach ($reciters as $ri => $r)
                             <li @if ($ri >= $chipLimit) x-show="all" x-cloak @endif>
                                 <a href="{{ $r['url'] }}"
@@ -133,8 +133,8 @@
                 @endif
 
                 {{-- Actions: one primary, the rest glass --}}
-                <div class="mt-7 flex flex-wrap items-center gap-3">
-                    <button type="button" @click="playAll(0)" :disabled="!playable.length"
+                <div class="mt-5 flex flex-wrap items-center gap-2.5">
+                    <button type="button" @click="toggleAll()" :disabled="!playable.length"
                             class="inline-flex items-center gap-2 h-12 px-6 rounded-2xl bg-white text-[#0056b3] font-bold shadow-lg transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80">
                         <i data-lucide="play" class="w-5 h-5 fill-current {{ $isRtl ? '-scale-x-100' : '' }}" x-show="!listPlaying"></i>
                         <i data-lucide="pause" class="w-5 h-5 fill-current" x-show="listPlaying" x-cloak></i>
@@ -194,10 +194,10 @@
                 </div>
 
                 {{-- Bare divided figures --}}
-                <dl class="mt-8 grid {{ $statCols }} max-w-lg divide-x divide-white/25 {{ $isRtl ? 'divide-x-reverse' : '' }}">
+                <dl class="mt-6 grid {{ $statCols }} max-w-lg divide-x divide-white/25 {{ $isRtl ? 'divide-x-reverse' : '' }}">
                     @foreach ($stats as $i => $stat)
                         <div class="{{ $i === 0 ? '' : 'ps-4 sm:ps-5' }} {{ $i === count($stats) - 1 ? '' : 'pe-4 sm:pe-5' }} min-w-0">
-                            <dd class="text-2xl sm:text-3xl font-black tabular-nums leading-none truncate">{{ $stat['value'] }}</dd>
+                            <dd class="text-xl sm:text-2xl font-black tabular-nums leading-none truncate">{{ $stat['value'] }}</dd>
                             <dt class="mt-1.5 text-xs sm:text-sm text-white/75">{{ $stat['label'] }}</dt>
                         </div>
                     @endforeach
@@ -205,13 +205,13 @@
             </div>
 
             {{-- Glass collage: reciter portraits, each a link --}}
-            <div class="pl-in-2 hidden lg:block justify-self-end w-full max-w-sm">
+            <div class="pl-in-2 hidden lg:block justify-self-end w-full max-w-[19rem]">
                 <div class="rounded-3xl pl-glass p-4">
                     <div class="grid grid-cols-2 gap-3" aria-label="{{ __('quran.public.reciters') }}">
                         @foreach (array_slice($reciters, 0, count($reciters) > 4 ? 3 : 4) as $i => $r)
                             <a href="{{ $r['url'] }}" title="{{ $r['name'] }}"
                                class="group block aspect-square rounded-2xl overflow-hidden ring-1 ring-white/20 transition-transform duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 {{ count($reciters) === 1 ? 'col-span-2 aspect-[2/1]' : '' }}">
-                                <x-site.reciter-avatar :name="$r['name']" :image="$r['image']" size="w-full h-full" shape="rounded-none" text="text-xl xl:text-2xl font-black px-3" class="transition-transform duration-500 group-hover:scale-105" />
+                                <x-site.reciter-avatar :name="$r['name']" :image="$r['image']" size="w-full h-full" shape="rounded-none" text="text-sm xl:text-base font-bold px-2" class="transition-transform duration-500 group-hover:scale-105" />
                             </a>
                         @endforeach
                         @if (count($reciters) > 4)
@@ -260,7 +260,7 @@
                         <span class="absolute inset-y-2 start-0 w-1 rounded-e-full bg-gradient-to-b from-[#0056b3] to-[#218838] transition-opacity" :class="isActive({{ $i }}) ? 'opacity-100' : 'opacity-0'" aria-hidden="true"></span>
 
                         {{-- number / equalizer --}}
-                        <button type="button" @click="playAll({{ $i }})" @disabled(! $t['url'])
+                        <button type="button" @click="playAt({{ $i }})" @disabled(! $t['url'])
                                 class="w-11 h-11 rounded-2xl flex items-center justify-center text-sm font-bold tabular-nums shrink-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed"
                                 :class="isActive({{ $i }}) ? 'bg-primary text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-primary/10 hover:text-primary'"
                                 aria-label="{{ __('quran.playlists.play') }} {{ $t['surahName'] }}">
@@ -271,8 +271,11 @@
 
                         {{-- surah --}}
                         <div class="min-w-0">
-                            <a href="{{ $t['readerUrl'] }}" class="font-bold text-zinc-900 dark:text-white hover:text-primary transition-colors truncate block"
-                               title="{{ __('quran.playlists.open_reader') }}">{{ $t['surahName'] }}</a>
+                            {{-- The title plays the track; the reader is reached through the book icon at the end of the row. --}}
+                            <button type="button" @click="playAt({{ $i }})" @disabled(! $t['url'])
+                                    class="font-bold text-zinc-900 dark:text-white hover:text-primary transition-colors truncate block max-w-full text-start disabled:cursor-default disabled:hover:text-zinc-900"
+                                    :class="isActive({{ $i }}) ? 'text-primary' : ''"
+                                    aria-label="{{ __('quran.playlists.play') }} {{ $t['surahName'] }}">{{ $t['surahName'] }}</button>
                             <p class="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
                                 {{ __('quran.playlists.verses', ['count' => $num($t['verses'] ?? 0)]) }}
                                 @if ($t['duration'])
@@ -345,14 +348,23 @@ function playlistPage() {
             const t = this.tracks[i];
             return !!t?.url && this.$store.audioPlayer.track?.url === t.url;
         },
-        playAll(i) {
+        // Hero button: starts the list, or pauses/resumes it once it is the loaded list.
+        toggleAll() {
+            const p = this.$store.audioPlayer;
+            const loaded = !!p.track?.url && this.tracks.some(t => t.url === p.track.url);
+            if (loaded) { p.toggle(); return; }
+            this.playAt(0);
+        },
+        // Row: always (re)starts that surah — never a toggle, so the first row is not special.
+        playAt(i) {
             const list = this.playable;
             if (!list.length) return;
-            // "Play all" while this list is already playing pauses it, like a transport button.
-            if (i === 0 && this.listPlaying) { this.$store.audioPlayer.toggle(); return; }
+            const p = this.$store.audioPlayer;
             const target = this.tracks[i]?.url;
             const idx = Math.max(0, list.findIndex(t => t.url === target));
-            this.$store.audioPlayer.setPlaylist(list, idx);
+            // setPlaylist() toggles when the tapped track is the loaded one; a tap on a row means "play it".
+            if (p.track?.url === target) { if (!p.playing) { p.toggle(); } return; }
+            p.setPlaylist(list, idx);
             if (!this.counted) {
                 this.counted = true;
                 fetch(this.playsUrl, {

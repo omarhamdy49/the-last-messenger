@@ -887,10 +887,14 @@
                 const a = new Audio(this.track.url);
                 a.volume = this.volume;
                 a.playbackRate = this.rate;
-                a.addEventListener('loadedmetadata', () => { this.duration = a.duration || 0; });
-                a.addEventListener('timeupdate', () => { this.currentTime = a.currentTime; this._syncTimedAyah(a.currentTime); this._persistSoon(); });
-                a.addEventListener('play', () => { this.playing = true; });
-                a.addEventListener('pause', () => { this.playing = false; this._persist(); });
+                // Every listener checks it still owns the store: _teardown() pauses and
+                // blanks the outgoing element, and its `pause` lands asynchronously —
+                // after the next track's `play` — so without the guard a track change
+                // shows "paused" (and hides the row equalizer) while audio is playing.
+                a.addEventListener('loadedmetadata', () => { if (this.audio !== a) { return; } this.duration = a.duration || 0; });
+                a.addEventListener('timeupdate', () => { if (this.audio !== a) { return; } this.currentTime = a.currentTime; this._syncTimedAyah(a.currentTime); this._persistSoon(); });
+                a.addEventListener('play', () => { if (this.audio !== a) { return; } this.playing = true; });
+                a.addEventListener('pause', () => { if (this.audio !== a) { return; } this.playing = false; this._persist(); });
                 a.addEventListener('ended', () => {
                     if (this.audio !== a) { return; }
                     // In queue mode the surah continues into the next ayah. Then,
