@@ -45,7 +45,7 @@
 
 @section('content')
 @php
-    $locales = ['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'];
+    $locales = enabled_content_languages();
     // Guarded accessors — raw getFirstMedia* throws on the custom media table.
     $thumbUrl = $episode->thumb_url;
     $bannerUrl = $episode->program?->banner_url;

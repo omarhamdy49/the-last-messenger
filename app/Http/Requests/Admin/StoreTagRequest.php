@@ -96,7 +96,7 @@ class StoreTagRequest extends FormRequest
         }
 
         // Ensure all language fields are present (set to null if missing)
-        $languages = ['ar', 'en', 'fr', 'tr', 'ur'];
+        $languages = enabled_content_locales();
         $name = $this->input('name', []);
 
         foreach ($languages as $lang) {

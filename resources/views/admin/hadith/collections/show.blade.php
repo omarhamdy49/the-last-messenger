@@ -6,9 +6,13 @@
         <p class="mt-2 text-sm font-mono" dir="ltr" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ $collection->slug }}</p>
     </div>
     <div class="flex flex-wrap gap-2">
+        @if($collection->has_books)
         <a href="{{ route('admin.hadith-books.create', ['collection' => $collection->id]) }}" class="px-5 py-2.5 rounded-xl font-semibold border" :class="darkMode ? 'border-gray-700 text-gray-300' : 'border-gray-300 text-gray-700'">
             <i data-lucide="plus" class="w-4 h-4 inline"></i> باب جديد
         </a>
+        @else
+        <a href="{{ route('admin.hadiths.create', ['collection' => $collection->id]) }}" class="px-5 py-2.5 rounded-xl font-semibold border">{{ __('hadith_admin.add') }} {{ __('hadith_admin.hadiths') }}</a>
+        @endif
         <a href="{{ route('admin.hadith-collections.edit', $collection) }}" class="px-5 py-2.5 rounded-xl font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white">{{ __('hadith_admin.edit') }}</a>
     </div>
 </div>
@@ -23,6 +27,28 @@
     <x-admin.stats-card icon="{{ $collection->is_published ? 'eye' : 'eye-off' }}" title="{{ $collection->is_published ? __('hadith_admin.published') : __('hadith_admin.draft') }}" :value="''" delay="delay-300" />
 </div>
 
+@if($hadiths !== null)
+<div class="space-y-3">
+    <h2 class="font-bold">{{ __('hadith_admin.hadiths') }}</h2>
+    @forelse($hadiths as $hadith)
+        <div class="rounded-2xl border p-5" :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <span class="font-mono" dir="ltr">{{ $hadith->reference_key }}</span>
+                <div class="flex items-center gap-2">
+                    <x-admin.hadith-status-toggle :action="route('admin.hadiths.toggle-status', $hadith)" :published="$hadith->is_published" />
+                    <a href="{{ route('admin.hadiths.show', $hadith) }}" class="text-accent">{{ __('hadith_admin.view') }}</a>
+                    <a href="{{ route('admin.hadiths.edit', $hadith) }}" class="text-accent">{{ __('hadith_admin.edit') }}</a>
+                    <x-admin.hadith-delete-button :action="route('admin.hadiths.destroy', $hadith)" :label="$hadith->reference_key" />
+                </div>
+            </div>
+            <p class="leading-loose" dir="rtl">{{ Str::limit(strip_tags((string) ($hadith->text_ar ?: $hadith->text_en)), 320) }}</p>
+        </div>
+    @empty
+        <p class="py-12 text-center">{{ __('hadith_admin.no_results') }}</p>
+    @endforelse
+</div>
+<div class="mt-6">{{ $hadiths->links() }}</div>
+@else
 <div class="rounded-2xl border overflow-hidden" :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
     <div class="px-5 py-4 border-b flex items-center justify-between" :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
         <h2 class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ __('hadith_admin.books') }}</h2>
@@ -65,4 +91,5 @@
     </div>
 </div>
 <div class="mt-6">{{ $books->links() }}</div>
+@endif
 @endsection

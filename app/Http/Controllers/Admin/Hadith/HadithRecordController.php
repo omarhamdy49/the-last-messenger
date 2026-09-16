@@ -15,6 +15,7 @@ use App\Http\Requests\Admin\Hadith\StoreHadithRequest;
 use App\Http\Requests\Admin\Hadith\UpdateHadithRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -126,7 +127,12 @@ class HadithRecordController extends Controller
 
     public function destroy(Hadith $hadith): RedirectResponse
     {
-        $hadith->delete();
+        // The chain FK is RESTRICT because it participates in a generated
+        // uniqueness column. Remove only this narration's links atomically.
+        DB::transaction(function () use ($hadith): void {
+            $hadith->narrators()->delete();
+            $hadith->delete();
+        });
 
         return redirect()
             ->route('admin.hadiths.index')

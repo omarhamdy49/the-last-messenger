@@ -111,7 +111,7 @@ class HadithCollection extends Model
      */
     public function availableHadithsCount(): int
     {
-        return (int) $this->hadiths()->where('is_published', true)->count();
+        return (int) $this->hadiths()->publiclyVisible()->count();
     }
 
     protected static function newFactory(): HadithCollectionFactory

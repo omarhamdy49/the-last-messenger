@@ -51,3 +51,9 @@ deploy/secrets/
 .worktrees/
 .security-key
 logs/security/
+
+# design-sync
+.design-sync/
+.ds-sync/
+ds-bundle/
+ds-bundle-*/

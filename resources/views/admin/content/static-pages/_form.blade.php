@@ -1,7 +1,7 @@
 {{-- Static page form — used by create and edit. Expects optional $page --}}
 @php
     $isEdit = isset($page) && $page->exists;
-    $locales = ['ar', 'en', 'fr', 'tr', 'ur'];
+    $locales = enabled_content_locales();
     $inputClasses = 'w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 font-cairo text-base sm:text-sm focus:ring-2 focus:ring-accent/50';
     $titles = $isEdit ? $page->getTranslations('title') : [];
     $bodies = $isEdit ? $page->getTranslations('body') : [];

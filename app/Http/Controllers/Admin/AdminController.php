@@ -277,7 +277,7 @@ abstract class AdminController extends Controller
         $locale = $request->input('locale', 'ar');
 
         // Validate locale
-        $supportedLocales = ['ar', 'en', 'fr', 'tr', 'ur'];
+        $supportedLocales = enabled_content_locales();
         if (! in_array($locale, $supportedLocales)) {
             return $this->failure(__('admin.locale_unsupported'), 400);
         }
@@ -317,13 +317,9 @@ abstract class AdminController extends Controller
             'locale' => $locale,
             'direction' => get_text_direction($locale),
             'is_rtl' => is_rtl_locale($locale),
-            'supported_locales' => [
-                ['code' => 'ar', 'name' => 'العربية', 'native' => 'العربية'],
-                ['code' => 'en', 'name' => 'English', 'native' => 'English'],
-                ['code' => 'fr', 'name' => 'Français', 'native' => 'Français'],
-                ['code' => 'tr', 'name' => 'Türkçe', 'native' => 'Türkçe'],
-                ['code' => 'ur', 'name' => 'اردو', 'native' => 'اردو'],
-            ],
+            'supported_locales' => collect(enabled_content_languages())->map(
+                fn (string $name, string $code): array => ['code' => $code, 'name' => $name, 'native' => $name]
+            )->values()->all(),
         ]);
     }
 }

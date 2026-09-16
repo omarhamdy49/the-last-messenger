@@ -8,6 +8,8 @@ use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithBook;
 use App\Domain\Hadith\Models\HadithChapter;
 use App\Domain\Hadith\Models\HadithCollection;
+use App\Domain\Hadith\Models\HadithNarrator;
+use App\Domain\People\Models\Muslim;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -64,6 +66,39 @@ class HadithAdminTest extends TestCase
             ->assertSee('صحيح البخاري', false);
     }
 
+    public function test_a_bookless_collection_shows_direct_narrations_in_admin(): void
+    {
+        $collection = HadithCollection::factory()->bookless()->create(['slug' => 'shahwaliullah40']);
+        Hadith::factory()->create(['collection_id' => $collection->id, 'text_ar' => 'حديث بلا أبواب']);
+
+        $this->actingAs($this->admin(), 'admin')
+            ->get(route('admin.hadith-collections.show', $collection))
+            ->assertOk()->assertSee('حديث بلا أبواب')
+            ->assertDontSee('باب جديد');
+    }
+
+    public function test_deleting_a_hadith_preserves_the_collection_and_other_narrations(): void
+    {
+        $collection = HadithCollection::factory()->bookless()->create();
+        $hadith = Hadith::factory()->create(['collection_id' => $collection->id]);
+        $other = Hadith::factory()->create(['collection_id' => $collection->id]);
+        $narrator = Muslim::factory()->create();
+        HadithNarrator::create([
+            'hadith_id' => $hadith->id, 'narrator_id' => $narrator->id,
+            'position' => 1, 'is_primary' => true,
+        ]);
+
+        $this->actingAs($this->admin(), 'admin')
+            ->delete(route('admin.hadiths.destroy', $hadith))
+            ->assertRedirect()->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('hadiths', ['id' => $hadith->id]);
+        $this->assertDatabaseHas('hadiths', ['id' => $other->id]);
+        $this->assertDatabaseHas('hadith_collections', ['id' => $collection->id]);
+        $this->assertDatabaseMissing('hadith_narrators', ['hadith_id' => $hadith->id]);
+        $this->assertDatabaseHas('muslims', ['id' => $narrator->id]);
+    }
+
     public function test_the_hadiths_index_loads_and_filters_by_collection(): void
     {
         $bukhari = $this->collection(['title_ar' => 'البخاري']);
@@ -78,6 +113,20 @@ class HadithAdminTest extends TestCase
 
         $response->assertSee('حديث البخاري هنا', false);
         $response->assertDontSee('حديث مسلم هنا', false);
+    }
+
+    public function test_the_hadiths_index_displays_available_english_text_when_arabic_is_missing(): void
+    {
+        Hadith::factory()->create([
+            'collection_id' => $this->collection()->id,
+            'text_ar' => null,
+            'text_en' => 'The available English narration',
+            'is_published' => false,
+        ]);
+
+        $this->actingAs($this->admin(), 'admin')
+            ->get(route('admin.hadiths.index'))
+            ->assertOk()->assertSee('The available English narration');
     }
 
     public function test_hadiths_can_be_filtered_to_the_ungraded_ones(): void

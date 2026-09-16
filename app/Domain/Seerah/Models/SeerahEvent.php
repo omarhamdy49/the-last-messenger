@@ -59,6 +59,12 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  */
 class SeerahEvent extends Model implements HasMedia
 {
+    /**
+     * Editorial sequence is authoritative when dates are uncertain. Dates break
+     * equal ranks (including the legacy default 0); id makes navigation stable.
+     */
+    public const CHRONOLOGY_COLUMNS = ['display_order', 'hijri_year', 'hijri_month', 'hijri_day', 'id'];
+
     use HasFactory, HasInteractions, HasLocalizedContent, InteractsWithMedia {
         getFirstMediaUrl as protected spatieGetFirstMediaUrl;
     }
@@ -489,17 +495,18 @@ class SeerahEvent extends Model implements HasMedia
     }
 
     /**
-     * Scope: Order chronologically (by Hijri date)
+     * Scope: Order by the editorial chronology without requiring an exact date.
      *
      * @param  Builder  $query
      * @return Builder
      */
     public function scopeChronological($query, string $direction = 'asc')
     {
-        return $query->orderBy('hijri_year', $direction)
-            ->orderBy('hijri_month', $direction)
-            ->orderBy('hijri_day', $direction)
-            ->orderBy('display_order', $direction);
+        foreach (self::CHRONOLOGY_COLUMNS as $column) {
+            $query->orderBy($column, $direction);
+        }
+
+        return $query;
     }
 
     /**

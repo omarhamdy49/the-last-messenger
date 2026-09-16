@@ -50,7 +50,7 @@ class CategoryTree {
         this.container = container;
         this.options = {
             maxDepth: options.maxDepth || 5,
-            apiUrl: options.apiUrl || '/admin/categories',
+            apiUrl: options.apiUrl || window.adminRoutes?.categories,
             onReorder: options.onReorder || (() => {}),
             onError: options.onError || console.error,
             animation: options.animation !== false,

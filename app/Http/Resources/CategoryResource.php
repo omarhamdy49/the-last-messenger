@@ -32,8 +32,8 @@ class CategoryResource extends JsonResource
             'name' => $this->getNameInLanguage($language),
             'description' => $this->getDescriptionInLanguage($language),
             'translations' => [
-                'name' => $this->getTranslations('name'),
-                'description' => $this->getTranslations('description'),
+                'name' => $this->getEnabledTranslations('name'),
+                'description' => $this->getEnabledTranslations('description'),
             ],
 
             // Hierarchy fields

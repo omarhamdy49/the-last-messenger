@@ -6,6 +6,7 @@ namespace App\Http\Requests\Admin;
 
 use App\Http\Requests\Admin\Concerns\ProtectsPrivilegedUsers;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
 /**
@@ -30,7 +31,7 @@ class StoreUserRequest extends FormRequest
             // mixed case + numbers and the API required 12 chars with symbols. `password` was a
             // valid admin password.
             'password' => ['required', 'string', 'confirmed', Password::min(12)->mixedCase()->numbers()->symbols()],
-            'language' => ['nullable', 'string', 'in:ar,en,fr,tr,ur'],
+            'language' => ['nullable', 'string', Rule::in(enabled_content_locales())],
             'roles' => ['nullable', 'array'],
             'roles.*' => ['string', 'exists:roles,name'],
         ];

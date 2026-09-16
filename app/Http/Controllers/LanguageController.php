@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Domain\Shared\Models\Language;
+use App\Domain\Shared\Services\LanguageService;
 use App\Support\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Session;
 
 /**
@@ -22,7 +23,7 @@ class LanguageController extends Controller
     /**
      * Supported languages
      */
-    private array $supportedLanguages = ['ar', 'en', 'fr', 'tr', 'ur'];
+    public function __construct(private readonly LanguageService $languages) {}
 
     /**
      * Switch application language
@@ -35,7 +36,7 @@ class LanguageController extends Controller
         $language = $request->input('language') ?? $request->input('locale');
 
         // Validate language
-        if (! in_array($language, $this->supportedLanguages)) {
+        if (! is_string($language) || ! in_array($language, array_keys(config('languages.available')), true)) {
             if ($request->expectsJson()) {
                 return $this->errorResponse('اللغة المختارة غير صحيحة', 422);
             }
@@ -90,7 +91,7 @@ class LanguageController extends Controller
      */
     public function all(): JsonResponse
     {
-        $languages = Cache::get('system.languages', $this->getDefaultLanguages());
+        $languages = $this->languages->settings();
 
         return $this->successResponse(
             array_values($languages),
@@ -106,7 +107,7 @@ class LanguageController extends Controller
     public function current(): JsonResponse
     {
         $currentLocale = app()->getLocale();
-        $languages = Cache::get('system.languages', $this->getDefaultLanguages());
+        $languages = $this->languages->settings();
         $currentLanguage = $languages[$currentLocale] ?? null;
 
         return $this->successResponse([
@@ -120,79 +121,15 @@ class LanguageController extends Controller
      */
     private function getActiveLanguages(): array
     {
-        $languages = Cache::get('system.languages', $this->getDefaultLanguages());
+        $languages = $this->languages->settings();
 
         return array_values(array_filter($languages, function ($lang) {
             return $lang['active'] ?? false;
         }));
     }
 
-    /**
-     * Check if language is active
-     */
     private function isLanguageActive(string $code): bool
     {
-        $languages = Cache::get('system.languages', []);
-
-        if (empty($languages)) {
-            // If no cache, allow all supported languages
-            return in_array($code, $this->supportedLanguages);
-        }
-
-        return isset($languages[$code]) && ($languages[$code]['active'] ?? false);
-    }
-
-    /**
-     * Get default languages configuration
-     */
-    private function getDefaultLanguages(): array
-    {
-        return [
-            'ar' => [
-                'code' => 'ar',
-                'name' => 'Arabic',
-                'native_name' => 'العربية',
-                'direction' => 'rtl',
-                'flag' => '🇸🇦',
-                'active' => true,
-                'order' => 1,
-            ],
-            'en' => [
-                'code' => 'en',
-                'name' => 'English',
-                'native_name' => 'English',
-                'direction' => 'ltr',
-                'flag' => '🇬🇧',
-                'active' => true,
-                'order' => 2,
-            ],
-            'fr' => [
-                'code' => 'fr',
-                'name' => 'French',
-                'native_name' => 'Français',
-                'direction' => 'ltr',
-                'flag' => '🇫🇷',
-                'active' => true,
-                'order' => 3,
-            ],
-            'tr' => [
-                'code' => 'tr',
-                'name' => 'Turkish',
-                'native_name' => 'Türkçe',
-                'direction' => 'ltr',
-                'flag' => '🇹🇷',
-                'active' => true,
-                'order' => 4,
-            ],
-            'ur' => [
-                'code' => 'ur',
-                'name' => 'Urdu',
-                'native_name' => 'اردو',
-                'direction' => 'rtl',
-                'flag' => '🇵🇰',
-                'active' => true,
-                'order' => 5,
-            ],
-        ];
+        return Language::isValidCode($code);
     }
 }

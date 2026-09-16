@@ -22,12 +22,12 @@
                     <span>{{ __('admin.merge_selected') }}</span>
                 </button>
 
-                <button @click="deleteUnused()"
+                <a href="{{ route('admin.tags.unused') }}"
                         class="px-4 py-2.5 rounded-lg font-semibold transition-all hover:scale-105 flex items-center gap-2"
                         :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
                     <i data-lucide="trash" class="w-5 h-5"></i>
                     <span>{{ __('admin.delete_unused') }}</span>
-                </button>
+                </a>
 
                 <a href="{{ route('admin.tags.create') }}"
                    class="px-6 py-2.5 rounded-lg font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white hover:scale-105 transition-all shadow-lg hover:shadow-xl flex items-center gap-2">
@@ -193,7 +193,7 @@
                                 <!-- Name (All Languages) -->
                                 <td class="px-6 py-4">
                                     <div class="space-y-1">
-                                        <a :href="`/admin/tags/${tag.id}/edit`"
+                                        <a :href="`{{ route('admin.tags.index') }}/${tag.id}/edit`"
                                            class="font-semibold hover:text-accent transition-colors"
                                            :class="darkMode ? 'text-white' : 'text-gray-900'"
                                            x-text="tag.name"></a>
@@ -242,7 +242,7 @@
                                 <!-- Actions -->
                                 <td class="px-6 py-4">
                                     <div class="flex items-center justify-center gap-2">
-                                        <a :href="`/admin/tags/${tag.id}/edit`"
+                                        <a :href="`{{ route('admin.tags.index') }}/${tag.id}/edit`"
                                            class="p-2 rounded-lg transition-all hover:scale-110"
                                            :class="darkMode ? 'hover:bg-gray-700 text-accent' : 'hover:bg-gray-100 text-accent'">
                                             <i data-lucide="edit" class="w-4 h-4"></i>
@@ -324,6 +324,8 @@
         </div>
     </div>
 
+    <div class="mt-6">{{ $tags->links() }}</div>
+
     <!-- Merge Modal -->
     <x-admin.tag-merge-modal />
 </div>
@@ -347,6 +349,7 @@ function tagManagement() {
         totalPages: 1,
 
         init() {
+            this.$watch('currentPage', () => this.updatePagination());
             this.filteredTags = this.tags;
             this.updatePagination();
             this.$nextTick(() => lucide.createIcons());
@@ -423,35 +426,6 @@ function tagManagement() {
             }));
         },
 
-        async deleteUnused() {
-            window.showConfirm({
-                title: '{{ __("admin.confirm_delete") }}',
-                message: 'هل أنت متأكد من حذف جميع الوسوم غير المستخدمة؟ لا يمكن التراجع عن هذا الإجراء.',
-                type: 'danger',
-                onConfirm: async () => {
-                    this.loading = true;
-                    try {
-                        const response = await fetch('/admin/tags/delete-unused', {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                                'Accept': 'application/json',
-                                'Content-Type': 'application/json'
-                            }
-                        });
-
-                        if (response.ok) {
-                            window.location.reload();
-                        }
-                    } catch (error) {
-                        console.error('Failed to delete unused tags:', error);
-                    } finally {
-                        this.loading = false;
-                    }
-                }
-            });
-        },
-
         deleteTag(tagId) {
             window.showConfirm({
                 title: '{{ __("admin.confirm_delete") }}',
@@ -459,7 +433,7 @@ function tagManagement() {
                 type: 'danger',
                 onConfirm: async () => {
                     try {
-                        const response = await fetch(`/admin/tags/${tagId}`, {
+                        const response = await fetch(`{{ route('admin.tags.index') }}/${tagId}`, {
                             method: 'DELETE',
                             headers: {
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -469,10 +443,15 @@ function tagManagement() {
 
                         if (response.ok) {
                             this.tags = this.tags.filter(tag => tag.id !== tagId);
+                            this.selectedTags = this.selectedTags.filter(id => Number(id) !== Number(tagId));
                             this.filterTags();
+                            showToast({{ Js::from(__('admin.tag_deleted')) }}, 'success');
+                        } else {
+                            const error = await response.json();
+                            showToast(error.message || {{ Js::from(__('admin.operation_failed')) }}, 'error');
                         }
                     } catch (error) {
-                        console.error('Failed to delete tag:', error);
+                        showToast({{ Js::from(__('admin.operation_failed')) }}, 'error');
                     }
                 }
             });

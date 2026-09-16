@@ -42,6 +42,18 @@ final class HadithBrowseService
         return HadithCollection::query()->published()->where('slug', $slug)->first();
     }
 
+    /** Collections such as the Forty books store narrations directly. */
+    public function collectionHadiths(HadithCollection $collection, int $perPage = 20): LengthAwarePaginator
+    {
+        return Hadith::query()
+            ->publiclyVisible()
+            ->where('collection_id', $collection->id)
+            ->with(['collection', 'chapter'])
+            ->orderBy('sort_order')->orderBy('id')
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
     /**
      * Books of a collection with their real, publicly-visible hadith counts.
      *

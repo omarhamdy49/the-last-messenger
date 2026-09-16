@@ -67,7 +67,7 @@ class ArticleResource extends JsonResource
                     return [
                         'id' => $tag->id,
                         'slug' => $tag->slug,
-                        'name' => $tag->getTranslations('name'),
+                        'name' => $tag->getEnabledTranslations('name'),
                     ];
                 });
             }),
@@ -78,7 +78,7 @@ class ArticleResource extends JsonResource
                     ? $this->locales
                     : $this->locales->where('is_ready', true);
 
-                return $locales->mapWithKeys(function ($locale) {
+                return $locales->whereIn('locale', enabled_content_locales())->mapWithKeys(function ($locale) {
                     return [
                         $locale->locale => [
                             'title' => $locale->title,
@@ -126,7 +126,7 @@ class ArticleResource extends JsonResource
                     return [
                         'id' => $event->id,
                         'slug' => $event->slug,
-                        'title' => $event->getTranslations('title'),
+                        'title' => $event->getEnabledTranslations('title'),
                         'featured_image' => $event->getFirstMediaUrl('featured_image') ?: $event->featured_image,
                     ];
                 });

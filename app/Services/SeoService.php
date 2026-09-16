@@ -621,6 +621,6 @@ class SeoService
      */
     public function getSupportedLocales(): array
     {
-        return self::SUPPORTED_LOCALES;
+        return enabled_content_locales();
     }
 }

@@ -30,7 +30,7 @@
         <div class="rounded-2xl border p-6" :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
             <h2 class="text-xl font-bold mb-6" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ __('admin.translations') }}</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                @foreach(['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'] as $lang => $label)
+                @foreach(enabled_content_languages() as $lang => $label)
                 <div class="p-4 rounded-xl border" :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
                     <p class="text-xs mb-1" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ $label }}</p>
                     <p class="font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'" dir="{{ in_array($lang, ['ar','ur']) ? 'rtl' : 'ltr' }}">

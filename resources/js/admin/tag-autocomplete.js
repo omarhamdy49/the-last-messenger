@@ -52,7 +52,7 @@ class TagAutocomplete {
         this.options = {
             inputName: options.inputName || 'tags',
             selectedTags: options.selectedTags || [],
-            apiUrl: options.apiUrl || '/admin/tags/search',
+            apiUrl: options.apiUrl || window.adminRoutes?.tagSearch,
             onTagAdded: options.onTagAdded || (() => {}),
             onTagRemoved: options.onTagRemoved || (() => {}),
             searchDelay: options.searchDelay || 300,

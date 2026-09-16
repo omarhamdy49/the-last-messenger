@@ -1,7 +1,7 @@
 {{-- Category Form — used by create.blade.php and edit.blade.php --}}
 
 @php
-    $langs = ['ar', 'en', 'tr', 'fr', 'ur'];
+    $langs = enabled_content_locales();
     $langMeta = [
         'ar' => ['name' => 'العربية',  'flag' => '🇸🇦', 'dir' => 'rtl'],
         'en' => ['name' => 'English',  'flag' => '🇬🇧', 'dir' => 'ltr'],

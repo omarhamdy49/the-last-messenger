@@ -77,7 +77,7 @@
                                         {{ $article->locales->where('locale', 'ar')->first()?->title ?? $article->locales->first()?->title ?? 'بدون عنوان' }}
                                     </h3>
                                     <div class="flex items-center gap-2 mt-1">
-                                        @foreach($article->locales as $locale)
+                                        @foreach($article->locales->whereIn('locale', enabled_content_locales()) as $locale)
                                         <span class="text-xs px-1.5 py-0.5 rounded"
                                               :class="darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500'">
                                             {{ strtoupper($locale->locale) }}

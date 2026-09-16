@@ -87,7 +87,7 @@
     <!-- Bulk bar -->
     <form method="POST" action="{{ route('admin.playlists.bulk-unpublish') }}" id="bulk-form"
           x-show="selected.length" x-cloak x-transition
-          @submit="if (!confirm(@js($t('bulk_confirm')))) $event.preventDefault()"
+          onsubmit="return window.confirmSubmit(this, { message: {{ Js::from($t('bulk_confirm')) }} })"
           class="mb-4 p-4 rounded-2xl border flex items-center justify-between gap-3"
           :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
         @csrf
@@ -168,7 +168,7 @@
                                            class="w-9 h-9 rounded-lg inline-flex items-center justify-center transition-colors" :class="darkMode ? 'text-gray-400 hover:bg-gray-800 hover:text-white' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'"
                                            title="{{ $t('edit') }}"><i data-lucide="pencil" class="w-4 h-4"></i></a>
                                         <form method="POST" action="{{ route('admin.playlists.destroy', $playlist->id) }}" class="inline"
-                                              @submit="if (!confirm(@js($t('delete_message', ['name' => $playlist->name])))) $event.preventDefault()">
+                                              onsubmit="return window.confirmSubmit(this, { message: {{ Js::from($t('delete_message', ['name' => $playlist->name])) }} })">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="w-9 h-9 rounded-lg inline-flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="{{ $t('delete') }}">

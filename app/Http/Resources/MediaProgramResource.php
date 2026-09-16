@@ -18,9 +18,9 @@ class MediaProgramResource extends JsonResource
         return [
             'id' => $this->id,
             'slug' => $this->slug,
-            'title' => $this->getTranslations('title'),
-            'description' => $this->getTranslations('description'),
-            'host' => $this->getTranslations('host'),
+            'title' => $this->getEnabledTranslations('title'),
+            'description' => $this->getEnabledTranslations('description'),
+            'host' => $this->getEnabledTranslations('host'),
             'category' => $this->category?->value,
             'category_label' => $this->category?->label(),
             'maturity_rating' => $this->maturity_rating?->value,

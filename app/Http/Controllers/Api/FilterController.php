@@ -15,6 +15,7 @@ use App\Support\Traits\ApiResponse;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * Filter Controller
@@ -272,7 +273,7 @@ class FilterController extends Controller
             'default_per_page' => 'nullable|integer|min:1|max:100',
             'show_facets' => 'nullable|boolean',
             'highlight_results' => 'nullable|boolean',
-            'language' => 'nullable|string|in:ar,en,fr,tr,ur',
+            'language' => ['nullable', 'string', Rule::in(enabled_content_locales())],
         ]);
 
         $preference = $this->searchService->saveSearchPreference(

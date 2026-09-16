@@ -72,6 +72,27 @@ class SeerahMilestoneTest extends TestCase
         $this->assertDatabaseMissing('seerah_milestones', ['id' => $milestone->id]);
     }
 
+    public function test_show_renders_formatted_milestone_descriptions_safely(): void
+    {
+        $this->actingAs($this->createAdminUser());
+        $milestone = SeerahMilestone::query()->create(['slug' => 'rich-preview', 'order_index' => 1, 'is_active' => true]);
+        $milestone->syncTranslations([
+            'title' => ['ar' => 'الحقبة'],
+            'description' => [
+                'ar' => '<h2>تفاصيل الحقبة</h2><p>وصف <strong>الحقبة</strong></p><script>alert("unsafe")</script>',
+                'en' => '<ul><li>Era detail</li></ul>',
+            ],
+        ]);
+
+        $this->get(route('admin.seerah-milestones.show', $milestone->id))
+            ->assertOk()
+            ->assertSee('<h2>تفاصيل الحقبة</h2>', false)
+            ->assertSee('<p>وصف <strong>الحقبة</strong></p>', false)
+            ->assertSee('<ul><li>Era detail</li></ul>', false)
+            ->assertDontSee('&lt;h2&gt;', false)
+            ->assertDontSee('<script>alert("unsafe")</script>', false);
+    }
+
     public function test_event_can_be_linked_to_a_milestone(): void
     {
         $admin = $this->createAdminUser();

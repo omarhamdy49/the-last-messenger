@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @php
-    $locales = ['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'];
+    $locales = enabled_content_languages();
     $byLocale = $context->translationsByLocale();
 @endphp
 

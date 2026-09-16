@@ -30,7 +30,7 @@ class UpdateUserRequest extends FormRequest
             'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
             // Same policy as creation — see StoreUserRequest.
             'password' => ['nullable', 'string', 'confirmed', Password::min(12)->mixedCase()->numbers()->symbols()],
-            'language' => ['nullable', 'string', 'in:ar,en,fr,tr,ur'],
+            'language' => ['nullable', 'string', Rule::in(enabled_content_locales())],
             'roles' => ['nullable', 'array'],
             'roles.*' => ['string', 'exists:roles,name'],
         ];

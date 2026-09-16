@@ -38,25 +38,7 @@
     }
 @endphp
 
-<div class="{{ $compact ? '' : 'animate-fadeInUp ' . $delay }}"
-     x-data="{
-         countValue: 0,
-         targetValue: {{ is_numeric($value) ? $value : 0 }},
-         animateCounter() {
-             if (this.targetValue === 0) return;
-             const duration = {{ $compact ? 800 : 1500 }};
-             const steps = 40;
-             const stepValue = this.targetValue / steps;
-             const stepDuration = duration / steps;
-             let currentStep = 0;
-             const interval = setInterval(() => {
-                 currentStep++;
-                 this.countValue = Math.min(Math.round(stepValue * currentStep), this.targetValue);
-                 if (currentStep >= steps) { clearInterval(interval); this.countValue = this.targetValue; }
-             }, stepDuration);
-         }
-     }"
-     x-init="setTimeout(() => animateCounter(), {{ $compact ? 50 : ($delay ? '300' : '100') }})">
+<div class="{{ $compact ? '' : 'animate-fadeInUp ' . $delay }}">
 
     @if($isClickable)
         <a href="{{ $href }}" {{ $attributes->merge(['class' => $baseClasses]) }}
@@ -74,8 +56,7 @@
             </div>
             <div class="min-w-0 flex-1">
                 @if(is_numeric($value))
-                    <p class="text-xl font-bold leading-none {{ $gradient ? 'text-white' : 'gradient-text' }}"
-                       x-text="countValue.toLocaleString()">0</p>
+                    <p class="text-xl font-bold leading-none {{ $gradient ? 'text-white' : 'gradient-text' }}">{{ number_format((float) $value) }}</p>
                 @else
                     <p class="text-xl font-bold leading-none {{ $gradient ? 'text-white' : 'gradient-text' }}">{{ $value }}</p>
                 @endif
@@ -110,8 +91,7 @@
 
             <div class="mb-1">
                 @if(is_numeric($value))
-                    <h3 class="text-2xl font-bold {{ $gradient ? 'text-white' : 'gradient-text' }}"
-                        x-text="countValue.toLocaleString()">0</h3>
+                    <h3 class="text-2xl font-bold {{ $gradient ? 'text-white' : 'gradient-text' }}">{{ number_format((float) $value) }}</h3>
                 @else
                     <h3 class="text-2xl font-bold {{ $gradient ? 'text-white' : 'gradient-text' }}">{{ $value }}</h3>
                 @endif

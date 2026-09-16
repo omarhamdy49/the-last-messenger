@@ -36,10 +36,10 @@
     @csrf
     @method('PUT')
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="seerah-layout seerah-authoring">
 
         <!-- Main Form -->
-        <div class="lg:col-span-2 space-y-6">
+        <div class="min-w-0 space-y-8">
 
             <!-- Title & Description (Multi-language) -->
             <div class="rounded-2xl border p-6"
@@ -51,7 +51,7 @@
 
                 <!-- Language Tabs -->
                 <div class="flex flex-wrap gap-2 border-b pb-4 mb-6" :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
-                    @foreach(['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'] as $lang => $label)
+                    @foreach(enabled_content_languages() as $lang => $label)
                     <button type="button"
                             @click="activeTab = '{{ $lang }}'"
                             class="px-4 py-2 rounded-lg font-medium transition-all"
@@ -64,8 +64,8 @@
                 </div>
 
                 <!-- Tab Contents -->
-                @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $lang)
-                <div x-show="activeTab === '{{ $lang }}'" class="space-y-4">
+                @foreach(enabled_content_locales() as $lang)
+                <div x-show="activeTab === '{{ $lang }}'" class="space-y-8">
                     <!-- Title -->
                     <div>
                         <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -90,19 +90,21 @@
                         <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                             الوصف ({{ strtoupper($lang) }})
                         </label>
-                        <textarea name="description[{{ $lang }}]"
-                                  rows="4"
-                                  class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all resize-none"
-                                  :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                                  dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                                  placeholder="أدخل وصف الحدث...">{{ old("description.{$lang}", $event->getTranslation('description', $lang, false)) }}</textarea>
+                        <x-admin.form.wysiwyg
+                            :name="'description['.$lang.']'"
+                            :value="old('description.'.$lang, $event->getTranslation('description', $lang, false) ?? '')"
+                            :locale="$lang"
+                            height="200px"
+                            toolbar="minimal"
+                            placeholder="أدخل وصف الحدث..."
+                        />
                         @error("description.{$lang}")
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
 
                     <!-- Content -->
-                    <div>
+                    <div class="seerah-content-field">
                         <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                             المحتوى التفصيلي ({{ strtoupper($lang) }})
                         </label>
@@ -110,7 +112,7 @@
                             :name="'content['.$lang.']'"
                             :value="old('content.'.$lang, $event->getTranslation('content', $lang, false) ?? '')"
                             :locale="$lang"
-                            height="360px"
+                            height="480px"
                             toolbar="full"
                             :modules="true"
                             placeholder="أدخل المحتوى التفصيلي..."
@@ -324,25 +326,7 @@
                         @error('importance') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">المقال المرتبط</label>
-                        <select name="related_article_id"
-                                class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                                :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                            <option value="">بدون ربط</option>
-                            @foreach($articles as $article)
-                                @php
-                                    $articleTitle = $article->locales->firstWhere('locale', 'ar')?->title
-                                        ?? $article->locales->firstWhere('locale', 'en')?->title
-                                        ?? ('Article #' . $article->id);
-                                @endphp
-                                <option value="{{ $article->id }}" {{ (string) old('related_article_id', $event->related_article_id) === (string) $article->id ? 'selected' : '' }}>
-                                    #{{ $article->id }} - {{ $articleTitle }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('related_article_id') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-                    </div>
+                    <x-admin.article-picker :article="$selectedArticle" :endpoint="route('admin.seerah-events.articles')" />
                 </div>
             </div>
 

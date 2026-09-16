@@ -54,6 +54,7 @@ trait CommitsForFullTextSearch
         'media_size_presets',
         'quran_translation_resources',
         'quran_tafsir_resources',
+        'languages',
         'language_translations',
     ];
 

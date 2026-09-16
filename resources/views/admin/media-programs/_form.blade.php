@@ -6,7 +6,7 @@
 --}}
 @php
     $isEdit = $program !== null;
-    $locales = ['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'];
+    $locales = enabled_content_languages();
     $existingTranslations = $isEdit ? $program->translations->keyBy('locale') : collect();
     $initialPublishStatus = old('is_published') !== null
         ? (old('is_published') ? 'published' : (old('publish_at') ? 'scheduled' : 'draft'))

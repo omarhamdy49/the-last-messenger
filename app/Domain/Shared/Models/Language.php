@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Shared\Models;
 
+use App\Domain\Shared\Services\LanguageCacheService;
 use App\Domain\Shared\Traits\HasLocalizedContent;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -169,7 +170,7 @@ class Language extends Model
         return Cache::remember(
             'languages:codes',
             now()->addMinutes(5),
-            fn () => self::active()->pluck('code')->toArray()
+            fn () => self::active()->ordered()->pluck('code')->toArray()
         );
     }
 
@@ -186,6 +187,13 @@ class Language extends Model
      */
     public static function clearCache(): void
     {
+        Cache::forget('sitemap_articles');
+        Cache::forget('languages:all');
+        Cache::forget('system:locales');
+        Cache::forget('system:default_locale');
+        Cache::forget('system.languages');
+        Cache::forget('app.locale');
+        app(LanguageCacheService::class)->clearCache();
         Cache::forget('languages:active');
         Cache::forget('languages:default');
         Cache::forget('languages:codes');

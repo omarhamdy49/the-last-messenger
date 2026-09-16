@@ -32,7 +32,7 @@
                 </h2>
 
                 <x-admin.language-tabs :errors="$errors">
-                    @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $lang)
+                    @foreach(enabled_content_locales() as $lang)
                         <x-admin.language-tab-panel :language="$lang">
 
                             {{-- Title Field --}}
@@ -102,7 +102,7 @@
                 </h2>
 
                 <x-admin.language-tabs :errors="$errors" :show-completion-status="true">
-                    @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $lang)
+                    @foreach(enabled_content_locales() as $lang)
                         <x-admin.language-tab-panel :language="$lang" :show-header="true">
 
                             {{-- Category Name --}}
@@ -142,7 +142,7 @@
                     :show-completion-status="false"
                     :show-copy-button="false">
 
-                    @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $lang)
+                    @foreach(enabled_content_locales() as $lang)
                         <x-admin.language-tab-panel :language="$lang">
 
                             {{-- Tag Name --}}
@@ -174,7 +174,7 @@
                     :errors="$errors"
                     default-language="en">
 
-                    @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $lang)
+                    @foreach(enabled_content_locales() as $lang)
                         <x-admin.language-tab-panel :language="$lang">
 
                             {{-- Page Title --}}

@@ -1,5 +1,9 @@
 @extends('layouts.admin')
 
+@push('styles')
+@include('partials.seerah-content-styles')
+@endpush
+
 @section('page-header')
 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
     <!-- Page Title -->
@@ -36,10 +40,10 @@
 @endsection
 
 @section('content')
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="seerah-layout seerah-reading">
 
     <!-- Main Content -->
-    <div class="lg:col-span-2 space-y-6">
+    <div class="min-w-0 space-y-8">
 
         <!-- Event Header Card -->
         <div class="rounded-2xl border overflow-hidden"
@@ -121,7 +125,11 @@
         </div>
 
         <!-- Description -->
-        @if($event->getTranslation('description', 'ar') || $event->getTranslation('description', 'en'))
+        @php
+            $descriptionLanguages = collect(enabled_content_languages())
+                ->filter(fn ($label, $locale) => filled($event->getTranslation('description', $locale, false)));
+        @endphp
+        @if($descriptionLanguages->isNotEmpty())
         <div class="rounded-2xl border p-6"
              :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
             <h2 class="text-xl font-bold mb-6 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
@@ -129,12 +137,12 @@
                 الوصف
             </h2>
 
-            <div x-data="{ activeTab: 'ar' }" class="space-y-4">
+            <div x-data="{ activeTab: '{{ $descriptionLanguages->keys()->first() }}' }" class="space-y-4">
                 <!-- Language Tabs -->
                 <div class="flex flex-wrap gap-2 border-b pb-4" :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
-                    @foreach(['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'] as $lang => $label)
+                    @foreach($descriptionLanguages as $lang => $label)
                         @if($event->getTranslation('description', $lang, false))
-                        <button @click="activeTab = '{{ $lang }}'"
+                        <button type="button" @click="activeTab = '{{ $lang }}'"
                                 class="px-4 py-2 rounded-lg font-medium transition-all"
                                 :class="activeTab === '{{ $lang }}' ?
                                     'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white' :
@@ -146,21 +154,65 @@
                 </div>
 
                 <!-- Content -->
-                @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $lang)
+                @foreach(enabled_content_locales() as $lang)
                     @if($event->getTranslation('description', $lang, false))
                     <div x-show="activeTab === '{{ $lang }}'"
                          class="p-4 rounded-xl"
                          :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                        <p class="leading-relaxed {{ in_array($lang, ['ar', 'ur']) ? 'text-right' : 'text-left' }}"
+                        <div class="seerah-content leading-relaxed break-words {{ in_array($lang, ['ar', 'ur']) ? 'text-right' : 'text-left' }}"
                            :class="darkMode ? 'text-gray-300' : 'text-gray-700'"
                            dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">
-                            {{ $event->getTranslation('description', $lang, false) }}
-                        </p>
+                            {!! app(\App\Domain\Shared\Services\RichTextSanitizer::class)->clean($event->getTranslation('description', $lang, false)) !!}
+                        </div>
                     </div>
                     @endif
                 @endforeach
             </div>
         </div>
+        @endif
+
+        @php
+            $contentTranslations = collect(enabled_content_languages())
+                ->map(fn ($label, $locale) => [
+                    'label' => $label,
+                    'html' => app(\App\Domain\Shared\Services\RichTextSanitizer::class)->clean($event->getTranslation('content', $locale, false)),
+                ])
+                ->filter(fn ($translation) => filled($translation['html']));
+        @endphp
+
+        @if($contentTranslations->isNotEmpty())
+        <section aria-labelledby="event-content-heading" class="rounded-2xl border p-6"
+                 :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+            <h2 id="event-content-heading" class="text-xl font-bold mb-6 flex items-center gap-2"
+                :class="darkMode ? 'text-white' : 'text-gray-900'">
+                <i data-lucide="book-open" class="w-5 h-5 text-accent"></i>
+                المحتوى الكامل
+            </h2>
+
+            <div x-data="{ activeTab: '{{ $contentTranslations->keys()->first() }}' }" class="space-y-4">
+                <div class="flex flex-wrap gap-2 border-b pb-4" :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
+                    @foreach($contentTranslations as $lang => $translation)
+                    <button type="button" @click="activeTab = '{{ $lang }}'"
+                            :aria-pressed="activeTab === '{{ $lang }}'" aria-controls="event-content-{{ $lang }}"
+                            class="px-4 py-2 rounded-lg font-medium transition-all"
+                            :class="activeTab === '{{ $lang }}' ?
+                                'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white' :
+                                (darkMode ? 'bg-gray-800 text-gray-400 hover:text-white' : 'bg-gray-100 text-gray-600 hover:text-gray-900')">
+                        {{ $translation['label'] }}
+                    </button>
+                    @endforeach
+                </div>
+
+                @foreach($contentTranslations as $lang => $translation)
+                <div id="event-content-{{ $lang }}" x-show="activeTab === '{{ $lang }}'" @if(!$loop->first) x-cloak @endif
+                     class="seerah-content leading-relaxed break-words {{ in_array($lang, ['ar', 'ur']) ? 'text-right' : 'text-left' }}"
+                     :class="darkMode ? 'text-gray-300' : 'text-gray-700'"
+                     lang="{{ $lang }}" dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">
+                    {!! $translation['html'] !!}
+                </div>
+                @endforeach
+            </div>
+        </section>
         @endif
 
         <!-- Names in Different Languages -->
@@ -172,7 +224,7 @@
             </h2>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                @foreach(['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'] as $lang => $label)
+                @foreach(enabled_content_languages() as $lang => $label)
                     @if($event->getTranslation('title', $lang))
                     <div class="p-4 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
                         <label class="text-xs font-medium" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
@@ -196,7 +248,7 @@
             </h2>
 
             <div class="space-y-3">
-                @foreach(['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'] as $lang => $label)
+                @foreach(enabled_content_languages() as $lang => $label)
                     @if($event->getTranslation('dispute_note', $lang, false))
                     <div class="p-4 rounded-xl bg-white/60 dark:bg-white/[.04]">
                         <label class="text-xs font-medium text-red-700 dark:text-red-300">{{ $label }}</label>

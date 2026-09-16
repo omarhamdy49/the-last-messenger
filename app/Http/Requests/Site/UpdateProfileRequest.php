@@ -13,13 +13,6 @@ use Illuminate\Validation\Rule;
  */
 final class UpdateProfileRequest extends FormRequest
 {
-    /**
-     * Supported UI languages (mirrors LanguageController::$supportedLanguages).
-     *
-     * @var list<string>
-     */
-    private const SUPPORTED_LANGUAGES = ['ar', 'en', 'fr', 'tr', 'ur'];
-
     public function authorize(): bool
     {
         // Only ever operates on the authenticated user's own record; the `auth`
@@ -43,7 +36,7 @@ final class UpdateProfileRequest extends FormRequest
                 'max:255',
                 Rule::unique('users', 'email')->ignore($userId),
             ],
-            'language' => ['required', 'string', Rule::in(self::SUPPORTED_LANGUAGES)],
+            'language' => ['required', 'string', Rule::in(enabled_content_locales())],
         ];
     }
 }

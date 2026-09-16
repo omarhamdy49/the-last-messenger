@@ -50,7 +50,7 @@
             </h2>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                @foreach(['ar' => 'العربية', 'en' => 'English', 'fr' => 'Fran&ccedil;ais', 'tr' => 'T&uuml;rk&ccedil;e', 'ur' => 'اردو'] as $lang => $label)
+                @foreach(enabled_content_languages() as $lang => $label)
                     @if($tag->getTranslation('name', $lang, false))
                     <div class="p-4 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
                         <label class="text-xs font-medium" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">

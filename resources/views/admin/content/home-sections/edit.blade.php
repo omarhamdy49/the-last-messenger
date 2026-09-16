@@ -2,7 +2,7 @@
 
 @section('content')
 @php
-    $locales = ['ar', 'en', 'fr', 'tr', 'ur'];
+    $locales = enabled_content_locales();
     $inputClasses = 'w-full px-4 py-3 rounded-lg border-2 transition-all font-cairo';
 @endphp
 

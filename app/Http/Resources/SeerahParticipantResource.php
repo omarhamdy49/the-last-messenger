@@ -28,10 +28,10 @@ class SeerahParticipantResource extends JsonResource
             // translatable fields. The repository eager-loads
             // participants.translations (filtered to the requested locale on
             // the public path), so this does not trigger extra queries.
-            'name' => $this->getTranslations('name'),
+            'name' => $this->getEnabledTranslations('name'),
             'role' => $this->role->value,
             'role_label' => $this->role->label(),
-            'description' => $this->getTranslations('description'),
+            'description' => $this->getEnabledTranslations('description'),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

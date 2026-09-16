@@ -98,11 +98,11 @@
                 <i data-lucide="languages" class="w-5 h-5 text-[#64CCC5]"></i>
                 {{ __('admin.translations') }}
             </h3>
-            @if($channel->translations->isEmpty())
+            @if($channel->translations->whereIn('locale', enabled_content_locales())->isEmpty())
                 <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">—</p>
             @else
                 <div class="space-y-4">
-                    @foreach($channel->translations->sortBy('locale') as $t)
+                    @foreach($channel->translations->whereIn('locale', enabled_content_locales())->sortBy('locale') as $t)
                     <div class="pb-4 border-b last:border-0 last:pb-0" :class="darkMode ? 'border-gray-800' : 'border-gray-100'" dir="{{ in_array($t->locale, ['ar','ur']) ? 'rtl' : 'ltr' }}">
                         <span class="inline-block px-2 py-0.5 rounded text-xs font-bold mb-2 bg-[#0056b3]/10 text-[#0056b3] dark:bg-[#64CCC5]/10 dark:text-[#64CCC5]">{{ strtoupper($t->locale) }}</span>
                         <p class="font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $t->title }}</p>

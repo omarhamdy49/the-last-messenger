@@ -7,6 +7,7 @@ namespace Tests\Feature\Hadith;
 use App\Domain\Hadith\Enums\Grade;
 use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithCollection;
+use App\Domain\Hadith\Services\HadithBrowseService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -45,6 +46,9 @@ final class SunnahFortyImportTest extends TestCase
     public function test_import_maps_the_aggregate_to_three_bookless_published_collections(): void
     {
         $this->fakeFortyApi();
+        $browse = app(HadithBrowseService::class);
+        $this->assertCount(0, $browse->collections());
+        $this->assertSame(0, $browse->totalVisible());
 
         $this->artisan('hadith:import', ['--collection' => 'forty', '--force' => true])
             ->expectsOutputToContain('Import completed; collections and imported rows are published.')
@@ -55,6 +59,8 @@ final class SunnahFortyImportTest extends TestCase
         $this->assertDatabaseCount('hadith_chapters', 0);
         $this->assertDatabaseCount('hadiths', 122);
         $this->assertDatabaseCount('hadith_narrators', 0);
+        $this->assertCount(3, $browse->collections());
+        $this->assertSame(122, $browse->totalVisible());
 
         $collection = HadithCollection::query()->where('slug', 'nawawi40')->firstOrFail();
         $hadith = Hadith::query()

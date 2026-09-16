@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Route;
 
 // Seerah Event Routes
 Route::prefix('seerah-events')->group(function (): void {
+    Route::get('/articles', [SeerahEventController::class, 'articles'])->name('admin.seerah-events.articles');
     Route::get('/search', [SeerahEventController::class, 'search'])->name('admin.seerah-events.search');
     Route::post('/bulk-delete', [SeerahEventController::class, 'bulkDelete'])->name('admin.seerah-events.bulk-delete');
     Route::post('/bulk-status', [SeerahEventController::class, 'bulkUpdateStatus'])->name('admin.seerah-events.bulk-status');

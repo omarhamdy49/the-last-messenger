@@ -14,6 +14,8 @@ use App\Http\Requests\Admin\UpdateTagRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -71,6 +73,11 @@ class TagController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $tags->items(),
+                'tags' => $tags->getCollection()->map(fn ($tag) => [
+                    'id' => $tag->id,
+                    'name' => $tag->getTranslation('name') ?? $tag->slug,
+                    'articles_count' => (int) ($tag->articles_count ?? $tag->usage_count ?? 0),
+                ])->values(),
                 'stats' => $stats,
                 'meta' => [
                     'current_page' => $tags->currentPage(),
@@ -231,10 +238,14 @@ class TagController extends Controller
      *
      * DELETE /su/portal/v1/admin/tags/{id}
      */
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse|RedirectResponse
     {
         try {
             $this->service->delete($id);
+
+            if (! $request->expectsJson()) {
+                return redirect()->route('admin.tags.index')->with('success', __('admin.tag_deleted'));
+            }
 
             return response()->json([
                 'success' => true,
@@ -246,6 +257,10 @@ class TagController extends Controller
                 'tag_id' => $id,
                 'error' => $e->getMessage(),
             ]);
+
+            if (! $request->expectsJson()) {
+                return back()->with('error', __('admin.operation_failed'));
+            }
 
             return response()->json([
                 'success' => false,
@@ -263,6 +278,10 @@ class TagController extends Controller
      */
     public function merge(Request $request): JsonResponse
     {
+        if ($request->has('source_tag_ids')) {
+            return $this->mergeSelected($request);
+        }
+
         $validated = $request->validate([
             'source_tag_id' => 'required|integer|exists:tags,id',
             'destination_tag_id' => 'required|integer|exists:tags,id|different:source_tag_id',
@@ -294,12 +313,52 @@ class TagController extends Controller
         }
     }
 
+    private function mergeSelected(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'source_tag_ids' => ['required', 'array', 'min:1'],
+            'source_tag_ids.*' => ['required', 'integer', 'distinct', 'exists:tags,id'],
+            'merge_mode' => ['required', Rule::in(['existing', 'new'])],
+            'target_tag_id' => ['required_if:merge_mode,existing', 'nullable', 'integer', 'exists:tags,id', Rule::notIn($request->input('source_tag_ids', []))],
+            'new_tag_name' => ['required_if:merge_mode,new', 'nullable', 'string', 'max:255'],
+        ]);
+
+        try {
+            $count = DB::transaction(function () use ($validated): int {
+                $targetId = $validated['target_tag_id'] ?? null;
+                if ($validated['merge_mode'] === 'new') {
+                    $names = [app()->getLocale() => $validated['new_tag_name']];
+                    if ($this->service->findDuplicate($names)) {
+                        throw new \RuntimeException(__('admin.tag_duplicate_exists'));
+                    }
+                    $target = $this->service->create(new CreateTagData(
+                        name: $names, description: [], type: 'article', color: null, slug: null,
+                    ));
+                    $targetId = $target->id;
+                }
+
+                $count = 0;
+                foreach ($validated['source_tag_ids'] as $sourceId) {
+                    $count += $this->service->mergeTags((int) $sourceId, (int) $targetId);
+                }
+
+                return $count;
+            });
+
+            return response()->json(['success' => true, 'message' => __('admin.tags_merged', ['count' => $count]), 'count' => $count]);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return response()->json(['success' => false, 'message' => __('admin.operation_failed')], 422);
+        }
+    }
+
     /**
      * Bulk delete multiple tags
      *
      * POST /su/portal/v1/admin/tags/bulk-delete
      */
-    public function bulkDelete(Request $request): JsonResponse
+    public function bulkDelete(Request $request): JsonResponse|RedirectResponse
     {
         $ids = $request->validate([
             'ids' => 'required|array|min:1',
@@ -308,6 +367,10 @@ class TagController extends Controller
 
         try {
             $count = $this->service->bulkDelete($ids);
+
+            if (! $request->expectsJson()) {
+                return back()->with('success', __('admin.tags_bulk_deleted', ['count' => $count]));
+            }
 
             return response()->json([
                 'success' => true,
@@ -319,6 +382,10 @@ class TagController extends Controller
                 'user_id' => auth()->id(),
                 'error' => $e->getMessage(),
             ]);
+
+            if (! $request->expectsJson()) {
+                return back()->with('error', __('admin.operation_failed'));
+            }
 
             return response()->json([
                 'success' => false,

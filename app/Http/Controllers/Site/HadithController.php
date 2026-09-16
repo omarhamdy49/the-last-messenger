@@ -55,7 +55,7 @@ final class HadithController extends Controller
         ]);
     }
 
-    /** One collection and its books. */
+    /** One collection: its books, or its direct narrations when bookless. */
     public function collection(string $slug): View
     {
         $collection = $this->hadith->findCollection($slug)
@@ -64,6 +64,7 @@ final class HadithController extends Controller
         return view('public.hadith.collection', [
             'collection' => $collection,
             'books' => $this->hadith->books($collection),
+            'hadiths' => $collection->has_books ? null : $this->hadith->collectionHadiths($collection),
         ]);
     }
 

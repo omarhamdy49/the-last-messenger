@@ -102,17 +102,19 @@
                 <!-- Actions -->
                 <div class="flex items-center gap-3">
                     <!-- Active/Inactive Toggle -->
-                    <button @click="toggleLanguage('{{ $code }}')"
-                            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+                    <button type="button" @click="toggleLanguage('{{ $code }}')"
+                            role="switch" aria-label="تفعيل {{ $lang['native_name'] }}" aria-checked="{{ $lang['active'] ? 'true' : 'false' }}"
+                            :disabled="busy !== null || {{ $code === $defaultLanguage || $code === 'ar' ? 'true' : 'false' }}"
+                            dir="ltr" class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
                             :class="{{ $lang['active'] ? 'true' : 'false' }} ? 'bg-green-500' : (darkMode ? 'bg-gray-700' : 'bg-gray-300')"
-                            {{ $code === $defaultLanguage ? 'disabled' : '' }}>
+                            {{ $code === $defaultLanguage || $code === 'ar' ? 'disabled' : '' }}>
                         <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
                               :class="{{ $lang['active'] ? 'true' : 'false' }} ? 'translate-x-6' : 'translate-x-1'"></span>
                     </button>
 
                     <!-- Set as Default -->
                     @if($code !== $defaultLanguage && $lang['active'])
-                    <button @click="setDefault('{{ $code }}')"
+                    <button type="button" :disabled="busy !== null" @click="setDefault('{{ $code }}')"
                             class="p-2 rounded-lg transition-colors"
                             :class="darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-600'"
                             title="تعيين كلغة افتراضية">
@@ -140,11 +142,11 @@
         <ul class="space-y-2 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
             <li class="flex items-start gap-2">
                 <i data-lucide="check" class="w-4 h-4 mt-0.5 text-green-500 flex-shrink-0"></i>
-                <span>اللغة الافتراضية لا يمكن تعطيلها أو حذفها</span>
+                <span>اللغة الافتراضية والعربية المطلوبة للمحتوى لا يمكن تعطيلهما</span>
             </li>
             <li class="flex items-start gap-2">
                 <i data-lucide="check" class="w-4 h-4 mt-0.5 text-green-500 flex-shrink-0"></i>
-                <span>تعطيل لغة لا يحذف المحتوى المترجم بها، فقط يخفيه عن الزوار</span>
+                <span>تعطيل لغة لا يحذف المحتوى المترجم بها، يخفيه من نماذج التحرير والمعاينات واختيارات الزوار</span>
             </li>
             <li class="flex items-start gap-2">
                 <i data-lucide="check" class="w-4 h-4 mt-0.5 text-green-500 flex-shrink-0"></i>
@@ -160,9 +162,12 @@
 <script>
     function languageSettings() {
         return {
+            busy: null,
             async toggleLanguage(code) {
+                if (this.busy !== null) return;
+                this.busy = code;
                 try {
-                    const response = await fetch(`{{ url('admin/settings/languages') }}/${code}/toggle`, {
+                    const response = await fetch(`{{ route('admin.settings.languages.index') }}/${code}/toggle`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -179,6 +184,8 @@
                     }
                 } catch (error) {
                     showToast('حدث خطأ أثناء تحديث حالة اللغة', 'error');
+                } finally {
+                    this.busy = null;
                 }
             },
 
@@ -188,8 +195,10 @@
                     message: 'هل تريد تعيين هذه اللغة كلغة افتراضية؟',
                     type: 'warning',
                     onConfirm: async () => {
+                        if (this.busy !== null) return;
+                        this.busy = code;
                         try {
-                            const response = await fetch(`{{ url('admin/settings/languages') }}/${code}/set-default`, {
+                            const response = await fetch(`{{ route('admin.settings.languages.index') }}/${code}/set-default`, {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
@@ -206,6 +215,8 @@
                             }
                         } catch (error) {
                             showToast('حدث خطأ أثناء تعيين اللغة الافتراضية', 'error');
+                        } finally {
+                            this.busy = null;
                         }
                     }
                 });

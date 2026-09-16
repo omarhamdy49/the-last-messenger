@@ -20,6 +20,7 @@ use App\Domain\Shared\Services\PublicImageService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreSeerahEventRequest;
 use App\Http\Requests\Admin\UpdateSeerahEventRequest;
+use App\Http\Resources\ArticleSelectorResource;
 use App\Repositories\ArticleRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -104,9 +105,9 @@ class SeerahEventController extends Controller
      *
      * GET /su/portal/v1/admin/seerah-events/create
      */
-    public function create(): View
+    public function create(Request $request): View
     {
-        $articles = $this->articleRepository->getForDropdown();
+        $selectedArticle = $this->articleRepository->findForSelector((int) $request->old('related_article_id'));
         $eventTypes = $this->eventTypeService->getForDropdown();
         $milestones = $this->milestoneService->getForDropdown();
         $statuses = SeerahEventStatus::cases();
@@ -115,8 +116,21 @@ class SeerahEventController extends Controller
         $participantRoles = ParticipantRole::cases();
 
         return view('admin.seerah-events.create', compact(
-            'articles', 'eventTypes', 'milestones', 'statuses', 'eras', 'phases', 'participantRoles'
+            'selectedArticle', 'eventTypes', 'milestones', 'statuses', 'eras', 'phases', 'participantRoles'
         ));
+    }
+
+    /** Paginated article choices, protected by the Seerah admin route permissions. */
+    public function articles(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:200'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $articles = $this->articleRepository->paginateForSelector(trim($validated['q'] ?? ''));
+
+        return ArticleSelectorResource::collection($articles)->response();
     }
 
     /**
@@ -164,7 +178,7 @@ class SeerahEventController extends Controller
      *
      * GET /su/portal/v1/admin/seerah-events/{id}/edit
      */
-    public function edit(int $id): View
+    public function edit(Request $request, int $id): View
     {
         $event = $this->seerahEventService->find($id);
 
@@ -174,11 +188,10 @@ class SeerahEventController extends Controller
 
         $event->loadMissing([
             'translations',
-            'article.locales:id,article_id,locale,title,slug,is_ready',
             'timelineItems.translations',
             'participants.translations',
         ]);
-        $articles = $this->articleRepository->getForDropdown();
+        $selectedArticle = $this->articleRepository->findForSelector((int) $request->old('related_article_id', $event->related_article_id));
         $eventTypes = $this->eventTypeService->getForDropdown();
         $milestones = $this->milestoneService->getForDropdown();
         $statuses = SeerahEventStatus::cases();
@@ -187,7 +200,7 @@ class SeerahEventController extends Controller
         $participantRoles = ParticipantRole::cases();
 
         return view('admin.seerah-events.edit', compact(
-            'event', 'articles', 'eventTypes', 'milestones', 'statuses', 'eras', 'phases', 'participantRoles'
+            'event', 'selectedArticle', 'eventTypes', 'milestones', 'statuses', 'eras', 'phases', 'participantRoles'
         ));
     }
 

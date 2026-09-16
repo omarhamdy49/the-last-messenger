@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domain\Shared\Models\Language;
 use Illuminate\Support\Carbon;
 
 if (! function_exists('format_arabic_date')) {
@@ -327,5 +328,25 @@ if (! function_exists('arabic_digits')) {
             '0' => '٠', '1' => '١', '2' => '٢', '3' => '٣', '4' => '٤',
             '5' => '٥', '6' => '٦', '7' => '٧', '8' => '٨', '9' => '٩',
         ]);
+    }
+}
+
+if (! function_exists('enabled_content_languages')) {
+    /** Language labels for forms and previews, ordered by the saved settings. */
+    function enabled_content_languages(): array
+    {
+        $languages = Language::getActiveCached()->pluck('native_name', 'code')->all();
+
+        return $languages ?: array_intersect_key(
+            array_map(fn (array $language): string => $language['native_name'], config('languages.available')),
+            array_flip(config('languages.default_enabled'))
+        );
+    }
+}
+
+if (! function_exists('enabled_content_locales')) {
+    function enabled_content_locales(): array
+    {
+        return array_keys(enabled_content_languages());
     }
 }

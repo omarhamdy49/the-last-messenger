@@ -521,7 +521,11 @@
                              full description here only when there is no rich content,
                              otherwise the page opens with the same text twice. --}}
                         @if ($hasDescription && ! $hasContent)
-                            <p class="text-lg sm:text-xl leading-relaxed break-words" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{!! nl2br(e($event['description'])) !!}</p>
+                            <div class="seerah-content text-lg sm:text-xl leading-relaxed break-words" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                                {!! str_contains($event['description'], '<')
+                                    ? app(\App\Domain\Shared\Services\RichTextSanitizer::class)->clean($event['description'])
+                                    : nl2br(e($event['description'])) !!}
+                            </div>
                         @endif
                         @if ($hasContent)
                             {{-- Purified admin HTML (see SanitizesRichText). Not wrapped in <p> —

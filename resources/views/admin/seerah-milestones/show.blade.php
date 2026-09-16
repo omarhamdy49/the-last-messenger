@@ -1,5 +1,9 @@
 @extends('layouts.admin')
 
+@push('styles')
+@include('partials.seerah-content-styles')
+@endpush
+
 @section('page-header')
 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
     <div>
@@ -20,17 +24,22 @@
 @endsection
 
 @section('content')
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2 space-y-6">
+<div class="seerah-layout seerah-reading">
+    <div class="min-w-0 space-y-8">
         <div class="rounded-2xl border p-6" :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
             <h2 class="text-xl font-bold mb-6" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ __('admin.translations') }}</h2>
             <div class="space-y-4">
-                @foreach(['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'] as $lang => $label)
+                @foreach(enabled_content_languages() as $lang => $label)
                 <div class="p-4 rounded-xl border" :class="darkMode ? 'border-gray-800' : 'border-gray-200'" dir="{{ in_array($lang, ['ar','ur']) ? 'rtl' : 'ltr' }}">
                     <p class="text-xs mb-1" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ $label }}</p>
                     <p class="font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $milestone->getTranslation('title', $lang, false) ?: '—' }}</p>
                     @if($milestone->getTranslation('subtitle', $lang, false))<p class="text-sm mt-1" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ $milestone->getTranslation('subtitle', $lang, false) }}</p>@endif
-                    @if($milestone->getTranslation('description', $lang, false))<p class="text-sm mt-2" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ $milestone->getTranslation('description', $lang, false) }}</p>@endif
+                    @if($milestone->getTranslation('description', $lang, false))
+                    <div class="seerah-content text-sm mt-2 leading-relaxed break-words" lang="{{ $lang }}"
+                         :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                        {!! app(\App\Domain\Shared\Services\RichTextSanitizer::class)->clean($milestone->getTranslation('description', $lang, false)) !!}
+                    </div>
+                    @endif
                 </div>
                 @endforeach
             </div>

@@ -3,7 +3,7 @@
     Open via: $dispatch('open-category-edit', { key, name: {}, description: {}, icon, color, display_order })
 --}}
 @php
-    $locales = ['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'];
+    $locales = enabled_content_languages();
     $palette = ['#0056b3', '#218838', '#64CCC5', '#7c3aed', '#d97706', '#dc2626', '#0d9488', '#475569'];
     $inputClasses = 'w-full text-base sm:text-sm border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#0056b3] transition-shadow';
 @endphp

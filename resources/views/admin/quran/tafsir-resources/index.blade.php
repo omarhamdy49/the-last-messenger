@@ -60,7 +60,7 @@
                                 <i data-lucide="pencil" class="w-4 h-4"></i>
                             </a>
                             <form method="POST" action="{{ route('admin.tafsir-resources.destroy', $resource->id) }}"
-                                  onsubmit="return confirm('{{ __('quran.admin.confirm_delete') }}')">
+                                  onsubmit="return window.confirmSubmit(this, { message: {{ Js::from(__('quran.admin.confirm_delete')) }} })">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="p-2 rounded-lg hover:bg-red-100 text-red-600" title="{{ __('quran.admin.delete') }}">
                                     <i data-lucide="trash-2" class="w-4 h-4"></i>

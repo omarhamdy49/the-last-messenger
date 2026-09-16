@@ -1,7 +1,7 @@
 {{-- Menu item form — used by create and edit. Expects: $locations, $activeLocation, $parents, optional $item --}}
 @php
     $isEdit = isset($item) && $item->exists;
-    $locales = ['ar', 'en', 'fr', 'tr', 'ur'];
+    $locales = enabled_content_locales();
     $inputClasses = 'w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 font-cairo text-base sm:text-sm focus:ring-2 focus:ring-accent/50';
 @endphp
 

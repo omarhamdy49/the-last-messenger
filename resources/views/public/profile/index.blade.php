@@ -337,8 +337,8 @@
                     <label for="language" class="block text-sm font-semibold mb-1.5">{{ __('profile.language') }}</label>
                     <select id="language" name="language"
                             class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0f3460] text-base sm:text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none">
-                        @foreach (['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'] as $code => $name)
-                            <option value="{{ $code }}" @selected(old('language', $user->language) === $code)>{{ $name }}</option>
+                        @foreach (enabled_content_languages() as $code => $name)
+                            <option value="{{ $code }}" @selected(old('language', in_array($user->language, enabled_content_locales(), true) ? $user->language : app()->getLocale()) === $code)>{{ $name }}</option>
                         @endforeach
                     </select>
                     @error('language') <p class="text-sm text-red-600 mt-1">{{ $message }}</p> @enderror

@@ -108,17 +108,69 @@ class SeerahEventRepositoryTest extends TestCase
         $this->assertEquals(3, $results->total());
     }
 
-    public function test_get_chronological_returns_events_in_hijri_year_order(): void
+    public function test_get_chronological_uses_hijri_dates_for_legacy_equal_ranks(): void
     {
-        $this->createEvent(['hijri_year' => 3, 'hijri_month' => 1, 'hijri_day' => 1]);
-        $this->createEvent(['hijri_year' => 1, 'hijri_month' => 1, 'hijri_day' => 1]);
-        $this->createEvent(['hijri_year' => 2, 'hijri_month' => 1, 'hijri_day' => 1]);
+        $this->createEvent(['display_order' => 0, 'hijri_year' => 3]);
+        $this->createEvent(['display_order' => 0, 'hijri_year' => 1]);
+        $this->createEvent(['display_order' => 0, 'hijri_year' => 2]);
 
         $repo = app(SeerahEventRepositoryInterface::class);
         $results = $repo->getChronological(10);
 
         $years = collect($results->items())->pluck('hijri_year')->toArray();
         $this->assertEquals([1, 2, 3], $years);
+    }
+
+    public function test_editorial_sequence_keeps_undated_events_between_dated_events_on_every_list(): void
+    {
+        $last = $this->createEvent(['display_order' => 30, 'hijri_year' => 9, 'hijri_month' => 7]);
+        $undated = $this->createEvent([
+            'display_order' => 20, 'hijri_year' => null, 'hijri_month' => null, 'hijri_day' => null,
+        ]);
+        $first = $this->createEvent(['display_order' => 10, 'hijri_year' => -13]);
+        $draft = $this->createEvent(['display_order' => 15, 'status' => 'draft']);
+        $repo = app(SeerahEventRepositoryInterface::class);
+        $expected = [$first->id, $undated->id, $last->id];
+
+        $this->assertSame($expected, $repo->getChronological(10)->pluck('id')->all());
+        $this->assertSame($expected, $repo->paginatePublicFiltered(['sort' => 'asc'], 'en', 10)->pluck('id')->all());
+        $this->assertSame(array_reverse($expected), $repo->paginatePublicFiltered(['sort' => 'desc'], 'en', 10)->pluck('id')->all());
+        $this->assertSame([$first->id, $draft->id, $undated->id, $last->id], $repo->paginateWithFilters([], 10)->pluck('id')->all());
+
+        foreach ([$first, $undated, $last] as $index => $event) {
+            $page = $repo->getPublicPage($event->slug, 'en');
+            $this->assertSame($expected[$index - 1] ?? null, $page['prev']?->id);
+            $this->assertSame($expected[$index + 1] ?? null, $page['next']?->id);
+        }
+
+        $this->assertNull($undated->fresh()->hijri_year);
+    }
+
+    public function test_equal_ranks_and_dates_have_stable_navigation_including_null_and_pre_hijra_dates(): void
+    {
+        $dated = $this->createEvent(['display_order' => 0, 'hijri_year' => -13]);
+        $undatedFirst = $this->createEvent([
+            'display_order' => 0, 'hijri_year' => null, 'hijri_month' => null, 'hijri_day' => null,
+        ]);
+        $undatedSecond = $this->createEvent([
+            'display_order' => 0, 'hijri_year' => null, 'hijri_month' => null, 'hijri_day' => null,
+        ]);
+        $partiallyDated = $this->createEvent([
+            'display_order' => 0, 'hijri_year' => -13, 'hijri_month' => null, 'hijri_day' => null,
+        ]);
+        $ranked = $this->createEvent(['display_order' => 10, 'hijri_year' => -53]);
+        $repo = app(SeerahEventRepositoryInterface::class);
+        $events = [$undatedFirst, $undatedSecond, $partiallyDated, $dated, $ranked];
+        $expected = array_map(fn (SeerahEvent $event) => $event->id, $events);
+
+        $this->assertSame($expected, $repo->getChronological(10)->pluck('id')->all());
+        $this->assertSame(array_reverse($expected), $repo->paginatePublicFiltered(['sort' => 'desc'], 'en', 10)->pluck('id')->all());
+
+        foreach ($events as $index => $event) {
+            $page = $repo->getPublicPage($event->slug, 'en');
+            $this->assertSame($expected[$index - 1] ?? null, $page['prev']?->id);
+            $this->assertSame($expected[$index + 1] ?? null, $page['next']?->id);
+        }
     }
 
     // ---------------------------------------------------------------------------

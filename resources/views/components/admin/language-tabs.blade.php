@@ -3,8 +3,8 @@
     Manages multi-language content editing with validation tracking
 
     Usage:
-    <x-admin.language-tabs :languages="['ar', 'en', 'fr', 'tr', 'ur']" :errors="$errors">
-        @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $lang)
+    <x-admin.language-tabs :languages="enabled_content_locales()" :errors="$errors">
+        @foreach(enabled_content_locales() as $lang)
             <x-admin.language-tab-panel :language="$lang">
                 <!-- Form fields here -->
             </x-admin.language-tab-panel>
@@ -13,7 +13,7 @@
 --}}
 
 @props([
-    'languages' => ['ar', 'en', 'fr', 'tr', 'ur'],
+    'languages' => enabled_content_locales(),
     'errors' => null,
     'defaultLanguage' => 'ar',
     'showCompletionStatus' => true,
@@ -21,6 +21,8 @@
 ])
 
 @php
+    $languages = array_values(array_intersect($languages, enabled_content_locales()));
+    $defaultLanguage = in_array($defaultLanguage, $languages, true) ? $defaultLanguage : ($languages[0] ?? 'ar');
     $languageData = [
         'ar' => ['name' => 'العربية', 'flag' => '🇸🇦', 'direction' => 'rtl'],
         'en' => ['name' => 'English', 'flag' => '🇬🇧', 'direction' => 'ltr'],

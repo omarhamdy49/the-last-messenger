@@ -80,11 +80,9 @@
                                 class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                                 :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
                                 required>
-                            <option value="ar" {{ old('lang', $tafsir->lang) == 'ar' ? 'selected' : '' }}>العربية</option>
-                            <option value="en" {{ old('lang', $tafsir->lang) == 'en' ? 'selected' : '' }}>English</option>
-                            <option value="fr" {{ old('lang', $tafsir->lang) == 'fr' ? 'selected' : '' }}>Français</option>
-                            <option value="tr" {{ old('lang', $tafsir->lang) == 'tr' ? 'selected' : '' }}>Türkçe</option>
-                            <option value="ur" {{ old('lang', $tafsir->lang) == 'ur' ? 'selected' : '' }}>اردو</option>
+                            @foreach(enabled_content_languages() as $code => $label)
+                                <option value="{{ $code }}" @selected(old('lang', $tafsir->lang) === $code)>{{ $label }}</option>
+                            @endforeach
                         </select>
                         @error('lang')
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>

@@ -14,7 +14,7 @@
 class LanguageTabsManager {
     constructor(options = {}) {
         this.container = options.container || document.querySelector('.language-tabs-container');
-        this.languages = options.languages || ['ar', 'en', 'fr', 'tr', 'ur'];
+        this.languages = options.languages || window.enabledContentLocales || ['ar'];
         this.activeLanguage = options.defaultLanguage || 'ar';
         this.autoSaveEnabled = options.autoSave !== false;
         this.autoSaveDelay = options.autoSaveDelay || 3000;

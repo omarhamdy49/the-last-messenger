@@ -1,13 +1,7 @@
 {{-- Language tab bar — requires `activeLanguage` in the surrounding x-data scope.
      Optional: $errorFields (array of translatable field names) to flag tabs with errors. --}}
 @php
-    $contentLanguages = [
-        'ar' => ['name' => 'العربية', 'flag' => '🇸🇦'],
-        'en' => ['name' => 'English', 'flag' => '🇬🇧'],
-        'fr' => ['name' => 'Français', 'flag' => '🇫🇷'],
-        'tr' => ['name' => 'Türkçe', 'flag' => '🇹🇷'],
-        'ur' => ['name' => 'اردو', 'flag' => '🇵🇰'],
-    ];
+    $contentLanguages = collect(config('app.supported_locales'))->only(enabled_content_locales())->all();
     $errorFields = $errorFields ?? [];
 @endphp
 

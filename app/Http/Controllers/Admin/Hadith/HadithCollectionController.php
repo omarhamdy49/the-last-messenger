@@ -51,6 +51,8 @@ class HadithCollectionController extends Controller
 
         return view('admin.hadith.collections.show', [
             'collection' => $collection,
+            'hadiths' => $collection->has_books ? null : $collection->hadiths()
+                ->orderBy('sort_order')->orderBy('id')->paginate(25),
             'books' => $collection->books()
                 ->withCount(['chapters', 'hadiths'])
                 ->orderBy('sort_order')->orderBy('book_number')

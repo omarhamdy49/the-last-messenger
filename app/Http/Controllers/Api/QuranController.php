@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Routing\Controller;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class QuranController extends Controller
@@ -212,7 +213,7 @@ class QuranController extends Controller
         try {
             $validated = $request->validate([
                 'q' => 'required|string|min:2|max:200',
-                'lang' => 'sometimes|string|in:ar,en,fr,tr,ur',
+                'lang' => ['sometimes', 'string', Rule::in(enabled_content_locales())],
                 'type' => 'sometimes|string|in:arabic,translation',
                 'per_page' => 'sometimes|integer|min:1|max:100',
             ]);
@@ -262,7 +263,7 @@ class QuranController extends Controller
             $validated = $request->validate([
                 'q' => 'required|string|min:1|max:100',
                 'limit' => 'sometimes|integer|min:1|max:20',
-                'locale' => 'sometimes|string|in:ar,en,fr,tr,ur',
+                'locale' => ['sometimes', 'string', Rule::in(enabled_content_locales())],
             ]);
         } catch (ValidationException $e) {
             report($e);

@@ -16,7 +16,7 @@
 @php
     $isEdit = $article && $article->exists;
     $actionUrl = $isEdit ? route('admin.articles.update', $article) : route('admin.articles.store');
-    $localeNames = ['ar' => 'العربية', 'en' => 'English', 'tr' => 'Türkçe', 'fr' => 'Français', 'ur' => 'اردو'];
+    $localeNames = enabled_content_languages();
 @endphp
 
 @push('styles')

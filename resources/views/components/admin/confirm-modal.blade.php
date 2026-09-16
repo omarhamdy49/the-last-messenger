@@ -41,6 +41,7 @@
 
     <!-- Modal -->
     <div x-show="isOpen"
+         role="dialog" aria-modal="true" aria-labelledby="admin-confirm-title" aria-describedby="admin-confirm-message"
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0 scale-95"
          x-transition:enter-end="opacity-100 scale-100"
@@ -72,12 +73,12 @@
             </div>
 
             <!-- Title -->
-            <h3 class="text-lg font-bold text-center mb-2"
+            <h3 id="admin-confirm-title" class="text-lg font-bold text-center mb-2"
                 :class="darkMode ? 'text-white' : 'text-gray-900'"
                 x-text="title"></h3>
 
             <!-- Message -->
-            <p class="text-sm text-center mb-6"
+            <p id="admin-confirm-message" class="text-sm text-center mb-6"
                :class="darkMode ? 'text-gray-400' : 'text-gray-600'"
                x-text="message"></p>
 
@@ -122,9 +123,11 @@ function confirmModal() {
         },
 
         confirm() {
+            const callback = this.onConfirmCallback;
+            this.onConfirmCallback = null;
             this.isOpen = false;
-            if (this.onConfirmCallback) {
-                this.onConfirmCallback();
+            if (callback) {
+                callback.call(this);
             }
         },
 
@@ -150,7 +153,7 @@ window.confirmSubmit = function(form, options = {}) {
         confirmText: options.confirmText,
         cancelText: options.cancelText,
         type: options.type || 'danger',
-        onConfirm: () => form.submit(),
+        onConfirm: () => HTMLFormElement.prototype.submit.call(form),
     });
     return false;
 };

@@ -458,7 +458,7 @@ final class SeerahController extends Controller
         return [
             'slug' => $event->slug,
             'title' => $event->getTranslation('title', $locale) ?? __('seerah.public.untitled_event'),
-            'description' => $event->getTranslation('description', $locale),
+            'description' => excerpt_sentence($event->getTranslation('description', $locale), PHP_INT_MAX),
             'type' => $type?->slug,
             'typeLabel' => $type?->getTranslation('name', $locale) ?? '',
             'icon' => $type?->icon ?? 'circle',

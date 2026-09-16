@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Web;
 
+use App\Domain\Shared\Services\LanguageService;
 use App\Models\User;
 use App\Notifications\Site\VerifyEmailNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -179,6 +180,7 @@ final class ProfileSecurityTest extends TestCase
 
     public function test_settings_language_select_persists_and_applies(): void
     {
+        app(LanguageService::class)->updateSettings('fr', ['active' => true]);
         $user = User::factory()->create(['language' => 'en']);
 
         $this->actingAs($user)->put(route('public.profile.update'), [

@@ -6,7 +6,7 @@
     $inputTheme = "darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'";
     $labelTheme = "darkMode ? 'text-gray-300' : 'text-gray-700'";
     $cardTheme = "darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'";
-    $languages = ['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'];
+    $languages = enabled_content_languages();
     $firstErrorLocale = collect(array_keys($languages))->first(fn ($l) => $errors->has('names.'.$l) || $errors->has('descriptions.'.$l)) ?? 'ar';
     $errorText = fn (string $field, string $id) => $errors->has($field) ? '<p id="'.$id.'-error" class="mt-1.5 text-sm text-red-600 flex items-center gap-1"><i data-lucide="alert-circle" class="w-4 h-4" aria-hidden="true"></i>'.e($errors->first($field)).'</p>' : '';
     $aria = fn (string $field, string $id) => $errors->has($field) ? 'aria-invalid=true aria-describedby='.$id.'-error' : '';

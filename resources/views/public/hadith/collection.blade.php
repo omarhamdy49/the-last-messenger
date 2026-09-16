@@ -32,14 +32,16 @@
             @endif
 
             <div class="mt-6 flex flex-wrap items-center gap-3">
+                @if ($collection->has_books)
                 <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 border border-white/15 backdrop-blur text-sm">
                     <i data-lucide="book" class="w-4 h-4 text-white/70"></i>
                     <span class="font-extrabold tabular-nums">{{ number_format($books->count()) }}</span>
                     <span class="text-white/80 text-xs">{{ __('hadith.books') }}</span>
                 </div>
+                @endif
                 <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 border border-white/15 backdrop-blur text-sm">
                     <i data-lucide="scroll-text" class="w-4 h-4 text-white/70"></i>
-                    <span class="font-extrabold tabular-nums">{{ number_format($collection->total_hadith) }}</span>
+                    <span class="font-extrabold tabular-nums">{{ number_format($hadiths?->total() ?? $collection->availableHadithsCount()) }}</span>
                     <span class="text-white/80 text-xs">{{ __('hadith.hadiths') }}</span>
                 </div>
                 <a href="{{ route('public.hadith.search', ['collection' => $collection->slug]) }}"
@@ -53,10 +55,21 @@
     <section class="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
         <h2 class="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-3">
             <span class="w-1.5 h-7 rounded-full bg-gradient-to-b from-[#0056b3] to-[#218838]"></span>
-            {{ __('hadith.book_index') }}
+            {{ __($collection->has_books ? 'hadith.book_index' : 'hadith.hadiths') }}
         </h2>
 
-        @if ($books->isEmpty())
+        @if ($hadiths !== null)
+            <div class="space-y-4">
+                @forelse ($hadiths as $hadith)
+                    @include('public.hadith._hadith-card', ['hadith' => $hadith])
+                @empty
+                    <p class="p-12 text-center text-gray-500 dark:text-gray-400">{{ __('hadith.no_hadiths') }}</p>
+                @endforelse
+            </div>
+            @if ($hadiths->hasPages())
+                <div class="mt-8">{{ $hadiths->links() }}</div>
+            @endif
+        @elseif ($books->isEmpty())
             <div class="rounded-2xl border border-dashed border-gray-300 dark:border-white/10 p-12 text-center">
                 <i data-lucide="book" class="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600"></i>
                 <p class="text-gray-500 dark:text-gray-400">{{ __('hadith.no_books') }}</p>

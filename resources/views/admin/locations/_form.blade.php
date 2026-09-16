@@ -1,6 +1,6 @@
 {{-- Shared create/edit form. Arabic tab is selected by default (constitution V). --}}
 @php
-    $locales = ['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'];
+    $locales = enabled_content_languages();
     $current = $location ?? null;
     $aliasList = old('aliases', $current?->aliasList() ?? []);
 @endphp

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use App\Http\Requests\Admin\Content\Concerns\SanitizesRichText;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -11,6 +12,13 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class StoreSeerahMilestoneRequest extends FormRequest
 {
+    use SanitizesRichText;
+
+    protected function prepareForValidation(): void
+    {
+        $this->sanitizeRichTextField('description');
+    }
+
     public function authorize(): bool
     {
         return $this->user()->hasAnyRole(['admin', 'super_admin']);

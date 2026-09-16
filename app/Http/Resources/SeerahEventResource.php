@@ -23,11 +23,11 @@ class SeerahEventResource extends JsonResource
         return [
             'id' => $this->id,
             'slug' => $this->slug,
-            'title' => $this->getTranslations('title'),
-            'description' => $this->getTranslations('description'),
+            'title' => $this->getEnabledTranslations('title'),
+            'description' => $this->getEnabledTranslations('description'),
             'content' => $this->when(
                 $request->route('slug'),
-                fn (): array => $this->getTranslations('content')
+                fn (): array => $this->getEnabledTranslations('content')
             ),
             'hijri_date' => $this->hijri_date,
             'hijri_year' => $this->hijri_year,

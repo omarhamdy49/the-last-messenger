@@ -181,7 +181,7 @@
                      :class="darkMode ? 'glass-dark' : 'glass-light'">
 
                     <div class="p-2 space-y-1">
-                        @foreach(['ar' => 'العربية', 'en' => 'English', 'tr' => 'Türkçe', 'fr' => 'Français', 'ur' => 'اردو'] as $code => $name)
+                        @foreach(enabled_content_languages() as $code => $name)
                             <button @click="changeLang('{{ $code }}'); langOpen = false"
                                     class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-start transition-colors"
                                     :class="[

@@ -126,11 +126,9 @@ use Illuminate\Support\Str;
                         class="w-full px-4 py-2.5 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                         :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
                     <option value="">{{ __('admin.all') }}</option>
-                    <option value="ar" {{ request('lang') == 'ar' ? 'selected' : '' }}>العربية</option>
-                    <option value="en" {{ request('lang') == 'en' ? 'selected' : '' }}>English</option>
-                    <option value="fr" {{ request('lang') == 'fr' ? 'selected' : '' }}>Français</option>
-                    <option value="tr" {{ request('lang') == 'tr' ? 'selected' : '' }}>Türkçe</option>
-                    <option value="ur" {{ request('lang') == 'ur' ? 'selected' : '' }}>اردو</option>
+                    @foreach(enabled_content_languages() as $code => $label)
+                        <option value="{{ $code }}" @selected(request('lang') === $code)>{{ $label }}</option>
+                    @endforeach
                 </select>
             </div>
 

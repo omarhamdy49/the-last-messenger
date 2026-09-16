@@ -135,11 +135,9 @@
                             <select id="user-language" x-model="form.language"
                                     class="w-full px-4 py-3 rounded-xl border transition-all focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                                     :class="fieldClass('language', darkMode)">
-                                <option value="ar">العربية</option>
-                                <option value="en">English</option>
-                                <option value="fr">Français</option>
-                                <option value="tr">Türkçe</option>
-                                <option value="ur">اردو</option>
+                                @foreach(enabled_content_languages() as $code => $label)
+                                    <option value="{{ $code }}">{{ $label }}</option>
+                                @endforeach
                             </select>
                             <p x-show="errors.language" x-cloak class="mt-1.5 text-sm text-red-500" x-text="firstError('language')"></p>
                         </div>
@@ -293,7 +291,7 @@ function userEditor(config) {
         form: {
             name: config.user.name ?? '',
             email: config.user.email ?? '',
-            language: config.user.language ?? 'ar',
+            language: window.enabledContentLocales.includes(config.user.language) ? config.user.language : @js(\App\Domain\Shared\Models\Language::getDefaultCode()),
             password: '',
             password_confirmation: '',
             roles: (config.user.roles ?? []).map(r => r.name),

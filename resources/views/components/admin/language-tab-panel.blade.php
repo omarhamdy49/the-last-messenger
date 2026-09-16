@@ -27,6 +27,7 @@
     $isRtl      = $direction === 'rtl';
 @endphp
 
+@if(in_array($language, enabled_content_locales(), true))
 <div x-show="activeLanguage === '{{ $language }}'"
      x-cloak
      x-transition:enter="transition ease-out duration-200"
@@ -56,3 +57,5 @@
         </div>
     @endif
 </div>
+
+@endif

@@ -4,7 +4,7 @@
 --}}
 
 @php
-    $supportedLanguages = ['ar', 'en', 'tr', 'fr', 'ur'];
+    $supportedLanguages = enabled_content_locales();
     $langNames = [
         'ar' => ['name' => 'العربية', 'flag' => '🇸🇦'],
         'en' => ['name' => 'English', 'flag' => '🇬🇧'],

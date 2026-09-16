@@ -82,7 +82,7 @@ final class ArticleController extends Controller
 
         // The index exists in every active UI language → emit hreflang for each.
         // Fall back to the full supported set when no languages are configured.
-        $activeCodes = Language::getActiveCodes() ?: ['ar', 'en', 'fr', 'tr', 'ur'];
+        $activeCodes = Language::getActiveCodes() ?: config('languages.default_enabled');
         $indexUrl = route('public.articles');
         $hreflangAlternates = [];
         foreach ($activeCodes as $code) {
@@ -161,7 +161,7 @@ final class ArticleController extends Controller
             'related' => $payload['related'],
             'prev' => $payload['prev'] ?? null,
             'next' => $payload['next'] ?? null,
-            'hreflangAlternates' => $payload['article']['alternates'] ?? [],
+            'hreflangAlternates' => array_intersect_key($payload['article']['alternates'] ?? [], array_flip(enabled_content_locales())),
         ]);
     }
 
@@ -344,7 +344,7 @@ final class ArticleController extends Controller
             ->map(function (Article $a) use ($locale, $article) {
                 $al = $a->locales->firstWhere('locale', $locale)
                     ?? $a->locales->firstWhere('locale', 'ar')
-                    ?? $a->locales->first();
+                    ?? $a->locales->whereIn('locale', enabled_content_locales())->first();
 
                 return $al === null ? null : [
                     'title' => $al->title,
@@ -559,6 +559,7 @@ final class ArticleController extends Controller
     private function buildArticleAlternates(Article $article): array
     {
         $ready = ($article->relationLoaded('locales') ? $article->locales : $article->locales()->get())
+            ->whereIn('locale', enabled_content_locales())
             ->filter(fn (ArticleLocale $row) => (bool) $row->is_ready && $row->slug);
 
         if ($ready->count() < 2) {
@@ -577,6 +578,8 @@ final class ArticleController extends Controller
     private function resolveLocale(Article $article, string $locale): ?ArticleLocale
     {
         $locales = $article->relationLoaded('locales') ? $article->locales : $article->locales()->get();
+
+        $locales = $locales->whereIn('locale', enabled_content_locales());
 
         return $locales->firstWhere('locale', $locale)
             ?? $locales->firstWhere('locale', 'ar')

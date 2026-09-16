@@ -32,7 +32,7 @@ class StoreTafsirResourceRequest extends FormRequest
             'name_en' => ['nullable', 'string', 'max:255'],
             'slug' => ['required', 'string', 'max:100', 'alpha_dash', Rule::unique('quran_tafsir_resources', 'slug')->ignore($this->resourceId())],
             'author' => ['nullable', 'string', 'max:255'],
-            'language' => ['required', 'string', 'in:ar,en,fr,tr,ur'],
+            'language' => ['required', 'string', Rule::in(enabled_content_locales())],
             'source' => ['nullable', 'string', 'max:255'],
             'display_order' => ['nullable', 'integer', 'min:0'],
         ];

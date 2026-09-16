@@ -184,7 +184,7 @@
 </form>
 
 <form method="POST" action="{{ route('admin.playlists.destroy', $playlist->id) }}" class="mt-6"
-      @submit="if (!confirm(@js($t('delete_message', ['name' => $playlist->name])))) $event.preventDefault()">
+      onsubmit="return window.confirmSubmit(this, { message: {{ Js::from($t('delete_message', ['name' => $playlist->name])) }} })">
     @csrf
     @method('DELETE')
     <button type="submit" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-red-600 border-2 border-red-200 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-900/20 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-red-300">

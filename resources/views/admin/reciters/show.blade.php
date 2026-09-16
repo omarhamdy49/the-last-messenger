@@ -14,7 +14,7 @@
     $coverage = $stats['surahs'] ? (int) round($stats['with_audio'] / $stats['surahs'] * 100) : 0;
     $duration = $stats['duration_seconds'];
     $durationLabel = $duration ? intdiv($duration, 3600).':'.str_pad((string) intdiv($duration % 3600, 60), 2, '0', STR_PAD_LEFT) : '—';
-    $languages = ['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'];
+    $languages = enabled_content_languages();
     $bios = collect($languages)->keys()->mapWithKeys(fn ($lang) => [$lang => $reciter->getTranslation('description', $lang, false)])->filter();
     $names = collect($languages)->keys()->mapWithKeys(fn ($lang) => [$lang => $reciter->getTranslation('name', $lang, false)])->filter();
     $chevron = $isRtl ? 'chevron-left' : 'chevron-right';

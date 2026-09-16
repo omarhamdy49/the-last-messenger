@@ -1,10 +1,11 @@
 @extends('layouts.admin')
 
 @php
-    $defaultLocale = $article->locales->firstWhere('locale', 'ar')?->locale
-        ?? $article->locales->first()?->locale
+    $enabledLocales = $article->locales->whereIn('locale', enabled_content_locales());
+    $defaultLocale = $enabledLocales->firstWhere('locale', 'ar')?->locale
+        ?? $enabledLocales->first()?->locale
         ?? 'ar';
-    $primaryLocale = $article->locales->firstWhere('locale', $defaultLocale) ?? $article->locales->first();
+    $primaryLocale = $enabledLocales->firstWhere('locale', $defaultLocale) ?? $enabledLocales->first();
     $statusValue = $article->status instanceof \BackedEnum ? $article->status->value : $article->status;
     $isPublished = in_array((string) $statusValue, ['published', 'active', '1', 'true'], true);
 @endphp
@@ -148,7 +149,7 @@
                 </div>
 
                 <div class="absolute inset-x-0 bottom-0 p-5 sm:p-7">
-                    @foreach($article->locales as $locale)
+                    @foreach($enabledLocales as $locale)
                     <h2 x-show="activeLocale === '{{ $locale->locale }}'" x-cloak
                         dir="{{ in_array($locale->locale, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
                         class="text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-tight tracking-tight">
@@ -162,10 +163,10 @@
             <div class="p-5 sm:p-7 lg:p-9">
 
                 {{-- Language switcher as a segmented control --}}
-                @if($article->locales->count() > 1)
+                @if($enabledLocales->count() > 1)
                 <div class="inline-flex p-1 rounded-xl mb-7 gap-1"
                      :class="darkMode ? 'bg-gray-800/70' : 'bg-gray-100'">
-                    @foreach($article->locales as $locale)
+                    @foreach($enabledLocales as $locale)
                     <button type="button"
                             @click="activeLocale = '{{ $locale->locale }}'"
                             class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all"
@@ -178,7 +179,7 @@
                 </div>
                 @endif
 
-                @forelse($article->locales as $locale)
+                @forelse($enabledLocales as $locale)
                 <div x-show="activeLocale === '{{ $locale->locale }}'" x-cloak
                      dir="{{ in_array($locale->locale, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">
 

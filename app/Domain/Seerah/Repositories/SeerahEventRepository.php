@@ -18,8 +18,6 @@ use Illuminate\Support\Facades\DB;
 
 class SeerahEventRepository extends BaseRepository implements SeerahEventRepositoryInterface
 {
-    private const CHRONOLOGY_COLUMNS = ['hijri_year', 'hijri_month', 'hijri_day', 'display_order'];
-
     /**
      * Cache TTL in seconds (30 minutes)
      */
@@ -534,7 +532,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
         $branches = 0;
 
         $query->where(function (Builder $boundaries) use ($event, $operator, &$branches): void {
-            foreach (self::CHRONOLOGY_COLUMNS as $index => $column) {
+            foreach (SeerahEvent::CHRONOLOGY_COLUMNS as $index => $column) {
                 $value = $event->getAttribute($column);
 
                 if ($operator === '<' && $value === null) {
@@ -543,7 +541,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
 
                 $branches++;
                 $boundaries->orWhere(function (Builder $branch) use ($event, $operator, $index, $column, $value): void {
-                    foreach (array_slice(self::CHRONOLOGY_COLUMNS, 0, $index) as $equalColumn) {
+                    foreach (array_slice(SeerahEvent::CHRONOLOGY_COLUMNS, 0, $index) as $equalColumn) {
                         $equalValue = $event->getAttribute($equalColumn);
                         $equalValue === null
                             ? $branch->whereNull($equalColumn)

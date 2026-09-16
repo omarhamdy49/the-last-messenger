@@ -56,11 +56,18 @@
                 تم تحديد <span x-text="selectedTags.length" class="font-bold text-accent"></span> وسم
             </span>
         </div>
-        <button @click="$dispatch('show-confirm', { title: 'هل أنت متأكد من حذف الوسوم المحددة؟', message: '{{ __("admin.delete_warning") }}', type: 'danger', onConfirm: () => { /* bulk delete via AJAX */ } })"
+        <form method="POST" action="{{ route('admin.tags.bulk-delete') }}"
+              onsubmit="return window.confirmSubmit(this, { title: {{ Js::from(__('admin.confirm_delete')) }}, message: {{ Js::from(__('admin.delete_warning')) }} })">
+            @csrf
+            <template x-for="id in selectedTags" :key="id">
+                <input type="hidden" name="ids[]" :value="id">
+            </template>
+        <button type="submit" :disabled="selectedTags.length === 0"
                 class="px-4 py-2 rounded-xl font-semibold transition-all hover:scale-105 bg-red-500 hover:bg-red-600 text-white flex items-center gap-2">
             <i data-lucide="trash-2" class="w-4 h-4"></i>
             <span>حذف المحدد</span>
         </button>
+        </form>
     </div>
 
     <!-- Tags Table -->

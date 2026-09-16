@@ -1,11 +1,11 @@
 @php
-    $langs = ['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'];
+    $langs = enabled_content_languages();
     $colorOptions = ['green','gray','red','blue','purple','yellow','pink','cyan','teal','orange','slate','indigo','amber','emerald','rose'];
 @endphp
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="seerah-layout seerah-authoring">
     <!-- Main -->
-    <div class="lg:col-span-2 space-y-6">
+    <div class="min-w-0 space-y-8">
         <!-- Story (multilingual) -->
         <div class="rounded-2xl border p-6" :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
             <h2 class="text-xl font-bold mb-6 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
@@ -22,7 +22,7 @@
             </div>
 
             @foreach(array_keys($langs) as $lang)
-            <div x-show="activeTab === '{{ $lang }}'" class="space-y-4">
+            <div x-show="activeTab === '{{ $lang }}'" class="space-y-8">
                 <div>
                     <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                         {{ __('admin.milestone_title') }} ({{ strtoupper($lang) }}) @if($lang === 'ar') <span class="text-red-500">*</span> @endif
@@ -43,10 +43,14 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.description') }} ({{ strtoupper($lang) }})</label>
-                    <textarea name="description[{{ $lang }}]" rows="3"
-                              dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                              class="w-full px-4 py-3 text-base sm:text-sm rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all resize-none"
-                              :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">{{ old("description.$lang", $milestone?->getTranslation('description', $lang, false)) }}</textarea>
+                    <x-admin.form.wysiwyg
+                        :name="'description['.$lang.']'"
+                        :value="old('description.'.$lang, $milestone?->getTranslation('description', $lang, false) ?? '')"
+                        :locale="$lang"
+                        height="320px"
+                        toolbar="compact"
+                    />
+                    @error("description.$lang") <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
                 </div>
             </div>
             @endforeach

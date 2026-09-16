@@ -31,6 +31,7 @@ class UpdateSeerahEventRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->sanitizeRichTextField('content');
+        $this->sanitizeRichTextField('description');
         $this->pruneEmptyMediaIds();
     }
 

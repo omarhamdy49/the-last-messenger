@@ -24,7 +24,7 @@
         <!-- Language Switcher -->
         <div class="flex items-center gap-1 p-1 rounded-xl border"
              :class="darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-300 bg-white'">
-            @foreach($article->locales as $locale)
+            @foreach($article->locales->whereIn('locale', enabled_content_locales()) as $locale)
             <a href="{{ route('admin.articles.preview', ['article' => $article->id, 'locale' => $locale->locale]) }}"
                class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all
                       {{ $locale->locale === $articleLocale->locale ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white' : '' }}"

@@ -1,5 +1,5 @@
 @php
-    $langs = ['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'];
+    $langs = enabled_content_languages();
     $colorOptions = ['green','gray','red','blue','purple','yellow','pink','cyan','teal','orange','slate','indigo','amber','emerald','rose'];
 @endphp
 

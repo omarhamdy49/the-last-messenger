@@ -104,7 +104,8 @@ class LanguageSeeder extends Seeder
             $translations = $language['name'];
             unset($language['name']);
 
-            $record = Language::updateOrCreate(
+            $language['is_active'] = in_array($language['code'], config('languages.default_enabled'), true);
+            $record = Language::firstOrCreate(
                 ['code' => $language['code']],
                 $language
             );

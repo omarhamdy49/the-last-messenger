@@ -2,7 +2,7 @@
 @php
     $r = $resource ?? null;
     $val = fn (string $k, $d = null) => old($k, $d);
-    $langs = ['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'];
+    $langs = enabled_content_languages();
 @endphp
 
 @if($errors->any())

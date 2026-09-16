@@ -12,7 +12,7 @@ return [
      * TranslationServiceProvider::boot(), which overrides this value; this array
      * is the startup fallback before that runs (and if the DB is unavailable).
      */
-    'locales' => ['ar', 'en', 'fr', 'tr', 'ur'],
+    'locales' => ['ar', 'en', 'tr'],
 
     /*
      * If a translation is not found for a given locale, fallback locale will be used.

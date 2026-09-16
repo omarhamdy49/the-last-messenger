@@ -482,6 +482,7 @@ class ArticleController extends AdminController
     public function preview(Article $article, Request $request): View
     {
         $locale = $request->get('locale', 'ar');
+        abort_unless(in_array($locale, enabled_content_locales(), true), 404);
         $articleLocale = $article->locales()->where('locale', $locale)->first();
 
         if (! $articleLocale) {

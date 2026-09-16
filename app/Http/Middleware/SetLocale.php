@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Domain\Shared\Models\Language;
+use App\Domain\Shared\Services\LanguageService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Session;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -19,11 +20,6 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class SetLocale
 {
-    /**
-     * Supported languages
-     */
-    private array $supportedLanguages = ['ar', 'en', 'fr', 'tr', 'ur'];
-
     /**
      * Handle an incoming request.
      *
@@ -38,6 +34,8 @@ class SetLocale
      */
     public function handle(Request $request, Closure $next): Response
     {
+        app(LanguageService::class)->applyRuntimeConfiguration();
+
         // Force Arabic for admin panel routes (bypass validation)
         $isAdminRoute = $request->is('su/portal/v1/admin/*') || $request->is('su/portal/v1/admin') ||
                         $request->is('admin/*') || $request->is('admin');
@@ -106,7 +104,7 @@ class SetLocale
         }
 
         // 4. Use default locale (check cache first for admin-configured default)
-        return Cache::get('app.locale', config('app.locale', 'ar'));
+        return Language::getDefaultCode();
     }
 
     /**
@@ -143,18 +141,6 @@ class SetLocale
      */
     private function isValidLocale(?string $locale): bool
     {
-        if (! $locale || ! in_array($locale, $this->supportedLanguages)) {
-            return false;
-        }
-
-        // Check if language is active in system settings
-        $languages = Cache::get('system.languages', []);
-
-        if (empty($languages)) {
-            // If no cache, allow all supported languages
-            return true;
-        }
-
-        return isset($languages[$locale]) && ($languages[$locale]['active'] ?? false);
+        return $locale !== null && Language::isValidCode($locale);
     }
 }

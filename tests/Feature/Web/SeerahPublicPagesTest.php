@@ -36,6 +36,8 @@ final class SeerahPublicPagesTest extends TestCase
         return SeerahEventFactory::new()->create(array_merge([
             'slug' => $slug,
             'featured_image' => 'https://example.com/image.jpg',
+            // Use the legacy equal rank unless a test specifies its editorial order.
+            'display_order' => 0,
             // The factory may pick a random article id; no articles exist here.
             'related_article_id' => null,
         ], $attributes));
@@ -181,12 +183,12 @@ final class SeerahPublicPagesTest extends TestCase
         $response->assertNotFound();
     }
 
-    public function test_event_navigation_uses_hijri_chronology_and_skips_unpublished_events(): void
+    public function test_event_navigation_uses_editorial_chronology_and_skips_unpublished_events(): void
     {
         $current = $this->makeEvent('navigation-current', [
-            'hijri_year' => 2,
-            'hijri_month' => 2,
-            'hijri_day' => 2,
+            'hijri_year' => null,
+            'hijri_month' => null,
+            'hijri_day' => null,
             'display_order' => 2,
             'is_featured' => false,
         ]);
@@ -194,21 +196,21 @@ final class SeerahPublicPagesTest extends TestCase
             'hijri_year' => 4,
             'hijri_month' => 1,
             'hijri_day' => 1,
-            'display_order' => 1,
+            'display_order' => 4,
             'is_featured' => false,
         ]);
         $previous = $this->makeEvent('navigation-previous', [
             'hijri_year' => 1,
             'hijri_month' => 12,
             'hijri_day' => 29,
-            'display_order' => 9,
+            'display_order' => 1,
             'is_featured' => false,
         ]);
         $hidden = $this->makeEvent('navigation-hidden', [
             'hijri_year' => 3,
             'hijri_month' => 1,
             'hijri_day' => 1,
-            'display_order' => 1,
+            'display_order' => 3,
             'status' => 'draft',
             'is_featured' => false,
         ]);

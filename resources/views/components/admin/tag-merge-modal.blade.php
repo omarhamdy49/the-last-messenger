@@ -251,18 +251,30 @@ function tagMergeModal() {
 
         async loadTags() {
             try {
-                const response = await fetch('/admin/tags?ajax=1', {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json'
-                    }
-                });
-                const data = await response.json();
+                const tags = [];
+                let page = 1;
+                let lastPage = 1;
+                do {
+                    const url = new URL({{ Js::from(route('admin.tags.index')) }});
+                    url.searchParams.set('page', page);
+                    const response = await fetch(url, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.message);
+                    tags.push(...data.tags);
+                    lastPage = data.meta.last_page;
+                    page++;
+                } while (page <= lastPage && this.isOpen);
+                if (!this.isOpen) return;
 
-                this.sourceTags = data.tags.filter(tag => this.sourceTagIds.includes(tag.id));
-                this.availableTags = data.tags.filter(tag => !this.sourceTagIds.includes(tag.id));
+                this.sourceTags = tags.filter(tag => this.sourceTagIds.map(Number).includes(Number(tag.id)));
+                this.availableTags = tags.filter(tag => !this.sourceTagIds.map(Number).includes(Number(tag.id)));
             } catch (error) {
-                console.error('Failed to load tags:', error);
+                showToast(error.message || {{ Js::from(__('admin.operation_failed')) }}, 'error');
             }
         },
 
@@ -300,7 +312,7 @@ function tagMergeModal() {
                     this.isLoading = true;
 
                     try {
-                        const response = await fetch('/admin/tags/merge', {
+                        const response = await fetch({{ Js::from(route('admin.tags.merge')) }}, {
                             method: 'POST',
                             headers: {
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,

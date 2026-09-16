@@ -1,6 +1,6 @@
 {{-- Shared form fields for create/edit. Expects: $surahs, optional $context (model). --}}
 @php
-    $locales = ['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'];
+    $locales = enabled_content_languages();
     $trans = fn (string $field, string $locale) => old("{$field}.{$locale}", isset($context) ? $context->getTranslation($field, $locale, false) : null);
 @endphp
 

@@ -61,7 +61,7 @@
 
             <div class="px-6 sm:px-8 py-5 border-b border-gray-100 dark:border-white/5 flex flex-wrap items-center gap-2">
                 <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-l from-[#0056b3] to-[#218838] text-white">
-                    <i data-lucide="hash" class="w-3.5 h-3.5"></i>{{ __('hadith.hadith_number_label') }} {{ $locale === 'ar' ? arabic_digits($hadith->number) : $hadith->number }}
+                    <i data-lucide="hash" class="w-3.5 h-3.5"></i>{{ __('hadith.hadith_number_label', ['number' => $locale === 'ar' ? arabic_digits($hadith->number) : $hadith->number]) }}
                 </span>
 
                 @if ($grade)

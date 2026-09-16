@@ -11,6 +11,7 @@ use App\Support\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Validation\Rule;
 
 class ArticleController extends Controller
 {
@@ -31,11 +32,11 @@ class ArticleController extends Controller
             'tag' => ['sometimes', 'integer', 'min:1'],
             'q' => ['sometimes', 'string', 'min:2', 'max:255'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
-            'locale' => ['sometimes', 'string', 'in:ar,en,fr,tr,ur'],
+            'locale' => ['sometimes', 'string', Rule::in(enabled_content_locales())],
         ]);
 
         $perPage = (int) ($validated['per_page'] ?? 20);
-        $locale = $validated['locale'] ?? $request->header('Accept-Language', 'ar');
+        $locale = $validated['locale'] ?? app()->getLocale();
 
         $filters = ['status' => 'published'];
 
@@ -124,10 +125,10 @@ class ArticleController extends Controller
         $validated = $request->validate([
             'q' => ['required', 'string', 'min:2', 'max:255'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
-            'locale' => ['sometimes', 'string', 'in:ar,en,fr,tr,ur'],
+            'locale' => ['sometimes', 'string', Rule::in(enabled_content_locales())],
         ]);
 
-        $locale = $validated['locale'] ?? $request->header('Accept-Language', 'ar');
+        $locale = $validated['locale'] ?? app()->getLocale();
         $perPage = (int) ($validated['per_page'] ?? 20);
         $paginator = $this->repository->searchArticles(
             query: $validated['q'],
@@ -144,9 +145,7 @@ class ArticleController extends Controller
      */
     public function show(string $slug): JsonResponse
     {
-        $allowedLocales = ['ar', 'en', 'fr', 'tr', 'ur'];
-        $requestedLocale = request()->header('Accept-Language', 'ar');
-        $locale = in_array($requestedLocale, $allowedLocales, true) ? $requestedLocale : 'ar';
+        $locale = app()->getLocale();
         $article = $this->repository->findBySlug($slug, $locale);
 
         if ($article === null) {

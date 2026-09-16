@@ -103,7 +103,7 @@
 
         {{-- Delete --}}
         <form method="POST" action="{{ route('admin.quran.ai-inquiries.destroy', $inquiry->id) }}"
-              onsubmit="return confirm('{{ __('admin.quran_ai_delete_confirm') }}')">
+              onsubmit="return window.confirmSubmit(this, { message: {{ Js::from(__('admin.quran_ai_delete_confirm')) }} })">
             @csrf
             @method('DELETE')
             <button type="submit" class="px-4 py-2 rounded-lg font-semibold border border-red-300 text-red-600 hover:bg-red-50 inline-flex items-center gap-2">

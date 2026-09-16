@@ -72,7 +72,7 @@
             <div x-data="{ activeTab: 'ar' }" class="space-y-4">
                 <!-- Language Tabs -->
                 <div class="flex flex-wrap gap-2 border-b pb-4" :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
-                    @foreach($verse->translations as $translation)
+                    @foreach($verse->translations->whereIn('lang', enabled_content_locales()) as $translation)
                     <button @click="activeTab = '{{ $translation->lang }}'"
                             class="px-4 py-2 rounded-lg font-medium transition-all"
                             :class="activeTab === '{{ $translation->lang }}' ?
@@ -84,7 +84,7 @@
                 </div>
 
                 <!-- Content -->
-                @foreach($verse->translations as $translation)
+                @foreach($verse->translations->whereIn('lang', enabled_content_locales()) as $translation)
                 <div x-show="activeTab === '{{ $translation->lang }}'"
                      class="p-6 rounded-xl"
                      :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">

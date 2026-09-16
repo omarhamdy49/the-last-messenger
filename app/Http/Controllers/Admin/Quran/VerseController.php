@@ -17,6 +17,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -301,7 +302,7 @@ class VerseController extends Controller
             'q' => ['required', 'string', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'surah_id' => ['nullable', 'integer', 'exists:quran_surahs,id'],
-            'language' => ['nullable', 'string', 'in:ar,en,fr,tr,ur'],
+            'language' => ['nullable', 'string', Rule::in(enabled_content_locales())],
         ]);
 
         $query = $request->input('q');

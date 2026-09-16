@@ -142,7 +142,7 @@
                                         <i data-lucide="pencil" class="w-4 h-4"></i>
                                     </a>
                                     <form method="POST" action="{{ route('admin.locations.destroy', $location->id) }}"
-                                          onsubmit="return confirm('{{ __('admin.confirm_delete') }}')">
+                                          onsubmit="return window.confirmSubmit(this, { message: {{ Js::from(__('admin.confirm_delete')) }} })">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="p-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30" title="{{ __('admin.delete') }}">

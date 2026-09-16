@@ -34,7 +34,7 @@ final class SitemapController extends Controller
      */
     private function buildEntries(): array
     {
-        $activeCodes = Language::getActiveCodes() ?: ['ar', 'en', 'fr', 'tr', 'ur'];
+        $activeCodes = Language::getActiveCodes() ?: config('languages.default_enabled');
         $indexUrl = route('public.articles');
 
         // Index page: one entry, alternates for every active language.
@@ -51,7 +51,7 @@ final class SitemapController extends Controller
 
         foreach ($this->articles->getPublishedForSitemap() as $article) {
             $alternates = [];
-            foreach ($article->locales as $row) {
+            foreach ($article->locales->whereIn('locale', $activeCodes) as $row) {
                 if ($row->slug) {
                     $alternates[$row->locale] = $this->localeUrl(route('public.articles.show', $row->slug), $row->locale);
                 }

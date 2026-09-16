@@ -62,7 +62,7 @@
 
                 <!-- Language Tabs -->
                 <div class="flex flex-wrap gap-2 border-b pb-4 mb-6" :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
-                    @foreach(['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'] as $lang => $label)
+                    @foreach(enabled_content_languages() as $lang => $label)
                     <button type="button"
                             @click="activeTab = '{{ $lang }}'"
                             class="px-4 py-2 rounded-lg font-medium transition-all"
@@ -75,7 +75,7 @@
                 </div>
 
                 <!-- Tab Contents -->
-                @foreach(['ar', 'en', 'fr', 'tr', 'ur'] as $lang)
+                @foreach(enabled_content_locales() as $lang)
                 <div x-show="activeTab === '{{ $lang }}'" class="space-y-4">
                     <!-- Name -->
                     <div>

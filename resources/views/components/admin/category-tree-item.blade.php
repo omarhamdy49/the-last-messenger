@@ -55,7 +55,7 @@
         <!-- Category Info -->
         <div class="flex-1 min-w-0">
             <div class="flex items-center gap-3">
-                <a :href="`/admin/categories/${category.id}`"
+                <a :href="`{{ route('admin.categories.index') }}/${category.id}`"
                    class="font-semibold truncate hover:text-accent transition-colors"
                    :class="darkMode ? 'text-white' : 'text-gray-900'"
                    x-text="category.name"></a>
@@ -112,28 +112,28 @@
                  class="absolute right-0 mt-2 w-56 rounded-xl shadow-xl glass z-50 overflow-hidden"
                  :class="darkMode ? 'bg-gray-800/95 border border-gray-700' : 'bg-white/95 border border-gray-200'">
 
-                <a :href="`/admin/categories/${category.id}`"
+                <a :href="`{{ route('admin.categories.index') }}/${category.id}`"
                    class="flex items-center gap-3 px-4 py-3 transition-colors"
                    :class="darkMode ? 'hover:bg-gray-700 text-white' : 'hover:bg-gray-50 text-gray-900'">
                     <i data-lucide="eye" class="w-5 h-5 text-blue-500"></i>
                     <span class="font-medium">View Details</span>
                 </a>
 
-                <a :href="`/admin/categories/${category.id}/edit`"
+                <a :href="`{{ route('admin.categories.index') }}/${category.id}/edit`"
                    class="flex items-center gap-3 px-4 py-3 transition-colors"
                    :class="darkMode ? 'hover:bg-gray-700 text-white' : 'hover:bg-gray-50 text-gray-900'">
                     <i data-lucide="edit" class="w-5 h-5 text-accent"></i>
                     <span class="font-medium">Edit</span>
                 </a>
 
-                <a :href="`/admin/categories/create?parent_id=${category.id}`"
+                <a :href="`{{ route('admin.categories.create') }}?parent_id=${category.id}`"
                    class="flex items-center gap-3 px-4 py-3 transition-colors"
                    :class="darkMode ? 'hover:bg-gray-700 text-white' : 'hover:bg-gray-50 text-gray-900'">
                     <i data-lucide="folder-plus" class="w-5 h-5 text-green-500"></i>
                     <span class="font-medium">Add Subcategory</span>
                 </a>
 
-                <a :href="`/admin/categories/create?duplicate=${category.id}`"
+                <a :href="`{{ route('admin.categories.create') }}?duplicate=${category.id}`"
                    class="flex items-center gap-3 px-4 py-3 transition-colors"
                    :class="darkMode ? 'hover:bg-gray-700 text-white' : 'hover:bg-gray-50 text-gray-900'">
                     <i data-lucide="copy" class="w-5 h-5 text-purple-500"></i>
@@ -203,7 +203,7 @@ function categoryTreeItem(initialCategory) {
                 type: 'danger',
                 onConfirm: async () => {
                     try {
-                        const response = await fetch(`/admin/categories/${this.category.id}`, {
+                        const response = await fetch(`{{ route('admin.categories.index') }}/${this.category.id}`, {
                             method: 'DELETE',
                             headers: {
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,

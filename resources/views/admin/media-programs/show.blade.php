@@ -226,7 +226,7 @@
         <div class="rounded-2xl border p-6" :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
             <h3 class="text-lg font-semibold mb-4" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ __('admin.translations') }}</h3>
 
-            @php $locales = ['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو']; @endphp
+            @php $locales = enabled_content_languages(); @endphp
             <div x-data="{ activeLocale: 'ar' }">
                 <div class="flex gap-2 mb-4 overflow-x-auto whitespace-nowrap pb-1">
                     @foreach($locales as $code => $label)

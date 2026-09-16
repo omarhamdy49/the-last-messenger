@@ -19,6 +19,7 @@ use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithBook;
 use App\Domain\Hadith\Models\HadithChapter;
 use App\Domain\Hadith\Models\HadithCollection;
+use App\Domain\Hadith\Services\HadithBrowseService;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -47,6 +48,8 @@ final class EloquentHadithImportRepository implements HadithImportRepositoryInte
     public function importFortyCollection(MappedFortyCollection $collection): FortyCollectionWriteResult
     {
         return DB::transaction(function () use ($collection): FortyCollectionWriteResult {
+            DB::afterCommit(static fn () => HadithBrowseService::forget());
+
             $model = $this->upsertCollection($collection);
             $this->assertBookless((int) $model->id, $collection->slug);
 
@@ -117,6 +120,8 @@ final class EloquentHadithImportRepository implements HadithImportRepositoryInte
     public function importCollection(MappedSunnahCollection $source): SunnahCollectionWriteResult
     {
         return DB::transaction(function () use ($source): SunnahCollectionWriteResult {
+            DB::afterCommit(static fn () => HadithBrowseService::forget());
+
             $collection = $this->upsertBookCollection($source);
             $collectionId = (int) $collection->id;
             $sourceBookNumbers = array_map(
@@ -212,6 +217,8 @@ final class EloquentHadithImportRepository implements HadithImportRepositoryInte
         array $bookNumbers,
     ): int {
         return DB::transaction(function () use ($definition, $source, $bookNumbers): int {
+            DB::afterCommit(static fn () => HadithBrowseService::forget());
+
             $attributes = [
                 'reference_template' => $definition->referenceTemplate,
                 'title_ar' => $source->titleAr,
@@ -251,6 +258,8 @@ final class EloquentHadithImportRepository implements HadithImportRepositoryInte
     public function importStreamingBook(int $collectionId, string $slug, MappedSunnahBook $book): array
     {
         return DB::transaction(function () use ($collectionId, $slug, $book): array {
+            DB::afterCommit(static fn () => HadithBrowseService::forget());
+
             $bookModel = $this->upsertBook($collectionId, $book);
             $chapterIds = $this->upsertChapters((int) $bookModel->id, $slug, $book);
             $existingReferences = Hadith::query()
@@ -309,6 +318,8 @@ final class EloquentHadithImportRepository implements HadithImportRepositoryInte
         int $expectedHadiths,
     ): SunnahCollectionWriteResult {
         return DB::transaction(function () use ($collectionId, $slug, $expectedBooks, $expectedHadiths): SunnahCollectionWriteResult {
+            DB::afterCommit(static fn () => HadithBrowseService::forget());
+
             $books = HadithBook::query()->where('collection_id', $collectionId)->count();
             $hadiths = Hadith::query()->where('collection_id', $collectionId)->count();
             if ($books !== $expectedBooks || $hadiths !== $expectedHadiths) {

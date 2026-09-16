@@ -2,7 +2,7 @@
 @php
     $r = $resource ?? null;
     $val = fn (string $k, $d = null) => old($k, $d);
-    $langs = ['ar' => 'العربية', 'en' => 'English', 'en-tl' => 'Transliteration', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'];
+    $langs = enabled_content_languages() + (in_array('en', enabled_content_locales(), true) ? ['en-tl' => 'Transliteration'] : []);
 @endphp
 
 @if($errors->any())

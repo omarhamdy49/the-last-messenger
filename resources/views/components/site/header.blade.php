@@ -61,13 +61,7 @@
         return '#';
     };
 
-    $languages = [
-        'ar' => ['name' => 'العربية', 'flag' => '🇸🇦'],
-        'en' => ['name' => 'English', 'flag' => '🇬🇧'],
-        'fr' => ['name' => 'Français', 'flag' => '🇫🇷'],
-        'tr' => ['name' => 'Türkçe', 'flag' => '🇹🇷'],
-        'ur' => ['name' => 'اردو', 'flag' => '🇵🇰'],
-    ];
+    $languages = collect(config('app.supported_locales'))->only(enabled_content_locales())->all();
     $navUrl = fn (string $route) => Route::has($route) ? route($route) : '#';
 @endphp
 

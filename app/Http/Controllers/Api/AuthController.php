@@ -12,6 +12,7 @@ use App\Support\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 
@@ -46,7 +47,7 @@ class AuthController extends Controller
                 'confirmed',
                 Password::min(12)->mixedCase()->letters()->numbers()->symbols(),
             ],
-            'language' => ['nullable', 'string', 'in:ar,en,fr,tr,ur'],
+            'language' => ['nullable', 'string', Rule::in(enabled_content_locales())],
         ]);
 
         $user = $this->users->createPublicAccount([

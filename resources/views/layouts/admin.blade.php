@@ -30,6 +30,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script>
+        window.adminRoutes = {
+            categories: {{ Js::from(route('admin.categories.index')) }},
+            tagSearch: {{ Js::from(route('admin.tags.search')) }},
+        };
+    </script>
 
     <title>{{ config('app.name', 'The Last Messenger') }} - Admin</title>
 
@@ -39,6 +45,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 
     <!-- Compiled Assets -->
+    <script>window.enabledContentLocales = {{ \Illuminate\Support\Js::from(enabled_content_locales()) }};</script>
     @vite(['resources/css/admin.css', 'resources/js/admin/app.js'])
 
     <style>

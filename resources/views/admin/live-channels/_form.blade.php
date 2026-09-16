@@ -6,7 +6,7 @@
 --}}
 @php
     $isEdit = $channel !== null;
-    $locales = ['ar' => 'العربية', 'en' => 'English', 'fr' => 'Français', 'tr' => 'Türkçe', 'ur' => 'اردو'];
+    $locales = enabled_content_languages();
     $existingTranslations = $isEdit ? $channel->translations->keyBy('locale') : collect();
     $inputClasses = 'w-full text-base sm:text-sm border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#0056b3] transition-shadow';
 @endphp

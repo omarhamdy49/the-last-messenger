@@ -109,7 +109,7 @@ trait HasLocalizedContent
             }
 
             // Return first available non-empty translation
-            foreach ($this->getLoadedTranslations() as $trans) {
+            foreach ($this->getLoadedTranslations()->whereIn('locale', Language::getActiveCodes()) as $trans) {
                 if (! empty($trans->{$field})) {
                     return $trans->{$field};
                 }
@@ -117,6 +117,12 @@ trait HasLocalizedContent
         }
 
         return null;
+    }
+
+    /** Return translations that may be shown in content responses. */
+    public function getEnabledTranslations(string $field): array
+    {
+        return array_intersect_key($this->getTranslations($field), array_flip(enabled_content_locales()));
     }
 
     /**

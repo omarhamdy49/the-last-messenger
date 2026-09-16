@@ -6,6 +6,7 @@ namespace Tests\Feature\Admin;
 
 use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Models\Tag;
+use App\Domain\Shared\Services\LanguageService;
 use App\Models\Article;
 use App\Models\ArticleLocale;
 use App\Models\Media;
@@ -18,6 +19,14 @@ use Tests\TestCase;
 class ArticleCrudTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        app(LanguageService::class)->updateSettings('fr', ['active' => true]);
+        app(LanguageService::class)->updateSettings('ur', ['active' => true]);
+        app(LanguageService::class)->applyRuntimeConfiguration();
+    }
 
     /**
      * NEEDS A PRODUCT DECISION — deliberately incomplete rather than deleted or silenced.

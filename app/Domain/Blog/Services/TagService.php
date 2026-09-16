@@ -10,7 +10,6 @@ use App\Domain\Blog\Exceptions\CannotMergeTagException;
 use App\Domain\Blog\Models\Tag;
 use App\Domain\Blog\Repositories\TagRepositoryInterface;
 use App\Domain\Shared\Services\SlugGenerator;
-use App\Models\Article;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -213,11 +212,11 @@ class TagService
     /**
      * Merge two tags
      *
-     * Move all articles from source tag to destination tag, then delete source.
+     * Move all content links from source tag to destination tag, then delete source.
      * All write operations are wrapped in a single database transaction so that
      * a mid-merge failure leaves the data in a consistent state.
      *
-     * @return int Number of articles moved
+     * @return int Number of source content links
      *
      * @throws CannotMergeTagException
      */
@@ -231,37 +230,29 @@ class TagService
         $this->findOrFail($destinationId);
 
         return DB::transaction(function () use ($sourceId, $destinationId): int {
-            $morphType = (new Article)->getMorphClass();
+            $links = DB::table('taggables')->where('tag_id', $sourceId)->get();
+            $count = $links->count();
+            $now = now();
 
-            $sourceArticleIds = DB::table('taggables')
-                ->where('tag_id', $sourceId)
-                ->where('taggable_type', $morphType)
-                ->pluck('taggable_id');
-
-            $count = $sourceArticleIds->count();
-
-            // Skip articles already carrying the destination tag: taggables has
-            // a unique (tag_id, taggable_id, taggable_type) index.
-            $alreadyTagged = DB::table('taggables')
-                ->where('tag_id', $destinationId)
-                ->where('taggable_type', $morphType)
-                ->whereIn('taggable_id', $sourceArticleIds)
-                ->pluck('taggable_id');
-
-            $toMove = $sourceArticleIds->diff($alreadyTagged);
-
-            if ($toMove->isNotEmpty()) {
-                $now = now();
-                DB::table('taggables')->insert(
-                    $toMove->map(fn ($articleId) => [
+            // Preserve every content type, including links already present on
+            // the destination. The composite unique key prevents duplicates.
+            foreach ($links->chunk(500) as $chunk) {
+                DB::table('taggables')->upsert(
+                    $chunk->map(fn ($link) => [
                         'tag_id' => $destinationId,
-                        'taggable_type' => $morphType,
-                        'taggable_id' => $articleId,
+                        'taggable_type' => $link->taggable_type,
+                        'taggable_id' => $link->taggable_id,
                         'created_at' => $now,
                         'updated_at' => $now,
-                    ])->all()
+                    ])->all(),
+                    ['tag_id', 'taggable_id', 'taggable_type'],
+                    ['updated_at'],
                 );
             }
+
+            Tag::whereKey($destinationId)->update([
+                'usage_count' => DB::table('taggables')->where('tag_id', $destinationId)->count(),
+            ]);
 
             // Delete source tag (the repository detaches its pivot rows first)
             $this->delete($sourceId);

@@ -861,16 +861,34 @@ class ArticleRepository
             ->get();
     }
 
-    /**
-     * Get articles for form dropdowns (SeerahEvent create/edit).
-     */
-    public function getForDropdown(): Collection
+    /** Load only the selected article when rendering a linking field. */
+    public function findForSelector(int $id): ?Article
+    {
+        return $this->articleSelectorQuery()->find($id);
+    }
+
+    /** Search and paginate in SQL; never hydrate the entire article catalog. */
+    public function paginateForSelector(string $search, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->articleSelectorQuery()
+            ->when($search !== '', function (Builder $query) use ($search): void {
+                $query->where(function (Builder $query) use ($search): void {
+                    $query->whereHas('locales', fn (Builder $locales) => $locales->where('title', 'like', "%{$search}%"));
+
+                    if (ctype_digit($search)) {
+                        $query->orWhere('id', $search);
+                    }
+                });
+            })
+            ->orderByDesc('id')
+            ->paginate($perPage);
+    }
+
+    private function articleSelectorQuery(): Builder
     {
         return Article::query()
-            ->select(['id', 'status', 'created_at'])
-            ->with(['locales:id,article_id,locale,title,slug,is_ready'])
-            ->orderByDesc('id')
-            ->get();
+            ->select(['id'])
+            ->with(['locales:id,article_id,locale,title']);
     }
 
     /**

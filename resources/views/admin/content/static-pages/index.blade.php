@@ -79,7 +79,7 @@
                                             <i data-lucide="pencil" class="w-4 h-4"></i>
                                         </a>
                                         <form method="POST" action="{{ route('admin.content.static-pages.destroy', $page->id) }}"
-                                              onsubmit="return confirm('{{ __('admin.confirm_delete') }}')">
+                                              onsubmit="return window.confirmSubmit(this, { message: {{ Js::from(__('admin.confirm_delete')) }} })">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors"

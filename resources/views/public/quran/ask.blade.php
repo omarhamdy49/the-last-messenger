@@ -86,13 +86,7 @@
 
             {{-- Language switcher (the site header that normally carries it is hidden here) --}}
             @php
-                $askLanguages = [
-                    'ar' => ['name' => 'العربية', 'flag' => '🇸🇦'],
-                    'en' => ['name' => 'English', 'flag' => '🇬🇧'],
-                    'fr' => ['name' => 'Français', 'flag' => '🇫🇷'],
-                    'tr' => ['name' => 'Türkçe', 'flag' => '🇹🇷'],
-                    'ur' => ['name' => 'اردو', 'flag' => '🇵🇰'],
-                ];
+                $askLanguages = config('app.supported_locales');
             @endphp
             <div class="relative shrink-0" x-data="{ langOpen: false }">
                 <button type="button" @click="langOpen = !langOpen" :aria-expanded="langOpen.toString()"

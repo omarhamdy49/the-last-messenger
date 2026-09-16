@@ -352,9 +352,11 @@
                                 </div>
                                 <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{{ __('seerah.public.section_intro') }}</h2>
                             </div>
-                            <p class="text-lg sm:text-xl leading-relaxed text-gray-700 dark:text-gray-300">
-                                {!! nl2br(e($event['description'])) !!}
-                            </p>
+                            <div class="seerah-content text-lg sm:text-xl leading-relaxed text-gray-700 dark:text-gray-300">
+                                {!! str_contains($event['description'], '<')
+                                    ? app(\App\Domain\Shared\Services\RichTextSanitizer::class)->clean($event['description'])
+                                    : nl2br(e($event['description'])) !!}
+                            </div>
                         </section>
                     @endif
 

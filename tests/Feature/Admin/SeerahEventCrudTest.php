@@ -6,6 +6,7 @@ namespace Tests\Feature\Admin;
 
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Models\SeerahEventType;
+use App\Domain\Shared\Services\LanguageService;
 use App\Models\Article;
 use App\Models\Media;
 use App\Models\User;
@@ -24,6 +25,8 @@ class SeerahEventCrudTest extends TestCase
         parent::setUp();
 
         $this->withoutVite();
+        app(LanguageService::class)->updateSettings('fr', ['active' => true]);
+        app(LanguageService::class)->updateSettings('ur', ['active' => true]);
     }
 
     public function test_admin_can_create_view_update_and_delete_seerah_events_with_multilingual_article_relations(): void
@@ -154,6 +157,50 @@ class SeerahEventCrudTest extends TestCase
 
         $this->assertDatabaseMissing('seerah_events', ['id' => $event->id]);
         Storage::disk('public')->assertMissing($event->featured_image);
+    }
+
+    public function test_show_displays_formatted_content_in_each_available_language(): void
+    {
+        $this->actingAs($this->createAdminUser());
+        $event = SeerahEvent::factory()->create();
+        $event->translations()->where('locale', 'ar')->update([
+            'description' => '<p>ملخص <strong>الحدث</strong></p><script>alert("unsafe-description")</script>',
+            'content' => '<h2>تفاصيل الحدث</h2><p>النص <strong>الكامل</strong></p><script>alert("unsafe")</script>',
+        ]);
+        $event->translations()->where('locale', 'en')->update([
+            'content' => '<p>Full English content</p>',
+        ]);
+
+        $this->get(route('admin.seerah-events.show', $event->id))
+            ->assertOk()
+            ->assertSee('<p>ملخص <strong>الحدث</strong></p>', false)
+            ->assertDontSee('<script>alert("unsafe-description")</script>', false)
+            ->assertSee('المحتوى الكامل')
+            ->assertSee('<h2>تفاصيل الحدث</h2>', false)
+            ->assertSee('<strong>الكامل</strong>', false)
+            ->assertSee('<p>Full English content</p>', false)
+            ->assertSee('id="event-content-ar"', false)
+            ->assertSee('id="event-content-en"', false)
+            ->assertDontSee('<script>alert("unsafe")</script>', false);
+    }
+
+    public function test_show_uses_first_available_content_language_and_hides_empty_content(): void
+    {
+        $this->actingAs($this->createAdminUser());
+        $event = SeerahEvent::factory()->create();
+        $event->translations()->update(['content' => null, 'description' => null]);
+        $event->translations()->where('locale', 'fr')->update(['content' => '<p>Contenu complet</p>']);
+
+        $this->get(route('admin.seerah-events.show', $event->id))
+            ->assertOk()
+            ->assertSee("x-data=\"{ activeTab: 'fr' }\"", false)
+            ->assertSee('<p>Contenu complet</p>', false)
+            ->assertDontSee('id="event-content-ar"', false);
+
+        $emptyEvent = SeerahEvent::factory()->create();
+        $emptyEvent->translations()->update(['content' => null]);
+        $this->get(route('admin.seerah-events.show', $emptyEvent->id))
+            ->assertOk()->assertDontSee('id="event-content-heading"', false);
     }
 
     private function createArticleWithMedia(User $owner, string $arabicTitle, string $englishTitle, string $slugPrefix): Article

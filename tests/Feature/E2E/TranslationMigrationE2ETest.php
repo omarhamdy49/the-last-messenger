@@ -37,8 +37,7 @@ class TranslationMigrationE2ETest extends TestCase
     public function test_language_model_translations(): void
     {
         // Create language with translation
-        $language = Language::create([
-            'code' => 'ar',
+        $language = Language::updateOrCreate(['code' => 'ar'], [
             'native_name' => 'العربية',
             'direction' => 'rtl',
             'is_active' => true,
