@@ -42,8 +42,6 @@ deptrac:
       - App\Models\Article
     App\Domain\Blog\Services\SlugGeneratorService:
       - App\Models\ArticleLocale
-    App\Domain\Blog\Services\TagService:
-      - App\Models\Article
     App\Domain\Media\DTOs\CreateLiveChannelData:
       - App\Http\Requests\Admin\LiveChannel\StoreLiveChannelRequest
     App\Domain\Media\DTOs\CreateMediaEpisodeData:

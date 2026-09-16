@@ -160,13 +160,21 @@ class LocaleConfigurationTest extends TestCase
     }
 
     /**
-     * Test supported content locales are configured for multilingual modules
+     * Test the content-language catalog covers every translatable module locale.
+     *
+     * config('app.supported_locales') is runtime state (the currently *enabled*
+     * languages, rewritten by LanguageService::applyRuntimeConfiguration); the
+     * catalog in config/languages.php is the full set.
      */
     public function test_supported_locales_include_all_content_languages(): void
     {
-        $supportedLocales = config('app.supported_locales');
+        $available = config('languages.available');
 
-        $this->assertIsArray($supportedLocales);
-        $this->assertSame(['ar', 'en', 'fr', 'tr', 'ur'], array_keys($supportedLocales));
+        $this->assertIsArray($available);
+        $this->assertSame(['ar', 'en', 'fr', 'tr', 'ur'], array_keys($available));
+        $this->assertSame(
+            [],
+            array_diff(config('languages.default_enabled'), array_keys($available))
+        );
     }
 }
