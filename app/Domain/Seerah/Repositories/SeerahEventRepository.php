@@ -339,7 +339,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     {
         return [
             'translations' => fn ($relation) => $relation
-                ->select(['id', 'event_id', 'locale', 'title', 'description', 'content', 'dispute_note', 'metadata', 'sources', 'is_ready'])
+                ->select(['id', 'event_id', 'locale', 'title', 'description', 'content', 'dispute_note', 'metadata', 'sources', 'seo_metadata', 'external_links', 'is_ready'])
                 ->where('locale', $locale)
                 ->where('is_ready', true),
             'type:id,slug,metadata,locale',
@@ -355,6 +355,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
                 ->whereIn('locale', array_unique([$locale, 'ar'])),
             'gallery:id,event_id,image,media_id,caption,order',
             'mediaLinks:id,event_id,media_id',
+            'links:id,event_id,type,target_id,order',
         ];
     }
 
@@ -366,7 +367,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     private function detailRelations(): array
     {
         return [
-            'translations:id,event_id,locale,title,description,content,dispute_note,metadata,sources,is_ready',
+            'translations:id,event_id,locale,title,description,content,dispute_note,metadata,sources,seo_metadata,external_links,is_ready',
             'type:id,slug,metadata,locale',
             'milestone:id,slug,order',
             'milestone.translations:id,sm_id,locale,title',
@@ -374,6 +375,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
             'place.translations:id,location_id,locale,name',
             'gallery:id,event_id,image,media_id,caption,order',
             'mediaLinks:id,event_id,media_id',
+            'links:id,event_id,type,target_id,order',
         ];
     }
 

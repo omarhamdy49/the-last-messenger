@@ -11,8 +11,10 @@ use App\Domain\Seerah\Repositories\SeerahEventTypeRepositoryInterface;
 use App\Domain\Seerah\Repositories\SeerahMilestoneRepository;
 use App\Domain\Seerah\Repositories\SeerahMilestoneRepositoryInterface;
 use App\Domain\Seerah\Services\SeerahPublicVisibility;
+use App\Domain\Shared\Contracts\ContentReferenceLookup;
 use App\Domain\Shared\Contracts\MediaLibraryLookup;
 use App\Domain\Shared\Contracts\PublicVisibilityProviderInterface;
+use App\Providers\Composition\ContentReferenceLookupService;
 use App\Services\MediaLibraryLookupService;
 use Illuminate\Support\ServiceProvider;
 
@@ -21,6 +23,7 @@ class SeerahServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(MediaLibraryLookup::class, MediaLibraryLookupService::class);
+        $this->app->bind(ContentReferenceLookup::class, ContentReferenceLookupService::class);
 
         $this->app->singleton(SeerahPublicVisibility::class);
         $this->app->tag(SeerahPublicVisibility::class, PublicVisibilityProviderInterface::class);

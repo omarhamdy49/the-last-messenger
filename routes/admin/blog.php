@@ -19,6 +19,8 @@ Route::prefix('articles')->group(function (): void {
         ->name('admin.articles.modules.episodes');
     Route::get('/module-options/episode-programs', [ArticleModuleController::class, 'episodePrograms'])
         ->name('admin.articles.modules.episode-programs');
+    Route::get('/module-options/articles', [ArticleModuleController::class, 'articles'])
+        ->name('admin.articles.modules.articles');
     Route::get('/module-options/surahs', [ArticleModuleController::class, 'surahs'])
         ->name('admin.articles.modules.surahs');
     Route::get('/module-options/surahs/{surah}/verses', [ArticleModuleController::class, 'verses'])

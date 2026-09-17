@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Domain\Seerah\Models\SeerahEvent;
+use App\Domain\Shared\Contracts\ContentReference;
 use App\Domain\Shared\Contracts\MediaReference;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -37,6 +38,17 @@ class SeerahEventResource extends JsonResource
             'dispute_note' => $this->when($isDetail, fn (): array => $this->getEnabledTranslations('dispute_note')),
             'metadata' => $this->when($isDetail, fn (): array => $this->metadataFor()),
             'sources' => $this->when($isDetail, fn (): array => $this->sourcesFor()),
+            'seo' => $this->when($isDetail, fn (): array => $this->seoFor()),
+            'external_links' => $this->when($isDetail, fn (): array => $this->externalLinksFor()),
+            // Cross-module links, resolved once by the service (ContentReferenceLookup).
+            'links' => $this->when($isDetail && $this->relationLoaded('resolvedLinks'), fn (): array => $this->resolvedLinks
+                ->map(fn (array $refs): array => array_map(fn (ContentReference $ref): array => [
+                    'id' => $ref->id,
+                    'title' => $ref->title,
+                    'subtitle' => $ref->subtitle,
+                    'url' => $ref->url,
+                ], $refs))
+                ->all()),
             'hijri_year' => $this->hijri_year,
             'hijri_month' => $this->hijri_month,
             'hijri_day' => $this->hijri_day,

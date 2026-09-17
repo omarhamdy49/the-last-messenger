@@ -1,43 +1,18 @@
 @extends('layouts.admin')
 
-@section('page-header')
-<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-    <div>
-        <div class="flex items-center gap-2 text-sm mb-2" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-            <a href="{{ route('admin.seerah-events.index') }}" class="hover:text-accent transition-colors">أحداث السيرة النبوية</a>
-            <i data-lucide="chevron-left" class="w-4 h-4"></i>
-            <span>إضافة حدث جديد</span>
-        </div>
-        <h1 class="text-3xl font-bold gradient-text flex items-center gap-3">
-            <div class="p-3 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] shadow-lg">
-                <i data-lucide="plus" class="w-7 h-7 text-white"></i>
-            </div>
-            إضافة حدث جديد
-        </h1>
-    </div>
+@section('title', __('wizard.new_record').' · '.__('wizard.seerah.eyebrow'))
 
-    <div class="flex flex-wrap items-center gap-3">
-        <a href="{{ route('admin.seerah-events.index') }}"
-           class="px-4 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 border-2"
-           :class="darkMode ? 'border-gray-700 bg-gray-800 text-white hover:bg-gray-700' : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'">
-            <i data-lucide="x" class="w-5 h-5"></i>
-            <span>{{ __('admin.cancel') }}</span>
-        </a>
-    </div>
-</div>
+@section('page-header')
+<nav class="flex items-center gap-2 text-sm" :class="darkMode ? 'text-gray-400' : 'text-slate-500'" aria-label="breadcrumb">
+    <a href="{{ route('admin.seerah-events.index') }}" class="hover:text-accent transition-colors">أحداث السيرة النبوية</a>
+    <i data-lucide="chevron-left" class="w-4 h-4 rtl:rotate-0 ltr:rotate-180" aria-hidden="true"></i>
+    <span aria-current="page">إضافة حدث جديد</span>
+</nav>
 @endsection
 
 @section('content')
-<form action="{{ route('admin.seerah-events.store') }}" method="POST" enctype="multipart/form-data" x-data="{ activeTab: 'ar' }">
+<form action="{{ route('admin.seerah-events.store') }}" method="POST" enctype="multipart/form-data" novalidate>
     @csrf
     @include('admin.seerah-events._form', ['event' => null])
 </form>
 @endsection
-
-@push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        lucide.createIcons();
-    });
-</script>
-@endpush

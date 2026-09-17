@@ -119,12 +119,12 @@
             </h3>
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.slug') }} <span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.slug') }}</label>
                     <input type="text" name="slug" value="{{ old('slug', $milestone?->slug) }}"
                            class="w-full px-4 py-3 text-base sm:text-sm rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                            :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                           placeholder="birth-and-preparation" pattern="[a-z0-9\-]+" required>
-                    <p class="mt-1 text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ __('admin.slug_format') }}</p>
+                           placeholder="m1-birth-and-preparation" pattern="[a-z0-9\-]+">
+                    <p class="mt-1 text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ __('admin.live_channel_slug_auto_hint') }} (m{order}-…) {{ __('admin.slug_format') }}</p>
                     @error('slug') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
                 </div>
                 <div>

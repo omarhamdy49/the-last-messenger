@@ -3,7 +3,66 @@
 declare(strict_types=1);
 
 return [
+    'admin' => [
+        'tab_links' => 'Liens',
+        'form_sections' => 'Sections du formulaire',
+        'tab_has_errors' => 'Cet onglet contient des erreurs',
+        'fix_errors' => 'Veuillez corriger les champs signalés dans les onglets.',
+        'related_content' => 'Contenu associé',
+        'related_content_help' => 'Reliez l’événement aux versets, hadiths, compagnons et articles associés ; ils apparaissent sur la page de l’événement.',
+        'link_verses' => 'Versets',
+        'link_hadiths' => 'Hadiths',
+        'link_companions' => 'Compagnons et personnages',
+        'link_articles' => 'Articles',
+        'add_link' => 'Ajouter',
+        'search_articles' => 'Rechercher un article…',
+        'no_links' => 'Aucun lien pour le moment.',
+        'no_options' => 'Aucune option.',
+        'quick_create' => 'Créer',
+        'quick_name_ar' => 'Nom en arabe',
+        'quick_name_en' => 'Nom en anglais',
+        'quick_name_required' => 'Saisissez d\'abord le nom en arabe',
+        'quick_create_failed' => 'Création impossible, veuillez réessayer',
+        'external_links' => 'Liens externes',
+        'external_links_help' => 'Liens vers des références, cartes ou sources en ligne, par langue.',
+        'link_title' => 'Titre du lien',
+    ],
+
     'public' => [
+
+        'view_label' => 'Affichage',
+
+        'view_timeline' => 'Chronologie',
+
+        'view_grid' => 'Cartes',
+
+        'save_event' => 'Enregistrer l\'événement',
+
+        'unsave_event' => 'Retirer des favoris',
+
+        'copy_link' => 'Copier le lien',
+
+        'share_whatsapp' => 'WhatsApp',
+
+        'share_x' => 'X',
+
+        'share_facebook' => 'Facebook',
+
+        'reading_time' => ':minutes min de lecture',
+
+        'events_in_year' => ':count événements',
+
+        'year_heading' => 'Année :year',
+
+        'open_event' => 'Ouvrir l\'événement',
+
+        'back_to_events' => 'Tous les événements',
+
+        'save_failed' => 'Échec de l\'enregistrement, réessayez',
+
+        'chapter' => ':number',
+
+        'reading_tools' => 'Outils de lecture',
         'page_title' => 'La biographie prophétique (Sîra)',
         'page_description' => 'Un voyage à travers la vie du Sceau des Messagers ﷺ grâce à une chronologie interactive documentant les jalons majeurs de la biographie prophétique.',
         'hero_badge' => 'Chronologie interactive',
@@ -36,6 +95,14 @@ return [
         'section_sources' => 'Sources et références',
         'section_more_details' => 'Plus de détails',
         'section_media' => 'Médias',
+        'section_episodes' => 'Épisodes vidéo',
+        'section_linked' => 'Contenu associé',
+        'linked_verses' => 'Versets associés',
+        'linked_hadiths' => 'Hadiths associés',
+        'linked_companions' => 'Personnages associés',
+        'linked_articles' => 'Articles associés',
+        'section_external_links' => 'Liens externes',
+        'tags_label' => 'Étiquettes et catégories',
         'on_this_page' => 'Sur cette page',
         'related_events' => 'Événements liés',
         'share' => 'Partager',

@@ -397,10 +397,10 @@ published, so a bare `where('is_published', true)` will serve hidden content.
 ### 7. Seerah Module
 **Status:** ✅ Implemented — schema rebuilt by `005-seerah-schema-refactor` (see `specs/005-seerah-schema-refactor/`)
 
-**Tables (7):** `seerah_milestones` (+`_translations`, FK `sm_id`), `seerah_event_types`,
+**Tables (8):** `seerah_milestones` (+`_translations`, FK `sm_id`), `seerah_event_types`,
 `seerah_events` (+`seerah_event_translations`, FK `event_id`), `seerah_events_gallery`,
-`seerah_events_media`. Defined by `2025_10_27_130000_create_seerah_tables` and
-`2026_03_09_200000_create_seerah_events_gallery_and_media_tables`; `location_id` comes from
+`seerah_events_media`, `seerah_event_links`. Defined by `2025_10_27_130000_create_seerah_tables`
+and `2026_08_18_000004_create_seerah_event_relation_tables`; `location_id` comes from
 `2026_08_18_000003_add_location_foreign_keys`.
 
 **Shape to know before touching it:**
@@ -1107,6 +1107,8 @@ ray($variable);
 ## Active Technologies
 - PHP 8.5 (platform pinned 8.5.4) + Laravel 13, spatie/laravel-permission, maatwebsite/excel, Blade + Alpine 3 + Tailwind. **No new package.** (005-seerah-schema-refactor)
 - MySQL 8 (InnoDB, utf8mb4); public disk for thumb/cover/gallery files (005-seerah-schema-refactor)
+- PHP 8.5 (platform pinned 8.5.4) + Laravel 13, spatie/laravel-permission, maatwebsite/excel, Blade + Alpine 3 + Tailwind, Laravel HTTP client (Guzzle). **No new package.** (006-quran-qf-refactor)
+- MySQL 8 (InnoDB, utf8mb4); public disk for verse images, uploaded/downloaded audio, resource images; `public/fonts/quran` for QCF/Unicode fonts (git-ignored, deploy-copied) (006-quran-qf-refactor)
 
 - PHP 8.5, Laravel 13, MySQL 8 (InnoDB, utf8mb4). No new package added by in-flight features.
 

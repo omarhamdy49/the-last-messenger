@@ -72,6 +72,53 @@ class ArticleCrudTest extends TestCase
             ->assertSee("editor.deleteText(insertionIndex, range.length, 'user')", false);
     }
 
+    public function test_show_and_preview_render_block_content_per_language(): void
+    {
+        $admin = $this->createAdminUser();
+        $this->actingAs($admin);
+
+        $this->post(route('admin.articles.store'), [
+            'title' => ['ar' => 'معاينة المقال', 'en' => 'Preview Article'],
+            'slug' => ['ar' => 'preview-article-ar', 'en' => 'preview-article'],
+            'content' => ['ar' => '<p>نص</p>', 'en' => '<p>Text</p>'],
+            'content_blocks' => [
+                'ar' => json_encode([['type' => 'wysiwyg', 'content' => '<h2>عنوان داخلي</h2><p>فقرة المقال</p>']], JSON_UNESCAPED_UNICODE),
+                'en' => json_encode([['type' => 'wysiwyg', 'content' => '<p>English body</p>']]),
+            ],
+            'writer_id' => $admin->id,
+            'status' => 'draft',
+        ])->assertSessionHasNoErrors();
+
+        $article = ArticleLocale::query()->where('slug', 'preview-article')->firstOrFail()->article;
+
+        $this->get(route('admin.articles.show', $article))
+            ->assertOk()
+            ->assertSee('<h2>عنوان داخلي</h2>', false)
+            ->assertSee('<p>English body</p>', false);
+
+        $this->get(route('admin.articles.preview', ['article' => $article, 'locale' => 'en']))
+            ->assertOk()
+            ->assertSee("x-data=\"{ lang: 'en' }\"", false)
+            ->assertSee('<p>فقرة المقال</p>', false);
+    }
+
+    public function test_article_slug_is_optional_and_generated_per_locale_title(): void
+    {
+        $admin = $this->createAdminUser();
+        $this->actingAs($admin);
+
+        $this->post(route('admin.articles.store'), [
+            'title' => ['ar' => 'مقال بلا رابط', 'en' => 'Article Without Slug'],
+            'slug' => ['ar' => '', 'en' => ''],
+            'content' => ['ar' => '<p>محتوى</p>', 'en' => '<p>Content</p>'],
+            'writer_id' => $admin->id,
+            'status' => 'draft',
+        ])->assertSessionHasNoErrors()->assertRedirect(route('admin.articles.index'));
+
+        $this->assertDatabaseHas('article_locale', ['locale' => 'en', 'slug' => 'article-without-slug']);
+        $this->assertNotEmpty(ArticleLocale::query()->where('locale', 'ar')->where('title', 'مقال بلا رابط')->value('slug'));
+    }
+
     public function test_inline_modules_are_saved_inside_wysiwyg_content_and_rendered_publicly(): void
     {
         $admin = $this->createAdminUser();

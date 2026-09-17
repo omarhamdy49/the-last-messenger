@@ -141,6 +141,19 @@ class SeerahMilestoneTest extends TestCase
         $this->assertDatabaseHas('seerah_events', ['id' => $event->id, 'sm_id' => null]);
     }
 
+    public function test_blank_milestone_slug_is_prefixed_with_order(): void
+    {
+        $this->actingAs($this->createAdminUser());
+
+        $this->post(route('admin.seerah-milestones.store'), ['slug' => '', 'order' => 3, 'title' => ['ar' => 'العهد المكي', 'en' => 'The Makkan Period']])
+            ->assertSessionHasNoErrors();
+        $this->post(route('admin.seerah-milestones.store'), ['order' => 4, 'title' => ['ar' => 'الهجرة']])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('seerah_milestones', ['slug' => 'm3-the-makkan-period']);
+        $this->assertMatchesRegularExpression('/^m4-[a-z0-9\-]+$/', SeerahMilestone::query()->where('order', 4)->value('slug'));
+    }
+
     public function test_milestone_store_requires_arabic_title(): void
     {
         $admin = $this->createAdminUser();

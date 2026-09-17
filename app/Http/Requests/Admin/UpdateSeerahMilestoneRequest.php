@@ -11,10 +11,16 @@ use Illuminate\Validation\Rule;
  */
 class UpdateSeerahMilestoneRequest extends StoreSeerahMilestoneRequest
 {
-    public function rules(): array
+    protected function ownerId(): ?int
     {
         $routeParameter = $this->route('seerah_milestone') ?? $this->route('id');
-        $milestoneId = is_object($routeParameter) ? $routeParameter->id : $routeParameter;
+
+        return is_object($routeParameter) ? $routeParameter->id : ($routeParameter === null ? null : (int) $routeParameter);
+    }
+
+    public function rules(): array
+    {
+        $milestoneId = $this->ownerId();
 
         return [
             ...parent::rules(),

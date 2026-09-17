@@ -17,6 +17,7 @@
         selectedLabel: @js($selectedLabel),
         endpoint: @js(route('admin.locations.search')),
      })"
+     x-init="$watch('selected', () => $dispatch('wizard:dirty'))"
      class="relative">
 
     <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">

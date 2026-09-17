@@ -143,6 +143,8 @@
      x-init="$watch('urlOpen', open => open && $nextTick(() => $refs.urlInput?.focus()))"
      x-effect="preview; source; urlState; urlOpen; $nextTick(() => window.lucide && lucide.createIcons())"
      @media-selected.window="handleMediaSelect($event.detail)"
+     {{-- After a wizard quick save the chosen image is stored: keep the preview, drop the one-shot inputs. --}}
+     @wizard-saved.window="clearFile(); mediaId = null; if (removed) { preview = null; source = null; } removed = false; if (preview && source !== 'url') source = 'current'"
      {{-- Preview-only fill (e.g. a fetched YouTube thumbnail): shows the image
           without sending a file or library id — the server-side fallback is
           expected to resolve the same URL. --}}

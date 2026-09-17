@@ -9,7 +9,12 @@ use App\Domain\Seerah\Models\SeerahEventGalleryItem;
 use App\Domain\Seerah\Models\SeerahEventType;
 use App\Domain\Seerah\Models\SeerahMilestone;
 use App\Domain\Seerah\Repositories\SeerahEventRepositoryInterface;
+use App\Domain\Shared\Enums\FavorableType;
 use App\Domain\Shared\Models\Location;
+use App\Domain\Shared\Services\FavoriteService;
+use App\Models\Article;
+use App\Models\ArticleLocale;
+use App\Models\User;
 use Database\Factories\SeerahEventFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -31,6 +36,21 @@ final class SeerahPublicPagesTest extends TestCase
     /**
      * Create a Seerah event with translations via the factory.
      */
+    public function test_event_save_state_is_per_visitor_and_not_served_from_the_shared_cache(): void
+    {
+        $event = $this->makeEvent('saved-state-event');
+        $url = route('public.seerah.event', $event->slug);
+
+        // Warm the shared payload cache as a guest first.
+        $this->get($url)->assertOk()->assertViewHas('isSaved', false);
+
+        $user = User::factory()->create();
+        app(FavoriteService::class)->add($user, FavorableType::SEERAH, $event->id);
+
+        $this->actingAs($user)->get($url)->assertOk()->assertViewHas('isSaved', true);
+        $this->actingAs(User::factory()->create())->get($url)->assertOk()->assertViewHas('isSaved', false);
+    }
+
     private function makeEvent(string $slug, array $attributes = []): SeerahEvent
     {
         return SeerahEventFactory::new()->create(array_merge([
@@ -589,6 +609,60 @@ final class SeerahPublicPagesTest extends TestCase
             'single update' => ['single'],
             'bulk status update' => ['bulk'],
         ];
+    }
+
+    public function test_event_page_uses_seo_meta_and_renders_linked_content(): void
+    {
+        $event = $this->makeEvent('battle-of-badr');
+        $this->setTranslation($event, 'ar', [
+            'title' => 'غزوة بدر',
+            'seo_metadata' => ['title' => 'عنوان بدر لمحركات البحث', 'description' => 'وصف بدر لمحركات البحث'],
+            'external_links' => [['title' => 'خريطة ميدان بدر', 'url' => 'https://example.com/badr-map']],
+        ]);
+
+        $published = $this->linkableArticle('مقال منشور عن بدر', 'published');
+        $draft = $this->linkableArticle('مسودة مخفية عن بدر', 'draft');
+        $event->links()->createMany([
+            ['type' => 'article', 'target_id' => $published->id, 'order' => 0],
+            ['type' => 'article', 'target_id' => $draft->id, 'order' => 1],
+        ]);
+
+        foreach ([route('public.seerah.event', 'battle-of-badr'), route('public.seerah.event', ['slug' => 'battle-of-badr', 'view' => 'article'])] as $url) {
+            $this->get($url)
+                ->assertOk()
+                ->assertSee('<title>عنوان بدر لمحركات البحث', false)
+                ->assertSee('وصف بدر لمحركات البحث', false)
+                ->assertSee(__('seerah.public.section_linked'))
+                ->assertSee('مقال منشور عن بدر')
+                ->assertSee(route('public.articles.show', 'slug-'.$published->id), false)
+                ->assertDontSee('مسودة مخفية عن بدر')
+                ->assertSee('خريطة ميدان بدر')
+                ->assertSee('https://example.com/badr-map', false);
+        }
+    }
+
+    public function test_event_without_seo_or_links_falls_back_and_renders_no_link_sections(): void
+    {
+        $event = $this->makeEvent('first-revelation');
+        $this->setTranslation($event, 'ar', ['title' => 'نزول الوحي', 'seo_metadata' => null, 'external_links' => null]);
+
+        $this->get(route('public.seerah.event', 'first-revelation'))
+            ->assertOk()
+            ->assertSee('<title>نزول الوحي — '.__('seerah.public.page_title'), false)
+            ->assertDontSee('id="linked"', false)
+            ->assertDontSee('id="episodes"', false)
+            ->assertDontSee(__('seerah.public.section_external_links'));
+    }
+
+    private function linkableArticle(string $title, string $status): Article
+    {
+        $article = Article::factory()->create(['status' => $status]);
+        ArticleLocale::create([
+            'article_id' => $article->id, 'locale' => 'ar', 'title' => $title,
+            'slug' => 'slug-'.$article->id, 'excerpt' => $title, 'is_ready' => true,
+        ]);
+
+        return $article;
     }
 
     private function makeEventType(string $slug): SeerahEventType

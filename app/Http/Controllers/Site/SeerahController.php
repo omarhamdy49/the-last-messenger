@@ -11,7 +11,11 @@ use App\Domain\Seerah\Services\SeerahCacheKeys;
 use App\Domain\Seerah\Services\SeerahEventService;
 use App\Domain\Seerah\Services\SeerahEventTypeService;
 use App\Domain\Seerah\Services\SeerahMilestoneService;
+use App\Domain\Shared\Contracts\ContentReference;
 use App\Domain\Shared\Contracts\MediaReference;
+use App\Domain\Shared\Enums\FavorableType;
+use App\Domain\Shared\Enums\LinkedContentType;
+use App\Domain\Shared\Services\FavoriteService;
 use App\Http\Controllers\Controller;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -392,7 +396,7 @@ final class SeerahController extends Controller
                     $page = $this->seerahEventService->getPublicEventPage($slug, $locale);
 
                     return [
-                        'event' => $this->mapEventDetail($page['event'], $page['media'], $locale),
+                        'event' => $this->mapEventDetail($page['event'], $page['media'], $page['links'], $locale),
                         'prev' => $page['prev'] ? $this->mapEventNavigation($page['prev'], $locale) : null,
                         'next' => $page['next'] ? $this->mapEventNavigation($page['next'], $locale) : null,
                         'related' => $page['related']
@@ -418,13 +422,16 @@ final class SeerahController extends Controller
             fn (): array => $payload['related'],
         );
 
-        $template = $viewStyle === 'timeline' ? 'public.seerah.event-timeline' : 'public.seerah.event';
-
-        return view($template, [
+        // One template; the story layout is the default, ?view=article opens the reading layout.
+        return view('public.seerah.event', [
+            'variant' => $viewStyle === 'timeline' ? 'story' : 'reading',
             'event' => $payload['event'],
             'related' => $related,
             'prev' => $payload['prev'],
             'next' => $payload['next'],
+            // Per visitor, so never part of the cached payload.
+            'isSaved' => auth()->check() && isset($payload['event']['id'])
+                && app(FavoriteService::class)->isFavorited(auth()->user(), FavorableType::SEERAH, (int) $payload['event']['id']),
             // Milestone shells for the breadcrumb navigator modal.
             'journeyNav' => $this->cachedJourneyPayload($locale)['journey'],
         ]);
@@ -464,10 +471,22 @@ final class SeerahController extends Controller
      * Map an event model to the full detail payload.
      *
      * @param  array<int, MediaReference>  $media
+     * @param  array<string, array<int, ContentReference>>  $links
      * @return array<string, mixed>
      */
-    private function mapEventDetail(SeerahEvent $event, array $media, string $locale): array
+    private function mapEventDetail(SeerahEvent $event, array $media, array $links, string $locale): array
     {
+        $refs = fn (LinkedContentType $type): array => array_map(
+            fn (ContentReference $ref): array => [
+                'title' => $ref->title,
+                'subtitle' => $ref->subtitle,
+                'url' => $ref->url,
+                'thumb' => $ref->thumbUrl,
+            ],
+            $links[$type->value] ?? [],
+        );
+        $seo = $event->seoFor($locale);
+
         $type = $event->type;
         $era = $event->era;
 
@@ -489,6 +508,7 @@ final class SeerahController extends Controller
         $milestone = $event->milestone;
 
         return [
+            'id' => $event->id,
             'slug' => $event->slug,
             'title' => $event->getTranslation('title', $locale) ?? __('seerah.public.untitled_event'),
             'description' => $event->getTranslation('description', $locale),
@@ -536,6 +556,17 @@ final class SeerahController extends Controller
             'details' => $event->metadataFor($locale),
             'statistics' => is_array($event->statistics) ? $event->statistics : [],
             'sources' => $event->sourcesFor($locale),
+            'seoTitle' => $seo['title'],
+            'seoDescription' => $seo['description'],
+            'linked' => array_filter([
+                'verse' => $refs(LinkedContentType::VERSE),
+                'hadith' => $refs(LinkedContentType::HADITH),
+                'muslim' => $refs(LinkedContentType::MUSLIM),
+                'article' => $refs(LinkedContentType::ARTICLE),
+            ]),
+            'episodes' => $refs(LinkedContentType::EPISODE),
+            'tags' => [...$refs(LinkedContentType::TAG), ...$refs(LinkedContentType::CATEGORY)],
+            'externalLinks' => $event->externalLinksFor($locale),
             'url' => route('public.seerah.event', $event->slug),
         ];
     }

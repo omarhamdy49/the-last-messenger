@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use App\Domain\Shared\Services\SlugGenerator;
 use App\Http\Requests\Admin\Content\Concerns\SanitizesRichText;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Store Seerah Milestone Request (Admin)
@@ -22,6 +24,22 @@ class StoreSeerahMilestoneRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->sanitizeRichTextField('description');
+
+        // Slug is optional on the form: blank → m{order}-{English title, else Arabic}.
+        if (! $this->filled('slug') && ($this->isMethod('post') || $this->has('slug'))) {
+            $title = app(SlugGenerator::class)->preferredText((array) $this->input('title', []), '');
+            $this->merge(['slug' => app(SlugGenerator::class)->unique(
+                'm'.(int) $this->input('order', 0).' '.$title,
+                fn (string $slug): bool => DB::table('seerah_milestones')->where('slug', $slug)
+                    ->when($this->ownerId(), fn ($q, $id) => $q->where('id', '!=', $id))->exists(),
+            )]);
+        }
+    }
+
+    /** Id of the milestone being updated; null on create. */
+    protected function ownerId(): ?int
+    {
+        return null;
     }
 
     public function authorize(): bool

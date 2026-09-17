@@ -154,6 +154,33 @@ class SeerahEvent extends Model
     }
 
     /**
+     * Localized external links as [{title, url}].
+     *
+     * @return array<int, array{title: string, url: string}>
+     */
+    public function externalLinksFor(?string $locale = null): array
+    {
+        return $this->localizedArray('external_links', $locale);
+    }
+
+    /**
+     * SEO title/description for exactly this locale (no Arabic fallback — a
+     * page in English must not advertise itself with Arabic meta).
+     *
+     * @return array{title: ?string, description: ?string}
+     */
+    public function seoFor(?string $locale = null): array
+    {
+        $locale ??= app()->getLocale();
+        $seo = $this->translations->firstWhere('locale', $locale)?->seo_metadata ?? [];
+
+        return [
+            'title' => filled($seo['title'] ?? null) ? $seo['title'] : null,
+            'description' => filled($seo['description'] ?? null) ? $seo['description'] : null,
+        ];
+    }
+
+    /**
      * Not translatable fields: HasLocalizedContent::getTranslation() is typed
      * `?string` and would fatal returning an array, so these read straight off
      * the locale row with a fallback to Arabic.
@@ -214,6 +241,27 @@ class SeerahEvent extends Model
     public function mediaLinks(): HasMany
     {
         return $this->hasMany(SeerahEventMedia::class, 'event_id');
+    }
+
+    /**
+     * Links to content in other modules (ids only — resolved via ContentReferenceLookup).
+     */
+    public function links(): HasMany
+    {
+        return $this->hasMany(SeerahEventLink::class, 'event_id')->orderBy('type')->orderBy('order');
+    }
+
+    /**
+     * Linked target ids grouped by type, in editor order.
+     *
+     * @return array<string, array<int, int>>
+     */
+    public function linkIdsByType(): array
+    {
+        return $this->links
+            ->groupBy(fn (SeerahEventLink $link): string => $link->type->value)
+            ->map(fn ($links): array => $links->sortBy('order')->pluck('target_id')->map(fn ($id): int => (int) $id)->values()->all())
+            ->all();
     }
 
     /**

@@ -3,7 +3,66 @@
 declare(strict_types=1);
 
 return [
+    'admin' => [
+        'tab_links' => 'Links',
+        'form_sections' => 'Form sections',
+        'tab_has_errors' => 'This tab has errors',
+        'fix_errors' => 'Please fix the highlighted fields in the tabs.',
+        'related_content' => 'Related content',
+        'related_content_help' => 'Link the event to related verses, hadiths, companions and articles; they appear on the event page.',
+        'link_verses' => 'Verses',
+        'link_hadiths' => 'Hadiths',
+        'link_companions' => 'Companions & figures',
+        'link_articles' => 'Articles',
+        'add_link' => 'Add',
+        'search_articles' => 'Search articles…',
+        'no_links' => 'No links yet.',
+        'no_options' => 'No options.',
+        'quick_create' => 'Create',
+        'quick_name_ar' => 'Arabic name',
+        'quick_name_en' => 'English name',
+        'quick_name_required' => 'Enter the Arabic name first',
+        'quick_create_failed' => 'Could not create it, please try again',
+        'external_links' => 'External links',
+        'external_links_help' => 'Links to online references, maps or sources, per language.',
+        'link_title' => 'Link title',
+    ],
+
     'public' => [
+
+        'view_label' => 'View',
+
+        'view_timeline' => 'Timeline',
+
+        'view_grid' => 'Cards',
+
+        'save_event' => 'Save event',
+
+        'unsave_event' => 'Remove from saved',
+
+        'copy_link' => 'Copy link',
+
+        'share_whatsapp' => 'WhatsApp',
+
+        'share_x' => 'X',
+
+        'share_facebook' => 'Facebook',
+
+        'reading_time' => ':minutes min read',
+
+        'events_in_year' => ':count events',
+
+        'year_heading' => 'Year :year',
+
+        'open_event' => 'Open event',
+
+        'back_to_events' => 'All events',
+
+        'save_failed' => 'Could not save, try again',
+
+        'chapter' => ':number',
+
+        'reading_tools' => 'Reading tools',
         'page_title' => 'The Prophetic Biography (Seerah)',
         'page_description' => 'A journey through the life of the Seal of the Messengers ﷺ via an interactive timeline documenting the key milestones of the Prophetic biography.',
         'hero_badge' => 'Interactive Timeline',
@@ -36,6 +95,14 @@ return [
         'section_sources' => 'Sources & References',
         'section_more_details' => 'More details',
         'section_media' => 'Media',
+        'section_episodes' => 'Video episodes',
+        'section_linked' => 'Related content',
+        'linked_verses' => 'Related verses',
+        'linked_hadiths' => 'Related hadiths',
+        'linked_companions' => 'Related figures',
+        'linked_articles' => 'Related articles',
+        'section_external_links' => 'External links',
+        'tags_label' => 'Tags and categories',
         'on_this_page' => 'On This Page',
         'related_events' => 'Related Events',
         'share' => 'Share',

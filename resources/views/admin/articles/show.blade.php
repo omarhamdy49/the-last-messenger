@@ -1,382 +1,350 @@
 @extends('layouts.admin')
 
-@php
-    $enabledLocales = $article->locales->whereIn('locale', enabled_content_locales());
-    $defaultLocale = $enabledLocales->firstWhere('locale', 'ar')?->locale
-        ?? $enabledLocales->first()?->locale
-        ?? 'ar';
-    $primaryLocale = $enabledLocales->firstWhere('locale', $defaultLocale) ?? $enabledLocales->first();
-    $statusValue = $article->status instanceof \BackedEnum ? $article->status->value : $article->status;
-    $isPublished = in_array((string) $statusValue, ['published', 'active', '1', 'true'], true);
-@endphp
-
 @push('styles')
-<style>
-    /* Editorial reading surface — the Tailwind CDN build ships no typography plugin,
-       so the article body HTML is styled explicitly here for both themes. */
-    .article-prose { font-size: 1.0625rem; line-height: 1.9; }
-    .article-prose > * + * { margin-top: 1.2em; }
-    .article-prose p { margin: 0 0 1.15em; }
-    .article-prose h2 { font-size: 1.6rem; font-weight: 700; line-height: 1.3; margin: 1.7em 0 .55em; letter-spacing: -0.01em; }
-    .article-prose h3 { font-size: 1.3rem; font-weight: 700; line-height: 1.35; margin: 1.5em 0 .5em; }
-    .article-prose h4 { font-size: 1.1rem; font-weight: 600; margin: 1.3em 0 .45em; }
-    .article-prose a { color: #0056b3; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
-    .dark .article-prose a { color: #64CCC5; }
-    .article-prose ul, .article-prose ol { padding-inline-start: 1.4rem; margin: 1.1em 0; }
-    .article-prose ul { list-style: disc; }
-    .article-prose ol { list-style: decimal; }
-    .article-prose li { margin: .45em 0; }
-    .article-prose li::marker { color: #64CCC5; }
-    .article-prose blockquote {
-        border-inline-start: 3px solid #64CCC5;
-        padding-inline-start: 1.1rem;
-        margin: 1.6em 0;
-        font-size: 1.15rem;
-        line-height: 1.7;
-        font-style: italic;
-        opacity: .92;
-    }
-    .article-prose img { border-radius: .9rem; margin: 1.6em 0; max-width: 100%; height: auto; }
-    .article-prose hr { border: 0; border-top: 1px solid currentColor; opacity: .12; margin: 2em 0; }
-    .article-prose code {
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: .9em; padding: .12em .4em; border-radius: .35rem;
-        background: rgba(100, 204, 197, 0.14);
-    }
-    .article-prose table { width: 100%; border-collapse: collapse; margin: 1.4em 0; font-size: .95rem; }
-    .article-prose th, .article-prose td { padding: .6rem .8rem; border: 1px solid rgba(128,128,128,.25); text-align: start; }
-
-    /* Editorial opening: drop-style emphasis on the lead's first letter. */
-    .article-lead::first-letter { font-size: 1.06em; font-weight: 700; }
-
-    /* Staggered entrance collapses to instant under reduced-motion. */
-    @media (prefers-reduced-motion: reduce) {
-        .reveal { animation: none !important; opacity: 1 !important; transform: none !important; }
-    }
-</style>
+@include('partials.seerah-content-styles')
 @endpush
 
+@php
+    /**
+     * Admin preview of an article (also serves admin.articles.preview with ?locale=).
+     * The body goes through ArticleLocale::getBody(), the same renderer the public reader uses,
+     * so module cards (verse / hadith / sahabi / seerah) look like they will for visitors.
+     *
+     * @var \App\Models\Article $article
+     * @var string|null $initialLocale
+     */
+    $languages = enabled_content_languages();
+    $locales = $article->locales->whereIn('locale', array_keys($languages))->keyBy('locale');
+    $firstLang = ($initialLocale ?? null) && $locales->has($initialLocale)
+        ? $initialLocale
+        : ($locales->has('ar') ? 'ar' : ($locales->keys()->first() ?? 'ar'));
+    $dirFor = fn (string $lang): string => in_array($lang, ['ar', 'ur'], true) ? 'rtl' : 'ltr';
+    $sanitizer = app(\App\Domain\Shared\Services\RichTextSanitizer::class);
+
+    $status = $article->status instanceof \BackedEnum ? $article->status->value : (string) $article->status;
+    $published = $status === 'published';
+    $cover = $article->thumb ? asset('storage/'.$article->thumb) : null;
+    $statistics = collect($article->statistics ?? [])->filter(fn ($row) => filled($row['name'] ?? null) || filled($row['value'] ?? null));
+    $references = collect($article->references ?? [])->filter(fn ($row) => filled($row['name'] ?? null) || filled($row['url'] ?? null));
+    $publicSlug = $locales->get('ar')?->slug ?? $locales->first()?->slug;
+@endphp
+
 @section('page-header')
-<div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
-    <div class="min-w-0">
-        <nav class="flex items-center gap-2 text-sm mb-3" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
-            <a href="{{ route('admin.articles.index') }}" class="hover:text-accent transition-colors font-medium">المقالات</a>
-            <i data-lucide="chevron-left" class="w-3.5 h-3.5 opacity-60 rtl:hidden"></i>
-            <i data-lucide="chevron-right" class="w-3.5 h-3.5 opacity-60 ltr:hidden"></i>
-            <span class="truncate max-w-[16rem]">{{ $primaryLocale?->title ?? 'Article' }}</span>
-        </nav>
-
-        <h1 class="text-2xl sm:text-3xl font-bold gradient-text leading-tight tracking-tight">
-            {{ $primaryLocale?->title ?? 'Article' }}
-        </h1>
-
-        <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold {{ $isPublished ? 'bg-emerald-500/15 text-emerald-500' : 'bg-amber-500/15 text-amber-500' }}">
-                <span class="w-1.5 h-1.5 rounded-full {{ $isPublished ? 'bg-emerald-500' : 'bg-amber-500' }}"></span>
-                {{ $isPublished ? 'منشور' : 'مسودة' }}
-            </span>
-            <span class="inline-flex items-center gap-1.5">
-                <i data-lucide="user" class="w-4 h-4 opacity-70"></i>
-                {{ $article->writer?->name ?? '—' }}
-            </span>
-            <span class="inline-flex items-center gap-1.5">
-                <i data-lucide="eye" class="w-4 h-4 opacity-70"></i>
-                {{ number_format($article->views) }}
-            </span>
-            @if($article->read_time)
-            <span class="inline-flex items-center gap-1.5">
-                <i data-lucide="clock" class="w-4 h-4 opacity-70"></i>
-                {{ $article->read_time }} دقيقة
-            </span>
-            @endif
-        </div>
-    </div>
-
-    <div class="flex items-center gap-2.5 flex-wrap shrink-0">
-        @if($primaryLocale)
-        <a href="{{ route('admin.articles.preview', ['article' => $article->id, 'locale' => $primaryLocale->locale]) }}"
-           class="px-4 py-2.5 rounded-xl font-semibold transition-all hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2 border"
-           :class="darkMode ? 'border-gray-700 bg-gray-800/60 text-gray-100 hover:bg-gray-700' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'">
-            <i data-lucide="eye" class="w-5 h-5"></i>
-            <span>معاينة</span>
-        </a>
-        @endif
-
-        <a href="{{ route('admin.articles.edit', $article) }}"
-           class="px-5 py-2.5 rounded-xl font-semibold transition-all hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2 shadow-soft bg-gradient-primary text-white">
-            <i data-lucide="edit-2" class="w-5 h-5"></i>
-            <span>{{ __('admin.edit') }}</span>
-        </a>
-
-        <a href="{{ route('admin.articles.index') }}"
-           class="p-2.5 rounded-xl transition-all hover:-translate-y-0.5 active:translate-y-0 border"
-           title="رجوع"
-           :class="darkMode ? 'border-gray-700 bg-gray-800/60 text-gray-300 hover:bg-gray-700' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'">
-            <i data-lucide="arrow-right" class="w-5 h-5 rtl:block ltr:hidden"></i>
-            <i data-lucide="arrow-left" class="w-5 h-5 ltr:block rtl:hidden"></i>
-        </a>
-    </div>
-</div>
+<nav class="flex flex-wrap items-center gap-2 text-sm" :class="darkMode ? 'text-gray-400' : 'text-slate-500'" aria-label="breadcrumb">
+    <a href="{{ route('admin.articles.index') }}" class="hover:text-accent transition-colors">{{ __('articles.title') }}</a>
+    <i data-lucide="chevron-left" class="w-4 h-4 ltr:rotate-180" aria-hidden="true"></i>
+    <span aria-current="page" class="truncate max-w-[24rem]">{{ $locales->get($firstLang)?->title ?? '—' }}</span>
+</nav>
 @endsection
 
 @section('content')
-<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 xl:gap-8" x-data="{ activeLocale: '{{ $defaultLocale }}' }">
+<div class="wz-root pv-root" x-data="{ lang: @js($firstLang) }">
 
-    {{-- ───────────────────────── Reading column ───────────────────────── --}}
-    <article class="lg:col-span-8 reveal animate-fadeInUp">
-        <div class="rounded-3xl border overflow-hidden shadow-soft"
-             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-
-            {{-- Cover with the title set as an overlaid editorial masthead --}}
-            @if($article->thumb)
-            <div class="relative aspect-[16/9]">
-                <img src="{{ asset('storage/' . $article->thumb) }}"
-                     alt="{{ $primaryLocale?->title ?? 'Article thumbnail' }}"
-                     class="w-full h-full object-cover">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent"></div>
-
-                <div class="absolute top-4 start-4 flex flex-wrap items-center gap-2">
-                    @if($article->is_featured)
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/90 text-white backdrop-blur-sm">
-                        <i data-lucide="star" class="w-3.5 h-3.5"></i> مميز
-                    </span>
-                    @endif
-                    @if($article->is_pinned)
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-sky-500/90 text-white backdrop-blur-sm">
-                        <i data-lucide="pin" class="w-3.5 h-3.5"></i> مثبت
-                    </span>
-                    @endif
-                </div>
-
-                <div class="absolute inset-x-0 bottom-0 p-5 sm:p-7">
-                    @foreach($enabledLocales as $locale)
-                    <h2 x-show="activeLocale === '{{ $locale->locale }}'" x-cloak
-                        dir="{{ in_array($locale->locale, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
-                        class="text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-tight tracking-tight">
-                        {{ $locale->title }}
-                    </h2>
-                    @endforeach
-                </div>
+    {{-- ═══════ HERO ═══════ --}}
+    <header class="pv-hero">
+        <div class="pv-hero-media">
+            @if($cover)
+                <img src="{{ $cover }}" alt="" fetchpriority="high" onerror="this.remove()">
+            @endif
+            <div class="absolute inset-0 -z-10 bg-gradient-to-br from-[#0b3b73] via-[#0f2a4a] to-[#16552a]"></div>
+        </div>
+        <div class="pv-hero-body">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="pv-chip {{ $published ? 'is-published' : 'is-draft' }}">
+                    <i data-lucide="{{ $published ? 'globe' : 'pencil-line' }}" aria-hidden="true"></i>{{ __("articles.status.{$status}") }}
+                </span>
+                @if($article->category)
+                    <span class="pv-chip"><i data-lucide="folder" aria-hidden="true"></i>{{ $article->category->getNameInLanguage('ar') ?? $article->category->slug }}</span>
+                @endif
+                @if($article->is_featured)
+                    <span class="pv-chip"><i data-lucide="star" aria-hidden="true"></i>{{ __('articles.fields.is_featured') }}</span>
+                @endif
+                @if($article->is_pinned)
+                    <span class="pv-chip"><i data-lucide="pin" aria-hidden="true"></i>{{ __('articles.fields.is_pinned') }}</span>
+                @endif
             </div>
+
+            @foreach($languages as $lang => $label)
+                @php $row = $locales->get($lang); @endphp
+                <div x-show="lang === '{{ $lang }}'" @if($lang !== $firstLang) x-cloak @endif dir="{{ $dirFor($lang) }}" lang="{{ $lang }}" class="grid gap-3">
+                    <h1 class="pv-hero-title">{{ $row?->title ?: ($locales->get('ar')?->title ?? '—') }}</h1>
+                    @if(filled($row?->excerpt))
+                        <p class="pv-hero-lead">{{ $row->excerpt }}</p>
+                    @endif
+                </div>
+            @endforeach
+
+            <div class="flex flex-wrap items-center gap-2">
+                @if($article->writer)
+                    <span class="pv-chip"><i data-lucide="pen-line" aria-hidden="true"></i>{{ $article->writer->name }}</span>
+                @endif
+                @if($article->hijri_date)
+                    <span class="pv-chip"><i data-lucide="moon" aria-hidden="true"></i>{{ $article->hijri_date }}</span>
+                @endif
+                @if($article->read_time)
+                    <span class="pv-chip"><i data-lucide="clock" aria-hidden="true"></i>{{ $article->read_time }} {{ __('wizard.show.read_time') }}</span>
+                @endif
+                <span class="pv-chip"><i data-lucide="eye" aria-hidden="true"></i><span class="tabular-nums">{{ number_format($article->views ?? 0) }}</span> {{ __('wizard.show.views') }}</span>
+            </div>
+        </div>
+    </header>
+
+    {{-- ═══════ TOOLBAR ═══════ --}}
+    <div class="pv-toolbar">
+        <div class="wz-langs" role="group" aria-label="{{ __('wizard.languages') }}">
+            @foreach($languages as $lang => $label)
+                <button type="button" class="wz-lang" :class="{ 'is-active': lang === '{{ $lang }}', 'is-filled': {{ $locales->get($lang)?->is_ready ? 'true' : 'false' }} }"
+                        :aria-pressed="lang === '{{ $lang }}'" @click="lang = '{{ $lang }}'">
+                    <span class="wz-dot" aria-hidden="true"></span>{{ $label }}
+                </button>
+            @endforeach
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            @if($published && $publicSlug)
+                <a href="{{ route('public.articles.show', $publicSlug) }}" target="_blank" rel="noopener" class="wz-btn is-ghost">
+                    <i data-lucide="external-link" aria-hidden="true"></i><span class="hidden sm:inline">{{ __('wizard.open_public') }}</span>
+                </a>
+            @endif
+            <a href="{{ route('admin.articles.create') }}" class="wz-btn is-ghost">
+                <i data-lucide="plus" aria-hidden="true"></i><span class="hidden sm:inline">{{ __('articles.create') }}</span>
+            </a>
+            <a href="{{ route('admin.articles.edit', $article) }}" class="wz-btn is-primary">
+                <i data-lucide="pencil" aria-hidden="true"></i>{{ __('wizard.open_editor') }}
+            </a>
+        </div>
+    </div>
+
+    @if($statistics->isNotEmpty())
+        <section class="pv-stats pv-reveal mb-6" aria-label="{{ __('articles.fields.statistics') }}">
+            @foreach($statistics as $row)
+                <div class="wz-card pv-stat">
+                    <p class="pv-stat-value">{{ $row['value'] ?? '' }}</p>
+                    <p class="pv-stat-label">{{ $row['name'] ?? '' }}</p>
+                </div>
+            @endforeach
+        </section>
+    @endif
+
+    <div class="pv-layout">
+        <div class="min-w-0 grid gap-6 pv-reveal">
+
+            {{-- ═══════ READING ═══════ --}}
+            @foreach($languages as $lang => $label)
+                @php
+                    $row = $locales->get($lang);
+                    $body = (string) ($row?->getBody() ?? '');
+                    $hasBody = trim(strip_tags($body)) !== '' || str_contains($body, '<img') || str_contains($body, 'module-embed');
+                    $toc = collect($row?->content['toc'] ?? [])->filter(fn ($item) => filled($item['title'] ?? $item['text'] ?? null));
+                    $summary = $sanitizer->clean($row?->content['summary'] ?? null);
+                    $description = $sanitizer->clean($row?->description);
+                @endphp
+                <div x-show="lang === '{{ $lang }}'" @if($lang !== $firstLang) x-cloak @endif class="grid gap-6" dir="{{ $dirFor($lang) }}" lang="{{ $lang }}">
+                    @if($toc->isNotEmpty())
+                        <nav class="wz-card pv-section" aria-label="{{ __('wizard.show.toc') }}">
+                            <p class="pv-section-title"><i data-lucide="list-tree" aria-hidden="true"></i>{{ __('wizard.show.toc') }}<span class="pv-count">{{ $toc->count() }}</span></p>
+                            <ol class="grid gap-1.5 text-sm">
+                                @foreach($toc as $item)
+                                    <li class="flex gap-2 {{ (int) ($item['level'] ?? 2) > 2 ? 'ps-5' : '' }}">
+                                        <span class="tabular-nums text-slate-400">{{ $loop->iteration }}.</span>
+                                        <span :class="darkMode ? 'text-slate-300' : 'text-slate-700'">{{ $item['title'] ?? $item['text'] }}</span>
+                                    </li>
+                                @endforeach
+                            </ol>
+                        </nav>
+                    @endif
+
+                    <article class="wz-card pv-section">
+                        @if(filled($description))
+                            <div class="mb-6 ps-4 border-s-2 border-[#64CCC5] text-base leading-relaxed seerah-content" :class="darkMode ? 'text-slate-300' : 'text-slate-600'">{!! $description !!}</div>
+                        @endif
+
+                        @if($hasBody)
+                            <div class="pv-prose seerah-content">{!! $body !!}</div>
+                        @else
+                            <div class="wz-empty">
+                                <i data-lucide="file-plus-2" aria-hidden="true"></i>
+                                <p>{{ __('wizard.show.no_content') }}</p>
+                                <a href="{{ route('admin.articles.edit', $article) }}#step-content" class="wz-btn is-soft">{{ __('wizard.open_editor') }}</a>
+                            </div>
+                        @endif
+
+                        @if(filled($summary))
+                            <aside class="mt-8 rounded-2xl p-5 border" :class="darkMode ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-slate-50'">
+                                <p class="pv-section-title !mb-2"><i data-lucide="sparkles" aria-hidden="true"></i>{{ __('wizard.show.summary') }}</p>
+                                <div class="seerah-content text-sm leading-relaxed" :class="darkMode ? 'text-slate-300' : 'text-slate-700'">{!! $summary !!}</div>
+                            </aside>
+                        @endif
+                    </article>
+
+                    <section class="wz-card pv-section" aria-label="{{ __('articles.seo.preview') }}">
+                        <p class="pv-section-title"><i data-lucide="scan-search" aria-hidden="true"></i>{{ __('articles.seo.preview') }}</p>
+                        <div class="max-w-[65ch]">
+                            <p class="text-xs text-slate-500 truncate" dir="ltr">{{ $row?->slug ? route('public.articles.show', $row->slug) : url('/articles') }}</p>
+                            <p class="mt-1 text-lg font-semibold leading-snug text-[#1a0dab] dark:text-[#8ab4f8]">{{ $row?->seo_title ?: ($row?->title ?? '—') }}</p>
+                            <p class="mt-1 text-sm leading-relaxed" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">{{ $row?->seo_description ?: \Illuminate\Support\Str::limit(trim(strip_tags($body)), 160) }}</p>
+                        </div>
+                    </section>
+                </div>
+            @endforeach
+
+            {{-- ═══════ GALLERY ═══════ --}}
+            @if($article->gallery->isNotEmpty())
+                <section class="wz-card pv-section" aria-labelledby="pv-gallery">
+                    <h2 id="pv-gallery" class="pv-section-title"><i data-lucide="images" aria-hidden="true"></i>{{ __('wizard.show.gallery') }}<span class="pv-count">{{ $article->gallery->count() }}</span></h2>
+                    <div class="pv-gallery">
+                        @foreach($article->gallery as $item)
+                            @continue(! $item->image)
+                            <figure>
+                                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($item->image) }}" alt="{{ $item->getCaption('ar') }}" loading="lazy">
+                                @if($item->getCaption('ar'))<figcaption>{{ $item->getCaption('ar') }}</figcaption>@endif
+                            </figure>
+                        @endforeach
+                    </div>
+                </section>
             @endif
 
-            <div class="p-5 sm:p-7 lg:p-9">
-
-                {{-- Language switcher as a segmented control --}}
-                @if($enabledLocales->count() > 1)
-                <div class="inline-flex p-1 rounded-xl mb-7 gap-1"
-                     :class="darkMode ? 'bg-gray-800/70' : 'bg-gray-100'">
-                    @foreach($enabledLocales as $locale)
-                    <button type="button"
-                            @click="activeLocale = '{{ $locale->locale }}'"
-                            class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all"
-                            :class="activeLocale === '{{ $locale->locale }}'
-                                ? 'bg-gradient-primary text-white shadow-soft'
-                                : (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900')">
-                        {{ strtoupper($locale->locale) }}
-                    </button>
-                    @endforeach
-                </div>
-                @endif
-
-                @forelse($enabledLocales as $locale)
-                <div x-show="activeLocale === '{{ $locale->locale }}'" x-cloak
-                     dir="{{ in_array($locale->locale, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">
-
-                    @php
-                        // content['body'] is a builder structure: an array of {type, content}
-                        // blocks. Flatten the HTML of each block; tolerate a legacy plain-string body.
-                        $rawBody = $locale->content['body'] ?? null;
-                        if (is_array($rawBody)) {
-                            $bodyHtml = collect($rawBody)->map(function ($block) {
-                                if (is_string($block)) {
-                                    return $block;
-                                }
-                                $content = is_array($block) ? ($block['content'] ?? '') : '';
-                                return is_string($content) ? $content : '';
-                            })->implode("\n");
-                        } else {
-                            $bodyHtml = is_string($rawBody) ? $rawBody : '';
-                        }
-                        $hasBody = trim(strip_tags($bodyHtml)) !== '' || str_contains($bodyHtml, '<img');
-                    @endphp
-
-                    {{-- No cover image? render the title here as the masthead --}}
-                    @unless($article->thumb)
-                    <h2 class="text-3xl lg:text-4xl font-bold mb-5 leading-tight tracking-tight"
-                        :class="darkMode ? 'text-white' : 'text-gray-900'">
-                        {{ $locale->title }}
-                    </h2>
-                    @endunless
-
-                    {{-- Lead / excerpt --}}
-                    @if($locale->excerpt)
-                    <p class="article-lead text-lg sm:text-xl leading-relaxed font-medium mb-7"
-                       :class="darkMode ? 'text-gray-200' : 'text-gray-700'">
-                        {{ $locale->excerpt }}
-                    </p>
-                    @endif
-
-                    {{-- Optional short description, set off as a pull aside --}}
-                    @if($locale->description)
-                    <div class="border-s-2 border-accent ps-4 mb-8 text-base leading-relaxed"
-                         :class="darkMode ? 'text-gray-300' : 'text-gray-600'">
-                        {{ $locale->description }}
-                    </div>
-                    @endif
-
-                    {{-- Body --}}
-                    @if($hasBody)
-                    <div class="article-prose" :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
-                        {!! $bodyHtml !!}
-                    </div>
-                    @else
-                    <div class="flex flex-col items-center justify-center text-center py-14 rounded-2xl border border-dashed"
-                         :class="darkMode ? 'border-gray-700 text-gray-500' : 'border-gray-200 text-gray-400'">
-                        <i data-lucide="file-text" class="w-9 h-9 mb-3 opacity-60"></i>
-                        <p class="font-medium">لا يوجد محتوى لهذه اللغة بعد</p>
-                        <a href="{{ route('admin.articles.edit', $article) }}" class="text-sm text-accent hover:underline mt-2">إضافة المحتوى</a>
-                    </div>
-                    @endif
-
-                    {{-- Publication details — one bordered panel, hairline-separated rows --}}
-                    <div class="mt-10 rounded-2xl border divide-y"
-                         :class="darkMode ? 'border-gray-800 divide-gray-800' : 'border-gray-200 divide-gray-100'">
-                        <div class="px-5 py-3.5 flex items-center justify-between gap-4">
-                            <span class="text-sm shrink-0" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">الرابط (Slug)</span>
-                            <span class="font-mono text-sm truncate" :class="darkMode ? 'text-gray-200' : 'text-gray-800'" dir="ltr">{{ $locale->slug }}</span>
-                        </div>
-                        <div class="px-5 py-3.5 flex items-center justify-between gap-4">
-                            <span class="text-sm" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">حالة الترجمة</span>
-                            <span class="inline-flex items-center gap-1.5 text-sm font-semibold {{ $locale->is_ready ? 'text-emerald-500' : 'text-amber-500' }}">
-                                <span class="w-1.5 h-1.5 rounded-full {{ $locale->is_ready ? 'bg-emerald-500' : 'bg-amber-500' }}"></span>
-                                {{ $locale->is_ready ? 'جاهز' : 'مسودة' }}
-                            </span>
-                        </div>
-                        <div class="px-5 py-3.5">
-                            <p class="text-sm mb-1.5" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">معاينة محرّكات البحث (SEO)</p>
-                            <p class="font-semibold leading-snug" :class="darkMode ? 'text-gray-100' : 'text-gray-900'">
-                                {{ $locale->seo_title ?? $locale->title }}
-                            </p>
-                            <p class="text-sm mt-1 leading-relaxed" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
-                                {{ $locale->seo_description ?? \Illuminate\Support\Str::limit(trim(strip_tags($bodyHtml)), 160) }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                @empty
-                <div class="flex flex-col items-center justify-center text-center py-16"
-                     :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
-                    <i data-lucide="languages" class="w-10 h-10 mb-3 opacity-60"></i>
-                    <p class="font-medium">لا توجد ترجمات لهذا المقال</p>
-                </div>
-                @endforelse
-            </div>
-        </div>
-    </article>
-
-    {{-- ───────────────────────── Sidebar ───────────────────────── --}}
-    <aside class="lg:col-span-4 space-y-5 reveal animate-fadeInUp" style="animation-delay: 90ms">
-
-        {{-- Article info --}}
-        <div class="rounded-2xl border shadow-soft overflow-hidden"
-             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            <div class="px-5 py-4 border-b flex items-center gap-2.5" :class="darkMode ? 'border-gray-800' : 'border-gray-100'">
-                <i data-lucide="info" class="w-5 h-5 text-accent"></i>
-                <h3 class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">معلومات المقال</h3>
-            </div>
-            <div class="divide-y" :class="darkMode ? 'divide-gray-800' : 'divide-gray-100'">
-                <div class="px-5 py-3.5 flex items-center justify-between gap-4">
-                    <span class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">الكاتب</span>
-                    <span class="font-semibold text-sm" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $article->writer?->name ?? '—' }}</span>
-                </div>
-                <div class="px-5 py-3.5 flex items-center justify-between gap-4">
-                    <span class="text-sm shrink-0" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">التصنيف الرئيسي</span>
-                    <span class="font-semibold text-sm text-end" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $article->category?->getNameInLanguage('ar') ?? '—' }}</span>
-                </div>
-                <div class="px-5 py-3.5 flex items-center justify-between gap-4">
-                    <span class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">المشاهدات</span>
-                    <span class="font-bold text-sm" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ number_format($article->views) }}</span>
-                </div>
-                <div class="px-5 py-3.5 flex items-center justify-between gap-4">
-                    <span class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">التاريخ الهجري</span>
-                    <span class="font-semibold text-sm" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $article->hijri_date ?? '—' }}</span>
-                </div>
-            </div>
-        </div>
-
-        {{-- Taxonomy --}}
-        <div class="rounded-2xl border shadow-soft p-5"
-             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            <h3 class="font-bold mb-4 flex items-center gap-2.5" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                <i data-lucide="folder-tree" class="w-5 h-5 text-accent"></i> التصنيفات والوسوم
-            </h3>
-
-            <p class="text-xs font-semibold uppercase tracking-wide mb-2" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">التصنيفات</p>
-            <div class="flex flex-wrap gap-2 mb-5">
-                @forelse($article->categories as $category)
-                <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium"
-                      :class="darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-gray-700'">
-                    {{ $category->getNameInLanguage('ar') ?? $category->slug }}
-                </span>
-                @empty
-                <span class="text-sm" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">لا توجد تصنيفات مرتبطة</span>
-                @endforelse
-            </div>
-
-            <p class="text-xs font-semibold uppercase tracking-wide mb-2" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">الوسوم</p>
-            <div class="flex flex-wrap gap-2">
-                @forelse($article->tags as $tag)
-                <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-accent bg-accent/10">
-                    <i data-lucide="hash" class="w-3 h-3"></i>{{ $tag->getTranslation('name', 'ar') }}
-                </span>
-                @empty
-                <span class="text-sm" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">لا توجد وسوم مرتبطة</span>
-                @endforelse
-            </div>
-        </div>
-
-        {{-- Media --}}
-        <div class="rounded-2xl border shadow-soft p-5"
-             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            <h3 class="font-bold mb-4 flex items-center gap-2.5" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                <i data-lucide="image-plus" class="w-5 h-5 text-accent"></i> الوسائط المرفقة
-            </h3>
-            <div class="space-y-2.5">
-                @forelse($article->mediaItems as $media)
-                <div class="p-2.5 rounded-xl flex items-center gap-3 transition-colors"
-                     :class="darkMode ? 'bg-gray-800/50 hover:bg-gray-800' : 'bg-gray-50 hover:bg-gray-100'">
-                    <div class="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center bg-gradient-primary shrink-0">
-                        @if($media->thumbnail_url || str_starts_with((string) $media->mime_type, 'image/'))
-                        <img src="{{ $media->thumbnail_url ?: $media->url }}" alt="{{ $media->filename }}" class="w-full h-full object-cover">
-                        @else
-                        <i data-lucide="file" class="w-5 h-5 text-white"></i>
+            {{-- ═══════ MEDIA ═══════ --}}
+            @if($article->episodes->isNotEmpty() || $article->mediaItems->isNotEmpty())
+                <section class="wz-card pv-section" aria-labelledby="pv-media">
+                    <h2 id="pv-media" class="pv-section-title"><i data-lucide="clapperboard" aria-hidden="true"></i>{{ __('wizard.show.media') }}<span class="pv-count">{{ $article->episodes->count() + $article->mediaItems->count() }}</span></h2>
+                    <div class="grid gap-5 lg:grid-cols-2">
+                        @if($article->episodes->isNotEmpty())
+                            <div class="grid gap-2 content-start">
+                                <p class="text-xs font-bold text-slate-500">{{ __('wizard.show.episodes') }} · {{ $article->episodes->count() }}</p>
+                                <ol class="pv-list">
+                                    @foreach($article->episodes as $episode)
+                                        @php $episodeUrl = $episode->program && $episode->is_published ? route('public.media.episode', [$episode->program->slug, $episode->slug]) : null; @endphp
+                                        <li>
+                                            <{{ $episodeUrl ? 'a' : 'div' }} @if($episodeUrl) href="{{ $episodeUrl }}" target="_blank" rel="noopener" @endif class="pv-item">
+                                                <span class="pv-item-icon"><i data-lucide="play" aria-hidden="true"></i></span>
+                                                <span class="min-w-0">
+                                                    <span class="pv-item-title block">{{ $episode->getTranslation('title', 'ar') ?: $episode->slug }}</span>
+                                                    <span class="pv-item-sub block">{{ $episode->program?->slug }}@if($episode->episode_number) · E{{ $episode->episode_number }}@endif</span>
+                                                </span>
+                                                <span class="pv-item-end tabular-nums">{{ $loop->iteration }}</span>
+                                            </{{ $episodeUrl ? 'a' : 'div' }}>
+                                        </li>
+                                    @endforeach
+                                </ol>
+                            </div>
+                        @endif
+                        @if($article->mediaItems->isNotEmpty())
+                            <div class="grid gap-2 content-start">
+                                <p class="text-xs font-bold text-slate-500">{{ __('wizard.show.files') }} · {{ $article->mediaItems->count() }}</p>
+                                <div class="pv-list">
+                                    @foreach($article->mediaItems as $media)
+                                        <a href="{{ route('admin.media-library.show', $media) }}" class="pv-item">
+                                            <span class="pv-item-icon">
+                                                @if($media->thumbnail_url)<img src="{{ $media->thumbnail_url }}" alt="" loading="lazy">@else<i data-lucide="file" aria-hidden="true"></i>@endif
+                                            </span>
+                                            <span class="min-w-0">
+                                                <span class="pv-item-title block">{{ $media->original_filename ?? $media->filename }}</span>
+                                                <span class="pv-item-sub block">{{ $media->mime_type }}</span>
+                                            </span>
+                                            <span class="pv-item-end">{{ $media->type }}</span>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            </div>
                         @endif
                     </div>
-                    <div class="min-w-0 flex-1">
-                        <p class="font-medium text-sm truncate" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $media->filename }}</p>
-                        <p class="text-xs truncate" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ $media->mime_type }}</p>
-                    </div>
-                    <a href="{{ route('admin.media-library.show', $media) }}"
-                       class="p-2 rounded-lg transition-colors shrink-0"
-                       :class="darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-gray-200 text-gray-500 hover:text-gray-900'">
-                        <i data-lucide="external-link" class="w-4 h-4"></i>
-                    </a>
-                </div>
-                @empty
-                <p class="text-sm" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">لا توجد وسائط مرتبطة بهذا المقال</p>
-                @endforelse
-            </div>
+                </section>
+            @endif
+
+            {{-- ═══════ REFERENCES ═══════ --}}
+            @if($references->isNotEmpty())
+                <section class="wz-card pv-section" aria-labelledby="pv-refs">
+                    <h2 id="pv-refs" class="pv-section-title"><i data-lucide="library" aria-hidden="true"></i>{{ __('wizard.show.references') }}<span class="pv-count">{{ $references->count() }}</span></h2>
+                    <ol class="grid gap-2">
+                        @foreach($references as $ref)
+                            <li class="flex gap-3 items-baseline text-sm">
+                                <span class="tabular-nums font-bold text-slate-400">{{ $loop->iteration }}.</span>
+                                <span class="min-w-0" :class="darkMode ? 'text-slate-300' : 'text-slate-700'">
+                                    @if(filled($ref['url'] ?? null) && preg_match('#^https?://#i', $ref['url']))
+                                        <a href="{{ $ref['url'] }}" target="_blank" rel="noopener noreferrer" class="font-semibold underline underline-offset-4 decoration-slate-300">{{ $ref['name'] ?: $ref['url'] }}</a>
+                                    @else
+                                        <strong :class="darkMode ? 'text-white' : 'text-slate-900'">{{ $ref['name'] ?? $ref['url'] ?? '' }}</strong>
+                                    @endif
+                                    @if(filled($ref['type'] ?? null))<span class="text-slate-500"> · {{ $ref['type'] }}</span>@endif
+                                </span>
+                            </li>
+                        @endforeach
+                    </ol>
+                </section>
+            @endif
         </div>
 
-    </aside>
+        {{-- ═══════ ASIDE ═══════ --}}
+        <aside class="pv-aside">
+            <div class="wz-card wz-rail-card">
+                <p class="wz-rail-title"><i data-lucide="database" aria-hidden="true"></i>{{ __('wizard.show.record') }}</p>
+                <dl class="wz-kv !mt-0">
+                    <div><dt>{{ __('wizard.show.writer') }}</dt><dd>{{ $article->writer?->name ?? '—' }}</dd></div>
+                    <div><dt>{{ __('articles.fields.status') }}</dt><dd>{{ __("articles.status.{$status}") }}</dd></div>
+                    @if($article->scheduled_at)
+                        <div><dt>{{ __('wizard.show.scheduled') }}</dt><dd class="tabular-nums">{{ $article->scheduled_at->format('Y/m/d H:i') }}</dd></div>
+                    @endif
+                    <div><dt>{{ __('articles.fields.hijri_date') }}</dt><dd>{{ $article->hijri_date ?? '—' }}</dd></div>
+                    <div><dt>{{ __('articles.fields.views') }}</dt><dd class="tabular-nums">{{ number_format($article->views ?? 0) }}</dd></div>
+                    <div><dt>{{ __('wizard.show.created') }}</dt><dd class="tabular-nums">{{ $article->created_at?->format('Y/m/d') }}</dd></div>
+                    <div><dt>{{ __('wizard.show.updated') }}</dt><dd>{{ $article->updated_at?->diffForHumans() }}</dd></div>
+                </dl>
+            </div>
+
+            <div class="wz-card wz-rail-card">
+                <p class="wz-rail-title"><i data-lucide="languages" aria-hidden="true"></i>{{ __('wizard.show.readiness') }}</p>
+                <ul class="pv-locales">
+                    @foreach($languages as $lang => $label)
+                        @php $row = $locales->get($lang); @endphp
+                        <li class="pv-locale">
+                            <button type="button" class="font-semibold hover:underline" @click="lang = '{{ $lang }}'">{{ $label }}</button>
+                            <span class="wz-pill !min-h-6 {{ $row?->is_ready ? 'is-success' : ($row ? 'is-warn' : '') }}">
+                                <span class="wz-dot" aria-hidden="true"></span>
+                                {{ $row?->is_ready ? __('wizard.show.ready') : ($row ? __('wizard.show.not_ready') : __('wizard.show.missing')) }}
+                            </span>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+
+            @if($article->categories->isNotEmpty() || $article->tags->isNotEmpty())
+                <div class="wz-card wz-rail-card grid gap-3">
+                    @if($article->categories->isNotEmpty())
+                        <div>
+                            <p class="wz-rail-title !mb-2"><i data-lucide="folder" aria-hidden="true"></i>{{ __('wizard.show.categories') }}</p>
+                            <div class="flex flex-wrap gap-1.5">
+                                @foreach($article->categories as $category)
+                                    <span class="wz-pill is-accent">{{ $category->getNameInLanguage('ar') ?? $category->slug }}</span>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                    @if($article->tags->isNotEmpty())
+                        <div>
+                            <p class="wz-rail-title !mb-2"><i data-lucide="hash" aria-hidden="true"></i>{{ __('wizard.show.tags') }}</p>
+                            <div class="flex flex-wrap gap-1.5">
+                                @foreach($article->tags as $tag)
+                                    <span class="wz-pill">#{{ $tag->getTranslation('name', 'ar') ?? $tag->slug }}</span>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            @endif
+
+            <div class="wz-card wz-rail-card !border-red-500/20">
+                <p class="wz-rail-title !text-red-600"><i data-lucide="trash-2" class="!text-red-600" aria-hidden="true"></i>{{ __('common.delete') }}</p>
+                <p class="wz-help !mt-0 mb-3">{{ __('admin.delete_warning') }}</p>
+                <form action="{{ route('admin.articles.destroy', $article) }}" method="POST"
+                      @submit.prevent="$dispatch('show-confirm', { title: '{{ __("admin.confirm_delete") }}', message: '{{ __("admin.delete_warning") }}', type: 'danger', onConfirm: () => $el.submit() })">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="wz-btn w-full !text-red-600 !border-red-500/30 hover:!bg-red-500/10">
+                        <i data-lucide="trash-2" aria-hidden="true"></i>{{ __('common.delete') }}
+                    </button>
+                </form>
+            </div>
+        </aside>
+    </div>
 </div>
 @endsection
-
-@push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        lucide.createIcons();
-    });
-</script>
-@endpush

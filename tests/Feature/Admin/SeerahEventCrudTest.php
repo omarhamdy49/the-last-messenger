@@ -121,6 +121,68 @@ class SeerahEventCrudTest extends TestCase
         $this->assertSame([['title' => 'مصدر', 'author' => 'مؤلف', 'reference' => 'مرجع']], $ar->sources);
     }
 
+    public function test_seo_external_links_and_cross_module_links_round_trip(): void
+    {
+        $this->actingAs($this->createAdminUser());
+
+        $this->post(route('admin.seerah-events.store'), [
+            ...$this->validPayload(),
+            'seo' => [
+                'ar' => ['title' => 'غزوة بدر الكبرى', 'description' => 'أول معركة فاصلة في الإسلام'],
+                'en' => ['title' => '', 'description' => ''],
+            ],
+            'external_links' => [
+                'ar' => [['title' => 'خريطة بدر', 'url' => 'https://example.com/badr'], ['title' => 'بلا رابط', 'url' => '']],
+            ],
+            'links' => [
+                'verse' => [12, 7],
+                'hadith' => [3],
+                'muslim' => [5],
+                'article' => [9],
+                'episode' => [4, 2],
+                'tag' => [1],
+                'category' => [2],
+            ],
+        ])->assertSessionHasNoErrors()->assertRedirect(route('admin.seerah-events.index'));
+
+        $event = SeerahEvent::query()->where('slug', 'battle-of-badr')->firstOrFail();
+        $ar = $event->translations()->where('locale', 'ar')->firstOrFail();
+
+        $this->assertSame(['title' => 'غزوة بدر الكبرى', 'description' => 'أول معركة فاصلة في الإسلام'], $ar->seo_metadata);
+        $this->assertNull($event->translations()->where('locale', 'en')->firstOrFail()->seo_metadata);
+        // The row with no URL is dropped, not stored empty.
+        // assertEquals: a MySQL JSON column does not preserve object key order.
+        $this->assertEquals([['title' => 'خريطة بدر', 'url' => 'https://example.com/badr']], $ar->external_links);
+        $this->assertSame(
+            ['article' => [9], 'category' => [2], 'episode' => [4, 2], 'hadith' => [3], 'muslim' => [5], 'tag' => [1], 'verse' => [12, 7]],
+            collect($event->load('links')->linkIdsByType())->sortKeys()->all()
+        );
+
+        // A type that is not posted is left alone; a type posted empty is cleared.
+        $this->put(route('admin.seerah-events.update', $event->id), [
+            ...$this->validPayload($event->slug),
+            'links' => ['verse' => '', 'episode' => [2]],
+        ])->assertRedirect(route('admin.seerah-events.index'));
+
+        $byType = $event->fresh()->load('links')->linkIdsByType();
+        $this->assertArrayNotHasKey('verse', $byType);
+        $this->assertSame([2], $byType['episode']);
+        $this->assertSame([3], $byType['hadith']);
+        $this->assertSame('غزوة بدر الكبرى', $event->fresh()->translations->firstWhere('locale', 'ar')->seo_metadata['title']);
+    }
+
+    public function test_seo_limits_link_types_and_external_urls_are_validated(): void
+    {
+        $this->actingAs($this->createAdminUser());
+
+        $this->post(route('admin.seerah-events.store'), [
+            ...$this->validPayload(),
+            'seo' => ['ar' => ['title' => str_repeat('ا', 71), 'description' => str_repeat('ب', 161)]],
+            'external_links' => ['ar' => [['title' => 'x', 'url' => 'javascript:alert(1)']]],
+            'links' => ['unknown' => [1], 'verse' => ['abc']],
+        ])->assertSessionHasErrors(['seo.ar.title', 'seo.ar.description', 'external_links.ar.0.url', 'links', 'links.verse.0']);
+    }
+
     public function test_remove_thumb_deletes_the_file_and_keeps_the_cover(): void
     {
         Storage::fake('public');
@@ -294,6 +356,26 @@ class SeerahEventCrudTest extends TestCase
     /**
      * @return array<string, mixed>
      */
+    public function test_blank_slug_is_generated_from_english_then_arabic_title(): void
+    {
+        $this->actingAs($this->createAdminUser());
+
+        $this->post(route('admin.seerah-events.store'), ['slug' => ''] + $this->validPayload())->assertSessionHasNoErrors();
+        $this->post(route('admin.seerah-events.store'), ['slug' => ''] + $this->validPayload())->assertSessionHasNoErrors();
+        $this->post(route('admin.seerah-events.store'), ['slug' => '', 'title' => ['ar' => 'غزوة أحد']] + $this->validPayload())->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('seerah_events', ['slug' => 'battle-of-badr']);
+        $this->assertDatabaseHas('seerah_events', ['slug' => 'battle-of-badr-1']);
+        $arabic = SeerahEvent::query()->latest('id')->value('slug');
+        $this->assertMatchesRegularExpression('/^[a-z0-9\-]+$/', $arabic);
+        $this->assertNotSame('event', $arabic);
+
+        // Clearing the slug on edit regenerates it, ignoring the event's own row.
+        $event = SeerahEvent::query()->where('slug', 'battle-of-badr')->firstOrFail();
+        $this->put(route('admin.seerah-events.update', $event), ['slug' => ''] + $this->validPayload())->assertSessionHasNoErrors();
+        $this->assertSame('battle-of-badr', $event->fresh()->slug);
+    }
+
     private function validPayload(string $slug = 'battle-of-badr'): array
     {
         return [

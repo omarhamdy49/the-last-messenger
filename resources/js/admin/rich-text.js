@@ -152,6 +152,19 @@ function registerEmbedMatcher(editor) {
     });
 }
 
+/**
+ * Quill's getSelection/setSelection re-read the DOM selection and throw when it
+ * sits on a node Quill has not mapped (after an Enter, or while focus is inside a
+ * picker modal). Moving the caret is never worth aborting the caller over.
+ */
+function safely(fn) {
+    try {
+        return fn();
+    } catch (e) {
+        return null;
+    }
+}
+
 const toolbars = {
     full: [
         [{ header: [1, 2, 3, 4, 5, 6, false] }],
@@ -242,9 +255,9 @@ function keepDirectionOnPaste(editor, direction) {
         queued = true;
         setTimeout(() => {
             queued = false;
-            const selection = editor.getSelection();
+            const selection = safely(() => editor.getSelection());
             applyDefaultDirection(editor, direction);
-            if (selection) { editor.setSelection(selection, 'silent'); }
+            if (selection) { safely(() => editor.setSelection(selection, 'silent')); }
         }, 0);
     });
 }
@@ -325,7 +338,8 @@ const AdminWysiwygModules = {
     attachToolbar(editor, { id, locale }) {
         let savedRange = null;
         const capture = () => {
-            const range = editor.getSelection();
+            // No mappable caret → append at the end rather than never opening the picker.
+            const range = safely(() => editor.getSelection());
             savedRange = range
                 ? { index: range.index, length: range.length }
                 : { index: Math.max(0, editor.getLength() - 1), length: 0 };
@@ -358,7 +372,7 @@ const AdminWysiwygModules = {
         return {
             takeRange() {
                 const range = savedRange
-                    || editor.getSelection()
+                    || safely(() => editor.getSelection())
                     || { index: Math.max(0, editor.getLength() - 1), length: 0 };
                 savedRange = null;
                 return range;
@@ -387,7 +401,7 @@ const AdminWysiwygModules = {
                 label: moduleLabels.verse,
                 text: verses.map((v) => v.text).join(' '),
                 reference,
-                href: `/quran/surah/${data.surah_id}#${verses[0]?.number ?? ''}`,
+                href: `/quran/surah/${data.surah_id}${verses[0]?.number ? `#v${verses[0].number}` : ''}`,
                 linkLabel: `📖 ${reference}`,
                 dir: 'rtl',
             };
@@ -441,7 +455,7 @@ const AdminWysiwygModules = {
 
             if (range.length > 0) {
                 editor.formatText(range.index, range.length, 'link', link, 'user');
-                editor.setSelection(range.index, range.length, 'silent');
+                safely(() => editor.setSelection(range.index, range.length, 'silent'));
                 return;
             }
 
@@ -455,7 +469,7 @@ const AdminWysiwygModules = {
             }
             editor.insertText(labelIndex, label, { link }, 'user');
             editor.insertText(labelIndex + label.length, ' ', { link: false }, 'user');
-            editor.setSelection(labelIndex + label.length + 1, 0, 'silent');
+            safely(() => editor.setSelection(labelIndex + label.length + 1, 0, 'silent'));
             editor.format('link', false, 'silent');
             return;
         }
@@ -469,7 +483,7 @@ const AdminWysiwygModules = {
 
         editor.insertEmbed(range.index, 'moduleEmbed', embed, 'user');
         editor.insertText(range.index + 1, '\n', 'user');
-        editor.setSelection(range.index + 2, 0, 'silent');
+        safely(() => editor.setSelection(range.index + 2, 0, 'silent'));
     },
 };
 

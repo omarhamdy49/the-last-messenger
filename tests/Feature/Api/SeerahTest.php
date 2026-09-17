@@ -9,6 +9,8 @@ use App\Domain\Seerah\Models\SeerahEventGalleryItem;
 use App\Domain\Seerah\Models\SeerahEventMedia;
 use App\Domain\Seerah\Models\SeerahEventType;
 use App\Domain\Shared\Models\Location;
+use App\Models\Article;
+use App\Models\ArticleLocale;
 use App\Models\Media;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -193,6 +195,31 @@ class SeerahTest extends TestCase
         }
 
         $this->assertCount(1, $mediaQueries, 'The show endpoint must resolve attached media in exactly one query.');
+    }
+
+    public function test_show_returns_seo_external_links_and_public_links_only(): void
+    {
+        $event = $this->createSeerahEvent();
+        // Every locale row: the API request resolves its own locale.
+        $event->translations->each->update([
+            'seo_metadata' => ['title' => 'SEO title', 'description' => 'SEO description'],
+            'external_links' => [['title' => 'Map', 'url' => 'https://example.com/map']],
+        ]);
+        $published = Article::factory()->create(['status' => 'published']);
+        ArticleLocale::create(['article_id' => $published->id, 'locale' => 'ar', 'title' => 'Linked', 'slug' => 'linked-article', 'is_ready' => true]);
+        ArticleLocale::create(['article_id' => $published->id, 'locale' => 'en', 'title' => 'Linked', 'slug' => 'linked-article-en', 'is_ready' => true]);
+        $draft = Article::factory()->create(['status' => 'draft']);
+        $event->links()->createMany([
+            ['type' => 'article', 'target_id' => $published->id, 'order' => 0],
+            ['type' => 'article', 'target_id' => $draft->id, 'order' => 1],
+        ]);
+
+        $this->getJson('/api/v1/seerah/battle-of-badr')
+            ->assertOk()
+            ->assertJsonPath('data.seo.title', 'SEO title')
+            ->assertJsonPath('data.external_links.0.url', 'https://example.com/map')
+            ->assertJsonCount(1, 'data.links.article')
+            ->assertJsonPath('data.links.article.0.id', $published->id);
     }
 
     public function test_show_returns_404_for_unknown_slug(): void

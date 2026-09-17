@@ -26,7 +26,7 @@
         ->all();
 @endphp
 
-<div x-data="{ rows: {{ Js::from($initial) }}, max: {{ (int) $max }} }" {{ $attributes->merge(['class' => 'space-y-3']) }}>
+<div x-data="{ rows: {{ Js::from($initial) }}, max: {{ (int) $max }} }" x-init="$watch('rows', () => $dispatch('wizard:dirty'))" {{ $attributes->merge(['class' => 'space-y-3']) }}>
     <template x-for="(row, index) in rows" :key="index">
         <div class="flex flex-col sm:flex-row gap-3 items-start">
             @foreach($fields as $field => $placeholder)

@@ -1005,6 +1005,8 @@ return [
     'create_tag' => 'Create Tag',
     'update_tag' => 'Update Tag',
     'tag_name_ar_required' => 'Arabic tag name is required',
+    'category_name_ar_required' => 'Arabic name is required',
+    'category_name_en_required' => 'English name is required',
     'tag_name_exists' => 'A tag with this name already exists',
     'slug_required' => 'The slug is required (enter it manually for non-Latin names)',
 

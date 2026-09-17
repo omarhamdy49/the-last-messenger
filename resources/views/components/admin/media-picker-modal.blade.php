@@ -60,7 +60,7 @@
             <!-- Tabs -->
             <div class="flex border-b"
                  :class="$root.darkMode ? 'border-gray-800 bg-gray-900/50' : 'border-gray-200 bg-gray-50'">
-                <button @click="activeTab = 'browse'"
+                <button type="button" @click="activeTab = 'browse'"
                         class="flex items-center gap-2 px-6 py-3 font-semibold transition-colors relative"
                         :class="activeTab === 'browse' ?
                             'text-accent border-b-2 border-accent' :
@@ -69,7 +69,7 @@
                     <span>{{ __('media.picker.browse') }}</span>
                 </button>
 
-                <button @click="activeTab = 'upload'"
+                <button type="button" @click="activeTab = 'upload'"
                         class="flex items-center gap-2 px-6 py-3 font-semibold transition-colors relative"
                         :class="activeTab === 'upload' ?
                             'text-accent border-b-2 border-accent' :
@@ -215,7 +215,7 @@
 
                         <!-- Load More -->
                         <div x-show="!isLoading && hasMorePages" class="mt-6 text-center">
-                            <button @click="loadMore()"
+                            <button type="button" @click="loadMore()"
                                     class="px-6 py-2 rounded-lg font-semibold transition-all hover:scale-105"
                                     :class="$root.darkMode ?
                                         'bg-gray-800 hover:bg-gray-700 text-white' :
@@ -244,7 +244,7 @@
                                 :class="$root.darkMode ? 'text-white' : 'text-gray-900'">
                                 {{ __('media.picker.selected') }} (<span x-text="selectedItems?.length || 0"></span>)
                             </h3>
-                            <button @click="clearSelection()"
+                            <button type="button" @click="clearSelection()"
                                     class="text-sm font-medium text-red-500 hover:text-red-600 transition-colors">
                                 {{ __('media.actions.clear_all') }}
                             </button>
@@ -353,7 +353,7 @@
                                     </p>
                                 </div>
 
-                                <button @click="$refs.fileInput.click()"
+                                <button type="button" @click="$refs.fileInput.click()"
                                         type="button"
                                         class="px-6 py-3 rounded-lg font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white hover:scale-105 transition-all shadow-lg shadow-accent/30">
                                     {{ __('media.picker.choose_files') }}
@@ -434,7 +434,7 @@
                 </div>
 
                 <div class="flex items-center gap-3">
-                    <button @click="close()"
+                    <button type="button" @click="close()"
                             class="px-6 py-2 rounded-lg font-semibold transition-all hover:scale-105"
                             :class="$root.darkMode ?
                                 'bg-gray-800 hover:bg-gray-700 text-white' :
@@ -442,7 +442,7 @@
                         {{ __('admin.cancel') }}
                     </button>
 
-                    <button @click="confirmSelection()"
+                    <button type="button" @click="confirmSelection()"
                             :disabled="(selectedItems?.length || 0) === 0"
                             class="px-6 py-2 rounded-lg font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 disabled:hover:scale-100"
                             :class="(selectedItems?.length || 0) > 0 ? 'shadow-accent/30' : ''">
@@ -463,7 +463,7 @@
                             <h3 class="text-xl font-bold" :class="$root.darkMode ? 'text-white' : 'text-gray-900'">{{ __('media.preview.title') }}</h3>
                             <p class="text-sm" :class="$root.darkMode ? 'text-gray-400' : 'text-gray-600'" x-text="previewModal.media?.title || previewModal.media?.original_filename || ''"></p>
                         </div>
-                        <button @click="closePreview()"
+                        <button type="button" @click="closePreview()"
                                 class="p-2 rounded-lg transition-all"
                                 :class="$root.darkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100'">
                             <i data-lucide="x" class="w-5 h-5"></i>
@@ -515,7 +515,7 @@
                                 </h4>
                                 <div class="mt-3 flex flex-wrap gap-2">
                                     <template x-for="source in previewSources(previewModal.media)" :key="source.key">
-                                        <button @click="previewModal.activeSource = source.key"
+                                        <button type="button" @click="previewModal.activeSource = source.key"
                                                 type="button"
                                                 class="px-3 py-2 rounded-xl text-sm font-semibold transition-all"
                                                 :class="previewModal.activeSource === source.key
@@ -550,7 +550,7 @@
                                    :class="$root.darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'">
                                     {{ __('media.preview.open_original') }}
                                 </a>
-                                <button @click="closePreview()"
+                                <button type="button" @click="closePreview()"
                                         type="button"
                                         class="px-4 py-3 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-semibold shadow-lg">
                                     {{ __('admin.cancel') }}

@@ -11,6 +11,7 @@ use App\Domain\Media\Models\MediaProgram;
 use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Models\Verse;
 use App\Http\Controllers\Controller;
+use App\Repositories\ArticleRepository;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +21,10 @@ use Illuminate\Http\Request;
  */
 final class ArticleModuleController extends Controller
 {
+    public function __construct(
+        private readonly ArticleRepository $articles,
+    ) {}
+
     /**
      * Paginated, searchable episode picker for the article's video queue.
      *
@@ -66,6 +71,43 @@ final class ArticleModuleController extends Controller
                 'current_page' => $episodes->currentPage(),
                 'last_page' => $episodes->lastPage(),
                 'total' => $episodes->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * Paginated, filterable article picker (related articles on other modules).
+     * Filters: `q` (title in any locale), `category` (primary or additional),
+     * `status`, and `exclude[]` ids already picked.
+     */
+    public function articles(Request $request): JsonResponse
+    {
+        $locale = $this->contentLocale($request);
+        $term = trim((string) $request->query('q', ''));
+        $categoryId = (int) $request->query('category', 0);
+        $status = (string) $request->query('status', '');
+        $exclude = array_map('intval', (array) $request->query('exclude', []));
+
+        $articles = $this->articles->paginateForPicker($term, $categoryId, $status, $exclude, (int) $request->query('page', 1));
+
+        return response()->json([
+            'data' => $articles->getCollection()->map(function ($article) use ($locale): array {
+                $title = $article->locales->firstWhere('locale', $locale)?->title
+                    ?? $article->locales->firstWhere('locale', 'ar')?->title
+                    ?? $article->locales->first()?->title;
+
+                return [
+                    'id' => $article->id,
+                    'title' => $title ?? __('admin.untitled'),
+                    'status' => $article->status,
+                    'category' => $article->category?->getTranslation('name', $locale) ?? $article->category?->getTranslation('name', 'ar'),
+                    'date' => $article->created_at?->toDateString(),
+                ];
+            })->values(),
+            'meta' => [
+                'current_page' => $articles->currentPage(),
+                'last_page' => $articles->lastPage(),
+                'total' => $articles->total(),
             ],
         ]);
     }

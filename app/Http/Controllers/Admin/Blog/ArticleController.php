@@ -483,13 +483,11 @@ class ArticleController extends AdminController
     {
         $locale = $request->get('locale', 'ar');
         abort_unless(in_array($locale, enabled_content_locales(), true), 404);
-        $articleLocale = $article->locales()->where('locale', $locale)->first();
+        $article->load($this->articleRelations());
+        abort_unless($article->locales->contains('locale', $locale), 404, 'Article not available in this language');
 
-        if (! $articleLocale) {
-            abort(404, 'Article not available in this language');
-        }
-
-        return view('admin.articles.preview', compact('article', 'articleLocale'));
+        // One preview surface: the show page, opened on the requested language.
+        return view('admin.articles.show', ['article' => $article, 'initialLocale' => $locale]);
     }
 
     /**

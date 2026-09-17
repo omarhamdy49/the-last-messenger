@@ -1,5 +1,5 @@
 {{--
-    Article Form Sidebar Component
+    Article "Classify & publish" wizard step (was the form sidebar).
     Contains: Thumbnail, Publication Settings, Writer, Categories, Tags, Options
 --}}
 
@@ -16,11 +16,11 @@
     $isEdit = $article && $article->exists;
 @endphp
 
-<aside class="w-full lg:w-80 xl:w-96 space-y-4 order-2 lg:order-1">
+<div class="grid gap-4 md:grid-cols-2 items-start">
 
     {{-- Thumbnail --}}
-    <div class="sidebar-card rounded-xl p-4"
-         :class="darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'">
+    <div class="rounded-2xl p-4"
+         :class="darkMode ? 'bg-white/[0.02] border border-white/10' : 'bg-slate-50/60 border border-slate-200'">
         <h3 class="text-sm font-semibold mb-3 flex items-center gap-2"
             :class="darkMode ? 'text-white' : 'text-gray-900'">
             <i data-lucide="image" class="w-4 h-4 text-gray-400"></i>
@@ -55,8 +55,8 @@
     </div>
 
     {{-- Publication --}}
-    <div class="sidebar-card rounded-xl p-4 space-y-3"
-         :class="darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'">
+    <div class="rounded-2xl p-4 space-y-3"
+         :class="darkMode ? 'bg-white/[0.02] border border-white/10' : 'bg-slate-50/60 border border-slate-200'">
         <h3 class="text-sm font-semibold flex items-center gap-2"
             :class="darkMode ? 'text-white' : 'text-gray-900'">
             <i data-lucide="calendar" class="w-4 h-4 text-gray-400"></i>
@@ -125,8 +125,8 @@
     </div>
 
     {{-- Writer --}}
-    <div class="sidebar-card rounded-xl p-4"
-         :class="darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'">
+    <div class="rounded-2xl p-4"
+         :class="darkMode ? 'bg-white/[0.02] border border-white/10' : 'bg-slate-50/60 border border-slate-200'">
         <label class="block text-sm font-semibold mb-2 flex items-center gap-2"
                :class="darkMode ? 'text-white' : 'text-gray-900'">
             <i data-lucide="user" class="w-4 h-4 text-gray-400"></i>
@@ -146,8 +146,8 @@
     </div>
 
     {{-- Categories --}}
-    <div class="sidebar-card rounded-xl p-4 space-y-3"
-         :class="darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'">
+    <div class="rounded-2xl p-4 space-y-3"
+         :class="darkMode ? 'bg-white/[0.02] border border-white/10' : 'bg-slate-50/60 border border-slate-200'">
         <h3 class="text-sm font-semibold flex items-center gap-2"
             :class="darkMode ? 'text-white' : 'text-gray-900'">
             <i data-lucide="folder" class="w-4 h-4 text-gray-400"></i>
@@ -191,8 +191,8 @@
     </div>
 
     {{-- Tags --}}
-    <div class="sidebar-card rounded-xl p-4"
-         :class="darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'">
+    <div class="rounded-2xl p-4"
+         :class="darkMode ? 'bg-white/[0.02] border border-white/10' : 'bg-slate-50/60 border border-slate-200'">
         <label class="block text-sm font-semibold mb-2 flex items-center gap-2"
                :class="darkMode ? 'text-white' : 'text-gray-900'">
             <i data-lucide="tag" class="w-4 h-4 text-gray-400"></i>
@@ -211,8 +211,8 @@
     </div>
 
     {{-- Options --}}
-    <div class="sidebar-card rounded-xl p-4 space-y-3"
-         :class="darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'">
+    <div class="rounded-2xl p-4 space-y-3"
+         :class="darkMode ? 'bg-white/[0.02] border border-white/10' : 'bg-slate-50/60 border border-slate-200'">
         <h3 class="text-sm font-semibold flex items-center gap-2"
             :class="darkMode ? 'text-white' : 'text-gray-900'">
             <i data-lucide="settings" class="w-4 h-4 text-gray-400"></i>
@@ -234,4 +234,4 @@
         </label>
     </div>
 
-</aside>
+</div>

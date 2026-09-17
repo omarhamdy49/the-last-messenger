@@ -28,6 +28,9 @@ final readonly class SeerahEventData
      * @param  array<int, int>  $gallery  Media-library ids, in display order.
      * @param  array<int|string, array<string, string|null>>  $galleryCaptions  media id => locale => caption
      * @param  array<int, int>  $mediaItems  Media-library ids.
+     * @param  array<string, array{title: ?string, description: ?string}>  $seo  Locale-keyed.
+     * @param  array<string, array<int, array{title: string, url: string}>>  $externalLinks  Locale-keyed rows.
+     * @param  array<string, array<int, int>>  $links  LinkedContentType value => target ids, in order.
      * @param  array<int, string>  $presentKeys  Input keys present in the validated payload.
      */
     public function __construct(
@@ -56,6 +59,9 @@ final readonly class SeerahEventData
         public array $gallery,
         public array $galleryCaptions,
         public array $mediaItems,
+        public array $seo,
+        public array $externalLinks,
+        public array $links,
         public array $presentKeys,
     ) {}
 
@@ -99,8 +105,46 @@ final readonly class SeerahEventData
             gallery: $ids('gallery'),
             galleryCaptions: (array) ($validated['gallery_captions'] ?? []),
             mediaItems: $ids('media_items'),
+            seo: self::seo($validated['seo'] ?? []),
+            externalLinks: self::localeRows($validated['external_links'] ?? [], ['title', 'url'], 'url'),
+            links: self::links($validated['links'] ?? []),
             presentKeys: array_keys($validated),
         );
+    }
+
+    /**
+     * @return array<string, array{title: ?string, description: ?string}>
+     */
+    private static function seo(mixed $byLocale): array
+    {
+        $result = [];
+
+        foreach (is_array($byLocale) ? $byLocale : [] as $locale => $fields) {
+            $fields = is_array($fields) ? $fields : [];
+            $result[(string) $locale] = [
+                'title' => filled($fields['title'] ?? null) ? trim((string) $fields['title']) : null,
+                'description' => filled($fields['description'] ?? null) ? trim((string) $fields['description']) : null,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Only the types that were submitted are kept, so a type the form did not
+     * carry is left alone; a type submitted empty becomes [] (clear it).
+     *
+     * @return array<string, array<int, int>>
+     */
+    private static function links(mixed $byType): array
+    {
+        $result = [];
+
+        foreach (is_array($byType) ? $byType : [] as $type => $ids) {
+            $result[(string) $type] = array_values(array_unique(array_filter(array_map('intval', (array) $ids))));
+        }
+
+        return $result;
     }
 
     /**

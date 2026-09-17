@@ -11,7 +11,9 @@ use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Services\SeerahEventService;
 use App\Domain\Seerah\Services\SeerahEventTypeService;
 use App\Domain\Seerah\Services\SeerahMilestoneService;
+use App\Domain\Shared\Contracts\ContentReference;
 use App\Domain\Shared\Contracts\MediaReference;
+use App\Domain\Shared\Enums\LinkedContentType;
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreSeerahEventRequest;
@@ -111,10 +113,10 @@ class SeerahEventController extends Controller
      */
     public function show(int $id): View
     {
-        ['event' => $event, 'media' => $media] = $this->seerahEventService->getEditPayload($id);
+        ['event' => $event, 'media' => $media, 'links' => $links] = $this->seerahEventService->getEditPayload($id);
         $event->loadMissing(['type:id,slug,metadata,locale', 'milestone.translations']);
 
-        return view('admin.seerah-events.show', compact('event', 'media'));
+        return view('admin.seerah-events.show', compact('event', 'media', 'links'));
     }
 
     /**
@@ -122,7 +124,13 @@ class SeerahEventController extends Controller
      */
     public function edit(int $id): View
     {
-        ['event' => $event, 'media' => $media] = $this->seerahEventService->getEditPayload($id);
+        ['event' => $event, 'media' => $media, 'links' => $links] = $this->seerahEventService->getEditPayload($id);
+        $shape = fn (ContentReference $ref): array => [
+            'id' => $ref->id,
+            'title' => $ref->title,
+            'subtitle' => $ref->subtitle,
+            'thumb' => $ref->thumbUrl,
+        ];
 
         return view('admin.seerah-events.edit', [
             ...$this->formOptions(),
@@ -140,6 +148,8 @@ class SeerahEventController extends Controller
                 'type' => $media->type,
                 'thumbnail_url' => $media->thumbnailUrl,
             ], $media),
+            'episodeItems' => array_map($shape, $links[LinkedContentType::EPISODE->value] ?? []),
+            'linkItems' => array_map(fn (array $refs): array => array_map($shape, $refs), $links),
         ]);
     }
 
@@ -275,6 +285,7 @@ class SeerahEventController extends Controller
             'milestones' => $this->milestoneService->getForDropdown(),
             'statuses' => SeerahEventStatus::cases(),
             'eras' => EventEra::cases(),
+            'linkOptions' => $this->seerahEventService->linkOptions(),
         ];
     }
 }
