@@ -1,0 +1,12 @@
+# Baseline — before any 005 code change (2026-09-17)
+
+Test DB: tlm_test_005 (isolated; never the shared the_last_messenger_test)
+
+## php artisan test --filter=Seerah
+87 passed, 1 failed (436 assertions)
+Pre-existing failure:
+- Tests\Feature\NoNPlusOneQueriesTest > seerah index does not cause N+1
+  "Seerah index uses too many queries: 6" (limit 5)
+
+## Full suite
+(see below — filled in when the background run completes)

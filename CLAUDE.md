@@ -1083,6 +1083,8 @@ ray($variable);
 - localize all view make it in arabic by default
 
 ## Active Technologies
+- PHP 8.5 (platform pinned 8.5.4) + Laravel 13, spatie/laravel-permission, maatwebsite/excel, Blade + Alpine 3 + Tailwind. **No new package.** (005-seerah-schema-refactor)
+- MySQL 8 (InnoDB, utf8mb4); public disk for thumb/cover/gallery files (005-seerah-schema-refactor)
 
 - PHP 8.5, Laravel 13, MySQL 8 (InnoDB, utf8mb4). No new package added by in-flight features.
 
