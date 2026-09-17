@@ -124,4 +124,15 @@ final class FavoriteRepository implements FavoriteRepositoryInterface
             ->where('favorable_id', $favorableId)
             ->delete();
     }
+
+    public function reassign(string $favorableType, int $fromId, int $toId): int
+    {
+        $rows = Favorite::query()->where('favorable_type', $favorableType);
+        // Drop duplicates first so the (user, type, id) unique index never trips.
+        (clone $rows)->where('favorable_id', $fromId)
+            ->whereIn('user_id', (clone $rows)->where('favorable_id', $toId)->pluck('user_id')) // MySQL 1093: no self-subquery in DELETE
+            ->delete();
+
+        return (clone $rows)->where('favorable_id', $fromId)->update(['favorable_id' => $toId]);
+    }
 }

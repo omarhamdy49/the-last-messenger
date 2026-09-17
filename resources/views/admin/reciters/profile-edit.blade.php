@@ -167,5 +167,42 @@
         @endif
     </div>
 </section>
+
+{{-- Merge: another reciter's recordings become this reciter's --}}
+<section class="mt-6 rounded-2xl border p-6" :class="{{ $cardTheme }}" aria-labelledby="merge-heading"
+         x-data="{ q: '', picked: '', options: @js($mergeCandidates->map(fn ($p) => ['id' => $p->id, 'text' => $p->displayName($locale).' ('.$p->slug.') — '.$t('recordings_count', ['count' => $p->recordings_count])])->values()), get filtered() { const q = this.q.toLowerCase(); return q ? this.options.filter(o => o.text.toLowerCase().includes(q)) : this.options; } }">
+    <h2 id="merge-heading" class="text-xl font-bold mb-2 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+        <i data-lucide="merge" class="w-5 h-5 text-accent" aria-hidden="true"></i>{{ $t('merge') }}
+    </h2>
+    <p class="text-sm mb-4" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ $t('merge_hint') }}</p>
+    @if($mergeCandidates->isEmpty())
+        <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">{{ $t('merge_none') }}</p>
+    @else
+        <form method="POST" action="{{ route('admin.reciter-profiles.merge', $profile->id) }}" class="grid grid-cols-1 md:grid-cols-[1fr_2fr_auto] gap-3 items-end"
+              @submit.prevent="$dispatch('show-confirm', { title: @js($t('merge_title')), message: @js($t('merge_message', ['name' => $name])), type: 'danger', onConfirm: () => $el.submit() })">
+            @csrf
+            <div>
+                <label for="merge_filter" class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ $t('attach_filter') }}</label>
+                <input type="search" id="merge_filter" x-model="q" class="w-full px-4 py-2.5 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                       :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+            </div>
+            <div>
+                <label for="source_profile_id" class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ $t('merge_label') }}</label>
+                <select id="source_profile_id" name="source_profile_id" x-model="picked" required class="w-full px-4 py-2.5 rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                        :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                    <option value="">—</option>
+                    <template x-for="option in filtered" :key="option.id">
+                        <option :value="option.id" x-text="option.text"></option>
+                    </template>
+                </select>
+                @error('source_profile_id')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
+            </div>
+            <button type="submit" :disabled="!picked"
+                    class="px-6 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center justify-center gap-2 shadow-lg bg-gradient-to-r from-[#0056b3] to-[#218838] text-white disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent">
+                <i data-lucide="merge" class="w-4 h-4" aria-hidden="true"></i>{{ $t('merge_submit') }}
+            </button>
+        </form>
+    @endif
+</section>
 @endif
 @endsection

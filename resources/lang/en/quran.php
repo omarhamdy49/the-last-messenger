@@ -26,6 +26,14 @@ return [
 
     // Reciter profile (person) admin pages
     'profiles_admin' => [
+        'merge' => 'Merge another reciter into this one',
+        'merge_hint' => 'All recordings of the chosen reciter move to this reciter, missing details are filled from it, user bookmarks move over, its public link redirects here, then it is deleted.',
+        'merge_label' => 'Reciter to merge',
+        'merge_submit' => 'Merge',
+        'merge_title' => 'Merge reciter?',
+        'merge_message' => 'The chosen reciter will be merged into “:name” and deleted. This cannot be undone.',
+        'merged' => 'Merged “:name” and moved :count recordings',
+        'merge_none' => 'There are no other reciters to merge.',
         'active' => 'Active',
         'all' => 'All',
         'apply' => 'Apply',
@@ -133,6 +141,14 @@ return [
     ],
 
     'sources' => [
+        'fill_title' => 'Add missing surah files',
+        'fill_hint' => 'Creates each missing surah file from this source\'s base URL, after checking the file really exists on the host.',
+        'fill_naming' => 'File naming',
+        'fill_format' => 'Format',
+        'fill_submit' => 'Check and add missing',
+        'fill_result' => 'Added :created surahs. Not available on the host: :unavailable',
+        'fill_needs_base_url' => 'Add a base URL to the source first.',
+        'fill_running' => 'Checking files…',
         'title' => 'Audio sources',
         'add' => 'Add source',
         'saved' => 'Source saved',

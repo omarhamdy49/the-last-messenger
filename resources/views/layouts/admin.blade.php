@@ -137,7 +137,9 @@
                   :class="darkMode ? 'bg-gray-950' : 'bg-gray-50'">
 
                 <!-- Content Wrapper with Padding (extra bottom space when the player bar is visible) -->
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fadeInUp"
+                {{-- backwards, not forwards: a transform kept after the animation makes this wrapper the
+                     containing block of every position:fixed modal inside it, pushing them off-screen. --}}
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fadeInUp [animation-fill-mode:backwards]"
                      :style="$store.audioPlayer && $store.audioPlayer.track ? 'padding-bottom: 6rem' : ''">
 
                     <!-- Page Title Section (Optional - Can be yielded) -->

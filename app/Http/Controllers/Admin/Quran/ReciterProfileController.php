@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin\Quran;
 
 use App\Domain\Quran\Models\Reciter;
 use App\Domain\Quran\Models\ReciterProfile;
+use App\Domain\Quran\Services\ReciterProfileMergeService;
 use App\Domain\Quran\Services\ReciterService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Quran\ReciterProfileRequest;
@@ -85,7 +86,10 @@ final class ReciterProfileController extends Controller
             ->with('translations:id,reciter_id,locale,name')->select('id', 'slug', 'style', 'riwayah')
             ->orderBy('id')->limit(300)->get(); // ponytail: plain select; switch to a search endpoint if unassigned recordings grow past this.
 
-        return view('admin.reciters.profile-edit', ['profile' => $model, 'unassigned' => $unassigned]);
+        $mergeCandidates = ReciterProfile::whereKeyNot($model->id)->with('translations:id,profile_id,locale,name')
+            ->withCount('recordings')->select('id', 'slug')->orderBy('id')->get();
+
+        return view('admin.reciters.profile-edit', ['profile' => $model, 'unassigned' => $unassigned, 'mergeCandidates' => $mergeCandidates]);
     }
 
     public function update(ReciterProfileRequest $request, int $profile): RedirectResponse
@@ -134,6 +138,18 @@ final class ReciterProfileController extends Controller
         return $request->expectsJson()
             ? response()->json(['success' => true, 'message' => $message])
             : redirect()->route('admin.reciter-profiles.index')->with('success', $message);
+    }
+
+    /** Fold another reciter into this one; its recordings become this reciter's recordings. */
+    public function merge(Request $request, int $profile, ReciterProfileMergeService $merger): RedirectResponse
+    {
+        $target = ReciterProfile::findOrFail($profile);
+        $data = $request->validate(['source_profile_id' => ['required', 'integer', Rule::exists('quran_reciter_profiles', 'id')->whereNot('id', $target->id)]]);
+        $source = ReciterProfile::with('translations')->findOrFail($data['source_profile_id']);
+        $name = $source->displayName(app()->getLocale());
+        $moved = $merger->merge($target, $source);
+
+        return back()->with('success', __('quran.profiles_admin.merged', ['name' => $name, 'count' => $moved]));
     }
 
     public function attach(Request $request, int $profile): RedirectResponse

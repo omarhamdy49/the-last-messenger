@@ -168,4 +168,70 @@ class AdminReciterProfilesTest extends TestCase
         $this->actingAs($this->admin)->delete(route('admin.reciters.sources.destroy', [$recording->id, $unused->id]))->assertSessionHas('success');
         $this->assertModelMissing($unused);
     }
+
+    public function test_merge_moves_recordings_bookmarks_and_redirects_the_absorbed_reciter(): void
+    {
+        $kept = $this->profile('husary', ['country' => null], 'الحصري');
+        $keptRecording = $this->recording($kept, 'husary-murattal');
+        $kept->update(['default_recording_id' => $keptRecording->id]);
+        $absorbed = $this->profile('al-husary', ['country' => 'EG', 'followers_count' => 5, 'is_featured' => true], 'محمود خليل');
+        $absorbed->translations()->create(['locale' => 'en', 'name' => 'Al-Husary', 'description' => 'Egyptian reciter']);
+        $moved = $this->recording($absorbed, 'husary-mujawwad');
+        $absorbed->update(['default_recording_id' => $moved->id]);
+
+        $both = User::factory()->create();
+        $onlyAbsorbed = User::factory()->create();
+        foreach ([[$both, $kept], [$both, $absorbed], [$onlyAbsorbed, $absorbed]] as [$user, $profile]) {
+            DB::table('favorites')->insert(['user_id' => $user->id, 'favorable_type' => ReciterProfile::class, 'favorable_id' => $profile->id, 'created_at' => now(), 'updated_at' => now()]);
+        }
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.reciter-profiles.merge', $kept->id), ['source_profile_id' => $absorbed->id])
+            ->assertRedirect()->assertSessionHas('success');
+
+        $this->assertModelMissing($absorbed);
+        $this->assertSame($kept->id, $moved->fresh()->profile_id);
+        $kept->refresh()->load('translations');
+        $this->assertSame($keptRecording->id, $kept->default_recording_id); // kept data wins
+        $this->assertSame('الحصري husary', $kept->displayName('ar'));
+        $this->assertSame('Al-Husary', $kept->displayName('en')); // gaps filled
+        $this->assertSame(['EG', 5, true], [$kept->country, $kept->followers_count, $kept->is_featured]);
+        $this->assertSame(3 - 1, DB::table('favorites')->where('favorable_id', $kept->id)->count()); // duplicate dropped
+        $this->assertSame(0, DB::table('favorites')->where('favorable_id', $absorbed->id)->count());
+
+        $this->get(route('public.quran.reciter', 'al-husary'))
+            ->assertRedirect(route('public.quran.reciter', ['slug' => 'husary', 'recording' => $moved->id]));
+    }
+
+    public function test_merge_rejects_merging_a_reciter_into_itself(): void
+    {
+        $profile = $this->profile('solo');
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.reciter-profiles.merge', $profile->id), ['source_profile_id' => $profile->id])
+            ->assertSessionHasErrors('source_profile_id');
+        $this->assertModelExists($profile);
+    }
+
+    public function test_fill_adds_only_surah_files_the_host_actually_serves(): void
+    {
+        foreach ([1, 2, 3] as $n) {
+            DB::table('quran_surahs')->insert(['id' => $n, 'name_ar' => 'سورة '.$n, 'name_en' => 'S'.$n, 'transliteration' => 'S'.$n, 'revelation_place' => 'makkah', 'revelation_order' => $n, 'verses_count' => 7, 'pages' => json_encode([1]), 'created_at' => now(), 'updated_at' => now()]);
+        }
+        $recording = $this->recording($this->profile('filler'), 'filler-murattal');
+        $source = $recording->sources()->create(['provider' => 'direct', 'kind' => 'surah', 'source_key' => 'cdn', 'base_url' => 'https://cdn.example/filler/', 'is_active' => true]);
+        Recitation::create(['reciter_id' => $recording->id, 'source_id' => $source->id, 'surah_id' => 1, 'audio_url' => 'https://cdn.example/filler/001.mp3', 'format' => 'mp3']);
+        Http::fake([
+            'cdn.example/filler/002.mp3' => Http::response('x', 206, ['Content-Range' => 'bytes 0-0/2048000']),
+            '*' => Http::response('', 404),
+        ]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.reciters.sources.fill', [$recording->id, $source->id]), ['naming' => 'padded', 'format' => 'mp3'])
+            ->assertRedirect()->assertSessionHas('success');
+
+        $this->assertSame([1, 2], $source->recitations()->orderBy('surah_id')->pluck('surah_id')->all()); // 3 is a 404 → skipped
+        $this->assertSame(2000, $source->recitations()->where('surah_id', 2)->value('file_size_kb'));
+        Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/001.mp3')); // existing file never re-probed
+    }
 }

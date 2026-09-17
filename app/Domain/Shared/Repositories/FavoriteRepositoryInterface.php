@@ -69,4 +69,10 @@ interface FavoriteRepositoryInterface
      * @param  class-string<Model>  $favorableType
      */
     public function remove(int $userId, string $favorableType, int $favorableId): int;
+
+    /**
+     * Move every bookmark of one record onto another (content merge). A user who
+     * already bookmarked the target keeps one row. Returns the rows moved.
+     */
+    public function reassign(string $favorableType, int $fromId, int $toId): int;
 }

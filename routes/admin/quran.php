@@ -68,6 +68,7 @@ Route::prefix('reciter-profiles')->name('admin.reciter-profiles.')->controller(R
     Route::put('/{profile}', 'update')->whereNumber('profile')->name('update');
     Route::delete('/{profile}', 'destroy')->whereNumber('profile')->name('destroy');
     Route::post('/{profile}/toggle/{field}', 'toggle')->whereNumber('profile')->whereIn('field', ['active', 'featured'])->name('toggle');
+    Route::post('/{profile}/merge', 'merge')->whereNumber('profile')->name('merge');
     Route::post('/{profile}/recordings', 'attach')->whereNumber('profile')->name('recordings.attach');
     Route::delete('/{profile}/recordings/{recording}', 'detach')->whereNumber(['profile', 'recording'])->name('recordings.detach');
     Route::post('/{profile}/recordings/{recording}/default', 'setDefault')->whereNumber(['profile', 'recording'])->name('recordings.default');
@@ -76,6 +77,7 @@ Route::prefix('reciter-profiles')->name('admin.reciter-profiles.')->controller(R
 Route::prefix('reciters')->group(function (): void {
     Route::get('/{reciter}/sources', [RecordingSourceController::class, 'index'])->whereNumber('reciter')->name('admin.reciters.sources.index');
     Route::post('/{reciter}/sources', [RecordingSourceController::class, 'store'])->whereNumber('reciter')->name('admin.reciters.sources.store');
+    Route::post('/{reciter}/sources/{source}/fill', [RecordingSourceController::class, 'fill'])->whereNumber(['reciter', 'source'])->name('admin.reciters.sources.fill');
     Route::put('/{reciter}/sources/{source}', [RecordingSourceController::class, 'update'])->whereNumber(['reciter', 'source'])->name('admin.reciters.sources.update');
     Route::delete('/{reciter}/sources/{source}', [RecordingSourceController::class, 'destroy'])->whereNumber(['reciter', 'source'])->name('admin.reciters.sources.destroy');
     Route::get('/search', [ReciterController::class, 'search'])->name('admin.reciters.search');

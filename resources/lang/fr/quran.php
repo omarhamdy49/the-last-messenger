@@ -26,6 +26,14 @@ return [
 
     // Reciter profile (person) admin pages
     'profiles_admin' => [
+        'merge' => 'Fusionner un autre récitant dans celui-ci',
+        'merge_hint' => 'Tous les enregistrements du récitant choisi passent à celui-ci, les informations manquantes sont complétées, les favoris des utilisateurs sont transférés, son lien public redirige ici, puis il est supprimé.',
+        'merge_label' => 'Récitant à fusionner',
+        'merge_submit' => 'Fusionner',
+        'merge_title' => 'Fusionner le récitant ?',
+        'merge_message' => 'Le récitant choisi sera fusionné dans « :name » puis supprimé. Action irréversible.',
+        'merged' => '« :name » fusionné, :count enregistrements déplacés',
+        'merge_none' => 'Aucun autre récitant à fusionner.',
         'active' => 'Actif',
         'all' => 'Tous',
         'apply' => 'Appliquer',
@@ -133,6 +141,14 @@ return [
     ],
 
     'sources' => [
+        'fill_title' => 'Ajouter les sourates manquantes',
+        'fill_hint' => 'Crée chaque fichier de sourate manquant à partir de l\'URL de base de cette source, après avoir vérifié qu\'il existe sur l\'hôte.',
+        'fill_naming' => 'Nommage des fichiers',
+        'fill_format' => 'Format',
+        'fill_submit' => 'Vérifier et ajouter',
+        'fill_result' => ':created sourates ajoutées. Indisponibles sur l\'hôte : :unavailable',
+        'fill_needs_base_url' => 'Ajoutez d\'abord une URL de base à la source.',
+        'fill_running' => 'Vérification des fichiers…',
         'title' => 'Audio sources',
         'add' => 'Add source',
         'saved' => 'Source saved',

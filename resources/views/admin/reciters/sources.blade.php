@@ -166,6 +166,37 @@
                         </button>
                     </div>
                 </form>
+
+                @if($source?->kind === 'surah' && filled($source->base_url) && $source->recitations_count < 114)
+                    <form method="POST" action="{{ route('admin.reciters.sources.fill', [$reciter->id, $source->id]) }}" x-data="{ busy: false }" @submit="busy = true"
+                          class="mx-6 mb-6 p-5 rounded-xl border border-dashed grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_auto] gap-3 items-end" :class="darkMode ? 'border-gray-700' : 'border-gray-300'">
+                        @csrf
+                        <div>
+                            <p class="font-bold flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                <i data-lucide="list-plus" class="w-4 h-4 text-accent" aria-hidden="true"></i>{{ __('quran.sources.fill_title') }}
+                                <span class="text-xs font-normal px-2 py-0.5 rounded-full" :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600'">{{ $source->recitations_count }} / 114</span>
+                            </p>
+                            <p class="text-xs mt-1" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">{{ __('quran.sources.fill_hint') }}</p>
+                        </div>
+                        <div>
+                            <label for="naming_{{ $uid }}" class="block text-sm font-medium mb-2" :class="{{ $labelTheme }}">{{ __('quran.sources.fill_naming') }}</label>
+                            <select id="naming_{{ $uid }}" name="naming" dir="ltr" class="{{ $inputClass }}" :class="{{ $inputTheme }}">
+                                <option value="plain">{{ rtrim($source->base_url, '/') }}/1.mp3</option>
+                                <option value="padded">{{ rtrim($source->base_url, '/') }}/001.mp3</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="format_{{ $uid }}" class="block text-sm font-medium mb-2" :class="{{ $labelTheme }}">{{ __('quran.sources.fill_format') }}</label>
+                            <select id="format_{{ $uid }}" name="format" class="{{ $inputClass }}" :class="{{ $inputTheme }}">
+                                @foreach(['mp3', 'aac', 'opus'] as $format)<option value="{{ $format }}">{{ strtoupper($format) }}</option>@endforeach
+                            </select>
+                        </div>
+                        <button type="submit" :disabled="busy" class="px-5 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center justify-center gap-2 shadow-lg bg-gradient-to-r from-[#0056b3] to-[#218838] text-white disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-accent">
+                            <i data-lucide="loader-2" class="w-4 h-4 animate-spin" x-show="busy" aria-hidden="true"></i>
+                            <span x-text="busy ? @js(__('quran.sources.fill_running')) : @js(__('quran.sources.fill_submit'))"></span>
+                        </button>
+                    </form>
+                @endif
             </div>
         </section>
     @endforeach

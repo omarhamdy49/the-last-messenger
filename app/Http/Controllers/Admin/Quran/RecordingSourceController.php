@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Quran;
 
 use App\Domain\Quran\Models\Reciter;
+use App\Domain\Quran\Services\Audio\RecordingSourceService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -53,6 +54,22 @@ final class RecordingSourceController extends Controller
         $model->delete();
 
         return back()->with('success', __('quran.profiles_admin.source_deleted'));
+    }
+
+    /** Probe the host and add every surah file this whole-surah source is missing. */
+    public function fill(Request $request, int $reciter, int $source, RecordingSourceService $sources): RedirectResponse
+    {
+        $model = Reciter::without('sources')->findOrFail($reciter)->sources()->where('kind', 'surah')->findOrFail($source);
+        $data = $request->validate(['naming' => ['required', Rule::in(['plain', 'padded'])], 'format' => ['required', Rule::in(['mp3', 'aac', 'opus'])]]);
+        if (blank($model->base_url)) {
+            return back()->with('error', __('quran.sources.fill_needs_base_url'));
+        }
+        $result = $sources->fillMissingSurahs($model, $data['naming'] === 'padded', $data['format']);
+
+        return back()->with($result['created'] > 0 ? 'success' : 'error', __('quran.sources.fill_result', [
+            'created' => $result['created'],
+            'unavailable' => $result['unavailable'] === [] ? '—' : implode(', ', $result['unavailable']),
+        ]));
     }
 
     private function validated(Request $request): array

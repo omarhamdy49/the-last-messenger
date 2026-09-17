@@ -682,7 +682,15 @@
                 // Returned so a caller can await the seek; nothing in the app does.
                 return this._loadTimings().then(() => {
                     const ms = this._ayahStartMs(number);
-                    if (ms === null) { this._playAyahQueued(number); return; }
+                    if (ms === null) {
+                        if (this._verseQueue(this.currentReciter())) { this._playAyahQueued(number); return; }
+                        // ponytail: no timings and no per-verse files — seek by the letter-share
+                        // estimate rather than refuse; exact once the recording gets real timings.
+                        const ratio = this._ratioAt(number);
+                        this._playWhole(whole, (duration) => ratio * duration, true);
+
+                        return;
+                    }
 
                     if (!this.queue && this.track?.url === whole && this.audio) {
                         // Re-tapping the ayah already under the playhead toggles it,

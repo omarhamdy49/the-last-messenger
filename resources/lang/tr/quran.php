@@ -26,6 +26,14 @@ return [
 
     // Reciter profile (person) admin pages
     'profiles_admin' => [
+        'merge' => 'Başka bir kârîyi bununla birleştir',
+        'merge_hint' => 'Seçilen kârînin tüm kayıtları bu kârîye taşınır, eksik bilgiler ondan tamamlanır, kullanıcı yer imleri aktarılır, genel bağlantısı buraya yönlendirilir ve ardından silinir.',
+        'merge_label' => 'Birleştirilecek kârî',
+        'merge_submit' => 'Birleştir',
+        'merge_title' => 'Kârî birleştirilsin mi?',
+        'merge_message' => 'Seçilen kârî “:name” ile birleştirilip silinecek. Bu işlem geri alınamaz.',
+        'merged' => '“:name” birleştirildi, :count kayıt taşındı',
+        'merge_none' => 'Birleştirilecek başka kârî yok.',
         'active' => 'Aktif',
         'all' => 'Tümü',
         'apply' => 'Uygula',
@@ -133,6 +141,14 @@ return [
     ],
 
     'sources' => [
+        'fill_title' => 'Eksik sure dosyalarını ekle',
+        'fill_hint' => 'Dosyanın sunucuda gerçekten var olduğunu doğruladıktan sonra her eksik sure dosyasını bu kaynağın temel URL\'sinden oluşturur.',
+        'fill_naming' => 'Dosya adlandırma',
+        'fill_format' => 'Biçim',
+        'fill_submit' => 'Kontrol et ve eksikleri ekle',
+        'fill_result' => ':created sure eklendi. Sunucuda bulunmayanlar: :unavailable',
+        'fill_needs_base_url' => 'Önce kaynağa bir temel URL ekleyin.',
+        'fill_running' => 'Dosyalar kontrol ediliyor…',
         'title' => 'Audio sources',
         'add' => 'Add source',
         'saved' => 'Source saved',
