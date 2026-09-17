@@ -65,7 +65,6 @@ deptrac:
     App\Domain\Quran\DTOs\UpdateReciterData:
       - App\Http\Requests\Admin\UpdateReciterRequest
     App\Domain\Seerah\Models\SeerahEvent:
-      - App\Models\Article
       - App\Models\User
     App\Domain\Shared\Enums\SearchModule:
       - App\Domain\Media\Models\MediaProgram
@@ -169,7 +168,6 @@ deptrac:
       - App\Domain\Blog\Models\Series
       - App\Domain\Blog\Models\Tag
       - App\Domain\Media\Models\MediaEpisode
-      - App\Domain\Seerah\Models\SeerahEvent
     App\Repositories\ArticleRepository:
       - App\Domain\Blog\Models\Category
       - App\Domain\Blog\Models\Tag

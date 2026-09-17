@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Domain\Seerah\Enums\EventImportance;
+use App\Domain\Seerah\Enums\EventEra;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Models\SeerahEventTranslation;
 use App\Domain\Seerah\Models\SeerahEventType;
@@ -44,22 +44,6 @@ class SeerahEventFactory extends Factory
     ];
 
     /**
-     * Famous locations.
-     *
-     * @var array<string>
-     */
-    private array $famousLocations = [
-        'مكة المكرمة',
-        'المدينة المنورة',
-        'جبل حراء',
-        'جبل أحد',
-        'بدر',
-        'الطائف',
-        'تبوك',
-        'خيبر',
-    ];
-
-    /**
      * Configure the model factory.
      */
     public function configure(): static
@@ -69,7 +53,7 @@ class SeerahEventFactory extends Factory
 
             foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $locale) {
                 SeerahEventTranslation::create([
-                    'seerah_event_id' => $event->id,
+                    'event_id' => $event->id,
                     'locale' => $locale,
                     'title' => $locale === 'ar' || $locale === 'ur'
                         ? $eventData['ar']
@@ -90,195 +74,37 @@ class SeerahEventFactory extends Factory
     public function definition(): array
     {
         $event = $this->faker->randomElement($this->famousEvents);
-        $slug = Str::slug($event['en']).'-'.$this->faker->unique()->numberBetween(1, 1000);
-
-        $hijriYear = $this->faker->numberBetween(-53, 11); // 53 BH to 11 AH
-        $gregorianYear = $hijriYear + 622; // Approximate conversion
 
         return [
-            'slug' => $slug,
-            'hijri_date' => $this->generateHijriDate($hijriYear),
-            'hijri_year' => $hijriYear,
+            'slug' => Str::slug($event['en']).'-'.$this->faker->unique()->numberBetween(1, 100000),
+            'event_type' => fn (): int => $this->randomTypeId(),
+            'order' => $this->faker->numberBetween(1, 1000),
+            'hijri_year' => $this->faker->numberBetween(-53, 11), // 53 BH to 11 AH
             'hijri_month' => $this->faker->numberBetween(1, 12),
             'hijri_day' => $this->faker->numberBetween(1, 29),
             'gregorian_date' => $this->faker->dateTimeBetween('-1500 years', '-1400 years'),
-            'gregorian_year' => $gregorianYear,
-            'seerah_event_type_id' => $this->randomTypeId(),
-            'importance' => $this->faker->randomElement(EventImportance::cases()),
             'status' => 'published',
-            'location' => $this->faker->randomElement($this->famousLocations),
-            'latitude' => $this->faker->optional(0.7)->latitude(),
-            'longitude' => $this->faker->optional(0.7)->longitude(),
-            'featured_image' => $this->faker->optional(0.6)->imageUrl(1200, 630, 'islamic', true),
-            'gallery' => $this->faker->optional(0.3)->passthrough([
-                $this->faker->imageUrl(800, 600, 'islamic', true),
-                $this->faker->imageUrl(800, 600, 'islamic', true),
-                $this->faker->imageUrl(800, 600, 'islamic', true),
-            ]),
-            // No bogus FK: callers attach a real article explicitly when needed.
-            'related_article_id' => null,
-            'views_count' => $this->faker->numberBetween(0, 100000),
-            'display_order' => $this->faker->numberBetween(1, 1000),
-            'is_featured' => $this->faker->boolean(25), // 25% chance
+            'era' => $this->faker->randomElement(EventEra::cases())->value,
         ];
     }
 
     /**
-     * Resolve a type id by slug, creating the type if it does not exist.
+     * An unpublished event.
      */
-    private function typeIdBySlug(string $slug): int
+    public function draft(): static
     {
-        $type = SeerahEventType::query()->firstOrCreate(['slug' => $slug], ['is_active' => true]);
-
-        if ($type->translations()->where('locale', 'ar')->doesntExist()) {
-            $type->syncTranslations(['name' => ['ar' => $slug, 'en' => Str::title($slug)]]);
-        }
-
-        return $type->id;
+        return $this->state(fn (): array => ['status' => 'draft']);
     }
 
     /**
-     * Pick a random existing type id (falling back to "other").
+     * Pick a random existing type id, creating "other" when none exist.
      */
     private function randomTypeId(): int
     {
-        return SeerahEventType::query()->inRandomOrder()->value('id') ?? $this->typeIdBySlug('other');
-    }
-
-    /**
-     * Generate Hijri date string.
-     */
-    private function generateHijriDate(int $year): string
-    {
-        $months = [
-            'محرم', 'صفر', 'ربيع الأول', 'ربيع الآخر', 'جمادى الأولى', 'جمادى الآخرة',
-            'رجب', 'شعبان', 'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة',
-        ];
-
-        $month = $this->faker->randomElement($months);
-        $day = $this->faker->numberBetween(1, 29);
-
-        if ($year < 0) {
-            return "{$day} {$month} ".abs($year).' قبل الهجرة';
-        }
-
-        return "{$day} {$month} {$year} هـ";
-    }
-
-    /**
-     * Create a battle event.
-     */
-    public function battle(): static
-    {
-        $battles = [
-            ['ar' => 'غزوة بدر', 'en' => 'Battle of Badr'],
-            ['ar' => 'غزوة أحد', 'en' => 'Battle of Uhud'],
-            ['ar' => 'غزوة الخندق', 'en' => 'Battle of the Trench'],
-            ['ar' => 'غزوة خيبر', 'en' => 'Battle of Khaybar'],
-        ];
-
-        $battle = $this->faker->randomElement($battles);
-
-        return $this->state(fn (array $attributes) => [
-            'seerah_event_type_id' => $this->typeIdBySlug('battle'),
-            'importance' => EventImportance::HIGH,
-        ])->afterCreating(function (SeerahEvent $event) use ($battle) {
-            foreach (['ar', 'en', 'fr', 'tr', 'ur'] as $locale) {
-                $event->translations()->updateOrCreate(
-                    ['locale' => $locale],
-                    ['title' => in_array($locale, ['ar', 'ur']) ? $battle['ar'] : $battle['en']]
-                );
-            }
-        });
-    }
-
-    /**
-     * Create a migration event.
-     */
-    public function migration(): static
-    {
-        $titles = ['ar' => 'الهجرة', 'en' => 'Migration', 'fr' => 'Migration', 'tr' => 'Hicret', 'ur' => 'ہجرت'];
-
-        return $this->state(fn (array $attributes) => [
-            'seerah_event_type_id' => $this->typeIdBySlug('migration'),
-            'importance' => EventImportance::HIGH,
-        ])->afterCreating(function (SeerahEvent $event) use ($titles) {
-            foreach ($titles as $locale => $title) {
-                $event->translations()->updateOrCreate(
-                    ['locale' => $locale],
-                    ['title' => $title]
-                );
-            }
-        });
-    }
-
-    /**
-     * Create a revelation event.
-     */
-    public function revelation(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'seerah_event_type_id' => $this->typeIdBySlug('revelation'),
-            'importance' => EventImportance::HIGH,
-        ]);
-    }
-
-    /**
-     * Create a miracle event.
-     */
-    public function miracle(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'seerah_event_type_id' => $this->typeIdBySlug('miracle'),
-            'importance' => $this->faker->randomElement([EventImportance::HIGH, EventImportance::MEDIUM]),
-        ]);
-    }
-
-    /**
-     * Create a featured event.
-     */
-    public function featured(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'is_featured' => true,
-            'importance' => EventImportance::HIGH,
-            'views_count' => $this->faker->numberBetween(50000, 500000),
-            'featured_image' => $this->faker->imageUrl(1200, 630, 'islamic', true),
-        ]);
-    }
-
-    /**
-     * Create event with location.
-     */
-    public function withLocation(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'latitude' => $this->faker->latitude(21.0, 25.0), // Mecca/Medina area
-            'longitude' => $this->faker->longitude(39.0, 40.0),
-        ]);
-    }
-
-    /**
-     * Create event in Mecca.
-     */
-    public function inMecca(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'location' => 'مكة المكرمة',
-            'latitude' => 21.4225,
-            'longitude' => 39.8262,
-        ]);
-    }
-
-    /**
-     * Create event in Medina.
-     */
-    public function inMedina(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'location' => 'المدينة المنورة',
-            'latitude' => 24.5247,
-            'longitude' => 39.5692,
-        ]);
+        return SeerahEventType::query()->inRandomOrder()->value('id')
+            ?? SeerahEventType::query()->firstOrCreate(
+                ['slug' => 'other'],
+                ['locale' => ['ar' => 'حدث آخر', 'en' => 'Other Event'], 'is_active' => true],
+            )->id;
     }
 }

@@ -32,6 +32,16 @@ class LocationUsageRegistryTest extends TestCase
         $this->assertContains('quran_surahs', $tables);
     }
 
+    public function test_seerah_events_are_registered_by_location_id_only(): void
+    {
+        $columns = array_column(
+            array_filter($this->registry()->all(), static fn (array $r): bool => $r['table'] === 'seerah_events'),
+            'column'
+        );
+
+        $this->assertSame(['location_id'], array_values($columns));
+    }
+
     public function test_an_unreferenced_location_reports_no_references(): void
     {
         $location = Location::factory()->create();
@@ -69,13 +79,16 @@ class LocationUsageRegistryTest extends TestCase
     {
         // A row with neither a place nor any text describing one is not part of
         // the editor's queue — it is simply a record that names no place.
-        $counts = $this->registry()->countUnresolved([
-            'seerah_events' => 'location',
-            'muslims' => 'birth_place',
+        $location = Location::factory()->create();
+
+        DB::table('muslims')->insert([
+            ['slug' => 'no-text', 'name_ar' => 'أ', 'birth_place' => null, 'birth_place_id' => null],
+            ['slug' => 'unresolved', 'name_ar' => 'ب', 'birth_place' => json_encode(['ar' => 'مكة']), 'birth_place_id' => null],
+            ['slug' => 'resolved', 'name_ar' => 'ج', 'birth_place' => json_encode(['ar' => 'مكة']), 'birth_place_id' => $location->id],
         ]);
 
-        $this->assertArrayHasKey('seerah_events', $counts);
-        $this->assertArrayHasKey('muslims', $counts);
-        $this->assertArrayNotHasKey('quran_surahs', $counts);
+        $counts = $this->registry()->countUnresolved(['muslims' => 'birth_place']);
+
+        $this->assertSame(['muslims' => 1], $counts);
     }
 }

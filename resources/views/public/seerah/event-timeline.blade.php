@@ -64,44 +64,6 @@
         transition: width 0.2s ease-out;
     }
 
-    /* ── Path of Light II: the inner event timeline ──────────────────
-       Continuous track behind the step chips; the fill is a paint-only
-       clip-path reveal driven by --jp, with a traveler light at the tip.
-       Steps ignite (.is-lit) as the reading line passes them. */
-    #event-path { --jp: 0; }
-    .ev-path-fill {
-        clip-path: inset(0 0 calc((1 - var(--jp, 0)) * 100%) 0);
-        transition: clip-path .18s ease-out;
-    }
-    .ev-traveler {
-        position: absolute;
-        top: calc(1.5rem + var(--jp, 0) * (100% - 5rem));
-        inset-inline-start: 24px;
-        width: 22px;
-        height: 22px;
-        margin-top: -11px;
-        margin-inline-start: -11px;
-        border-radius: 50%;
-        pointer-events: none;
-        z-index: 5;
-        background: radial-gradient(circle, #ffffff 0%, #a8f0ea 25%, #64CCC5 48%, rgba(100,204,197,0) 74%);
-        filter: drop-shadow(0 0 9px rgba(100,204,197,.95)) drop-shadow(0 0 22px rgba(100,204,197,.45));
-        transition: top .18s ease-out;
-        animation: ev-traveler-breathe 2.6s ease-in-out infinite;
-    }
-    @keyframes ev-traveler-breathe {
-        0%, 100% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.25); opacity: .85; }
-    }
-    .ev-step-chip { transition: box-shadow .5s ease, filter .5s ease; }
-    [data-path-step]:not(.is-lit) .ev-step-chip { filter: grayscale(.4) brightness(.92); }
-    [data-path-step].is-lit .ev-step-chip { box-shadow: 0 0 22px -4px rgba(100,204,197,.85); }
-
-    @media (prefers-reduced-motion: reduce) {
-        .ev-traveler { animation: none; }
-        .ev-traveler, .ev-path-fill, .ev-step-chip { transition: none; }
-    }
-
     .tl-item { transition: opacity 0.5s ease-out, transform 0.5s ease-out; }
     .tl-item[data-revealed="false"] { opacity: 0; transform: translateY(24px); }
     .tl-item[data-revealed="true"] { opacity: 1; transform: translateY(0); }
@@ -130,39 +92,25 @@
     $isRtl = in_array(app()->getLocale(), ['ar', 'ur'], true);
     $hasDescription = ! empty($event['description']);
     $hasContent = ! empty($event['content']);
-    $eventTimeline = collect($event['timeline'] ?? []);
-    $hasTimeline = $eventTimeline->isNotEmpty();
-    $characters = collect($event['characters'] ?? []);
-    $hasCharacters = $characters->isNotEmpty();
+    $details = collect($event['details'] ?? [])->filter(fn ($d) => ! empty($d['key']));
+    $hasDetails = $details->isNotEmpty();
+    $hasMedia = ! empty($event['media']);
     $statistics = collect($event['statistics'] ?? [])->filter(fn ($v) => is_scalar($v))->take(4);
     $hasStatistics = $statistics->isNotEmpty();
-    $lessons = collect($event['lessons'] ?? [])->filter(fn ($l) => ! empty($l['title']));
-    $hasLessons = $lessons->isNotEmpty();
     $sources = collect($event['sources'] ?? [])->filter(fn ($x) => ! empty($x['title']));
     $hasSources = $sources->isNotEmpty();
     $disputeNote = $event['disputeNote'] ?? null;
-    // كل علم باسمه — العهد والمرحلة والأهمية لم يكن لها أثر في هذا القالب أصلاً.
+    // كل علم باسمه.
     $facts = collect([
         ['icon' => 'calendar', 'label' => __('seerah.public.hijri_date_label'), 'value' => $event['hijriDate']],
         ['icon' => 'calendar-days', 'label' => __('seerah.public.gregorian_year_label'), 'value' => $event['gregorianYear'] ? $event['gregorianYear'].' '.__('seerah.public.gregorian_suffix') : null],
         ['icon' => $event['icon'], 'label' => __('seerah.public.type_label'), 'value' => $event['typeLabel']],
-        ['icon' => 'map-pin', 'label' => __('seerah.public.location_label'), 'value' => $event['location']],
+        ['icon' => 'map-pin', 'label' => __('seerah.public.location_label'), 'value' => $event['place']['name'] ?? null],
         ['icon' => 'landmark', 'label' => __('seerah.public.era_label'), 'value' => $event['eraLabel']],
-        ['icon' => 'route', 'label' => __('seerah.public.phase_label'), 'value' => $event['phaseLabel']],
-        ['icon' => 'flame', 'label' => __('seerah.public.importance_label'), 'value' => $event['importanceLabel'] ?? null],
-        ['icon' => 'star', 'label' => __('seerah.public.pivotal_label'), 'value' => $event['isPivotal'] ? __('seerah.public.pivotal_event') : null],
         ['icon' => 'flag', 'label' => __('seerah.public.milestone_label'), 'value' => $event['milestone']['title'] ?? null],
     ])->filter(fn ($fact) => ! empty($fact['value']))->values();
     // Timeline is the default style now — the switch link opts into the article view.
     $articleStyleUrl = route('public.seerah.event', ['slug' => $event['slug'], 'view' => 'article']);
-    $characterGradients = [
-        'from-green-500 to-emerald-600',
-        'from-blue-500 to-cyan-600',
-        'from-indigo-500 to-purple-600',
-        'from-amber-500 to-orange-600',
-        'from-teal-500 to-cyan-600',
-        'from-rose-500 to-pink-600',
-    ];
 @endphp
 
 <div x-data="{
@@ -171,7 +119,6 @@
     parallaxOffset: 0,
     showShareMenu: false,
     isLiked: false,
-    selectedCharacter: null,
     reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     stats: @js($statistics->map(fn ($value) => [
         'target' => is_numeric($value) ? (float) $value : null,
@@ -199,27 +146,12 @@
         const documentHeight = document.documentElement.scrollHeight;
         const scrollTop = window.scrollY;
         this.readingProgress = Math.min((scrollTop / Math.max(documentHeight - windowHeight, 1)) * 100, 100);
-        this.updateEventPath();
 
         if (! this.reducedMotion) {
             this.parallaxOffset = scrollTop * 0.35;
             this.revealTimelineItems();
             this.animateStatsWhenVisible();
         }
-    },
-
-    // Path of Light II: continuous fill + traveler on the inner timeline,
-    // and step chips ignite once the reading line passes them.
-    updateEventPath() {
-        const path = document.getElementById('event-path');
-        if (! path) return;
-        const rect = path.getBoundingClientRect();
-        const line = window.innerHeight * 0.4;
-        const progress = Math.min(1, Math.max(0, (line - rect.top) / Math.max(rect.height, 1)));
-        path.style.setProperty('--jp', progress.toFixed(4));
-        path.querySelectorAll('[data-path-step]').forEach(step => {
-            step.classList.toggle('is-lit', step.getBoundingClientRect().top < line);
-        });
     },
 
     revealTimelineItems() {
@@ -298,7 +230,7 @@
         document.getElementById(sectionId)?.scrollIntoView({ behavior: this.reducedMotion ? 'auto' : 'smooth' });
     }
 }"
-@keydown.escape.window="selectedCharacter = null; showShareMenu = false">
+@keydown.escape.window="showShareMenu = false">
 
     <!-- Toast Notification -->
     {{-- x-on: form is required here — Blade would otherwise compile @show as its own directive --}}
@@ -324,8 +256,8 @@
         <!-- Parallax Hero -->
         <section id="event-hero" class="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
             {{-- See event.blade.php: the fallback asset does not exist. --}}
-            @if (! empty($event['featuredImage']))
-            <img src="{{ $event['featuredImage'] }}"
+            @if (! empty($event['coverImage']))
+            <img src="{{ $event['coverImage'] }}"
                  alt="{{ $event['title'] }}"
                  width="1920"
                  height="1080"
@@ -356,18 +288,6 @@
                         <i data-lucide="{{ $event['icon'] }}" class="w-4 h-4"></i>
                         {{ $event['typeLabel'] }}
                     </span>
-                    @if ($event['isPivotal'])
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-l from-[#0056b3] to-[#218838] text-white shadow-sm text-xs font-bold">
-                            <i data-lucide="star" class="w-3.5 h-3.5"></i>
-                            {{ __('seerah.public.pivotal_event') }}
-                        </span>
-                    @endif
-                    @if (($event['importance'] ?? null) === 'high')
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md text-xs font-bold">
-                            <i data-lucide="flame" class="w-3.5 h-3.5"></i>
-                            {{ $event['importanceLabel'] }}
-                        </span>
-                    @endif
                     @if ($disputeNote)
                         {{-- Anchor, not decoration: jumps to the note itself. --}}
                         <a href="#event-dispute"
@@ -386,15 +306,15 @@
                     </p>
                 @endif
 
-                @if ($event['location'])
+                @if ($event['place'])
                     <div class="flex items-center justify-center gap-2 text-lg mb-10 tl-fade-in-up tl-stagger-2">
                         <i data-lucide="map-pin" class="w-5 h-5"></i>
-                        <span class="break-words">{{ $event['location'] }}</span>
+                        <span class="break-words">{{ $event['place']['name'] }}</span>
                     </div>
                 @endif
 
                 <div class="flex flex-wrap items-center justify-center gap-4 tl-fade-in-up tl-stagger-3">
-                    <button @click="scrollToSection('{{ $hasStatistics ? 'event-stats' : ($hasTimeline ? 'event-timeline' : 'event-story') }}')"
+                    <button @click="scrollToSection('{{ $hasStatistics ? 'event-stats' : 'event-story' }}')"
                             class="px-8 py-4 rounded-full bg-white text-[#0056b3] font-bold text-base sm:text-lg shadow-2xl hover:scale-105 transition-all flex items-center gap-2">
                         <span>{{ __('seerah.public.explore_story') }}</span>
                         <i data-lucide="arrow-down" class="w-5 h-5"></i>
@@ -470,44 +390,6 @@
             </section>
         @endif
 
-        <!-- Inner Event Timeline (scroll reveal) -->
-        @if ($hasTimeline)
-            <section id="event-timeline" class="py-16 sm:py-20">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-                    <h2 class="text-3xl md:text-5xl font-bold text-center mb-12 flex items-center justify-center gap-3" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                        <i data-lucide="clock" class="w-9 h-9 text-[#0056b3]"></i>
-                        {{ __('seerah.public.event_timeline_heading') }}
-                    </h2>
-
-                    <div id="event-path" class="relative max-w-4xl mx-auto">
-                        {{-- continuous track — replaces the old per-item connectors,
-                             which never reached the next chip past a tall card --}}
-                        <div class="absolute top-6 bottom-14 start-[23px] w-0.5 rounded-full bg-gray-200 dark:bg-white/10" aria-hidden="true"></div>
-                        <div class="ev-path-fill absolute top-6 bottom-14 start-[23px] w-0.5 rounded-full bg-gradient-to-b from-[#0056b3] via-[#64CCC5] to-[#218838]" aria-hidden="true"></div>
-                        <div class="ev-traveler" aria-hidden="true"></div>
-
-                        <div class="space-y-10">
-                            @foreach ($eventTimeline as $index => $timelineItem)
-                                <div class="tl-item relative" data-revealed="false" data-path-step>
-                                    <div class="flex items-start gap-4 sm:gap-6">
-                                        <div class="ev-step-chip relative z-10 flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center text-white font-bold shadow-lg">
-                                            {{ $index + 1 }}
-                                        </div>
-                                        <div class="flex-1 min-w-0 tl-card-hover p-5 sm:p-6 rounded-2xl shadow-lg" :class="darkMode ? 'bg-gray-800' : 'bg-white'">
-                                            <h3 class="text-xl sm:text-2xl font-bold mb-3 break-words" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $timelineItem['title'] }}</h3>
-                                            @if (! empty($timelineItem['description']))
-                                                <p class="text-base sm:text-lg leading-relaxed break-words" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ $timelineItem['description'] }}</p>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                </div>
-            </section>
-        @endif
-
         <!-- Story / Context (real content) -->
         @if ($hasDescription || $hasContent)
             <section id="event-story" class="py-16 sm:py-20" :class="darkMode ? 'bg-gray-900/40' : 'bg-white'">
@@ -539,40 +421,33 @@
         @endif
 
         <!-- Empty content fallback -->
-        @if (! $hasTimeline && ! $hasDescription && ! $hasContent)
+        @if (! $hasDescription && ! $hasContent)
             <section class="py-20 text-center">
                 <i data-lucide="file-question" class="w-12 h-12 mx-auto mb-4 text-gray-400"></i>
                 <p :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('seerah.public.no_content') }}</p>
             </section>
         @endif
 
-        {{-- Lessons and sources are independent of characters — they used to be
-             nested inside the characters guard and silently disappeared for any
-             event without a characters list. --}}
-        @if ($hasLessons)
-            <section id="event-lessons" class="py-16 sm:py-20" :class="darkMode ? 'bg-gray-900/40' : 'bg-white'">
+        @if ($hasDetails)
+            <section id="event-details" class="py-16 sm:py-20" :class="darkMode ? 'bg-gray-900/40' : 'bg-white'">
                 <div class="max-w-4xl mx-auto px-4 sm:px-6">
                     <div class="flex items-center gap-4 mb-10">
-                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-                            <i data-lucide="lightbulb" class="w-6 h-6 text-white"></i>
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center">
+                            <i data-lucide="list" class="w-6 h-6 text-white"></i>
                         </div>
-                        <h2 class="text-2xl sm:text-3xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ __('seerah.public.section_lessons') }}</h2>
+                        <h2 class="text-2xl sm:text-3xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ __('seerah.public.section_more_details') }}</h2>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        @foreach ($lessons as $lesson)
-                            <div class="tl-item tl-card-hover rounded-2xl p-6" data-revealed="false"
-                                 :class="darkMode ? 'bg-gray-800/60' : 'bg-amber-50/70'">
-                                <span class="block w-10 h-[3px] rounded-full bg-gradient-to-l from-amber-500 to-orange-600 mb-3" aria-hidden="true"></span>
-                                <h3 class="font-bold text-lg mb-2 break-words" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $lesson['title'] }}</h3>
-                                @if (! empty($lesson['description']))
-                                    <p class="leading-relaxed break-words" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ $lesson['description'] }}</p>
-                                @endif
+                    <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        @foreach ($details as $detail)
+                            <div class="tl-item rounded-2xl p-5" data-revealed="false" :class="darkMode ? 'bg-gray-800/60' : 'bg-gray-50'">
+                                <dt class="text-sm break-words" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">{{ $detail['key'] }}</dt>
+                                <dd class="mt-1 font-bold break-words" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $detail['value'] }}</dd>
                             </div>
                         @endforeach
-                    </div>
+                    </dl>
                 </div>
             </section>
-            @endif
+        @endif
 
             @if ($hasSources)
             <section id="event-sources" class="py-16 sm:py-20">
@@ -602,38 +477,29 @@
             </section>
             @endif
 
-        @if ($hasCharacters)
-            <section id="event-characters" class="py-16 sm:py-20">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        @if ($hasMedia)
+            <section id="event-media" class="py-16 sm:py-20">
+                <div class="max-w-4xl mx-auto px-4 sm:px-6">
                     <h2 class="text-3xl md:text-5xl font-bold text-center mb-12 flex items-center justify-center gap-3" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                        <i data-lucide="users" class="w-9 h-9 text-[#0056b3]"></i>
-                        {{ __('seerah.public.section_characters') }}
+                        <i data-lucide="play-circle" class="w-9 h-9 text-[#0056b3]"></i>
+                        {{ __('seerah.public.section_media') }}
                     </h2>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-                        @foreach ($characters as $index => $character)
-                            @php $gradient = $characterGradients[$index % count($characterGradients)]; @endphp
-                            <button type="button"
-                                    @click="selectedCharacter = @js(array_merge($character, ['gradient' => $gradient]))"
-                                    class="tl-card-hover text-start rounded-3xl overflow-hidden shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#64CCC5]"
-                                    :class="darkMode ? 'bg-gray-900' : 'bg-white'">
-                                <div class="relative h-32 bg-gradient-to-br {{ $gradient }}">
-                                    <div class="absolute inset-0 flex items-center justify-center">
-                                        <div class="w-20 h-20 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border-2 border-white/50">
-                                            <i data-lucide="user" class="w-10 h-10 text-white"></i>
-                                        </div>
-                                    </div>
+                    <div class="space-y-6">
+                        @foreach ($event['media'] as $item)
+                            @if ($item['type'] === 'video')
+                                <video controls preload="metadata" class="w-full rounded-3xl shadow-xl bg-black" src="{{ $item['url'] }}" aria-label="{{ $item['title'] }}"></video>
+                            @elseif ($item['type'] === 'audio')
+                                <div class="rounded-3xl p-6 shadow-xl" :class="darkMode ? 'bg-gray-900' : 'bg-white'">
+                                    <p class="mb-3 font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $item['title'] }}</p>
+                                    <audio controls preload="metadata" class="w-full" src="{{ $item['url'] }}"></audio>
                                 </div>
-                                <div class="p-6">
-                                    <h3 class="text-xl font-bold mb-1 truncate" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $character['name'] }}</h3>
-                                    @if (! empty($character['roleLabel']))
-                                        <p class="text-sm font-semibold mb-3 truncate text-[#0056b3] dark:text-[#64CCC5]">{{ $character['roleLabel'] }}</p>
-                                    @endif
-                                    @if (! empty($character['description']))
-                                        <p class="text-sm leading-relaxed line-clamp-3" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">{{ $character['description'] }}</p>
-                                    @endif
-                                </div>
-                            </button>
+                            @else
+                                <a href="{{ $item['url'] }}" target="_blank" rel="noopener"
+                                   class="tl-card-hover flex items-center gap-3 rounded-3xl p-6 shadow-xl font-bold"
+                                   :class="darkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'">
+                                    <i data-lucide="file" class="w-6 h-6 shrink-0 text-[#0056b3]"></i>{{ $item['title'] }}
+                                </a>
+                            @endif
                         @endforeach
                     </div>
                 </div>
@@ -649,19 +515,24 @@
                     </h2>
                     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
                         @foreach ($event['gallery'] as $image)
-                            <img src="{{ $image }}"
-                                 alt="{{ $event['title'] }}"
-                                 width="800"
-                                 height="600"
-                                 loading="lazy"
-                                 class="w-full aspect-[4/3] object-cover rounded-3xl shadow-xl" />
+                            <figure>
+                                <img src="{{ $image['url'] }}"
+                                     alt="{{ $image['caption'] ?: $event['title'] }}"
+                                     width="800"
+                                     height="600"
+                                     loading="lazy"
+                                     class="w-full aspect-[4/3] object-cover rounded-3xl shadow-xl" />
+                                @if ($image['caption'])
+                                    <figcaption class="mt-2 text-sm text-center" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ $image['caption'] }}</figcaption>
+                                @endif
+                            </figure>
                         @endforeach
                     </div>
                 </div>
             </section>
         @endif
 
-        @if ($event['mapUrl'] || $event['relatedArticle'] || ! empty($related))
+        @if ($event['mapUrl'] || ! empty($related))
             <section class="py-16 sm:py-20">
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl grid lg:grid-cols-2 gap-6">
                     @if ($event['mapUrl'])
@@ -682,18 +553,6 @@
                     @endif
 
                     <div class="space-y-6">
-                        @if ($event['relatedArticle'])
-                            <a href="{{ $event['relatedArticle']['url'] }}"
-                               class="tl-card-hover block rounded-3xl p-6 shadow-xl"
-                               :class="darkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'">
-                                <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('seerah.public.related_article') }}</span>
-                                <span class="mt-2 flex items-center gap-3 text-xl font-bold line-clamp-2">
-                                    <i data-lucide="newspaper" class="w-6 h-6 shrink-0 text-[#0056b3]"></i>
-                                    {{ $event['relatedArticle']['title'] }}
-                                </span>
-                            </a>
-                        @endif
-
                         @if (! empty($related))
                             <div class="rounded-3xl p-6 shadow-xl" :class="darkMode ? 'bg-gray-900' : 'bg-white'">
                                 <h2 class="text-2xl font-bold mb-4" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ __('seerah.public.related_events') }}</h2>
@@ -800,41 +659,6 @@
                     aria-label="{{ __('seerah.public.share') }}">
                 <i data-lucide="share-2" class="w-6 h-6"></i>
             </button>
-        </div>
-    </div>
-
-    <!-- Character Modal -->
-    <div x-show="selectedCharacter"
-         x-cloak
-         x-transition.opacity
-         @click.self="selectedCharacter = null"
-         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-         role="dialog"
-         aria-modal="true"
-         style="display: none;">
-        <div x-show="selectedCharacter"
-             x-transition
-             class="relative max-w-2xl w-full max-h-[80vh] overflow-y-auto rounded-3xl shadow-2xl"
-             :class="darkMode ? 'bg-gray-800' : 'bg-white'">
-            <div class="relative h-40 bg-gradient-to-br from-[#0056b3] to-[#218838]" :class="selectedCharacter?.gradient">
-                <div class="absolute inset-0 flex items-center justify-center">
-                    <div class="w-24 h-24 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border-4 border-white/50">
-                        <i data-lucide="user" class="w-12 h-12 text-white"></i>
-                    </div>
-                </div>
-                <button type="button"
-                        @click="selectedCharacter = null"
-                        class="absolute top-4 end-4 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
-                        aria-label="{{ __('seerah.public.close') }}">
-                    <i data-lucide="x" class="w-6 h-6"></i>
-                </button>
-            </div>
-
-            <div class="p-6 sm:p-8">
-                <h3 class="text-2xl sm:text-3xl font-bold mb-2 break-words" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="selectedCharacter?.name"></h3>
-                <p class="text-lg sm:text-xl mb-6 break-words text-[#0056b3] dark:text-[#64CCC5]" x-text="selectedCharacter?.roleLabel"></p>
-                <p class="text-base sm:text-lg leading-relaxed break-words" :class="darkMode ? 'text-gray-300' : 'text-gray-700'" x-text="selectedCharacter?.description"></p>
-            </div>
         </div>
     </div>
 </div>

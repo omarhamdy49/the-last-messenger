@@ -36,15 +36,15 @@ class MilestoneEventsTest extends TestCase
 
         $this->milestone = SeerahMilestone::create([
             'slug' => 'makkah-era',
-            'order_index' => 1,
+            'order' => 1,
             'is_active' => true,
         ]);
         $this->milestone->syncTranslations(['title' => ['ar' => 'العهد المكي']]);
 
-        $this->inside = SeerahEvent::factory()->create(['seerah_milestone_id' => $this->milestone->id]);
+        $this->inside = SeerahEvent::factory()->create(['sm_id' => $this->milestone->id, 'order' => 1]);
         $this->inside->syncTranslations(['title' => ['ar' => 'حدث داخل الحقبة']]);
 
-        $this->outside = SeerahEvent::factory()->create(['seerah_milestone_id' => null]);
+        $this->outside = SeerahEvent::factory()->create(['sm_id' => null, 'order' => 2]);
         $this->outside->syncTranslations(['title' => ['ar' => 'حدث خارج الحقبة']]);
     }
 
@@ -55,6 +55,17 @@ class MilestoneEventsTest extends TestCase
             ->assertOk()
             ->assertSee('حدث داخل الحقبة', false)
             ->assertDontSee('حدث خارج الحقبة', false);
+    }
+
+    public function test_milestone_show_lists_events_in_order(): void
+    {
+        $second = SeerahEvent::factory()->create(['sm_id' => $this->milestone->id, 'order' => 0]);
+        $second->syncTranslations(['title' => ['ar' => 'حدث أسبق ترتيباً']]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.seerah-milestones.show', $this->milestone->id))
+            ->assertOk()
+            ->assertSeeInOrder(['حدث أسبق ترتيباً', 'حدث داخل الحقبة'], false);
     }
 
     public function test_events_index_filters_by_milestone(): void

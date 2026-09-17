@@ -33,7 +33,7 @@ class SeerahEventBulkHandler extends AbstractBulkOperationHandler
     protected function previewQuery(array $ids): Builder
     {
         return parent::previewQuery($ids)
-            ->with('translations:id,seerah_event_id,locale,title');
+            ->with('translations:id,event_id,locale,title');
     }
 
     protected function previewLabel(Model $item): string

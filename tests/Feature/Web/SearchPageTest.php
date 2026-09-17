@@ -29,21 +29,24 @@ final class SearchPageTest extends TestCase
 
     private function makeMatchingSeerahEvent(string $slug): void
     {
+        // seerah_event_types is truncated between tests, so the type is created here.
+        DB::table('seerah_event_types')->insertOrIgnore([
+            'slug' => 'other',
+            'locale' => json_encode(['ar' => 'أخرى', 'en' => 'Other']),
+            'is_active' => true,
+        ]);
+
         $eventId = (int) DB::table('seerah_events')->insertGetId([
             'slug' => $slug,
-            'seerah_event_type_id' => DB::table('seerah_event_types')->where('slug', 'other')->value('id'),
+            'event_type' => DB::table('seerah_event_types')->where('slug', 'other')->value('id'),
             'status' => 'published',
-            'importance' => 'medium',
-            'views_count' => 0,
-            'display_order' => 0,
-            'is_featured' => false,
-            'is_pivotal' => false,
+            'order' => 0,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
         DB::table('seerah_event_translations')->insert([
-            'seerah_event_id' => $eventId,
+            'event_id' => $eventId,
             'locale' => 'ar',
             'title' => 'حدث من أحداث السيرة النبوية',
             'description' => 'وصف الحدث',

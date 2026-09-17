@@ -87,14 +87,14 @@
                     @forelse($milestones as $milestone)
                     <tr class="transition-colors" :class="darkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'">
                         <td class="px-4 py-4"><input type="checkbox" value="{{ $milestone->id }}" x-model.number="selected" class="w-4 h-4 rounded text-accent border-gray-300 focus:ring-accent"></td>
-                        <td class="px-4 py-4 text-sm font-bold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ $milestone->order_index }}</td>
+                        <td class="px-4 py-4 text-sm font-bold" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ $milestone->order }}</td>
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 rounded-lg bg-gradient-to-br {{ $milestone->gradient ?: 'from-[#0056b3] to-[#218838]' }} flex items-center justify-center flex-shrink-0">
                                     <i data-lucide="{{ $milestone->icon ?: 'milestone' }}" class="w-5 h-5 text-white"></i>
                                 </div>
                                 <div class="min-w-0 max-w-xs">
-                                    <h4 class="font-semibold truncate" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $milestone->getTranslation('title', 'ar') }}</h4>
+                                    <h4 class="font-semibold truncate" :class="darkMode ? 'text-white' : 'text-gray-900'"><a href="{{ route('admin.seerah-milestones.show', $milestone->id) }}" class="transition-colors hover:text-accent hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded">{{ $milestone->getTranslation('title', 'ar') }}</a></h4>
                                     <p class="text-xs truncate" :class="darkMode ? 'text-gray-500' : 'text-gray-400'"><code class="px-1.5 py-0.5 rounded text-[11px]" :class="darkMode ? 'bg-gray-800' : 'bg-gray-100'">{{ $milestone->slug }}</code></p>
                                 </div>
                             </div>
@@ -150,11 +150,12 @@
                 :icon="$milestone->icon ?: 'milestone'"
                 :gradient="$milestone->gradient ?: 'from-[#0056b3] to-[#218838]'"
                 :title="$milestone->getTranslation('title', 'ar')"
+                :href="route('admin.seerah-milestones.show', $milestone->id)"
                 :subtitle="$milestone->slug">
 
                 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
                       :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
-                    <i data-lucide="hash" class="w-3 h-3"></i> {{ $milestone->order_index }}
+                    <i data-lucide="hash" class="w-3 h-3"></i> {{ $milestone->order }}
                 </span>
 
                 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"

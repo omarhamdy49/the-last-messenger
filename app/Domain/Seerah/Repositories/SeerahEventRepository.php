@@ -23,6 +23,15 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
      */
     private const CACHE_TTL = 1800;
 
+    /**
+     * Columns a list row / card needs. FKs are included so the eager loads can
+     * resolve without a second query per row.
+     */
+    private const LIST_COLUMNS = [
+        'id', 'slug', 'event_type', 'sm_id', 'location_id', 'order', 'status', 'era',
+        'thumb_url', 'cover_url', 'hijri_year', 'hijri_month', 'hijri_day', 'gregorian_date',
+    ];
+
     public function __construct(
         private readonly PublicVisibilityRegistry $publicVisibility,
     ) {
@@ -43,13 +52,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     public function getPublicPage(string $slug, string $locale, int $relatedLimit = 3): ?array
     {
         $query = $this->model->newQuery()
-            ->select([
-                'id', 'slug', 'hijri_date', 'hijri_year', 'hijri_month', 'hijri_day',
-                'gregorian_year', 'seerah_event_type_id', 'seerah_milestone_id', 'phase',
-                'era', 'location', 'location_id', 'latitude', 'longitude', 'featured_image', 'gallery',
-                'related_article_id', 'is_pivotal', 'is_featured', 'importance',
-                'views_count', 'statistics', 'display_order',
-            ])
+            ->select([...self::LIST_COLUMNS, 'statistics'])
             ->with($this->publicDetailRelations($locale))
             ->where('slug', $slug);
 
@@ -71,100 +74,56 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     }
 
     /**
-     * Get events by type (type id or slug). Public read — published only.
+     * Get events by type (type id or slug). Public read — published + ready translation.
      */
     public function getByType(int|string $type, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->model
-            ->with($this->listRelations())
-            ->published()
-            ->byType($type)
-            ->chronological()
-            ->paginate($perPage);
+        return $this->publicList()->byType($type)->paginate($perPage);
     }
 
     /**
-     * Get events by Hijri year. Public read — published only.
+     * Get events by Hijri year. Public read — published + ready translation.
      */
     public function getByHijriYear(int $year, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->model
-            ->with($this->listRelations())
-            ->published()
-            ->byHijriYear($year)
-            ->chronological()
-            ->paginate($perPage);
+        return $this->publicList()->byHijriYear($year)->paginate($perPage);
     }
 
     /**
-     * Get events by Gregorian year. Public read — published only.
+     * Get events by Gregorian year. Public read — published + ready translation.
      */
     public function getByGregorianYear(int $year, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->model
-            ->with($this->listRelations())
-            ->published()
-            ->byGregorianYear($year)
-            ->chronological()
-            ->paginate($perPage);
+        return $this->publicList()->byGregorianYear($year)->paginate($perPage);
     }
 
     /**
-     * Get featured events. Public read — published only.
-     */
-    public function getFeatured(int $limit = 10): Collection
-    {
-        return Cache::remember(
-            SeerahCacheKeys::featured($limit),
-            self::CACHE_TTL,
-            fn () => $this->model
-                ->with($this->listRelations())
-                ->published()
-                ->featured()
-                ->chronological()
-                ->limit($limit)
-                ->get()
-        );
-    }
-
-    /**
-     * Get events with location (for map). Public read — published only.
+     * Get events whose place has coordinates (for the map). Public read — published + ready translation.
      */
     public function getEventsWithLocation(): Collection
     {
         return Cache::remember(
-            SeerahCacheKeys::eventsWithLocation(),
+            SeerahCacheKeys::eventsWithLocation(app()->getLocale()),
             self::CACHE_TTL,
-            fn () => $this->model
-                ->with([
-                    'translations:id,seerah_event_id,locale,title',
-                    'type:id,slug,icon,color,gradient',
-                    'type.translations:id,seerah_event_type_id,locale,name',
-                ])
-                ->published()
-                ->withLocation()
-                ->chronological()
-                ->get(['id', 'slug', 'location', 'latitude', 'longitude', 'seerah_event_type_id', 'hijri_year'])
+            fn () => $this->publicList()->withLocation()->get()
         );
     }
 
     /**
      * {@inheritdoc}
      *
-     * One query for the whole public directory — search, type, milestone,
-     * importance, pivotal and dating-dispute compose instead of branching into
-     * three mutually exclusive methods, so "معجزة + مفصلي" is expressible.
+     * One query for the whole public directory — search, type, milestone, era
+     * and dating-dispute compose instead of branching into separate methods.
      */
     public function paginatePublicFiltered(array $filters, string $locale, int $perPage = 12): LengthAwarePaginator
     {
-        $query = $this->model->newQuery()->with($this->listRelations());
+        $query = $this->model->newQuery()
+            ->select(self::LIST_COLUMNS)
+            ->with($this->listRelations());
 
         if (! empty($filters['search'])) {
             $term = $filters['search'];
-            $query->where(function ($q) use ($term) {
-                $q->whereHas('translations', fn ($tq) => FullTextSearchHelper::apply($tq, ['title', 'description'], $term))
-                    ->orWhere('location', 'LIKE', "%{$term}%");
-            });
+            $query->whereHas('translations', fn ($tq) => FullTextSearchHelper::apply($tq, ['title', 'description'], $term));
         }
 
         if (! empty($filters['type'])) {
@@ -175,23 +134,16 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
             $query->whereHas('milestone', fn ($q) => $q->where('slug', $filters['milestone']));
         }
 
-        if (! empty($filters['importance'])) {
-            $query->where('importance', $filters['importance']);
-        }
-
-        if (! empty($filters['pivotal'])) {
-            $query->where('is_pivotal', true);
+        if (! empty($filters['era'])) {
+            $query->byEra($filters['era']);
         }
 
         if (! empty($filters['disputed'])) {
-            $query->whereHas('translations', fn ($q) => $q
-                ->where('locale', $locale)
-                ->whereNotNull('dispute_note')
-                ->where('dispute_note', '<>', ''));
+            $this->whereDisputed($query, $locale);
         }
 
         return $this->publicVisibility->apply($query, $locale)
-            ->chronological($filters['sort'] === 'desc' ? 'desc' : 'asc')
+            ->chronological(($filters['sort'] ?? 'asc') === 'desc' ? 'desc' : 'asc')
             ->paginate($perPage);
     }
 
@@ -200,55 +152,30 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
      */
     public function publicFilterFacets(string $locale): array
     {
-        $base = fn () => $this->publicVisibility->apply($this->model->newQuery(), $locale);
-
-        $importance = $base()
-            ->selectRaw('importance, COUNT(*) as count')
-            ->groupBy('importance')
-            ->pluck('count', 'importance')
-            ->map(fn ($count) => (int) $count)
-            ->all();
+        $query = $this->publicVisibility->apply($this->model->newQuery(), $locale);
 
         return [
-            'pivotal' => $base()->where('is_pivotal', true)->count(),
-            'disputed' => $base()->whereHas('translations', fn ($q) => $q
-                ->where('locale', $locale)
-                ->whereNotNull('dispute_note')
-                ->where('dispute_note', '<>', ''))->count(),
-            'importance' => $importance,
+            'disputed' => $this->whereDisputed($query, $locale)->count(),
         ];
     }
 
     /**
-     * Search events via translation table. Public read — published only.
+     * Search events via translation table. Public read — published + ready translation.
      * FULLTEXT index covers (title, description) on seerah_event_translations.
-     * 'location' on seerah_events has no FULLTEXT index and keeps LIKE.
      */
     public function search(string $query, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->model
-            ->with($this->listRelations())
-            ->published()
-            ->where(function ($q) use ($query) {
-                $q->whereHas('translations', function ($tq) use ($query) {
-                    FullTextSearchHelper::apply($tq, ['title', 'description'], $query);
-                })
-                    ->orWhere('location', 'LIKE', "%{$query}%");
-            })
-            ->chronological()
+        return $this->publicList()
+            ->whereHas('translations', fn ($tq) => FullTextSearchHelper::apply($tq, ['title', 'description'], $query))
             ->paginate($perPage);
     }
 
     /**
-     * Get events in chronological order. Public read — published only.
+     * Get events in chronological order. Public read — published + ready translation.
      */
     public function getChronological(int $perPage = 15): LengthAwarePaginator
     {
-        return $this->model
-            ->with($this->listRelations())
-            ->published()
-            ->chronological()
-            ->paginate($perPage);
+        return $this->publicList()->paginate($perPage);
     }
 
     /**
@@ -259,42 +186,30 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
      */
     public function paginateWithFilters(array $filters, int $perPage = 15): LengthAwarePaginator
     {
-        $query = $this->model
-            // Milestone + point count drive two columns on the admin list; loading
-            // them here keeps it at a constant query count instead of 2 per row.
-            ->with([...$this->listRelations(), 'milestone:id,slug,icon,color,gradient', 'milestone.translations:id,seerah_milestone_id,locale,title'])
-            ->select([
-                'id', 'slug', 'seerah_event_type_id', 'seerah_milestone_id', 'importance', 'status',
-                'hijri_year', 'hijri_date', 'location', 'location_id', 'is_featured', 'is_pivotal', 'display_order',
-                'hijri_month', 'hijri_day',
-            ])
-            // After select(), not before: select() replaces the column list and would
-            // drop the count subquery, leaving every row reading 0.
-            ->withCount('timelineItems');
+        $query = $this->model->newQuery()
+            ->select(self::LIST_COLUMNS)
+            // Milestone drives a column on the admin list; loading it here keeps
+            // the page at a constant query count instead of 2 per row.
+            ->with([
+                ...$this->listRelations(),
+                'milestone:id,slug,order,metadata',
+                'milestone.translations:id,sm_id,locale,title',
+            ]);
 
         if (! empty($filters['type'])) {
             $query->byType($filters['type']);
-        }
-
-        if (! empty($filters['importance'])) {
-            $query->where('importance', $filters['importance']);
         }
 
         if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        if (! empty($filters['milestone'])) {
-            $query->byMilestone((int) $filters['milestone']);
+        if (! empty($filters['era'])) {
+            $query->byEra($filters['era']);
         }
 
-        // The editor's review queue: rows that NAME a place in prose but carry
-        // no canonical reference. Rows with no place text at all are excluded —
-        // they are not unresolved, they simply name no place.
-        if (! empty($filters['unmapped'])) {
-            $query->whereNull('location_id')
-                ->whereNotNull('location')
-                ->where('location', '<>', '');
+        if (! empty($filters['milestone'])) {
+            $query->byMilestone((int) $filters['milestone']);
         }
 
         if (! empty($filters['location_id'])) {
@@ -304,9 +219,8 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
         if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
-                $q->whereHas('translations', function ($tq) use ($search) {
-                    $tq->where('title', 'LIKE', "%{$search}%");
-                })->orWhere('location', 'LIKE', "%{$search}%");
+                $q->whereHas('translations', fn ($tq) => $tq->where('title', 'LIKE', "%{$search}%"))
+                    ->orWhere('slug', 'LIKE', "%{$search}%");
             });
         }
 
@@ -334,83 +248,87 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
      */
     public function getForExport(array $filters = []): Collection
     {
-        $query = $this->model->newQuery()->with($this->exportRelations());
+        $query = $this->model->newQuery()
+            ->select(self::LIST_COLUMNS)
+            ->with([
+                'translations:id,event_id,locale,title,description',
+                'type:id,slug,locale',
+                'place:id,slug',
+                'place.translations:id,location_id,locale,name',
+            ]);
 
         if (! empty($filters['event_type'])) {
             $query->byType($filters['event_type']);
         }
 
         if (! empty($filters['start_date'])) {
-            $query->whereDate('gregorian_date', '>=', $filters['start_date']);
+            $query->where('gregorian_date', '>=', $filters['start_date']);
         }
 
         if (! empty($filters['end_date'])) {
-            $query->whereDate('gregorian_date', '<=', $filters['end_date']);
+            $query->where('gregorian_date', '<=', $filters['end_date']);
         }
 
         if (! empty($filters['search'])) {
             $search = $filters['search'];
-            $query->where(function (Builder $q) use ($search) {
-                $q->whereHas('translations', fn ($tq) => $tq->where('title', 'LIKE', "%{$search}%"))
-                    ->orWhere('location', 'LIKE', "%{$search}%");
-            });
+            $query->whereHas('translations', fn ($tq) => $tq->where('title', 'LIKE', "%{$search}%"));
         }
 
         return $query->chronological()->get();
     }
 
     /**
-     * Relations needed to render an export row. Mirrors the translation-backed
-     * shape of detailRelations() minus the article sub-tree, which is not
-     * exported.
-     *
-     * @return array<int, string>
-     */
-    private function exportRelations(): array
-    {
-        return [
-            'translations:id,seerah_event_id,locale,title,description,content,lessons,sources',
-            'type:id,slug',
-            'type.translations:id,seerah_event_type_id,locale,name',
-            'participants:id,event_id,role',
-            'participants.translations:id,seerah_participant_id,locale,name',
-        ];
-    }
-
-    /**
-     * Find by slug with relations
+     * Find a publicly visible event by slug with its full detail relations (API show).
      */
     public function findBySlug(string $slug, array $columns = ['*'], array $relations = []): ?Model
     {
         $relations = empty($relations) ? $this->detailRelations() : $relations;
+        $locale = app()->getLocale();
 
         return Cache::remember(
-            SeerahCacheKeys::eventBySlug($slug),
+            SeerahCacheKeys::eventBySlug($slug, $locale),
             self::CACHE_TTL,
-            fn () => $this->model
-                ->with($relations)
-                ->published()
-                ->where('slug', $slug)
+            fn () => $this->publicVisibility
+                ->apply($this->model->newQuery()->with($relations)->where('slug', $slug), $locale)
                 ->first($columns)
         );
     }
 
     /**
+     * Publicly visible (published + ready in the current locale), chronological,
+     * list-shaped query shared by the public reads.
+     */
+    private function publicList(): Builder
+    {
+        $query = $this->model->newQuery()
+            ->select(self::LIST_COLUMNS)
+            ->with($this->listRelations());
+
+        return $this->publicVisibility->apply($query, app()->getLocale())->chronological();
+    }
+
+    private function whereDisputed(Builder $query, string $locale): Builder
+    {
+        return $query->whereHas('translations', fn ($q) => $q
+            ->where('locale', $locale)
+            ->whereNotNull('dispute_note')
+            ->where('dispute_note', '<>', ''));
+    }
+
+    /**
      * Minimal relations for list/index endpoints.
-     * Loads only the translation titles needed to render a list row.
-     * Avoids the 5 article sub-relations and the participants join entirely.
      *
      * @return array<int, string>
      */
     private function listRelations(): array
     {
         return [
-            // description included: public list cards render an excerpt, and
-            // without the column here getTranslation() silently returned null.
+            // description included: public list cards render an excerpt.
             // dispute_note included: list cards carry the ⚠ dating-dispute marker.
-            'translations:id,seerah_event_id,locale,title,description,dispute_note',
-            'type:id,slug,icon,color,gradient',
-            'type.translations:id,seerah_event_type_id,locale,name',
+            'translations:id,event_id,locale,title,description,dispute_note,is_ready',
+            'type:id,slug,metadata,locale',
+            'place:id,slug,latitude,longitude',
+            'place.translations:id,location_id,locale,name',
         ];
     }
 
@@ -421,43 +339,41 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     {
         return [
             'translations' => fn ($relation) => $relation
-                ->select(['id', 'seerah_event_id', 'locale', 'title', 'description', 'content', 'lessons', 'sources', 'dispute_note', 'is_ready'])
+                ->select(['id', 'event_id', 'locale', 'title', 'description', 'content', 'dispute_note', 'metadata', 'sources', 'is_ready'])
                 ->where('locale', $locale)
                 ->where('is_ready', true),
-            'type:id,slug,icon,color,gradient',
-            'type.translations' => fn ($relation) => $relation
-                ->select(['id', 'seerah_event_type_id', 'locale', 'name'])
-                ->where('locale', $locale),
+            'type:id,slug,metadata,locale',
             // Milestone (الحقبة) — powers the breadcrumb + navigator on the event pages.
             'milestone:id,slug',
             'milestone.translations' => fn ($relation) => $relation
-                ->select(['id', 'seerah_milestone_id', 'locale', 'title'])
+                ->select(['id', 'sm_id', 'locale', 'title'])
                 ->where('locale', $locale),
-            // Canonical place: supplies the map coordinates when the event has
-            // none of its own, and the localized place name. Columns are named
-            // and the parent select carries location_id, per constitution II.
+            // Canonical place: the map coordinates and the localized place name.
             'place:id,slug,type,latitude,longitude',
             'place.translations' => fn ($relation) => $relation
                 ->select(['id', 'location_id', 'locale', 'name'])
                 ->whereIn('locale', array_unique([$locale, 'ar'])),
-            'participants:id,event_id,participant_type,participant_id,role',
-            'participants.translations' => fn ($relation) => $relation
-                ->select(['id', 'seerah_participant_id', 'locale', 'name', 'description'])
-                ->where('locale', $locale),
-            'timelineItems' => fn ($relation) => $relation
-                ->select(['id', 'seerah_event_id', 'display_order'])
-                ->orderBy('display_order'),
-            'timelineItems.translations' => fn ($relation) => $relation
-                ->select(['id', 'seerah_event_timeline_item_id', 'locale', 'title', 'description'])
-                ->where('locale', $locale),
-            'article' => function ($relation) use ($locale): void {
-                $query = $relation->getQuery()->select(['articles.id', 'articles.status']);
-                $this->publicVisibility->apply($query, $locale);
-            },
-            'article.locales' => fn ($relation) => $relation
-                ->select(['id', 'article_id', 'locale', 'title', 'slug', 'is_ready'])
-                ->where('locale', $locale)
-                ->where('is_ready', true),
+            'gallery:id,event_id,image,media_id,caption,order',
+            'mediaLinks:id,event_id,media_id',
+        ];
+    }
+
+    /**
+     * Full relations for the single-record API show endpoint.
+     *
+     * @return array<int, string>
+     */
+    private function detailRelations(): array
+    {
+        return [
+            'translations:id,event_id,locale,title,description,content,dispute_note,metadata,sources,is_ready',
+            'type:id,slug,metadata,locale',
+            'milestone:id,slug,order',
+            'milestone.translations:id,sm_id,locale,title',
+            'place:id,slug,latitude,longitude',
+            'place.translations:id,location_id,locale,name',
+            'gallery:id,event_id,image,media_id,caption,order',
+            'mediaLinks:id,event_id,media_id',
         ];
     }
 
@@ -468,9 +384,9 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     {
         $base = function () use ($event, $locale): Builder {
             $query = $this->model->newQuery()
-                ->select(['id', 'slug', 'hijri_year', 'hijri_month', 'hijri_day', 'display_order'])
+                ->select(['id', 'slug', 'order', 'hijri_year', 'hijri_month', 'hijri_day'])
                 ->with(['translations' => fn ($relation) => $relation
-                    ->select(['id', 'seerah_event_id', 'locale', 'title', 'is_ready'])
+                    ->select(['id', 'event_id', 'locale', 'title', 'is_ready'])
                     ->where('locale', $locale)
                     ->where('is_ready', true),
                 ])
@@ -491,38 +407,42 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
         ];
     }
 
+    /**
+     * Related events: the same milestone first, then the same era, each in
+     * chronological order. With neither set there is nothing to relate by.
+     */
     private function getRelatedForPublic(SeerahEvent $event, string $locale, int $limit): Collection
     {
+        if ($event->sm_id === null && $event->era === null) {
+            return new Collection;
+        }
+
         $query = $this->model->newQuery()
-            ->select([
-                'id', 'slug', 'seerah_event_type_id', 'phase', 'hijri_date',
-                'hijri_year', 'hijri_month', 'hijri_day', 'gregorian_year',
-                'location', 'is_pivotal', 'is_featured', 'display_order',
-            ])
+            ->select(self::LIST_COLUMNS)
             ->with([
                 'translations' => fn ($relation) => $relation
-                    ->select(['id', 'seerah_event_id', 'locale', 'title', 'description', 'is_ready'])
+                    ->select(['id', 'event_id', 'locale', 'title', 'description', 'dispute_note', 'is_ready'])
                     ->where('locale', $locale)
                     ->where('is_ready', true),
-                'type:id,slug,icon,color,gradient',
-                'type.translations' => fn ($relation) => $relation
-                    ->select(['id', 'seerah_event_type_id', 'locale', 'name'])
-                    ->where('locale', $locale),
+                'type:id,slug,metadata,locale',
+                'place:id,slug,latitude,longitude',
+                'place.translations:id,location_id,locale,name',
             ])
-            ->whereKeyNot($event->id);
+            ->whereKeyNot($event->id)
+            ->where(function (Builder $candidate) use ($event): void {
+                if ($event->sm_id !== null) {
+                    $candidate->orWhere('sm_id', $event->sm_id);
+                }
+                if ($event->era !== null) {
+                    $candidate->orWhere('era', $event->era->value);
+                }
+            });
+
+        if ($event->sm_id !== null) {
+            $query->orderByRaw('CASE WHEN sm_id = ? THEN 0 ELSE 1 END', [$event->sm_id]);
+        }
 
         $this->publicVisibility->apply($query, $locale);
-
-        if ($event->phase === null) {
-            $query->featured();
-        } else {
-            $phase = $event->phase->value;
-            $query
-                ->where(fn (Builder $candidate) => $candidate
-                    ->where('phase', $phase)
-                    ->orWhere('is_featured', true))
-                ->orderByRaw('CASE WHEN phase = ? THEN 0 ELSE 1 END', [$phase]);
-        }
 
         return $query->chronological()->limit($limit)->get();
     }
@@ -573,60 +493,15 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     }
 
     /**
-     * Full relations for single-record detail/show endpoints.
-     * Includes all article sub-relations, participant data (+translations),
-     * and the ordered inner event timeline items (+translations).
-     *
-     * @return array<int|string, string|\Closure>
-     */
-    private function detailRelations(): array
-    {
-        return [
-            // lessons/sources feed the الدروس والعبر and المصادر والمراجع sections;
-            // omitted from this column list they load as null and both sections vanish.
-            'translations:id,seerah_event_id,locale,title,description,content,lessons,sources,is_ready',
-            'type:id,slug,icon,color,gradient',
-            'type.translations:id,seerah_event_type_id,locale,name',
-            'participants:id,event_id,participant_type,participant_id,role',
-            'participants.translations:id,seerah_participant_id,locale,name,description',
-            'timelineItems' => fn ($query) => $query
-                ->select(['id', 'seerah_event_id', 'display_order'])
-                ->orderBy('display_order'),
-            'timelineItems.translations:id,seerah_event_timeline_item_id,locale,title,description',
-            'article:id,status,thumb,category_id,writer_id,read_time,views,is_featured,is_pinned,hijri_date,created_at,updated_at',
-            'article.locales:id,article_id,locale,title,slug,excerpt,is_ready',
-            'article.category:id,slug,icon,color',
-            'article.category.translations:id,category_id,locale,name',
-            'article.categories:id,slug,icon,color',
-            'article.categories.translations:id,category_id,locale,name',
-            'article.tags:id,slug,type',
-            'article.tags.translations:id,tag_id,locale,name',
-            'article.mediaItems:id,filename,path,mime_type,type,alt_text',
-        ];
-    }
-
-    /**
-     * Alias for detailRelations() — kept for backward compatibility with any
-     * BaseRepository or external callers that reference defaultRelations().
-     *
-     * @return array<int, string>
-     */
-    private function defaultRelations(): array
-    {
-        return $this->detailRelations();
-    }
-
-    /**
      * {@inheritdoc}
      *
      * getIndexStats() counts every row whatever its status — that is the admin
-     * header. The public filter pills must not, or drafts inflate them (they
-     * read «578» over a list of 545).
+     * header. The public filter pills must not, or drafts inflate them.
      */
     public function countPublicByCategory(string $locale): array
     {
         $query = $this->model->newQuery()
-            ->leftJoin('seerah_event_types as t', 't.id', '=', 'seerah_events.seerah_event_type_id')
+            ->leftJoin('seerah_event_types as t', 't.id', '=', 'seerah_events.event_type')
             ->selectRaw("COALESCE(t.slug, 'unknown') as type_slug, COUNT(*) as count")
             ->groupBy('type_slug');
 
@@ -642,7 +517,7 @@ class SeerahEventRepository extends BaseRepository implements SeerahEventReposit
     public function getIndexStats(): array
     {
         $rows = DB::table('seerah_events as e')
-            ->leftJoin('seerah_event_types as t', 't.id', '=', 'e.seerah_event_type_id')
+            ->leftJoin('seerah_event_types as t', 't.id', '=', 'e.event_type')
             ->selectRaw("COALESCE(t.slug, 'unknown') as type_slug, COUNT(*) as count")
             ->groupBy('type_slug')
             ->pluck('count', 'type_slug');

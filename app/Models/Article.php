@@ -8,7 +8,6 @@ use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Models\Series;
 use App\Domain\Blog\Models\Tag;
 use App\Domain\Media\Models\MediaEpisode;
-use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Shared\Services\PublicImageService;
 use App\Domain\Shared\Traits\HasVersions;
 use Carbon\Carbon;
@@ -321,13 +320,5 @@ class Article extends Model
             ->withPivot('position')
             ->withTimestamps()
             ->orderBy('article_series.position');
-    }
-
-    /**
-     * Get Seerah events linked to this article.
-     */
-    public function seerahEvents(): HasMany
-    {
-        return $this->hasMany(SeerahEvent::class, 'related_article_id');
     }
 }

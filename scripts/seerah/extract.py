@@ -1,3 +1,5 @@
+# NOTE: targets the pre-005 public event page (lessons section). Kept for reference only;
+# see specs/005-seerah-schema-refactor — lessons no longer exist.
 """Pull the reviewable fields out of a saved public seerah event page."""
 import re, sys, html, json, os
 

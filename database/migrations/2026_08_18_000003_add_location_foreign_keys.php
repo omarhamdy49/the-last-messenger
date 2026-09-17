@@ -11,10 +11,8 @@ use Illuminate\Support\Facades\Schema;
  *
  * ADDITIVE ONLY — this migration drops and alters nothing.
  *
- *  - `seerah_events.location` stays. It holds editorial prose, not place names
- *    ("حمراء الأسد على نحو 8 أميال جنوب المدينة"), 215 distinct values across 279
- *    filled rows. Replacing it would delete content no place record can rebuild,
- *    and would churn ~30 call sites. See research.md R-02.
+ *  - `seerah_events.location` (free text) was removed by 005-seerah-schema-refactor;
+ *    `location_id` is the only place field on an event.
  *
  *  - `muslims.birth_place` stays until nothing reads it, which is a separate
  *    later decision, not part of this feature.
@@ -32,7 +30,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('seerah_events', function (Blueprint $table): void {
-            $table->foreignId('location_id')->nullable()->after('location')
+            $table->foreignId('location_id')->nullable()->after('sm_id')
                 ->constrained('locations')->nullOnDelete();
         });
 

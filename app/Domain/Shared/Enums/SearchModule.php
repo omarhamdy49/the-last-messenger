@@ -51,7 +51,7 @@ enum SearchModule: string
         return match ($this) {
             self::ARTICLE => ['locales.title', 'locales.excerpt', 'locales.content'],
             self::MEDIA => ['translations.title', 'translations.description'],
-            self::SEERAH => ['translations.title', 'translations.description', 'location'],
+            self::SEERAH => ['translations.title', 'translations.description'],
             self::SAHABA => ['name_ar', 'name_en'],
             self::QURAN => ['translations.text', 'translations.text_notashkeel'],
             self::ALL => [],
@@ -121,8 +121,6 @@ enum SearchModule: string
             // article_locale's ft_search covers title + excerpt only — `content` is not
             // in the index.
             self::ARTICLE => ['locales.content'],
-            // `location` is a plain column on seerah_events.
-            self::SEERAH => ['location'],
             default => [],
         };
     }
@@ -149,9 +147,9 @@ enum SearchModule: string
                 'year' => FilterType::RANGE,
             ],
             self::SEERAH => [
-                'seerah_event_type_id' => FilterType::SELECT,
-                'importance_level' => FilterType::SELECT,
-                'hijri_date' => FilterType::DATE_RANGE,
+                'event_type' => FilterType::SELECT,
+                'sm_id' => FilterType::SELECT,
+                'era' => FilterType::SELECT,
                 'gregorian_date' => FilterType::DATE_RANGE,
             ],
             self::SAHABA => [

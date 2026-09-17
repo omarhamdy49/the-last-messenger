@@ -26,35 +26,32 @@ class NoNPlusOneQueriesTest extends TestCase
 
     public function test_seerah_index_does_not_cause_n_plus_one(): void
     {
-        // Create a set of seerah events to trigger potential N+1 scenarios.
-        // featured_image is set to a URL so the model's getFirstMediaUrl() override
-        // returns early, avoiding Spatie media queries incompatible with SQLite.
+        // Every row gets its own type and place so a per-row lazy load would show.
         for ($i = 1; $i <= 5; $i++) {
-            SeerahEvent::query()->create([
+            $type = SeerahEventType::query()->create(['slug' => "type-{$i}", 'locale' => ['ar' => "نوع {$i}"], 'is_active' => true]);
+            $place = Location::factory()->withNames(['ar' => "مكان {$i}"])->create();
+            SeerahEvent::factory()->create([
                 'slug' => "event-{$i}",
-                'seerah_event_type_id' => SeerahEventType::query()->where('slug', 'other')->value('id'),
-                'importance' => 'medium',
-                'is_featured' => false,
-                'display_order' => $i,
-                'featured_image' => "https://example.com/event-{$i}.jpg",
-                'title' => ['ar' => "عنوان {$i}", 'en' => "Title {$i}"],
-                'description' => ['ar' => "وصف {$i}", 'en' => "Description {$i}"],
+                'event_type' => $type->id,
+                'location_id' => $place->id,
+                'order' => $i,
             ]);
         }
 
-        $queryCount = 0;
-        DB::listen(function () use (&$queryCount): void {
-            $queryCount++;
-        });
+        DB::flushQueryLog();
+        DB::enableQueryLog();
 
-        $this->getJson('/api/v1/seerah');
+        $this->getJson('/api/v1/seerah')->assertOk();
 
-        // A well-optimized list endpoint should not exceed ~5 queries
-        // (1 for count, 1 for data, maybe 1-2 for eager loads)
+        $queries = array_column(DB::getQueryLog(), 'query');
+        DB::disableQueryLog();
+
+        // Constant: 3 language lookups (request locale), count, page, then one batch
+        // each for translations, type, place and place.translations.
         $this->assertLessThanOrEqual(
-            5,
-            $queryCount,
-            "Seerah index uses too many queries: {$queryCount}. Check for N+1."
+            9,
+            count($queries),
+            'Seerah index uses too many queries: '.count($queries).'. Check for N+1.'
         );
     }
 
@@ -147,20 +144,15 @@ class NoNPlusOneQueriesTest extends TestCase
         ]);
 
         for ($i = 1; $i <= 20; $i++) {
-            SeerahEvent::query()->create([
+            SeerahEvent::factory()->create([
                 'slug' => "placed-event-{$i}",
-                'seerah_event_type_id' => SeerahEventType::query()->where('slug', 'other')->value('id'),
-                'importance' => 'medium',
-                'location' => "وصف المكان {$i}",
                 'location_id' => $place->id,
-                'display_order' => $i,
-                'title' => ['ar' => "عنوان {$i}", 'en' => "Title {$i}"],
-                'description' => ['ar' => "وصف {$i}", 'en' => "Description {$i}"],
+                'order' => $i,
             ]);
         }
 
         $events = SeerahEvent::query()
-            ->select(['id', 'slug', 'location', 'location_id'])
+            ->select(['id', 'slug', 'location_id'])
             ->with(['place:id,slug,latitude,longitude', 'place.translations:id,location_id,locale,name'])
             ->get();
 

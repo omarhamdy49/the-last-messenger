@@ -49,19 +49,10 @@
         <div class="rounded-2xl border overflow-hidden"
              :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
             <div class="relative h-48 bg-gradient-to-br from-[#0056b3] to-[#218838]">
-                @if($event->getFirstMediaUrl('featured_image'))
-                    <img src="{{ $event->getFirstMediaUrl('featured_image') }}"
+                @if($event->pageImageUrl())
+                    <img src="{{ $event->pageImageUrl() }}"
                          alt="{{ $event->getTranslation('title', 'ar') }}"
                          class="w-full h-full object-cover opacity-60">
-                @endif
-
-                @if($event->is_featured)
-                <div class="absolute top-4 start-4">
-                    <span class="inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-semibold bg-amber-500 text-white shadow-lg">
-                        <i data-lucide="star" class="w-4 h-4"></i>
-                        حدث مميز
-                    </span>
-                </div>
                 @endif
 
                 @if($event->type)
@@ -80,11 +71,6 @@
                         {{ $event->status->labelArabic() }}
                     </span>
                     @endif
-                    @if($event->importance)
-                    <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-white/20 backdrop-blur-sm text-white">
-                        {{ $event->importance->labelArabic() }}
-                    </span>
-                    @endif
                 </div>
             </div>
 
@@ -99,25 +85,25 @@
                 @endif
 
                 <div class="flex flex-wrap gap-3 mt-4">
-                    @if($event->hijri_year)
+                    @if($event->formattedHijriDate('ar'))
                     <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl"
                           :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
                         <i data-lucide="calendar" class="w-4 h-4 text-accent"></i>
-                        {{ $event->hijri_year }} هـ
+                        {{ $event->formattedHijriDate('ar') }}
                     </span>
                     @endif
-                    @if($event->gregorian_year)
+                    @if($event->gregorian_date)
                     <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl"
                           :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
                         <i data-lucide="calendar" class="w-4 h-4 text-accent"></i>
-                        {{ $event->gregorian_year }} م
+                        {{ $event->gregorian_date->format('Y/m/d') }} م
                     </span>
                     @endif
-                    @if($event->location)
+                    @if($event->place)
                     <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl"
                           :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
                         <i data-lucide="map-pin" class="w-4 h-4 text-accent"></i>
-                        {{ $event->location }}
+                        {{ $event->place->name('ar') }}
                     </span>
                     @endif
                 </div>
@@ -262,6 +248,82 @@
             </div>
         </div>
         @endif
+
+        @php
+            $details = $event->metadataFor('ar');
+            $sources = $event->sourcesFor('ar');
+        @endphp
+        @if($details !== [] || $sources !== [])
+        <div class="rounded-2xl border p-6"
+             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+            @if($details !== [])
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                <i data-lucide="list" class="w-5 h-5 text-accent"></i>
+                تفاصيل إضافية
+            </h2>
+            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                @foreach($details as $row)
+                <div class="p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <dt class="text-xs font-medium" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ $row['key'] ?? '' }}</dt>
+                    <dd class="mt-1 font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $row['value'] ?? '' }}</dd>
+                </div>
+                @endforeach
+            </dl>
+            @endif
+
+            @if($sources !== [])
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                <i data-lucide="library" class="w-5 h-5 text-accent"></i>
+                المصادر والمراجع
+            </h2>
+            <ul class="space-y-2">
+                @foreach($sources as $source)
+                <li class="p-3 rounded-xl text-sm" :class="darkMode ? 'bg-gray-800/50 text-gray-300' : 'bg-gray-50 text-gray-700'">
+                    {{ collect([$source['title'] ?? null, $source['author'] ?? null, $source['reference'] ?? null])->filter()->implode(' — ') }}
+                </li>
+                @endforeach
+            </ul>
+            @endif
+        </div>
+        @endif
+
+        @if($event->gallery->isNotEmpty() || $media !== [])
+        <div class="rounded-2xl border p-6"
+             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
+            @if($event->gallery->isNotEmpty())
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                <i data-lucide="images" class="w-5 h-5 text-accent"></i>
+                معرض الصور
+            </h2>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+                @foreach($event->gallery as $item)
+                <figure>
+                    <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($item->image) }}" alt="{{ $item->captionFor('ar') }}" loading="lazy" class="w-full aspect-video object-cover rounded-lg">
+                    @if($item->captionFor('ar'))
+                    <figcaption class="mt-1 text-xs" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ $item->captionFor('ar') }}</figcaption>
+                    @endif
+                </figure>
+                @endforeach
+            </div>
+            @endif
+
+            @if($media !== [])
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                <i data-lucide="video" class="w-5 h-5 text-accent"></i>
+                الوسائط المرفقة
+            </h2>
+            <ul class="space-y-2">
+                @foreach($media as $item)
+                <li class="flex items-center gap-3 p-3 rounded-xl text-sm" :class="darkMode ? 'bg-gray-800/50 text-gray-300' : 'bg-gray-50 text-gray-700'">
+                    <i data-lucide="file" class="w-4 h-4 text-accent shrink-0"></i>
+                    <span class="truncate">{{ $item->title }}</span>
+                    <span class="ms-auto text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ $item->type }}</span>
+                </li>
+                @endforeach
+            </ul>
+            @endif
+        </div>
+        @endif
     </div>
 
     <!-- Sidebar -->
@@ -289,49 +351,22 @@
                     <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $event->status?->labelArabic() ?? '-' }}</span>
                 </div>
                 <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">الأهمية</span>
-                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $event->importance?->labelArabic() ?? '-' }}</span>
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">الحقبة</span>
+                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $event->milestone?->getTranslation('title', 'ar') ?? '-' }}</span>
+                </div>
+                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
+                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">الحقبة التاريخية</span>
+                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $event->era?->labelArabic() ?? '-' }}</span>
                 </div>
                 <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
                     <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">ترتيب العرض</span>
-                    <span class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $event->display_order }}</span>
-                </div>
-                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">المشاهدات</span>
-                    <span class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ number_format($event->views_count) }}</span>
+                    <span class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $event->order }}</span>
                 </div>
                 <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
                     <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">تاريخ الإضافة</span>
                     <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $event->created_at?->format('Y/m/d') }}</span>
                 </div>
             </div>
-        </div>
-
-        <div class="rounded-2xl border p-6"
-             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            <h3 class="text-lg font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                <i data-lucide="link-2" class="w-5 h-5 text-accent"></i>
-                المقال المرتبط
-            </h3>
-
-            @if($event->article)
-            <a href="{{ route('admin.articles.show', $event->article->id) }}"
-               class="block p-4 rounded-xl transition-colors"
-               :class="darkMode ? 'bg-gray-800/50 hover:bg-gray-800 text-white' : 'bg-gray-50 hover:bg-gray-100 text-gray-900'">
-                <p class="font-semibold">
-                    {{ $event->article->locales->firstWhere('locale', 'ar')?->title
-                        ?? $event->article->locales->firstWhere('locale', 'en')?->title
-                        ?? ('Article #' . $event->article->id) }}
-                </p>
-                <p class="text-xs mt-1" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
-                    #{{ $event->article->id }} · {{ number_format($event->article->views ?? 0) }} مشاهدة
-                </p>
-            </a>
-            @else
-            <p class="text-sm" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
-                لا يوجد مقال مرتبط بهذا الحدث.
-            </p>
-            @endif
         </div>
 
         <!-- Quick Actions -->

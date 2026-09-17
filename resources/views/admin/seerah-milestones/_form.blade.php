@@ -65,12 +65,10 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 @php
                     $dateFields = [
-                        'hijri_label_from' => ['admin.hijri_from', 'text', '53 ق.هـ'],
-                        'hijri_label_to' => ['admin.hijri_to', 'text', '13 ق.هـ'],
-                        'hijri_year_from' => ['admin.hijri_year_from', 'number', '-53'],
-                        'hijri_year_to' => ['admin.hijri_year_to', 'number', '-13'],
-                        'gregorian_year_from' => ['admin.gregorian_year_from', 'number', '570'],
-                        'gregorian_year_to' => ['admin.gregorian_year_to', 'number', '610'],
+                        'hijri_from' => ['admin.hijri_year_from', 'number', '-53'],
+                        'hijri_to' => ['admin.hijri_year_to', 'number', '-13'],
+                        'gregorian_from' => ['admin.gregorian_year_from', 'number', '570'],
+                        'gregorian_to' => ['admin.gregorian_year_to', 'number', '610'],
                     ];
                 @endphp
                 @foreach($dateFields as $field => [$labelKey, $type, $ph])
@@ -96,21 +94,21 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.icon') }}</label>
-                    <x-admin.icon-picker name="icon" :value="old('icon', $milestone?->icon ?? 'milestone')" />
+                    <x-admin.icon-picker name="metadata[icon]" :value="old('metadata.icon', $milestone?->icon ?? 'milestone')" />
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.color') }}</label>
-                    <select name="color" class="w-full px-4 py-3 text-base sm:text-sm rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                    <select name="metadata[color]" class="w-full px-4 py-3 text-base sm:text-sm rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                             :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
                         <option value="">—</option>
                         @foreach($colorOptions as $c)
-                            <option value="{{ $c }}" {{ old('color', $milestone?->color) === $c ? 'selected' : '' }}>{{ $c }}</option>
+                            <option value="{{ $c }}" {{ old('metadata.color', $milestone?->color) === $c ? 'selected' : '' }}>{{ $c }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.gradient') }}</label>
-                    <x-admin.gradient-picker name="gradient" :value="old('gradient', $milestone?->gradient)" />
+                    <x-admin.gradient-picker name="metadata[gradient]" :value="old('metadata.gradient', $milestone?->gradient)" />
                 </div>
             </div>
         </div>
@@ -131,10 +129,10 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.order') }}</label>
-                    <input type="number" name="order_index" min="0" value="{{ old('order_index', $milestone?->order_index ?? 0) }}"
+                    <input type="number" name="order" min="0" required value="{{ old('order', $milestone?->order ?? 0) }}"
                            class="w-full px-4 py-3 text-base sm:text-sm rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                            :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                    @error('order_index') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+                    @error('order') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
                 </div>
                 <label class="flex items-center gap-3 cursor-pointer p-3 rounded-xl transition-all" :class="darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'">
                     <input type="checkbox" name="is_active" value="1" {{ old('is_active', $milestone?->is_active ?? true) ? 'checked' : '' }}

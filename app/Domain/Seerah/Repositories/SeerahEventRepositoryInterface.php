@@ -32,12 +32,7 @@ interface SeerahEventRepositoryInterface extends RepositoryInterface
     public function getByGregorianYear(int $year, int $perPage = 15): LengthAwarePaginator;
 
     /**
-     * Get featured events
-     */
-    public function getFeatured(int $limit = 10): Collection;
-
-    /**
-     * Get events with location
+     * Published events whose linked place has coordinates (for the map)
      */
     public function getEventsWithLocation(): Collection;
 
@@ -70,20 +65,20 @@ interface SeerahEventRepositoryInterface extends RepositoryInterface
     /**
      * Public events directory with every filter composed into one query.
      *
-     * @param  array{search?: string, type?: string, milestone?: string, importance?: string, pivotal?: bool, disputed?: bool, sort?: string}  $filters
+     * @param  array{search?: string, type?: string, milestone?: string, era?: string, disputed?: bool, sort?: string}  $filters
      */
     public function paginatePublicFiltered(array $filters, string $locale, int $perPage = 12): LengthAwarePaginator;
 
     /**
      * Counts behind the public filter controls.
      *
-     * @return array{pivotal: int, disputed: int, importance: array<string, int>}
+     * @return array{disputed: int}
      */
     public function publicFilterFacets(string $locale): array;
 
     /**
      * Paginate events for the admin index with optional whitelisted filters
-     * (type, importance, status, search).
+     * (type, status, era, milestone, location_id, search).
      *
      * @param  array<string, mixed>  $filters
      */
@@ -98,7 +93,7 @@ interface SeerahEventRepositoryInterface extends RepositoryInterface
 
     /**
      * Fetch events for export with the relations an export row needs
-     * (translations, type, participants) and optional whitelisted filters
+     * (translations, type, place) and optional whitelisted filters
      * (event_type, start_date, end_date, search).
      *
      * Admin path — drafts are included so an export mirrors the admin index.

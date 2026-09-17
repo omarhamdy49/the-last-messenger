@@ -315,6 +315,58 @@ const AdminWysiwygModules = {
     },
 
     /**
+     * Append the Quran / hadith / sahabi / seerah buttons to `editor`'s toolbar and
+     * wire them to the shared picker (<x-admin.module-selector-modal>).
+     *
+     * The caret is captured on mousedown because clicking the toolbar blurs the
+     * editor and Quill drops the range. Returns a getter for that range; the caller
+     * passes it back to insert() once the picker answers with `module-inline-insert`.
+     */
+    attachToolbar(editor, { id, locale }) {
+        let savedRange = null;
+        const capture = () => {
+            const range = editor.getSelection();
+            savedRange = range
+                ? { index: range.index, length: range.length }
+                : { index: Math.max(0, editor.getLength() - 1), length: 0 };
+        };
+
+        const group = document.createElement('span');
+        group.className = 'ql-formats ql-module-btns';
+
+        this.buttons().forEach((mod) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = `ql-module-btn ${mod.cls}`;
+            btn.title = mod.label;
+            btn.setAttribute('aria-label', mod.label);
+            btn.innerHTML = `${mod.icon}<span>${mod.label}</span>`;
+            btn.addEventListener('mousedown', capture);
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!savedRange) { capture(); }
+                window.dispatchEvent(new CustomEvent('open-module-selector', {
+                    detail: { type: mod.type, locale, insertMode: 'inline', quillBlockId: id },
+                }));
+            });
+            group.appendChild(btn);
+        });
+
+        editor.getModule('toolbar').container.appendChild(group);
+
+        return {
+            takeRange() {
+                const range = savedRange
+                    || editor.getSelection()
+                    || { index: Math.max(0, editor.getLength() - 1), length: 0 };
+                savedRange = null;
+                return range;
+            },
+        };
+    },
+
+    /**
      * Build the structured moduleEmbed payload. Returns null for `sahabi`, which
      * reads better as an inline link inside the sentence than as a card — see
      * insertInline().

@@ -32,17 +32,6 @@ return new class extends Migration
             }
         }
 
-        // Drop from seerah_participants table
-        if (Schema::hasTable('seerah_participants')) {
-            $columns = Schema::getColumnListing('seerah_participants');
-            $columnsToRemove = array_intersect(['name', 'description'], $columns);
-            if (! empty($columnsToRemove)) {
-                Schema::table('seerah_participants', function (Blueprint $table) use ($columnsToRemove) {
-                    $table->dropColumn($columnsToRemove);
-                });
-            }
-        }
-
         // Drop from languages table
         if (Schema::hasTable('languages')) {
             $columns = Schema::getColumnListing('languages');
@@ -92,19 +81,6 @@ return new class extends Migration
         if (Schema::hasTable('quran_reciters')) {
             $columns = Schema::getColumnListing('quran_reciters');
             Schema::table('quran_reciters', function (Blueprint $table) use ($columns) {
-                if (! in_array('name', $columns)) {
-                    $table->json('name')->nullable();
-                }
-                if (! in_array('description', $columns)) {
-                    $table->json('description')->nullable();
-                }
-            });
-        }
-
-        // Restore JSON columns for seerah_participants table
-        if (Schema::hasTable('seerah_participants')) {
-            $columns = Schema::getColumnListing('seerah_participants');
-            Schema::table('seerah_participants', function (Blueprint $table) use ($columns) {
                 if (! in_array('name', $columns)) {
                     $table->json('name')->nullable();
                 }

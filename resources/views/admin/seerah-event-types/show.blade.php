@@ -54,10 +54,6 @@
                 <span :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ $type->color ?: '—' }}</span>
             </div>
             <div class="flex items-center justify-between text-sm">
-                <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ __('admin.display_order') }}</span>
-                <span :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ $type->display_order }}</span>
-            </div>
-            <div class="flex items-center justify-between text-sm">
                 <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ __('admin.events') }}</span>
                 <span :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ $eventsCount }}</span>
             </div>

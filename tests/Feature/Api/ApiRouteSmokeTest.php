@@ -184,16 +184,14 @@ class ApiRouteSmokeTest extends TestCase
 
         $eventType = SeerahEventType::query()->firstOrCreate(
             ['slug' => 'battle'],
-            ['is_active' => true, 'display_order' => 1]
+            ['locale' => ['ar' => 'غزوة', 'en' => 'Battle'], 'is_active' => true]
         );
-        $eventType->syncTranslations(['name' => ['ar' => 'غزوة', 'en' => 'Battle']]);
         $event = SeerahEventFactory::new()->create([
             'slug' => 'route-smoke-event',
-            'seerah_event_type_id' => $eventType->id,
+            'event_type' => $eventType->id,
             'hijri_year' => 1,
-            'gregorian_year' => 622,
+            'gregorian_date' => '0622-09-24',
             'status' => 'published',
-            'featured_image' => 'https://example.com/smoke.jpg',
         ]);
 
         $program = MediaProgramFactory::new()->seerah()->create([
@@ -262,7 +260,7 @@ class ApiRouteSmokeTest extends TestCase
             'v1.quran.verse:surahNumber' => $surah->revelation_order,
             'v1.quran.verse:verseNumber' => 1,
             'v1.search.module:module' => 'article',
-            'v1.seerah.by-gregorian-year:year' => $event->gregorian_year,
+            'v1.seerah.by-gregorian-year:year' => $event->gregorian_date->year,
             'v1.seerah.by-hijri-year:year' => $event->hijri_year,
             'v1.seerah.by-type:type' => $eventType->slug,
             'v1.seerah.show:slug' => $event->slug,

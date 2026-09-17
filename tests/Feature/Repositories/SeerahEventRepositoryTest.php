@@ -5,9 +5,14 @@ declare(strict_types=1);
 namespace Tests\Feature\Repositories;
 
 use App\Domain\Seerah\Models\SeerahEvent;
+use App\Domain\Seerah\Models\SeerahEventGalleryItem;
+use App\Domain\Seerah\Models\SeerahEventMedia;
 use App\Domain\Seerah\Models\SeerahEventTranslation;
 use App\Domain\Seerah\Models\SeerahEventType;
+use App\Domain\Seerah\Models\SeerahMilestone;
 use App\Domain\Seerah\Repositories\SeerahEventRepositoryInterface;
+use App\Domain\Shared\Models\Location;
+use App\Models\Media;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -17,119 +22,111 @@ use Tests\TestCase;
  *
  * The repository exposes two loading profiles:
  *
- *  LIST  — getChronological() / getByType() / etc.
- *          Uses listRelations(): only 'translations:id,seerah_event_id,locale,title'
- *          This is 1 query for the data + 1 count + 1 translations batch = 3 total.
+ *  LIST   — getChronological() / getByType() / search() / paginatePublicFiltered():
+ *           translations (no content), type, place + place translations.
  *
- *  DETAIL — findBySlug()
- *           Uses detailRelations(): translations (full) + participants + article
- *           + article.locales + article.category + article.categories
- *           + article.tags + article.mediaItems
- *           More queries than the list path; in practice 5–8 depending on
- *           whether linked article and its relations exist.
+ *  DETAIL — findBySlug(): full translations (content, metadata, sources), type,
+ *           milestone, place, gallery and media links.
  *
- * The key invariant: the list query count must be strictly less than the detail
- * query count when the detail record has a linked article with sub-relations.
- *
- * FULLTEXT search tests are skipped on SQLite.
+ * Chronology is `order`, then the Hijri parts, then id.
  */
 class SeerahEventRepositoryTest extends TestCase
 {
     use RefreshDatabase;
 
+    private int $counter = 0;
+
     // ---------------------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------------------
 
-    private function isUsingSqlite(): bool
+    private function repo(): SeerahEventRepositoryInterface
     {
-        return DB::getDriverName() === 'sqlite';
+        return app(SeerahEventRepositoryInterface::class);
+    }
+
+    private function type(string $slug = 'other'): SeerahEventType
+    {
+        return SeerahEventType::query()->firstOrCreate(
+            ['slug' => $slug],
+            ['locale' => ['ar' => $slug, 'en' => $slug], 'is_active' => true],
+        );
+    }
+
+    private function milestone(string $slug, int $order = 1): SeerahMilestone
+    {
+        return SeerahMilestone::query()->create([
+            'slug' => $slug, 'order' => $order, 'metadata' => ['icon' => 'x'],
+            'hijri_from' => -13, 'hijri_to' => 1, 'is_active' => true,
+        ]);
     }
 
     /**
-     * Create a SeerahEvent with its translation rows.
-     * featured_image is set to an HTTP URL so SeerahEvent::getFirstMediaUrl()
-     * returns early (the Spatie media library is not configured in tests).
+     * Create a SeerahEvent with ready ar/en translation rows.
+     *
+     * @param  array<string, mixed>  $translation  extra columns for both locales
      */
-    private function createEvent(array $overrides = []): SeerahEvent
+    private function createEvent(array $overrides = [], array $translation = []): SeerahEvent
     {
-        static $counter = 0;
-        $counter++;
+        $counter = ++$this->counter;
 
-        $defaults = [
+        $event = SeerahEvent::query()->create(array_merge([
             'slug' => "event-{$counter}",
-            'seerah_event_type_id' => SeerahEventType::query()->where('slug', 'other')->value('id'),
+            'event_type' => $this->type()->id,
             'status' => 'published',
-            'importance' => 'medium',
-            'is_featured' => false,
-            'display_order' => $counter,
+            'order' => $counter,
             'hijri_year' => 1,
             'hijri_month' => 1,
             'hijri_day' => 1,
-            'featured_image' => "https://example.com/event-{$counter}.jpg",
-        ];
+        ], $overrides));
 
-        $event = SeerahEvent::create(array_merge($defaults, $overrides));
-
-        SeerahEventTranslation::create([
-            'seerah_event_id' => $event->id,
-            'locale' => 'ar',
-            'title' => "عنوان الحدث {$counter}",
-            'description' => "وصف الحدث {$counter}",
-            'content' => "محتوى الحدث {$counter}",
-            'is_ready' => true,
-        ]);
-
-        SeerahEventTranslation::create([
-            'seerah_event_id' => $event->id,
-            'locale' => 'en',
-            'title' => "Event Title {$counter}",
-            'description' => "Event description {$counter}",
-            'content' => "Event content {$counter}",
-            'is_ready' => true,
-        ]);
+        foreach (['ar' => "عنوان الحدث {$counter}", 'en' => "Event Title {$counter}"] as $locale => $title) {
+            SeerahEventTranslation::query()->create(array_merge([
+                'event_id' => $event->id,
+                'locale' => $locale,
+                'title' => $title,
+                'description' => "Event description {$counter}",
+                'content' => "Event content {$counter}",
+                'is_ready' => true,
+            ], $translation));
+        }
 
         return $event->fresh();
     }
 
     // ---------------------------------------------------------------------------
-    // getChronological() — list path
+    // Chronology
     // ---------------------------------------------------------------------------
 
-    public function test_get_chronological_returns_paginated_results(): void
+    public function test_get_chronological_returns_published_paginated_results(): void
     {
-        $this->createEvent(['hijri_year' => 1]);
-        $this->createEvent(['hijri_year' => 2]);
-        $this->createEvent(['hijri_year' => 3]);
+        $this->createEvent();
+        $this->createEvent();
+        $this->createEvent(['status' => 'draft']);
 
-        $repo = app(SeerahEventRepositoryInterface::class);
-        $results = $repo->getChronological(10);
-
-        $this->assertEquals(3, $results->total());
+        $this->assertEquals(2, $this->repo()->getChronological(10)->total());
     }
 
-    public function test_get_chronological_uses_hijri_dates_for_legacy_equal_ranks(): void
+    public function test_get_chronological_uses_hijri_dates_for_equal_order(): void
     {
-        $this->createEvent(['display_order' => 0, 'hijri_year' => 3]);
-        $this->createEvent(['display_order' => 0, 'hijri_year' => 1]);
-        $this->createEvent(['display_order' => 0, 'hijri_year' => 2]);
+        $this->createEvent(['order' => 0, 'hijri_year' => 3]);
+        $this->createEvent(['order' => 0, 'hijri_year' => 1]);
+        $this->createEvent(['order' => 0, 'hijri_year' => 2]);
 
-        $repo = app(SeerahEventRepositoryInterface::class);
-        $results = $repo->getChronological(10);
+        $years = collect($this->repo()->getChronological(10)->items())->pluck('hijri_year')->all();
 
-        $years = collect($results->items())->pluck('hijri_year')->toArray();
         $this->assertEquals([1, 2, 3], $years);
     }
 
-    public function test_editorial_sequence_keeps_undated_events_between_dated_events_on_every_list(): void
+    public function test_order_keeps_undated_events_between_dated_events_on_every_list(): void
     {
-        $last = $this->createEvent(['display_order' => 30, 'hijri_year' => 9, 'hijri_month' => 7]);
+        $last = $this->createEvent(['order' => 30, 'hijri_year' => 9, 'hijri_month' => 7]);
         $undated = $this->createEvent([
-            'display_order' => 20, 'hijri_year' => null, 'hijri_month' => null, 'hijri_day' => null,
+            'order' => 20, 'hijri_year' => null, 'hijri_month' => null, 'hijri_day' => null,
         ]);
-        $first = $this->createEvent(['display_order' => 10, 'hijri_year' => -13]);
-        $draft = $this->createEvent(['display_order' => 15, 'status' => 'draft']);
-        $repo = app(SeerahEventRepositoryInterface::class);
+        $first = $this->createEvent(['order' => 10, 'hijri_year' => -13]);
+        $draft = $this->createEvent(['order' => 15, 'status' => 'draft']);
+        $repo = $this->repo();
         $expected = [$first->id, $undated->id, $last->id];
 
         $this->assertSame($expected, $repo->getChronological(10)->pluck('id')->all());
@@ -142,24 +139,22 @@ class SeerahEventRepositoryTest extends TestCase
             $this->assertSame($expected[$index - 1] ?? null, $page['prev']?->id);
             $this->assertSame($expected[$index + 1] ?? null, $page['next']?->id);
         }
-
-        $this->assertNull($undated->fresh()->hijri_year);
     }
 
-    public function test_equal_ranks_and_dates_have_stable_navigation_including_null_and_pre_hijra_dates(): void
+    public function test_equal_order_and_dates_have_stable_navigation_including_null_and_pre_hijra_dates(): void
     {
-        $dated = $this->createEvent(['display_order' => 0, 'hijri_year' => -13]);
+        $dated = $this->createEvent(['order' => 0, 'hijri_year' => -13]);
         $undatedFirst = $this->createEvent([
-            'display_order' => 0, 'hijri_year' => null, 'hijri_month' => null, 'hijri_day' => null,
+            'order' => 0, 'hijri_year' => null, 'hijri_month' => null, 'hijri_day' => null,
         ]);
         $undatedSecond = $this->createEvent([
-            'display_order' => 0, 'hijri_year' => null, 'hijri_month' => null, 'hijri_day' => null,
+            'order' => 0, 'hijri_year' => null, 'hijri_month' => null, 'hijri_day' => null,
         ]);
         $partiallyDated = $this->createEvent([
-            'display_order' => 0, 'hijri_year' => -13, 'hijri_month' => null, 'hijri_day' => null,
+            'order' => 0, 'hijri_year' => -13, 'hijri_month' => null, 'hijri_day' => null,
         ]);
-        $ranked = $this->createEvent(['display_order' => 10, 'hijri_year' => -53]);
-        $repo = app(SeerahEventRepositoryInterface::class);
+        $ranked = $this->createEvent(['order' => 10, 'hijri_year' => -53]);
+        $repo = $this->repo();
         $events = [$undatedFirst, $undatedSecond, $partiallyDated, $dated, $ranked];
         $expected = array_map(fn (SeerahEvent $event) => $event->id, $events);
 
@@ -174,34 +169,24 @@ class SeerahEventRepositoryTest extends TestCase
     }
 
     // ---------------------------------------------------------------------------
-    // List loads only translation relation (not article sub-graph)
+    // List relations
     // ---------------------------------------------------------------------------
 
-    public function test_get_chronological_loads_only_translations_not_article_graph(): void
+    public function test_list_loads_translations_type_and_place_only(): void
     {
         $this->createEvent();
 
-        $repo = app(SeerahEventRepositoryInterface::class);
-        $results = $repo->getChronological(10);
+        $event = $this->repo()->getChronological(10)->first();
 
-        $event = $results->first();
+        foreach (['translations', 'type', 'place'] as $relation) {
+            $this->assertTrue($event->relationLoaded($relation), "The list path must eager-load {$relation}.");
+        }
 
-        // The list path loads translations — must be present
-        $this->assertTrue(
-            $event->relationLoaded('translations'),
-            'getChronological() must eager-load translations.'
-        );
+        foreach (['milestone', 'gallery', 'mediaLinks'] as $relation) {
+            $this->assertFalse($event->relationLoaded($relation), "The list path must NOT load {$relation}.");
+        }
 
-        // The list path must NOT load the article sub-graph
-        $this->assertFalse(
-            $event->relationLoaded('article'),
-            'getChronological() must NOT load the article relation (list path).'
-        );
-
-        $this->assertFalse(
-            $event->relationLoaded('participants'),
-            'getChronological() must NOT load participants (list path).'
-        );
+        $this->assertNull($event->translations->first()->getAttribute('content'));
     }
 
     // ---------------------------------------------------------------------------
@@ -212,150 +197,143 @@ class SeerahEventRepositoryTest extends TestCase
     {
         $event = $this->createEvent(['slug' => 'battle-of-badr']);
 
-        $repo = app(SeerahEventRepositoryInterface::class);
-        $result = $repo->findBySlug('battle-of-badr');
+        $result = $this->repo()->findBySlug('battle-of-badr');
 
         $this->assertNotNull($result);
         $this->assertEquals($event->id, $result->id);
-        $this->assertEquals('battle-of-badr', $result->slug);
     }
 
-    public function test_find_by_slug_returns_null_for_non_existent_slug(): void
+    public function test_find_by_slug_returns_null_for_non_existent_slug_or_draft(): void
     {
-        $repo = app(SeerahEventRepositoryInterface::class);
-        $result = $repo->findBySlug('does-not-exist-xyz');
+        $this->createEvent(['slug' => 'a-draft', 'status' => 'draft']);
 
-        $this->assertNull($result);
+        $this->assertNull($this->repo()->findBySlug('does-not-exist-xyz'));
+        $this->assertNull($this->repo()->findBySlug('a-draft'));
     }
 
-    public function test_find_by_slug_loads_full_translations(): void
+    public function test_find_by_slug_loads_detail_translations_gallery_and_media_links(): void
     {
-        $event = $this->createEvent(['slug' => 'conquest-of-mecca']);
+        $event = $this->createEvent(['slug' => 'conquest-of-mecca'], [
+            'metadata' => [['key' => 'k', 'value' => 'v']],
+            'sources' => [['title' => 't', 'author' => 'a', 'reference' => 'r']],
+        ]);
+        SeerahEventGalleryItem::query()->create(['event_id' => $event->id, 'image' => 'g.jpg', 'order' => 0]);
+        $media = Media::query()->create([
+            'filename' => 'm.jpg', 'original_filename' => 'm.jpg', 'path' => 'media/m.jpg',
+            'mime_type' => 'image/jpeg', 'size' => 1, 'disk' => 'public', 'type' => 'image',
+        ]);
+        SeerahEventMedia::query()->create(['event_id' => $event->id, 'media_id' => $media->id]);
 
-        $repo = app(SeerahEventRepositoryInterface::class);
-        $result = $repo->findBySlug('conquest-of-mecca');
+        $result = $this->repo()->findBySlug('conquest-of-mecca');
 
-        $this->assertNotNull($result);
-        $this->assertTrue(
-            $result->relationLoaded('translations'),
-            'findBySlug() must eager-load translations.'
-        );
+        foreach (['translations', 'type', 'milestone', 'place', 'gallery', 'mediaLinks'] as $relation) {
+            $this->assertTrue($result->relationLoaded($relation), "findBySlug() must eager-load {$relation}.");
+        }
 
-        // The detail translations include description and content (not just title)
-        $arTranslation = $result->translations->firstWhere('locale', 'ar');
-        $this->assertNotNull($arTranslation);
-        $this->assertNotEmpty($arTranslation->title);
+        $this->assertSame('Event content 1', $result->translations->firstWhere('locale', 'ar')->content);
+        $this->assertSame([['key' => 'k', 'value' => 'v']], $result->metadataFor('ar'));
+        $this->assertSame('a', $result->sourcesFor('ar')[0]['author']);
+        $this->assertCount(1, $result->gallery);
+        $this->assertSame($media->id, $result->mediaLinks->first()->media_id);
     }
 
     // ---------------------------------------------------------------------------
-    // List vs Detail query count — list must use fewer queries
-    // ---------------------------------------------------------------------------
-
-    public function test_list_query_count_is_less_than_detail_query_count(): void
-    {
-        // Create an event with a unique slug we can retrieve via findBySlug().
-        $this->createEvent(['slug' => 'migration-to-medina']);
-
-        $repo = app(SeerahEventRepositoryInterface::class);
-
-        // ---- Measure list queries ----
-        DB::enableQueryLog();
-        $repo->getChronological(10);
-        $listCount = count(DB::getQueryLog());
-        DB::disableQueryLog();
-
-        // ---- Measure detail queries ----
-        DB::enableQueryLog();
-        $repo->findBySlug('migration-to-medina');
-        $detailCount = count(DB::getQueryLog());
-        DB::disableQueryLog();
-
-        // The list path loads only translations (1 batch load).
-        // The detail path loads translations + participants + article + 5 article
-        // sub-relations = more queries.
-        // Even if the linked article doesn't exist in this test, findBySlug() still
-        // issues separate queries to attempt loading each relation, making it heavier.
-        // We just assert that the list count is at most equal (almost always less).
-        $this->assertLessThanOrEqual(
-            $detailCount,
-            $listCount,
-            "List path ({$listCount} queries) should not exceed detail path ({$detailCount} queries)."
-        );
-    }
-
-    // ---------------------------------------------------------------------------
-    // getByType() — type scope
+    // getByType() / search()
     // ---------------------------------------------------------------------------
 
     public function test_get_by_type_returns_only_matching_event_type(): void
     {
-        $battleId = SeerahEventType::query()->where('slug', 'battle')->value('id');
-        $revelationId = SeerahEventType::query()->where('slug', 'revelation')->value('id');
+        $battle = $this->type('battle');
+        $revelation = $this->type('revelation');
 
-        $this->createEvent(['seerah_event_type_id' => $battleId]);
-        $this->createEvent(['seerah_event_type_id' => $battleId]);
-        $this->createEvent(['seerah_event_type_id' => $revelationId]);
+        $this->createEvent(['event_type' => $battle->id]);
+        $this->createEvent(['event_type' => $battle->id]);
+        $this->createEvent(['event_type' => $revelation->id]);
 
-        $repo = app(SeerahEventRepositoryInterface::class);
-        $results = $repo->getByType('battle');
+        $bySlug = $this->repo()->getByType('battle');
 
-        $this->assertEquals(2, $results->total());
-        foreach ($results->items() as $event) {
+        $this->assertEquals(2, $bySlug->total());
+        foreach ($bySlug->items() as $event) {
             $this->assertEquals('battle', $event->type->slug);
         }
+
+        $this->assertEquals(1, $this->repo()->getByType($revelation->id)->total());
     }
 
-    // ---------------------------------------------------------------------------
-    // getFeatured()
-    // ---------------------------------------------------------------------------
-
-    public function test_get_featured_returns_only_featured_events(): void
+    public function test_search_returns_matching_published_events(): void
     {
-        $this->createEvent(['is_featured' => true]);
-        $this->createEvent(['is_featured' => true]);
-        $this->createEvent(['is_featured' => false]);
+        // A 2-byte term takes the LIKE path: FULLTEXT cannot see rows that
+        // RefreshDatabase never commits.
+        $this->createEvent([], ['title' => 'Qx Badr']);
+        $this->createEvent(['status' => 'draft'], ['title' => 'Qx Uhud']);
+        $this->createEvent();
 
-        $repo = app(SeerahEventRepositoryInterface::class);
-        $results = $repo->getFeatured(10);
-
-        $this->assertCount(2, $results);
-        foreach ($results as $event) {
-            $this->assertTrue($event->is_featured);
-        }
+        $this->assertEquals(1, $this->repo()->search('Qx')->total());
     }
 
     // ---------------------------------------------------------------------------
-    // search() — FULLTEXT (MySQL only)
+    // Public directory filters
     // ---------------------------------------------------------------------------
 
-    public function test_search_returns_matching_events(): void
+    public function test_paginate_public_filtered_by_era(): void
     {
-        if ($this->isUsingSqlite()) {
-            $this->markTestSkipped(
-                'MATCH...AGAINST FULLTEXT search is MySQL-only. '.
-                'Run with TEST_DB_CONNECTION=mysql to enable this test.'
-            );
-        }
+        $mecca = $this->createEvent(['era' => 'mecca']);
+        $this->createEvent(['era' => 'medina']);
 
-        // The search also matches on the event's `location` column using LIKE,
-        // so we can test that path without FULLTEXT support.
-        $this->createEvent(['location' => 'مكة المكرمة']);
-        $this->createEvent(['location' => 'المدينة المنورة']);
+        $this->assertSame([$mecca->id], $this->repo()->paginatePublicFiltered(['era' => 'mecca'], 'en')->pluck('id')->all());
+    }
 
-        $repo = app(SeerahEventRepositoryInterface::class);
-        $results = $repo->search('مكة');
+    public function test_paginate_public_filtered_by_disputed_and_facet_count(): void
+    {
+        $disputed = $this->createEvent([], ['dispute_note' => 'Dates differ']);
+        $this->createEvent([], ['dispute_note' => '']);
+        $this->createEvent();
 
-        $this->assertGreaterThan(0, $results->total());
+        $this->assertSame([$disputed->id], $this->repo()->paginatePublicFiltered(['disputed' => 1], 'en')->pluck('id')->all());
+        $this->assertSame(['disputed' => 1], $this->repo()->publicFilterFacets('en'));
+    }
+
+    public function test_related_events_prefer_same_milestone_then_same_era(): void
+    {
+        $milestone = $this->milestone('makkah');
+        $other = $this->milestone('madinah', 2);
+
+        $event = $this->createEvent(['sm_id' => $milestone->id, 'era' => 'mecca']);
+        $sameEra = $this->createEvent(['sm_id' => $other->id, 'era' => 'mecca', 'order' => 0]);
+        $sameMilestone = $this->createEvent(['sm_id' => $milestone->id, 'era' => 'medina']);
+        $this->createEvent(['sm_id' => $other->id, 'era' => 'medina']);
+
+        $related = $this->repo()->getPublicPage($event->slug, 'en')['related'];
+
+        $this->assertSame([$sameMilestone->id, $sameEra->id], $related->pluck('id')->all());
     }
 
     // ---------------------------------------------------------------------------
-    // getChronological() — list N+1 check
+    // Query counts
     // ---------------------------------------------------------------------------
+
+    public function test_list_query_count_is_less_than_detail_query_count(): void
+    {
+        $this->createEvent(['slug' => 'migration-to-medina', 'sm_id' => $this->milestone('m')->id]);
+        $repo = $this->repo();
+
+        DB::enableQueryLog();
+        $repo->getChronological(10);
+        $listCount = count(DB::getQueryLog());
+        DB::flushQueryLog();
+
+        $repo->findBySlug('migration-to-medina');
+        $detailCount = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        $this->assertLessThan($detailCount, $listCount);
+    }
 
     public function test_get_chronological_does_not_cause_n_plus_one(): void
     {
         for ($i = 1; $i <= 5; $i++) {
-            $this->createEvent(['hijri_year' => $i]);
+            $place = Location::factory()->withNames(['ar' => "مكان {$i}"])->create();
+            $this->createEvent(['location_id' => $place->id, 'event_type' => $this->type("type-{$i}")->id]);
         }
 
         $queryCount = 0;
@@ -363,16 +341,9 @@ class SeerahEventRepositoryTest extends TestCase
             $queryCount++;
         });
 
-        $repo = app(SeerahEventRepositoryInterface::class);
-        $repo->getChronological(5);
+        $this->repo()->getChronological(5);
 
-        // 1 count + 1 data + 1 translations batch + 1 type batch + 1 type-translations
-        // batch = 5 queries max (all constant — no per-row queries).
-        $this->assertLessThanOrEqual(
-            5,
-            $queryCount,
-            "getChronological() issued {$queryCount} queries for 5 events. ".
-            'Expected ≤ 5 (translations + type + type translations, all batched).'
-        );
+        // count + data + translations + type + place + place.translations — all batched.
+        $this->assertLessThanOrEqual(6, $queryCount, "getChronological() issued {$queryCount} queries for 5 events.");
     }
 }

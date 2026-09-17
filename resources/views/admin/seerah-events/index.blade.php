@@ -39,19 +39,6 @@
 
 @section('content')
 
-    {{-- Review queue: rows that name a place in prose but carry no canonical
-         reference. The resolver leaves ambiguous and place-less text alone by
-         design, so this is the editor's worklist, not an error count. --}}
-    @if(($unmappedCount ?? 0) > 0)
-        <a href="{{ request()->fullUrlWithQuery(['unmapped' => 1]) }}"
-           class="mb-6 flex items-center gap-2 px-4 py-3 rounded-xl border text-sm transition-colors
-                  bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100
-                  dark:bg-amber-900/25 dark:border-amber-800 dark:text-amber-200 dark:hover:bg-amber-900/40">
-            <i data-lucide="map-pin-off" class="w-4 h-4 flex-shrink-0"></i>
-            <span>{{ __('locations.messages.unmapped_count', ['count' => $unmappedCount]) }}</span>
-            <i data-lucide="arrow-left" class="w-4 h-4 ms-auto rtl:rotate-180"></i>
-        </a>
-    @endif
 <div x-data="seerahEventsIndex()"
      @toggle-filters.window="filtersOpen = !filtersOpen">
 
@@ -161,6 +148,23 @@
                 </select>
             </div>
 
+            <!-- Era Filter -->
+            <div>
+                <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                    الحقبة التاريخية
+                </label>
+                <select name="era"
+                        class="w-full px-4 py-2.5 text-base sm:text-sm rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                        :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                    <option value="">{{ __('admin.all') }}</option>
+                    @foreach($eras as $era)
+                        <option value="{{ $era->value }}" {{ request('era') == $era->value ? 'selected' : '' }}>
+                            {{ $era->labelArabic() }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
             <!-- Filter Actions -->
             <div class="flex items-end gap-3">
                 <a href="{{ route('admin.seerah-events.index') }}"
@@ -217,8 +221,7 @@
                         <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الحدث</th>
                         <th class="px-6 py-4 text-start text-sm font-semibold hidden xl:table-cell" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الحقبة</th>
                         <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">النوع</th>
-                        <th class="px-6 py-4 text-center text-sm font-semibold hidden lg:table-cell" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">النقاط</th>
-                        <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الأهمية</th>
+                        <th class="px-6 py-4 text-center text-sm font-semibold hidden lg:table-cell" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الترتيب</th>
                         <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.status') }}</th>
                         <th class="px-6 py-4 text-start text-sm font-semibold" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">الإجراءات</th>
                     </tr>
@@ -244,24 +247,18 @@
                                 <div class="min-w-0">
                                     <div class="flex items-center gap-1.5">
                                         <h4 class="font-semibold truncate" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                                            {{ $event->getTranslation('title', 'ar') }}
+                                            <a href="{{ route('admin.seerah-events.show', $event->id) }}" class="transition-colors hover:text-accent hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded">{{ $event->getTranslation('title', 'ar') }}</a>
                                         </h4>
-                                        @if($event->is_pivotal)
-                                        <span title="حدث مفصلي" class="inline-flex flex-shrink-0 w-5 h-5 items-center justify-center rounded-full bg-amber-500 text-white">
-                                            <i data-lucide="star" class="w-3 h-3"></i>
-                                            <span class="sr-only">حدث مفصلي</span>
-                                        </span>
-                                        @endif
                                     </div>
                                     <p class="text-xs truncate flex items-center gap-2 mt-0.5" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
-                                        @if($event->location)
+                                        @if($event->place)
                                             <span class="inline-flex items-center gap-1">
-                                                <i data-lucide="map-pin" class="w-3 h-3"></i>{{ $event->location }}
+                                                <i data-lucide="map-pin" class="w-3 h-3"></i>{{ $event->place->name('ar') }}
                                             </span>
                                         @endif
-                                        @if($event->hijri_date)
+                                        @if($event->formattedHijriDate('ar'))
                                             <span class="inline-flex items-center gap-1">
-                                                <i data-lucide="calendar" class="w-3 h-3"></i>{{ $event->hijri_date }}
+                                                <i data-lucide="calendar" class="w-3 h-3"></i>{{ $event->formattedHijriDate('ar') }}
                                             </span>
                                         @endif
                                     </p>
@@ -291,27 +288,10 @@
                             <span class="text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">—</span>
                             @endif
                         </td>
-                        {{-- Timeline points: an event with none renders no "الخط الزمني"
-                             section on the public page, so surface it as a warning. --}}
                         <td class="px-6 py-4 text-center hidden lg:table-cell">
-                            @php $pointCount = $event->timeline_items_count ?? 0; @endphp
-                            <span class="inline-flex items-center justify-center min-w-[2rem] px-2 py-1 rounded-lg text-xs font-bold tabular-nums
-                                {{ $pointCount === 0
-                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                    : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }}"
-                                  title="{{ $pointCount === 0 ? 'لا توجد نقاط — قسم الخط الزمني لن يظهر' : $pointCount.' نقطة' }}">
-                                {{ $pointCount }}
+                            <span class="inline-flex items-center justify-center min-w-[2rem] px-2 py-1 rounded-lg text-xs font-bold tabular-nums bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                {{ $event->order }}
                             </span>
-                        </td>
-                        <td class="px-6 py-4">
-                            @if($event->importance)
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
-                                {{ $event->importance->value === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : '' }}
-                                {{ $event->importance->value === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : '' }}
-                                {{ $event->importance->value === 'low' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : '' }}">
-                                {{ $event->importance->labelArabic() }}
-                            </span>
-                            @endif
                         </td>
                         <td class="px-6 py-4">
                             @if($event->status)
@@ -353,7 +333,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="8" class="px-6 py-12 text-center">
+                        <td colspan="7" class="px-6 py-12 text-center">
                             <i data-lucide="calendar" class="w-16 h-16 mx-auto mb-4" :class="darkMode ? 'text-gray-600' : 'text-gray-400'"></i>
                             <p class="text-lg font-medium mb-4" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">
                                 لا توجد أحداث حالياً
@@ -374,19 +354,13 @@
     <!-- Mobile card stack (< md) -->
     <div class="md:hidden space-y-3">
         @forelse($events ?? [] as $event)
-            @php $pointCount = $event->timeline_items_count ?? 0; @endphp
             <x-admin.list-card
                 :value="$event->id"
                 :icon="$event->type?->icon ?? 'calendar'"
                 :gradient="$event->type?->gradient ?: 'from-[#0056b3] to-[#218838]'"
                 :title="$event->getTranslation('title', 'ar')"
-                :subtitle="collect([$event->location, $event->hijri_date])->filter()->implode(' · ') ?: null">
-
-                @if($event->is_pivotal)
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500 text-white">
-                        <i data-lucide="star" class="w-3 h-3"></i> مفصلي
-                    </span>
-                @endif
+                :href="route('admin.seerah-events.show', $event->id)"
+                :subtitle="collect([$event->place?->name('ar'), $event->formattedHijriDate('ar')])->filter()->implode(' · ') ?: null">
 
                 @if($event->milestone)
                     <a href="{{ route('admin.seerah-milestones.show', $event->milestone->id) }}"
@@ -402,24 +376,6 @@
                           :class="darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-800'">
                         <i data-lucide="{{ $event->type->icon ?? 'tag' }}" class="w-3 h-3"></i>
                         {{ $event->type->getTranslation('name', 'ar') }}
-                    </span>
-                @endif
-
-                {{-- Same warning the table carries: no points means no public timeline section. --}}
-                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold tabular-nums
-                    {{ $pointCount === 0
-                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                        : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }}"
-                      title="{{ $pointCount === 0 ? 'لا توجد نقاط — قسم الخط الزمني لن يظهر' : $pointCount.' نقطة' }}">
-                    <i data-lucide="list" class="w-3 h-3"></i> {{ $pointCount }}
-                </span>
-
-                @if($event->importance)
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold
-                        {{ $event->importance->value === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : '' }}
-                        {{ $event->importance->value === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : '' }}
-                        {{ $event->importance->value === 'low' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : '' }}">
-                        {{ $event->importance->labelArabic() }}
                     </span>
                 @endif
 
@@ -486,7 +442,7 @@
 <script>
     function seerahEventsIndex() {
         return {
-            filtersOpen: {{ request()->hasAny(['event_type', 'importance', 'status', 'milestone', 'search']) ? 'true' : 'false' }},
+            filtersOpen: {{ request()->hasAny(['event_type', 'era', 'status', 'milestone', 'search']) ? 'true' : 'false' }},
             selected: [],
             // The row checkboxes are x-model bound, so Alpine mirrors `selected`
             // into them on its own. Reading the DOM here instead would miss the

@@ -8,9 +8,14 @@ use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * Store Seerah Event Type Request (Admin)
+ *
+ * Names are posted per locale as `locale[ar]`, `locale[en]`, … and stored on the
+ * type itself.
  */
 class StoreSeerahEventTypeRequest extends FormRequest
 {
+    private const REMOVED_FIELDS = ['name', 'icon', 'color', 'gradient', 'display_order'];
+
     public function authorize(): bool
     {
         return $this->user()->hasAnyRole(['admin', 'super_admin']);
@@ -20,24 +25,25 @@ class StoreSeerahEventTypeRequest extends FormRequest
     {
         return [
             'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9\-]+$/', 'unique:seerah_event_types,slug'],
-            'name' => ['required', 'array'],
-            'name.ar' => ['required', 'string', 'max:255'],
-            'name.en' => ['nullable', 'string', 'max:255'],
-            'name.fr' => ['nullable', 'string', 'max:255'],
-            'name.tr' => ['nullable', 'string', 'max:255'],
-            'name.ur' => ['nullable', 'string', 'max:255'],
-            'icon' => ['nullable', 'string', 'max:50'],
-            'color' => ['nullable', 'string', 'max:30'],
-            'gradient' => ['nullable', 'string', 'max:60'],
+            'locale' => ['required', 'array'],
+            'locale.ar' => ['required', 'string', 'max:255'],
+            'locale.en' => ['nullable', 'string', 'max:255'],
+            'locale.fr' => ['nullable', 'string', 'max:255'],
+            'locale.tr' => ['nullable', 'string', 'max:255'],
+            'locale.ur' => ['nullable', 'string', 'max:255'],
+            'metadata' => ['nullable', 'array'],
+            'metadata.icon' => ['nullable', 'string', 'max:50'],
+            'metadata.color' => ['nullable', 'string', 'max:30'],
+            'metadata.gradient' => ['nullable', 'string', 'max:60'],
             'is_active' => ['nullable', 'boolean'],
-            'display_order' => ['nullable', 'integer', 'min:0'],
+            ...array_fill_keys(self::REMOVED_FIELDS, ['prohibited']),
         ];
     }
 
     public function messages(): array
     {
         return [
-            'name.ar.required' => __('admin.field_required'),
+            'locale.ar.required' => __('admin.field_required'),
             'slug.unique' => __('admin.slug_taken'),
             'slug.regex' => __('admin.slug_format'),
         ];

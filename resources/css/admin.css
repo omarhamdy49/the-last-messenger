@@ -13,6 +13,7 @@
 
 @import "tailwindcss";
 @import "./admin/seerah-editorial.css";
+@import "./admin/rich-text.css";
 @config "../../tailwind.config.js";
 
 /* ============================================

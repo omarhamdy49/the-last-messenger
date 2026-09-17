@@ -121,17 +121,6 @@ class ArticleResource extends JsonResource
                 });
             }),
 
-            'seerah_events' => $this->when($this->relationLoaded('seerahEvents'), function () {
-                return $this->seerahEvents->map(function ($event) {
-                    return [
-                        'id' => $event->id,
-                        'slug' => $event->slug,
-                        'title' => $event->getEnabledTranslations('title'),
-                        'featured_image' => $event->getFirstMediaUrl('featured_image') ?: $event->featured_image,
-                    ];
-                });
-            }),
-
             // Version History
             'versions' => $this->when($isAdminRequest && $this->relationLoaded('versions'), function () {
                 return $this->versions->map(function ($version) {

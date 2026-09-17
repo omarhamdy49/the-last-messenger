@@ -31,16 +31,18 @@ final class ProfileFavoritesTest extends TestCase
     private function makeSeerahEvent(string $slug): int
     {
         // Translatable text lives in seerah_event_translations; the base row
-        // only needs slug + metadata.
+        // only needs slug + type.
+        DB::table('seerah_event_types')->insertOrIgnore([
+            'slug' => 'other',
+            'locale' => json_encode(['ar' => 'أخرى', 'en' => 'Other']),
+            'is_active' => true,
+        ]);
+
         return (int) DB::table('seerah_events')->insertGetId([
             'slug' => $slug,
-            'seerah_event_type_id' => DB::table('seerah_event_types')->where('slug', 'other')->value('id'),
+            'event_type' => DB::table('seerah_event_types')->where('slug', 'other')->value('id'),
             'status' => 'published',
-            'importance' => 'medium',
-            'views_count' => 0,
-            'display_order' => 0,
-            'is_featured' => false,
-            'is_pivotal' => false,
+            'order' => 0,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -211,6 +213,21 @@ final class ProfileFavoritesTest extends TestCase
             'user_id' => $user->id,
             'favorable_id' => $eventId,
         ]);
+    }
+
+    public function test_a_favorite_whose_seerah_event_was_deleted_does_not_break_the_page(): void
+    {
+        $user = User::factory()->create();
+        $eventId = $this->makeSeerahEvent('deleted-event');
+
+        $this->actingAs($user)
+            ->postJson(route('public.favorites.store'), ['type' => 'seerah', 'id' => $eventId])
+            ->assertCreated();
+
+        DB::table('seerah_events')->where('id', $eventId)->delete();
+
+        $this->actingAs($user)->get(route('public.favorites'))->assertOk();
+        $this->actingAs($user)->get(route('public.profile'))->assertOk();
     }
 
     public function test_store_validates_content_type(): void

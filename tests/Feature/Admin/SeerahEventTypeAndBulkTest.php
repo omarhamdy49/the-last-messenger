@@ -6,6 +6,7 @@ namespace Tests\Feature\Admin;
 
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Models\SeerahEventType;
+use Database\Seeders\SeerahEventTypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -19,12 +20,20 @@ class SeerahEventTypeAndBulkTest extends TestCase
         $this->withoutVite();
     }
 
-    public function test_seed_migration_populates_event_types(): void
+    public function test_seeder_populates_event_types_idempotently(): void
     {
-        // The 2026_06_18 seed migration backfills the 11 canonical types.
-        $this->assertSame(11, SeerahEventType::query()->count());
+        $this->seed(SeerahEventTypeSeeder::class);
+        $this->seed(SeerahEventTypeSeeder::class);
+
+        $types = SeerahEventType::query()->get();
+
+        $this->assertCount(11, $types);
         $this->assertDatabaseHas('seerah_event_types', ['slug' => 'battle']);
-        $this->assertDatabaseMissing('seerah_events', ['id' => 0]);
+
+        foreach ($types as $type) {
+            $this->assertNotEmpty($type->locale['ar'] ?? null, "{$type->slug} has no Arabic name");
+            $this->assertNotEmpty($type->metadata['icon'] ?? null, "{$type->slug} has no icon");
+        }
     }
 
     public function test_admin_can_bulk_update_status_and_bulk_delete_events(): void
@@ -32,7 +41,7 @@ class SeerahEventTypeAndBulkTest extends TestCase
         $admin = $this->createAdminUser();
         $this->actingAs($admin);
 
-        $events = SeerahEvent::factory()->count(3)->create(['status' => 'draft']);
+        $events = SeerahEvent::factory()->count(3)->draft()->create();
         $ids = $events->pluck('id')->all();
 
         // Bulk publish
@@ -66,29 +75,28 @@ class SeerahEventTypeAndBulkTest extends TestCase
         // Create
         $this->post(route('admin.seerah-event-types.store'), [
             'slug' => 'expedition',
-            'name' => ['ar' => 'سرية', 'en' => 'Expedition'],
-            'icon' => 'flag',
-            'color' => 'red',
-            'gradient' => 'from-red-500 to-orange-500',
+            'locale' => ['ar' => 'سرية', 'en' => 'Expedition'],
+            'metadata' => ['icon' => 'flag', 'color' => 'red', 'gradient' => 'from-red-500 to-orange-500'],
             'is_active' => '1',
-            'display_order' => 12,
         ])->assertRedirect(route('admin.seerah-event-types.index'));
 
         $type = SeerahEventType::query()->where('slug', 'expedition')->firstOrFail();
-        $this->assertSame('سرية', $type->getTranslation('name', 'ar'));
+        $this->assertSame('سرية', $type->name('ar'));
+        $this->assertSame('Expedition', $type->getTranslation('name', 'en'));
+        $this->assertSame('flag', $type->metadata['icon']);
         $this->assertTrue($type->is_active);
 
         // Update (keep it active)
         $this->put(route('admin.seerah-event-types.update', $type->id), [
             'slug' => 'expedition',
-            'name' => ['ar' => 'سرية عسكرية', 'en' => 'Military Expedition'],
-            'display_order' => 5,
+            'locale' => ['ar' => 'سرية عسكرية', 'en' => 'Military Expedition'],
+            'metadata' => ['icon' => 'swords'],
             'is_active' => '1',
         ])->assertRedirect(route('admin.seerah-event-types.index'));
 
         $type->refresh();
-        $this->assertSame('سرية عسكرية', $type->getTranslation('name', 'ar'));
-        $this->assertSame(5, $type->display_order);
+        $this->assertSame('سرية عسكرية', $type->name('ar'));
+        $this->assertSame('swords', $type->metadata['icon']);
 
         // Toggle active
         $this->post(route('admin.seerah-event-types.toggle-active', $type->id))
@@ -109,8 +117,9 @@ class SeerahEventTypeAndBulkTest extends TestCase
         $admin = $this->createAdminUser();
         $this->actingAs($admin);
 
+        $this->seed(SeerahEventTypeSeeder::class);
         $type = SeerahEventType::query()->where('slug', 'battle')->firstOrFail();
-        SeerahEvent::factory()->create(['seerah_event_type_id' => $type->id]);
+        SeerahEvent::factory()->create(['event_type' => $type->id]);
 
         $this->delete(route('admin.seerah-event-types.destroy', $type->id))
             ->assertRedirect(route('admin.seerah-event-types.index'))
@@ -127,11 +136,29 @@ class SeerahEventTypeAndBulkTest extends TestCase
         $this->from(route('admin.seerah-event-types.create'))
             ->post(route('admin.seerah-event-types.store'), [
                 'slug' => 'no-name',
-                'name' => ['en' => 'No Arabic'],
+                'locale' => ['en' => 'No Arabic'],
             ])
-            ->assertSessionHasErrors('name.ar');
+            ->assertSessionHasErrors('locale.ar');
 
         $this->assertDatabaseMissing('seerah_event_types', ['slug' => 'no-name']);
+    }
+
+    public function test_event_type_store_rejects_removed_fields(): void
+    {
+        $admin = $this->createAdminUser();
+        $this->actingAs($admin);
+
+        foreach (['name' => ['ar' => 'قديم'], 'display_order' => 3] as $field => $value) {
+            $this->from(route('admin.seerah-event-types.create'))
+                ->post(route('admin.seerah-event-types.store'), [
+                    'slug' => 'legacy',
+                    'locale' => ['ar' => 'قديم'],
+                    $field => $value,
+                ])
+                ->assertSessionHasErrors($field);
+        }
+
+        $this->assertDatabaseMissing('seerah_event_types', ['slug' => 'legacy']);
     }
 
     public function test_non_admin_cannot_create_event_type(): void
@@ -142,7 +169,7 @@ class SeerahEventTypeAndBulkTest extends TestCase
         // The admin portal gate redirects non-admins before the form request runs.
         $response = $this->post(route('admin.seerah-event-types.store'), [
             'slug' => 'forbidden',
-            'name' => ['ar' => 'ممنوع'],
+            'locale' => ['ar' => 'ممنوع'],
         ]);
 
         $this->assertContains($response->getStatusCode(), [302, 403]);

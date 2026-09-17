@@ -46,11 +46,14 @@ class SeerahMilestoneRepository extends BaseRepository implements SeerahMileston
             fn () => $this->model->newQuery()
                 ->with([
                     'translations',
-                    'events' => fn ($q) => $q->published()->chronological()->with([
-                        'translations:id,seerah_event_id,locale,title,dispute_note',
-                        'type:id,slug,icon,color,gradient',
-                        'type.translations:id,seerah_event_type_id,locale,name',
-                    ]),
+                    'events' => fn ($q) => $q->published()->chronological()
+                        ->select(['id', 'slug', 'event_type', 'sm_id', 'location_id', 'order', 'era', 'thumb_url', 'cover_url', 'hijri_year', 'hijri_month', 'hijri_day', 'gregorian_date'])
+                        ->with([
+                            'translations:id,event_id,locale,title,description,dispute_note',
+                            'type:id,slug,metadata,locale',
+                            'place:id,slug,latitude,longitude',
+                            'place.translations:id,location_id,locale,name',
+                        ]),
                 ])
                 ->active()
                 ->ordered()
@@ -117,7 +120,7 @@ class SeerahMilestoneRepository extends BaseRepository implements SeerahMileston
      */
     public function countEvents(int $id): int
     {
-        return DB::table('seerah_events')->where('seerah_milestone_id', $id)->count();
+        return DB::table('seerah_events')->where('sm_id', $id)->count();
     }
 
     /**

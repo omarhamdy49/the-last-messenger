@@ -61,7 +61,6 @@ class SeerahEventTypeController extends Controller
     public function store(StoreSeerahEventTypeRequest $request): RedirectResponse
     {
         $type = $this->typeService->create($this->payload($request));
-        $type->syncTranslations(['name' => $request->validated()['name'] ?? []]);
 
         $this->logger->logCreate($type, $request->user());
 
@@ -100,7 +99,6 @@ class SeerahEventTypeController extends Controller
         $oldValues = $type->toArray();
 
         $this->typeService->update($id, $this->payload($request));
-        $type->syncTranslations(['name' => $request->validated()['name'] ?? []]);
         $type->refresh();
 
         $this->logger->logUpdate($type, $oldValues, $type->toArray(), $request->user());
@@ -174,9 +172,13 @@ class SeerahEventTypeController extends Controller
     private function payload(StoreSeerahEventTypeRequest|UpdateSeerahEventTypeRequest $request): array
     {
         $data = $request->validated();
-        unset($data['name']); // names persisted via the translations table
         $data['is_active'] = $request->boolean('is_active');
-        $data['display_order'] = (int) ($data['display_order'] ?? 0);
+
+        foreach (['locale', 'metadata'] as $json) {
+            if (array_key_exists($json, $data)) {
+                $data[$json] = array_filter((array) $data[$json], fn ($value): bool => filled($value)) ?: null;
+            }
+        }
 
         return $data;
     }

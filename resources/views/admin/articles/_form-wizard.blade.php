@@ -45,24 +45,13 @@
         background-color: rgb(55, 65, 81); color: white; border-color: rgb(75, 85, 99);
     }
 
-    /* Quill Editor */
-    .ql-toolbar.ql-snow { border-radius: 0.5rem 0.5rem 0 0; }
-    .ql-container.ql-snow { border-radius: 0 0 0.5rem 0.5rem; }
-    .dark .ql-toolbar.ql-snow { background: rgb(55, 65, 81); border-color: rgb(75, 85, 99); }
-    .dark .ql-container.ql-snow { background: rgb(55, 65, 81); border-color: rgb(75, 85, 99); }
-    .dark .ql-editor { color: white; }
-    .dark .ql-toolbar .ql-stroke { stroke: #ccc; }
-    .dark .ql-toolbar .ql-fill { fill: #ccc; }
-    .dark .ql-toolbar .ql-picker-label { color: #ccc; }
-    .dark .ql-editor.ql-blank::before { color: rgb(156, 163, 175); }
-
-    /* Block editor Quill instances */
-    .block-quill .ql-toolbar.ql-snow { border-top: none; border-radius: 0; border-left: none; border-right: none; }
-    .block-quill .ql-container.ql-snow { border: none; border-radius: 0; resize: vertical; overflow: auto; min-height: 400px; }
-    .block-quill .ql-editor { min-height: 380px; }
-
-    /* Module toolbar + in-editor embed styles now ship with
-       components/admin/form/wysiwyg.blade.php (modules prop). */
+    /* Editor look + typography: resources/css/admin/rich-text.css (.wysiwyg-field).
+       Block editors sit inside a bordered block card, so drop the outer frame. */
+    /* The pinned toolbar sits below this page's sticky action bar. */
+    .wysiwyg-field { --wysiwyg-sticky-top: 4.5rem; }
+    .wysiwyg-field.block-quill-field .ql-toolbar.ql-snow { border-width: 0 0 1px; border-radius: 0; }
+    .wysiwyg-field.block-quill-field .ql-container.ql-snow { border: 0; border-radius: 0; }
+    .wysiwyg-field.block-quill-field .ql-editor { min-height: 380px; }
 
     /* Line clamp utility */
     .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -230,12 +219,12 @@
                             </div>
 
                             {{-- Description (Quill) --}}
-                            <div>
+                            <div class="wysiwyg-field" data-default-dir="{{ in_array($locale, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">
                                 <label class="block text-sm font-semibold mb-1.5"
                                        :class="darkMode ? 'text-white' : 'text-gray-900'">
                                     {{ __('articles.fields.description') }}
                                 </label>
-                                <div id="description_{{ $locale }}_editor" class="quill-editor" style="height: 120px;"></div>
+                                <div id="description_{{ $locale }}_editor" class="quill-editor" style="min-height: 120px;"></div>
                                 <textarea name="description[{{ $locale }}]"
                                           id="description_{{ $locale }}"
                                           class="hidden">{{ old("description.{$locale}", $article && $article->getArticleLocale($locale) ? $article->getArticleLocale($locale)->description : '') }}</textarea>
@@ -415,7 +404,7 @@
                                             <div x-show="!block._collapsed" x-collapse>
 
                                             {{-- WYSIWYG Block --}}
-                                            <div x-show="block.type === 'wysiwyg'" class="p-0">
+                                            <div x-show="block.type === 'wysiwyg'" class="p-0 wysiwyg-field block-quill-field" data-default-dir="{{ in_array($locale, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">
                                                 <div :id="'block_editor_' + block.id" class="quill-editor block-quill"
                                                      x-init="$nextTick(() => initBlockQuill(block.id, '{{ $locale }}'))"></div>
                                             </div>
@@ -526,12 +515,12 @@
                             />
 
                             {{-- Summary (Quill) --}}
-                            <div>
+                            <div class="wysiwyg-field" data-default-dir="{{ in_array($locale, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">
                                 <label class="block text-sm font-semibold mb-1.5"
                                        :class="darkMode ? 'text-white' : 'text-gray-900'">
                                     {{ __('articles.fields.summary') }}
                                 </label>
-                                <div id="summary_{{ $locale }}_editor" class="quill-editor" style="height: 120px;"></div>
+                                <div id="summary_{{ $locale }}_editor" class="quill-editor" style="min-height: 120px;"></div>
                                 <textarea name="summary[{{ $locale }}]"
                                           id="summary_{{ $locale }}"
                                           class="hidden">{{ old("summary.{$locale}", $article && $article->getArticleLocale($locale) ? ($article->getArticleLocale($locale)->content['summary'] ?? '') : '') }}</textarea>
@@ -1186,6 +1175,7 @@ function articleForm(article, locales) {
                 if (this.quillEditors[editorKey]) {
                     delete this.quillEditors[editorKey];
                 }
+                delete this.blockModules[editorKey];
             }
             this.contentBlocks[locale].splice(index, 1);
             this.syncContentBlocks(locale);
@@ -1241,8 +1231,8 @@ function articleForm(article, locales) {
                 toolbar: 'full',
             });
 
-            // Add custom module insert buttons to toolbar
-            this.addModuleToolbarButtons(editor, blockId, locale);
+            // Same Quran / hadith / sahabi / seerah buttons as every other admin editor.
+            this.blockModules[editorKey] = window.AdminWysiwygModules.attachToolbar(editor, { id: blockId, locale });
 
             editor.on('text-change', () => {
                 const b = this.contentBlocks[locale]?.find(b => b.id === blockId);
@@ -1254,58 +1244,7 @@ function articleForm(article, locales) {
             this.quillEditors[editorKey] = editor;
         },
 
-        addModuleToolbarButtons(editor, blockId, locale) {
-            const toolbar = editor.getModule('toolbar').container;
-            const btnGroup = document.createElement('span');
-            btnGroup.className = 'ql-formats ql-module-btns';
-
-            const modules = [
-                { type: 'verse', label: '{{ __("articles.modules.quran_short") }}', cls: 'ql-module-btn--verse',
-                  icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>' },
-                { type: 'hadith', label: '{{ __("articles.modules.hadith_short") }}', cls: 'ql-module-btn--hadith',
-                  icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></svg>' },
-                { type: 'sahabi', label: '{{ __("articles.modules.sahabi_short") }}', cls: 'ql-module-btn--sahabi',
-                  icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
-                { type: 'seerah', label: '{{ __("articles.modules.seerah_short") }}', cls: 'ql-module-btn--seerah',
-                  icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>' }
-            ];
-
-            modules.forEach(mod => {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = `ql-module-btn ${mod.cls}`;
-                btn.innerHTML = `${mod.icon}<span>${mod.label}</span>`;
-                btn.title = mod.label;
-                btn.addEventListener('mousedown', () => {
-                    const range = editor.getSelection();
-                    this.activeInlineSelection = range
-                        ? { index: range.index, length: range.length }
-                        : { index: Math.max(0, editor.getLength() - 1), length: 0 };
-                });
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (!this.activeInlineSelection) {
-                        const range = editor.getSelection();
-                        this.activeInlineSelection = range
-                            ? { index: range.index, length: range.length }
-                            : { index: Math.max(0, editor.getLength() - 1), length: 0 };
-                    }
-                    this.activeInlineQuillId = blockId;
-                    this.activeInlineLocale = locale;
-                    window.dispatchEvent(new CustomEvent('open-module-selector', {
-                        detail: { type: mod.type, locale, insertMode: 'inline', quillBlockId: blockId }
-                    }));
-                });
-                btnGroup.appendChild(btn);
-            });
-
-            toolbar.appendChild(btnGroup);
-        },
-
-        activeInlineQuillId: null,
-        activeInlineLocale: null,
-        activeInlineSelection: null,
+        blockModules: {},
 
         getBlockQuill(blockId) {
             const container = document.getElementById(`block_editor_${blockId}`);
@@ -1322,111 +1261,15 @@ function articleForm(article, locales) {
         insertModuleInline(detail) {
             const { quillBlockId, locale, moduleType, data } = detail;
             const editor = this.getBlockQuill(quillBlockId);
-            if (!editor) return;
+            const modules = this.blockModules[`block_${quillBlockId}`];
+            if (!editor || !modules) return;
 
-            const range = this.activeInlineSelection || editor.getSelection() || {
-                index: Math.max(0, editor.getLength() - 1),
-                length: 0
-            };
+            window.AdminWysiwygModules.insert(editor, modules.takeRange(), moduleType, data, locale);
 
-            if (moduleType === 'sahabi') {
-                const link = `/sahaba/${encodeURIComponent(data.slug || data.sahabi_id)}`;
-
-                if (range.length > 0) {
-                    editor.formatText(range.index, range.length, 'link', link, 'user');
-                    editor.setSelection(range.index, range.length, 'silent');
-                } else {
-                    const label = data.name || '';
-                    const previousCharacter = range.index > 0
-                        ? editor.getText(range.index - 1, 1)
-                        : '';
-                    const leadingSeparator = previousCharacter && !/\s/.test(previousCharacter) ? ' ' : '';
-                    const labelIndex = range.index + leadingSeparator.length;
-
-                    if (leadingSeparator) {
-                        editor.insertText(range.index, leadingSeparator, { link: false }, 'user');
-                    }
-                    editor.insertText(labelIndex, label, { link }, 'user');
-                    editor.insertText(labelIndex + label.length, ' ', { link: false }, 'user');
-                    editor.setSelection(labelIndex + label.length + 1, 0, 'silent');
-                    editor.format('link', false, 'silent');
-                }
-
-                const block = this.contentBlocks[locale]?.find(item => item.id === quillBlockId);
-                if (block) block.content = editor.root.innerHTML;
-                this.syncContentBlocks(locale);
-                this.hasUnsavedChanges = true;
-                this.activeInlineSelection = null;
-                editor.focus();
-                return;
-            }
-
-            // Build a structured payload rather than an HTML string: the
-            // moduleEmbed blot (resources/js/admin/rich-text.js) is what keeps
-            // data-module/data-id alive through Quill, so the article stays
-            // linked to the verse/hadith/event it cites.
-            let embed = null;
-            const moduleDirection = ['ar', 'ur', 'fa', 'he'].includes(locale) ? 'rtl' : 'ltr';
-
-            if (moduleType === 'verse') {
-                const versesText = data.verses.map(v => v.text).join(' ');
-                const verseRange = data.verses.length > 1
-                    ? `${data.verses[0].number}-${data.verses[data.verses.length-1].number}`
-                    : String(data.verses[0].number);
-                embed = {
-                    module: 'verse',
-                    id: data.surah_id,
-                    label: @js(__('articles.modules.quran')),
-                    text: versesText,
-                    reference: `${data.surah_name} — {{ __('articles.blocks.verse') }} ${verseRange}`,
-                    href: `/quran/surah/${data.surah_id}#${data.verses[0].number}`,
-                    linkLabel: `📖 ${data.surah_name} — {{ __('articles.blocks.verse') }} ${verseRange}`,
-                    dir: 'rtl',
-                };
-            } else if (moduleType === 'hadith') {
-                embed = {
-                    module: 'hadith',
-                    id: data.hadith_id,
-                    label: @js(__('articles.modules.hadith')),
-                    text: data.text,
-                    reference: `${data.collection} #${data.number}`,
-                    href: `/hadith/${data.hadith_id}`,
-                    linkLabel: `📜 ${data.collection} #${data.number}`,
-                    dir: moduleDirection,
-                };
-            } else if (moduleType === 'seerah') {
-                embed = {
-                    module: 'seerah',
-                    id: data.event_id,
-                    label: @js(__('articles.modules.seerah')),
-                    text: `${data.title}${data.hijri_year ? ' — ' + data.hijri_year + ' {{ __("articles.blocks.hijri") }}' : ''}`,
-                    href: `/seerah/${data.slug || data.event_id}`,
-                    linkLabel: `📍 {{ __('articles.embed.view_event') }}`,
-                    dir: moduleDirection,
-                };
-            }
-            // 'sahabi' never reaches here — companions read better as an inline
-            // link inside the sentence, handled by the early return above.
-
-            if (embed) {
-                const insertionIndex = range.index;
-                if (range.length > 0) {
-                    editor.deleteText(insertionIndex, range.length, 'user');
-                }
-
-                editor.insertEmbed(insertionIndex, 'moduleEmbed', embed, 'user');
-                // Leave an empty paragraph after the card so the editor can keep
-                // typing below it instead of being trapped against the embed.
-                editor.insertText(insertionIndex + 1, '\n', 'user');
-                editor.setSelection(insertionIndex + 2, 0, 'silent');
-
-                const block = this.contentBlocks[locale]?.find(item => item.id === quillBlockId);
-                if (block) block.content = editor.root.innerHTML;
-                this.syncContentBlocks(locale);
-                this.hasUnsavedChanges = true;
-            }
-
-            this.activeInlineSelection = null;
+            const block = this.contentBlocks[locale]?.find(item => item.id === quillBlockId);
+            if (block) block.content = editor.root.innerHTML;
+            this.syncContentBlocks(locale);
+            this.hasUnsavedChanges = true;
             editor.focus();
         },
 

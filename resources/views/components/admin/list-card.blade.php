@@ -15,6 +15,7 @@
     'title' => '',
     'subtitle' => null,
     'value' => null,
+    'href' => null,
 ])
 
 <div class="p-4 rounded-xl border transition-colors"
@@ -33,7 +34,11 @@
 
         <div class="min-w-0 flex-1">
             <h4 class="font-semibold break-words" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                {{ $title }}
+                @if ($href)
+                    <a href="{{ $href }}" class="transition-colors hover:text-accent hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded">{{ $title }}</a>
+                @else
+                    {{ $title }}
+                @endif
             </h4>
             @if ($subtitle)
                 <p class="text-xs mt-0.5 break-words" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">

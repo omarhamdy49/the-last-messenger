@@ -14,6 +14,11 @@ class StoreSeerahMilestoneRequest extends FormRequest
 {
     use SanitizesRichText;
 
+    private const REMOVED_FIELDS = [
+        'order_index', 'icon', 'color', 'gradient', 'hijri_label_from', 'hijri_label_to',
+        'hijri_year_from', 'hijri_year_to', 'gregorian_year_from', 'gregorian_year_to',
+    ];
+
     protected function prepareForValidation(): void
     {
         $this->sanitizeRichTextField('description');
@@ -28,27 +33,24 @@ class StoreSeerahMilestoneRequest extends FormRequest
     {
         return [
             'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9\-]+$/', 'unique:seerah_milestones,slug'],
-            'order_index' => ['nullable', 'integer', 'min:0'],
+            'order' => ['required', 'integer', 'min:0'],
             'title' => ['required', 'array'],
             'title.ar' => ['required', 'string', 'max:500'],
-            'title.en' => ['nullable', 'string', 'max:500'],
-            'title.fr' => ['nullable', 'string', 'max:500'],
-            'title.tr' => ['nullable', 'string', 'max:500'],
-            'title.ur' => ['nullable', 'string', 'max:500'],
+            'title.*' => ['nullable', 'string', 'max:500'],
             'subtitle' => ['nullable', 'array'],
             'subtitle.*' => ['nullable', 'string', 'max:500'],
             'description' => ['nullable', 'array'],
             'description.*' => ['nullable', 'string'],
-            'icon' => ['nullable', 'string', 'max:50'],
-            'color' => ['nullable', 'string', 'max:30'],
-            'gradient' => ['nullable', 'string', 'max:60'],
-            'hijri_label_from' => ['nullable', 'string', 'max:100'],
-            'hijri_label_to' => ['nullable', 'string', 'max:100'],
-            'hijri_year_from' => ['nullable', 'integer', 'between:-100,100'],
-            'hijri_year_to' => ['nullable', 'integer', 'between:-100,100'],
-            'gregorian_year_from' => ['nullable', 'integer', 'between:400,800'],
-            'gregorian_year_to' => ['nullable', 'integer', 'between:400,800'],
+            'metadata' => ['nullable', 'array'],
+            'metadata.icon' => ['nullable', 'string', 'max:50'],
+            'metadata.color' => ['nullable', 'string', 'max:30'],
+            'metadata.gradient' => ['nullable', 'string', 'max:60'],
+            'hijri_from' => ['nullable', 'integer', 'between:-100,100'],
+            'hijri_to' => ['nullable', 'integer', 'between:-100,100', 'gte:hijri_from'],
+            'gregorian_from' => ['nullable', 'integer', 'between:400,800'],
+            'gregorian_to' => ['nullable', 'integer', 'between:400,800', 'gte:gregorian_from'],
             'is_active' => ['nullable', 'boolean'],
+            ...array_fill_keys(self::REMOVED_FIELDS, ['prohibited']),
         ];
     }
 

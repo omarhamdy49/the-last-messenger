@@ -34,7 +34,9 @@ every value round-trips; save untouched → nothing blanked.
 ## Existing environment (already ran the old migrations)
 
 Edited migrations do not re-run. **Never** `migrate:fresh`, `--step`, or
-`--database=` here (dev was wiped this way on 2026-09-13).
+`--database=` here (dev was wiped this way on 2026-09-13). Production: same steps
+in a maintenance window, after confirming the backup restores into a scratch
+database.
 
 ```bash
 # 1. Assert the target — abort if it is not the database you mean
@@ -46,18 +48,60 @@ mysqldump -h 127.0.0.1 -P 3308 -u root -p the_last_messenger \
   $(mysql -h 127.0.0.1 -P 3308 -u root -p -N -e "SHOW TABLES LIKE 'seerah\_%'" the_last_messenger) \
   > ~/seerah-backup-$(date +%F).sql
 
-# 3. Drop the Seerah tables by name + forget their migration rows
-#    (SET FOREIGN_KEY_CHECKS=0; DROP TABLE IF EXISTS seerah_…  — the 11 old tables, listed explicitly;
-#     DELETE FROM migrations WHERE migration IN (… the Seerah migration names, listed explicitly …);
-#     ALTER TABLE favorites / content_schedules: delete rows whose morph type is SeerahEvent)
+# 3. Drop the old Seerah tables and forget their migration rows (explicit names, no wildcards)
+mysql -h 127.0.0.1 -P 3308 -u root -p the_last_messenger <<'SQL'
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS
+  seerah_events_media, seerah_events_gallery,
+  seerah_event_timeline_item_translations, seerah_event_timeline_items,
+  seerah_participant_translations, seerah_participants,
+  seerah_event_translations, seerah_events,
+  seerah_event_type_translations, seerah_event_types,
+  seerah_milestone_translations, seerah_milestones;
+SET FOREIGN_KEY_CHECKS = 1;
 
-# 4. Rebuild
+DELETE FROM migrations WHERE migration IN (
+  '2025_10_27_130000_create_seerah_events_table',
+  '2025_10_27_130001_create_seerah_participants_table',
+  '2026_03_09_200000_create_seerah_event_translations_table',
+  '2026_03_09_200002_migrate_seerah_and_sahabi_translations_data',
+  '2026_03_09_200003_drop_json_columns_from_seerah',
+  '2026_06_10_100000_add_taxonomy_and_statistics_to_seerah_events_table',
+  '2026_06_10_100001_create_seerah_event_timeline_items_table',
+  '2026_06_11_250000_add_missing_unique_to_seerah_participant_translations',
+  '2026_06_18_100000_create_seerah_event_types_table',
+  '2026_06_18_100001_seed_event_types_and_link_seerah_events',
+  '2026_06_18_100002_add_status_to_seerah_events_table',
+  '2026_06_19_100000_create_seerah_milestones_table',
+  '2026_06_19_100001_add_milestone_id_to_seerah_events_table',
+  '2026_08_13_100000_add_lessons_and_sources_to_seerah_event_translations',
+  '2026_08_15_120000_add_dispute_note_to_seerah_event_translations'
+);
+
+-- Polymorphic rows that pointed at the dropped events. SeerahEvent is not in the
+-- morph map, so the stored type is the class name.
+DELETE FROM favorites         WHERE favorable_type    = 'App\\Domain\\Seerah\\Models\\SeerahEvent';
+DELETE FROM user_interactions WHERE interactable_type = 'App\\Domain\\Seerah\\Models\\SeerahEvent';
+DELETE FROM content_schedules WHERE schedulable_type  = 'App\\Domain\\Seerah\\Models\\SeerahEvent';
+SQL
+
+# 4. Rebuild: only the two rewritten Seerah migrations should be pending
+php artisan migrate --pretend | grep -i seerah
 php artisan migrate
+
+# 5. 2026_08_18_000003_add_location_foreign_keys already ran on this database, so
+#    location_id is NOT re-added by step 4. Add it by hand, matching that migration:
+mysql -h 127.0.0.1 -P 3308 -u root -p the_last_messenger -e "
+  ALTER TABLE seerah_events
+    ADD COLUMN location_id BIGINT UNSIGNED NULL AFTER sm_id,
+    ADD CONSTRAINT seerah_events_location_id_foreign
+      FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL;"
+
+# 6. Lookup seed + cache
 php artisan db:seed --class=SeerahEventTypeSeeder
-php artisan cache:clear        # only if SeerahCacheKeys version bump is not enough; never Cache::flush() in code
+php artisan cache:clear
 ```
 
-The exact table and migration-name lists for step 3 are produced by the
-implementation task that finalises the migration files, so they cannot drift.
-Production: same steps in a maintenance window, after confirming the backup
-restores into a scratch database.
+Check afterwards: `SHOW COLUMNS FROM seerah_events` lists the 17 columns in
+data-model.md (including `location_id`), and `php artisan migrate:status | grep -i seerah`
+shows both Seerah migrations as Ran.

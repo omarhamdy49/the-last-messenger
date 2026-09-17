@@ -10,6 +10,10 @@
 @endpush
 @endif
 
+@push('head')
+    @include('partials.module-embed-styles')
+@endpush
+
 @section('content')
 @php $isRtl = in_array(app()->getLocale(), ['ar', 'ur'], true); @endphp
 

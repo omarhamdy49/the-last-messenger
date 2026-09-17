@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature\Admin;
 
 use App\Domain\Seerah\Models\SeerahEvent;
+use App\Domain\Seerah\Models\SeerahEventType;
 use App\Domain\Seerah\Models\SeerahMilestone;
+use Database\Seeders\SeerahEventTypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -27,36 +29,39 @@ class SeerahMilestoneTest extends TestCase
         // Create
         $this->post(route('admin.seerah-milestones.store'), [
             'slug' => 'birth-and-preparation',
-            'order_index' => 1,
+            'order' => 1,
             'title' => ['ar' => 'من اليتيم إلى الأمين', 'en' => 'From orphan to the trustworthy'],
             'subtitle' => ['ar' => 'ميلاد النور'],
             'description' => ['ar' => 'فترة الإعداد الإلهي'],
-            'icon' => 'sunrise',
-            'gradient' => 'from-amber-400 to-orange-500',
-            'hijri_label_from' => '53 ق.هـ',
-            'hijri_label_to' => '13 ق.هـ',
-            'hijri_year_from' => -53,
-            'hijri_year_to' => -13,
-            'gregorian_year_from' => 570,
-            'gregorian_year_to' => 610,
+            'metadata' => ['icon' => 'sunrise', 'color' => 'amber', 'gradient' => 'from-amber-400 to-orange-500'],
+            'hijri_from' => -53,
+            'hijri_to' => -13,
+            'gregorian_from' => 570,
+            'gregorian_to' => 610,
             'is_active' => '1',
         ])->assertRedirect(route('admin.seerah-milestones.index'));
 
         $milestone = SeerahMilestone::query()->where('slug', 'birth-and-preparation')->firstOrFail();
         $this->assertSame('من اليتيم إلى الأمين', $milestone->getTranslation('title', 'ar'));
         $this->assertSame('ميلاد النور', $milestone->getTranslation('subtitle', 'ar'));
-        $this->assertSame(-53, $milestone->hijri_year_from);
-        $this->assertSame(570, $milestone->gregorian_year_from);
+        $this->assertSame(1, $milestone->order);
+        $this->assertSame('sunrise', $milestone->icon);
+        $this->assertSame('from-amber-400 to-orange-500', $milestone->gradient);
+        $this->assertSame(-53, $milestone->hijri_from);
+        $this->assertSame(-13, $milestone->hijri_to);
+        $this->assertSame(570, $milestone->gregorian_from);
+        $this->assertSame(610, $milestone->gregorian_to);
         $this->assertTrue($milestone->is_active);
 
         // Update
         $this->put(route('admin.seerah-milestones.update', $milestone->id), [
             'slug' => 'birth-and-preparation',
-            'order_index' => 1,
+            'order' => 2,
             'title' => ['ar' => 'من اليتيم إلى الأمين (معدّل)'],
             'is_active' => '1',
         ])->assertRedirect(route('admin.seerah-milestones.index'));
         $this->assertSame('من اليتيم إلى الأمين (معدّل)', $milestone->fresh()->getTranslation('title', 'ar'));
+        $this->assertSame(2, $milestone->fresh()->order);
 
         // Toggle active
         $this->post(route('admin.seerah-milestones.toggle-active', $milestone->id))
@@ -75,7 +80,7 @@ class SeerahMilestoneTest extends TestCase
     public function test_show_renders_formatted_milestone_descriptions_safely(): void
     {
         $this->actingAs($this->createAdminUser());
-        $milestone = SeerahMilestone::query()->create(['slug' => 'rich-preview', 'order_index' => 1, 'is_active' => true]);
+        $milestone = SeerahMilestone::query()->create(['slug' => 'rich-preview', 'order' => 1, 'is_active' => true]);
         $milestone->syncTranslations([
             'title' => ['ar' => 'الحقبة'],
             'description' => [
@@ -97,10 +102,11 @@ class SeerahMilestoneTest extends TestCase
     {
         $admin = $this->createAdminUser();
         $this->actingAs($admin);
+        $this->seed(SeerahEventTypeSeeder::class);
 
         $milestone = SeerahMilestone::query()->create([
             'slug' => 'dawn-of-revelation',
-            'order_index' => 2,
+            'order' => 2,
             'is_active' => true,
         ]);
         $milestone->syncTranslations(['title' => ['ar' => 'فجر الرسالة']]);
@@ -108,12 +114,14 @@ class SeerahMilestoneTest extends TestCase
         $this->post(route('admin.seerah-events.store'), [
             'slug' => 'first-revelation',
             'title' => ['ar' => 'نزول الوحي'],
-            'seerah_milestone_id' => $milestone->id,
+            'event_type' => SeerahEventType::query()->where('slug', 'revelation')->value('id'),
+            'order' => 1,
+            'sm_id' => $milestone->id,
             'status' => 'published',
         ])->assertRedirect(route('admin.seerah-events.index'));
 
         $event = SeerahEvent::query()->where('slug', 'first-revelation')->firstOrFail();
-        $this->assertSame($milestone->id, $event->seerah_milestone_id);
+        $this->assertSame($milestone->id, $event->sm_id);
         $this->assertSame('dawn-of-revelation', $event->milestone->slug);
     }
 
@@ -122,15 +130,15 @@ class SeerahMilestoneTest extends TestCase
         $admin = $this->createAdminUser();
         $this->actingAs($admin);
 
-        $milestone = SeerahMilestone::query()->create(['slug' => 'temp', 'order_index' => 9, 'is_active' => true]);
+        $milestone = SeerahMilestone::query()->create(['slug' => 'temp', 'order' => 9, 'is_active' => true]);
         $milestone->syncTranslations(['title' => ['ar' => 'مؤقت']]);
-        $event = SeerahEvent::factory()->create(['seerah_milestone_id' => $milestone->id]);
+        $event = SeerahEvent::factory()->create(['sm_id' => $milestone->id]);
 
         $this->delete(route('admin.seerah-milestones.destroy', $milestone->id))
             ->assertRedirect(route('admin.seerah-milestones.index'));
 
         $this->assertDatabaseMissing('seerah_milestones', ['id' => $milestone->id]);
-        $this->assertDatabaseHas('seerah_events', ['id' => $event->id, 'seerah_milestone_id' => null]);
+        $this->assertDatabaseHas('seerah_events', ['id' => $event->id, 'sm_id' => null]);
     }
 
     public function test_milestone_store_requires_arabic_title(): void
@@ -139,10 +147,34 @@ class SeerahMilestoneTest extends TestCase
         $this->actingAs($admin);
 
         $this->from(route('admin.seerah-milestones.create'))
-            ->post(route('admin.seerah-milestones.store'), ['slug' => 'no-title', 'title' => ['en' => 'No Arabic']])
+            ->post(route('admin.seerah-milestones.store'), ['slug' => 'no-title', 'order' => 1, 'title' => ['en' => 'No Arabic']])
             ->assertSessionHasErrors('title.ar');
 
         $this->assertDatabaseMissing('seerah_milestones', ['slug' => 'no-title']);
+    }
+
+    public function test_milestone_store_validates_order_ranges_and_removed_fields(): void
+    {
+        $admin = $this->createAdminUser();
+        $this->actingAs($admin);
+
+        $valid = ['slug' => 'invalid', 'order' => 1, 'title' => ['ar' => 'حقبة']];
+
+        $this->from(route('admin.seerah-milestones.create'))
+            ->post(route('admin.seerah-milestones.store'), array_diff_key($valid, ['order' => true]))
+            ->assertSessionHasErrors('order');
+
+        $this->from(route('admin.seerah-milestones.create'))
+            ->post(route('admin.seerah-milestones.store'), [...$valid, 'hijri_from' => 5, 'hijri_to' => 1])
+            ->assertSessionHasErrors('hijri_to');
+
+        foreach (['order_index' => 1, 'hijri_label_from' => '53 ق.هـ'] as $field => $value) {
+            $this->from(route('admin.seerah-milestones.create'))
+                ->post(route('admin.seerah-milestones.store'), [...$valid, $field => $value])
+                ->assertSessionHasErrors($field);
+        }
+
+        $this->assertDatabaseMissing('seerah_milestones', ['slug' => 'invalid']);
     }
 
     public function test_non_admin_cannot_create_milestone(): void
@@ -152,6 +184,7 @@ class SeerahMilestoneTest extends TestCase
 
         $response = $this->post(route('admin.seerah-milestones.store'), [
             'slug' => 'forbidden',
+            'order' => 1,
             'title' => ['ar' => 'ممنوع'],
         ]);
 

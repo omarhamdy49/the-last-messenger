@@ -10,7 +10,6 @@ use App\Domain\Blog\Models\Tag;
 use App\Domain\Quran\Models\Reciter;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Models\SeerahEventType;
-use App\Domain\Seerah\Models\SeerahParticipant;
 use App\Domain\Shared\Models\Language;
 use App\Domain\Shared\Models\LanguageTranslation;
 use App\Models\Article;
@@ -141,9 +140,15 @@ class TranslationMigrationE2ETest extends TestCase
      */
     public function test_seerah_event_translations(): void
     {
+        $type = SeerahEventType::create([
+            'slug' => 'other',
+            'locale' => ['ar' => 'أخرى', 'en' => 'Other'],
+            'is_active' => true,
+        ]);
+
         $event = SeerahEvent::create([
             'slug' => 'migration-to-medina',
-            'seerah_event_type_id' => SeerahEventType::query()->where('slug', 'other')->value('id'),
+            'event_type' => $type->id,
         ]);
 
         // Verify translation table exists
@@ -155,16 +160,10 @@ class TranslationMigrationE2ETest extends TestCase
         $this->assertContains('description', $translatable);
         $this->assertContains('content', $translatable);
 
-        $this->assertTrue(true);
-    }
-
-    /**
-     * Test 10: Seerah Module - SeerahParticipant with Translations
-     * Verify SeerahParticipant model migrated correctly
-     */
-    public function test_seerah_participant_translations(): void
-    {
-        $this->assertTrue(\Schema::hasTable('seerah_participant_translations'));
+        // Translation rows are keyed by event_id.
+        $event->syncTranslations(['title' => ['ar' => 'الهجرة', 'en' => 'The Hijra']]);
+        $this->assertDatabaseHas('seerah_event_translations', ['event_id' => $event->id, 'locale' => 'ar', 'title' => 'الهجرة']);
+        $this->assertSame('The Hijra', $event->fresh()->getTranslation('title', 'en'));
     }
 
     /**
@@ -259,7 +258,6 @@ class TranslationMigrationE2ETest extends TestCase
             Category::class,
             Tag::class,
             SeerahEvent::class,
-            SeerahParticipant::class,
             Reciter::class,
             Language::class,
             // Article uses Spatie HasTranslations (JSON columns), not HasLocalizedContent per-table approach
@@ -317,7 +315,6 @@ class TranslationMigrationE2ETest extends TestCase
             'tags_translations',
             'reciter_translations',
             'seerah_event_translations',
-            'seerah_participant_translations',
         ];
 
         // Tables exist (we verified above)
@@ -367,7 +364,6 @@ class TranslationMigrationE2ETest extends TestCase
             'tag_translations',          // singular — canonical name
             'reciter_translations',
             'seerah_event_translations',
-            'seerah_participant_translations',
             'language_translations',
             // Article uses Spatie JSON columns (no separate article_translations table)
         ];
@@ -386,15 +382,16 @@ class TranslationMigrationE2ETest extends TestCase
         // The migrations table stores filenames only (no directory prefix)
         $migrations = \DB::table('migrations')
             ->whereIn('migration', [
-                '2026_03_09_200000_create_seerah_event_translations_table',
+                '2025_10_27_130000_create_seerah_tables',
+                '2026_03_09_200000_create_seerah_events_gallery_and_media_tables',
                 '2026_03_10_100000_create_blog_translation_tables',
                 '2026_03_10_100003_create_phase_4_translation_tables',
             ])
             ->count();
 
-        // Three, not four: the sahabi_translations migration was deleted with
-        // the Sahaba module.
-        $this->assertGreaterThanOrEqual(3, $migrations);
+        // The sahabi_translations migration was deleted with the Sahaba module;
+        // Seerah translations are created inside create_seerah_tables.
+        $this->assertSame(4, $migrations);
     }
 
     /**

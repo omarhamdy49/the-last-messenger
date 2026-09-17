@@ -6,14 +6,13 @@ namespace Tests\Feature\Admin;
 
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Models\SeerahEventType;
+use App\Domain\Seerah\Models\SeerahMilestone;
+use App\Domain\Shared\Models\Location;
 use App\Domain\Shared\Services\LanguageService;
-use App\Models\Article;
-use App\Models\Media;
-use App\Models\User;
+use Database\Seeders\SeerahEventTypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class SeerahEventCrudTest extends TestCase
@@ -25,138 +24,227 @@ class SeerahEventCrudTest extends TestCase
         parent::setUp();
 
         $this->withoutVite();
+        $this->seed(SeerahEventTypeSeeder::class);
         app(LanguageService::class)->updateSettings('fr', ['active' => true]);
         app(LanguageService::class)->updateSettings('ur', ['active' => true]);
     }
 
-    public function test_admin_can_create_view_update_and_delete_seerah_events_with_multilingual_article_relations(): void
+    public function test_admin_can_create_an_event_with_every_field(): void
     {
         Storage::fake('public');
+        Storage::fake('local');
+        $this->actingAs($this->createAdminUser());
 
-        $admin = $this->createAdminUser();
-        $this->actingAs($admin);
+        $milestone = $this->createMilestone();
+        $location = Location::factory()->create();
 
-        $sourceArticle = $this->createArticleWithMedia($admin, 'الهجرة إلى المدينة', 'Migration to Madinah', 'migration');
-        $updatedArticle = $this->createArticleWithMedia($admin, 'بناء المسجد النبوي', 'Building the Prophet Mosque', 'mosque');
-
-        $battleTypeId = SeerahEventType::query()->where('slug', 'battle')->value('id');
-
-        $createPayload = [
-            'slug' => 'battle-of-badr',
-            'title' => $this->localizedField('غزوة بدر', 'Battle of Badr'),
-            'description' => $this->localizedField('وصف عربي للحدث', 'English event description'),
-            'content' => $this->localizedField('تفاصيل عربية للحدث', 'English event content'),
-            'dispute_note' => $this->localizedField('قيل سنة 2 هـ وقيل 3 هـ', 'Some place it in 2 AH, others in 3 AH'),
-            'hijri_date' => '17 رمضان 2 هـ',
+        $this->post(route('admin.seerah-events.store'), [
+            ...$this->validPayload(),
+            'description' => ['ar' => 'وصف عربي للحدث', 'en' => 'English event description'],
+            'content' => ['ar' => 'تفاصيل عربية للحدث', 'en' => 'English event content'],
+            'dispute_note' => ['ar' => 'قيل سنة 2 هـ وقيل 3 هـ', 'en' => 'Some place it in 2 AH, others in 3 AH'],
+            'metadata' => [
+                'ar' => [['key' => 'عدد المسلمين', 'value' => '313']],
+                'en' => [['key' => 'Muslims', 'value' => '313']],
+            ],
+            'sources' => [
+                'ar' => [['title' => 'السيرة النبوية', 'author' => 'ابن هشام', 'reference' => 'ج2 ص251']],
+                'en' => [['title' => 'The Life of Muhammad', 'author' => 'Ibn Ishaq', 'reference' => 'p. 289']],
+            ],
+            'statistics' => [['label' => 'المسلمون', 'value' => '313'], ['label' => 'المشركون', 'value' => '1000']],
+            'era' => 'medina',
             'hijri_year' => 2,
             'hijri_month' => 9,
             'hijri_day' => 17,
             'gregorian_date' => '0624-03-13',
-            'gregorian_year' => 624,
-            'seerah_event_type_id' => $battleTypeId,
-            'status' => 'published',
-            'importance' => 'high',
-            'location' => 'Badr',
-            'latitude' => '23.7833',
-            'longitude' => '38.7900',
-            'related_article_id' => $sourceArticle->id,
-            'display_order' => 1,
-            'is_featured' => '1',
-            'featured_image' => UploadedFile::fake()->image('badr-create.jpg', 1200, 630),
-        ];
-
-        $this->post(route('admin.seerah-events.store'), $createPayload)
-            ->assertRedirect(route('admin.seerah-events.index'));
+            'sm_id' => $milestone->id,
+            'location_id' => $location->id,
+            'thumb' => UploadedFile::fake()->image('badr-thumb.jpg', 640, 360),
+            'cover' => UploadedFile::fake()->image('badr-cover.jpg', 1200, 630),
+        ])->assertRedirect(route('admin.seerah-events.index'));
 
         $event = SeerahEvent::query()->where('slug', 'battle-of-badr')->firstOrFail();
 
-        $this->assertSame('غزوة بدر', $event->getTranslation('title', 'ar'));
-        $this->assertSame('Battle of Badr FR', $event->getTranslation('title', 'fr'));
-        $this->assertSame('Battle of Badr UR', $event->getTranslation('title', 'ur'));
-        $this->assertSame('قيل سنة 2 هـ وقيل 3 هـ', $event->getTranslation('dispute_note', 'ar'));
-        $this->assertSame('Some place it in 2 AH, others in 3 AH', $event->getTranslation('dispute_note', 'en', false));
-        $this->assertSame($sourceArticle->id, $event->related_article_id);
-        $this->assertSame($battleTypeId, $event->seerah_event_type_id);
+        $this->assertSame($this->battleTypeId(), $event->event_type);
         $this->assertSame('battle', $event->type->slug);
+        $this->assertSame($milestone->id, $event->sm_id);
+        $this->assertSame($location->id, $event->location_id);
+        $this->assertSame(7, $event->order);
         $this->assertSame('published', $event->status->value);
-        $this->assertTrue($event->is_featured);
-        $this->assertNotNull($event->featured_image);
-        Storage::disk('public')->assertExists($event->featured_image);
+        $this->assertSame('medina', $event->era->value);
+        $this->assertSame([2, 9, 17], [$event->hijri_year, $event->hijri_month, $event->hijri_day]);
+        $this->assertSame('0624-03-13', $event->gregorian_date->format('Y-m-d'));
+        $this->assertSame(['المسلمون' => '313', 'المشركون' => '1000'], $event->statistics);
 
-        $this->get(route('admin.seerah-events.show', $event->id))
-            ->assertOk()
-            ->assertSee('غزوة بدر')
-            ->assertSee('الهجرة إلى المدينة');
+        $this->assertSame('غزوة بدر', $event->getTranslation('title', 'ar'));
+        $this->assertSame('Battle of Badr', $event->getTranslation('title', 'en', false));
+        $this->assertSame('English event content', $event->getTranslation('content', 'en', false));
+        $this->assertSame('قيل سنة 2 هـ وقيل 3 هـ', $event->getTranslation('dispute_note', 'ar'));
 
-        $oldImagePath = $event->featured_image;
+        $ar = $event->translations()->where('locale', 'ar')->firstOrFail();
+        $en = $event->translations()->where('locale', 'en')->firstOrFail();
+        $this->assertSame([['key' => 'عدد المسلمين', 'value' => '313']], $ar->metadata);
+        $this->assertSame([['title' => 'The Life of Muhammad', 'author' => 'Ibn Ishaq', 'reference' => 'p. 289']], $en->sources);
 
-        $updatePayload = [
-            'slug' => 'battle-of-badr',
-            'title' => $this->localizedField('غزوة بدر الكبرى', 'The Great Battle of Badr'),
-            'description' => $this->localizedField('وصف عربي محدث', 'Updated English description'),
-            'content' => $this->localizedField('تفاصيل عربية محدثة', 'Updated English content'),
-            'dispute_note' => $this->localizedField('الراجح 2 هـ', 'The stronger view is 2 AH'),
-            'hijri_date' => '17 رمضان 2 هـ',
-            'hijri_year' => 2,
-            'hijri_month' => 9,
-            'hijri_day' => 17,
-            'gregorian_date' => '0624-03-13',
-            'gregorian_year' => 624,
-            'seerah_event_type_id' => $battleTypeId,
-            'status' => 'published',
+        $this->assertStringStartsWith('seerah-events/thumbs/', (string) $event->thumb_url);
+        $this->assertStringStartsWith('seerah-events/covers/', (string) $event->cover_url);
+        Storage::disk('public')->assertExists($event->thumb_url);
+        Storage::disk('public')->assertExists($event->cover_url);
+    }
+
+    public function test_update_without_repeatable_keys_leaves_them_untouched_and_empty_metadata_clears(): void
+    {
+        $this->actingAs($this->createAdminUser());
+        $event = SeerahEvent::factory()->create(['event_type' => $this->battleTypeId()]);
+        $event->translations()->where('locale', 'ar')->firstOrFail()->forceFill([
+            'metadata' => [['key' => 'مفتاح', 'value' => 'قيمة']],
+            'sources' => [['title' => 'مصدر', 'author' => 'مؤلف', 'reference' => 'مرجع']],
+        ])->save();
+
+        $this->put(route('admin.seerah-events.update', $event->id), [
+            ...$this->validPayload($event->slug),
+            'title' => ['ar' => 'عنوان محدث'],
+        ])->assertRedirect(route('admin.seerah-events.index'));
+
+        $ar = $event->translations()->where('locale', 'ar')->firstOrFail();
+        $this->assertSame('عنوان محدث', $ar->title);
+        $this->assertSame([['key' => 'مفتاح', 'value' => 'قيمة']], $ar->metadata);
+        $this->assertSame([['title' => 'مصدر', 'author' => 'مؤلف', 'reference' => 'مرجع']], $ar->sources);
+
+        $this->put(route('admin.seerah-events.update', $event->id), [
+            ...$this->validPayload($event->slug),
+            'metadata' => ['ar' => ''],
+        ])->assertRedirect(route('admin.seerah-events.index'));
+
+        $ar->refresh();
+        $this->assertNull($ar->metadata);
+        $this->assertSame([['title' => 'مصدر', 'author' => 'مؤلف', 'reference' => 'مرجع']], $ar->sources);
+    }
+
+    public function test_remove_thumb_deletes_the_file_and_keeps_the_cover(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+        $this->actingAs($this->createAdminUser());
+
+        $this->post(route('admin.seerah-events.store'), [
+            ...$this->validPayload(),
+            'thumb' => UploadedFile::fake()->image('thumb.jpg', 640, 360),
+            'cover' => UploadedFile::fake()->image('cover.jpg', 1200, 630),
+        ])->assertRedirect(route('admin.seerah-events.index'));
+
+        $event = SeerahEvent::query()->where('slug', 'battle-of-badr')->firstOrFail();
+        $thumb = $event->thumb_url;
+        $cover = $event->cover_url;
+
+        $this->put(route('admin.seerah-events.update', $event->id), [
+            ...$this->validPayload($event->slug),
+            'remove_thumb' => '1',
+        ])->assertRedirect(route('admin.seerah-events.index'));
+
+        $event->refresh();
+        $this->assertNull($event->thumb_url);
+        $this->assertSame($cover, $event->cover_url);
+        Storage::disk('public')->assertMissing($thumb);
+        Storage::disk('public')->assertExists($cover);
+    }
+
+    public function test_removed_fields_are_rejected(): void
+    {
+        $this->actingAs($this->createAdminUser());
+
+        foreach ([
             'importance' => 'high',
-            'location' => 'Badr Valley',
-            'latitude' => '23.7900',
-            'longitude' => '38.8000',
-            'related_article_id' => $updatedArticle->id,
-            'display_order' => 2,
-            'is_featured' => '1',
-            'featured_image' => UploadedFile::fake()->image('badr-update.jpg', 1200, 630),
-        ];
+            'display_order' => 1,
+            'participants' => [['name' => 'x']],
+            'lessons' => ['ar' => 'درس'],
+            'featured_image' => 'seerah-events/x.jpg',
+            'latitude' => '23.78',
+            'seerah_event_type_id' => $this->battleTypeId(),
+        ] as $field => $value) {
+            $this->from(route('admin.seerah-events.create'))
+                ->post(route('admin.seerah-events.store'), [...$this->validPayload(), $field => $value])
+                ->assertSessionHasErrors($field);
 
-        $this->put(route('admin.seerah-events.update', $event->id), $updatePayload)
-            ->assertRedirect(route('admin.seerah-events.index'));
+            $this->postJson(route('admin.seerah-events.store'), [...$this->validPayload(), $field => $value])
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors($field);
+        }
 
-        $event->refresh();
+        $this->assertDatabaseMissing('seerah_events', ['slug' => 'battle-of-badr']);
+    }
 
-        $this->assertSame('غزوة بدر الكبرى', $event->getTranslation('title', 'ar'));
-        $this->assertSame('The Great Battle of Badr TR', $event->getTranslation('title', 'tr'));
-        $this->assertSame('الراجح 2 هـ', $event->getTranslation('dispute_note', 'ar'));
-        $this->assertSame('The stronger view is 2 AH', $event->getTranslation('dispute_note', 'en', false));
-        $this->assertSame($updatedArticle->id, $event->related_article_id);
-        $this->assertSame('Badr Valley', $event->location);
-        $this->assertSame(2, $event->display_order);
-        $this->assertNotSame($oldImagePath, $event->featured_image);
-        Storage::disk('public')->assertMissing($oldImagePath);
-        Storage::disk('public')->assertExists($event->featured_image);
+    public function test_store_validates_order_era_and_active_type(): void
+    {
+        $this->actingAs($this->createAdminUser());
 
-        Sanctum::actingAs($admin, ['api:access']);
-        $response = $this->getJson('/api/v1/seerah/battle-of-badr');
+        $payload = $this->validPayload();
+        unset($payload['order']);
+        $this->from(route('admin.seerah-events.create'))
+            ->post(route('admin.seerah-events.store'), $payload)
+            ->assertSessionHasErrors('order');
 
-        $response->assertOk()
-            ->assertJsonPath('success', true)
-            ->assertJsonPath('data.slug', 'battle-of-badr')
-            ->assertJsonPath('data.title.ar', 'غزوة بدر الكبرى')
-            ->assertJsonPath('data.title.fr', 'The Great Battle of Badr FR')
-            ->assertJsonPath('data.content.ur', 'Updated English content UR')
-            ->assertJsonPath('data.article.id', $updatedArticle->id)
-            ->assertJsonPath('data.article.locales.ar.title', 'بناء المسجد النبوي')
-            ->assertJsonPath('data.article.locales.en.title', 'Building the Prophet Mosque')
-            ->assertJsonPath('data.article.media_items.0.filename', 'mosque-media.jpg');
+        $this->from(route('admin.seerah-events.create'))
+            ->post(route('admin.seerah-events.store'), [...$this->validPayload(), 'era' => 'ottoman'])
+            ->assertSessionHasErrors('era');
 
-        $this->assertStringContainsString(
-            'seerah-events/featured-images',
-            (string) $response->json('data.featured_image')
-        );
+        $inactive = SeerahEventType::create([
+            'slug' => 'retired',
+            'locale' => ['ar' => 'متوقف'],
+            'metadata' => ['icon' => 'circle'],
+            'is_active' => false,
+        ]);
+        $this->from(route('admin.seerah-events.create'))
+            ->post(route('admin.seerah-events.store'), [...$this->validPayload(), 'event_type' => $inactive->id])
+            ->assertSessionHasErrors('event_type');
 
-        $event->refresh();
-        $this->assertSame(1, $event->views_count);
+        $this->assertDatabaseMissing('seerah_events', ['slug' => 'battle-of-badr']);
+    }
+
+    public function test_show_and_edit_pages_render(): void
+    {
+        $this->actingAs($this->createAdminUser());
+        $event = SeerahEvent::factory()->create();
+        $event->syncTranslations(['title' => ['ar' => 'غزوة بدر']]);
+
+        $this->get(route('admin.seerah-events.show', $event->id))->assertOk()->assertSee('غزوة بدر');
+        $this->get(route('admin.seerah-events.edit', $event->id))->assertOk()->assertSee('غزوة بدر');
+        $this->get(route('admin.seerah-events.create'))->assertOk();
+    }
+
+    public function test_destroy_deletes_the_row_and_its_files(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+        $this->actingAs($this->createAdminUser());
+
+        $this->post(route('admin.seerah-events.store'), [
+            ...$this->validPayload(),
+            'thumb' => UploadedFile::fake()->image('thumb.jpg', 640, 360),
+            'cover' => UploadedFile::fake()->image('cover.jpg', 1200, 630),
+        ])->assertRedirect(route('admin.seerah-events.index'));
+
+        $event = SeerahEvent::query()->where('slug', 'battle-of-badr')->firstOrFail();
 
         $this->delete(route('admin.seerah-events.destroy', $event->id))
             ->assertRedirect(route('admin.seerah-events.index'));
 
         $this->assertDatabaseMissing('seerah_events', ['id' => $event->id]);
-        Storage::disk('public')->assertMissing($event->featured_image);
+        $this->assertDatabaseMissing('seerah_event_translations', ['event_id' => $event->id]);
+        Storage::disk('public')->assertMissing($event->thumb_url);
+        Storage::disk('public')->assertMissing($event->cover_url);
+    }
+
+    public function test_guests_are_redirected_to_login(): void
+    {
+        $event = SeerahEvent::factory()->create();
+
+        $this->get(route('admin.seerah-events.index'))->assertRedirect(route('login'));
+        $this->post(route('admin.seerah-events.store'), $this->validPayload())->assertRedirect(route('login'));
+        $this->delete(route('admin.seerah-events.destroy', $event->id))->assertRedirect(route('login'));
+
+        $this->assertDatabaseHas('seerah_events', ['id' => $event->id]);
+        $this->assertDatabaseMissing('seerah_events', ['slug' => 'battle-of-badr']);
     }
 
     public function test_show_displays_formatted_content_in_each_available_language(): void
@@ -203,71 +291,37 @@ class SeerahEventCrudTest extends TestCase
             ->assertOk()->assertDontSee('id="event-content-heading"', false);
     }
 
-    private function createArticleWithMedia(User $owner, string $arabicTitle, string $englishTitle, string $slugPrefix): Article
-    {
-        $article = Article::query()->create([
-            'writer_id' => $owner->id,
-            'read_time' => 6,
-            'views' => 0,
-            'is_featured' => false,
-            'is_pinned' => false,
-        ]);
-
-        foreach ($this->localizedField($arabicTitle, $englishTitle) as $locale => $title) {
-            $article->locales()->create([
-                'locale' => $locale,
-                'title' => $title,
-                'slug' => $slugPrefix.'-'.$locale,
-                'description' => $title.' description',
-                'excerpt' => $title.' excerpt',
-                'content' => [
-                    'body' => '<p>'.$title.' body</p>',
-                    'summary' => $title.' summary',
-                    'toc' => [],
-                ],
-                'seo_metadata' => [
-                    'title' => $title.' seo',
-                    'description' => $title.' seo description',
-                ],
-                'is_ready' => true,
-            ]);
-        }
-
-        $media = Media::query()->create([
-            'filename' => $slugPrefix.'-media.jpg',
-            'original_filename' => $slugPrefix.'-media.jpg',
-            'path' => 'media/'.$slugPrefix.'-media.jpg',
-            'mime_type' => 'image/jpeg',
-            'size' => 153600,
-            'width' => 1200,
-            'height' => 630,
-            'disk' => 'public',
-            'alt_text' => $englishTitle.' image',
-            'caption' => $englishTitle.' image',
-            'metadata' => ['source' => 'test'],
-            'type' => 'image',
-            'mediable_type' => User::class,
-            'mediable_id' => $owner->id,
-            'collection_name' => 'images',
-            'tags' => [$slugPrefix],
-        ]);
-
-        $article->mediaItems()->sync([$media->id]);
-
-        return $article->load(['locales', 'mediaItems']);
-    }
-
     /**
-     * @return array<string, string>
+     * @return array<string, mixed>
      */
-    private function localizedField(string $arabic, string $english): array
+    private function validPayload(string $slug = 'battle-of-badr'): array
     {
         return [
-            'ar' => $arabic,
-            'en' => $english,
-            'fr' => $english.' FR',
-            'tr' => $english.' TR',
-            'ur' => $english.' UR',
+            'slug' => $slug,
+            'event_type' => $this->battleTypeId(),
+            'order' => 7,
+            'status' => 'published',
+            'title' => ['ar' => 'غزوة بدر', 'en' => 'Battle of Badr'],
         ];
+    }
+
+    private function battleTypeId(): int
+    {
+        return (int) SeerahEventType::query()->where('slug', 'battle')->value('id');
+    }
+
+    private function createMilestone(): SeerahMilestone
+    {
+        $milestone = SeerahMilestone::create([
+            'slug' => 'medina-era',
+            'order' => 1,
+            'metadata' => ['icon' => 'moon'],
+            'hijri_from' => 1,
+            'hijri_to' => 11,
+            'is_active' => true,
+        ]);
+        $milestone->syncTranslations(['title' => ['ar' => 'العهد المدني']]);
+
+        return $milestone;
     }
 }

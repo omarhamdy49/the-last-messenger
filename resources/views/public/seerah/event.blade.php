@@ -55,19 +55,6 @@
         transition: width 0.2s ease-out;
     }
 
-    /* ── Path of Light II ────────────────────────────────────────────
-       The inner timeline carries a continuous track whose fill follows
-       the reading line (--jp, paint-only clip-path); step chips ignite
-       as they are passed. The TOC mirrors it as a lit dot trail. */
-    #article-path { --jp: 0; }
-    .ev-path-fill {
-        clip-path: inset(0 0 calc((1 - var(--jp, 0)) * 100%) 0);
-        transition: clip-path .18s ease-out;
-    }
-    .ev-step-chip { transition: box-shadow .5s ease, filter .5s ease; }
-    [data-path-step]:not(.is-lit) .ev-step-chip { filter: grayscale(.4) brightness(.92); }
-    [data-path-step].is-lit .ev-step-chip { box-shadow: 0 0 20px -4px rgba(100,204,197,.85); }
-
     .ev-toc-dot {
         width: 10px;
         height: 10px;
@@ -87,7 +74,7 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-        .ev-path-fill, .ev-step-chip, .ev-toc-dot, .ev-toc-fill { transition: none; }
+        .ev-toc-dot, .ev-toc-fill { transition: none; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -102,13 +89,11 @@
     $isRtl = in_array(app()->getLocale(), ['ar', 'ur'], true);
     $hasContent = ! empty($event['content']);
     $hasDescription = ! empty($event['description']);
-    $hasCharacters = ! empty($event['characters']);
-    $lessons = collect($event['lessons'] ?? [])->filter(fn ($l) => ! empty($l['title']));
-    $hasLessons = $lessons->isNotEmpty();
+    $details = collect($event['details'] ?? [])->filter(fn ($d) => ! empty($d['key']));
+    $hasDetails = $details->isNotEmpty();
+    $hasMedia = ! empty($event['media']);
     $sources = collect($event['sources'] ?? [])->filter(fn ($s) => ! empty($s['title']));
     $hasSources = $sources->isNotEmpty();
-    $eventTimeline = collect($event['timeline'] ?? []);
-    $hasTimeline = $eventTimeline->isNotEmpty();
     $statistics = collect($event['statistics'] ?? [])->filter(fn ($v) => is_scalar($v))->take(4);
     $hasStatistics = $statistics->isNotEmpty();
     // Timeline is the default style now — plain URL, no query param.
@@ -118,10 +103,8 @@
     $facts = collect([
         ['icon' => 'calendar', 'label' => __('seerah.public.hijri_year_label').' ('.__('seerah.public.hijri_suffix').')', 'value' => $event['hijriDate'] ?: ($event['hijriYear'] !== null ? abs($event['hijriYear']).' '.($event['hijriYear'] < 0 ? __('seerah.public.before_hijra_suffix') : __('seerah.public.hijri_suffix')) : null)],
         ['icon' => 'calendar-days', 'label' => __('seerah.public.gregorian_suffix'), 'value' => $event['gregorianYear'] ? $event['gregorianYear'].' '.__('seerah.public.gregorian_suffix') : null],
-        ['icon' => 'map-pin', 'label' => __('seerah.public.location_label'), 'value' => $event['location']],
+        ['icon' => 'map-pin', 'label' => __('seerah.public.location_label'), 'value' => $event['place']['name'] ?? null],
         ['icon' => 'landmark', 'label' => __('seerah.public.era_label'), 'value' => $event['eraLabel']],
-        ['icon' => 'route', 'label' => __('seerah.public.phase_label'), 'value' => $event['phaseLabel']],
-        ['icon' => 'flame', 'label' => __('seerah.public.importance_label'), 'value' => $event['importanceLabel'] ?? null],
     ])->filter(fn ($f) => ! empty($f['value']));
 
     $disputeNote = $event['disputeNote'] ?? null;
@@ -131,9 +114,8 @@
         ['id' => 'introduction', 'label' => __('seerah.public.section_intro'), 'show' => $hasDescription],
         ['id' => 'dispute', 'label' => __('seerah.public.dispute_heading'), 'show' => (bool) ($event['disputeNote'] ?? null)],
         ['id' => 'context', 'label' => __('seerah.public.section_context'), 'show' => $hasContent],
-        ['id' => 'timeline', 'label' => __('seerah.public.event_timeline_heading'), 'show' => $hasTimeline],
-        ['id' => 'characters', 'label' => __('seerah.public.section_characters'), 'show' => $hasCharacters],
-        ['id' => 'lessons', 'label' => __('seerah.public.section_lessons'), 'show' => $hasLessons],
+        ['id' => 'more-details', 'label' => __('seerah.public.section_more_details'), 'show' => $hasDetails],
+        ['id' => 'media', 'label' => __('seerah.public.section_media'), 'show' => $hasMedia],
         ['id' => 'sources', 'label' => __('seerah.public.section_sources'), 'show' => $hasSources],
     ])->filter(fn ($t) => $t['show'])->values();
 @endphp
@@ -150,26 +132,11 @@
     init() {
         this.updateReadingProgress();
         this.updateActiveSection();
-        this.updatePathLight();
         window.addEventListener('scroll', () => {
             this.updateReadingProgress();
             this.showFab = window.scrollY > 500;
             this.updateActiveSection();
-            this.updatePathLight();
         }, { passive: true });
-    },
-
-    // Path of Light II: fill the inner timeline's track to the reading
-    // line and ignite the step chips it has passed.
-    updatePathLight() {
-        const path = document.getElementById('article-path');
-        if (! path) return;
-        const line = window.innerHeight * 0.4;
-        const rect = path.getBoundingClientRect();
-        path.style.setProperty('--jp', Math.min(1, Math.max(0, (line - rect.top) / Math.max(rect.height, 1))).toFixed(4));
-        path.querySelectorAll('[data-path-step]').forEach(step => {
-            step.classList.toggle('is-lit', step.getBoundingClientRect().top < line);
-        });
     },
 
     updateReadingProgress() {
@@ -244,8 +211,8 @@
     <main class="pb-12">
         <!-- Hero -->
         <section class="relative overflow-hidden">
-            @if (! empty($event['featuredImage']))
-            <img src="{{ $event['featuredImage'] }}"
+            @if (! empty($event['coverImage']))
+            <img src="{{ $event['coverImage'] }}"
                  alt="{{ $event['title'] }}"
                  width="1920"
                  height="1080"
@@ -267,16 +234,6 @@
                     <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-sm font-bold">
                         <i data-lucide="{{ $event['icon'] }}" class="w-4 h-4"></i>{{ $event['typeLabel'] }}
                     </span>
-                    @if ($event['isPivotal'])
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-l from-[#0056b3] to-[#218838] text-white shadow-sm text-xs font-bold">
-                            <i data-lucide="star" class="w-3.5 h-3.5"></i>{{ __('seerah.public.pivotal_event') }}
-                        </span>
-                    @endif
-                    @if (($event['importance'] ?? null) === 'high')
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-xs font-bold">
-                            <i data-lucide="flame" class="w-3.5 h-3.5"></i>{{ $event['importanceLabel'] }}
-                        </span>
-                    @endif
                     @if ($disputeNote)
                         {{-- Anchor, not decoration: jumps to the note itself. --}}
                         <a href="#dispute" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/85 border border-red-300/50 text-white text-xs font-bold hover:bg-red-600 transition-colors">
@@ -298,8 +255,8 @@
                     @if ($event['gregorianYear'])
                         <span class="inline-flex items-center gap-2"><i data-lucide="calendar-days" class="w-4 h-4 sm:w-5 sm:h-5"></i>{{ $event['gregorianYear'] }} {{ __('seerah.public.gregorian_suffix') }}</span>
                     @endif
-                    @if ($event['location'])
-                        <span class="inline-flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4 sm:w-5 sm:h-5"></i>{{ $event['location'] }}</span>
+                    @if ($event['place'])
+                        <span class="inline-flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4 sm:w-5 sm:h-5"></i>{{ $event['place']['name'] }}</span>
                     @endif
                 </div>
 
@@ -399,94 +356,23 @@
                         </section>
                     @endif
 
-                    <!-- Inner Event Timeline -->
-                    @if ($hasTimeline)
-                        <section id="timeline" class="scroll-mt-28 rounded-3xl p-6 sm:p-10 bg-white dark:bg-[#161d38] border border-gray-200/80 dark:border-white/10 shadow-sm">
-                            <div class="flex items-center gap-3 sm:gap-4 mb-8">
+                    <!-- More details (editor-defined key/value pairs) -->
+                    @if ($hasDetails)
+                        <section id="more-details" class="scroll-mt-28 rounded-3xl p-6 sm:p-10 bg-white dark:bg-[#161d38] border border-gray-200/80 dark:border-white/10 shadow-sm">
+                            <div class="flex items-center gap-3 sm:gap-4 mb-6">
                                 <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center flex-shrink-0">
-                                    <i data-lucide="clock" class="w-5 h-5 sm:w-6 sm:h-6 text-white"></i>
+                                    <i data-lucide="list" class="w-5 h-5 sm:w-6 sm:h-6 text-white"></i>
                                 </div>
-                                <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{{ __('seerah.public.event_timeline_heading') }}</h2>
+                                <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{{ __('seerah.public.section_more_details') }}</h2>
                             </div>
-
-                            <div id="article-path" class="relative">
-                                {{-- continuous track — replaces per-item connectors that
-                                     never reached the next chip past a tall card --}}
-                                <div class="absolute top-5 bottom-10 start-[17px] sm:start-[19px] w-0.5 rounded-full bg-gray-200 dark:bg-white/10" aria-hidden="true"></div>
-                                <div class="ev-path-fill absolute top-5 bottom-10 start-[17px] sm:start-[19px] w-0.5 rounded-full bg-gradient-to-b from-[#0056b3] via-[#64CCC5] to-[#218838]" aria-hidden="true"></div>
-
-                                <div class="space-y-6 sm:space-y-8">
-                                    @foreach ($eventTimeline as $index => $timelineItem)
-                                        <div class="relative flex items-start gap-3 sm:gap-5" data-path-step>
-                                            <div class="ev-step-chip relative z-10 flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center text-white font-bold text-sm shadow-md">
-                                                {{ $index + 1 }}
-                                            </div>
-                                            <div class="flex-1 min-w-0 rounded-2xl p-4 sm:p-5 bg-gray-50/80 dark:bg-white/[.04] border border-gray-100 dark:border-white/5">
-                                                <h3 class="text-lg sm:text-xl font-bold mb-1.5 break-words text-gray-900 dark:text-white">{{ $timelineItem['title'] }}</h3>
-                                                @if (! empty($timelineItem['description']))
-                                                    <p class="leading-relaxed break-words text-gray-700 dark:text-gray-300">{{ $timelineItem['description'] }}</p>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                        </section>
-                    @endif
-
-                    <!-- Key Characters (single source of truth — not repeated in the sidebar) -->
-                    @if ($hasCharacters)
-                        <section id="characters" class="scroll-mt-28 rounded-3xl p-6 sm:p-10 bg-white dark:bg-[#161d38] border border-gray-200/80 dark:border-white/10 shadow-sm">
-                            <div class="flex items-center gap-3 sm:gap-4 mb-8">
-                                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center flex-shrink-0">
-                                    <i data-lucide="users" class="w-5 h-5 sm:w-6 sm:h-6 text-white"></i>
-                                </div>
-                                <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{{ __('seerah.public.section_characters') }}</h2>
-                            </div>
-
-                            <div class="grid sm:grid-cols-2 gap-4 sm:gap-5">
-                                @foreach ($event['characters'] as $character)
-                                    <div class="rounded-2xl p-5 sm:p-6 bg-gradient-to-br from-blue-50 to-green-50 dark:from-white/[.04] dark:to-white/[.02] border border-gray-100 dark:border-white/5">
-                                        <div class="flex items-center gap-3 mb-3">
-                                            <div class="w-11 h-11 rounded-full bg-gradient-to-br from-[#0056b3] to-[#218838] flex items-center justify-center flex-shrink-0">
-                                                <i data-lucide="user" class="w-5 h-5 text-white"></i>
-                                            </div>
-                                            <div class="min-w-0">
-                                                <h3 class="text-lg font-bold text-gray-900 dark:text-white break-words">{{ $character['name'] }}</h3>
-                                                @if (! empty($character['roleLabel']))
-                                                    <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#0056b3]/10 text-[#0056b3] dark:bg-[#64CCC5]/15 dark:text-[#64CCC5]">{{ $character['roleLabel'] }}</span>
-                                                @endif
-                                            </div>
-                                        </div>
-                                        @if (! empty($character['description']))
-                                            <p class="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300">{{ $character['description'] }}</p>
-                                        @endif
+                            <dl class="grid sm:grid-cols-2 gap-4">
+                                @foreach ($details as $detail)
+                                    <div class="rounded-2xl p-4 sm:p-5 bg-gray-50/80 dark:bg-white/[.04] border border-gray-100 dark:border-white/5">
+                                        <dt class="text-sm text-gray-500 dark:text-gray-400 break-words">{{ $detail['key'] }}</dt>
+                                        <dd class="mt-1 font-semibold break-words text-gray-900 dark:text-white">{{ $detail['value'] }}</dd>
                                     </div>
                                 @endforeach
-                            </div>
-                        </section>
-                    @endif
-
-                    <!-- Lessons -->
-                    @if ($hasLessons)
-                        <section id="lessons" class="scroll-mt-28 rounded-3xl p-6 sm:p-10 bg-white dark:bg-[#161d38] border border-gray-200/80 dark:border-white/10 shadow-sm">
-                            <div class="flex items-center gap-3 sm:gap-4 mb-8">
-                                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center flex-shrink-0">
-                                    <i data-lucide="lightbulb" class="w-5 h-5 sm:w-6 sm:h-6 text-white"></i>
-                                </div>
-                                <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{{ __('seerah.public.section_lessons') }}</h2>
-                            </div>
-                            <div class="grid sm:grid-cols-2 gap-4 sm:gap-5">
-                                @foreach ($lessons as $lesson)
-                                    <div class="rounded-2xl p-5 sm:p-6 bg-amber-50/60 dark:bg-white/[.04]">
-                                        <span class="block w-10 h-[3px] rounded-full bg-gradient-to-l from-amber-500 to-orange-600 mb-3" aria-hidden="true"></span>
-                                        <h3 class="font-bold text-lg mb-2 break-words text-gray-900 dark:text-white">{{ $lesson['title'] }}</h3>
-                                        @if (! empty($lesson['description']))
-                                            <p class="leading-relaxed break-words text-gray-700 dark:text-gray-300">{{ $lesson['description'] }}</p>
-                                        @endif
-                                    </div>
-                                @endforeach
-                            </div>
+                            </dl>
                         </section>
                     @endif
 
@@ -526,12 +412,43 @@
                             </h2>
                             <div class="grid sm:grid-cols-2 gap-4">
                                 @foreach ($event['gallery'] as $image)
-                                    <img src="{{ $image }}"
-                                         alt="{{ $event['title'] }}"
-                                         width="800"
-                                         height="600"
-                                         loading="lazy"
-                                         class="w-full aspect-[4/3] object-cover rounded-2xl" />
+                                    <figure>
+                                        <img src="{{ $image['url'] }}"
+                                             alt="{{ $image['caption'] ?: $event['title'] }}"
+                                             width="800"
+                                             height="600"
+                                             loading="lazy"
+                                             class="w-full aspect-[4/3] object-cover rounded-2xl" />
+                                        @if ($image['caption'])
+                                            <figcaption class="mt-2 text-sm text-gray-600 dark:text-gray-400">{{ $image['caption'] }}</figcaption>
+                                        @endif
+                                    </figure>
+                                @endforeach
+                            </div>
+                        </section>
+                    @endif
+
+                    <!-- Attached media -->
+                    @if ($hasMedia)
+                        <section id="media" class="scroll-mt-28 rounded-3xl p-6 sm:p-10 bg-white dark:bg-[#161d38] border border-gray-200/80 dark:border-white/10 shadow-sm">
+                            <h2 class="text-2xl sm:text-3xl font-bold mb-6 flex items-center gap-3 text-gray-900 dark:text-white">
+                                <i data-lucide="play-circle" class="w-6 h-6 sm:w-7 sm:h-7 text-[#0056b3] dark:text-[#64CCC5]"></i>
+                                {{ __('seerah.public.section_media') }}
+                            </h2>
+                            <div class="space-y-4">
+                                @foreach ($event['media'] as $item)
+                                    @if ($item['type'] === 'video')
+                                        <video controls preload="metadata" class="w-full rounded-2xl bg-black" src="{{ $item['url'] }}" aria-label="{{ $item['title'] }}"></video>
+                                    @elseif ($item['type'] === 'audio')
+                                        <div>
+                                            <p class="mb-2 font-semibold text-gray-900 dark:text-white">{{ $item['title'] }}</p>
+                                            <audio controls preload="metadata" class="w-full" src="{{ $item['url'] }}"></audio>
+                                        </div>
+                                    @else
+                                        <a href="{{ $item['url'] }}" target="_blank" rel="noopener" class="flex items-center gap-3 p-4 rounded-2xl bg-gray-50/80 dark:bg-white/[.04] border border-gray-100 dark:border-white/5 font-semibold text-gray-900 dark:text-white hover:text-[#0056b3] dark:hover:text-[#64CCC5]">
+                                            <i data-lucide="file" class="w-5 h-5 shrink-0"></i>{{ $item['title'] }}
+                                        </a>
+                                    @endif
                                 @endforeach
                             </div>
                         </section>
@@ -610,36 +527,14 @@
                                         height="256"
                                         loading="lazy"
                                         class="w-full h-56 border-0"></iframe>
-                                {{-- The canonical, localized place name sits above the
-                                     historian's descriptive note. Both are shown: the
-                                     note carries detail no place record holds
-                                     ("على نحو 8 أميال جنوب المدينة"). --}}
-                                @if ($event['place'] || $event['location'])
-                                    <div class="p-4 space-y-1.5">
-                                        @if ($event['place'] && $event['place']['name'])
-                                            <p class="text-sm font-semibold flex items-center gap-2 text-gray-900 dark:text-white">
-                                                <i data-lucide="map-pin" class="w-4 h-4 flex-shrink-0"></i>{{ $event['place']['name'] }}
-                                            </p>
-                                        @endif
-                                        @if ($event['location'])
-                                            <p class="text-sm flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                                                <i data-lucide="map" class="w-4 h-4 flex-shrink-0"></i>{{ $event['location'] }}
-                                            </p>
-                                        @endif
+                                @if ($event['place'] && $event['place']['name'])
+                                    <div class="p-4">
+                                        <p class="text-sm font-semibold flex items-center gap-2 text-gray-900 dark:text-white">
+                                            <i data-lucide="map-pin" class="w-4 h-4 flex-shrink-0"></i>{{ $event['place']['name'] }}
+                                        </p>
                                     </div>
                                 @endif
                             </div>
-                        @endif
-
-                        @if ($event['relatedArticle'])
-                            <a href="{{ $event['relatedArticle']['url'] }}"
-                               class="block rounded-2xl p-5 sm:p-6 bg-white dark:bg-[#161d38] border border-gray-200/80 dark:border-white/10 shadow-sm transition-transform hover:-translate-y-1">
-                                <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('seerah.public.related_article') }}</span>
-                                <span class="mt-2 flex items-center gap-3 font-bold text-gray-900 dark:text-white line-clamp-2">
-                                    <i data-lucide="newspaper" class="w-5 h-5 shrink-0 text-[#0056b3] dark:text-[#64CCC5]"></i>
-                                    {{ $event['relatedArticle']['title'] }}
-                                </span>
-                            </a>
                         @endif
 
                         <!-- Related Events -->

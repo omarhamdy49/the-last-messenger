@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Per-locale story title / subtitle / description for SeerahMilestone.
  *
  * @property int $id
- * @property int $seerah_milestone_id
+ * @property int $sm_id
  * @property string $locale
  * @property string|null $title
  * @property string|null $subtitle
@@ -31,7 +31,7 @@ class SeerahMilestoneTranslation extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'seerah_milestone_id',
+        'sm_id',
         'locale',
         'title',
         'subtitle',
@@ -43,7 +43,7 @@ class SeerahMilestoneTranslation extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'seerah_milestone_id' => 'integer',
+        'sm_id' => 'integer',
         'is_ready' => 'boolean',
     ];
 
@@ -52,6 +52,6 @@ class SeerahMilestoneTranslation extends Model
      */
     public function milestone(): BelongsTo
     {
-        return $this->belongsTo(SeerahMilestone::class, 'seerah_milestone_id');
+        return $this->belongsTo(SeerahMilestone::class, 'sm_id');
     }
 }

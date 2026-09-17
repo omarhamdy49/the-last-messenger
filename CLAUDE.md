@@ -395,17 +395,39 @@ published, so a bare `where('is_published', true)` will serve hidden content.
 > of its verses.
 
 ### 7. Seerah Module
-**Status:** ✅ Implemented
+**Status:** ✅ Implemented — schema rebuilt by `005-seerah-schema-refactor` (see `specs/005-seerah-schema-refactor/`)
 
-**Features:**
-- Seerah events with timeline support
-- Exporters for data output
-- Enums for event categorization
+**Tables (7):** `seerah_milestones` (+`_translations`, FK `sm_id`), `seerah_event_types`,
+`seerah_events` (+`seerah_event_translations`, FK `event_id`), `seerah_events_gallery`,
+`seerah_events_media`. Defined by `2025_10_27_130000_create_seerah_tables` and
+`2026_03_09_200000_create_seerah_events_gallery_and_media_tables`; `location_id` comes from
+`2026_08_18_000003_add_location_foreign_keys`.
+
+**Shape to know before touching it:**
+- Events: `event_type` (FK), `sm_id`, `order` (editorial rank, always posted), `thumb_url` /
+  `cover_url` (public-disk paths), `hijri_year/month/day`, `gregorian_date`, `location_id`
+  (the only place field — coordinates come from the place), `status` / `era` (strings cast to
+  `SeerahEventStatus` / `EventEra`), `statistics` (label => value).
+- Translations: `title`, `description`, `content`, `dispute_note` via `syncTranslations()`;
+  `metadata` [{key,value}] and `sources` are JSON arrays written per locale by the service
+  (they cannot ride through `syncTranslations()`). An absent repeatable key in the admin
+  payload means "leave alone"; posted empty means "clear".
+- Milestones/types keep look-and-feel in `metadata` JSON (`$m->icon` etc. are accessors).
+  Event-type names live in the type's `locale` JSON — a deliberate exception for a tiny lookup,
+  seeded by `SeerahEventTypeSeeder`; don't copy it to content tables.
+- Gallery and media mirror `articles_gallery` / `articles_media`. Seerah may not import
+  `App\Models\Media`: media ids resolve through the Shared `MediaLibraryLookup` contract, and
+  visitors stream files via `public.articles.media` (authorises published events too).
+- **Removed, do not reintroduce:** participants, inner timeline items, lessons, importance,
+  phase, pivotal, featured (+ API `/seerah/featured`), view counting, related-article link,
+  free-text `location`, own lat/lng, `hijri_date`, `gregorian_year`.
 
 **Key Files:**
-- `app/Domain/Seerah/` — domain structure
-- `app/Http/Controllers/Admin/SeerahEventController.php`
-- `app/Http/Resources/SeerahEventResource.php`, `SeerahParticipantResource.php`
+- `app/Domain/Seerah/` — Models, `DTOs/SeerahEventData`, Repositories, Services
+- `app/Http/Controllers/Admin/Seerah/`, `app/Http/Controllers/Site/SeerahController.php`,
+  `app/Http/Controllers/Api/SeerahEventController.php`
+- `resources/views/admin/seerah-events/_form.blade.php`, `resources/views/public/seerah/`
+- `app/Http/Resources/SeerahEventResource.php`
 
 ### 8. People Module (Companions + Genealogy)
 **Status:** ✅ Implemented
@@ -1090,7 +1112,10 @@ ray($variable);
 
 ## Recent Changes
 
+- `005-seerah-schema-refactor`: Seerah rebuilt on 7 tables (see §7); migrations rewritten in
+  place, no data carried over. Existing databases are rebuilt with the runbook in
+  `specs/005-seerah-schema-refactor/quickstart.md` — never `migrate:fresh`.
 - `003-locations-module`: shared `locations` + `location_translations` tables in
-  `app/Domain/Shared/`, with additive nullable FKs on `seerah_events`, `muslims` and
-  `quran_surahs`. No existing place column is dropped. See
-  `specs/003-locations-module/plan.md`.
+  `app/Domain/Shared/`, with nullable FKs on `seerah_events`, `muslims` and `quran_surahs`.
+  Additive for People and Quran; Seerah's free-text `location` was later dropped by 005.
+  See `specs/003-locations-module/plan.md`.

@@ -11,9 +11,11 @@ Auth unchanged: Sanctum bearer + `api:access` + `throttle:api`. Envelope unchang
 | `v1.seerah.map` | kept; events whose `place` has coordinates |
 | `v1.seerah.featured` | **removed** (404) |
 
-`index` filters: `type`, `milestone`, `era`, `status` is never client-settable
-(public = published + ready translation). Removed query params: `importance`,
-`pivotal`, `featured`. `per_page` cast to int, capped at 50.
+`index` filters: `type` (slug), `milestone` (slug), `era`. `status` is never
+client-settable: every public read returns only events that are published AND have
+a ready translation in the request locale. Removed query params: `importance`,
+`pivotal`, `featured`. `per_page` is an integer 1–100; anything else is 422
+(unchanged from before the refactor).
 
 ## `SeerahEventResource`
 

@@ -12,19 +12,14 @@ final class SeerahCacheKeys
 
     private const MILESTONE_PREFIX = 'seerahmilestone';
 
-    public static function eventBySlug(string $slug): string
+    public static function eventBySlug(string $slug, string $locale): string
     {
-        return self::eventKey('slug', compact('slug'));
+        return self::eventKey('slug', compact('slug', 'locale'));
     }
 
-    public static function featured(int $limit): string
+    public static function eventsWithLocation(string $locale): string
     {
-        return self::eventKey('featured', compact('limit'));
-    }
-
-    public static function eventsWithLocation(): string
-    {
-        return self::eventKey('withLocation');
+        return self::eventKey('withLocation', compact('locale'));
     }
 
     public static function journey(string $locale): string

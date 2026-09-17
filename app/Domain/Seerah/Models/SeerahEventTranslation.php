@@ -15,15 +15,18 @@ use Illuminate\Support\Carbon;
  * Stores per-locale translations for SeerahEvent.
  *
  * @property int $id
- * @property int $seerah_event_id
+ * @property int $event_id
  * @property string $locale
  * @property string|null $title
  * @property string|null $description
  * @property string|null $content
+ * @property string|null $dispute_note
+ * @property array<int, array{key: string, value: string}>|null $metadata
+ * @property array<int, array{title?: string, author?: string, reference?: string}>|null $sources
  * @property bool $is_ready
  * @property Carbon $created_at
  * @property Carbon $updated_at
- * @property-read SeerahEvent $seerahEvent
+ * @property-read SeerahEvent $event
  */
 class SeerahEventTranslation extends Model
 {
@@ -40,14 +43,14 @@ class SeerahEventTranslation extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'seerah_event_id',
+        'event_id',
         'locale',
         'title',
         'description',
         'content',
-        'lessons',
-        'sources',
         'dispute_note',
+        'metadata',
+        'sources',
         'is_ready',
     ];
 
@@ -57,19 +60,18 @@ class SeerahEventTranslation extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'seerah_event_id' => 'integer',
+        'event_id' => 'integer',
         'is_ready' => 'boolean',
-        // [{title, description}] and [{title, author, reference}] per locale.
-        'lessons' => 'array',
+        'metadata' => 'array',
         'sources' => 'array',
     ];
 
     /**
      * Get the parent seerah event.
      */
-    public function seerahEvent(): BelongsTo
+    public function event(): BelongsTo
     {
-        return $this->belongsTo(SeerahEvent::class, 'seerah_event_id');
+        return $this->belongsTo(SeerahEvent::class, 'event_id');
     }
 
     /**
@@ -92,28 +94,6 @@ class SeerahEventTranslation extends Model
     public function scopeReady($query)
     {
         return $query->where('is_ready', true);
-    }
-
-    /**
-     * Scope: Search title field.
-     *
-     * @param  Builder  $query
-     * @return Builder
-     */
-    public function scopeSearchTitle($query, string $term)
-    {
-        return $query->where('title', 'LIKE', "%{$term}%");
-    }
-
-    /**
-     * Scope: Search description field.
-     *
-     * @param  Builder  $query
-     * @return Builder
-     */
-    public function scopeSearchDescription($query, string $term)
-    {
-        return $query->where('description', 'LIKE', "%{$term}%");
     }
 
     /**

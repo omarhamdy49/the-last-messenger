@@ -448,8 +448,8 @@ class ImportController extends Controller
                 'optional' => ['title_fr', 'title_tr', 'title_ur', 'content_fr', 'content_tr', 'content_ur', 'excerpt_ar', 'excerpt_en', 'excerpt_fr', 'excerpt_tr', 'excerpt_ur', 'category_name', 'tags', 'status', 'published_at'],
             ],
             'seerah_events' => [
-                'required' => ['title_ar', 'title_en', 'description_ar', 'description_en', 'event_date'],
-                'optional' => ['title_fr', 'title_tr', 'title_ur', 'description_fr', 'description_tr', 'description_ur', 'hijri_date', 'location', 'status'],
+                'required' => ['title_ar', 'title_en', 'description_ar', 'description_en', 'event_date', 'event_type'],
+                'optional' => ['title_fr', 'title_tr', 'title_ur', 'description_fr', 'description_tr', 'description_ur', 'hijri_year', 'hijri_month', 'hijri_day', 'order', 'status'],
             ],
             'sahaba' => [
                 'required' => ['name_ar', 'name_en'],

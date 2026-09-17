@@ -66,25 +66,6 @@ return new class extends Migration
             }
         }
 
-        // Seerah Events - Add search indexes
-        if (Schema::hasTable('seerah_events')) {
-            try {
-                DB::statement('CREATE INDEX idx_seerah_events_type ON seerah_events(event_type)');
-            } catch (Exception $e) {
-                // Index might already exist, skip
-            }
-            try {
-                DB::statement('CREATE INDEX idx_seerah_events_importance ON seerah_events(importance_level)');
-            } catch (Exception $e) {
-                // Index might already exist, skip
-            }
-            try {
-                DB::statement('CREATE INDEX idx_seerah_events_hijri_date ON seerah_events(hijri_date)');
-            } catch (Exception $e) {
-                // Index might already exist, skip
-            }
-        }
-
         // Sahaba - Add search indexes
         if (Schema::hasTable('sahabis')) {
             try {
@@ -159,24 +140,6 @@ return new class extends Migration
             }
             try {
                 DB::statement('DROP INDEX idx_media_programs_type ON media_programs');
-            } catch (Exception $e) {
-                // Index might not exist, skip
-            }
-        }
-
-        if (Schema::hasTable('seerah_events')) {
-            try {
-                DB::statement('DROP INDEX idx_seerah_events_type ON seerah_events');
-            } catch (Exception $e) {
-                // Index might not exist, skip
-            }
-            try {
-                DB::statement('DROP INDEX idx_seerah_events_importance ON seerah_events');
-            } catch (Exception $e) {
-                // Index might not exist, skip
-            }
-            try {
-                DB::statement('DROP INDEX idx_seerah_events_hijri_date ON seerah_events');
             } catch (Exception $e) {
                 // Index might not exist, skip
             }

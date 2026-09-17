@@ -318,7 +318,7 @@
          shareable URL and the back button restores it. --}}
     <form method="GET" action="{{ route('public.seerah.events') }}"
           @submit="loading = true"
-          x-data="{ advanced: {{ ($filters['milestone'] || $filters['importance'] || $filters['pivotal'] || $filters['disputed']) ? 'true' : 'false' }} }"
+          x-data="{ advanced: {{ ($filters['milestone'] || $filters['era'] || $filters['disputed']) ? 'true' : 'false' }} }"
           class="rounded-3xl border p-4 sm:p-5 mb-8 stagger-1 fade-in-up shadow-sm"
           :class="darkMode ? 'bg-gray-900/60 border-gray-800' : 'bg-white border-gray-200'">
       @if ($filters['type'] !== '')
@@ -369,7 +369,7 @@
         </div>
       </div>
 
-      {{-- Progressive disclosure: the four secondary facets stay folded until asked for. --}}
+      {{-- Progressive disclosure: the secondary facets stay folded until asked for. --}}
       <div x-show="advanced" x-cloak x-collapse class="mt-4 pt-4 border-t grid grid-cols-1 sm:grid-cols-2 gap-3"
            :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
         <div>
@@ -385,13 +385,13 @@
         </div>
 
         <div>
-          <label for="seerah-importance" class="block text-xs font-semibold mb-1.5" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">{{ __('seerah.public.importance_label') }}</label>
-          <select id="seerah-importance" name="importance"
+          <label for="seerah-era" class="block text-xs font-semibold mb-1.5" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">{{ __('seerah.public.era_label') }}</label>
+          <select id="seerah-era" name="era"
             class="w-full h-12 px-4 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-[#64CCC5] transition-all"
             :class="darkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'">
             <option value="">{{ __('seerah.public.filter_all') }}</option>
-            @foreach ($importanceOptions as $option)
-              <option value="{{ $option['value'] }}" @selected($filters['importance'] === $option['value'])>{{ $option['label'] }} ({{ $option['count'] }})</option>
+            @foreach ($eraOptions as $option)
+              <option value="{{ $option['value'] }}" @selected($filters['era'] === $option['value'])>{{ $option['label'] }}</option>
             @endforeach
           </select>
         </div>
@@ -399,7 +399,6 @@
         {{-- Flag toggles: links, not checkboxes — one tap applies, and each is a real URL. --}}
         <div class="sm:col-span-2 flex flex-wrap gap-2">
           @foreach ([
-            ['key' => 'pivotal', 'icon' => 'star', 'label' => __('seerah.public.pivotal_event'), 'count' => $facets['pivotal'], 'tone' => 'brand'],
             ['key' => 'disputed', 'icon' => 'scale', 'label' => __('seerah.public.dispute_badge'), 'count' => $facets['disputed'], 'tone' => 'danger'],
           ] as $toggle)
             @continue($toggle['count'] === 0)
@@ -409,9 +408,7 @@
                aria-pressed="{{ $filters[$toggle['key']] ? 'true' : 'false' }}"
                @class([
                  'min-h-11 inline-flex items-center gap-1.5 px-3.5 rounded-xl border font-bold text-[13px] transition-colors focus:outline-none focus:ring-2 focus:ring-[#64CCC5]',
-                 'bg-gradient-to-l from-[#0056b3] to-[#218838] text-white border-transparent shadow-sm' => $filters[$toggle['key']] && $toggle['tone'] === 'brand',
                  'bg-red-600 border-red-600 text-white shadow-sm shadow-red-600/25' => $filters[$toggle['key']] && $toggle['tone'] === 'danger',
-                 'border-[#0056b3]/40 text-[#0056b3] dark:text-[#64CCC5] dark:border-[#64CCC5]/40 hover:bg-[#0056b3]/10' => ! $filters[$toggle['key']] && $toggle['tone'] === 'brand',
                  'border-red-500/40 text-red-700 dark:text-red-300 hover:bg-red-500/10' => ! $filters[$toggle['key']] && $toggle['tone'] === 'danger',
                ])>
               <i data-lucide="{{ $toggle['icon'] }}" class="w-3.5 h-3.5"></i>
@@ -552,7 +549,7 @@
 
                 <!-- Meta Info -->
                 <div class="flex flex-wrap items-center gap-3 sm:gap-4 text-sm">
-                  <!-- Location -->
+                  <!-- Place -->
                   @if ($event['location'])
                     <div class="flex items-center gap-2">
                       <i data-lucide="map-pin" class="w-4 h-4 text-[#64CCC5]"></i>
@@ -571,14 +568,6 @@
                     <div class="flex items-center gap-2 px-3 py-1 rounded-full" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-100/50'">
                       <i data-lucide="calendar" class="w-4 h-4 text-[#64CCC5]"></i>
                       <span class="text-xs font-medium" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">{{ $event['gregorianYear'] }} {{ __('seerah.public.gregorian_suffix') }}</span>
-                    </div>
-                  @endif
-
-                  <!-- Pivotal -->
-                  @if ($event['isPivotal'])
-                    <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-l from-[#0056b3] to-[#218838] text-white border-transparent">
-                      <i data-lucide="star" class="w-3 h-3"></i>
-                      <span class="text-[11px] font-bold">{{ __('seerah.public.pivotal_event') }}</span>
                     </div>
                   @endif
 

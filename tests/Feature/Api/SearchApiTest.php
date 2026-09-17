@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
+use App\Domain\Seerah\Models\SeerahEventType;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
@@ -41,19 +42,18 @@ final class SearchApiTest extends TestCase
     {
         $eventId = (int) DB::table('seerah_events')->insertGetId([
             'slug' => $slug,
-            'seerah_event_type_id' => DB::table('seerah_event_types')->where('slug', 'other')->value('id'),
+            'event_type' => SeerahEventType::query()->firstOrCreate(
+                ['slug' => 'other'],
+                ['locale' => ['ar' => 'حدث آخر', 'en' => 'Other Event'], 'is_active' => true],
+            )->id,
             'status' => 'published',
-            'importance' => 'medium',
-            'views_count' => 0,
-            'display_order' => 0,
-            'is_featured' => false,
-            'is_pivotal' => false,
+            'order' => 0,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
         DB::table('seerah_event_translations')->insert([
-            'seerah_event_id' => $eventId,
+            'event_id' => $eventId,
             'locale' => 'ar',
             'title' => 'حدث من أحداث السيرة النبوية',
             'description' => 'وصف الحدث',

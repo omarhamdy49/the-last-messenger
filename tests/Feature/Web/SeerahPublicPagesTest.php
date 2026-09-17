@@ -5,16 +5,17 @@ declare(strict_types=1);
 namespace Tests\Feature\Web;
 
 use App\Domain\Seerah\Models\SeerahEvent;
-use App\Domain\Seerah\Models\SeerahEventTimelineItem;
+use App\Domain\Seerah\Models\SeerahEventGalleryItem;
 use App\Domain\Seerah\Models\SeerahEventType;
-use App\Domain\Seerah\Models\SeerahParticipant;
+use App\Domain\Seerah\Models\SeerahMilestone;
 use App\Domain\Seerah\Repositories\SeerahEventRepositoryInterface;
-use App\Models\Article;
-use App\Models\ArticleLocale;
+use App\Domain\Shared\Models\Location;
 use Database\Factories\SeerahEventFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -29,67 +30,14 @@ final class SeerahPublicPagesTest extends TestCase
 
     /**
      * Create a Seerah event with translations via the factory.
-     * featured_image is set to avoid Spatie media fallback queries on SQLite.
      */
     private function makeEvent(string $slug, array $attributes = []): SeerahEvent
     {
         return SeerahEventFactory::new()->create(array_merge([
             'slug' => $slug,
-            'featured_image' => 'https://example.com/image.jpg',
-            // Use the legacy equal rank unless a test specifies its editorial order.
-            'display_order' => 0,
-            // The factory may pick a random article id; no articles exist here.
-            'related_article_id' => null,
+            // Use an equal editorial rank unless a test specifies its order.
+            'order' => 0,
         ], $attributes));
-    }
-
-    /**
-     * Attach an inner timeline item (with AR/EN translations) to an event.
-     */
-    private function attachTimelineItem(SeerahEvent $event, int $order, string $titleAr): SeerahEventTimelineItem
-    {
-        $item = SeerahEventTimelineItem::query()->create([
-            'seerah_event_id' => $event->id,
-            'display_order' => $order,
-        ]);
-
-        foreach (['ar' => $titleAr, 'en' => "Step {$order}"] as $locale => $title) {
-            DB::table('seerah_event_timeline_item_translations')->insert([
-                'seerah_event_timeline_item_id' => $item->id,
-                'locale' => $locale,
-                'title' => $title,
-                'description' => "وصف {$title}",
-                'is_ready' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-
-        return $item;
-    }
-
-    /**
-     * Attach a participant (with an AR translation) to an event.
-     */
-    private function attachParticipant(SeerahEvent $event, string $nameAr): SeerahParticipant
-    {
-        $participant = SeerahParticipant::query()->create([
-            'event_id' => $event->id,
-            'participant_type' => 'sahabi',
-            'role' => 'companion',
-        ]);
-
-        DB::table('seerah_participant_translations')->insert([
-            'seerah_participant_id' => $participant->id,
-            'locale' => 'ar',
-            'name' => $nameAr,
-            'description' => "نبذة عن {$nameAr}",
-            'is_ready' => true,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        return $participant;
     }
 
     private function setEnglishTitle(SeerahEvent $event, string $title): void
@@ -97,24 +45,45 @@ final class SeerahPublicPagesTest extends TestCase
         $event->translations()->where('locale', 'en')->update(['title' => $title]);
     }
 
-    private function makeArticle(string $slug, string $title, string $status = Article::STATUS_PUBLISHED): Article
+    /**
+     * Update one locale row's translation fields (arrays are cast by the model).
+     */
+    private function setTranslation(SeerahEvent $event, string $locale, array $fields): void
     {
-        $article = Article::factory()->create([
-            'status' => $status,
-            'published_at' => $status === Article::STATUS_PUBLISHED ? now() : null,
-        ]);
+        $event->translations()->where('locale', $locale)->firstOrFail()->update($fields);
+    }
 
-        ArticleLocale::query()->create([
-            'article_id' => $article->id,
-            'locale' => 'en',
-            'title' => $title,
+    private function makeMilestone(string $slug, int $order = 1): SeerahMilestone
+    {
+        $milestone = SeerahMilestone::query()->create([
             'slug' => $slug,
-            'excerpt' => $title,
-            'content' => ['body' => '<p>Article body</p>'],
-            'is_ready' => true,
+            'order' => $order,
+            'metadata' => ['icon' => 'flag'],
+            'hijri_from' => -13,
+            'hijri_to' => 11,
+            'is_active' => true,
         ]);
+        $milestone->syncTranslations(['title' => ['ar' => $slug, 'en' => $slug]]);
 
-        return $article;
+        return $milestone;
+    }
+
+    /**
+     * Total results the directory reports for a URL.
+     */
+    private function directoryTotal(string $url): int
+    {
+        $total = null;
+
+        $this->withSession(['locale' => 'en'])->get($url)
+            ->assertOk()
+            ->assertViewHas('events', function (LengthAwarePaginator $events) use (&$total): bool {
+                $total = $events->total();
+
+                return true;
+            });
+
+        return $total;
     }
 
     public function test_seerah_index_returns_200(): void
@@ -135,35 +104,49 @@ final class SeerahPublicPagesTest extends TestCase
         $response->assertOk();
     }
 
-    public function test_event_page_article_style_returns_200_with_timeline_and_characters(): void
+    public function test_public_seerah_pages_return_200_with_no_events(): void
+    {
+        $this->withSession(['locale' => 'en'])->get('/seerah')->assertOk();
+
+        $this->withSession(['locale' => 'en'])->get('/seerah/events')
+            ->assertOk()
+            ->assertSee(__('seerah.public.no_results_title'));
+    }
+
+    public function test_event_page_article_style_renders_details_and_sources_only(): void
     {
         $event = $this->makeEvent('battle-of-badr');
-        $this->attachTimelineItem($event, 1, 'خروج الجيش');
-        $this->attachTimelineItem($event, 2, 'بداية المعركة');
-        $this->attachParticipant($event, 'حمزة بن عبد المطلب');
+        $this->setTranslation($event, 'ar', [
+            'metadata' => [['key' => 'عدد المسلمين', 'value' => '313']],
+            'sources' => [['title' => 'السيرة النبوية', 'author' => 'ابن هشام', 'reference' => 'ج2']],
+        ]);
 
-        $response = $this->withSession(['locale' => 'ar'])->get('/seerah/event/battle-of-badr?view=article');
-
-        $response->assertOk()
-            ->assertSee('خروج الجيش')
-            ->assertSee('بداية المعركة')
-            ->assertSee('حمزة بن عبد المطلب');
+        $this->withSession(['locale' => 'ar'])->get('/seerah/event/battle-of-badr?view=article')
+            ->assertOk()
+            ->assertSee(__('seerah.public.section_more_details'))
+            ->assertSee('عدد المسلمين')
+            ->assertSee('313')
+            ->assertSee(__('seerah.public.section_sources'))
+            ->assertSee('السيرة النبوية')
+            ->assertSee('ابن هشام')
+            // Removed concepts never render.
+            ->assertDontSee('الشخصيات')
+            ->assertDontSee('الدروس المستفادة')
+            ->assertDontSee('section_characters')
+            ->assertDontSee('section_lessons')
+            ->assertDontSee('event_timeline_heading');
     }
 
     public function test_event_page_timeline_style_is_the_default(): void
     {
-        $event = $this->makeEvent('battle-of-uhud');
-        $this->attachTimelineItem($event, 1, 'خطة النبي');
-        $this->attachParticipant($event, 'مصعب بن عمير');
+        $this->makeEvent('battle-of-uhud');
 
         $response = $this->withSession(['locale' => 'ar'])->get('/seerah/event/battle-of-uhud');
 
         $response->assertOk()
             // Timeline-style hero CTA + style switch to the article view.
             ->assertSee(__('seerah.public.explore_story'))
-            ->assertSee(__('seerah.public.read_as_article'))
-            ->assertSee('خطة النبي')
-            ->assertSee('مصعب بن عمير');
+            ->assertSee(__('seerah.public.read_as_article'));
     }
 
     public function test_event_page_unknown_view_param_falls_back_to_timeline_style(): void
@@ -183,36 +166,40 @@ final class SeerahPublicPagesTest extends TestCase
         $response->assertNotFound();
     }
 
+    public function test_draft_event_page_returns_404(): void
+    {
+        $this->makeEvent('draft-event', ['status' => 'draft']);
+
+        $this->get('/seerah/event/draft-event')->assertNotFound();
+        $this->get('/seerah/event/draft-event?view=article')->assertNotFound();
+    }
+
     public function test_event_navigation_uses_editorial_chronology_and_skips_unpublished_events(): void
     {
         $current = $this->makeEvent('navigation-current', [
             'hijri_year' => null,
             'hijri_month' => null,
             'hijri_day' => null,
-            'display_order' => 2,
-            'is_featured' => false,
+            'order' => 2,
         ]);
         $next = $this->makeEvent('navigation-next', [
             'hijri_year' => 4,
             'hijri_month' => 1,
             'hijri_day' => 1,
-            'display_order' => 4,
-            'is_featured' => false,
+            'order' => 4,
         ]);
         $previous = $this->makeEvent('navigation-previous', [
             'hijri_year' => 1,
             'hijri_month' => 12,
             'hijri_day' => 29,
-            'display_order' => 1,
-            'is_featured' => false,
+            'order' => 1,
         ]);
         $hidden = $this->makeEvent('navigation-hidden', [
             'hijri_year' => 3,
             'hijri_month' => 1,
             'hijri_day' => 1,
-            'display_order' => 3,
+            'order' => 3,
             'status' => 'draft',
-            'is_featured' => false,
         ]);
         $this->setEnglishTitle($current, 'Current Chronological Event');
         $this->setEnglishTitle($next, 'Next Chronological Event');
@@ -233,15 +220,13 @@ final class SeerahPublicPagesTest extends TestCase
             'hijri_year' => 2,
             'hijri_month' => 1,
             'hijri_day' => 1,
-            'display_order' => 1,
-            'is_featured' => false,
+            'order' => 1,
         ]);
         $first = $this->makeEvent('navigation-first', [
             'hijri_year' => 1,
             'hijri_month' => 1,
             'hijri_day' => 1,
-            'display_order' => 1,
-            'is_featured' => false,
+            'order' => 1,
         ]);
         $this->setEnglishTitle($first, 'First Boundary Event');
         $this->setEnglishTitle($last, 'Last Boundary Event');
@@ -261,161 +246,208 @@ final class SeerahPublicPagesTest extends TestCase
             ->assertSee('First Boundary Event');
     }
 
-    public function test_event_media_map_and_public_related_article_render_from_database_values(): void
+    public function test_event_place_cover_and_gallery_render_from_database_values(): void
     {
-        $article = $this->makeArticle('locale-related-article', 'Localized Related Article');
+        Storage::fake('public');
+        Storage::disk('public')->put('seerah-events/covers/hero.jpg', 'image');
+
+        $place = Location::factory()
+            ->withNames(['ar' => 'بدر', 'en' => 'Badr Wells'])
+            ->create(['latitude' => 23.7333, 'longitude' => 38.7667]);
         $event = $this->makeEvent('event-with-public-data', [
-            'featured_image' => 'seerah-events/hero.jpg',
-            'gallery' => ['seerah-events/gallery-one.jpg', 'https://example.com/gallery-two.jpg'],
-            'related_article_id' => $article->id,
-            'latitude' => 21.4225,
-            'longitude' => 39.8262,
-            'is_featured' => false,
+            'location_id' => $place->id,
+            'cover_url' => 'seerah-events/covers/hero.jpg',
+        ]);
+        SeerahEventGalleryItem::query()->create([
+            'event_id' => $event->id,
+            'image' => 'seerah-events/gallery/one.jpg',
+            'caption' => ['ar' => 'تعليق عربي', 'en' => 'English caption'],
+            'order' => 1,
         ]);
 
         $this->withSession(['locale' => 'en'])
-            ->get(route('public.seerah.event', $event->slug))
+            ->get(route('public.seerah.event', ['slug' => $event->slug, 'view' => 'article']))
             ->assertOk()
-            ->assertSee('/storage/seerah-events/hero.jpg', false)
-            ->assertSee('/storage/seerah-events/gallery-one.jpg', false)
-            ->assertSee('https://example.com/gallery-two.jpg', false)
             ->assertSee('openstreetmap.org/export/embed.html', false)
-            ->assertSee('Localized Related Article')
-            ->assertSee('/articles/locale-related-article', false);
+            ->assertSee('Badr Wells')
+            ->assertSee('/storage/seerah-events/covers/hero.jpg', false)
+            ->assertSee(__('seerah.public.event_gallery'))
+            ->assertSee('seerah-events/gallery/one.jpg', false)
+            ->assertSee('English caption')
+            ->assertDontSee('تعليق عربي');
     }
 
-    public function test_absent_event_media_article_and_coordinates_render_no_optional_blocks(): void
+    public function test_event_without_optional_data_renders_no_optional_sections(): void
     {
-        $event = $this->makeEvent('event-without-public-data', [
-            'featured_image' => null,
-            'gallery' => null,
-            'related_article_id' => null,
-            'latitude' => null,
-            'longitude' => null,
-            'is_featured' => false,
-        ]);
-
-        $this->withSession(['locale' => 'en'])
-            ->get(route('public.seerah.event', $event->slug))
-            ->assertOk()
-            ->assertDontSee(__('seerah.public.event_gallery'))
-            ->assertDontSee(__('seerah.public.related_article'))
-            ->assertDontSee('openstreetmap.org/export/embed.html', false)
-            ->assertDontSee(__('seerah.public.event_location_map'));
-    }
-
-    public function test_draft_related_article_is_not_linked_and_cached_link_is_invalidated(): void
-    {
-        $article = $this->makeArticle('article-that-becomes-draft', 'Article That Becomes Draft');
-        $event = $this->makeEvent('event-with-draft-article', [
-            'related_article_id' => $article->id,
-            'is_featured' => false,
-        ]);
+        $event = $this->makeEvent('event-without-public-data', ['location_id' => null]);
         $url = route('public.seerah.event', $event->slug);
 
-        $this->withSession(['locale' => 'en'])->get($url)
-            ->assertOk()
-            ->assertSee('/articles/article-that-becomes-draft', false);
+        foreach ([$url, $url.'?view=article'] as $pageUrl) {
+            $response = $this->withSession(['locale' => 'en'])->get($pageUrl)->assertOk();
+            // Markup comments name some sections ("More details", "Event Location Map").
+            $html = preg_replace('/<!--.*?-->/s', '', (string) $response->getContent());
 
-        $article->update(['status' => Article::STATUS_DRAFT]);
-
-        $this->withSession(['locale' => 'en'])->get($url)
-            ->assertOk()
-            ->assertDontSee('/articles/article-that-becomes-draft', false)
-            ->assertDontSee('Article That Becomes Draft');
+            foreach ([
+                __('seerah.public.section_more_details'),
+                __('seerah.public.event_gallery'),
+                __('seerah.public.dispute_heading'),
+                __('seerah.public.event_location'),
+                // "Media" also names the site nav link, so match the section anchor.
+                'id="media"',
+                'openstreetmap.org/export/embed.html',
+            ] as $needle) {
+                $this->assertStringNotContainsString($needle, $html, "{$pageUrl} rendered {$needle}");
+            }
+        }
     }
 
-    public function test_related_events_prefer_same_phase_then_fill_with_featured_events(): void
+    public function test_dispute_note_renders_only_when_present_in_locale(): void
     {
+        $disputed = $this->makeEvent('disputed-event');
+        $this->setTranslation($disputed, 'en', ['dispute_note' => 'Some say it was in Rajab.']);
+        $plain = $this->makeEvent('undisputed-event');
+
+        $this->withSession(['locale' => 'en'])
+            ->get(route('public.seerah.event', $disputed->slug))
+            ->assertOk()
+            ->assertSee(__('seerah.public.dispute_heading'))
+            ->assertSee('Some say it was in Rajab.');
+
+        $this->withSession(['locale' => 'en'])
+            ->get(route('public.seerah.event', $plain->slug))
+            ->assertOk()
+            ->assertDontSee(__('seerah.public.dispute_heading'));
+    }
+
+    public function test_related_events_prefer_same_milestone_then_same_era(): void
+    {
+        $milestone = $this->makeMilestone('related-milestone');
+        $other = $this->makeMilestone('other-milestone', 2);
+
         $current = $this->makeEvent('related-current', [
-            'phase' => 'mecca',
-            'hijri_year' => 2,
-            'is_featured' => false,
+            'sm_id' => $milestone->id, 'era' => 'mecca', 'hijri_year' => 2,
         ]);
-        $samePhaseEarly = $this->makeEvent('related-same-early', [
-            'phase' => 'mecca',
-            'hijri_year' => 1,
-            'is_featured' => false,
+        $sameMilestoneLate = $this->makeEvent('related-milestone-late', [
+            'sm_id' => $milestone->id, 'era' => 'medina', 'hijri_year' => 5,
         ]);
-        $samePhaseLate = $this->makeEvent('related-same-late', [
-            'phase' => 'mecca',
-            'hijri_year' => 3,
-            'is_featured' => false,
+        $sameEraEarly = $this->makeEvent('related-era-early', [
+            'sm_id' => $other->id, 'era' => 'mecca', 'hijri_year' => -5,
         ]);
-        $featuredFallback = $this->makeEvent('related-featured-fallback', [
-            'phase' => 'hijra',
-            'hijri_year' => 0,
-            'is_featured' => true,
+        $sameMilestoneEarly = $this->makeEvent('related-milestone-early', [
+            'sm_id' => $milestone->id, 'era' => 'medina', 'hijri_year' => 1,
         ]);
         $this->makeEvent('related-irrelevant', [
-            'phase' => 'hijra',
-            'hijri_year' => 4,
-            'is_featured' => false,
+            'sm_id' => $other->id, 'era' => 'medina', 'hijri_year' => -10,
         ]);
 
         $this->withSession(['locale' => 'en'])
             ->get(route('public.seerah.event', $current->slug))
             ->assertOk()
             ->assertViewHas('related', fn (array $related): bool => array_column($related, 'slug') === [
-                $samePhaseEarly->slug,
-                $samePhaseLate->slug,
-                $featuredFallback->slug,
+                $sameMilestoneEarly->slug,
+                $sameMilestoneLate->slug,
+                $sameEraEarly->slug,
             ]);
+    }
+
+    public function test_event_without_milestone_or_era_has_no_related_events(): void
+    {
+        $current = $this->makeEvent('unrelated-current', ['sm_id' => null, 'era' => null]);
+        $this->makeEvent('unrelated-other', ['sm_id' => null, 'era' => null]);
+
+        $this->withSession(['locale' => 'en'])
+            ->get(route('public.seerah.event', $current->slug))
+            ->assertOk()
+            ->assertViewHas('related', [])
+            ->assertDontSee(__('seerah.public.related_events'));
+    }
+
+    public function test_directory_ignores_removed_importance_and_pivotal_filters(): void
+    {
+        $this->makeEvent('ignored-filter-one');
+        $this->makeEvent('ignored-filter-two');
+
+        $this->assertSame(2, $this->directoryTotal(route('public.seerah.events')));
+        $this->assertSame(2, $this->directoryTotal(route('public.seerah.events', ['importance' => 'high', 'pivotal' => 1])));
+    }
+
+    public function test_directory_era_and_disputed_filters_narrow_results(): void
+    {
+        $this->makeEvent('filter-mecca', ['era' => 'mecca']);
+        $medina = $this->makeEvent('filter-medina', ['era' => 'medina']);
+        $disputed = $this->makeEvent('filter-disputed', ['era' => 'mecca']);
+        $this->setTranslation($disputed, 'en', ['dispute_note' => 'Dated differently.']);
+        $this->setEnglishTitle($medina, 'Medina Era Event');
+
+        $this->assertSame(3, $this->directoryTotal(route('public.seerah.events')));
+        $this->assertSame(1, $this->directoryTotal(route('public.seerah.events', ['era' => 'medina'])));
+        $this->assertSame(1, $this->directoryTotal(route('public.seerah.events', ['disputed' => 1])));
+
+        $this->withSession(['locale' => 'en'])
+            ->get(route('public.seerah.events', ['era' => 'medina']))
+            ->assertOk()
+            ->assertSee('Medina Era Event');
     }
 
     public function test_timeline_view_renders_the_extended_event_payload(): void
     {
-        $article = $this->makeArticle('timeline-related-article', 'Timeline Related Article');
+        Storage::fake('public');
+        Storage::disk('public')->put('seerah-events/covers/timeline-hero.jpg', 'image');
+
+        $place = Location::factory()
+            ->withNames(['ar' => 'المدينة', 'en' => 'Medina City'])
+            ->create(['latitude' => 24.4672, 'longitude' => 39.6111]);
         $event = $this->makeEvent('timeline-extended-payload', [
-            'featured_image' => 'seerah-events/timeline-hero.jpg',
-            'gallery' => ['seerah-events/timeline-gallery.jpg'],
-            'related_article_id' => $article->id,
-            'latitude' => 24.4672,
-            'longitude' => 39.6111,
-            'is_featured' => false,
+            'location_id' => $place->id,
+            'cover_url' => 'seerah-events/covers/timeline-hero.jpg',
+        ]);
+        SeerahEventGalleryItem::query()->create([
+            'event_id' => $event->id,
+            'image' => 'seerah-events/gallery/timeline.jpg',
+            'caption' => ['en' => 'Timeline caption'],
+            'order' => 1,
         ]);
 
         $this->withSession(['locale' => 'en'])
             ->get(route('public.seerah.event', ['slug' => $event->slug, 'view' => 'timeline']))
             ->assertOk()
-            ->assertSee('/storage/seerah-events/timeline-hero.jpg', false)
-            ->assertSee('/storage/seerah-events/timeline-gallery.jpg', false)
-            ->assertSee('Timeline Related Article')
+            ->assertSee('/storage/seerah-events/covers/timeline-hero.jpg', false)
+            ->assertSee('seerah-events/gallery/timeline.jpg', false)
+            ->assertSee('Timeline caption')
+            ->assertSee('Medina City')
             ->assertSee('openstreetmap.org/export/embed.html', false);
     }
 
     public function test_editing_event_fields_invalidates_the_extended_public_payload(): void
     {
-        $article = $this->makeArticle('updated-related-article', 'Updated Related Article');
+        Storage::fake('public');
+        Storage::disk('public')->put('seerah-events/covers/old-hero.jpg', 'image');
+        Storage::disk('public')->put('seerah-events/covers/new-hero.jpg', 'image');
+
+        $place = Location::factory()
+            ->withNames(['ar' => 'مكة', 'en' => 'Updated Place'])
+            ->create(['latitude' => 21.4225, 'longitude' => 39.8262]);
         $event = $this->makeEvent('event-cache-refresh', [
-            'featured_image' => 'seerah-events/old-hero.jpg',
-            'gallery' => null,
-            'related_article_id' => null,
-            'latitude' => null,
-            'longitude' => null,
-            'is_featured' => false,
+            'cover_url' => 'seerah-events/covers/old-hero.jpg',
+            'location_id' => null,
         ]);
         $url = route('public.seerah.event', $event->slug);
 
         $this->withSession(['locale' => 'en'])->get($url)
             ->assertOk()
-            ->assertSee('/storage/seerah-events/old-hero.jpg', false)
-            ->assertDontSee('Updated Related Article');
+            ->assertSee('/storage/seerah-events/covers/old-hero.jpg', false)
+            ->assertDontSee('Updated Place');
 
         app(SeerahEventRepositoryInterface::class)->update($event->id, [
-            'featured_image' => 'seerah-events/new-hero.jpg',
-            'gallery' => ['seerah-events/new-gallery.jpg'],
-            'related_article_id' => $article->id,
-            'latitude' => 21.4225,
-            'longitude' => 39.8262,
+            'cover_url' => 'seerah-events/covers/new-hero.jpg',
+            'location_id' => $place->id,
         ]);
 
         $this->withSession(['locale' => 'en'])->get($url)
             ->assertOk()
-            ->assertDontSee('/storage/seerah-events/old-hero.jpg', false)
-            ->assertSee('/storage/seerah-events/new-hero.jpg', false)
-            ->assertSee('/storage/seerah-events/new-gallery.jpg', false)
-            ->assertSee('Updated Related Article')
+            ->assertDontSee('/storage/seerah-events/covers/old-hero.jpg', false)
+            ->assertSee('/storage/seerah-events/covers/new-hero.jpg', false)
+            ->assertSee('Updated Place')
             ->assertSee('openstreetmap.org/export/embed.html', false);
     }
 
@@ -473,13 +505,13 @@ final class SeerahPublicPagesTest extends TestCase
 
         foreach (range(1, 12) as $year) {
             $this->makeEvent("ssg-001-filler-{$mutation}-{$year}", [
-                'seerah_event_type_id' => $type->id,
+                'event_type' => $type->id,
                 'hijri_year' => $year,
             ]);
         }
 
         $event = $this->makeEvent("ssg-001-listing-{$mutation}", [
-            'seerah_event_type_id' => $type->id,
+            'event_type' => $type->id,
             'hijri_year' => 999,
         ]);
         $title = "SSG-001 listing {$mutation}";
@@ -502,7 +534,7 @@ final class SeerahPublicPagesTest extends TestCase
     {
         $type = $this->makeEventType('ssg-001-publish');
         $event = $this->makeEvent('ssg-001-publish', [
-            'seerah_event_type_id' => $type->id,
+            'event_type' => $type->id,
             'status' => 'draft',
         ]);
         $title = 'SSG-001 newly published';
@@ -561,13 +593,11 @@ final class SeerahPublicPagesTest extends TestCase
 
     private function makeEventType(string $slug): SeerahEventType
     {
-        $type = SeerahEventType::query()->create([
+        return SeerahEventType::query()->create([
             'slug' => $slug,
+            'locale' => ['ar' => $slug, 'en' => $slug],
             'is_active' => true,
         ]);
-        $type->syncTranslations(['name' => ['ar' => $slug, 'en' => $slug]]);
-
-        return $type;
     }
 
     private function unpublish(SeerahEvent $event, string $mutation): void

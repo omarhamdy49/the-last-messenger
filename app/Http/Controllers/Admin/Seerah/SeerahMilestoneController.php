@@ -184,7 +184,10 @@ class SeerahMilestoneController extends Controller
         $data = $request->validated();
         unset($data['title'], $data['subtitle'], $data['description']);
         $data['is_active'] = $request->boolean('is_active');
-        $data['order_index'] = (int) ($data['order_index'] ?? 0);
+
+        if (array_key_exists('metadata', $data)) {
+            $data['metadata'] = array_filter((array) $data['metadata'], fn ($value): bool => filled($value)) ?: null;
+        }
 
         return $data;
     }

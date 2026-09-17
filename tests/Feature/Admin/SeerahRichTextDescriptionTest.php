@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature\Admin;
 
 use App\Domain\Seerah\Models\SeerahEvent;
+use App\Domain\Seerah\Models\SeerahEventType;
 use App\Domain\Seerah\Models\SeerahMilestone;
+use Database\Seeders\SeerahEventTypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,9 +18,20 @@ class SeerahRichTextDescriptionTest extends TestCase
     public function test_event_and_era_descriptions_preserve_formatting_and_remove_unsafe_html_on_save(): void
     {
         $this->actingAs($this->createAdminUser());
+        $this->seed(SeerahEventTypeSeeder::class);
+
+        $required = [
+            'seerah-events' => [
+                'event_type' => SeerahEventType::query()->where('slug', 'other')->value('id'),
+                'order' => 1,
+                'status' => 'draft',
+            ],
+            'seerah-milestones' => ['order' => 1],
+        ];
 
         foreach (['seerah-events' => SeerahEvent::class, 'seerah-milestones' => SeerahMilestone::class] as $resource => $model) {
             $this->post(route("admin.{$resource}.store"), [
+                ...$required[$resource],
                 'slug' => 'formatted-description',
                 'title' => ['ar' => 'عنوان للتجربة'],
                 'description' => ['ar' => '<p>وصف <strong>منسق</strong></p><script>alert("unsafe")</script>'],

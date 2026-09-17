@@ -196,8 +196,9 @@
                             <x-admin.form.wysiwyg
                                 name="description[{{ $code }}]"
                                 :value="old('description.'.$code, $t?->description)"
-                                dir="{{ in_array($code, ['ar','ur']) ? 'rtl' : 'ltr' }}"
-                                height="200px" />
+                                :locale="$code"
+                                height="240px"
+                                :modules="true" />
                             @error("description.{$code}")
                                 <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                             @enderror

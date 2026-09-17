@@ -170,16 +170,8 @@
 
             {{-- Shortcuts into the filtered directory: the flags exist on individual
                  stations, but nothing at this level pointed at them. --}}
-            @if (($stats['pivotal'] ?? 0) > 0 || ($stats['disputed'] ?? 0) > 0)
+            @if (($stats['disputed'] ?? 0) > 0)
             <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
-                @if (($stats['pivotal'] ?? 0) > 0)
-                <a href="{{ route('public.seerah.events', ['pivotal' => 1]) }}"
-                   class="min-h-11 inline-flex items-center gap-1.5 px-3.5 rounded-xl font-bold text-[13px] border bg-gradient-to-l from-[#0056b3] to-[#218838] text-white border-transparent shadow-sm hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-[#64CCC5]">
-                    <i data-lucide="star" class="w-3.5 h-3.5"></i>
-                    <span>{{ __('seerah.public.pivotal_event') }}</span>
-                    <span class="px-1.5 rounded-full text-[11px] bg-white/25 tabular-nums">{{ $stats['pivotal'] }}</span>
-                </a>
-                @endif
                 @if (($stats['disputed'] ?? 0) > 0)
                 <a href="{{ route('public.seerah.events', ['disputed' => 1]) }}"
                    class="min-h-11 inline-flex items-center gap-1.5 px-3.5 rounded-xl font-bold text-[13px] border border-red-500/40 text-red-700 dark:text-red-300 bg-red-500/10 hover:bg-red-500/20 transition-colors focus:outline-none focus:ring-2 focus:ring-[#64CCC5]">
@@ -317,14 +309,8 @@
                         @if($m['subtitle'])<p class="mt-1.5 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{{ $m['subtitle'] }}</p>@endif
 
                         {{-- Per-era flag counts, each a link into the filtered directory. --}}
-                        @if(($m['pivotalCount'] ?? 0) > 0 || ($m['disputedCount'] ?? 0) > 0)
+                        @if(($m['disputedCount'] ?? 0) > 0)
                         <div class="mt-3 flex flex-wrap gap-2">
-                            @if(($m['pivotalCount'] ?? 0) > 0)
-                            <a href="{{ $m['pivotalUrl'] }}"
-                               class="min-h-9 inline-flex items-center gap-1.5 px-2.5 rounded-full text-[11px] font-bold bg-gradient-to-l from-[#0056b3] to-[#218838] text-white border-transparent hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-[#64CCC5]">
-                                <i data-lucide="star" class="w-3 h-3"></i>{{ $m['pivotalCount'] }} {{ __('seerah.public.pivotal_event') }}
-                            </a>
-                            @endif
                             @if(($m['disputedCount'] ?? 0) > 0)
                             <a href="{{ $m['disputedUrl'] }}"
                                class="min-h-9 inline-flex items-center gap-1.5 px-2.5 rounded-full text-[11px] font-bold border border-red-500/30 text-red-700 dark:text-red-300 bg-red-500/10 hover:bg-red-500/20 transition-colors focus:outline-none focus:ring-2 focus:ring-[#64CCC5]">
@@ -449,9 +435,6 @@
                 <span data-tpl="type" class="font-semibold text-[#0056b3]/70 dark:text-[#64CCC5]/80 flex-shrink-0"></span>
                 <span data-tpl="hijri" class="flex-shrink-0 tabular-nums"></span>
                 <span data-tpl="location" class="truncate"></span>
-                <span data-tpl="pivotal" class="inline-flex items-center gap-1 px-1.5 rounded-full flex-shrink-0 font-bold bg-gradient-to-l from-[#0056b3] to-[#218838] text-white border-transparent">
-                    <i data-lucide="star" class="w-3 h-3"></i>{{ __('seerah.public.pivotal_event') }}
-                </span>
                 <span data-tpl="dispute" class="inline-flex items-center gap-1 px-1.5 rounded-full flex-shrink-0 font-bold bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300">
                     <i data-lucide="alert-triangle" class="w-3 h-3"></i>{{ __('seerah.public.dispute_badge') }}
                 </span>
@@ -470,9 +453,6 @@
                     <i data-tpl="icon" class="w-3 h-3"></i><span data-tpl="type"></span>
                 </span>
                 <span data-tpl="hijri" class="text-[11px] font-bold text-gray-400 dark:text-gray-500 tabular-nums"></span>
-                <span data-tpl="pivotal" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-gradient-to-l from-[#0056b3] to-[#218838] text-white border-transparent">
-                    <i data-lucide="star" class="w-3 h-3"></i>{{ __('seerah.public.pivotal_event') }}
-                </span>
                 <span data-tpl="dispute" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300">
                     <i data-lucide="alert-triangle" class="w-3 h-3"></i>{{ __('seerah.public.dispute_badge') }}
                 </span>
@@ -645,7 +625,6 @@
                 this._fill(node, 'type', ev.typeLabel);
                 this._fill(node, 'hijri', ev.hijriLabel ? `· ${ev.hijriLabel}` : null);
                 this._fill(node, 'location', ev.location ? `· ${ev.location}` : null);
-                this._toggle(node, 'pivotal', ev.isPivotal);
                 this._toggle(node, 'dispute', ev.hasDispute);
                 return node;
             },
@@ -666,7 +645,6 @@
                 } else {
                     node.querySelector('[data-tpl="locationWrap"]').remove();
                 }
-                this._toggle(node, 'pivotal', ev.isPivotal);
                 this._toggle(node, 'dispute', ev.hasDispute);
                 return node;
             },

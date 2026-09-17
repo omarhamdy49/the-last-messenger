@@ -29,14 +29,14 @@
                     {{ __('admin.name') }} ({{ strtoupper($lang) }})
                     @if($lang === 'ar') <span class="text-red-500">*</span> @endif
                 </label>
-                <input type="text" name="name[{{ $lang }}]"
-                       value="{{ old("name.$lang", $type?->getTranslation('name', $lang, false)) }}"
+                <input type="text" name="locale[{{ $lang }}]"
+                       value="{{ old("locale.$lang", $type?->getTranslation('name', $lang, false)) }}"
                        dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}"
                        class="w-full px-4 py-3 text-base sm:text-sm rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                        :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
                        placeholder="{{ __('admin.name') }}"
                        {{ $lang === 'ar' ? 'required' : '' }}>
-                @error("name.$lang") <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+                @error("locale.$lang") <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
             </div>
             @endforeach
         </div>
@@ -51,27 +51,27 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.icon') }}</label>
-                    <x-admin.icon-picker name="icon" :value="old('icon', $type?->icon ?? 'tag')" />
-                    @error('icon') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+                    <x-admin.icon-picker name="metadata[icon]" :value="old('metadata.icon', $type?->icon ?? 'tag')" />
+                    @error('metadata.icon') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.color') }}</label>
-                    <select name="color"
+                    <select name="metadata[color]"
                             class="w-full px-4 py-3 text-base sm:text-sm rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                             :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
                         <option value="">—</option>
                         @foreach($colorOptions as $c)
-                            <option value="{{ $c }}" {{ old('color', $type?->color) === $c ? 'selected' : '' }}>{{ $c }}</option>
+                            <option value="{{ $c }}" {{ old('metadata.color', $type?->color) === $c ? 'selected' : '' }}>{{ $c }}</option>
                         @endforeach
                     </select>
-                    @error('color') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+                    @error('metadata.color') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
                 </div>
 
                 <div class="md:col-span-2">
                     <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.gradient') }}</label>
-                    <x-admin.gradient-picker name="gradient" :value="old('gradient', $type?->gradient)" />
-                    @error('gradient') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+                    <x-admin.gradient-picker name="metadata[gradient]" :value="old('metadata.gradient', $type?->gradient)" />
+                    @error('metadata.gradient') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
                 </div>
             </div>
         </div>
@@ -96,14 +96,6 @@
                            placeholder="battle" pattern="[a-z0-9\-]+" required>
                     <p class="mt-1 text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ __('admin.slug_format') }}</p>
                     @error('slug') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium mb-2" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">{{ __('admin.display_order') }}</label>
-                    <input type="number" name="display_order" min="0" value="{{ old('display_order', $type?->display_order ?? 0) }}"
-                           class="w-full px-4 py-3 text-base sm:text-sm rounded-xl border focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                           :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
-                    @error('display_order') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
                 </div>
 
                 <label class="flex items-center gap-3 cursor-pointer p-3 rounded-xl transition-all" :class="darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'">

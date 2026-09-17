@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Hash;
  * Local-development fixtures.
  *
  * Seeds the minimum authentic content needed to exercise the article wizard's
- * cross-module embeds (Quran verses, hadiths, seerah events) and its taxonomy
+ * cross-module embeds (Quran verses, hadiths) and its taxonomy
  * pickers. Every write is an upsert keyed on the natural key, so the seeder is
  * safely re-runnable.
  *
@@ -29,7 +29,6 @@ final class DevContentFixturesSeeder extends Seeder
         $this->seedTags();
         $this->seedQuran();
         $this->seedHadith();
-        $this->seedSeerah();
     }
 
     private function now(): string
@@ -337,99 +336,6 @@ final class DevContentFixturesSeeder extends Seeder
             DB::table('hadith_collections')->where('id', $collectionId)->update([
                 'total_hadith' => DB::table('hadiths')->where('collection_id', $collectionId)->count(),
             ]);
-        }
-    }
-
-    private function seedSeerah(): void
-    {
-        $types = [
-            ['slug' => 'battle', 'icon' => 'swords', 'color' => 'red', 'ar' => 'غزوة', 'en' => 'Battle'],
-            ['slug' => 'revelation', 'icon' => 'book-open', 'color' => 'emerald', 'ar' => 'وحي', 'en' => 'Revelation'],
-            ['slug' => 'migration', 'icon' => 'route', 'color' => 'blue', 'ar' => 'هجرة', 'en' => 'Migration'],
-        ];
-
-        foreach ($types as $order => $type) {
-            DB::table('seerah_event_types')->updateOrInsert(
-                ['slug' => $type['slug']],
-                [
-                    'icon' => $type['icon'],
-                    'color' => $type['color'],
-                    'gradient' => null,
-                    'is_active' => 1,
-                    'display_order' => $order + 1,
-                    'updated_at' => $this->now(),
-                    'created_at' => $this->now(),
-                ]
-            );
-
-            $id = (int) DB::table('seerah_event_types')->where('slug', $type['slug'])->value('id');
-
-            foreach (['ar' => $type['ar'], 'en' => $type['en']] as $locale => $name) {
-                DB::table('seerah_event_type_translations')->updateOrInsert(
-                    ['seerah_event_type_id' => $id, 'locale' => $locale],
-                    ['name' => $name, 'is_ready' => 1, 'updated_at' => $this->now(), 'created_at' => $this->now()]
-                );
-            }
-        }
-
-        $events = [
-            [
-                'slug' => 'first-revelation', 'type' => 'revelation', 'hijri_year' => -13, 'gregorian_year' => 610,
-                'location' => 'غار حراء، مكة', 'lat' => 21.4577, 'lng' => 39.8579, 'importance' => 'high', 'pivotal' => 1,
-                'ar' => ['نزول الوحي', 'أول لقاء بين النبي محمد ﷺ وجبريل عليه السلام في غار حراء.'],
-                'en' => ['The First Revelation', 'The first encounter between the Prophet Muhammad ﷺ and the Angel Jibril in the cave of Hira.'],
-            ],
-            [
-                'slug' => 'hijrah-to-madinah', 'type' => 'migration', 'hijri_year' => 1, 'gregorian_year' => 622,
-                'location' => 'من مكة إلى المدينة', 'lat' => 24.4686, 'lng' => 39.6142, 'importance' => 'high', 'pivotal' => 1,
-                'ar' => ['الهجرة إلى المدينة', 'هجرة النبي ﷺ وصحبه من مكة إلى يثرب، وبها بدأ التقويم الهجري.'],
-                'en' => ['The Migration to Madinah', 'The migration of the Prophet ﷺ and his companions from Makkah to Yathrib, which begins the Hijri calendar.'],
-            ],
-            [
-                'slug' => 'battle-of-badr', 'type' => 'battle', 'hijri_year' => 2, 'gregorian_year' => 624,
-                'location' => 'بدر', 'lat' => 23.7772, 'lng' => 38.7906, 'importance' => 'high', 'pivotal' => 1,
-                'ar' => ['غزوة بدر الكبرى', 'أول معركة فاصلة بين المسلمين وقريش في السنة الثانية للهجرة.'],
-                'en' => ['The Battle of Badr', 'The first decisive battle between the Muslims and Quraysh, in the second year after the Hijrah.'],
-            ],
-        ];
-
-        foreach ($events as $order => $event) {
-            $typeId = (int) DB::table('seerah_event_types')->where('slug', $event['type'])->value('id');
-
-            DB::table('seerah_events')->updateOrInsert(
-                ['slug' => $event['slug']],
-                [
-                    'hijri_year' => $event['hijri_year'],
-                    'gregorian_year' => $event['gregorian_year'],
-                    'seerah_event_type_id' => $typeId,
-                    'importance' => $event['importance'],
-                    'status' => 'published',
-                    'location' => $event['location'],
-                    'latitude' => $event['lat'],
-                    'longitude' => $event['lng'],
-                    'display_order' => $order + 1,
-                    'is_featured' => 1,
-                    'is_pivotal' => $event['pivotal'],
-                    'updated_at' => $this->now(),
-                    'created_at' => $this->now(),
-                ]
-            );
-
-            $id = (int) DB::table('seerah_events')->where('slug', $event['slug'])->value('id');
-
-            foreach (['ar' => $event['ar'], 'en' => $event['en']] as $locale => [$title, $description]) {
-                DB::table('seerah_event_translations')->updateOrInsert(
-                    ['seerah_event_id' => $id, 'locale' => $locale],
-                    [
-                        'title' => $title,
-                        'description' => $description,
-                        'content' => $description,
-                        'is_ready' => 1,
-                        'updated_at' => $this->now(),
-                        'created_at' => $this->now(),
-                    ]
-                );
-            }
         }
     }
 }

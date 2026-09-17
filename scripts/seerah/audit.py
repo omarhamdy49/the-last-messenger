@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# NOTE: targets the pre-005 public event page (lessons section). Kept for reference only;
+# see specs/005-seerah-schema-refactor — lessons no longer exist.
 """Register + attribution audit over the saved m01 event pages. No book needed."""
 import json, re, collections
 

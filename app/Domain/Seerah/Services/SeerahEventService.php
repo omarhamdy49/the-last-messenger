@@ -4,18 +4,16 @@ declare(strict_types=1);
 
 namespace App\Domain\Seerah\Services;
 
-use App\Domain\Seerah\DTOs\CreateSeerahEventData;
-use App\Domain\Seerah\DTOs\UpdateSeerahEventData;
-use App\Domain\Seerah\Enums\EventImportance;
-use App\Domain\Seerah\Enums\ParticipantRole;
-use App\Domain\Seerah\Enums\SeerahEventStatus;
+use App\Domain\Seerah\DTOs\SeerahEventData;
 use App\Domain\Seerah\Models\SeerahEvent;
-use App\Domain\Seerah\Models\SeerahEventTimelineItem;
-use App\Domain\Seerah\Models\SeerahParticipant;
 use App\Domain\Seerah\Repositories\SeerahEventRepositoryInterface;
+use App\Domain\Shared\Contracts\MediaLibraryLookup;
+use App\Domain\Shared\Contracts\MediaReference;
 use App\Domain\Shared\Services\BaseService;
+use App\Domain\Shared\Services\PublicImageService;
 use App\Exceptions\Domain\ResourceNotFoundException;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
@@ -24,19 +22,24 @@ use Illuminate\Support\Facades\DB;
  */
 class SeerahEventService extends BaseService
 {
+    private const THUMB_DIRECTORY = 'seerah-events/thumbs';
+
+    private const COVER_DIRECTORY = 'seerah-events/covers';
+
+    private const GALLERY_DIRECTORY = 'seerah-events/gallery';
+
     /**
-     * Columns that are NOT NULL in `seerah_events` and carry a DB default.
-     * An empty submission must leave them alone rather than null them out.
+     * Columns that are NOT NULL in `seerah_events`. An empty submission must
+     * leave them alone rather than null them out.
      *
      * @var array<int, string>
      */
-    private const NON_NULLABLE_COLUMNS = ['slug', 'importance', 'status', 'display_order'];
+    private const NON_NULLABLE_COLUMNS = ['slug', 'event_type', 'status', 'order'];
 
-    /**
-     * SeerahEventService constructor
-     */
     public function __construct(
-        SeerahEventRepositoryInterface $repository
+        SeerahEventRepositoryInterface $repository,
+        private readonly PublicImageService $images,
+        private readonly MediaLibraryLookup $mediaLibrary,
     ) {
         $this->repository = $repository;
     }
@@ -50,26 +53,26 @@ class SeerahEventService extends BaseService
     }
 
     /**
-     * Get event by slug
+     * Get a published event by slug, with its attached media resolved.
      *
      * @throws ResourceNotFoundException
      */
     public function getEventBySlug(string $slug): SeerahEvent
     {
+        /** @var SeerahEvent|null $event */
         $event = $this->repository->findBySlug($slug);
 
         if (! $event) {
             throw new ResourceNotFoundException("Timeline event not found: {$slug}");
         }
 
-        // Increment views
-        $event->incrementViews();
+        $event->setRelation('resolvedMedia', collect($this->resolveMedia($event)));
 
         return $event;
     }
 
     /**
-     * @return array{event: SeerahEvent, prev: ?SeerahEvent, next: ?SeerahEvent, related: Collection<int, SeerahEvent>}
+     * @return array{event: SeerahEvent, prev: ?SeerahEvent, next: ?SeerahEvent, related: Collection<int, SeerahEvent>, media: array<int, MediaReference>}
      *
      * @throws ResourceNotFoundException
      */
@@ -81,9 +84,24 @@ class SeerahEventService extends BaseService
             throw new ResourceNotFoundException("Timeline event not found: {$slug}");
         }
 
-        $page['event']->incrementViews();
+        $page['media'] = $this->resolveMedia($page['event']);
 
         return $page;
+    }
+
+    /**
+     * Edit-form state: the event with everything the form round-trips, plus the
+     * attached media resolved for the picker.
+     *
+     * @return array{event: SeerahEvent, media: array<int, MediaReference>}
+     */
+    public function getEditPayload(int $id): array
+    {
+        /** @var SeerahEvent $event */
+        $event = $this->repository->findOrFail($id);
+        $event->loadMissing(['translations', 'gallery', 'mediaLinks', 'place']);
+
+        return ['event' => $event, 'media' => $this->resolveMedia($event)];
     }
 
     /**
@@ -111,14 +129,6 @@ class SeerahEventService extends BaseService
     }
 
     /**
-     * Get featured events
-     */
-    public function getFeaturedEvents(int $limit = 10): Collection
-    {
-        return $this->repository->getFeatured($limit);
-    }
-
-    /**
      * Get events with location (for map)
      */
     public function getEventsWithLocation(): Collection
@@ -135,59 +145,46 @@ class SeerahEventService extends BaseService
     }
 
     /**
-     * Create a new event together with its translations, in one transaction.
+     * Create an event with its images, translations, gallery and media.
      *
-     * The event row and its translations are written atomically so a failure
-     * can never leave a title-less event behind.
-     *
-     * @param  string|null  $featuredImagePath  Path of the already-stored upload, if any
+     * Images are stored before the transaction (file I/O cannot roll back) and
+     * removed again if the write fails, so a failure leaves no orphans behind.
      */
-    public function createEvent(CreateSeerahEventData $data, ?string $featuredImagePath = null, array $galleryPaths = []): SeerahEvent
+    public function createEvent(SeerahEventData $data): SeerahEvent
     {
-        $event = DB::transaction(function () use ($data, $featuredImagePath, $galleryPaths): SeerahEvent {
-            /** @var SeerahEvent $event */
-            $event = $this->repository->create([
-                'slug' => $data->slug,
-                'hijri_date' => $data->hijriDate,
-                'hijri_year' => $data->hijriYear,
-                'hijri_month' => $data->hijriMonth,
-                'hijri_day' => $data->hijriDay,
-                'gregorian_date' => $data->gregorianDate,
-                'gregorian_year' => $data->gregorianYear,
-                'seerah_event_type_id' => $data->seerahEventTypeId,
-                'seerah_milestone_id' => $data->seerahMilestoneId,
-                'importance' => $data->importance ?? EventImportance::MEDIUM->value,
-                'status' => $data->status ?? SeerahEventStatus::PUBLISHED->value,
-                'location' => $data->location,
-                'location_id' => $data->locationId,
-                'latitude' => $data->latitude,
-                'longitude' => $data->longitude,
-                'related_article_id' => $data->relatedArticleId,
-                'featured_image' => $featuredImagePath,
-                'display_order' => $data->displayOrder,
-                'is_featured' => $data->isFeatured,
-                'views_count' => 0,
-                'era' => $data->era,
-                'phase' => $data->phase,
-                'is_pivotal' => $data->isPivotal,
-                'statistics' => $data->statistics !== [] ? $data->statistics : null,
-                'gallery' => $galleryPaths !== [] ? $galleryPaths : null,
-            ]);
+        $thumbPath = $this->images->store($data->thumb, self::THUMB_DIRECTORY, 'seerah-events');
+        $coverPath = $this->images->store($data->cover, self::COVER_DIRECTORY, 'seerah-events');
 
-            $event->syncTranslations([
-                'title' => $data->title,
-                'description' => $data->description,
-                'content' => $data->content,
-                'dispute_note' => $data->disputeNote,
-            ]);
+        try {
+            $event = DB::transaction(function () use ($data, $thumbPath, $coverPath): SeerahEvent {
+                /** @var SeerahEvent $event */
+                $event = $this->repository->create([
+                    'slug' => $data->slug,
+                    'event_type' => $data->eventType,
+                    'sm_id' => $data->smId,
+                    'order' => $data->order ?? 0,
+                    'thumb_url' => $thumbPath,
+                    'cover_url' => $coverPath,
+                    'hijri_year' => $data->hijriYear,
+                    'hijri_month' => $data->hijriMonth,
+                    'hijri_day' => $data->hijriDay,
+                    'gregorian_date' => $data->gregorianDate,
+                    'location_id' => $data->locationId,
+                    'status' => $data->status ?? 'draft',
+                    'era' => $data->era,
+                    'statistics' => $data->statistics !== [] ? $data->statistics : null,
+                ]);
 
-            $this->syncLocaleArrays($event, $data->lessons, $data->sources);
+                $this->syncContent($event, $data);
 
-            $this->syncTimelineItems($event, $data->timelineItems);
-            $this->syncParticipants($event, $data->participants);
+                return $event;
+            });
+        } catch (\Throwable $e) {
+            $this->images->delete($thumbPath);
+            $this->images->delete($coverPath);
 
-            return $event;
-        });
+            throw $e;
+        }
 
         // Bump the cache once, after the whole write has committed.
         $this->repository->clearCache();
@@ -196,190 +193,74 @@ class SeerahEventService extends BaseService
     }
 
     /**
-     * Update an event together with its translations, in one transaction.
-     *
-     * @param  string|null  $featuredImagePath  Path of the already-stored upload, if any
+     * Update an event. Only submitted keys are written (see SeerahEventData).
      *
      * @throws ResourceNotFoundException
      */
-    public function updateEvent(int $id, UpdateSeerahEventData $data, ?string $featuredImagePath = null, array $galleryPaths = []): SeerahEvent
+    public function updateEvent(int $id, SeerahEventData $data): SeerahEvent
     {
-        $event = DB::transaction(function () use ($id, $data, $featuredImagePath, $galleryPaths): SeerahEvent {
-            $payload = $this->buildUpdatePayload($data, $featuredImagePath, $galleryPaths);
+        /** @var SeerahEvent|null $current */
+        $current = $this->repository->find($id);
 
-            if (! $this->repository->update($id, $payload)) {
-                throw new ResourceNotFoundException("Timeline event not found: {$id}");
+        if ($current === null) {
+            throw new ResourceNotFoundException("Timeline event not found: {$id}");
+        }
+
+        $payload = $this->buildUpdatePayload($data);
+        $superseded = [];
+
+        foreach ([
+            'thumb_url' => [$data->thumb, $data->removeThumb, self::THUMB_DIRECTORY],
+            'cover_url' => [$data->cover, $data->removeCover, self::COVER_DIRECTORY],
+        ] as $column => [$source, $remove, $directory]) {
+            $stored = $source instanceof UploadedFile || is_int($source)
+                ? $this->images->store($source, $directory, 'seerah-events')
+                : null;
+
+            if ($stored !== null || $remove) {
+                $payload[$column] = $stored;
+                $superseded[] = $current->{$column};
             }
+        }
 
-            /** @var SeerahEvent|null $event */
+        $event = DB::transaction(function () use ($id, $data, $payload): SeerahEvent {
+            $this->repository->update($id, $payload);
+
+            /** @var SeerahEvent $event */
             $event = $this->repository->find($id);
-
-            if ($event === null) {
-                throw new ResourceNotFoundException("Timeline event not found: {$id}");
-            }
-
-            $event->syncTranslations([
-                'title' => $data->title,
-                'description' => $data->description,
-                'content' => $data->content,
-                'dispute_note' => $data->disputeNote,
-            ]);
-
-            $this->syncLocaleArrays($event, $data->lessons, $data->sources);
-
-            // Both repeaters are all-or-nothing: the form always posts the full
-            // set, so an absent key means "the form had no repeater" (partial
-            // API update) and must not wipe existing rows.
-            if ($data->hasInput('timeline_items')) {
-                $this->syncTimelineItems($event, $data->timelineItems);
-            }
-            if ($data->hasInput('participants')) {
-                $this->syncParticipants($event, $data->participants);
-            }
+            $this->syncContent($event, $data);
 
             return $event;
         });
 
-        // Bump the cache once, after the whole write has committed.
+        // Drop superseded files only once the new paths are committed.
+        array_map($this->images->delete(...), $superseded);
+
         $this->repository->clearCache();
 
         return $event;
     }
 
     /**
-     * Replace the event's inner timeline with the submitted rows.
-     *
-     * Rebuilt wholesale rather than diffed: the rows carry no stable client-side
-     * identity, and a 4–6 row collection makes diffing pure overhead.
-     *
-     * @param  array<int, array<string, mixed>>  $rows
-     */
-    private function syncTimelineItems(SeerahEvent $event, array $rows): void
-    {
-        $event->timelineItems()->delete();
-
-        foreach (array_values($rows) as $index => $row) {
-            $item = SeerahEventTimelineItem::create([
-                'seerah_event_id' => $event->id,
-                'display_order' => $index + 1,
-            ]);
-
-            $item->syncTranslations([
-                'title' => (array) ($row['title'] ?? []),
-                'description' => (array) ($row['description'] ?? []),
-            ]);
-        }
-    }
-
-    /**
-     * Replace the event's participants with the submitted rows.
-     *
-     * @param  array<int, array<string, mixed>>  $rows
-     */
-    private function syncParticipants(SeerahEvent $event, array $rows): void
-    {
-        $event->participants()->delete();
-
-        foreach ($rows as $row) {
-            $participant = SeerahParticipant::create([
-                'event_id' => $event->id,
-                'participant_type' => 'person',
-                'participant_id' => isset($row['participant_id']) && $row['participant_id'] !== ''
-                    ? (int) $row['participant_id']
-                    : null,
-                'role' => $row['role'] ?? ParticipantRole::OTHER->value,
-            ]);
-
-            $participant->syncTranslations([
-                'name' => (array) ($row['name'] ?? []),
-                'description' => (array) ($row['description'] ?? []),
-            ]);
-        }
-    }
-
-    /**
-     * Build the update payload from the keys that were actually submitted.
-     *
-     * Null-stripping would make nullable fields (location, coordinates, hijri
-     * parts, milestone, related article) impossible to clear, so a submitted
-     * key is written even when its value is null; an omitted key is untouched.
-     *
-     * @return array<string, mixed>
-     */
-    private function buildUpdatePayload(UpdateSeerahEventData $data, ?string $featuredImagePath, array $galleryPaths = []): array
-    {
-        $candidates = [
-            'era' => $data->era,
-            'phase' => $data->phase,
-            'slug' => $data->slug,
-            'hijri_date' => $data->hijriDate,
-            'hijri_year' => $data->hijriYear,
-            'hijri_month' => $data->hijriMonth,
-            'hijri_day' => $data->hijriDay,
-            'gregorian_date' => $data->gregorianDate,
-            'gregorian_year' => $data->gregorianYear,
-            'seerah_event_type_id' => $data->seerahEventTypeId,
-            'seerah_milestone_id' => $data->seerahMilestoneId,
-            'importance' => $data->importance,
-            'status' => $data->status,
-            'location' => $data->location,
-            'location_id' => $data->locationId,
-            'latitude' => $data->latitude,
-            'longitude' => $data->longitude,
-            'related_article_id' => $data->relatedArticleId,
-            'display_order' => $data->displayOrder,
-        ];
-
-        $payload = [];
-
-        foreach ($candidates as $column => $value) {
-            if (! $data->hasInput($column)) {
-                continue;
-            }
-
-            if ($value === null && in_array($column, self::NON_NULLABLE_COLUMNS, true)) {
-                continue;
-            }
-
-            $payload[$column] = $value;
-        }
-
-        // Checkbox semantics: an absent `is_featured` / `is_pivotal` means
-        // "unchecked", so both are always written rather than keyed off presence.
-        $payload['is_featured'] = $data->isFeatured;
-        $payload['is_pivotal'] = $data->isPivotal;
-
-        if ($data->hasInput('statistics')) {
-            $payload['statistics'] = $data->statistics !== [] ? $data->statistics : null;
-        }
-
-        // The form re-posts the surviving old paths in `existing_gallery`, so
-        // removing an image is a submit without it. Only touch the column when
-        // the form actually carried gallery state.
-        if ($data->hasInput('existing_gallery') || $galleryPaths !== []) {
-            $merged = array_values(array_unique([...$data->existingGallery, ...$galleryPaths]));
-            $payload['gallery'] = $merged !== [] ? $merged : null;
-        }
-
-        if ($featuredImagePath !== null) {
-            $payload['featured_image'] = $featuredImagePath;
-        }
-
-        return $payload;
-    }
-
-    /**
-     * Delete an event
+     * Delete an event and every file it owns.
      *
      * @throws ResourceNotFoundException
      */
     public function deleteEvent(int $id): bool
     {
-        $deleted = $this->repository->delete($id);
+        /** @var SeerahEvent|null $event */
+        $event = $this->repository->find($id);
 
-        if (! $deleted) {
+        if ($event === null) {
             throw new ResourceNotFoundException("Timeline event not found: {$id}");
         }
+
+        $files = [$event->thumb_url, $event->cover_url, ...$event->gallery()->pluck('image')->all()];
+
+        // Translations, gallery and media rows go with it (FK cascade).
+        $this->repository->delete($id);
+
+        array_map($this->images->delete(...), $files);
 
         return true;
     }
@@ -405,8 +286,7 @@ class SeerahEventService extends BaseService
     }
 
     /**
-     * Public events directory — search + type + milestone + importance +
-     * pivotal + dispute + sort, all composable.
+     * Public events directory — search + type + milestone + era + dispute + sort.
      *
      * @param  array<string, mixed>  $filters
      */
@@ -416,7 +296,7 @@ class SeerahEventService extends BaseService
     }
 
     /**
-     * @return array{pivotal: int, disputed: int, importance: array<string, int>}
+     * @return array{disputed: int}
      */
     public function publicFilterFacets(string $locale): array
     {
@@ -454,7 +334,7 @@ class SeerahEventService extends BaseService
     /**
      * Get aggregate stats for the index page (single query, no N+1).
      *
-     * @return array{total: int, categories: array<string, int>}
+     * @return array{total: int, categories: array<string, int>, published: int, draft: int}
      */
     public function getIndexStats(): array
     {
@@ -462,25 +342,160 @@ class SeerahEventService extends BaseService
     }
 
     /**
-     * Persist lessons + sources onto the Arabic locale row.
-     *
-     * These are JSON arrays, not strings, so they cannot ride through
-     * syncTranslations() — HasLocalizedContent only handles scalar fields and
-     * getTranslation() is typed ?string.
-     *
-     * @param  array<int, array<string, string>>  $lessons
-     * @param  array<int, array<string, string>>  $sources
+     * Translations, per-locale arrays, gallery and media — everything after the
+     * event row itself. Runs inside the caller's transaction.
      */
-    private function syncLocaleArrays(SeerahEvent $event, array $lessons, array $sources): void
+    private function syncContent(SeerahEvent $event, SeerahEventData $data): void
     {
-        $translation = $event->translations()->firstOrCreate(
-            ['locale' => 'ar'],
-            ['is_ready' => true],
-        );
+        $event->syncTranslations([
+            'title' => $data->title,
+            'description' => $data->description,
+            'content' => $data->content,
+            'dispute_note' => $data->disputeNote,
+        ]);
 
-        $translation->forceFill([
-            'lessons' => $lessons !== [] ? array_values($lessons) : null,
-            'sources' => $sources !== [] ? array_values($sources) : null,
-        ])->save();
+        if ($data->hasInput('metadata')) {
+            $this->syncLocaleArray($event, 'metadata', $data->metadata);
+        }
+
+        if ($data->hasInput('sources')) {
+            $this->syncLocaleArray($event, 'sources', $data->sources);
+        }
+
+        if ($data->hasInput('gallery')) {
+            $this->syncGallery($event, $data->gallery, $data->galleryCaptions);
+        }
+
+        if ($data->hasInput('media_items')) {
+            $this->syncMedia($event, $data->mediaItems);
+        }
+    }
+
+    /**
+     * Persist a JSON-array translation field for each submitted locale.
+     *
+     * These are arrays, not strings, so they cannot ride through
+     * syncTranslations() — HasLocalizedContent only handles scalar fields.
+     * Locales that were not submitted are left untouched.
+     *
+     * @param  array<string, array<int, array<string, string>>>  $byLocale
+     */
+    private function syncLocaleArray(SeerahEvent $event, string $field, array $byLocale): void
+    {
+        foreach ($byLocale as $locale => $rows) {
+            $translation = $event->translations()->firstOrNew(['locale' => $locale]);
+
+            if (! $translation->exists && $rows === []) {
+                continue;
+            }
+
+            $translation->forceFill([$field => $rows !== [] ? array_values($rows) : null])->save();
+        }
+    }
+
+    /**
+     * Replace-on-submit, keyed by media-library id — the same semantics as the
+     * article gallery. Kept items are reordered and re-captioned in place (their
+     * public copy is not re-made); removed items lose their row and their file.
+     *
+     * @param  array<int, int>  $mediaIds
+     * @param  array<int|string, array<string, string|null>>  $captions
+     */
+    private function syncGallery(SeerahEvent $event, array $mediaIds, array $captions): void
+    {
+        $existing = $event->gallery()->get()->keyBy('media_id');
+
+        foreach ($existing as $mediaId => $item) {
+            if (! in_array((int) $mediaId, $mediaIds, true)) {
+                $this->images->delete($item->image);
+                $item->delete();
+            }
+        }
+
+        foreach ($mediaIds as $order => $mediaId) {
+            $caption = array_filter((array) ($captions[$mediaId] ?? []), fn ($text): bool => filled($text));
+            $attributes = ['order' => $order, 'caption' => $caption !== [] ? $caption : null];
+
+            if ($existing->has($mediaId)) {
+                $existing->get($mediaId)->update($attributes);
+
+                continue;
+            }
+
+            $path = $this->images->store($mediaId, self::GALLERY_DIRECTORY, 'seerah-events');
+
+            if ($path !== null) {
+                $event->gallery()->create(['media_id' => $mediaId, 'image' => $path] + $attributes);
+            }
+        }
+    }
+
+    /**
+     * @param  array<int, int>  $mediaIds
+     */
+    private function syncMedia(SeerahEvent $event, array $mediaIds): void
+    {
+        $event->mediaLinks()->whereNotIn('media_id', $mediaIds)->delete();
+
+        $current = $event->mediaLinks()->pluck('media_id')->map(fn ($id): int => (int) $id)->all();
+
+        foreach (array_diff($mediaIds, $current) as $mediaId) {
+            $event->mediaLinks()->create(['media_id' => $mediaId]);
+        }
+    }
+
+    /**
+     * @return array<int, MediaReference> in attachment order
+     */
+    private function resolveMedia(SeerahEvent $event): array
+    {
+        $ids = $event->mediaLinks->pluck('media_id')->map(fn ($id): int => (int) $id)->all();
+
+        return array_values($this->mediaLibrary->byIds($ids));
+    }
+
+    /**
+     * Build the update payload from the keys that were actually submitted.
+     *
+     * A submitted key is written even when its value is null, so nullable
+     * fields can be cleared; an omitted key is untouched.
+     *
+     * @return array<string, mixed>
+     */
+    private function buildUpdatePayload(SeerahEventData $data): array
+    {
+        $candidates = [
+            'slug' => $data->slug,
+            'event_type' => $data->eventType,
+            'sm_id' => $data->smId,
+            'order' => $data->order,
+            'hijri_year' => $data->hijriYear,
+            'hijri_month' => $data->hijriMonth,
+            'hijri_day' => $data->hijriDay,
+            'gregorian_date' => $data->gregorianDate,
+            'location_id' => $data->locationId,
+            'status' => $data->status,
+            'era' => $data->era,
+        ];
+
+        $payload = [];
+
+        foreach ($candidates as $column => $value) {
+            if (! $data->hasInput($column)) {
+                continue;
+            }
+
+            if ($value === null && in_array($column, self::NON_NULLABLE_COLUMNS, true)) {
+                continue;
+            }
+
+            $payload[$column] = $value;
+        }
+
+        if ($data->hasInput('statistics')) {
+            $payload['statistics'] = $data->statistics !== [] ? $data->statistics : null;
+        }
+
+        return $payload;
     }
 }

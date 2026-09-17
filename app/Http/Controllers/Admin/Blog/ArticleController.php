@@ -680,7 +680,6 @@ class ArticleController extends AdminController
             'episodes.translations:id,media_episode_id,locale,title',
             'episodes.program:id,slug',
             'versions:id,versionable_id,versionable_type,created_at',
-            'seerahEvents:id,slug',
         ];
     }
 

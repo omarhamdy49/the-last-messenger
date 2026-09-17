@@ -50,7 +50,6 @@ class BackfillLocationsCommand extends Command
         }
 
         $reports = [
-            $this->backfillText($resolver, 'seerah_events', 'location', 'location_id', $dryRun),
             $this->backfillJsonText($resolver, 'muslims', 'birth_place', 'birth_place_id', $dryRun),
             $this->backfillSurahs($dryRun),
         ];
@@ -72,57 +71,6 @@ class BackfillLocationsCommand extends Command
         }
 
         return self::SUCCESS;
-    }
-
-    /**
-     * Plain varchar source column — Seerah events.
-     *
-     * @return array<string, mixed>
-     */
-    private function backfillText(
-        LocationResolver $resolver,
-        string $table,
-        string $textColumn,
-        string $keyColumn,
-        bool $dryRun,
-    ): array {
-        $report = $this->emptyReport($table);
-
-        DB::table($table)
-            ->select(['id', $textColumn, $keyColumn])
-            ->orderBy('id')
-            ->chunkById(self::CHUNK, function ($rows) use (&$report, $resolver, $table, $textColumn, $keyColumn, $dryRun): void {
-                $updates = [];
-
-                foreach ($rows as $row) {
-                    $text = $row->{$textColumn};
-
-                    if ($text === null || trim((string) $text) === '') {
-                        continue; // Names no place in text — not part of the queue.
-                    }
-
-                    $report['examined']++;
-
-                    if ($row->{$keyColumn} !== null) {
-                        $report['already_assigned']++;
-
-                        continue;
-                    }
-
-                    $outcome = $resolver->resolve((string) $text);
-                    $this->tally($report, $outcome);
-
-                    if ($outcome->isMatched()) {
-                        $updates[$row->id] = $outcome->locationId;
-                    }
-                }
-
-                if (! $dryRun && $updates !== []) {
-                    $this->applyUpdates($table, $keyColumn, $updates);
-                }
-            });
-
-        return $report;
     }
 
     /**

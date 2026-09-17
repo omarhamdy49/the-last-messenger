@@ -32,7 +32,9 @@ class SeerahEventTypeRepository extends BaseRepository implements SeerahEventTyp
         return Cache::remember(
             $cacheKey,
             $this->cacheTTL,
-            fn () => $this->model->newQuery()->with('translations')->active()->ordered()->get()
+            fn () => $this->model->newQuery()->active()->get()
+                ->sortBy(fn (SeerahEventType $type): string => $type->name('ar'))
+                ->values()
         );
     }
 
@@ -41,13 +43,14 @@ class SeerahEventTypeRepository extends BaseRepository implements SeerahEventTyp
      */
     public function paginateWithFilters(array $filters, int $perPage = 15): LengthAwarePaginator
     {
-        $query = $this->model->newQuery()->with('translations');
+        $query = $this->model->newQuery();
 
         if (! empty($filters['search'])) {
             $search = $filters['search'];
+            // ponytail: LIKE over the JSON names is a table scan; fine for a lookup of ~11 rows.
             $query->where(function ($q) use ($search) {
                 $q->where('slug', 'LIKE', "%{$search}%")
-                    ->orWhereHas('translations', fn ($tq) => $tq->where('name', 'LIKE', "%{$search}%"));
+                    ->orWhere('locale', 'LIKE', "%{$search}%");
             });
         }
 
@@ -95,7 +98,7 @@ class SeerahEventTypeRepository extends BaseRepository implements SeerahEventTyp
      */
     public function countEvents(int $id): int
     {
-        return DB::table('seerah_events')->where('seerah_event_type_id', $id)->count();
+        return DB::table('seerah_events')->where('event_type', $id)->count();
     }
 
     /**

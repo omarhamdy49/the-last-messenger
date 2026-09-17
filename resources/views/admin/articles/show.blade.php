@@ -369,30 +369,6 @@
             </div>
         </div>
 
-        {{-- Linked Seerah events --}}
-        <div class="rounded-2xl border shadow-soft p-5"
-             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            <h3 class="font-bold mb-4 flex items-center gap-2.5" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                <i data-lucide="calendar-range" class="w-5 h-5 text-accent"></i> أحداث السيرة المرتبطة
-            </h3>
-            <div class="space-y-2.5">
-                @forelse($article->seerahEvents as $event)
-                <a href="{{ route('admin.seerah-events.show', $event->id) }}"
-                   class="group block p-3.5 rounded-xl transition-colors"
-                   :class="darkMode ? 'bg-gray-800/50 hover:bg-gray-800' : 'bg-gray-50 hover:bg-gray-100'">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="min-w-0">
-                            <p class="font-semibold text-sm truncate" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $event->getTranslation('title', 'ar') ?: $event->slug }}</p>
-                            <p class="text-xs mt-0.5 truncate" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ $event->slug }}</p>
-                        </div>
-                        <i data-lucide="arrow-up-left" class="w-4 h-4 text-accent shrink-0 transition-transform group-hover:-translate-y-0.5"></i>
-                    </div>
-                </a>
-                @empty
-                <p class="text-sm" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">لا توجد أحداث سيرة مرتبطة بهذا المقال</p>
-                @endforelse
-            </div>
-        </div>
     </aside>
 </div>
 @endsection

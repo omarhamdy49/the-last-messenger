@@ -48,6 +48,9 @@ class DatabaseSeeder extends Seeder
             ProphetFamilySeeder::class,
         ]);
 
+        // Seerah: the event-type lookup. Milestones and events are authored in the admin.
+        $this->call(SeerahEventTypeSeeder::class);
+
         // Topics auto-curate from EXISTING Quran/Hadith/Article content, so only
         // run once that content has been imported. Otherwise it would create empty
         // topics. Always runnable standalone via: php artisan db:seed --class=TopicSeeder

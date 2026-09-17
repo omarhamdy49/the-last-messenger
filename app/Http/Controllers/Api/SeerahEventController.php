@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Domain\Seerah\Enums\EventEra;
 use App\Domain\Seerah\Services\SeerahEventService;
 use App\Exceptions\Domain\ResourceNotFoundException;
 use App\Http\Resources\SeerahEventResource;
@@ -11,6 +12,7 @@ use App\Support\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Validation\Rule;
 
 class SeerahEventController extends Controller
 {
@@ -24,12 +26,21 @@ class SeerahEventController extends Controller
     ) {}
 
     /**
-     * Get all events chronologically
+     * Get events chronologically, optionally filtered by type, milestone or era
      */
     public function index(Request $request): JsonResponse
     {
         $perPage = $this->perPage($request);
-        $events = $this->timelineEventService->getAllEvents($perPage);
+        $filters = $request->validate([
+            'type' => ['sometimes', 'string', 'max:100'],
+            'milestone' => ['sometimes', 'string', 'max:255'],
+            'era' => ['sometimes', Rule::enum(EventEra::class)],
+        ]);
+        $events = $this->timelineEventService->paginatePublicFiltered(
+            $filters + ['sort' => 'asc'],
+            app()->getLocale(),
+            $perPage,
+        );
 
         return $this->successResponse(
             SeerahEventResource::collection($events)->response()->getData(true)
@@ -94,22 +105,6 @@ class SeerahEventController extends Controller
 
         return $this->successResponse(
             SeerahEventResource::collection($events)->response()->getData(true)
-        );
-    }
-
-    /**
-     * Get featured events
-     */
-    public function featured(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'limit' => ['sometimes', 'integer', 'min:1', 'max:50'],
-        ]);
-        $limit = (int) ($validated['limit'] ?? 10);
-        $events = $this->timelineEventService->getFeaturedEvents($limit);
-
-        return $this->successResponse(
-            SeerahEventResource::collection($events)
         );
     }
 

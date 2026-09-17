@@ -81,11 +81,9 @@ class LocationSchemaTest extends TestCase
         Location::factory()->create(['slug' => 'makkah']);
     }
 
-    public function test_coordinate_precision_matches_seerah_events(): void
+    public function test_coordinates_round_trip_at_seven_decimal_places(): void
     {
-        // Both columns are decimal(10,7). A coordinate must survive the round
-        // trip between them without rounding, because the map gate reads whichever
-        // of the two is present.
+        // decimal(10,7): the map pin reads these directly, so no rounding.
         $location = Location::factory()->create([
             'latitude' => '21.4224779',
             'longitude' => '39.8251832',
@@ -109,10 +107,11 @@ class LocationSchemaTest extends TestCase
         }
     }
 
-    public function test_no_existing_place_column_was_dropped(): void
+    public function test_only_the_seerah_place_text_was_dropped(): void
     {
-        // The load-bearing invariant of this feature: nothing is replaced.
-        $this->assertTrue(DB::getSchemaBuilder()->hasColumn('seerah_events', 'location'));
+        // Additive for People and Quran. Seerah's free-text `location` was removed
+        // by 005-seerah-schema-refactor: `location_id` is its only place field.
+        $this->assertFalse(DB::getSchemaBuilder()->hasColumn('seerah_events', 'location'));
         $this->assertTrue(DB::getSchemaBuilder()->hasColumn('muslims', 'birth_place'));
         $this->assertTrue(DB::getSchemaBuilder()->hasColumn('quran_surahs', 'revelation_place'));
     }

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Seerah\Models;
 
-use App\Domain\Shared\Traits\HasLocalizedContent;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -13,21 +13,24 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * SeerahEventType Model
  *
- * DB-driven taxonomy for Seerah timeline events. Replaces the former static
- * EventType enum so editors can manage types from the admin portal. The display
- * name is localized via the per-locale translations table (HasLocalizedContent).
+ * DB-driven taxonomy for Seerah timeline events, managed from the admin portal.
+ *
+ * The display name is a one-word label held per locale in the `locale` JSON
+ * column rather than in a translations table — a deliberate exception for this
+ * small lookup. Do not copy it to content tables.
  *
  * @property int $id
  * @property string $slug
- * @property string|null $icon
- * @property string|null $color
- * @property string|null $gradient
+ * @property array{icon?: string, color?: string, gradient?: string}|null $metadata
+ * @property array<string, string> $locale
  * @property bool $is_active
- * @property int $display_order
+ * @property-read string|null $icon
+ * @property-read string|null $color
+ * @property-read string|null $gradient
  */
 class SeerahEventType extends Model
 {
-    use HasFactory, HasLocalizedContent;
+    use HasFactory;
 
     /**
      * @var string
@@ -39,43 +42,43 @@ class SeerahEventType extends Model
      */
     protected $fillable = [
         'slug',
-        'icon',
-        'color',
-        'gradient',
+        'metadata',
+        'locale',
         'is_active',
-        'display_order',
     ];
 
     /**
      * @var array<string, string>
      */
     protected $casts = [
+        'metadata' => 'array',
+        'locale' => 'array',
         'is_active' => 'boolean',
-        'display_order' => 'integer',
     ];
 
     /**
-     * Get the translation model class.
+     * Localized display name. Mirrors HasLocalizedContent's signature so callers
+     * read a type's name the same way they read any other translated field.
      */
-    public function getTranslationModelClass(): string
+    public function getTranslation(string $field, ?string $locale = null, bool $useFallbackLocale = true): ?string
     {
-        return SeerahEventTypeTranslation::class;
+        if ($field !== 'name') {
+            return null;
+        }
+
+        $names = $this->locale ?? [];
+        $locale ??= app()->getLocale();
+
+        if (filled($names[$locale] ?? null)) {
+            return $names[$locale];
+        }
+
+        return $useFallbackLocale && filled($names['ar'] ?? null) ? $names['ar'] : null;
     }
 
-    /**
-     * Get the list of translatable field names.
-     */
-    public function getTranslatableFields(): array
+    public function name(?string $locale = null): string
     {
-        return ['name'];
-    }
-
-    /**
-     * Get the foreign key name for translations.
-     */
-    public function getTranslationForeignKey(): string
-    {
-        return 'seerah_event_type_id';
+        return $this->getTranslation('name', $locale) ?? $this->slug;
     }
 
     /**
@@ -83,7 +86,22 @@ class SeerahEventType extends Model
      */
     public function events(): HasMany
     {
-        return $this->hasMany(SeerahEvent::class, 'seerah_event_type_id');
+        return $this->hasMany(SeerahEvent::class, 'event_type');
+    }
+
+    protected function icon(): Attribute
+    {
+        return Attribute::get(fn (): ?string => $this->metadata['icon'] ?? null);
+    }
+
+    protected function color(): Attribute
+    {
+        return Attribute::get(fn (): ?string => $this->metadata['color'] ?? null);
+    }
+
+    protected function gradient(): Attribute
+    {
+        return Attribute::get(fn (): ?string => $this->metadata['gradient'] ?? null);
     }
 
     /**
@@ -95,10 +113,11 @@ class SeerahEventType extends Model
     }
 
     /**
-     * Scope: ordered by display order then slug.
+     * Scope: ordered by slug. Screens that list types by name sort the (small,
+     * cached) collection in PHP, since the name lives inside JSON.
      */
     public function scopeOrdered(Builder $query): Builder
     {
-        return $query->orderBy('display_order')->orderBy('slug');
+        return $query->orderBy('slug');
     }
 }

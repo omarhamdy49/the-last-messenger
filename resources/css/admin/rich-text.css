@@ -1,0 +1,203 @@
+/*
+ * Shared admin WYSIWYG (Quill) surface — every .wysiwyg-field: Seerah events and
+ * milestones, article blocks, media programs/episodes, content pages, FAQs.
+ * Reading views (.seerah-reading .seerah-content) share the same typography so
+ * the preview matches the writing canvas.
+ */
+
+.wysiwyg-field { --writing-gutter: 1.5rem; --writing-measure: 80ch; }
+
+/* ── Toolbar ─────────────────────────────────────────────── */
+.wysiwyg-field .ql-toolbar.ql-snow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .375rem;
+    padding: .5rem .625rem;
+    background: rgb(var(--color-bg-tertiary));
+    border-color: rgb(var(--color-border));
+    border-radius: .75rem .75rem 0 0;
+    font-family: 'Cairo', sans-serif;
+    /* Long bodies keep the formatting controls in reach (admin <main> is the scroller). */
+    position: sticky;
+    top: var(--wysiwyg-sticky-top, 0);
+    z-index: 10;
+}
+.wysiwyg-field .ql-toolbar .ql-formats {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: .125rem;
+    margin: 0;
+    padding-inline-end: .375rem;
+    border-inline-end: 1px solid rgb(var(--color-border));
+}
+.wysiwyg-field .ql-toolbar .ql-formats:last-of-type { border-inline-end: 0; }
+.wysiwyg-field .ql-toolbar button {
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: .5rem;
+    border-radius: .375rem;
+    float: none;
+    transition: background-color .15s ease;
+}
+.wysiwyg-field .ql-toolbar button:hover,
+.wysiwyg-field .ql-toolbar button.ql-active { background: rgb(var(--color-bg-secondary)); }
+.wysiwyg-field .ql-toolbar :is(button, .ql-picker-label):focus-visible {
+    outline: 2px solid rgb(var(--color-primary));
+    outline-offset: 2px;
+}
+.wysiwyg-field .ql-snow .ql-stroke { stroke: rgb(var(--color-text-secondary)); }
+.wysiwyg-field .ql-snow .ql-fill { fill: rgb(var(--color-text-secondary)); }
+.wysiwyg-field .ql-snow .ql-picker { color: rgb(var(--color-text-secondary)); height: 2.25rem; }
+.wysiwyg-field .ql-snow :is(button:hover, button.ql-active) .ql-stroke { stroke: rgb(var(--color-primary)); }
+.wysiwyg-field .ql-snow :is(button:hover, button.ql-active) .ql-fill { fill: rgb(var(--color-primary)); }
+.wysiwyg-field .ql-toolbar .ql-picker-label { display: flex; align-items: center; border-radius: .375rem; }
+.wysiwyg-field .ql-toolbar .ql-header { width: 8rem; direction: ltr; }
+.wysiwyg-field .ql-toolbar .ql-header .ql-picker-label { padding-inline: .5rem 1.5rem; }
+.wysiwyg-field .ql-snow .ql-picker-options {
+    max-height: 18rem;
+    overflow-y: auto;
+    background: rgb(var(--color-bg-secondary));
+    border-color: rgb(var(--color-border)) !important;
+    border-radius: .5rem;
+    box-shadow: 0 8px 24px rgb(0 0 0 / .12);
+}
+
+/* Cross-module insert row (Quran / hadith / sahabi / seerah) */
+.wysiwyg-field .ql-toolbar .ql-module-btns {
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin: .125rem 0 0;
+    padding: .5rem 0 0;
+    border: 0;
+    border-block-start: 1px solid rgb(var(--color-border));
+}
+.wysiwyg-field .ql-toolbar .ql-module-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .375rem;
+    width: auto;
+    min-height: 2.25rem;
+    padding: 0 .75rem;
+    border-radius: .5rem;
+    border: 1px solid rgb(var(--color-border));
+    background: rgb(var(--color-bg-secondary));
+    color: rgb(var(--color-text-secondary));
+    font-size: .8125rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color .15s ease, border-color .15s ease, background-color .15s ease;
+}
+.wysiwyg-field .ql-toolbar .ql-module-btn svg { width: 1rem; height: 1rem; flex-shrink: 0; }
+.wysiwyg-field .ql-toolbar .ql-module-btn:hover { color: var(--btn-accent); border-color: var(--btn-accent); }
+.ql-module-btn--verse { --btn-accent: #218838; }
+.ql-module-btn--hadith { --btn-accent: #0056b3; }
+.ql-module-btn--sahabi { --btn-accent: #0d9488; }
+.ql-module-btn--seerah { --btn-accent: #7c3aed; }
+.dark .ql-module-btn--verse { --btn-accent: #86efac; }
+.dark .ql-module-btn--hadith { --btn-accent: #93c5fd; }
+.dark .ql-module-btn--sahabi { --btn-accent: #5eead4; }
+.dark .ql-module-btn--seerah { --btn-accent: #c4b5fd; }
+
+/* ── Writing canvas ──────────────────────────────────────── */
+.wysiwyg-field .ql-container.ql-snow {
+    height: auto;
+    background: rgb(var(--color-bg-secondary));
+    border-color: rgb(var(--color-border));
+    border-radius: 0 0 .75rem .75rem;
+    font-family: 'Cairo', sans-serif;
+    transition: border-color .15s ease;
+}
+.wysiwyg-field:focus-within .ql-container.ql-snow { border-color: rgb(var(--color-primary)); }
+/* No max-height: the page scrolls, not a second scrollbar inside the form. */
+.wysiwyg-field .ql-editor {
+    min-height: inherit;
+    padding: 1.25rem var(--writing-gutter);
+}
+/* Cap the line length on the reading-start side instead of centring a column,
+   which left a wide dead gap before the text. */
+.wysiwyg-field .ql-editor > * { max-inline-size: var(--writing-measure); }
+.wysiwyg-field .ql-editor.ql-blank::before {
+    inset-inline: var(--writing-gutter);
+    font-style: normal;
+    color: rgb(var(--color-text-secondary) / .7);
+}
+.wysiwyg-field[data-default-dir="rtl"] .ql-editor.ql-blank::before { direction: rtl; text-align: right; }
+
+/* ── Typography (editor + reading views) ─────────────────── */
+.wysiwyg-field .ql-editor,
+.seerah-reading .seerah-content {
+    font-family: 'Cairo', sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.85;
+    color: rgb(var(--color-text-primary));
+    overflow-wrap: anywhere;
+    text-rendering: optimizeLegibility;
+}
+.wysiwyg-field[data-default-dir="rtl"] .ql-editor,
+.seerah-reading [dir="rtl"] .seerah-content,
+.seerah-reading .seerah-content[dir="rtl"] { font-size: 1.125rem; line-height: 2; }
+.seerah-reading .seerah-content { max-width: 72ch; margin-inline: auto; padding-block: .5rem; }
+.wysiwyg-field .ql-editor p,
+.seerah-reading .seerah-content p { margin: 0 0 .9em; }
+.wysiwyg-field .ql-editor :is(h1, h2, h3, h4, h5, h6),
+.seerah-reading .seerah-content :is(h1, h2, h3, h4, h5, h6) {
+    margin: 1.5em 0 .5em;
+    font-weight: 700;
+    line-height: 1.5;
+    color: inherit;
+}
+.wysiwyg-field .ql-editor h1, .seerah-reading .seerah-content h1 { font-size: 1.75em; }
+.wysiwyg-field .ql-editor h2, .seerah-reading .seerah-content h2 { font-size: 1.45em; }
+.wysiwyg-field .ql-editor h3, .seerah-reading .seerah-content h3 { font-size: 1.25em; }
+.wysiwyg-field .ql-editor h4, .seerah-reading .seerah-content h4 { font-size: 1.125em; }
+.wysiwyg-field .ql-editor :is(h5, h6), .seerah-reading .seerah-content :is(h5, h6) { font-size: 1em; }
+.wysiwyg-field .ql-editor :is(ul, ol),
+.seerah-reading .seerah-content :is(ul, ol) { margin-block: .5em 1em; }
+.wysiwyg-field .ql-editor li,
+.seerah-reading .seerah-content li { margin-block-end: .35em; }
+.seerah-reading .seerah-content li[data-list="bullet"] { list-style-type: disc; }
+.wysiwyg-field .ql-editor a,
+.seerah-reading .seerah-content a { color: rgb(var(--color-primary)); text-underline-offset: 3px; }
+.wysiwyg-field .ql-editor blockquote,
+.seerah-reading .seerah-content blockquote {
+    margin: 1.25em 0;
+    padding: .875rem 1.25rem;
+    border: 0;
+    border-inline-start: 3px solid rgb(var(--color-primary) / .5);
+    border-radius: .5rem;
+    background: rgb(var(--color-bg-tertiary));
+    font-style: normal;
+}
+.wysiwyg-field .ql-editor pre.ql-syntax,
+.wysiwyg-field .ql-editor .ql-code-block-container {
+    border-radius: .5rem;
+    padding: .75rem 1rem;
+    direction: ltr;
+    text-align: left;
+}
+.wysiwyg-field .ql-editor > :first-child,
+.seerah-reading .seerah-content > :first-child { margin-block-start: 0; }
+.wysiwyg-field .ql-editor > :last-child,
+.seerah-reading .seerah-content > :last-child { margin-block-end: 0; }
+.wysiwyg-field .ql-editor img,
+.seerah-reading .seerah-content img { max-width: 100%; height: auto; margin-block: 1em; border-radius: .5rem; }
+.wysiwyg-field .ql-editor .module-embed { margin: 1.25rem 0; padding: 1.125rem 1.25rem; font-size: 1rem; }
+.wysiwyg-field .ql-editor .module-embed__body p,
+.seerah-reading .seerah-content .module-embed__body p { margin-block-end: .35rem; }
+.seerah-reading .seerah-content .ql-align-center { text-align: center; }
+.seerah-reading .seerah-content .ql-align-right { text-align: right; }
+.seerah-reading .seerah-content .ql-align-justify { text-align: justify; }
+.seerah-reading .seerah-content .ql-direction-rtl { direction: rtl; }
+
+@media (max-width: 640px) {
+    .wysiwyg-field { --writing-gutter: 1rem; }
+    .wysiwyg-field .ql-toolbar.ql-snow { gap: .25rem; padding: .375rem; }
+    .wysiwyg-field .ql-toolbar button { min-width: 2.75rem; min-height: 2.75rem; }
+    .wysiwyg-field .ql-toolbar .ql-module-btn { min-height: 2.75rem; }
+    .wysiwyg-field .ql-editor h1, .seerah-reading .seerah-content h1 { font-size: 1.5em; }
+}

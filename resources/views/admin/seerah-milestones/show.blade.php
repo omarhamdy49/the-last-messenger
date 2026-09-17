@@ -70,8 +70,8 @@
                     <div class="min-w-0 flex-1">
                         <p class="font-semibold truncate" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $event->getTranslation('title', 'ar') }}</p>
                         <p class="text-xs truncate flex items-center gap-2 mt-0.5" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
-                            @if($event->hijri_date)<span class="inline-flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i>{{ $event->hijri_date }}</span>@endif
-                            @if($event->location)<span class="inline-flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i>{{ $event->location }}</span>@endif
+                            @if($event->formattedHijriDate('ar'))<span class="inline-flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i>{{ $event->formattedHijriDate('ar') }}</span>@endif
+                            @if($event->place)<span class="inline-flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i>{{ $event->place->name('ar') }}</span>@endif
                         </p>
                     </div>
                     <span class="hidden sm:inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold flex-shrink-0
@@ -95,7 +95,7 @@
             <h3 class="text-lg font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ __('admin.details') }}</h3>
             @foreach([
                 ['admin.slug', $milestone->slug],
-                ['admin.order', $milestone->order_index],
+                ['admin.order', $milestone->order],
                 ['admin.date_range', $milestone->hijriRangeLabel() ?: '—'],
                 ['admin.gregorian', $milestone->gregorianRangeLabel() ?: '—'],
                 ['admin.events', $eventsCount],

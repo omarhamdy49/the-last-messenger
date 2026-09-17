@@ -36,21 +36,15 @@ trait CommitsForFullTextSearch
      *
      * This is the subtle half. RefreshDatabase runs migrations once for the whole suite, so
      * anything a migration INSERTed exists exactly once — truncating it destroys it
-     * permanently for every later test, and nothing restores it. That is not hypothetical:
-     * wiping `seerah_event_types` (seeded by
-     * 2026_06_18_100001_seed_event_types_and_link_seerah_events) made
-     * SeerahEventRepositoryTest::test_get_by_type fail with 0 results, several classes later,
-     * for no visible reason.
+     * permanently for every later test, and nothing restores it.
      *
-     * The data tables those same migrations backfill (seerah_events,
-     * quran_verse_translations, quran_verse_tafsirs) are deliberately NOT listed — tests
-     * populate those themselves and they must be truncated.
+     * `seerah_event_types` is deliberately NOT listed: it is seeded by
+     * SeerahEventTypeSeeder, not a migration, and the event factory creates a type when
+     * none exists. Keeping it would leak test-created types into later classes.
      *
      * @var array<int, string>
      */
     protected array $exceptTables = [
-        'seerah_event_types',
-        'seerah_event_type_translations',
         'media_size_presets',
         'quran_translation_resources',
         'quran_tafsir_resources',

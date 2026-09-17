@@ -94,7 +94,6 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
 
         Route::prefix('seerah')->group(function (): void {
             Route::get('/', [SeerahEventController::class, 'index'])->name('seerah.index');
-            Route::get('/featured', [SeerahEventController::class, 'featured'])->name('seerah.featured');
             Route::get('/search', [SeerahEventController::class, 'search'])
                 ->middleware('throttle:search')->name('seerah.search');
             Route::get('/map', [SeerahEventController::class, 'map'])->name('seerah.map');

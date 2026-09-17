@@ -39,7 +39,7 @@
             {{-- Verse: Surah selector --}}
             <div x-show="moduleType === 'verse'" class="space-y-2">
                 <template x-if="!selectedSurah">
-                    <input type="text" x-model="surahFilter" placeholder="{{ __('articles.selector.search_surah') }}"
+                    <input type="text" @keydown.enter.prevent x-model="surahFilter" placeholder="{{ __('articles.selector.search_surah') }}"
                            class="w-full px-4 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent"
                            :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'">
                 </template>
@@ -65,14 +65,14 @@
                         <option :value="col.id" x-text="hadithCollectionLabel(col)"></option>
                     </template>
                 </select>
-                <input type="text" x-model="searchQuery" @input.debounce.400ms="searchHadith()"
+                <input type="text" @keydown.enter.prevent x-model="searchQuery" @input.debounce.400ms="searchHadith()"
                        placeholder="{{ __('articles.selector.search_hadith') }}"
                        class="flex-1 px-4 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent"
                        :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'">
             </div>
             {{-- Sahabi / Seerah: search --}}
             <div x-show="moduleType === 'sahabi' || moduleType === 'seerah'">
-                <input type="text" x-model="searchQuery" @input.debounce.400ms="searchModule()"
+                <input type="text" @keydown.enter.prevent x-model="searchQuery" @input.debounce.400ms="searchModule()"
                        :placeholder="moduleType === 'sahabi' ? '{{ __('articles.selector.search_sahabi') }}' : '{{ __('articles.selector.search_seerah') }}'"
                        class="w-full px-4 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent"
                        :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'">
@@ -533,6 +533,36 @@ function moduleSelector() {
         }
     };
 }
+</script>
+@endpush
+@endonce
+
+@once
+@php
+    // Multi-line @json(...) breaks Blade's directive-argument parser, so the map is
+    // built here and injected as a ready-made JSON literal.
+    $moduleLabelsJson = \Illuminate\Support\Js::from([
+        'verse' => __('articles.modules.quran'),
+        'hadith' => __('articles.modules.hadith'),
+        'sahabi' => __('articles.modules.sahabah'),
+        'seerah' => __('articles.modules.seerah'),
+        'verseWord' => __('articles.blocks.verse'),
+        'hijri' => __('articles.blocks.hijri'),
+        'viewEvent' => __('articles.embed.view_event'),
+    ])->toHtml();
+@endphp
+@push('scripts')
+<script>
+    // Labels for the cross-module toolbar buttons and embed cards (every module-enabled editor includes this modal). Injected from
+    // Blade because rich-text.js is plain JS with no access to the translator.
+    (function applyModuleLabels() {
+        const labels = {!! $moduleLabelsJson !!};
+        if (window.AdminWysiwygModules) {
+            window.AdminWysiwygModules.setLabels(labels);
+        } else {
+            window.addEventListener('rich-text:ready', () => window.AdminWysiwygModules.setLabels(labels), { once: true });
+        }
+    })();
 </script>
 @endpush
 @endonce

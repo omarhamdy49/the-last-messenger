@@ -6,6 +6,7 @@ namespace App\Domain\Seerah\Importers;
 
 use App\Domain\Seerah\Enums\SeerahEventStatus;
 use App\Domain\Seerah\Models\SeerahEvent;
+use App\Domain\Seerah\Models\SeerahEventType;
 use App\Domain\Shared\Importers\BaseImporter;
 use Illuminate\Support\Str;
 
@@ -20,6 +21,8 @@ use Illuminate\Support\Str;
  *
  * The `event_date` CSV column maps to the `gregorian_date` DB column; the
  * template column name is kept so existing import files keep working.
+ * `event_type` is a type slug; an unknown slug fails the row rather than being
+ * silently re-typed.
  */
 class SeerahEventImporter extends BaseImporter
 {
@@ -34,8 +37,11 @@ class SeerahEventImporter extends BaseImporter
             'description_ar' => 'required|string',
             'description_en' => 'required|string',
             'event_date' => 'required|date',
-            'hijri_date' => 'nullable|string|max:100',
-            'location' => 'nullable|string|max:255',
+            'event_type' => 'required|string|exists:seerah_event_types,slug',
+            'hijri_year' => 'nullable|integer|between:-100,100',
+            'hijri_month' => 'nullable|integer|between:1,12',
+            'hijri_day' => 'nullable|integer|between:1,30',
+            'order' => 'nullable|integer|min:0',
             'status' => 'nullable|in:published,draft',
         ];
     }
@@ -57,8 +63,11 @@ class SeerahEventImporter extends BaseImporter
             'description_tr' => 'description_tr',
             'description_ur' => 'description_ur',
             'event_date' => 'event_date',
-            'hijri_date' => 'hijri_date',
-            'location' => 'location',
+            'event_type' => 'event_type',
+            'hijri_year' => 'hijri_year',
+            'hijri_month' => 'hijri_month',
+            'hijri_day' => 'hijri_day',
+            'order' => 'order',
             'status' => 'status',
         ];
     }
@@ -80,10 +89,12 @@ class SeerahEventImporter extends BaseImporter
 
         $event = SeerahEvent::create([
             'slug' => $this->buildSlug($row),
+            'event_type' => SeerahEventType::query()->where('slug', trim((string) $row['event_type']))->value('id'),
+            'order' => $this->nullableInt($row['order'] ?? null) ?? 0,
             'gregorian_date' => $eventDate,
-            'gregorian_year' => $eventDate !== null ? (int) substr($eventDate, 0, 4) : null,
-            'hijri_date' => $this->nullableString($row['hijri_date'] ?? null),
-            'location' => $this->nullableString($row['location'] ?? null),
+            'hijri_year' => $this->nullableInt($row['hijri_year'] ?? null),
+            'hijri_month' => $this->nullableInt($row['hijri_month'] ?? null),
+            'hijri_day' => $this->nullableInt($row['hijri_day'] ?? null),
             'status' => SeerahEventStatus::tryFrom(trim((string) ($row['status'] ?? ''))) ?? SeerahEventStatus::DRAFT,
         ]);
 
@@ -118,10 +129,10 @@ class SeerahEventImporter extends BaseImporter
     /**
      * Normalise a blank spreadsheet cell to NULL.
      */
-    private function nullableString(mixed $value): ?string
+    private function nullableInt(mixed $value): ?int
     {
         $value = trim((string) ($value ?? ''));
 
-        return $value === '' ? null : $value;
+        return $value === '' ? null : (int) $value;
     }
 }
