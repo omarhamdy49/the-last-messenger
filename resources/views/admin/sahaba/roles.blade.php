@@ -126,25 +126,49 @@
                                       dir="ltr">{{ $role->slug }}</code>
                             </td>
 
+                            {{-- Each count links to the list filtered to exactly the
+                                 rows it counts. A number an editor cannot open is a
+                                 number they have to reproduce by hand in the filters. --}}
                             <td class="px-4 py-3 text-center">
-                                <span class="font-bold tabular-nums" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                                <a href="{{ route('admin.sahaba.index', ['role' => $role->slug]) }}"
+                                   class="font-bold tabular-nums rounded px-1 transition-colors hover:text-accent
+                                          focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                                   :class="darkMode ? 'text-white' : 'text-gray-900'">
                                     {{ number_format($role->people_count) }}
-                                </span>
+                                </a>
                             </td>
 
                             <td class="px-4 py-3 text-center">
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold tabular-nums"
-                                      :class="darkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'">
+                                <a href="{{ route('admin.sahaba.index', ['role' => $role->slug, 'status' => 'published']) }}"
+                                   class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold tabular-nums transition-colors
+                                          focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                                   :class="darkMode ? 'bg-green-900/30 text-green-400 hover:bg-green-900/50' : 'bg-green-100 text-green-700 hover:bg-green-200'">
                                     {{ number_format($role->published_count) }}
-                                </span>
+                                </a>
                             </td>
 
+                            {{-- Zero featured is the state that silently empties the
+                                 homepage carousel, so it reads as a warning rather than
+                                 as an ordinary count of none. --}}
                             <td class="px-4 py-3 text-center">
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold tabular-nums"
-                                      :class="darkMode ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-700'">
-                                    <i data-lucide="star" class="w-3 h-3"></i>
-                                    {{ number_format($role->featured_count) }}
-                                </span>
+                                @if($role->featured_count > 0)
+                                    <a href="{{ route('admin.sahaba.index', ['role' => $role->slug, 'is_featured' => '1']) }}"
+                                       class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold tabular-nums transition-colors
+                                              focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                                       :class="darkMode ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'">
+                                        <i data-lucide="star" class="w-3 h-3"></i>
+                                        {{ number_format($role->featured_count) }}
+                                    </a>
+                                @else
+                                    <a href="{{ route('admin.sahaba.index', ['role' => $role->slug]) }}"
+                                       title="{{ __('sahaba.featured_hint') }}"
+                                       class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold tabular-nums transition-colors
+                                              focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                                       :class="darkMode ? 'bg-gray-800 text-gray-500 hover:bg-gray-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'">
+                                        <i data-lucide="star-off" class="w-3 h-3"></i>
+                                        0
+                                    </a>
+                                @endif
                             </td>
 
                             <td class="px-4 py-3 text-center">

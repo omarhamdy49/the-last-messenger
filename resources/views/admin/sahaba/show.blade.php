@@ -406,6 +406,73 @@
         {{-- ==================== ASIDE ==================== --}}
         <aside class="lg:col-span-4 space-y-6">
 
+            {{-- Flags, flippable from here.
+
+                 The hero above shows the same three states as badges, but a
+                 badge is a read-out: an editor who spots the wrong one had to
+                 open the edit form, scroll, save, and come back. These are the
+                 same flags as controls. Each is a real PATCH form posting the
+                 target state, so a double press is idempotent rather than a
+                 flip-flop. --}}
+            @php
+                // "Featured" is a pivot column, so it is true when ANY role the
+                // person holds carries it — the same reading the list's bulk
+                // action and the public carousel use.
+                $isFeaturedAnywhere = $muslim->roles->contains(fn ($role) => (bool) $role->pivot->is_featured);
+            @endphp
+
+            <section class="rounded-2xl border shadow-sm overflow-hidden"
+                     :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
+                <header class="px-6 py-4 border-b" :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
+                    <p class="text-[11px] font-bold uppercase tracking-[0.2em]"
+                       :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ __('sahaba.quick_actions') }}</p>
+                </header>
+
+                <div class="p-4 flex flex-wrap gap-2">
+                    <x-admin.flag-toggle
+                        :action="route('admin.sahaba.toggle', [$muslim, 'published'])"
+                        :on="(bool) $muslim->is_published"
+                        :on-label="__('sahaba.published')"
+                        :off-label="__('sahaba.draft')"
+                        on-icon="globe"
+                        off-icon="circle-slash"
+                        tone="emerald"
+                        size="md"
+                        :title="__('sahaba.published_hint')"
+                        data-testid="toggle-published" />
+
+                    <x-admin.flag-toggle
+                        :action="route('admin.sahaba.toggle', [$muslim, 'featured'])"
+                        :on="$isFeaturedAnywhere"
+                        :on-label="__('sahaba.featured')"
+                        :off-label="__('sahaba.not_featured')"
+                        on-icon="star"
+                        off-icon="star-off"
+                        tone="amber"
+                        size="md"
+                        :title="__('sahaba.featured_all_roles_hint')"
+                        data-testid="toggle-featured" />
+
+                    <x-admin.flag-toggle
+                        :action="route('admin.sahaba.toggle', [$muslim, 'tree'])"
+                        :on="! $muslim->hide_from_tree"
+                        :on-label="__('sahaba.in_tree')"
+                        :off-label="__('sahaba.hide_from_tree')"
+                        on-icon="git-fork"
+                        off-icon="eye-off"
+                        tone="slate"
+                        size="md"
+                        :title="__('sahaba.hide_from_tree_hint')"
+                        data-testid="toggle-tree" />
+                </div>
+
+                <p class="px-4 pb-4 text-xs leading-relaxed" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
+                    {{ __('sahaba.featured_all_roles_hint') }}
+                </p>
+            </section>
+
+            @include('admin.sahaba._visibility', ['muslim' => $muslim])
+
             <section id="lineage" class="scroll-mt-24 rounded-2xl border shadow-sm overflow-hidden"
                      :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
                 <header class="px-6 py-5 border-b flex items-center justify-between gap-3"

@@ -11,17 +11,26 @@
 @php
     $muslim = $muslim ?? null;
 
-    // Existing role assignments keyed by role id, so `is_featured` survives a
+    // Existing role assignments keyed by role id, so the pivot values survive a
     // round trip. On a validation failure `old('roles')` is the source instead:
     // it is keyed by the loop index, so it is re-keyed onto role ids here.
     $oldRoles = collect(old('roles', []))
         ->filter(fn ($row) => is_array($row) && isset($row['role_id']))
         ->keyBy(fn ($row) => (int) $row['role_id']);
 
+    // role_id => ['featured' => bool, 'sort' => int]. Both pivot columns, so a
+    // rejected submit does not silently reset the one that is not the subject
+    // of the error.
     $assigned = $oldRoles->isNotEmpty()
-        ? $oldRoles->map(fn ($row) => (bool) ($row['is_featured'] ?? false))
+        ? $oldRoles->map(fn ($row) => [
+            'featured' => (bool) ($row['is_featured'] ?? false),
+            'sort' => (int) ($row['sort_order'] ?? 0),
+        ])
         : ($muslim?->roles ?? collect())
-            ->mapWithKeys(fn ($role) => [$role->id => (bool) $role->pivot->is_featured]);
+            ->mapWithKeys(fn ($role) => [$role->id => [
+                'featured' => (bool) $role->pivot->is_featured,
+                'sort' => (int) $role->pivot->sort_order,
+            ]]);
 
 @endphp
 
@@ -39,6 +48,99 @@
 @endif
 
 <div class="space-y-6">
+
+    {{-- Status first, not last.
+
+         These controls are the only reason a saved person is or is not on the
+         public site, so they lead the form instead of sitting 400 lines below
+         the fold where the previous layout put them. Each carries the
+         consequence of flipping it â "hidden from the tree" means nothing to an
+         editor who has not read the genealogy code. --}}
+    {{-- `form-section` and `scroll-mt-24` are what the edit page's rail tracks
+         and jumps to; this section is hand-built rather than an
+         `x-admin.form-section`, so it has to opt in explicitly. --}}
+    <section id="sec-status"
+             class="form-section scroll-mt-24 rounded-2xl border overflow-hidden shadow-sm"
+             :class="darkMode ? 'bg-gray-900/60 border-gray-800' : 'bg-white border-gray-200'"
+             aria-labelledby="sec-status-title">
+
+        <div class="px-5 py-4 border-b bg-gradient-to-r from-[#0056b3]/10 to-[#218838]/10"
+             :class="darkMode ? 'border-gray-800' : 'border-gray-200'">
+            <div class="flex items-center gap-2.5">
+                <span class="p-2 rounded-lg bg-gradient-to-br from-[#0056b3] to-[#218838] shrink-0">
+                    <i data-lucide="toggle-right" class="w-4 h-4 text-white"></i>
+                </span>
+                <div class="min-w-0">
+                    <h2 id="sec-status-title" class="text-sm font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                        {{ __('sahaba.section_status') }}
+                    </h2>
+                    <p class="text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
+                        {{ __('sahaba.section_status_hint') }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-5 grid gap-4 lg:grid-cols-3">
+            @foreach ([
+                'is_published' => [
+                    'label' => __('sahaba.published'),
+                    'hint' => __('sahaba.published_hint'),
+                    'icon' => 'globe',
+                    'testid' => 'field-published',
+                ],
+                'hide_from_tree' => [
+                    'label' => __('sahaba.hide_from_tree'),
+                    'hint' => __('sahaba.hide_from_tree_hint'),
+                    'icon' => 'eye-off',
+                    'testid' => 'field-hide-from-tree',
+                ],
+            ] as $field => $meta)
+                <label class="flex items-start justify-between gap-3 px-4 py-3.5 rounded-xl cursor-pointer transition-all border"
+                       :class="darkMode ? 'bg-gray-800/40 border-gray-700 hover:bg-gray-800' : 'bg-gray-50 border-gray-200 hover:bg-white'">
+                    <span class="min-w-0">
+                        <span class="text-sm font-semibold flex items-center gap-2" :class="darkMode ? 'text-gray-100' : 'text-gray-800'">
+                            <i data-lucide="{{ $meta['icon'] }}" class="w-4 h-4 opacity-60"></i>
+                            {{ $meta['label'] }}
+                        </span>
+                        <span class="mt-1 block text-xs leading-relaxed" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
+                            {{ $meta['hint'] }}
+                        </span>
+                    </span>
+
+                    {{-- The project's switch, with the knob travelling the right
+                         way under RTL â `translate-x-5` alone walks it off the
+                         track when the page direction flips. --}}
+                    <span class="relative inline-flex items-center shrink-0 mt-0.5">
+                        <input type="checkbox" name="{{ $field }}" value="1"
+                               @checked(old($field, $muslim->{$field} ?? false))
+                               class="sr-only peer"
+                               data-testid="{{ $meta['testid'] }}">
+                        <span class="w-11 h-6 rounded-full transition-colors peer-checked:bg-gradient-to-r peer-checked:from-[#0056b3] peer-checked:to-[#218838] peer-focus-visible:ring-2 peer-focus-visible:ring-accent"
+                              :class="darkMode ? 'bg-gray-700' : 'bg-gray-300'"></span>
+                        <span class="absolute start-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform peer-checked:translate-x-5 rtl:peer-checked:-translate-x-5"></span>
+                    </span>
+                </label>
+            @endforeach
+
+            <div class="px-4 py-3.5 rounded-xl border"
+                 :class="darkMode ? 'bg-gray-800/40 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                <label for="tree_display_order" class="text-sm font-semibold flex items-center gap-2" :class="darkMode ? 'text-gray-100' : 'text-gray-800'">
+                    <i data-lucide="arrow-up-down" class="w-4 h-4 opacity-60"></i>
+                    {{ __('sahaba.tree_display_order') }}
+                </label>
+                <input id="tree_display_order" name="tree_display_order" type="number" min="0" dir="ltr"
+                       value="{{ old('tree_display_order', $muslim->tree_display_order ?? '') }}"
+                       class="mt-2 w-full px-4 py-2.5 rounded-xl border text-base sm:text-sm transition-all focus:ring-2 focus:ring-accent/50 tabular-nums"
+                       :class="darkMode ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
+                       data-testid="field-tree-order">
+                <p class="mt-1.5 text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
+                    {{ __('sahaba.tree_display_order_hint') }}
+                </p>
+                @error('tree_display_order') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+            </div>
+        </div>
+    </section>
 
     {{-- Identity: Arabic tab first, per project convention. --}}
     <x-admin.form-section id="sec-identity" :title="__('sahaba.section_identity')"
@@ -230,13 +332,15 @@
                 @foreach ($roles as $i => $role)
                     @php
                         $isAssigned = $assigned->has($role->id);
-                        $isFeatured = (bool) $assigned->get($role->id, false);
+                        $pivot = $assigned->get($role->id, ['featured' => false, 'sort' => 0]);
+                        $isFeatured = (bool) $pivot['featured'];
+                        $sortOrder = (int) $pivot['sort'];
                     @endphp
                     {{-- `checked` drives whether the row is submitted at all;
-                         the featured box only matters when it is, so it is
-                         disabled until then. --}}
+                         the featured switch and the order only matter when it
+                         is, so they are disabled until then. --}}
                     <div x-data="{ on: {{ $isAssigned ? 'true' : 'false' }} }"
-                         class="px-4 py-3 rounded-xl border transition-all"
+                         class="px-4 py-3.5 rounded-xl border transition-all"
                          :class="on
                             ? (darkMode ? 'bg-accent/10 border-accent/40' : 'bg-[#0056b3]/5 border-[#0056b3]/30')
                             : (darkMode ? 'bg-gray-800/40 border-gray-700' : 'bg-white border-gray-300')">
@@ -248,17 +352,50 @@
                             <span class="font-semibold text-sm" :class="darkMode ? 'text-gray-200' : 'text-gray-700'">{{ $role->name() }}</span>
                         </label>
 
-                        <label class="flex items-center gap-2 mt-2.5 ms-7 cursor-pointer"
-                               :class="on ? '' : 'opacity-40 pointer-events-none'">
-                            <input type="checkbox" name="roles[{{ $i }}][is_featured]" value="1"
-                                   @checked($isFeatured) :disabled="! on"
-                                   class="w-4 h-4 rounded text-amber-500 focus:ring-amber-500"
-                                   data-testid="role-featured-{{ $role->slug }}">
-                            <span class="text-xs flex items-center gap-1" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
-                                <i data-lucide="star" class="w-3 h-3"></i>
-                                {{ __('sahaba.featured_in_role') }}
-                            </span>
-                        </label>
+                        <div class="mt-3 ms-7 space-y-3" :class="on ? '' : 'opacity-40 pointer-events-none'">
+                            <label class="flex items-start justify-between gap-3 cursor-pointer">
+                                <span class="min-w-0">
+                                    <span class="text-xs font-semibold flex items-center gap-1.5" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                                        <i data-lucide="star" class="w-3.5 h-3.5 text-amber-500"></i>
+                                        {{ __('sahaba.featured_in_role') }}
+                                    </span>
+                                    <span class="mt-0.5 block text-[11px] leading-relaxed" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
+                                        {{ __('sahaba.featured_hint') }}
+                                    </span>
+                                </span>
+
+                                <span class="relative inline-flex items-center shrink-0 mt-0.5">
+                                    <input type="checkbox" name="roles[{{ $i }}][is_featured]" value="1"
+                                           @checked($isFeatured) :disabled="! on"
+                                           class="sr-only peer"
+                                           data-testid="role-featured-{{ $role->slug }}">
+                                    <span class="w-9 h-5 rounded-full transition-colors peer-checked:bg-amber-500 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-500"
+                                          :class="darkMode ? 'bg-gray-700' : 'bg-gray-300'"></span>
+                                    <span class="absolute start-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4 rtl:peer-checked:-translate-x-4"></span>
+                                </span>
+                            </label>
+
+                            {{-- Accepted by StoreMuslimRequest since it was
+                                 written, but never rendered until now: without
+                                 an input every assignment silently saved
+                                 sort_order 0. --}}
+                            <div>
+                                <label for="role-sort-{{ $role->id }}"
+                                       class="text-xs font-semibold flex items-center gap-1.5" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 opacity-60"></i>
+                                    {{ __('sahaba.role_sort_order') }}
+                                </label>
+                                <input id="role-sort-{{ $role->id }}" type="number" min="0" dir="ltr"
+                                       name="roles[{{ $i }}][sort_order]" value="{{ $sortOrder }}"
+                                       :disabled="! on"
+                                       class="mt-1.5 w-full px-3 py-2 rounded-lg border text-sm transition-all focus:ring-2 focus:ring-accent/50 tabular-nums"
+                                       :class="darkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                                       data-testid="role-sort-{{ $role->slug }}">
+                                <p class="mt-1 text-[11px]" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">
+                                    {{ __('sahaba.role_sort_order_hint') }}
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 @endforeach
             </div>
@@ -401,38 +538,6 @@
             </div>
         </x-admin.form-section>
     @endforeach
-
-    <x-admin.form-section id="sec-publishing" :title="__('sahaba.section_publishing')" icon="eye">
-        <div class="grid gap-4 sm:grid-cols-3">
-            @foreach ([
-                'is_published' => ['label' => __('sahaba.published'), 'icon' => 'check-circle', 'testid' => 'field-published'],
-                'hide_from_tree' => ['label' => __('sahaba.hide_from_tree'), 'icon' => 'eye-off', 'testid' => 'field-hide-from-tree'],
-            ] as $field => $meta)
-                <label class="flex items-center justify-between gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all border"
-                       :class="darkMode ? 'bg-gray-800/40 border-gray-700 hover:bg-gray-800' : 'bg-white border-gray-300 hover:bg-gray-50'">
-                    <span class="text-sm font-semibold flex items-center gap-2" :class="darkMode ? 'text-gray-200' : 'text-gray-700'">
-                        <i data-lucide="{{ $meta['icon'] }}" class="w-4 h-4"></i>
-                        {{ $meta['label'] }}
-                    </span>
-                    <input type="checkbox" name="{{ $field }}" value="1"
-                           @checked(old($field, $muslim->{$field} ?? false))
-                           class="w-4 h-4 rounded text-accent focus:ring-accent"
-                           data-testid="{{ $meta['testid'] }}">
-                </label>
-            @endforeach
-
-            <div>
-                <label for="tree_display_order" class="block text-sm font-semibold mb-1.5" :class="darkMode ? 'text-gray-200' : 'text-gray-700'">
-                    {{ __('sahaba.tree_display_order') }}
-                </label>
-                <input id="tree_display_order" name="tree_display_order" type="number" min="0" dir="ltr"
-                       value="{{ old('tree_display_order', $muslim->tree_display_order ?? '') }}"
-                       class="w-full px-4 py-2.5 rounded-xl border text-base sm:text-sm transition-all focus:ring-2 focus:ring-accent/50" :class="darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                       data-testid="field-tree-order">
-                @error('tree_display_order') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
-            </div>
-        </div>
-    </x-admin.form-section>
 
 </div>
 

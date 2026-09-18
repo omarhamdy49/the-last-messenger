@@ -38,6 +38,14 @@ final readonly class MuslimListFilters
          * are excluded — they are not unresolved, they simply record none.
          */
         public bool $unmappedBirthPlaceOnly = false,
+        /**
+         * Tri-state publication filter for the admin list: null = both, true =
+         * published only, false = drafts only. Distinct from `publishedOnly`,
+         * which is the public-surface guard and can only ever narrow.
+         */
+        public ?bool $published = null,
+        /** Records hidden from the genealogy tree. null = don't filter. */
+        public ?bool $hiddenFromTree = null,
     ) {}
 
     public static function fromRequest(Request $request, bool $publishedOnly = true): self

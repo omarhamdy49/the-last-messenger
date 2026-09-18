@@ -101,8 +101,23 @@
     @endif
 <div x-data="sahabaAdminTable(@json($sahaba->pluck('id')))" x-init="init()">
 
-    <!-- Compact Stats Row -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+    {{-- Compact stats row.
+
+         Publication and featured counts sit here because nothing else on the
+         screen answers "why is the public carousel empty" — that is a count of
+         pivot rows, invisible in a list of people. Each is a link into the list
+         filtered to exactly the rows it counts, so the number is a way in
+         rather than a fact to act on somewhere else. --}}
+    @php
+        // Every stat link keeps the role scope it was read under, or the number
+        // and the list it opens would disagree.
+        $scopedFilter = fn (array $extra): array => array_filter(
+            ['role' => $activeRole?->slug] + $extra,
+            fn ($value) => $value !== null && $value !== '',
+        );
+    @endphp
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
         {{-- The count is role-scoped, so the label has to name the role — a
              narrators page counting "companions" reads as a bug. --}}
         <x-admin.stats-card
@@ -113,15 +128,38 @@
             :compact="true"
         />
         <x-admin.stats-card
+            icon="globe"
+            :title="__('sahaba.stat_published')"
+            :value="$stats['published'] ?? 0"
+            :href="route('admin.sahaba.index', $scopedFilter(['status' => 'published']))"
+            :compact="true"
+        />
+        <x-admin.stats-card
+            icon="file-pen-line"
+            :title="__('sahaba.stat_draft')"
+            :value="$stats['draft'] ?? 0"
+            :href="route('admin.sahaba.index', $scopedFilter(['status' => 'draft']))"
+            :compact="true"
+        />
+        <x-admin.stats-card
+            icon="star"
+            :title="__('sahaba.featured')"
+            :value="$stats['featured'] ?? 0"
+            :href="route('admin.sahaba.index', $scopedFilter(['is_featured' => '1']))"
+            :compact="true"
+        />
+        <x-admin.stats-card
             icon="user"
             :title="__('sahaba.stat_male')"
             :value="$stats['male'] ?? 0"
+            :href="route('admin.sahaba.index', $scopedFilter(['gender' => 'male']))"
             :compact="true"
         />
         <x-admin.stats-card
             icon="user"
             :title="__('sahaba.stat_female')"
             :value="$stats['female'] ?? 0"
+            :href="route('admin.sahaba.index', $scopedFilter(['gender' => 'female']))"
             :compact="true"
         />
     </div>
@@ -271,10 +309,29 @@
                     </select>
                 </div>
 
-                {{-- Only `is_featured` survives here: `tribe` and `is_verified`
-                     were retired with the Sahabi table and have no source
-                     column, so rendering them would be a control that quietly
-                     does nothing. --}}
+                {{-- Publication status. A tri-state select, not a checkbox:
+                     "drafts only" is the query an editor actually needs and a
+                     checkbox can only ever express "published only". --}}
+                <div class="space-y-2">
+                    <label for="filter-status" class="text-sm font-bold block" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                        {{ __('sahaba.filter_status') }}
+                    </label>
+                    <select name="status" id="filter-status"
+                            class="w-full px-4 py-2.5 rounded-xl border text-base sm:text-sm transition-all focus:ring-2 focus:ring-accent/50"
+                            :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                        <option value="">{{ __('sahaba.filter_status_all') }}</option>
+                        <option value="published" {{ $filters->statusValue() === 'published' ? 'selected' : '' }}>
+                            {{ __('sahaba.stat_published') }}
+                        </option>
+                        <option value="draft" {{ $filters->statusValue() === 'draft' ? 'selected' : '' }}>
+                            {{ __('sahaba.stat_draft') }}
+                        </option>
+                    </select>
+                </div>
+
+                {{-- `tribe` and `is_verified` were retired with the Sahabi table
+                     and have no source column, so rendering them would be a
+                     control that quietly does nothing. --}}
                 <div class="space-y-2">
                     <label class="text-sm font-bold block" :class="darkMode ? 'text-white' : 'text-gray-900'">
                         {{ __('admin.special_filters') }}
@@ -286,6 +343,16 @@
                             {{ __('admin.featured_only') }}
                         </span>
                         <input type="checkbox" name="is_featured" value="1" {{ $filters->isFeatured ? 'checked' : '' }}
+                               class="form-checkbox rounded text-accent focus:ring-accent">
+                    </label>
+
+                    <label class="flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all"
+                           :class="darkMode ? 'bg-gray-800 hover:bg-gray-750' : 'bg-gray-100 hover:bg-gray-200'">
+                        <span class="text-sm font-medium flex items-center gap-2" :class="darkMode ? 'text-gray-200' : 'text-gray-700'">
+                            <i data-lucide="eye-off" class="w-4 h-4"></i>
+                            {{ __('sahaba.filter_hidden_tree') }}
+                        </span>
+                        <input type="checkbox" name="hidden_from_tree" value="1" {{ $filters->hiddenFromTree ? 'checked' : '' }}
                                class="form-checkbox rounded text-accent focus:ring-accent">
                     </label>
                 </div>
@@ -399,6 +466,11 @@
                             // Publication is a plain boolean on `muslims` now; the old
                             // per-locale translation `is_ready` flags are gone.
                             $isPublished = (bool) $sahabi->is_published;
+                            // Featured is a pivot column, so it is true when any role
+                            // the person holds carries it — the reading the bulk action
+                            // and the public carousel both use. Roles are eager-loaded,
+                            // so this costs no query per row.
+                            $isFeatured = $sahabi->roles->contains(fn ($role) => (bool) $role->pivot->is_featured);
                         @endphp
                         <tr class="border-b transition-colors duration-150"
                             :class="darkMode ? 'border-gray-800 hover:bg-gray-800/60' : 'border-gray-200 hover:bg-gray-50'">
@@ -494,21 +566,34 @@
                                 </span>
                             </td>
 
-                            <!-- Status (published / unpublished) -->
+            {{-- Status, as controls rather than badges.
+
+                 Both flags are one press from the list, which is where an
+                 editor notices they are wrong. Each is its own PATCH form —
+                 legal here because the toolbar's GET form closes well above the
+                 table, so these are not nested inside it. --}}
                             <td class="px-4 py-2.5" x-show="visibleColumns.includes('status')">
-                                @if($isPublished)
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-                                          :class="darkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
-                                        {{ __('admin.published') }}
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-                                          :class="darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
-                                        {{ __('admin.unpublished') }}
-                                    </span>
-                                @endif
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    <x-admin.flag-toggle
+                                        :action="route('admin.sahaba.toggle', [$sahabi, 'published'])"
+                                        :on="$isPublished"
+                                        :on-label="__('admin.published')"
+                                        :off-label="__('sahaba.draft')"
+                                        on-icon="globe"
+                                        off-icon="circle-slash"
+                                        tone="emerald"
+                                        :title="__('sahaba.published_hint')" />
+
+                                    <x-admin.flag-toggle
+                                        :action="route('admin.sahaba.toggle', [$sahabi, 'featured'])"
+                                        :on="$isFeatured"
+                                        :on-label="__('sahaba.featured')"
+                                        :off-label="__('sahaba.not_featured')"
+                                        on-icon="star"
+                                        off-icon="star-off"
+                                        tone="amber"
+                                        :title="__('sahaba.featured_all_roles_hint')" />
+                                </div>
                             </td>
 
                             <!-- Actions -->

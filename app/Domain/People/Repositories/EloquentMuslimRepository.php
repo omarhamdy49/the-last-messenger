@@ -33,6 +33,10 @@ final class EloquentMuslimRepository implements MuslimRepositoryInterface
 
         if ($filters->publishedOnly) {
             $query->published();
+        } elseif ($filters->published !== null) {
+            // Admin list only: `publishedOnly` is off there, so this is the one
+            // place drafts can be isolated instead of merely included.
+            $query->where('is_published', $filters->published);
         }
 
         if ($filters->roleSlug !== null) {
@@ -49,6 +53,10 @@ final class EloquentMuslimRepository implements MuslimRepositoryInterface
 
         if ($filters->gender !== null) {
             $query->where('gender', $filters->gender->value);
+        }
+
+        if ($filters->hiddenFromTree !== null) {
+            $query->where('hide_from_tree', $filters->hiddenFromTree);
         }
 
         if ($filters->search !== null && $filters->search !== '') {

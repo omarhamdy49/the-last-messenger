@@ -55,6 +55,8 @@ class SahabiController extends Controller
             publishedOnly: false,
             perPage: min(max((int) $request->query('per_page', 15), 10), 100),
             unmappedBirthPlaceOnly: $request->boolean('unmapped'),
+            published: $filters->isPublished,
+            hiddenFromTree: $filters->hiddenFromTree,
         ));
 
         return view('admin.sahaba.index', [
@@ -75,7 +77,12 @@ class SahabiController extends Controller
      * itself — on the Narrators view "total" has to mean narrators, or the
      * cards contradict the rows underneath them.
      *
-     * @return array{total:int,male:int,female:int}
+     * Publication and featured counts are here rather than left to the eye:
+     * "featured" lives on the muslims_roles pivot and "published" on the row,
+     * so nothing on the page otherwise tells an editor that a carousel is empty
+     * because nobody carries the flag.
+     *
+     * @return array{total:int,male:int,female:int,published:int,draft:int,featured:int,hidden_from_tree:int}
      */
     private function adminStats(?string $roleSlug): array
     {
@@ -87,10 +94,24 @@ class SahabiController extends Controller
             ),
         );
 
+        $total = (clone $base)->count();
+        $published = (clone $base)->where('is_published', true)->count();
+
         return [
-            'total' => (clone $base)->count(),
+            'total' => $total,
             'male' => (clone $base)->where('gender', 'male')->count(),
             'female' => (clone $base)->where('gender', 'female')->count(),
+            'published' => $published,
+            'draft' => $total - $published,
+            // Scoped to the role in view when there is one, so the number
+            // answers "featured *here*" rather than "featured anywhere".
+            'featured' => (clone $base)->whereHas(
+                'roles',
+                fn (Builder $roles) => $roles
+                    ->where('muslims_roles.is_featured', true)
+                    ->when($roleSlug !== null, fn (Builder $q) => $q->where('islamic_roles.slug', $roleSlug)),
+            )->count(),
+            'hidden_from_tree' => (clone $base)->where('hide_from_tree', true)->count(),
         ];
     }
 
@@ -310,6 +331,30 @@ class SahabiController extends Controller
         $this->muslims->bulkSetPublished($request->ids(), $request->boolean('is_published'));
 
         return back()->with('success', __('sahaba.saved'));
+    }
+
+    /**
+     * Flip one flag on one person, from the list row or the profile header.
+     *
+     * Takes the target state rather than flipping what it reads, so a
+     * double-submit is idempotent instead of toggling back.
+     *
+     * `featured` writes every role the person holds — the same meaning the bulk
+     * action on the list has, because neither screen has a single role in
+     * scope. Per-role featuring stays in the edit form, which is the only place
+     * that can express it.
+     */
+    public function toggle(Request $request, Muslim $muslim, string $flag): RedirectResponse
+    {
+        $value = $request->boolean('value');
+
+        match ($flag) {
+            'published' => $this->muslims->bulkSetPublished([$muslim->id], $value),
+            'featured' => $this->muslims->bulkSetFeatured([$muslim->id], $value),
+            'tree' => $this->muslims->update($muslim, ['hide_from_tree' => $value]),
+        };
+
+        return back()->with('success', __('sahaba.flag_saved'));
     }
 
     /**
