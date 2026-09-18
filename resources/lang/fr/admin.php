@@ -716,6 +716,16 @@ return [
     'live_channel_streaming' => 'Diffusion',
     'live_channel_streaming_url' => 'URL de diffusion',
     'live_channel_streaming_hint' => 'URL d’intégration YouTube ou tout flux intégrable via iframe.',
+    'live_channel_stream_type' => 'Type de flux',
+    'live_channel_stream_type_hint' => 'Laissez sur « Auto » pour le déduire de l’URL. Choisissez « Audio en direct » pour la radio : ces URL n’ont pas d’extension.',
+    'stream_type_auto' => 'Auto (d’après l’URL)',
+    'stream_type_youtube' => 'YouTube',
+    'stream_type_hls' => 'HLS (.m3u8)',
+    'stream_type_dash' => 'DASH (.mpd)',
+    'stream_type_file' => 'Fichier vidéo (MP4 / WebM)',
+    'stream_type_audio' => 'Audio en direct (radio)',
+    'stream_type_iframe' => 'Intégration iframe',
+    'live_channel_preview_unavailable' => 'Pas d’aperçu ici pour ce type. Ouvrez la page de la chaîne pour tester le lecteur.',
     'live_channel_slug_auto_hint' => 'Laissez vide pour générer automatiquement à partir du titre.',
 
     // YouTube import / sync

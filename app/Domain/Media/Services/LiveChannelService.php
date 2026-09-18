@@ -81,6 +81,7 @@ class LiveChannelService extends BaseService
         $channel = $this->repository->create([
             'slug' => $data->slug ?? $this->generateSlug($data->title),
             'streaming_url' => $data->streamingUrl,
+            'stream_type' => $data->streamType,
             'status' => $data->status,
             'is_published' => $data->isPublished,
             'display_order' => $data->displayOrder,
@@ -102,6 +103,7 @@ class LiveChannelService extends BaseService
         $updated = $this->repository->update($id, [
             'slug' => $data->slug,
             'streaming_url' => $data->streamingUrl,
+            'stream_type' => $data->streamType,
             'status' => $data->status,
             'is_published' => $data->isPublished,
             'display_order' => $data->displayOrder,

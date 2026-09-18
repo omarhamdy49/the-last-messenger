@@ -716,6 +716,16 @@ return [
     'live_channel_streaming' => 'Yayın',
     'live_channel_streaming_url' => 'Yayın URL’si',
     'live_channel_streaming_hint' => 'YouTube yerleştirme URL’si veya iframe ile yerleştirilebilir herhangi bir yayın.',
+    'live_channel_stream_type' => 'Yayın türü',
+    'live_channel_stream_type_hint' => 'URL’den anlaşılması için “Otomatik” bırakın. Radyo yayınları için “Canlı ses” seçin; radyo adreslerinde uzantı bulunmaz.',
+    'stream_type_auto' => 'Otomatik (URL’den)',
+    'stream_type_youtube' => 'YouTube',
+    'stream_type_hls' => 'HLS (.m3u8)',
+    'stream_type_dash' => 'DASH (.mpd)',
+    'stream_type_file' => 'Video dosyası (MP4 / WebM)',
+    'stream_type_audio' => 'Canlı ses (radyo)',
+    'stream_type_iframe' => 'iframe yerleştirme',
+    'live_channel_preview_unavailable' => 'Bu tür için burada önizleme yok. Oynatıcıyı denemek için kanal sayfasını açın.',
     'live_channel_slug_auto_hint' => 'Başlıktan otomatik oluşturmak için boş bırakın.',
 
     // YouTube import / sync

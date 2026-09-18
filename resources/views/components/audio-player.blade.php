@@ -29,17 +29,17 @@
     Hidden until a track is loaded.
 --}}
 @php
-    // bg-[#ffffff], not bg-white: app.css carries an unlayered
-    // `.dark .bg-white { ... !important }` that would beat `dark:bg-gray-900`
-    // and repaint the bar navy on public pages only.
-    $surface = 'bg-[#ffffff] dark:bg-gray-900';
+    // The bar renders under the public layout (app.css, sx tokens on :root) AND the
+    // admin layout (admin.css, no sx tokens), so every token carries a literal
+    // fallback — that is why these are var(--sx-*, #hex) and not bare tokens.
+    $surface = 'bg-[color:var(--sx-surface,#ffffff)]';
     $iconBtnBase = 'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors disabled:opacity-25 disabled:pointer-events-none';
-    $iconBtnTheme = 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white';
+    $iconBtnTheme = 'text-[color:var(--sx-ink-2,#4b5563)] hover:bg-[color:var(--sx-accent-soft,rgb(0_86_179/0.08))] hover:text-[color:var(--sx-accent,#0056b3)]';
     $iconBtn = $iconBtnBase.' '.$iconBtnTheme;
 @endphp
 <div x-data x-show="$store.audioPlayer.track" x-cloak
      x-effect="document.body.classList.toggle('site-has-audio', !!$store.audioPlayer.track)"
-     class="fixed bottom-0 inset-x-0 z-50 border-t shadow-2xl {{ $surface }} border-gray-200 dark:border-gray-800"
+     class="fixed bottom-0 inset-x-0 z-50 border-t shadow-2xl {{ $surface }} border-[color:var(--sx-line,rgb(15_23_42/0.08))]"
      role="region" aria-label="{{ __('quran.public.listen') }}">
     <div class="mx-auto max-w-5xl px-3 sm:px-4 py-2">
 
@@ -47,12 +47,12 @@
 
             {{-- Track info --}}
             <div class="flex items-center gap-2.5 flex-1 min-w-0">
-                <div class="hidden sm:flex w-9 h-9 rounded-lg bg-gradient-to-br from-[#0056b3] to-[#218838] items-center justify-center flex-shrink-0">
+                <div class="hidden sm:flex w-9 h-9 rounded-lg [background:var(--sx-grad,linear-gradient(135deg,#0056b3_0%,#218838_100%))] items-center justify-center flex-shrink-0">
                     <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M18 3a1 1 0 00-1.196-.98l-8 1.6A1 1 0 008 4.6v7.114A3.5 3.5 0 1010 14.5V8.82l6-1.2v3.894A3.5 3.5 0 1018 14V3z"/></svg>
                 </div>
                 <div class="min-w-0">
-                    <p class="text-sm font-semibold truncate font-['Amiri'] text-gray-900 dark:text-white" x-text="$store.audioPlayer.track?.title"></p>
-                    <p class="text-[11px] truncate text-gray-500 dark:text-gray-400" x-text="$store.audioPlayer.track?.subtitle"></p>
+                    <p class="text-sm font-semibold truncate font-['Amiri'] text-[color:var(--sx-ink,#111827)]" x-text="$store.audioPlayer.track?.title"></p>
+                    <p class="text-[11px] truncate text-[color:var(--sx-muted,#6b7280)]" x-text="$store.audioPlayer.track?.subtitle"></p>
                 </div>
             </div>
 
@@ -80,7 +80,7 @@
 
                 {{-- Play / pause --}}
                 <button @click="$store.audioPlayer.toggle()"
-                        class="w-10 h-10 rounded-full flex items-center justify-center text-white bg-gradient-to-r from-[#0056b3] to-[#218838] flex-shrink-0 hover:scale-105 active:scale-95 transition-transform"
+                        class="w-10 h-10 rounded-full flex items-center justify-center text-white [background:var(--sx-grad,linear-gradient(135deg,#0056b3_0%,#218838_100%))] flex-shrink-0 hover:scale-105 active:scale-95 transition-transform"
                         :aria-label="$store.audioPlayer.playing ? '{{ __('quran.public.pause') }}' : '{{ __('quran.public.play') }}'">
                     <svg x-show="!$store.audioPlayer.playing" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.84A1 1 0 004 3.7v12.6a1 1 0 001.5.86l11-6.3a1 1 0 000-1.72l-11-6.3z"/></svg>
                     <svg x-show="$store.audioPlayer.playing" x-cloak class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M6 4a1 1 0 011 1v10a1 1 0 11-2 0V5a1 1 0 011-1zm7 0a1 1 0 011 1v10a1 1 0 11-2 0V5a1 1 0 011-1z"/></svg>
@@ -106,7 +106,7 @@
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M15 5h2v14h-2zM5 5v14l9.5-7z"/></svg>
                 </button>
 
-                <span class="w-px h-5 mx-0.5 sm:mx-1 flex-shrink-0 bg-gray-200 dark:bg-gray-700" aria-hidden="true"></span>
+                <span class="w-px h-5 mx-0.5 sm:mx-1 flex-shrink-0 bg-[color:var(--sx-line-strong,rgb(15_23_42/0.14))]" aria-hidden="true"></span>
 
                 {{-- Play from the beginning --}}
                 <button @click="$store.audioPlayer.restart()" class="{{ $iconBtn }}"
@@ -137,7 +137,7 @@
                         @click="$store.audioPlayer.toggleFollow()"
                         class="{{ $iconBtnBase }} ms-2 sm:ms-3"
                         :class="$store.audioPlayer.follow
-                            ? 'text-white bg-gradient-to-r from-[#0056b3] to-[#218838]'
+                            ? 'text-white [background:var(--sx-grad,linear-gradient(135deg,#0056b3_0%,#218838_100%))]'
                             : '{{ $iconBtnTheme }}'"
                         :aria-pressed="$store.audioPlayer.follow"
                         title="{{ __('quran.public.follow_verses') }}" aria-label="{{ __('quran.public.follow_verses') }}">
@@ -149,7 +149,7 @@
                         @click="$store.audioPlayer.toggleAutoNext()"
                         class="{{ $iconBtnBase }} ms-2 sm:ms-3"
                         :class="$store.audioPlayer.autoNext
-                            ? 'text-white bg-gradient-to-r from-[#0056b3] to-[#218838]'
+                            ? 'text-white [background:var(--sx-grad,linear-gradient(135deg,#0056b3_0%,#218838_100%))]'
                             : '{{ $iconBtnTheme }}'"
                         :aria-pressed="$store.audioPlayer.autoNext"
                         title="{{ __('quran.public.auto_next') }}" aria-label="{{ __('quran.public.auto_next') }}">
@@ -165,7 +165,7 @@
                 </a>
 
                 <button @click="$store.audioPlayer.cycleSpeed()"
-                        class="px-2 h-8 rounded-lg text-xs font-bold tabular-nums transition-colors flex-shrink-0 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                        class="px-2 h-8 rounded-lg text-xs font-bold tabular-nums transition-colors flex-shrink-0 text-[color:var(--sx-ink-2,#4b5563)] hover:bg-[color:var(--sx-accent-soft,rgb(0_86_179/0.08))]"
                         x-text="$store.audioPlayer.rate + '×'" title="{{ __('quran.public.playback_speed') }}"
                         aria-label="{{ __('quran.public.playback_speed') }}">1×</button>
 
@@ -179,13 +179,13 @@
                     </button>
                     <input type="range" min="0" max="1" step="0.05" :value="$store.audioPlayer.volume"
                            @input="$store.audioPlayer.setVolume(parseFloat($event.target.value))"
-                           class="w-16 lg:w-20 accent-[#0056b3] cursor-pointer" aria-label="{{ __('quran.public.volume') }}">
+                           class="w-16 lg:w-20 accent-[color:var(--sx-accent,#0056b3)] cursor-pointer" aria-label="{{ __('quran.public.volume') }}">
                 </div>
 
                 {{-- Reciter picker (only when reciters are configured) --}}
                 <div class="relative flex-shrink-0" x-show="$store.audioPlayer.reciters.length > 0" @click.outside="$store.audioPlayer.reciterOpen = false">
                     <button @click="$store.audioPlayer.reciterOpen = !$store.audioPlayer.reciterOpen"
-                            class="flex items-center gap-1.5 px-2 sm:px-2.5 h-8 rounded-lg text-xs font-semibold transition-colors max-w-[8rem] sm:max-w-[10rem] text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+                            class="flex items-center gap-1.5 px-2 sm:px-2.5 h-8 rounded-lg text-xs font-semibold transition-colors max-w-[8rem] sm:max-w-[10rem] text-[color:var(--sx-ink-2,#4b5563)] hover:bg-[color:var(--sx-accent-soft,rgb(0_86_179/0.08))]"
                             title="{{ __('quran.public.choose_reciter') }}" aria-haspopup="listbox" :aria-expanded="$store.audioPlayer.reciterOpen">
                         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14a4 4 0 004-4V6a4 4 0 10-8 0v4a4 4 0 004 4zm6-4a6 6 0 01-12 0m6 6v3"/></svg>
                         <span class="truncate hidden sm:inline" x-text="$store.audioPlayer.reciterName()"></span>
@@ -193,12 +193,12 @@
                     <div x-show="$store.audioPlayer.reciterOpen" x-cloak x-transition.opacity
                          class="absolute bottom-full end-0 mb-2 w-56 max-h-72 overflow-y-auto rounded-xl border shadow-2xl py-1 {{ $surface }} border-gray-200 dark:border-gray-700" role="listbox">
                         <label class="block p-2 text-sm">{{ __('quran.public.reciter') }}
-                            <select class="w-full rounded border-gray-300 dark:bg-gray-800" :value="$store.audioPlayer.currentReciter()?.profileId || $store.audioPlayer.reciterId" @change="$store.audioPlayer.selectPerson(Number($event.target.value))">
+                            <select class="w-full rounded border-[color:var(--sx-line,rgb(15_23_42/0.08))] bg-[color:var(--sx-surface-2,#f1f4f9)]" :value="$store.audioPlayer.currentReciter()?.profileId || $store.audioPlayer.reciterId" @change="$store.audioPlayer.selectPerson(Number($event.target.value))">
                                 <template x-for="person in $store.audioPlayer.personOptions()" :key="person.id"><option :value="person.id" x-text="person.name"></option></template>
                             </select>
                         </label>
                         <label class="block p-2 text-sm" x-show="$store.audioPlayer.recordingOptions().length > 1">{{ __('quran.recordings.choose') }}
-                            <select class="w-full rounded border-gray-300 dark:bg-gray-800" :value="$store.audioPlayer.reciterId" @change="$store.audioPlayer.selectReciter(Number($event.target.value))">
+                            <select class="w-full rounded border-[color:var(--sx-line,rgb(15_23_42/0.08))] bg-[color:var(--sx-surface-2,#f1f4f9)]" :value="$store.audioPlayer.reciterId" @change="$store.audioPlayer.selectReciter(Number($event.target.value))">
                                 <template x-for="r in $store.audioPlayer.recordingOptions()" :key="r.id"><option :value="r.id" x-text="r.recordingLabel || r.nameAr || r.nameEn"></option></template>
                             </select>
                         </label>
@@ -213,7 +213,7 @@
         </div>
         {{-- Scrub bar (under the transport): click, drag or arrow-key. Own row so it stays grabbable on phones. --}}
         <div class="mt-1 flex items-center gap-2" dir="ltr">
-            <span class="text-[11px] tabular-nums w-10 text-right flex-shrink-0 text-gray-500 dark:text-gray-400"
+            <span class="text-[11px] tabular-nums w-10 text-right flex-shrink-0 text-[color:var(--sx-muted,#6b7280)]"
                   x-text="$store.audioPlayer.fmt($store.audioPlayer.currentTime)">0:00</span>
 
             <div class="group flex-1 py-1.5 cursor-pointer touch-none focus:outline-none"
@@ -223,15 +223,15 @@
                  tabindex="0" role="slider"
                  :aria-valuenow="Math.round($store.audioPlayer.progress)" aria-valuemin="0" aria-valuemax="100"
                  aria-label="{{ __('quran.public.seek') }}">
-                <div class="h-1.5 rounded-full transition-[height] group-hover:h-2 group-focus:h-2 bg-gray-200 dark:bg-gray-700">
-                    <div class="relative h-full rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838]"
+                <div class="h-1.5 rounded-full transition-[height] group-hover:h-2 group-focus:h-2 bg-[color:var(--sx-line-strong,rgb(15_23_42/0.14))]">
+                    <div class="relative h-full rounded-full" style="background: var(--sx-grad, linear-gradient(135deg,#0056b3 0%,#218838 100%))"
                          :style="`width: ${$store.audioPlayer.progress}%`">
                         <span class="absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow ring-1 ring-black/10 opacity-0 transition-opacity group-hover:opacity-100 group-focus:opacity-100"></span>
                     </div>
                 </div>
             </div>
 
-            <span class="text-[11px] tabular-nums w-10 flex-shrink-0 text-gray-500 dark:text-gray-400"
+            <span class="text-[11px] tabular-nums w-10 flex-shrink-0 text-[color:var(--sx-muted,#6b7280)]"
                   x-text="$store.audioPlayer.fmt($store.audioPlayer.duration)">0:00</span>
         </div>
 

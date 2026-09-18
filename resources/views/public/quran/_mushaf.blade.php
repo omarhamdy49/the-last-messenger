@@ -20,8 +20,9 @@
     };
 @endphp
 
+{{-- Dark mode comes from the `.dark` root the theme store toggles, so the view
+     needs no theme binding of its own. --}}
 <div class="mushaf" dir="rtl"
-     :class="$store.theme.dark ? 'text-gray-100 mushaf-dark' : 'text-gray-900'"
      :style="`font-size: ${fontSize}px`">
 
     @if(! empty($surah['bismillahPre']) && (int) ($surah['number'] ?? 0) !== 1 && (int) ($surah['number'] ?? 0) !== 9)

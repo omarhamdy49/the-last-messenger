@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Web;
 
 use App\Domain\Media\Enums\LiveStatus;
+use App\Domain\Media\Enums\StreamType;
 use App\Domain\Media\Models\LiveChannel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -134,6 +135,148 @@ final class LiveChannelTest extends TestCase
         $this->assertNull($channel->embed_url);
     }
 
+    // ===================== ADMIN STREAM TYPE ROUND TRIP =====================
+
+    public function test_admin_create_and_edit_forms_render_the_stream_type_field(): void
+    {
+        $this->actingAs($this->createAdminUser());
+        $channel = $this->createChannel(['slug' => 'form-render']);
+
+        foreach ([
+            route('admin.live-channels.create'),
+            route('admin.live-channels.edit', $channel->id),
+        ] as $url) {
+            $response = $this->get($url);
+            $response->assertStatus(200);
+            $response->assertSee('name="stream_type"', false);
+        }
+    }
+
+    public function test_admin_can_store_an_explicit_stream_type(): void
+    {
+        $this->actingAs($this->createAdminUser());
+
+        // A radio mount: nothing in the URL says "audio", so the editor's
+        // explicit choice is the only thing that makes it play correctly.
+        $response = $this->post(route('admin.live-channels.store'), [
+            'title' => ['ar' => 'إذاعة تجريبية'],
+            'streaming_url' => 'https://n0d.radiojar.com/0tpy1h0kxtzuv',
+            'stream_type' => 'audio',
+            'status' => 'live',
+            'is_published' => '1',
+        ]);
+
+        $response->assertRedirect(route('admin.live-channels.index'));
+        $this->assertDatabaseHas('live_channels', ['stream_type' => 'audio']);
+
+        $channel = LiveChannel::where('stream_type', StreamType::Audio)->firstOrFail();
+        $this->assertTrue($channel->stream_source['audio_only']);
+    }
+
+    public function test_blank_stream_type_is_stored_as_auto_not_as_a_guess(): void
+    {
+        $this->actingAs($this->createAdminUser());
+
+        $this->post(route('admin.live-channels.store'), [
+            'title' => ['ar' => 'قناة تلقائية'],
+            'streaming_url' => 'https://win.holol.com/live/quran/playlist.m3u8',
+            'stream_type' => '',
+            'status' => 'live',
+            'is_published' => '1',
+        ])->assertRedirect();
+
+        $channel = LiveChannel::where('slug', 'qnat-tlqayy')->first()
+            ?? LiveChannel::latest('id')->firstOrFail();
+
+        // Stored as NULL so a later URL change re-detects, but reads as HLS now.
+        $this->assertNull($channel->stream_type);
+        $this->assertSame(StreamType::Hls, $channel->resolved_stream_type);
+    }
+
+    public function test_admin_rejects_an_unknown_stream_type(): void
+    {
+        $this->actingAs($this->createAdminUser());
+
+        $this->post(route('admin.live-channels.store'), [
+            'title' => ['ar' => 'قناة'],
+            'streaming_url' => 'https://example.com/x.m3u8',
+            'stream_type' => 'rtmp',
+            'status' => 'live',
+        ])->assertSessionHasErrors('stream_type');
+    }
+
+    // ===================== STREAM TYPE RESOLUTION =====================
+
+    public function test_stream_type_is_detected_from_the_url_when_left_on_auto(): void
+    {
+        $channel = new LiveChannel;
+
+        foreach ([
+            'https://www.youtube.com/watch?v=dQw4w9WgXcQ' => StreamType::YouTube,
+            'https://youtu.be/dQw4w9WgXcQ' => StreamType::YouTube,
+            'https://www.youtube.com/live/dQw4w9WgXcQ' => StreamType::YouTube,
+            'https://win.holol.com/live/quran/playlist.m3u8' => StreamType::Hls,
+            'https://example.com/stream.mpd' => StreamType::Dash,
+            'https://example.com/clip.mp4' => StreamType::File,
+            'https://example.com/radio.mp3' => StreamType::Audio,
+            // A radio mount point carries no extension at all: nothing in the URL
+            // says "audio", which is exactly why the editor can override.
+            'https://n0d.radiojar.com/0tpy1h0kxtzuv?rj-ttl=5' => StreamType::Iframe,
+        ] as $url => $expected) {
+            $channel->streaming_url = $url;
+            $channel->stream_type = null;
+            $this->assertSame($expected, $channel->resolved_stream_type, "for {$url}");
+        }
+    }
+
+    public function test_query_string_does_not_fool_extension_detection(): void
+    {
+        $channel = new LiveChannel;
+        // The token below ends in ".mpd" but lives in the query, not the path.
+        $channel->streaming_url = 'https://cdn.example.com/live/index.m3u8?token=abc.mpd';
+
+        $this->assertSame(StreamType::Hls, $channel->resolved_stream_type);
+    }
+
+    public function test_explicit_stream_type_overrides_detection(): void
+    {
+        $channel = new LiveChannel;
+        $channel->streaming_url = 'https://n0d.radiojar.com/0tpy1h0kxtzuv?rj-ttl=5';
+        $channel->stream_type = StreamType::Audio;
+
+        $source = $channel->stream_source;
+
+        $this->assertSame('audio', $source['type']);
+        $this->assertSame('media', $source['engine']);
+        $this->assertTrue($source['audio_only']);
+        // The engine needs the manifest/mount URL untouched, not an embed form.
+        $this->assertSame('https://n0d.radiojar.com/0tpy1h0kxtzuv?rj-ttl=5', $source['url']);
+        $this->assertNull($source['video_id']);
+    }
+
+    public function test_youtube_stream_source_carries_the_video_id_for_the_sdk(): void
+    {
+        $channel = new LiveChannel;
+        $channel->streaming_url = 'https://www.youtube.com/live/dQw4w9WgXcQ';
+
+        $source = $channel->stream_source;
+
+        $this->assertSame('youtube', $source['engine']);
+        $this->assertSame('dQw4w9WgXcQ', $source['video_id']);
+        $this->assertFalse($source['audio_only']);
+    }
+
+    public function test_stream_source_is_null_without_a_url(): void
+    {
+        $channel = new LiveChannel;
+
+        $channel->streaming_url = null;
+        $this->assertNull($channel->stream_source);
+
+        $channel->streaming_url = '   ';
+        $this->assertNull($channel->stream_source);
+    }
+
     // ===================== SINGLE CHANNEL PAGE =====================
 
     public function test_single_live_channel_page_renders(): void
@@ -144,8 +287,12 @@ final class LiveChannelTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('بث مباشر للاختبار');
-        // Embed URL is rendered in the iframe.
-        $response->assertSee('youtube.com/embed/dQw4w9WgXcQ', false);
+        // The page now mounts the wrapped player rather than a bare YouTube
+        // iframe: the video id is handed to our own chrome, and none of
+        // YouTube's embed UI is reachable.
+        $response->assertSee('streamPlayer(', false);
+        $response->assertSee('dQw4w9WgXcQ', false);
+        $response->assertDontSee('<iframe src="https://www.youtube.com/embed/', false);
     }
 
     public function test_single_live_channel_shows_related_channels(): void

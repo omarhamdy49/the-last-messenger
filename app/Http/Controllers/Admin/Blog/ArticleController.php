@@ -119,11 +119,12 @@ class ArticleController extends AdminController
         $this->authorizeAdmin('create articles');
 
         $libraryThumb = $this->resolveLibraryThumb($request);
+        $libraryCover = $this->resolveLibraryThumb($request, 'cover');
         $libraryGallery = $this->resolveLibraryGallery($request);
 
         try {
             $article = $this->createAction->execute(
-                CreateArticleData::fromRequest($request, $libraryThumb, $libraryGallery),
+                CreateArticleData::fromRequest($request, $libraryThumb, $libraryGallery, $libraryCover),
                 $this->locales
             );
 
@@ -155,6 +156,7 @@ class ArticleController extends AdminController
             return back()->withInput()->withErrors(['error' => __('admin.article_create_failed')]);
         } finally {
             $this->cleanupTemporaryThumb($libraryThumb);
+            $this->cleanupTemporaryThumb($libraryCover);
             $this->cleanupTemporaryGallery($libraryGallery);
         }
     }
@@ -216,12 +218,13 @@ class ArticleController extends AdminController
         $this->authorizeAdmin('edit articles');
 
         $libraryThumb = $this->resolveLibraryThumb($request);
+        $libraryCover = $this->resolveLibraryThumb($request, 'cover');
         $libraryGallery = $request->has('gallery') ? $this->resolveLibraryGallery($request) : null;
 
         try {
             $this->updateAction->execute(
                 $article,
-                UpdateArticleData::fromRequest($request, $article, $libraryThumb, $libraryGallery),
+                UpdateArticleData::fromRequest($request, $article, $libraryThumb, $libraryGallery, $libraryCover),
                 $this->locales
             );
 
@@ -254,6 +257,7 @@ class ArticleController extends AdminController
             return back()->withInput()->withErrors(['error' => __('admin.article_update_failed')]);
         } finally {
             $this->cleanupTemporaryThumb($libraryThumb);
+            $this->cleanupTemporaryThumb($libraryCover);
             $this->cleanupTemporaryGallery($libraryGallery ?? []);
         }
     }
@@ -266,25 +270,25 @@ class ArticleController extends AdminController
      * caller owns the returned file's temp path and must clean it up after
      * the action runs.
      */
-    private function resolveLibraryThumb(StoreArticleRequest|UpdateArticleRequest $request): ?UploadedFile
+    private function resolveLibraryThumb(StoreArticleRequest|UpdateArticleRequest $request, string $field = 'thumb'): ?UploadedFile
     {
-        if ($request->hasFile('thumb')) {
-            $media = $this->mediaService->upload($request->file('thumb'), [
+        if ($request->hasFile($field)) {
+            $media = $this->mediaService->upload($request->file($field), [
                 'collection_name' => 'articles',
             ]);
             $copy = $this->mediaService->temporaryOriginalCopyById($media->id);
 
             // Fall back to the raw upload if the fresh library copy can't be read.
             return $copy === null
-                ? $request->file('thumb')
+                ? $request->file($field)
                 : new UploadedFile($copy->path, $copy->filename, null, null, true);
         }
 
-        if (! $request->filled('thumb_id')) {
+        if (! $request->filled($field.'_id')) {
             return null;
         }
 
-        $copy = $this->mediaService->temporaryOriginalCopyById((int) $request->input('thumb_id'));
+        $copy = $this->mediaService->temporaryOriginalCopyById((int) $request->input($field.'_id'));
         if ($copy === null) {
             return null;
         }
@@ -536,8 +540,8 @@ class ArticleController extends AdminController
         try {
             $files = $this->repository->forceDeleteById($id);
 
-            if ($files['thumb']) {
-                Storage::disk('public')->delete($files['thumb']);
+            foreach (array_filter([$files['thumb'], $files['cover']]) as $image) {
+                Storage::disk('public')->delete($image);
             }
 
             foreach ($files['gallery'] as $galleryImage) {
@@ -742,6 +746,7 @@ class ArticleController extends AdminController
         return [
             'id' => $article->id,
             'thumb' => $article->thumb,
+            'cover' => $article->featured_image,
             'writer_id' => $article->writer_id,
             'category_id' => $article->category_id,
             'is_featured' => $article->is_featured,

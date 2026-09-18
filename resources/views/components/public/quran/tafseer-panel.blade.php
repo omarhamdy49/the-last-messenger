@@ -4,12 +4,13 @@
     Displays an accordion-style tafseer panel within a verse card.
     Tafseer is loaded on-demand when the panel is opened.
 
+    Rendered inside an Alpine `x-for` template, so its icons are inline SVG.
+
     Expected Alpine.js context:
     - verse: current verse object (id)
     - selectedTafsirId: number | null
     - openTafsir: object mapping verse.id to boolean
     - tafsirLoadingVerse: number | null
-    - $store.theme.dark: boolean
 
     Functions expected:
     - toggleTafsir(verse)
@@ -18,14 +19,11 @@
     - tafsirLoaded(verse): boolean
 --}}
 
-<div class="mt-4 pt-4" :class="$store.theme.dark ? 'border-t border-gray-700' : 'border-t border-gray-200'"
-     x-show="selectedTafsirId">
+<div class="mt-4 border-t border-[color:var(--sx-line)] pt-4" x-show="selectedTafsirId">
     {{-- Explicit per-verse action: loads this verse's tafsir on demand --}}
-    <button @click="toggleTafsir(verse)"
-        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-        :class="openTafsir[verse.id]
-            ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white'
-            : ($store.theme.dark ? 'bg-gray-800 text-gray-200 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
+    <button type="button" @click="toggleTafsir(verse)"
+        class="sx-chip"
+        :class="openTafsir[verse.id] ? 'is-active' : ''"
         :aria-expanded="openTafsir[verse.id] ? 'true' : 'false'"
     >
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -44,25 +42,21 @@
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0 transform -translate-y-2"
          x-transition:enter-end="opacity-100 transform translate-y-0"
-         class="mt-4 p-4 rounded-xl"
-         :class="$store.theme.dark ? 'bg-gray-800/50' : 'bg-gray-50'">
+         class="sx-panel mt-4 p-4">
 
         {{-- Loading state --}}
-        <p x-show="tafsirLoadingVerse === verse.id" class="text-sm animate-pulse"
-           :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">
+        <p x-show="tafsirLoadingVerse === verse.id" class="animate-pulse text-sm text-[color:var(--sx-muted)]">
             {{ __('quran.public.tafsir_loading') }}
         </p>
 
         {{-- Tafseer text --}}
         <p x-show="tafsirLoadingVerse !== verse.id && currentTafsir(verse)"
-           class="leading-relaxed font-['Amiri'] text-lg" dir="auto"
-           :class="$store.theme.dark ? 'text-gray-300' : 'text-gray-700'"
+           class="font-arabic text-lg leading-relaxed text-[color:var(--sx-ink-2)]" dir="auto"
            x-text="currentTafsir(verse)"></p>
 
         {{-- Loaded but this edition has no tafsir for the verse --}}
         <p x-show="tafsirLoadingVerse !== verse.id && tafsirLoaded(verse) && !currentTafsir(verse)"
-           class="text-sm italic"
-           :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">
+           class="text-sm italic text-[color:var(--sx-muted)]">
             {{ __('quran.public.no_tafsir') }}
         </p>
     </div>

@@ -3,117 +3,116 @@
 @section('title', __('auth_web.forgot_title') . ' — ' . __('site.site_name'))
 
 @section('content')
-<section class="relative min-h-[calc(100vh-5rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
+@php $backArrow = in_array(app()->getLocale(), ['ar', 'ur'], true) ? 'arrow-right' : 'arrow-left'; @endphp
+<div class="sx-wrap py-10 sm:py-16">
+    <div class="sx-surface mx-auto max-w-5xl overflow-hidden">
+        <div class="grid md:grid-cols-2">
 
-    {{-- Decorative floating shapes (match prototype) --}}
-    <div class="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
-        <div class="absolute top-20 end-10 w-72 h-72 bg-gradient-to-br from-[#0056b3]/20 to-[#218838]/20 rounded-full blur-3xl animate-fade-in-up motion-reduce:animate-none"></div>
-        <div class="absolute bottom-20 start-10 w-96 h-96 bg-gradient-to-br from-[#218838]/20 to-[#64CCC5]/20 rounded-full blur-3xl animate-fade-in-up motion-reduce:animate-none"></div>
-    </div>
-
-    <div class="relative w-full max-w-5xl">
-        <div class="glass rounded-3xl shadow-2xl overflow-hidden animate-fade-in-up motion-reduce:animate-none"
-             :class="$store.theme.dark ? 'border-white/10' : 'border-gray-200'">
-            <div class="grid md:grid-cols-2">
-
-                {{-- Marketing / hero column --}}
-                <div class="hidden md:flex relative bg-gradient-to-br from-[#0056b3] to-[#218838] p-12 text-white flex-col justify-center overflow-hidden">
-                    <div class="relative z-10">
-                        <i data-lucide="key-round" class="w-16 h-16 mb-6"></i>
-                        <h2 class="text-3xl lg:text-4xl font-bold font-amiri mb-4">{{ __('auth_web.forgot_heading') }}</h2>
-                        <p class="text-lg text-white/90 mb-10">{{ __('auth_web.forgot_subheading') }}</p>
-
-                        <div class="space-y-4">
-                            <div class="flex items-center gap-4 bg-white/10 backdrop-blur p-4 rounded-2xl">
-                                <span class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center shrink-0">
-                                    <i data-lucide="shield-check" class="w-6 h-6"></i>
-                                </span>
-                                <div>
-                                    <h3 class="font-bold">{{ __('auth_web.benefit_verified_title') }}</h3>
-                                    <p class="text-sm text-white/80">{{ __('auth_web.benefit_verified_desc') }}</p>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-4 bg-white/10 backdrop-blur p-4 rounded-2xl">
-                                <span class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center shrink-0">
-                                    <i data-lucide="mail-check" class="w-6 h-6"></i>
-                                </span>
-                                <div>
-                                    <h3 class="font-bold">{{ __('auth_web.benefit_content_title') }}</h3>
-                                    <p class="text-sm text-white/80">{{ __('auth_web.benefit_content_desc') }}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            {{-- Reassurance column: the brand gradient plate, hidden on phones --}}
+            <aside class="hidden flex-col justify-center gap-7 bg-[image:var(--sx-grad)] p-10 text-white md:flex lg:p-12">
+                <span class="grid h-16 w-16 place-items-center rounded-2xl border border-white/25 bg-[rgb(255_255_255/0.15)]">
+                    <i data-lucide="key-round" class="h-8 w-8"></i>
+                </span>
+                <div>
+                    <h2 class="text-3xl font-extrabold leading-tight lg:text-4xl">{{ __('auth_web.forgot_heading') }}</h2>
+                    <p class="mt-3 text-lg leading-relaxed text-white/90">{{ __('auth_web.forgot_subheading') }}</p>
                 </div>
 
-                {{-- Form column --}}
-                <div class="p-8 sm:p-12 bg-white dark:bg-[#16213e]"
-                     x-data="{ loading: false }">
-
-                    <h1 class="text-2xl font-bold mb-1">{{ __('auth_web.forgot_title') }}</h1>
-                    <p class="text-sm text-gray-600 dark:text-gray-300 mb-8">{{ __('auth_web.forgot_subheading') }}</p>
-
-                    {{-- Success toast (broker confirmation) --}}
-                    @if (session('toast'))
-                        <div class="mb-6 rounded-xl border border-green-300 bg-green-50 dark:bg-green-900/20 dark:border-green-800 px-4 py-3 text-sm text-green-700 dark:text-green-300 flex items-start gap-2"
-                             role="status">
-                            <i data-lucide="check-circle" class="w-5 h-5 shrink-0 mt-0.5"></i>
-                            <span>{{ session('toast') }}</span>
-                        </div>
-                    @endif
-
-                    {{-- Validation errors --}}
-                    @if ($errors->any())
-                        <div class="mb-6 rounded-xl border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300"
-                             role="alert">
-                            <ul class="space-y-1 list-disc list-inside">
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
-
-                    <form method="POST" action="{{ route('password.email') }}"
-                          @submit="loading = true" class="space-y-5">
-                        @csrf
-
-                        {{-- Email --}}
+                <ul class="space-y-3">
+                    <li class="flex items-center gap-4 rounded-2xl border border-white/20 bg-[rgb(255_255_255/0.10)] p-4">
+                        <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[rgb(255_255_255/0.20)]">
+                            <i data-lucide="shield-check" class="h-6 w-6"></i>
+                        </span>
                         <div>
-                            <label for="email" class="block text-sm font-semibold mb-2">{{ __('auth_web.forgot_email_label') }}</label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 start-0 flex items-center ps-3 text-gray-400 pointer-events-none">
-                                    <i data-lucide="mail" class="w-5 h-5"></i>
-                                </span>
-                                <input id="email" name="email" type="email" required autocomplete="email" autofocus
-                                       value="{{ old('email') }}"
-                                       placeholder="{{ __('auth_web.email_placeholder') }}"
-                                       class="w-full ps-11 pe-4 py-3 text-base sm:text-sm rounded-xl border border-gray-300 dark:border-[#0f3460] bg-white dark:bg-[#1a1a2e] focus:ring-2 focus:ring-[#0056b3] focus:border-transparent outline-none transition">
-                            </div>
+                            <h3 class="font-bold">{{ __('auth_web.benefit_verified_title') }}</h3>
+                            <p class="text-sm text-white/80">{{ __('auth_web.benefit_verified_desc') }}</p>
                         </div>
+                    </li>
+                    <li class="flex items-center gap-4 rounded-2xl border border-white/20 bg-[rgb(255_255_255/0.10)] p-4">
+                        <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[rgb(255_255_255/0.20)]">
+                            <i data-lucide="mail-check" class="h-6 w-6"></i>
+                        </span>
+                        <div>
+                            <h3 class="font-bold">{{ __('auth_web.benefit_content_title') }}</h3>
+                            <p class="text-sm text-white/80">{{ __('auth_web.benefit_content_desc') }}</p>
+                        </div>
+                    </li>
+                </ul>
+            </aside>
 
-                        {{-- Submit --}}
-                        <button type="submit" :disabled="loading"
-                                class="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white font-bold bg-gradient-to-br from-[#0056b3] to-[#218838] hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed transition">
-                            <svg x-show="loading" x-cloak class="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                            </svg>
-                            <span x-show="!loading">{{ __('auth_web.forgot_cta') }}</span>
-                            <span x-show="loading" x-cloak>{{ __('auth_web.submitting') }}</span>
-                        </button>
-                    </form>
+            {{-- Form column --}}
+            <div class="p-7 sm:p-10 lg:p-12" x-data="{ loading: false }">
 
-                    <p class="mt-8 text-center text-sm text-gray-600 dark:text-gray-300">
-                        {{ __('auth_web.forgot_help') }}
-                        <a href="{{ route('public.login') }}" class="inline-flex items-center gap-1 font-semibold text-[#0056b3] hover:underline">
-                            <i data-lucide="{{ in_array(app()->getLocale(), ['ar', 'ur']) ? 'arrow-right' : 'arrow-left' }}" class="w-4 h-4"></i>
-                            {{ __('auth_web.back_to_login') }}
-                        </a>
-                    </p>
-                </div>
+                <h1 class="text-2xl font-extrabold text-[color:var(--sx-ink)]">{{ __('auth_web.forgot_title') }}</h1>
+                <p class="mt-1.5 mb-7 text-sm text-[color:var(--sx-muted)]">{{ __('auth_web.forgot_subheading') }}</p>
+
+                {{-- Broker confirmation ("a reset link has been sent") --}}
+                @if (session('toast'))
+                    <div class="sx-note mb-6" role="status">
+                        <i data-lucide="mail-check" class="w-5 h-5 mt-1" aria-hidden="true"></i>
+                        <p class="text-sm">{{ session('toast') }}</p>
+                    </div>
+                @endif
+
+                {{-- Error summary (kept alongside the inline error: throttling
+                     reports against the request, not the field). --}}
+                @if ($errors->any())
+                    <div class="sx-note mb-6 !bg-[color:var(--sx-danger-soft)] !text-[color:var(--sx-danger)]" role="alert">
+                        <i data-lucide="alert-circle" class="w-5 h-5 mt-1 !text-[color:var(--sx-danger)]" aria-hidden="true"></i>
+                        <ul class="space-y-1 list-disc list-inside text-sm">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                <form method="POST" action="{{ route('password.email') }}"
+                      @submit="loading = true" class="space-y-5">
+                    @csrf
+
+                    {{-- Email --}}
+                    <div>
+                        <label for="email" class="sx-label">{{ __('auth_web.forgot_email_label') }} <span class="sx-req" aria-hidden="true">*</span></label>
+                        <div class="relative">
+                            <span class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3.5 text-[color:var(--sx-muted)]">
+                                <i data-lucide="mail" class="w-5 h-5"></i>
+                            </span>
+                            <input id="email" name="email" type="email" required autocomplete="email" autofocus
+                                   value="{{ old('email') }}"
+                                   placeholder="{{ __('auth_web.email_placeholder') }}"
+                                   @error('email') aria-invalid="true" aria-describedby="email-error" @enderror
+                                   class="sx-input ps-11 text-base sm:text-sm">
+                        </div>
+                        @error('email')
+                            <p id="email-error" class="sx-error">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    {{-- Submit --}}
+                    <button type="submit" :disabled="loading"
+                            class="sx-btn is-primary w-full disabled:cursor-not-allowed disabled:opacity-60">
+                        <span x-show="!loading" class="inline-flex items-center gap-2">
+                            <i data-lucide="send" aria-hidden="true"></i>
+                            {{ __('auth_web.forgot_cta') }}
+                        </span>
+                        <span x-show="loading" x-cloak class="inline-flex items-center gap-2">
+                            <i data-lucide="loader-2" class="animate-spin" aria-hidden="true"></i>
+                            {{ __('auth_web.submitting') }}
+                        </span>
+                    </button>
+                </form>
+
+                <p class="mt-8 text-center text-sm text-[color:var(--sx-muted)]">
+                    {{ __('auth_web.forgot_help') }}
+                    <a href="{{ route('public.login') }}"
+                       class="inline-flex min-h-11 items-center gap-1.5 font-bold text-[color:var(--sx-accent)] hover:underline">
+                        <i data-lucide="{{ $backArrow }}" class="w-4 h-4" aria-hidden="true"></i>
+                        {{ __('auth_web.back_to_login') }}
+                    </a>
+                </p>
             </div>
         </div>
     </div>
-</section>
+</div>
 @endsection

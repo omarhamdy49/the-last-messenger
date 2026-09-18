@@ -5,54 +5,26 @@
 
 @push('head')
 <style>
-    .progress-bar {
-        position: fixed;
-        top: 64px;
-        inset-inline-start: 0;
-        inset-inline-end: 0;
-        height: 3px;
-        background: linear-gradient(90deg, #0056b3, #218838);
-        transform-origin: left;
-        z-index: 40;
-        transition: transform 0.2s ease;
+    /* Page-scoped CSS only for what the design system has no shape for: the
+       printed-mushaf line layout, the ayah rosette ornament, and the floating
+       tools rail. Every colour comes from an sx token. */
+
+    .mushaf,
+    .mushaf-rail {
+        /* The rosette gold is an ornament, not a brand colour — it is the one
+           value here that has no token, so it is named once and reused. */
+        --mushaf-gold: #c9a227;
+        --mushaf-halo: color-mix(in srgb, var(--sx-teal) 55%, transparent);
     }
-    /* Desktop: let the sticky sidebar scroll on its own so all sections
-       (player, surah nav, related links) are reachable without scrolling
-       the full verse list. */
-    @media (min-width: 1024px) {
-        .quran-sidebar {
-            position: sticky;
-            top: 6rem;
-            max-height: calc(100vh - 7rem);
-            overflow-y: auto;
-        }
-    }
-    /* Mobile: the sidebar becomes a bottom sheet opened via the floating button. */
-    @media (max-width: 1023px) {
-        .quran-sidebar-aside {
-            position: fixed;
-            inset-inline: 0;
-            bottom: 0;
-            z-index: 50;
-            margin-top: 0;
-            max-height: 85vh;
-            overflow-y: auto;
-            border-top-left-radius: 1.5rem;
-            border-top-right-radius: 1.5rem;
-            box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.35);
-            transform: translateY(100%);
-            transition: transform 0.3s ease;
-        }
-        .quran-sidebar-aside.is-open {
-            transform: translateY(0);
-        }
-    }
+    .dark .mushaf,
+    .dark .mushaf-rail { --mushaf-gold: #e7c66a; }
+
     /* Brief highlight for a deep-linked verse (#v65). */
     .verse-target { animation: verseTargetPulse 2.4s ease-out 1; border-radius: 1rem; }
     @keyframes verseTargetPulse {
-        0% { box-shadow: 0 0 0 0 rgba(100,204,197,0.0); }
-        15% { box-shadow: 0 0 0 4px rgba(100,204,197,0.55); }
-        100% { box-shadow: 0 0 0 4px rgba(100,204,197,0.0); }
+        0% { box-shadow: 0 0 0 0 transparent; }
+        15% { box-shadow: 0 0 0 4px var(--mushaf-halo); }
+        100% { box-shadow: 0 0 0 4px transparent; }
     }
     @media (prefers-reduced-motion: reduce) { .verse-target { animation: none; } }
 
@@ -62,6 +34,7 @@
     .mushaf-card { max-width: 40rem; }
     .mushaf {
         font-family: 'Amiri', serif;
+        color: var(--sx-ink);
         -webkit-font-smoothing: antialiased;
         text-rendering: optimizeLegibility;
     }
@@ -89,29 +62,30 @@
         cursor: pointer;
         border-radius: 0.25em;
         padding: 0.02em 0.04em;
-        transition: background-color 0.18s ease, color 0.18s ease;
+        transition: background-color 0.18s var(--sx-ease), color 0.18s var(--sx-ease);
     }
     /* Whole-ayah lift on hover (set by the partial's delegated listener). */
     .mushaf .qw.qw-verse-active {
-        background-color: rgba(100, 204, 197, 0.16);
-        color: #0056b3;
+        background-color: color-mix(in srgb, var(--sx-teal) 16%, transparent);
+        color: var(--sx-accent);
     }
-    .mushaf-dark .qw.qw-verse-active { color: #a7f3ef; }
 
     /* Ayah being recited — stronger than the hover lift, and it stays put. */
     .mushaf .qw.qw-verse-playing {
-        background-color: rgba(33, 136, 56, 0.16);
-        color: #17693a;
+        background-color: color-mix(in srgb, var(--sx-green) 16%, transparent);
+        color: var(--sx-green);
     }
-    .mushaf-dark .qw.qw-verse-playing {
-        background-color: rgba(100, 204, 197, 0.2);
-        color: #7ee7dd;
+    .dark .mushaf .qw.qw-verse-playing {
+        background-color: color-mix(in srgb, var(--sx-teal) 20%, transparent);
+        color: var(--sx-teal);
     }
-    .mushaf .ayah-end.ayah-end-playing { filter: drop-shadow(0 0 4px rgba(33, 136, 56, 0.5)); }
-    .mushaf-dark .ayah-end.ayah-end-playing { filter: drop-shadow(0 0 4px rgba(100, 204, 197, 0.55)); }
-    .verse-card.is-playing { box-shadow: 0 0 0 2px #218838, 0 10px 30px -10px rgba(33, 136, 56, 0.45); }
+    .mushaf .ayah-end.ayah-end-playing { filter: drop-shadow(0 0 4px color-mix(in srgb, var(--sx-green) 50%, transparent)); }
+    .dark .mushaf .ayah-end.ayah-end-playing { filter: drop-shadow(0 0 4px var(--mushaf-halo)); }
+    .verse-card.is-playing { box-shadow: 0 0 0 2px var(--sx-green), 0 10px 30px -10px color-mix(in srgb, var(--sx-green) 45%, transparent); }
+    .dark .verse-card.is-playing { box-shadow: 0 0 0 2px var(--sx-teal), 0 10px 30px -10px var(--mushaf-halo); }
 
-    /* Verse-end rosette — our ornament (not a glyph font), holds the verse number. */
+    /* Verse-end rosette — our ornament (not a glyph font), holds the verse number.
+       The outline is a mask, so the gold is a token and can brighten in dark mode. */
     .mushaf .ayah-end {
         position: relative;
         display: inline-flex;
@@ -123,19 +97,32 @@
         vertical-align: middle;
         user-select: none;
         cursor: pointer;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cg fill='none' stroke='%23c9a227' stroke-width='1.1'%3E%3Ccircle cx='24' cy='24' r='15'/%3E%3Ccircle cx='24' cy='24' r='20' stroke-width='1' stroke-dasharray='0.6 2.6' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E");
-        background-size: contain;
-        background-repeat: no-repeat;
-        background-position: center;
+    }
+    .mushaf .ayah-end::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: var(--mushaf-gold);
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.1'%3E%3Ccircle cx='24' cy='24' r='15'/%3E%3Ccircle cx='24' cy='24' r='20' stroke-width='1' stroke-dasharray='0.6 2.6' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E");
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.1'%3E%3Ccircle cx='24' cy='24' r='15'/%3E%3Ccircle cx='24' cy='24' r='20' stroke-width='1' stroke-dasharray='0.6 2.6' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E");
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
     }
     .mushaf .ayah-end-num {
-        font-family: 'Cairo', sans-serif;
+        position: relative;
+        /* The numeral is chrome inside the scripture, so it steps out of Amiri
+           back to the interface stack — as it did before the re-skin. */
+        font-family: "Readex Pro", "Cairo", system-ui, sans-serif;
         font-size: 0.46em;
         font-weight: 700;
         line-height: 1;
-        color: #b08515;
+        font-variant-numeric: tabular-nums;
+        color: var(--mushaf-gold);
     }
-    .mushaf-dark .ayah-end-num { color: #e7c66a; }
 
     .mushaf-pageno {
         text-align: center;
@@ -145,94 +132,81 @@
         display: inline-block;
         min-width: 2.25rem;
         padding: 0.15rem 0.6rem;
-        font-family: 'Cairo', sans-serif;
+        font-family: "Readex Pro", "Cairo", system-ui, sans-serif;
         font-size: 0.8rem;
         font-weight: 600;
-        color: #9a7b1f;
-        border: 1px solid rgba(201, 162, 39, 0.4);
+        font-variant-numeric: tabular-nums;
+        color: var(--mushaf-gold);
+        border: 1px solid color-mix(in srgb, var(--mushaf-gold) 40%, transparent);
         border-radius: 9999px;
     }
-    .mushaf-dark .mushaf-pageno-badge { color: #e7c66a; border-color: rgba(201, 162, 39, 0.35); }
     .mushaf-page:not(:last-child) .mushaf-pageno {
         padding-bottom: 1.5rem;
-        border-bottom: 1px solid rgba(120, 120, 120, 0.16);
+        border-bottom: 1px solid var(--sx-line);
     }
 
     /* ---- Floating tools rail ----
-       Frosted-glass panel over a 4-step elevation scale. The gold (#c9a227) is the
-       same accent the ayah rosette uses, so the rail reads as part of the mushaf
-       rather than generic chrome. All motion is gated behind prefers-reduced-motion. */
+       Same frosted paper as the system dock, with a gradient lozenge for the
+       active tool and the rosette gold as its second, non-colour-only cue.
+       All motion is gated behind prefers-reduced-motion. */
     .mushaf-rail {
         position: fixed;
         z-index: 45;
-        --rail-ease: cubic-bezier(0.22, 1, 0.36, 1); /* spring-like ease-out */
-        --rail-gold: #c9a227;
     }
     .mushaf-rail-inner {
         display: flex;
         gap: 0.25rem;
         padding: 0.4rem;
         border-radius: 9999px;
-        border: 1px solid rgba(255, 255, 255, 0.7);
-        /* Two layers: a soft top-light sheen over the frosted base. */
-        background:
-            linear-gradient(160deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.42)),
-            rgba(248, 250, 252, 0.66);
-        box-shadow:
-            0 1px 2px rgba(15, 23, 42, 0.06),
-            0 8px 20px rgba(15, 23, 42, 0.09),
-            0 24px 48px rgba(15, 23, 42, 0.12),
-            inset 0 1px 0 rgba(255, 255, 255, 0.9);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
-        backdrop-filter: blur(20px) saturate(180%);
-    }
-    .mushaf-rail-inner.mushaf-rail-dark {
-        border-color: rgba(255, 255, 255, 0.09);
-        background:
-            linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
-            rgba(15, 23, 42, 0.72);
-        box-shadow:
-            0 1px 2px rgba(0, 0, 0, 0.4),
-            0 8px 20px rgba(0, 0, 0, 0.45),
-            0 24px 48px rgba(0, 0, 0, 0.5),
-            inset 0 1px 0 rgba(255, 255, 255, 0.07);
+        border: 1px solid var(--sx-line-strong);
+        background: color-mix(in srgb, var(--sx-surface) 82%, transparent);
+        box-shadow: 0 24px 44px -24px rgb(0 30 70 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.2);
+        -webkit-backdrop-filter: blur(16px) saturate(150%);
+        backdrop-filter: blur(16px) saturate(150%);
     }
     .mushaf-rail-item { position: relative; display: flex; }
+    /* Every action stacks its icon over an always-visible label, on both
+       breakpoints — the only difference between them is how the rail is placed. */
     .mushaf-rail-btn {
         position: relative;
         display: inline-flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        border-radius: 9999px;
-        color: #475569;
+        gap: 0.22rem;
+        height: auto;
+        min-width: 0;
+        border-radius: 0.8rem;
+        color: var(--sx-ink-2);
         -webkit-tap-highlight-color: transparent;
         transition:
-            background-color 0.22s var(--rail-ease),
-            color 0.22s var(--rail-ease),
-            box-shadow 0.22s var(--rail-ease),
-            transform 0.16s var(--rail-ease);
+            background-color 0.22s var(--sx-ease),
+            color 0.22s var(--sx-ease),
+            box-shadow 0.22s var(--sx-ease),
+            transform 0.16s var(--sx-ease);
     }
     .mushaf-rail-btn > svg { flex-shrink: 0; }
+    /* No opacity dimming on inactive labels — at this size it would drop contrast
+       below 4.5:1, and the active state is already carried by the gradient
+       lozenge and the gold underline. */
     .mushaf-rail-label {
         font-weight: 600;
         line-height: 1.15;
         white-space: nowrap;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
-    .mushaf-rail-dark .mushaf-rail-btn { color: #cbd5e1; }
 
     .mushaf-rail-btn:hover {
-        background: rgba(0, 86, 179, 0.09);
-        color: #0056b3;
+        background: var(--sx-accent-soft);
+        color: var(--sx-accent);
     }
-    .mushaf-rail-dark .mushaf-rail-btn:hover { background: rgba(100, 204, 197, 0.13); color: #64CCC5; }
 
     /* Keyboard focus must be visible on its own, not only via the label chip. */
     .mushaf-rail-btn:focus-visible {
-        outline: none;
-        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.95), 0 0 0 4px #0056b3;
-    }
-    .mushaf-rail-dark .mushaf-rail-btn:focus-visible {
-        box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.95), 0 0 0 4px #64CCC5;
+        outline: 2px solid var(--sx-teal);
+        outline-offset: 2px;
     }
 
     /* Tactile press — scale only, so nothing around it reflows. */
@@ -241,91 +215,13 @@
     /* Active tool: brand gradient lozenge lifted off the glass, edged in gold. */
     .mushaf-rail-btn.is-active {
         color: #fff;
-        background: linear-gradient(135deg, #0056b3 0%, #14746b 55%, #218838 100%);
+        background: var(--sx-grad);
         box-shadow:
-            0 2px 6px rgba(0, 86, 179, 0.32),
-            0 6px 16px rgba(33, 136, 56, 0.28),
-            inset 0 1px 0 rgba(255, 255, 255, 0.28),
-            inset 0 0 0 1px rgba(201, 162, 39, 0.45);
+            0 14px 28px -16px rgb(0 86 179 / 0.8),
+            inset 0 1px 0 rgb(255 255 255 / 0.28),
+            inset 0 0 0 1px color-mix(in srgb, var(--mushaf-gold) 45%, transparent);
     }
     .mushaf-rail-btn.is-active:hover { color: #fff; }
-
-    /* Hairline that fades at both ends instead of a flat grey bar. */
-    .mushaf-rail-divider {
-        display: block;
-        background: linear-gradient(to right, transparent, rgba(100, 116, 139, 0.34), transparent);
-    }
-    .mushaf-rail-dark .mushaf-rail-divider {
-        background: linear-gradient(to right, transparent, rgba(148, 163, 184, 0.28), transparent);
-    }
-
-    /* Popovers anchored off each rail button */
-    .mushaf-rail-pop {
-        position: absolute;
-        min-width: 11rem;
-        padding: 0.65rem;
-        border-radius: 0.9rem;
-        border: 1px solid rgba(0, 0, 0, 0.08);
-        background: #fff;
-        box-shadow: 0 12px 34px rgba(0, 0, 0, 0.18);
-        z-index: 46;
-    }
-    .mushaf-rail-pop.mushaf-pop-dark { background: #111827; border-color: rgba(255, 255, 255, 0.1); }
-    .mushaf-rail-pop-wide { min-width: 14rem; }
-    .mushaf-pop-title {
-        font-size: 0.7rem;
-        font-weight: 700;
-        letter-spacing: 0.02em;
-        margin-bottom: 0.4rem;
-        color: #6b7280;
-    }
-    .mushaf-pop-dark .mushaf-pop-title { color: #9ca3af; }
-    .mushaf-pop-opt {
-        display: block;
-        width: 100%;
-        text-align: start;
-        padding: 0.45rem 0.6rem;
-        border-radius: 0.55rem;
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: #374151;
-        transition: background-color 0.15s ease, color 0.15s ease;
-    }
-    .mushaf-pop-dark .mushaf-pop-opt { color: #d1d5db; }
-    .mushaf-pop-opt:hover { background: rgba(0, 0, 0, 0.05); }
-    .mushaf-pop-dark .mushaf-pop-opt:hover { background: rgba(255, 255, 255, 0.06); }
-    .mushaf-pop-opt.is-on { color: #fff; background: linear-gradient(135deg, #0056b3, #218838); }
-    .mushaf-step-btn {
-        width: 2.25rem; height: 2.25rem;
-        display: inline-flex; align-items: center; justify-content: center;
-        border-radius: 0.6rem; color: #374151;
-        background: rgba(0, 0, 0, 0.05);
-    }
-    .mushaf-pop-dark .mushaf-step-btn { color: #e5e7eb; background: rgba(255, 255, 255, 0.08); }
-    .mushaf-pop-select {
-        width: 100%; height: 2.5rem; padding: 0 0.6rem;
-        font-size: 0.85rem; border-radius: 0.6rem;
-        border: 1px solid rgba(0, 0, 0, 0.15); background: #fff; color: #111827;
-    }
-    .mushaf-pop-dark .mushaf-pop-select { background: #1f2937; border-color: rgba(255,255,255,0.12); color: #f3f4f6; }
-
-    /* Every action stacks its icon over an always-visible label, on both
-       breakpoints — the only difference between them is how the rail is placed. */
-    .mushaf-rail-btn {
-        flex-direction: column;
-        gap: 0.22rem;
-        height: auto;
-        min-width: 0;
-        border-radius: 0.8rem;
-    }
-    /* No opacity dimming on inactive labels — at this size it would drop contrast
-       below 4.5:1, and the active state is already carried by the gradient
-       lozenge and the gold underline. */
-    .mushaf-rail-label {
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
     /* Gold underline marks the active tool — a second cue beyond the gradient,
        so the state is not carried by colour alone. */
     .mushaf-rail-btn.is-active::after {
@@ -337,8 +233,36 @@
         width: 1.1rem;
         height: 2px;
         border-radius: 2px;
-        background: var(--rail-gold);
+        background: var(--mushaf-gold);
     }
+
+    /* Hairline that fades at both ends instead of a flat bar. */
+    .mushaf-rail-divider {
+        display: block;
+        background: linear-gradient(to right, transparent, var(--sx-line-strong), transparent);
+    }
+
+    /* Popovers anchored off each rail button (the paper is .sx-surface). */
+    .mushaf-rail-pop {
+        position: absolute;
+        min-width: 11rem;
+        padding: 0.65rem;
+        z-index: 46;
+    }
+    .mushaf-rail-pop-wide { min-width: 14rem; }
+    .mushaf-pop-opt {
+        display: block;
+        width: 100%;
+        text-align: start;
+        padding: 0.45rem 0.6rem;
+        border-radius: 0.55rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--sx-ink-2);
+        transition: background-color 0.15s var(--sx-ease), color 0.15s var(--sx-ease);
+    }
+    .mushaf-pop-opt:hover { background: var(--sx-surface-2); color: var(--sx-ink); }
+    .mushaf-pop-opt.is-on { color: #fff; background: var(--sx-grad); }
 
     /* Desktop: vertical rail on the inline-end edge; popovers open toward content. */
     @media (min-width: 1024px) {
@@ -390,8 +314,8 @@
 @endphp
 
 @section('content')
-{{-- Reading progress bar --}}
-<div class="progress-bar" id="reading-progress-bar" style="transform: scaleX(0)"></div>
+{{-- Reading progress bar (the script below scales the inner span) --}}
+<div class="sx-progress" aria-hidden="true"><span id="reading-progress-bar" style="transform: scaleX(0)"></span></div>
 
 <div
     x-data="{
@@ -771,11 +695,10 @@
         }
     }"
     x-init="boot()"
-    :class="$store.theme.dark ? 'bg-gray-950' : 'bg-gray-50'"
-    class="min-h-dvh font-['Cairo'] transition-colors duration-300"
+    class="sx min-h-[100dvh] pb-20"
 >
 
-<main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8"
+<main class="sx-wrap py-8"
       :style="$store.audioPlayer.track ? 'padding-bottom: 8rem' : ''"
       x-effect="syncPlayingVerse($store.audioPlayer.playingAyah)">
 
@@ -832,25 +755,21 @@
      @click.outside="verseMenu = null"
      @keydown.escape.window="verseMenu = null"
      @scroll.window="verseMenu = null"
-     class="fixed rounded-xl border shadow-2xl py-1 overflow-hidden"
+     class="sx-surface fixed p-1 overflow-hidden"
      {{-- one :style, not a static style plus a bound one: a bound string replaces the attribute --}}
      :style="`left: ${verseMenuPos.x}px; top: ${verseMenuPos.y}px; width: 216px; z-index: 65`"
-     :class="$store.theme.dark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'"
      role="menu">
-    <p class="px-3 py-1.5 text-[11px] font-semibold"
-       :class="$store.theme.dark ? 'text-gray-500' : 'text-gray-400'">
+    <p class="px-3 py-1.5 text-[11px] font-bold tabular-nums text-[color:var(--sx-muted)]">
         {{ __('quran.public.verse_label') }} <span x-text="verseMenu ? fmtNum(verseMenu.number) : ''"></span>
     </p>
     <button type="button" role="menuitem" @click="listenFromVerse(verseMenu)"
-            class="w-full text-start px-3 py-2.5 text-sm font-medium flex items-center gap-2.5 transition-colors"
-            :class="$store.theme.dark ? 'text-gray-200 hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-100'">
-        <svg class="w-4 h-4 flex-shrink-0 text-[#218838]" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.84A1 1 0 004 3.7v12.6a1 1 0 001.5.86l11-6.3a1 1 0 000-1.72l-11-6.3z"/></svg>
+            class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-start text-sm font-semibold text-[color:var(--sx-ink-2)] transition-colors hover:bg-[color:var(--sx-surface-2)] hover:text-[color:var(--sx-ink)]">
+        <i data-lucide="play" class="w-4 h-4 flex-shrink-0 text-[color:var(--sx-accent)]" aria-hidden="true"></i>
         {{ __('quran.public.listen_from_here') }}
     </button>
     <button type="button" role="menuitem" @click="showTafsirFor(verseMenu)"
-            class="w-full text-start px-3 py-2.5 text-sm font-medium flex items-center gap-2.5 transition-colors"
-            :class="$store.theme.dark ? 'text-gray-200 hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-100'">
-        <svg class="w-4 h-4 flex-shrink-0 text-[#0056b3]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.5S10 5 7 5H4v12h3c3 0 5 1.5 5 1.5m0-12S14 5 17 5h3v12h-3c-3 0-5 1.5-5 1.5m0-12v12"/></svg>
+            class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-start text-sm font-semibold text-[color:var(--sx-ink-2)] transition-colors hover:bg-[color:var(--sx-surface-2)] hover:text-[color:var(--sx-ink)]">
+        <i data-lucide="book-open" class="w-4 h-4 flex-shrink-0 text-[color:var(--sx-accent)]" aria-hidden="true"></i>
         {{ __('quran.public.show_tafsir') }}
     </button>
 </div>

@@ -17,7 +17,6 @@
     - translationResources: array
     - surah: object
     - $store.audioPlayer: audio player store
-    - $store.theme.dark: boolean
 
     Functions expected:
     - setViewMode(mode)
@@ -30,7 +29,7 @@
 
 <div x-data="{ panel: null }" @keydown.escape.window="panel = null" @click.outside="panel = null"
      class="mushaf-rail" role="toolbar" aria-label="{{ __('quran.public.surah_tools') }}">
-    <div class="mushaf-rail-inner" :class="$store.theme.dark ? 'mushaf-rail-dark' : ''">
+    <div class="mushaf-rail-inner">
 
         {{-- Layout toggle: Mushaf <-> Verses --}}
         <button type="button" @click="setViewMode(viewMode === 'reading' ? 'verses' : 'reading'); panel = null"
@@ -52,8 +51,8 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5h7M4 5c0 4 3 9 7 11M9 3v2m-2 9c2-1 4-3 5-6m6 13-3-7-3 7m1.2-3h3.6"/></svg>
                 <span class="mushaf-rail-label">{{ __('quran.public.filter_display') }}</span>
             </button>
-            <div x-show="panel === 'display'" x-cloak x-transition.opacity class="mushaf-rail-pop" :class="$store.theme.dark ? 'mushaf-pop-dark' : ''">
-                <p class="mushaf-pop-title">{{ __('quran.public.filter_display') }}</p>
+            <div x-show="panel === 'display'" x-cloak x-transition.opacity class="mushaf-rail-pop sx-surface">
+                <p class="sx-label">{{ __('quran.public.filter_display') }}</p>
                 @foreach(['arabic' => __('quran.public.mode_arabic'), 'translation' => __('quran.public.mode_translation'), 'both' => __('quran.public.mode_both')] as $mode => $label)
                 <button type="button" @click="setReadingMode('{{ $mode }}')" class="mushaf-pop-opt" :class="readingMode === '{{ $mode }}' ? 'is-on' : ''">{{ $label }}</button>
                 @endforeach
@@ -68,14 +67,14 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 18 8.5 7l4.5 11M5.4 14h6.2M15 18l3-8 3 8m-5.3-2.8h4.6"/></svg>
                 <span class="mushaf-rail-label">{{ __('quran.public.filter_font') }}</span>
             </button>
-            <div x-show="panel === 'font'" x-cloak x-transition.opacity class="mushaf-rail-pop" :class="$store.theme.dark ? 'mushaf-pop-dark' : ''">
-                <p class="mushaf-pop-title">{{ __('quran.public.filter_font') }}</p>
+            <div x-show="panel === 'font'" x-cloak x-transition.opacity class="mushaf-rail-pop sx-surface">
+                <p class="sx-label">{{ __('quran.public.filter_font') }}</p>
                 <div class="flex items-center gap-2">
-                    <button type="button" @click="adjustFontSize(-2)" class="mushaf-step-btn" aria-label="{{ __('quran.public.decrease_font') }}">
+                    <button type="button" @click="adjustFontSize(-2)" class="sx-btn w-11 px-0" aria-label="{{ __('quran.public.decrease_font') }}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M20 12H4"/></svg>
                     </button>
-                    <span class="min-w-[3.25rem] text-center text-sm font-semibold tabular-nums" x-text="fontSize + 'px'"></span>
-                    <button type="button" @click="adjustFontSize(2)" class="mushaf-step-btn" aria-label="{{ __('quran.public.increase_font') }}">
+                    <span class="min-w-[3.25rem] text-center text-sm font-bold tabular-nums text-[color:var(--sx-ink)]" x-text="fontSize + 'px'"></span>
+                    <button type="button" @click="adjustFontSize(2)" class="sx-btn w-11 px-0" aria-label="{{ __('quran.public.increase_font') }}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
                     </button>
                 </div>
@@ -100,10 +99,10 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h10m4 0h2M4 12h2m4 0h10M4 18h10m4 0h2"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/></svg>
                 <span class="mushaf-rail-label">{{ __('quran.public.rail_settings') }}</span>
             </button>
-            <div x-show="panel === 'settings'" x-cloak x-transition.opacity class="mushaf-rail-pop mushaf-rail-pop-wide" :class="$store.theme.dark ? 'mushaf-pop-dark' : ''">
+            <div x-show="panel === 'settings'" x-cloak x-transition.opacity class="mushaf-rail-pop mushaf-rail-pop-wide sx-surface">
                 <div x-show="editionsForLang.length > 1">
-                    <p class="mushaf-pop-title">{{ __('quran.public.translation_edition') }}</p>
-                    <select x-model.number="selectedTranslationId" @change="setTranslationEdition(selectedTranslationId)" class="mushaf-pop-select">
+                    <p class="sx-label">{{ __('quran.public.translation_edition') }}</p>
+                    <select x-model.number="selectedTranslationId" @change="setTranslationEdition(selectedTranslationId)" class="sx-input">
                         @foreach($translationResources as $tr)
                             @if($tr['language'] === $defaultTranslationLang)
                             <option value="{{ $tr['id'] }}">{{ $tr['name'] }}</option>
@@ -112,20 +111,21 @@
                     </select>
                 </div>
                 <div x-show="tafsirResources.length > 1" class="mt-3">
-                    <p class="mushaf-pop-title">{{ __('quran.public.tafsir_source') }}</p>
-                    <select x-model.number="selectedTafsirId" @change="setTafsirSource(selectedTafsirId)" class="mushaf-pop-select">
+                    <p class="sx-label">{{ __('quran.public.tafsir_source') }}</p>
+                    <select x-model.number="selectedTafsirId" @change="setTafsirSource(selectedTafsirId)" class="sx-input">
                         @foreach($tafsirResources as $tr)
                         <option value="{{ $tr['id'] }}">{{ $tr['name'] }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div x-show="reciters.length > 1" class="mt-3">
-                    <p class="mushaf-pop-title">{{ __('quran.public.reciter') }}</p>
-                    <select :value="$store.audioPlayer.currentReciter()?.profileId || $store.audioPlayer.reciterId" @change="$store.audioPlayer.selectPerson(Number($event.target.value))" class="w-full rounded-lg border-gray-300 dark:bg-gray-800">
+                    <p class="sx-label">{{ __('quran.public.reciter') }}</p>
+                    <select :value="$store.audioPlayer.currentReciter()?.profileId || $store.audioPlayer.reciterId" @change="$store.audioPlayer.selectPerson(Number($event.target.value))" class="sx-input">
                         <template x-for="person in $store.audioPlayer.personOptions()" :key="person.id"><option :value="person.id" x-text="person.name"></option></template>
                     </select>
-                    <label class="block mt-3" x-show="$store.audioPlayer.recordingOptions().length > 1">{{ __('quran.recordings.choose') }}
-                        <select :value="$store.audioPlayer.reciterId" @change="$store.audioPlayer.selectReciter(Number($event.target.value))" class="w-full rounded-lg border-gray-300 dark:bg-gray-800">
+                    <label class="block mt-3" x-show="$store.audioPlayer.recordingOptions().length > 1">
+                        <span class="sx-label">{{ __('quran.recordings.choose') }}</span>
+                        <select :value="$store.audioPlayer.reciterId" @change="$store.audioPlayer.selectReciter(Number($event.target.value))" class="sx-input">
                             <template x-for="r in $store.audioPlayer.recordingOptions()" :key="r.id"><option :value="r.id" x-text="r.recordingLabel || r.nameAr || r.nameEn"></option></template>
                         </select>
                     </label>

@@ -24,7 +24,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use ZipStream\CompressionMethod;
+use ZipStream\ZipStream;
 
 /**
  * Visitor-built reciter playlists: public gallery, 3-step wizard, playlist
@@ -147,6 +152,51 @@ final class QuranPlaylistController extends Controller
         $this->plays->record($playlist, $request);
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * The playlist as a zip, streamed straight from the source CDNs — nothing
+     * is written to disk and memory stays flat. Files are STOREd: mp3 does not
+     * compress, so deflating would only burn CPU.
+     *
+     * ponytail: a full-Quran playlist proxies ~1-2 GB through this process (hence
+     * the throttle, and a file that dies mid-stream leaves a truncated entry).
+     * Move to a queued job writing to storage if it gets popular.
+     */
+    public function download(Request $request, string $slug): StreamedResponse
+    {
+        $playlist = $this->repo->findBySlugVisibleTo($slug, $request->user()?->id) ?? abort(404);
+        $tracks = array_values(array_filter($this->service->tracks($playlist, app()->getLocale()), fn (array $t) => (bool) $t['url']));
+        abort_if($tracks === [], 404);
+
+        return response()->streamDownload(function () use ($tracks): void {
+            @set_time_limit(0);
+            $zip = new ZipStream(sendHttpHeaders: false, defaultCompressionMethod: CompressionMethod::STORE);
+            foreach ($tracks as $i => $track) {
+                try {
+                    $body = Http::timeout(900)->withOptions(['stream' => true])
+                        ->get($track['url'])->throw()->resource();
+                } catch (\Throwable $e) {
+                    report($e); // A dead CDN link skips one track, it does not kill the archive.
+
+                    continue;
+                }
+                $zip->addFileFromStream($this->trackFilename($i + 1, $track), $body);
+            }
+            $zip->finish();
+        }, (Str::slug($playlist->name) ?: $playlist->slug).'.zip', [
+            'Content-Type' => 'application/zip',
+            'X-Accel-Buffering' => 'no', // nginx must not buffer a multi-GB body
+        ]);
+    }
+
+    /** `001 - Al-Fatihah - Reciter.mp3`, with anything a filesystem hates replaced. */
+    private function trackFilename(int $position, array $track): string
+    {
+        $ext = pathinfo((string) parse_url((string) $track['url'], PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'mp3';
+        $label = rtrim(sprintf('%03d - %s - %s', $position, $track['surahName'], $track['reciterName'] ?? ''), ' -');
+
+        return preg_replace('#[/\\\\:*?"<>|[:cntrl:]]#', '-', $label).'.'.$ext;
     }
 
     /**

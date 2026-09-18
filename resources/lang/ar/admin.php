@@ -777,6 +777,16 @@ return [
     'live_channel_streaming' => 'البث',
     'live_channel_streaming_url' => 'رابط البث',
     'live_channel_streaming_hint' => 'رابط تضمين يوتيوب أو أي بث قابل للتضمين عبر iframe.',
+    'live_channel_stream_type' => 'نوع البث',
+    'live_channel_stream_type_hint' => 'اتركه على «تلقائي» ليُحدَّد من الرابط. اختر «صوت مباشر» لبث الراديو، فروابط الراديو لا تحمل امتدادًا يدل عليها.',
+    'stream_type_auto' => 'تلقائي (حسب الرابط)',
+    'stream_type_youtube' => 'يوتيوب',
+    'stream_type_hls' => 'HLS (‎.m3u8)',
+    'stream_type_dash' => 'DASH (‎.mpd)',
+    'stream_type_file' => 'ملف فيديو (MP4 / WebM)',
+    'stream_type_audio' => 'صوت مباشر (راديو)',
+    'stream_type_iframe' => 'تضمين iframe',
+    'live_channel_preview_unavailable' => 'لا تتوفر معاينة لهذا النوع هنا. افتح صفحة القناة لتجربة المشغّل.',
     'live_channel_slug_auto_hint' => 'اتركه فارغًا ليتم توليده تلقائيًا من العنوان.',
 
     // YouTube import / sync

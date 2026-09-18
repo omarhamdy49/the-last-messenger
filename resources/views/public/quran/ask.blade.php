@@ -24,63 +24,54 @@
 
 @push('head')
 <style>
-    .ask-fade { animation: askFadeUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) both; }
-    @keyframes askFadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-    @media (prefers-reduced-motion: reduce) { .ask-fade { animation: none; } }
-    .ask-skeleton { background: linear-gradient(90deg, rgba(148,163,184,0.10) 25%, rgba(148,163,184,0.20) 37%, rgba(148,163,184,0.10) 63%); background-size: 400% 100%; animation: askShimmer 1.4s ease infinite; }
-    @keyframes askShimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
-    .qa-caret::after { content: '▍'; margin-inline-start: 1px; color: #64CCC5; animation: qaBlink 1s steps(2) infinite; }
+    /* The streaming caret is the one thing the system has no vocabulary for:
+       a blinking block glyph tacked onto the tail of a token stream. Everything
+       else on this page (entrance, skeleton, surfaces) uses `sx`. */
+    .qa-caret::after { content: '▍'; margin-inline-start: 1px; color: var(--sx-teal); animation: qaBlink 1s steps(2) infinite; }
     @keyframes qaBlink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
     @media (prefers-reduced-motion: reduce) { .qa-caret::after { animation: none; } }
-    .ask-hist-active { position: relative; }
-    .ask-hist-active::before { content: ''; position: absolute; inset-inline-start: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 9999px; background: linear-gradient(180deg, #0056b3, #218838); }
-    .ask-thin-scroll::-webkit-scrollbar { width: 6px; }
-    .ask-thin-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.35); border-radius: 9999px; }
-    .ask-thin-scroll { scrollbar-width: thin; }
 </style>
 @endpush
 
 @section('content')
 @include('components.quran.answer-renderer')
 
-<div x-data="quranAsk()" x-init="boot()"
-     class="h-dvh flex flex-col overflow-hidden"
-     :class="$store.theme.dark ? 'bg-[#0b0f1a] text-gray-100' : 'bg-[#F8F9FA] text-gray-900'">
+{{-- The shell stays `h-dvh … overflow-hidden`: the conversation scrolls inside
+     itself and the composer is pinned to the bottom of the column. --}}
+<div x-data="quranAsk()" x-init="boot()" class="sx h-dvh flex flex-col overflow-hidden">
 
     {{-- ============================ Top bar (wide / full width) ============================ --}}
-    <header class="shrink-0 h-14 sm:h-16 flex items-center gap-2 sm:gap-3 px-3 sm:px-4 border-b z-30 backdrop-blur-md"
-            :class="$store.theme.dark ? 'bg-[#0b0f1a]/90 border-white/10' : 'bg-white/95 border-gray-200'">
+    <header class="shrink-0 h-14 sm:h-16 flex items-center gap-2 sm:gap-3 px-3 sm:px-4 z-30
+                   border-b border-[color:var(--sx-line)] bg-[color:var(--sx-surface)]">
 
         {{-- Sidebar collapse / expand --}}
         @auth
         <button type="button" @click="toggleSidebar()"
-                class="p-2 rounded-lg transition-colors shrink-0"
-                :class="$store.theme.dark ? 'text-gray-300 hover:bg-white/10' : 'text-gray-600 hover:bg-gray-100'"
-                :aria-expanded="sidebarOpen.toString()" aria-label="{{ __('quran.public.ask_history_title') }}">
-            <i data-lucide="panel-left" class="w-5 h-5 {{ $isRtl ? '-scale-x-100' : '' }}"></i>
+                class="shrink-0 p-2.5 rounded-full text-[color:var(--sx-ink-2)] transition-colors hover:bg-[color:var(--sx-accent-soft)] hover:text-[color:var(--sx-accent)]"
+                :aria-expanded="sidebarOpen.toString()"
+                aria-label="{{ __('quran.public.ask_history_title') }}" title="{{ __('quran.public.ask_history_title') }}">
+            <i data-lucide="panel-left" class="w-5 h-5 {{ $isRtl ? '-scale-x-100' : '' }}" aria-hidden="true"></i>
         </button>
         {{-- Quick "new question" — only when the sidebar is collapsed/closed --}}
         <button type="button" x-show="!sidebarOpen" @click="newChat()"
-                class="p-2 rounded-lg transition-colors shrink-0"
-                :class="$store.theme.dark ? 'text-gray-300 hover:bg-white/10' : 'text-gray-600 hover:bg-gray-100'"
+                class="shrink-0 p-2.5 rounded-full text-[color:var(--sx-ink-2)] transition-colors hover:bg-[color:var(--sx-accent-soft)] hover:text-[color:var(--sx-accent)]"
                 title="{{ __('quran.public.ask_new_question') }}" aria-label="{{ __('quran.public.ask_new_question') }}">
-            <i data-lucide="square-pen" class="w-5 h-5"></i>
+            <i data-lucide="square-pen" class="w-5 h-5" aria-hidden="true"></i>
         </button>
         @endauth
 
         {{-- Brand --}}
-        <div class="flex items-center gap-2 font-bold truncate" :class="$store.theme.dark ? 'text-white' : 'text-gray-900'">
-            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-[#0056b3] to-[#218838] text-white shrink-0">
-                <i data-lucide="sparkles" class="w-5 h-5"></i>
+        <div class="flex items-center gap-2 font-bold truncate text-[color:var(--sx-ink)]">
+            <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl text-white shrink-0" style="background: var(--sx-grad)">
+                <i data-lucide="sparkles" class="w-5 h-5" aria-hidden="true"></i>
             </span>
             <span class="truncate text-sm sm:text-base">{{ __('quran.public.ask_page_title') }}</span>
         </div>
 
         <div class="ms-auto flex items-center gap-1.5 sm:gap-2">
             @auth
-            <span x-show="mode === 'ai'" class="hidden md:inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-semibold"
-                  :class="$store.theme.dark ? 'bg-white/10 text-gray-200' : 'bg-gray-100 text-gray-600'">
-                <i data-lucide="gauge" class="w-3.5 h-3.5 text-[#64CCC5]"></i><span x-text="quotaLabel()"></span>
+            <span x-show="mode === 'ai'" class="sx-chip hidden md:inline-flex">
+                <i data-lucide="gauge" aria-hidden="true"></i><span class="tabular-nums" x-text="quotaLabel()"></span>
             </span>
             @endauth
 
@@ -90,27 +81,24 @@
             @endphp
             <div class="relative shrink-0" x-data="{ langOpen: false }">
                 <button type="button" @click="langOpen = !langOpen" :aria-expanded="langOpen.toString()"
-                        class="inline-flex items-center gap-1 p-2 rounded-lg transition-colors"
-                        :class="$store.theme.dark ? 'text-gray-300 hover:bg-white/10' : 'text-gray-600 hover:bg-gray-100'"
+                        class="inline-flex items-center gap-1 p-2.5 rounded-full text-[color:var(--sx-ink-2)] transition-colors hover:bg-[color:var(--sx-accent-soft)] hover:text-[color:var(--sx-accent)]"
                         aria-label="{{ __('site.language') }}" title="{{ __('site.language') }}">
-                    <i data-lucide="globe" class="w-5 h-5"></i>
+                    <i data-lucide="globe" class="w-5 h-5" aria-hidden="true"></i>
                     <span class="hidden sm:block text-xs font-semibold uppercase">{{ app()->getLocale() }}</span>
-                    <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5" aria-hidden="true"></i>
                 </button>
                 <div x-show="langOpen" @click.away="langOpen = false" x-transition x-cloak
-                     class="absolute end-0 mt-2 w-44 rounded-xl shadow-2xl border py-1.5 z-50"
-                     :class="$store.theme.dark ? 'bg-[#16213e] border-white/10' : 'bg-white border-gray-200'">
+                     class="sx-surface absolute end-0 mt-2 w-44 p-1.5 z-50">
                     @foreach ($askLanguages as $code => $lang)
                         <form method="POST" action="{{ route('language.switch') }}">
                             @csrf
                             <input type="hidden" name="language" value="{{ $code }}">
                             <button type="submit"
-                                    class="w-full text-start px-4 py-2.5 flex items-center gap-3 text-sm transition-colors {{ app()->getLocale() === $code ? 'font-bold' : '' }}"
-                                    :class="$store.theme.dark ? 'text-gray-200 hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'">
+                                    class="w-full text-start px-3 py-2.5 flex items-center gap-3 text-sm rounded-xl transition-colors text-[color:var(--sx-ink-2)] hover:bg-[color:var(--sx-surface-2)] hover:text-[color:var(--sx-ink)] {{ app()->getLocale() === $code ? 'font-bold' : '' }}">
                                 <span class="text-xl leading-none">{{ $lang['flag'] }}</span>
                                 <span>{{ $lang['name'] }}</span>
                                 @if (app()->getLocale() === $code)
-                                    <i data-lucide="check" class="w-4 h-4 ms-auto text-[#64CCC5]"></i>
+                                    <i data-lucide="check" class="w-4 h-4 ms-auto text-[color:var(--sx-accent)]" aria-hidden="true"></i>
                                 @endif
                             </button>
                         </form>
@@ -120,20 +108,16 @@
 
             {{-- Theme toggle (the site header that normally carries it is hidden here) --}}
             <button type="button" @click="$store.theme.toggle()"
-                    class="p-2 rounded-lg transition-colors shrink-0"
-                    :class="$store.theme.dark ? 'text-gray-300 hover:bg-white/10' : 'text-gray-600 hover:bg-gray-100'"
-                    aria-label="{{ __('site.toggle_theme') }}">
-                <i x-show="!$store.theme.dark" data-lucide="moon" class="w-5 h-5"></i>
-                <i x-show="$store.theme.dark" data-lucide="sun" class="w-5 h-5" x-cloak></i>
+                    class="shrink-0 p-2.5 rounded-full text-[color:var(--sx-ink-2)] transition-colors hover:bg-[color:var(--sx-accent-soft)] hover:text-[color:var(--sx-accent)]"
+                    aria-label="{{ __('site.toggle_theme') }}" title="{{ __('site.toggle_theme') }}">
+                <i x-show="!$store.theme.dark" data-lucide="moon" class="w-5 h-5" aria-hidden="true"></i>
+                <i x-show="$store.theme.dark" data-lucide="sun" class="w-5 h-5" x-cloak aria-hidden="true"></i>
             </button>
 
             {{-- Exit / back to Quran — arrow points outward (toward the edge it sits on) --}}
-            <a href="{{ route('public.quran') }}" aria-label="{{ __('quran.public.ask_back') }}"
-               class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border transition-all shrink-0"
-               :class="$store.theme.dark
-                   ? 'bg-gray-900 border-white/10 text-gray-200 hover:text-white hover:border-[#64CCC5]/40'
-                   : 'bg-white border-gray-200 text-gray-700 hover:text-gray-900 hover:border-[#0056b3]/40 shadow-sm'">
-                <i data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}" class="w-4 h-4"></i>
+            <a href="{{ route('public.quran') }}" class="sx-btn shrink-0"
+               aria-label="{{ __('quran.public.ask_back') }}" title="{{ __('quran.public.ask_back') }}">
+                <i data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}" aria-hidden="true"></i>
                 <span class="hidden sm:inline">{{ __('quran.public.ask_back_short') }}</span>
             </a>
         </div>
@@ -149,40 +133,38 @@
 
         {{-- History sidebar — collapsible on desktop, slide-over on mobile --}}
         <aside x-cloak
-               class="absolute lg:relative inset-y-0 start-0 z-30 lg:z-auto flex flex-col shrink-0 border-e overflow-hidden transition-all duration-300 ease-in-out"
-               :class="(sidebarOpen ? 'w-[85vw] max-w-[20rem] lg:w-72 translate-x-0' : 'w-[85vw] max-w-[20rem] lg:w-0 lg:translate-x-0 ' + closedTranslate) + ' ' + ($store.theme.dark ? 'bg-[#0b0f1a] border-white/10' : 'bg-white border-gray-200')"
+               class="absolute lg:relative inset-y-0 start-0 z-30 lg:z-auto flex flex-col shrink-0 overflow-hidden transition-all duration-300 ease-in-out
+                      border-e border-[color:var(--sx-line)] bg-[color:var(--sx-surface)]"
+               :class="sidebarOpen ? 'w-[85vw] max-w-[20rem] lg:w-72 translate-x-0' : 'w-[85vw] max-w-[20rem] lg:w-0 lg:translate-x-0 ' + closedTranslate"
                aria-label="{{ __('quran.public.ask_history_title') }}">
             <div class="p-3 shrink-0">
-                <button type="button" @click="newChat()"
-                        class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-[#0056b3] to-[#218838] shadow-md shadow-[#0056b3]/25 hover:shadow-lg active:scale-[0.98] transition-all whitespace-nowrap">
-                    <i data-lucide="plus" class="w-4 h-4"></i>{{ __('quran.public.ask_new_question') }}
+                <button type="button" @click="newChat()" class="sx-btn is-primary w-full">
+                    <i data-lucide="plus" aria-hidden="true"></i>{{ __('quran.public.ask_new_question') }}
                 </button>
             </div>
             <div class="px-3 pb-1 shrink-0">
-                <p class="text-[11px] font-semibold uppercase tracking-wider px-2" :class="$store.theme.dark ? 'text-gray-500' : 'text-gray-400'">{{ __('quran.public.ask_history_title') }}</p>
+                <p class="sx-label !mb-0 px-2 uppercase tracking-wider">{{ __('quran.public.ask_history_title') }}</p>
             </div>
-            <div class="flex-1 overflow-y-auto ask-thin-scroll px-2 pb-3 space-y-1">
+            <div class="flex-1 overflow-y-auto px-2 pb-3">
                 <template x-if="!history.length">
-                    <p class="text-xs text-center py-6 px-3" :class="$store.theme.dark ? 'text-gray-500' : 'text-gray-400'">{{ __('quran.public.ask_history_empty') }}</p>
+                    <p class="px-3 py-6 text-center text-xs text-[color:var(--sx-muted)]">{{ __('quran.public.ask_history_empty') }}</p>
                 </template>
-                <template x-for="h in history" :key="h.id">
-                    <button type="button" @click="openHistory(h.id)"
-                            :aria-current="h.id === activeId ? 'true' : 'false'"
-                            class="group w-full text-start flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm transition-colors whitespace-nowrap"
-                            :class="h.id === activeId
-                                ? 'ask-hist-active font-semibold ' + ($store.theme.dark ? 'bg-white/10 text-white' : 'bg-blue-50 text-[#0056b3]')
-                                : ($store.theme.dark ? 'text-gray-300 hover:bg-white/5' : 'text-gray-600 hover:bg-gray-100')">
-                        {{-- AI indicator: every saved inquiry was answered by the AI assistant --}}
-                        <span class="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-md"
-                              :class="h.id === activeId
-                                  ? 'bg-gradient-to-br from-[#0056b3] to-[#218838] text-white'
-                                  : ($store.theme.dark ? 'bg-white/10 text-[#64CCC5]' : 'bg-blue-50 text-[#0056b3]')"
-                              title="{{ __('quran.public.ask_tab_ai') }}" aria-label="{{ __('quran.public.ask_tab_ai') }}">
-                            <i data-lucide="sparkles" class="w-3 h-3"></i>
-                        </span>
-                        <span class="truncate" x-text="h.question" :title="h.question"></span>
-                    </button>
-                </template>
+                <div class="sx-tile-list">
+                    <template x-for="h in history" :key="h.id">
+                        <button type="button" @click="openHistory(h.id)"
+                                :aria-current="h.id === activeId ? 'true' : 'false'"
+                                class="sx-tile group w-full text-start"
+                                :class="h.id === activeId ? '!border-[color:var(--sx-accent)] !bg-[color:var(--sx-accent-soft)]' : ''">
+                            {{-- AI indicator: every saved inquiry was answered by the AI assistant --}}
+                            <span class="sx-tile-icon" title="{{ __('quran.public.ask_tab_ai') }}" aria-label="{{ __('quran.public.ask_tab_ai') }}">
+                                <i data-lucide="sparkles" aria-hidden="true"></i>
+                            </span>
+                            <span class="sx-tile-title" x-text="h.question" :title="h.question"></span>
+                            <i data-lucide="chevron-left" class="w-4 h-4 ltr:rotate-180 text-[color:var(--sx-muted)]"
+                               x-show="h.id !== activeId" aria-hidden="true"></i>
+                        </button>
+                    </template>
+                </div>
             </div>
         </aside>
         @endauth
@@ -191,49 +173,46 @@
         <main class="flex-1 flex flex-col min-w-0">
 
             {{-- Scrollable conversation --}}
-            <div class="flex-1 overflow-y-auto ask-thin-scroll" x-ref="scroll">
-                <div class="container mx-auto px-4 sm:px-6 max-w-3xl py-6">
+            <div class="flex-1 overflow-y-auto" x-ref="scroll">
+                <div class="sx-wrap max-w-3xl py-6">
 
                     {{-- Guest notice --}}
                     @guest
-                    <div class="mb-6 ask-fade rounded-2xl border px-5 py-4 flex items-center justify-between gap-3 flex-wrap"
-                         :class="$store.theme.dark ? 'bg-gray-900 border-white/10' : 'bg-white border-gray-200 shadow-sm'">
-                        <div class="flex items-center gap-3">
-                            <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl"
-                                  :class="$store.theme.dark ? 'bg-gray-800 text-[#64CCC5]' : 'bg-blue-50 text-[#0056b3]'">
-                                <i data-lucide="lock" class="w-4 h-4"></i>
-                            </span>
-                            <div>
-                                <p class="text-sm font-semibold" :class="$store.theme.dark ? 'text-white' : 'text-gray-900'">{{ __('quran.public.ask_login_required') }}</p>
-                                <p class="text-xs" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'">{{ __('quran.public.ask_login_note') }}</p>
+                    <div class="sx-rise mb-6">
+                        <div class="sx-note">
+                            <i data-lucide="lock" class="w-5 h-5 mt-0.5 shrink-0" aria-hidden="true"></i>
+                            <div class="flex items-center justify-between gap-3 flex-wrap">
+                                <div class="min-w-0">
+                                    <p class="font-semibold text-[color:var(--sx-ink)]">{{ __('quran.public.ask_login_required') }}</p>
+                                    <p class="text-sm text-[color:var(--sx-muted)]">{{ __('quran.public.ask_login_note') }}</p>
+                                </div>
+                                <a href="{{ route('public.login') }}" @click.prevent="$dispatch('open-login')" class="sx-btn is-primary">
+                                    <i data-lucide="log-in" aria-hidden="true"></i>{{ __('quran.public.ask_login_cta') }}
+                                </a>
                             </div>
                         </div>
-                        <a href="{{ route('public.login') }}" @click.prevent="$dispatch('open-login')"
-                           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-br from-[#0056b3] to-[#218838] shadow-md hover:shadow-lg transition-all">
-                            <i data-lucide="log-in" class="w-4 h-4"></i>{{ __('quran.public.ask_login_cta') }}
-                        </a>
                     </div>
                     @endguest
 
-                    {{-- Empty / welcome state (centered, ChatGPT-style) --}}
+                    {{-- Empty / welcome state --}}
                     <template x-if="!current">
-                        <div class="ask-fade min-h-[55vh] flex flex-col items-center justify-center text-center px-2">
-                            <div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 bg-gradient-to-br from-[#0056b3] to-[#218838] text-white shadow-lg shadow-[#0056b3]/25">
-                                <i data-lucide="sparkles" class="w-9 h-9"></i>
-                            </div>
-                            <h1 class="text-2xl md:text-3xl font-bold mb-2 font-['Amiri']" :class="$store.theme.dark ? 'text-white' : 'text-gray-900'">{{ __('quran.public.ask_page_title') }}</h1>
-                            <p class="text-sm md:text-base max-w-xl" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'"
-                               x-text="mode === 'ai' ? @js(__('quran.public.ask_ai_disclaimer')) : @js(__('quran.public.ask_source_note'))"></p>
-                            <p class="mt-4 text-xs" :class="$store.theme.dark ? 'text-gray-500' : 'text-gray-400'">{{ __('quran.public.ask_start_hint') }}</p>
+                        <div class="min-h-[55vh] grid content-center">
+                            <x-public.editorial.page-hero :title="__('quran.public.ask_page_title')">
+                                <p class="sx-lead"
+                                   x-text="mode === 'ai' ? @js(__('quran.public.ask_ai_disclaimer')) : @js(__('quran.public.ask_source_note'))"></p>
+                                <p class="text-sm text-[color:var(--sx-muted)]">{{ __('quran.public.ask_start_hint') }}</p>
+                            </x-public.editorial.page-hero>
                         </div>
                     </template>
 
                     {{-- Single active Q&A (replaced on each ask / history open — never appended) --}}
                     <template x-if="current">
-                        <div class="ask-fade pb-4" :key="current.viewId">
+                        <div class="sx-rise pb-4" :key="current.viewId">
 
                             <div class="flex {{ $isRtl ? 'justify-start' : 'justify-end' }} mb-4" x-show="current.query">
-                                <div dir="{{ $isRtl ? 'rtl' : 'ltr' }}" class="max-w-[85%] rounded-2xl {{ $isRtl ? 'rounded-ss-md' : 'rounded-se-md' }} px-4 py-3 shadow-md bg-gradient-to-br from-[#0056b3] to-[#218838] text-white text-start">
+                                <div dir="{{ $isRtl ? 'rtl' : 'ltr' }}"
+                                     class="max-w-[85%] rounded-2xl {{ $isRtl ? 'rounded-ss-md' : 'rounded-se-md' }} px-4 py-3 text-white text-start shadow-[var(--sx-shadow)]"
+                                     style="background: var(--sx-grad)">
                                     <p class="text-[11px] font-semibold uppercase tracking-wider opacity-80 mb-0.5">{{ __('quran.public.ask_you') }}</p>
                                     <p class="text-base font-medium break-words" x-text="current.query"></p>
                                 </div>
@@ -243,20 +222,21 @@
                                 {{-- Loading / streaming --}}
                                 <template x-if="current.status === 'loading'">
                                     <div>
-                                        <div class="flex items-center gap-2 mb-3 text-sm" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">
-                                            <span class="w-4 h-4 border-2 border-[#64CCC5] border-t-transparent rounded-full animate-spin"></span>
+                                        <div class="flex items-center gap-2 mb-3 text-sm text-[color:var(--sx-muted)]">
+                                            <span class="w-4 h-4 rounded-full border-2 border-[color:var(--sx-teal)] border-t-transparent animate-spin" aria-hidden="true"></span>
                                             <span x-text="current.statusText || (current.kind === 'ai' ? @js(__('quran.public.ask_thinking')) : @js(__('quran.public.ask_loading')))"></span>
                                         </div>
                                         <template x-if="current.html">
-                                            <div class="rounded-2xl p-5 border" :class="$store.theme.dark ? 'bg-gray-900 border-white/5' : 'bg-white border-gray-100 shadow-sm'">
-                                                <div dir="{{ $isRtl ? 'rtl' : 'ltr' }}" class="qa-prose qa-caret" :class="($store.theme.dark ? 'qa-dark text-gray-100' : 'text-gray-800')" x-html="current.html"></div>
+                                            <div class="sx-surface p-5">
+                                                <div dir="{{ $isRtl ? 'rtl' : 'ltr' }}" class="qa-prose qa-caret text-[color:var(--sx-ink-2)]"
+                                                     :class="$store.theme.dark ? 'qa-dark' : ''" x-html="current.html"></div>
                                             </div>
                                         </template>
                                         <template x-if="!current.html">
-                                            <div class="rounded-2xl p-5 border space-y-3" :class="$store.theme.dark ? 'bg-gray-900 border-white/5' : 'bg-white border-gray-100'">
-                                                <div class="ask-skeleton h-4 w-full rounded"></div>
-                                                <div class="ask-skeleton h-4 w-11/12 rounded"></div>
-                                                <div class="ask-skeleton h-4 w-2/3 rounded"></div>
+                                            <div class="sx-surface p-5 space-y-3">
+                                                <div class="sx-skeleton h-4 w-full"></div>
+                                                <div class="sx-skeleton h-4 w-11/12"></div>
+                                                <div class="sx-skeleton h-4 w-2/3"></div>
                                             </div>
                                         </template>
                                     </div>
@@ -264,42 +244,39 @@
 
                                 {{-- Error --}}
                                 <template x-if="current.status === 'error'">
-                                    <div class="rounded-2xl p-5 border flex items-center justify-between gap-3 flex-wrap"
-                                         :class="$store.theme.dark ? 'bg-red-950/30 border-red-900/40' : 'bg-red-50 border-red-100'">
-                                        <div class="flex items-center gap-2 text-sm" :class="$store.theme.dark ? 'text-red-300' : 'text-red-600'">
-                                            <i data-lucide="alert-triangle" class="w-4 h-4 flex-shrink-0"></i><span>{{ __('quran.public.ask_error') }}</span>
+                                    <div class="sx-dispute">
+                                        <span class="sx-dispute-icon" aria-hidden="true"><i data-lucide="alert-triangle"></i></span>
+                                        <div class="flex items-center justify-between gap-3 flex-wrap">
+                                            <p>{{ __('quran.public.ask_error') }}</p>
+                                            <button type="button" @click="retry()" class="sx-btn is-primary">
+                                                <i data-lucide="rotate-cw" aria-hidden="true"></i>{{ __('quran.public.ask_retry') }}
+                                            </button>
                                         </div>
-                                        <button @click="retry()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white hover:shadow-md transition-all">
-                                            <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>{{ __('quran.public.ask_retry') }}
-                                        </button>
                                     </div>
                                 </template>
 
                                 {{-- Quota --}}
                                 <template x-if="current.status === 'quota'">
-                                    <div class="rounded-2xl p-6 border text-center" :class="$store.theme.dark ? 'bg-amber-950/20 border-amber-900/40' : 'bg-amber-50 border-amber-100'">
-                                        <i data-lucide="gauge" class="w-8 h-8 mx-auto mb-3" :class="$store.theme.dark ? 'text-amber-400' : 'text-amber-500'"></i>
-                                        <p class="text-sm font-medium" :class="$store.theme.dark ? 'text-amber-200' : 'text-amber-700'">{{ __('quran.public.ask_quota_exceeded', ['limit' => $limit]) }}</p>
-                                    </div>
+                                    <x-public.editorial.empty-state icon="gauge"
+                                        :title="__('quran.public.ask_quota_exceeded', ['limit' => $limit])" />
                                 </template>
 
                                 {{-- Empty search --}}
                                 <template x-if="current.status === 'empty'">
-                                    <div class="rounded-2xl p-8 border text-center" :class="$store.theme.dark ? 'bg-gray-900 border-white/5' : 'bg-white border-gray-100'">
-                                        <i data-lucide="search-x" class="w-8 h-8 mx-auto mb-3" :class="$store.theme.dark ? 'text-gray-600' : 'text-gray-400'"></i>
-                                        <p class="font-semibold mb-1" :class="$store.theme.dark ? 'text-gray-200' : 'text-gray-800'">{{ __('quran.public.ask_empty') }}</p>
-                                        <p class="text-sm" :class="$store.theme.dark ? 'text-gray-500' : 'text-gray-500'">{{ __('quran.public.ask_empty_hint') }}</p>
-                                    </div>
+                                    <x-public.editorial.empty-state icon="search-x"
+                                        :title="__('quran.public.ask_empty')"
+                                        :hint="__('quran.public.ask_empty_hint')" />
                                 </template>
 
                                 {{-- Done: AI answer --}}
                                 <template x-if="current.status === 'done' && current.kind === 'ai'">
-                                    <div class="rounded-2xl p-5 border" :class="$store.theme.dark ? 'bg-gray-900 border-white/5' : 'bg-white border-gray-100 shadow-sm'">
-                                        <div dir="{{ $isRtl ? 'rtl' : 'ltr' }}" class="qa-prose" :class="($store.theme.dark ? 'qa-dark text-gray-100' : 'text-gray-800')" x-html="current.html"></div>
+                                    <div class="sx-surface p-5">
+                                        <div dir="{{ $isRtl ? 'rtl' : 'ltr' }}" class="qa-prose text-[color:var(--sx-ink-2)]"
+                                             :class="$store.theme.dark ? 'qa-dark' : ''" x-html="current.html"></div>
                                         <template x-if="current.source === 'cache'">
-                                            <div class="mt-3 flex items-center gap-2 text-[11px]" :class="$store.theme.dark ? 'text-gray-500' : 'text-gray-400'">
-                                                <span class="inline-flex items-center gap-1"><i data-lucide="history" class="w-3 h-3"></i>{{ __('quran.public.ask_from_cache') }}</span>
-                                            </div>
+                                            <p class="mt-3 inline-flex items-center gap-1 text-[11px] text-[color:var(--sx-muted)]">
+                                                <i data-lucide="history" class="w-3 h-3" aria-hidden="true"></i>{{ __('quran.public.ask_from_cache') }}
+                                            </p>
                                         </template>
                                     </div>
                                 </template>
@@ -307,25 +284,26 @@
                                 {{-- Done: search results --}}
                                 <template x-if="current.status === 'done' && current.kind === 'search'">
                                     <div>
-                                        <p class="text-xs mb-3 flex items-center gap-1.5" :class="$store.theme.dark ? 'text-gray-500' : 'text-gray-500'">
-                                            <i data-lucide="book-open" class="w-3.5 h-3.5 text-[#64CCC5]"></i>
-                                            <span x-text="current.results.length"></span><span>{{ __('quran.public.verse_unit') }}</span>
+                                        <p class="mb-3 flex items-center gap-1.5 text-xs text-[color:var(--sx-muted)]">
+                                            <i data-lucide="book-open" class="w-3.5 h-3.5 text-[color:var(--sx-teal)]" aria-hidden="true"></i>
+                                            <span class="tabular-nums" x-text="current.results.length"></span><span>{{ __('quran.public.verse_unit') }}</span>
                                             <template x-if="current.translationName"><span class="opacity-70">· <span x-text="current.translationName"></span></span></template>
                                         </p>
-                                        <div class="space-y-3">
+                                        <div class="grid gap-3">
                                             <template x-for="r in current.results" :key="r.verseKey">
-                                                <a :href="r.url" class="group block rounded-2xl p-5 border transition-all hover:-translate-y-0.5"
-                                                   :class="$store.theme.dark ? 'bg-gray-900 border-white/5 hover:border-[#64CCC5]/30' : 'bg-white border-gray-100 hover:border-[#0056b3]/25 hover:shadow-lg'">
-                                                    <div class="flex items-center justify-between gap-3 mb-3">
-                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold" :class="$store.theme.dark ? 'bg-gray-800 text-[#64CCC5]' : 'bg-blue-50 text-[#0056b3]'" x-text="r.verseKey"></span>
-                                                        <span class="inline-flex items-center gap-1 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity" :class="$store.theme.dark ? 'text-[#64CCC5]' : 'text-[#0056b3]'">
-                                                            {{ __('quran.public.ask_open_verse') }}<i data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}" class="w-3.5 h-3.5"></i>
-                                                        </span>
+                                                <a :href="r.url" class="sx-card group">
+                                                    <div class="sx-card-body">
+                                                        <div class="flex items-center justify-between gap-3">
+                                                            <span class="sx-chip font-bold tabular-nums" x-text="r.verseKey"></span>
+                                                            <span class="inline-flex items-center gap-1 text-xs font-semibold text-[color:var(--sx-accent)] opacity-0 transition-opacity group-hover:opacity-100">
+                                                                {{ __('quran.public.ask_open_verse') }}<i data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                                                            </span>
+                                                        </div>
+                                                        <p dir="rtl" class="sx-scripture text-end" x-text="r.arabic"></p>
+                                                        <template x-if="r.translation">
+                                                            <p class="text-sm leading-relaxed text-[color:var(--sx-ink-2)]" x-text="r.translation"></p>
+                                                        </template>
                                                     </div>
-                                                    <p dir="rtl" class="font-['Amiri'] text-2xl leading-loose text-end mb-3" :class="$store.theme.dark ? 'text-white' : 'text-gray-900'" x-text="r.arabic"></p>
-                                                    <template x-if="r.translation">
-                                                        <p class="text-sm leading-relaxed" :class="$store.theme.dark ? 'text-gray-300' : 'text-gray-600'" x-text="r.translation"></p>
-                                                    </template>
                                                 </a>
                                             </template>
                                         </div>
@@ -338,62 +316,50 @@
             </div>
 
             {{-- Composer (in-flow at the bottom of the column) --}}
-            <div class="shrink-0 border-t backdrop-blur-md" :class="$store.theme.dark ? 'bg-[#0b0f1a]/90 border-white/10' : 'bg-white/90 border-gray-200'">
-                <div class="container mx-auto px-4 sm:px-6 max-w-3xl py-3">
+            <div class="shrink-0 border-t border-[color:var(--sx-line)] bg-[color:var(--sx-surface)]">
+                <div class="sx-wrap max-w-3xl py-3">
                     {{-- Mode switch — segmented control (clearly toggled), aligned to the right (RTL start) --}}
                     <div class="flex items-center justify-between gap-2 mb-2.5">
-                        <div role="tablist" aria-label="{{ __('quran.public.ask_mode') }}"
-                             class="inline-flex items-center gap-1 p-1 rounded-xl border"
-                             :class="$store.theme.dark ? 'bg-gray-900 border-white/10' : 'bg-gray-100 border-gray-200'">
+                        <div role="tablist" aria-label="{{ __('quran.public.ask_mode') }}" class="sx-segment gap-1">
                             @auth
                                 <button type="button" role="tab" :aria-selected="(mode === 'ai').toString()" @click="setMode('ai')"
                                         :disabled="remaining <= 0"
                                         :title="remaining <= 0 ? @js(__('quran.public.ask_quota_exceeded', ['limit' => $limit])) : ''"
                                         :aria-label="@js(__('quran.public.ask_tab_ai')) + ' — ' + quotaLabel()"
-                                        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-                                        :class="(mode === 'ai'
-                                            ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-sm'
-                                            : ($store.theme.dark ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'))
-                                            + (remaining <= 0 ? ' opacity-40 cursor-not-allowed' : '')">
-                                    <i data-lucide="sparkles" class="w-4 h-4"></i>{{ __('quran.public.ask_tab_ai') }}
+                                        class="sx-chip"
+                                        :class="(mode === 'ai' ? 'is-active ' : '') + (remaining <= 0 ? 'opacity-40 cursor-not-allowed' : '')">
+                                    <i data-lucide="sparkles" aria-hidden="true"></i>{{ __('quran.public.ask_tab_ai') }}
                                     {{-- Remaining quota, always visible on the tab. --}}
-                                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md tabular-nums leading-none"
-                                          :class="mode === 'ai' ? 'bg-white/20 text-white' : ($store.theme.dark ? 'bg-white/10 text-gray-300' : 'bg-gray-200 text-gray-600')"
-                                          x-text="remaining" aria-hidden="true"></span>
+                                    <span class="sx-count" x-text="remaining" aria-hidden="true"></span>
                                 </button>
                             @else
                                 <a href="{{ route('public.login') }}" role="tab" :aria-selected="false" @click.prevent="$dispatch('open-login')"
-                                   class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-                                   :class="$store.theme.dark ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'">
-                                    <i data-lucide="sparkles" class="w-4 h-4"></i>{{ __('quran.public.ask_tab_ai') }}<i data-lucide="lock" class="w-3 h-3 opacity-60"></i>
+                                   class="sx-chip !bg-transparent !border-transparent">
+                                    <i data-lucide="sparkles" aria-hidden="true"></i>{{ __('quran.public.ask_tab_ai') }}<i data-lucide="lock" class="opacity-60" aria-hidden="true"></i>
                                 </a>
                             @endauth
                             <button type="button" role="tab" :aria-selected="(mode === 'search').toString()" @click="setMode('search')"
-                                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-                                    :class="mode === 'search'
-                                        ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-sm'
-                                        : ($store.theme.dark ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900')">
-                                <i data-lucide="search" class="w-4 h-4"></i>{{ __('quran.public.ask_tab_search') }}
+                                    class="sx-chip" :class="mode === 'search' ? 'is-active' : ''">
+                                <i data-lucide="search" aria-hidden="true"></i>{{ __('quran.public.ask_tab_search') }}
                             </button>
                         </div>
                         {{-- Detailed-answer toggle — a switch chip on the end side (AI mode only). --}}
                         <div>
                             @auth
                             <label x-show="mode === 'ai'" x-cloak x-effect="if (remaining < 2 && detailed) detailed = false"
-                                   class="inline-flex items-center gap-2 ps-3 pe-2 py-1.5 rounded-full border transition-all select-none focus-within:ring-2 focus-within:ring-[#64CCC5]/50"
-                                   :class="(busy || remaining < 2 ? 'opacity-50 cursor-not-allowed ' : 'cursor-pointer ') + (detailed
-                                       ? ($store.theme.dark ? 'bg-[#64CCC5]/10 border-[#64CCC5]/40 text-[#64CCC5]' : 'bg-[#0056b3]/10 border-[#0056b3]/40 text-[#0056b3]')
-                                       : ($store.theme.dark ? 'bg-gray-900 border-white/10 text-gray-300' : 'bg-white border-gray-200 text-gray-600'))"
+                                   class="sx-chip select-none focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[color:var(--sx-teal)]"
+                                   :class="(busy || remaining < 2 ? 'opacity-50 cursor-not-allowed ' : 'cursor-pointer ') + (detailed ? 'is-active' : '')"
                                    :title="@js(__('quran.public.ask_detailed_note'))">
                                 <input type="checkbox" x-model="detailed" :disabled="busy || remaining < 2" class="sr-only"
                                        aria-label="{{ __('quran.public.ask_detailed_label') }}">
-                                <i data-lucide="file-text" class="w-4 h-4 shrink-0"></i>
-                                <span class="text-xs font-semibold whitespace-nowrap">{{ __('quran.public.ask_detailed_label') }}</span>
-                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0"
-                                      :class="$store.theme.dark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-100 text-amber-700'">&times;2</span>
+                                <i data-lucide="file-text" aria-hidden="true"></i>
+                                <span class="whitespace-nowrap">{{ __('quran.public.ask_detailed_label') }}</span>
+                                <span class="sx-count">&times;2</span>
+                                {{-- The track/knob take their colour from the chip's own ink, so the
+                                     switch flips with `.is-active` without naming a colour. --}}
                                 <span class="relative inline-block w-9 h-5 rounded-full transition-colors shrink-0"
-                                      :class="detailed ? ($store.theme.dark ? 'bg-[#64CCC5]' : 'bg-[#0056b3]') : ($store.theme.dark ? 'bg-gray-600' : 'bg-gray-300')">
-                                    <span class="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all"
+                                      :class="detailed ? 'bg-current/40' : 'bg-[color:var(--sx-line-strong)]'" aria-hidden="true">
+                                    <span class="absolute top-0.5 w-4 h-4 rounded-full bg-current shadow transition-all"
                                           :class="detailed ? 'end-0.5' : 'start-0.5'"></span>
                                 </span>
                             </label>
@@ -403,14 +369,11 @@
 
                     {{-- Detailed-answer cost notes (the toggle itself is the switch chip in the controls bar above). --}}
                     @auth
-                    <p x-show="mode === 'ai' && detailed" x-cloak
-                       class="mb-2 text-[11px] flex items-center gap-1 {{ $isRtl ? 'justify-start' : 'justify-end' }}"
-                       :class="$store.theme.dark ? 'text-amber-300/90' : 'text-amber-600'">
-                        <i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i><span>{{ __('quran.public.ask_detailed_note') }}</span>
+                    <p x-show="mode === 'ai' && detailed" x-cloak class="sx-note mb-2 !py-2 !px-3.5 text-xs">
+                        <i data-lucide="info" class="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true"></i><span>{{ __('quran.public.ask_detailed_note') }}</span>
                     </p>
                     <p x-show="mode === 'ai' && remaining < 2 && remaining > 0" x-cloak
-                       class="mb-2 text-[11px] {{ $isRtl ? 'text-start' : 'text-end' }}"
-                       :class="$store.theme.dark ? 'text-gray-500' : 'text-gray-400'">{{ __('quran.public.ask_detailed_need_two') }}</p>
+                       class="mb-2 text-[11px] text-[color:var(--sx-muted)] {{ $isRtl ? 'text-start' : 'text-end' }}">{{ __('quran.public.ask_detailed_need_two') }}</p>
                     @endauth
 
                     <form @submit.prevent="submit()" class="flex items-end gap-2">
@@ -421,24 +384,23 @@
                                       @input="autoGrow($event); sanitizeInput()"
                                       :disabled="busy"
                                       :placeholder="mode === 'ai' ? @js(__('quran.public.ask_ai_placeholder')) : @js(__('quran.public.ask_search_placeholder'))"
-                                      class="w-full resize-none ps-4 pe-4 py-3 text-base sm:text-sm rounded-2xl border focus:outline-none focus:ring-2 focus:ring-[#64CCC5]/60 focus:border-[#64CCC5] transition-all max-h-32 disabled:opacity-60"
-                                      :class="$store.theme.dark ? 'bg-gray-950 border-gray-800 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'"
+                                      class="sx-input resize-none py-3 text-base sm:text-sm max-h-32 disabled:opacity-60"
                                       :aria-label="mode === 'ai' ? @js(__('quran.public.ask_ai_placeholder')) : @js(__('quran.public.ask_search_placeholder'))"></textarea>
                             <span x-show="mode === 'ai'" class="absolute bottom-1.5 end-3 text-[10px] tabular-nums pointer-events-none"
-                                  :class="tooLong ? 'text-red-500' : ($store.theme.dark ? 'text-gray-600' : 'text-gray-400')" x-text="input.length + '/' + maxChars"></span>
+                                  :class="tooLong ? 'text-[color:var(--sx-danger)]' : 'text-[color:var(--sx-muted)]'" x-text="input.length + '/' + maxChars"></span>
                         </div>
                         <button type="submit" :disabled="!canSend"
-                                class="flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center text-white bg-gradient-to-br from-[#0056b3] to-[#218838] shadow-md shadow-[#0056b3]/30 hover:scale-105 active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+                                class="sx-btn is-primary shrink-0 w-12 h-12 !px-0 disabled:opacity-40 disabled:cursor-not-allowed"
                                 aria-label="{{ __('quran.public.ask_send') }}" title="{{ __('quran.public.ask_send') }}">
-                            <span x-show="busy" class="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                            <i x-show="!busy" data-lucide="send-horizontal" class="w-5 h-5 {{ $isRtl ? '-scale-x-100' : '' }}"></i>
+                            <span x-show="busy" class="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" aria-hidden="true"></span>
+                            <i x-show="!busy" data-lucide="send-horizontal" class="w-5 h-5 {{ $isRtl ? '-scale-x-100' : '' }}" aria-hidden="true"></i>
                         </button>
                     </form>
-                    <p class="mt-1.5 text-center text-[11px]" :class="$store.theme.dark ? 'text-gray-600' : 'text-gray-400'">
+                    <p class="mt-1.5 text-center text-[11px] text-[color:var(--sx-muted)]">
                         <template x-if="mode === 'ai'">
                             <span>
                                 <span x-show="remaining > 0" x-text="quotaLabel()"></span>
-                                <span x-show="remaining <= 0" class="text-amber-500">{{ __('quran.public.ask_quota_exceeded', ['limit' => $limit]) }}</span>
+                                <span x-show="remaining <= 0" class="text-[color:var(--sx-danger)]">{{ __('quran.public.ask_quota_exceeded', ['limit' => $limit]) }}</span>
                             </span>
                         </template>
                         <template x-if="mode === 'search'"><span>{{ __('quran.public.ask_source_note') }}</span></template>

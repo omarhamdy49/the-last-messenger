@@ -40,6 +40,15 @@ window.renderIcons = renderIcons;
 window.loadGenealogyTree = () =>
     import('./genealogy-tree.js').then((m) => m.mountGenealogyTree);
 
+/* ------------------------------------------------------ live stream player --- */
+/*
+ * The live-channel player engine (YouTube SDK / hls.js / dash.js), loaded only
+ * on pages that actually open a stream — same literal-import() reasoning as the
+ * genealogy tree above, and it keeps hls.js and dash.js out of app.js entirely.
+ */
+window.loadStreamEngine = () =>
+    import('./stream-player.js').then((m) => m.createStream);
+
 /* ----------------------------------------------------------- dark mode --- */
 Alpine.store('theme', {
     dark: window.resolveDarkMode(),
@@ -482,3 +491,78 @@ window.addEventListener('pagehide', cleanupIconObservers);
 window.iconObservers = iconObservers;
 window.setupIconObservers = setupIconObservers;
 window.cleanupIconObservers = cleanupIconObservers;
+
+/* ------------------------------------------------- cinematic navigation ---
+   Opening a card carries its image into the next page's hero: the card's
+   media and the destination hero share one view-transition-name, so the
+   browser morphs between them instead of cutting.
+
+   The name is set at click time, not in the markup: a name must be unique in
+   the document, and every card on a directory carries a candidate image. On
+   the way back (bfcache / history) the name is cleared so the next click can
+   claim it. Browsers without cross-document view transitions simply navigate. */
+const HERO_VT = 'sx-hero';
+
+// Only cards are released: the destination hero declares the same name in its
+// markup, and clearing that would cancel the morph it exists for.
+const releaseCardTransitions = () => {
+    document.querySelectorAll('.sx-card-media[style*="view-transition-name"]').forEach((el) => {
+        el.style.viewTransitionName = '';
+    });
+};
+
+const claimHeroTransition = (media) => {
+    releaseCardTransitions();
+    media.style.viewTransitionName = HERO_VT;
+};
+
+document.addEventListener('click', (event) => {
+    if (!('startViewTransition' in document) || event.defaultPrevented) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const link = event.target.closest('a[href]');
+    if (!link || link.target === '_blank' || link.hasAttribute('download')) return;
+    if (link.origin !== window.location.origin) return;
+
+    // The media plate rather than the picture inside it: a card with no artwork
+    // still shows the brand plate, and that plate is what travels into the hero.
+    const media = link.matches('.sx-card')
+        ? link.querySelector('.sx-card-media')
+        : link.closest('.sx-card')?.querySelector('.sx-card-media');
+
+    if (media) claimHeroTransition(media);
+}, true);
+
+// A page restored from bfcache keeps the name it left with, which would make
+// the *previous* card morph on the next navigation.
+window.addEventListener('pageshow', releaseCardTransitions);
+
+/* ---------------------------------------------------------- nav indicator ---
+   One bar under the active menu item, measured from the item itself so it
+   survives translation, RTL and font swaps. Without JS the active item still
+   reads as active through colour and weight. */
+const positionNavIndicator = () => {
+    document.querySelectorAll('[data-nav-indicator]').forEach((indicator) => {
+        const nav = indicator.parentElement;
+        const active = nav?.querySelector('.sx-nav-link.is-active');
+        if (!active) {
+            indicator.style.opacity = '0';
+            return;
+        }
+        const navBox = nav.getBoundingClientRect();
+        const box = active.getBoundingClientRect();
+        const rtl = document.dir === 'rtl';
+        // Logical offset, then flipped: in RTL the bar starts at the nav's right
+        // edge and travels the other way.
+        const offset = rtl ? navBox.right - box.right : box.left - navBox.left;
+        indicator.style.transform = `translate3d(${rtl ? -offset : offset}px, 0, 0) scaleX(${box.width})`;
+        indicator.style.opacity = '1';
+    });
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    positionNavIndicator();
+    document.fonts?.ready.then(positionNavIndicator).catch(() => {});
+});
+window.addEventListener('resize', positionNavIndicator, { passive: true });

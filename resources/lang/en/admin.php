@@ -765,6 +765,16 @@ return [
     'live_channel_streaming' => 'Streaming',
     'live_channel_streaming_url' => 'Streaming URL',
     'live_channel_streaming_hint' => 'YouTube embed URL or any iframe-embeddable stream.',
+    'live_channel_stream_type' => 'Stream type',
+    'live_channel_stream_type_hint' => 'Leave on “Auto” to read it from the URL. Pick “Live audio” for radio streams — radio URLs carry no extension to detect.',
+    'stream_type_auto' => 'Auto (from the URL)',
+    'stream_type_youtube' => 'YouTube',
+    'stream_type_hls' => 'HLS (.m3u8)',
+    'stream_type_dash' => 'DASH (.mpd)',
+    'stream_type_file' => 'Video file (MP4 / WebM)',
+    'stream_type_audio' => 'Live audio (radio)',
+    'stream_type_iframe' => 'iframe embed',
+    'live_channel_preview_unavailable' => 'No preview for this type here. Open the channel page to try the player.',
     'live_channel_slug_auto_hint' => 'Leave empty to auto-generate from the title.',
 
     // YouTube import / sync

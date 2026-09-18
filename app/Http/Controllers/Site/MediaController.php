@@ -430,6 +430,8 @@ final class MediaController extends Controller
         $card['description'] = $channel->trans('description');
         $card['streaming_url'] = $channel->streaming_url;
         $card['embed_url'] = $channel->embed_url;
+        // Everything the wrapped player needs to pick an engine and open it.
+        $card['stream_source'] = $channel->stream_source;
 
         return $card;
     }

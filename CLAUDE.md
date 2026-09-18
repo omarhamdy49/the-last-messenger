@@ -462,6 +462,13 @@ and `2026_08_18_000004_create_seerah_event_relation_tables`; `location_id` comes
   encrypted media library (libsodium secretstream + generated variants)
 - Public visibility filtering is centralised — use the repository/service methods
   (`publicEpisodes()` scope etc.), never a hand-rolled query in a controller
+- **Live channels play through one wrapped component**, never a raw provider iframe:
+  `<x-public.media.stream-player>` (chrome) + `resources/js/stream-player.js` (engine).
+  `live_channels.stream_type` selects the engine — `youtube|hls|dash|file|audio|iframe`,
+  or NULL meaning "detect from the URL" (`StreamType::detect`). Radio/Icecast mounts carry
+  no extension, so those must be set to `audio` by hand or they fall through to `iframe`.
+  hls.js/dash.js are lazy `import()`s (own Vite chunks); `iframe` is the only unwrappable
+  type. Autoplay asks for sound first and falls back to muted + a "tap for sound" pill.
 
 **Key Files:**
 - `app/Domain/Media/` — Models, Repositories, Services

@@ -18,32 +18,32 @@
 
 @push('head')
 <style>
-    [x-cloak] { display: none !important; }
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    .seerah-reveal { opacity: 0; transform: translateY(22px); transition: opacity .55s ease-out, transform .6s cubic-bezier(.16,1,.3,1); }
-    .seerah-reveal.is-visible { opacity: 1; transform: none; }
-    @media (prefers-reduced-motion: reduce) {
-        .seerah-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
-        .seerah-anim { animation: none !important; }
-    }
-    @keyframes seerah-soft-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(100,204,197,.45); } 50% { box-shadow: 0 0 0 6px rgba(100,204,197,0); } }
-    .seerah-current-chip { animation: seerah-soft-pulse 2.2s ease-in-out infinite; }
-
-    /* ── Path of Light ─────────────────────────────────────────────
-       The journey spine fills continuously with scroll (--jp is set 0→1
-       by a rAF-throttled scroll handler), and a glowing traveler rides
-       the fill tip at the reading line, trailing light back the way it
-       came. Scroll-driven, so the motion is always user-controlled. */
+    /* ── Path of Light — this page's one authored moment ──────────────
+       The journey spine fills continuously with scroll (--jp is set 0→1 by a
+       rAF-throttled handler) and a glowing traveller rides the fill tip at the
+       reading line, trailing light back the way it came. The geometry and the
+       clip-path fill are genuinely unique to this page; every colour is a
+       system token. Everything else on the page uses .sx-reveal / .sx-rise. */
     #seerah-journey { --jp: 0; }
+    .seerah-spine,
+    .seerah-spine-fill {
+        position: absolute;
+        top: 0.75rem;
+        bottom: 3rem;
+        inset-inline-start: 26px;
+        width: 3px;
+        border-radius: 999px;
+    }
+    .seerah-spine { background: var(--sx-line-strong); }
     /* Paint-only reveal: the gradient keeps its position, the clip slides. */
     .seerah-spine-fill {
+        background: linear-gradient(to bottom, var(--sx-accent), var(--sx-teal), var(--sx-green));
         clip-path: inset(0 0 calc((1 - var(--jp, 0)) * 100%) 0);
-        transition: clip-path .18s ease-out;
+        transition: clip-path 0.18s ease-out;
     }
     .seerah-traveler {
         position: absolute;
-        /* Same track geometry as the spine: starts at top-3, ends at bottom-12. */
+        /* Same track geometry as the spine: starts at top .75rem, ends 3rem up. */
         top: calc(0.75rem + var(--jp, 0) * (100% - 3.75rem));
         inset-inline-start: 27.5px;
         width: 26px;
@@ -53,9 +53,9 @@
         border-radius: 50%;
         pointer-events: none;
         z-index: 5;
-        background: radial-gradient(circle, #ffffff 0%, #a8f0ea 22%, #64CCC5 45%, rgba(100,204,197,0) 74%);
-        filter: drop-shadow(0 0 10px rgba(100,204,197,.95)) drop-shadow(0 0 26px rgba(100,204,197,.5));
-        transition: top .18s ease-out;
+        background: radial-gradient(circle, #fff 0%, var(--sx-teal) 45%, transparent 74%);
+        filter: drop-shadow(0 0 10px var(--sx-teal)) drop-shadow(0 0 26px var(--sx-teal));
+        transition: top 0.18s ease-out;
         animation: seerah-traveler-breathe 2.6s ease-in-out infinite;
     }
     .seerah-traveler::after {
@@ -67,33 +67,56 @@
         height: 96px;
         margin-inline-start: -2.5px;
         border-radius: 3px;
-        background: linear-gradient(to top, rgba(100,204,197,.85), rgba(100,204,197,.25) 55%, rgba(100,204,197,0));
-        filter: blur(.5px);
+        opacity: 0.75;
+        background: linear-gradient(to top, var(--sx-teal), transparent);
+        filter: blur(0.5px);
     }
-    @media (min-width: 640px) { .seerah-traveler { inset-inline-start: 31.5px; } }
+    @media (min-width: 640px) {
+        .seerah-spine,
+        .seerah-spine-fill { inset-inline-start: 30px; }
+        .seerah-traveler { inset-inline-start: 31.5px; }
+    }
     @keyframes seerah-traveler-breathe {
         0%, 100% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.28); opacity: .82; }
+        50% { transform: scale(1.28); opacity: 0.82; }
     }
 
-    /* Era nodes: passed nodes stay lit, the current card carries an aura. */
-    .seerah-node-lit { box-shadow: 0 0 20px -4px rgba(100,204,197,.65); }
-    .seerah-card-aura { box-shadow: 0 12px 48px -12px rgba(100,204,197,.38), 0 2px 8px rgba(16,24,52,.08); }
-    .dark .seerah-card-aura { box-shadow: 0 12px 56px -10px rgba(100,204,197,.26), 0 4px 24px rgba(0,0,0,.4); }
-
-    /* Hero light orbs drift slowly — barely noticed, felt as alive. */
-    @keyframes seerah-drift-a { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(24px, 18px) scale(1.08); } }
-    @keyframes seerah-drift-b { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-28px, 12px) scale(1.05); } }
-    .seerah-drift-a { animation: seerah-drift-a 26s ease-in-out infinite; }
-    .seerah-drift-b { animation: seerah-drift-b 22s ease-in-out infinite; }
+    /* Era states along the path: a passed node stays lit, the current era's
+       card carries the traveller's aura. States, not extra animation. */
+    .seerah-node-lit { box-shadow: 0 0 18px -4px color-mix(in srgb, var(--sx-teal) 60%, transparent); }
+    .seerah-card-aura { box-shadow: 0 0 0 2px color-mix(in srgb, var(--sx-teal) 45%, transparent), var(--sx-shadow); }
 
     @media (prefers-reduced-motion: reduce) {
         .seerah-traveler { animation: none; }
-        .seerah-traveler, .seerah-spine-fill { transition: none; }
-        .seerah-drift-a, .seerah-drift-b { animation: none; }
+        .seerah-traveler,
+        .seerah-spine-fill { transition: none; }
     }
 </style>
 @endpush
+
+@php
+    /**
+     * The articles feed arrives as JSON, so one real <x-public.seerah.event-card> is
+     * rendered below as a stencil inside <template> and cloned + filled per item. The
+     * feed therefore gets exactly the same card as the server-rendered directory —
+     * including the card→hero image morph — instead of a second card markup to keep
+     * in sync. Placeholders are non-blank ('·') so every optional slot exists in the
+     * stencil for the script to fill or drop.
+     */
+    $cardStencil = [
+        'url' => '#',
+        'title' => '',
+        'description' => '·',
+        'typeLabel' => '·',
+        'icon' => 'circle',
+        'image' => null,
+        'hijriYear' => 0,
+        'hijriDate' => '·',
+        'gregorianYear' => '·',
+        'location' => '·',
+        'hasDispute' => true,
+    ];
+@endphp
 
 @section('content')
 <div x-data="seerahQuest({
@@ -105,248 +128,229 @@
             'url' => $m['eventsUrl'],
         ])->values()->all()) }},
         articlesUrl: {{ Js::from(route('public.seerah.articles.feed')) }},
+        suffix: {{ Js::from([
+            'hijri' => __('seerah.public.hijri_suffix'),
+            'beforeHijra' => __('seerah.public.before_hijra_suffix'),
+            'gregorian' => __('seerah.public.gregorian_suffix'),
+        ]) }},
      })" x-init="init()"
-     class="min-h-dvh overflow-x-clip bg-[#f5f7fc] dark:bg-[#0d1226] text-[#1c2238] dark:text-gray-100">
+     class="sx min-h-[100dvh] pb-20">
 
-    {{-- ───────────────────────── HERO ───────────────────────── --}}
-    <section class="relative overflow-hidden">
-        {{-- layered premium backdrop — designed for light AND dark --}}
-        <div class="absolute inset-0 -z-10 bg-gradient-to-b from-[#e9f1fc] via-[#f1f6fc] to-[#f5f7fc] dark:from-[#0e1533] dark:via-[#0d1226] dark:to-[#0d1226]"></div>
-        <div class="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
-            <div class="seerah-drift-a seerah-anim absolute -top-20 start-[10%] w-80 h-80 rounded-full bg-[#0056b3]/15 dark:bg-[#0056b3]/25 blur-3xl"></div>
-            <div class="seerah-drift-b seerah-anim absolute -top-10 end-[8%] w-72 h-72 rounded-full bg-[#218838]/12 dark:bg-[#64CCC5]/15 blur-3xl"></div>
-            <div class="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#0056b3]/25 dark:via-white/15 to-transparent"></div>
-        </div>
-        <div class="relative max-w-4xl mx-auto px-4 sm:px-6 pt-12 pb-8 sm:pt-16 text-center">
-            <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold
-                         bg-white/90 dark:bg-white/[.06] border border-[#0056b3]/15 dark:border-white/10 text-[#0056b3] dark:text-[#64CCC5] shadow-sm backdrop-blur">
-                <i data-lucide="sparkles" class="w-4 h-4"></i>{{ __('seerah.public.journey_badge') }}
-            </span>
-            <h1 class="mt-5 text-4xl sm:text-6xl font-extrabold tracking-tight leading-tight">
-                <span class="bg-gradient-to-l from-[#004a9c] via-[#1a7a32] to-[#0a8079] dark:from-[#4aa3ff] dark:via-[#3fbf6b] dark:to-[#64CCC5] bg-clip-text text-transparent">{{ __('seerah.public.hero_heading') }}</span>
-            </h1>
-            <p class="mt-3 max-w-xl mx-auto text-base sm:text-lg text-gray-600 dark:text-gray-300/90 leading-relaxed">{{ __('seerah.public.journey_subtitle') }}</p>
-
-            {{-- journey stats --}}
-            <div class="mt-7 flex flex-wrap items-stretch justify-center gap-2.5 sm:gap-3">
-                @foreach([
-                    ['value' => $stats['milestones'], 'label' => __('seerah.public.stat_milestones'), 'icon' => 'flag'],
-                    ['value' => $stats['events'], 'label' => __('seerah.public.stat_stations'), 'icon' => 'map-pin'],
-                    ['value' => $stats['span'], 'label' => __('seerah.public.stat_span'), 'icon' => 'calendar-range'],
-                ] as $stat)
-                <div class="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/85 dark:bg-white/[.05] border border-gray-200/80 dark:border-white/10 shadow-sm backdrop-blur">
-                    <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-[#0056b3] to-[#218838] text-white flex-shrink-0 shadow-sm">
-                        <i data-lucide="{{ $stat['icon'] }}" class="w-4 h-4"></i>
-                    </span>
-                    <span class="text-start leading-tight">
-                        <span class="block text-base sm:text-lg font-black text-gray-900 dark:text-white tabular-nums">{{ $stat['value'] }}</span>
-                        <span class="block text-[11px] font-bold text-gray-500 dark:text-gray-400">{{ $stat['label'] }}</span>
-                    </span>
-                </div>
-                @endforeach
-            </div>
+    {{-- ───────────────────────── HEADER ───────────────────────── --}}
+    <div class="sx-wrap">
+        <x-public.editorial.page-hero
+            :eyebrow-label="__('seerah.public.journey_badge')" eyebrow-icon="sparkles"
+            :title="__('seerah.public.hero_heading')" :lead="__('seerah.public.journey_subtitle')"
+            :stats="[
+                ['icon' => 'flag', 'label' => __('seerah.public.stat_milestones'), 'value' => $stats['milestones']],
+                ['icon' => 'map-pin', 'label' => __('seerah.public.stat_stations'), 'value' => $stats['events']],
+                ['icon' => 'calendar-range', 'label' => __('seerah.public.stat_span'), 'value' => $stats['span'], 'small' => true],
+            ]">
 
             {{-- Search is the CTA on a directory: this posts straight to the events
                  page, so typing here lands on the filtered results. --}}
             <form method="GET" action="{{ route('public.seerah.events') }}" role="search"
-                  class="mt-7 mx-auto max-w-xl flex flex-col sm:flex-row items-stretch gap-2">
+                  class="flex flex-col gap-2 sm:flex-row sm:items-stretch">
                 <label for="seerah-journey-q" class="sr-only">{{ __('seerah.public.search_placeholder') }}</label>
                 <div class="relative flex-1">
-                    <i data-lucide="search" class="absolute start-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500 pointer-events-none"></i>
+                    <i data-lucide="search" aria-hidden="true"
+                       class="pointer-events-none absolute start-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[color:var(--sx-muted)]"></i>
                     <input id="seerah-journey-q" type="search" name="q"
                            placeholder="{{ __('seerah.public.search_placeholder') }}"
-                           class="w-full h-12 ps-12 pe-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-white/90 dark:bg-white/[.06] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 shadow-sm backdrop-blur focus:outline-none focus:ring-2 focus:ring-[#64CCC5] focus:border-transparent transition-shadow">
+                           class="sx-input !ps-12">
                 </div>
-                <button type="submit"
-                        class="h-12 px-6 rounded-2xl font-bold text-white whitespace-nowrap bg-gradient-to-r from-[#0056b3] to-[#218838] shadow-sm hover:shadow-lg hover:shadow-[#0056b3]/20 transition-shadow focus:outline-none focus:ring-2 focus:ring-[#64CCC5] focus:ring-offset-2 dark:focus:ring-offset-[#0d1226]">
-                    {{ __('seerah.public.search_submit') }}
-                </button>
+                <button type="submit" class="sx-btn is-primary">{{ __('seerah.public.search_submit') }}</button>
             </form>
 
-            <a href="{{ route('public.seerah.events') }}"
-               class="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-[#0056b3] dark:text-[#64CCC5] hover:underline focus:outline-none focus:ring-2 focus:ring-[#64CCC5] rounded">
-                <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>{{ __('seerah.public.browse_and_filter') }}
-            </a>
-
-            {{-- Shortcuts into the filtered directory: the flags exist on individual
-                 stations, but nothing at this level pointed at them. --}}
-            @if (($stats['disputed'] ?? 0) > 0)
-            <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
-                @if (($stats['disputed'] ?? 0) > 0)
-                <a href="{{ route('public.seerah.events', ['disputed' => 1]) }}"
-                   class="min-h-11 inline-flex items-center gap-1.5 px-3.5 rounded-xl font-bold text-[13px] border border-red-500/40 text-red-700 dark:text-red-300 bg-red-500/10 hover:bg-red-500/20 transition-colors focus:outline-none focus:ring-2 focus:ring-[#64CCC5]">
-                    <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
-                    <span>{{ __('seerah.public.dispute_badge') }}</span>
-                    <span class="px-1.5 rounded-full text-[11px] bg-red-500/15 tabular-nums">{{ $stats['disputed'] }}</span>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('public.seerah.events') }}" class="sx-chip">
+                    <i data-lucide="sliders-horizontal" aria-hidden="true"></i>{{ __('seerah.public.browse_and_filter') }}
                 </a>
+                {{-- Shortcut into the filtered directory: the flag exists on individual
+                     stations, but nothing at this level pointed at it. --}}
+                @if (($stats['disputed'] ?? 0) > 0)
+                    <a href="{{ route('public.seerah.events', ['disputed' => 1]) }}" class="sx-chip is-danger">
+                        <i data-lucide="alert-triangle" aria-hidden="true"></i>{{ __('seerah.public.dispute_badge') }}
+                        <span class="sx-count">{{ $stats['disputed'] }}</span>
+                    </a>
                 @endif
             </div>
-            @endif
+        </x-public.editorial.page-hero>
 
-            <div class="mt-6 inline-flex p-1 rounded-2xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-sm" role="tablist">
-                <button @click="setMode('journey')" role="tab" :aria-selected="mode==='journey'"
-                        :class="mode==='journey' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow' : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'"
-                        class="px-5 sm:px-6 py-2.5 rounded-xl font-semibold text-sm transition-all flex items-center gap-2">
-                    <i data-lucide="route" class="w-4 h-4"></i>{{ __('seerah.public.mode_journey') }}
-                </button>
-                <button @click="setMode('articles')" role="tab" :aria-selected="mode==='articles'"
-                        :class="mode==='articles' ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow' : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'"
-                        class="px-5 sm:px-6 py-2.5 rounded-xl font-semibold text-sm transition-all flex items-center gap-2">
-                    <i data-lucide="layout-grid" class="w-4 h-4"></i>{{ __('seerah.public.mode_articles') }}
-                </button>
-            </div>
+        {{-- Journey / articles: two readings of the same corpus. --}}
+        <div class="sx-tabs" role="tablist" aria-label="{{ __('seerah.public.page_title') }}">
+            <button type="button" id="seerah-tab-journey" role="tab" aria-controls="seerah-panel-journey"
+                    @click="setMode('journey')" :aria-selected="(mode === 'journey').toString()" class="sx-tab">
+                <i data-lucide="route" aria-hidden="true"></i>{{ __('seerah.public.mode_journey') }}
+            </button>
+            <button type="button" id="seerah-tab-articles" role="tab" aria-controls="seerah-panel-articles"
+                    @click="setMode('articles')" :aria-selected="(mode === 'articles').toString()" class="sx-tab">
+                <i data-lucide="layout-grid" aria-hidden="true"></i>{{ __('seerah.public.mode_articles') }}
+            </button>
         </div>
-    </section>
+    </div>
 
     {{-- The journey groups events under eras. Events outside any era stay
          reachable through the articles feed. Only a genuinely empty corpus
          gets the empty state. --}}
-    @if(empty($journey) && $stats['events'] === 0)
-        <div class="max-w-2xl mx-auto px-4 py-20 text-center">
-            <i data-lucide="milestone" class="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600"></i>
-            <p class="text-lg text-gray-500 dark:text-gray-400">{{ __('seerah.public.empty_journey') }}</p>
+    @if (empty($journey) && $stats['events'] === 0)
+        <div class="sx-wrap mt-10">
+            <x-public.editorial.empty-state icon="milestone" :title="__('seerah.public.empty_journey')" />
         </div>
     @else
 
     {{-- ──────────── STICKY TIMELINE BAR (current era + progress rail) ──────────── --}}
-    <div x-show="mode==='journey'" x-cloak class="sticky top-20 z-30 border-b border-gray-200/80 dark:border-white/10 bg-[#f5f7fc]/85 dark:bg-[#0d1226]/90 backdrop-blur-lg">
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 py-3">
-            {{-- current era (title + its date range) + counter --}}
-            <div class="flex items-center justify-between gap-3 mb-3">
-                <div class="flex items-center gap-2.5 min-w-0">
-                    <span class="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-[#0056b3] to-[#218838] text-white text-xs font-black tabular-nums shadow-sm" x-text="currentIndex+1"></span>
-                    <div class="min-w-0 leading-tight">
-                        <span class="block font-bold text-sm sm:text-base text-gray-800 dark:text-gray-100 truncate" x-text="currentTitle"></span>
-                        <span class="block text-[11px] font-bold text-[#0056b3] dark:text-[#64CCC5] tabular-nums truncate" x-show="currentRange" x-text="currentRange"></span>
+    <div x-show="mode==='journey'" x-cloak
+         class="sticky top-[var(--sx-header-h)] z-30 border-b border-[color:var(--sx-line)] bg-[color:var(--sx-bg)]/85 backdrop-blur-lg">
+        <div class="sx-wrap">
+            <div class="mx-auto max-w-3xl py-3">
+                {{-- current era (title + its date range) + counter --}}
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <div class="flex min-w-0 items-center gap-2.5">
+                        <span class="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-[image:var(--sx-grad)] text-xs font-extrabold tabular-nums text-white"
+                              x-text="currentIndex+1"></span>
+                        <div class="min-w-0 leading-tight">
+                            <span class="sx-clamp-1 block text-sm font-bold text-[color:var(--sx-ink)] sm:text-base"
+                                  :title="currentTitle" x-text="currentTitle"></span>
+                            <span class="sx-clamp-1 block text-[11px] font-bold tabular-nums text-[color:var(--sx-accent)]"
+                                  x-show="currentRange" x-text="currentRange"></span>
+                        </div>
                     </div>
+                    <span class="mt-0.5 flex flex-shrink-0 items-center gap-1 self-start text-xs font-bold tabular-nums text-[color:var(--sx-muted)]">
+                        <i data-lucide="flag-triangle-right" aria-hidden="true" class="h-3.5 w-3.5 text-[color:var(--sx-accent)]"></i>
+                        <span x-text="currentIndex+1"></span><span aria-hidden="true">/</span><span x-text="total"></span>
+                    </span>
                 </div>
-                <span class="flex-shrink-0 inline-flex items-center gap-1 text-xs font-bold text-gray-500 dark:text-gray-400 tabular-nums self-start mt-0.5">
-                    <i data-lucide="flag-triangle-right" class="w-3.5 h-3.5 text-[#0056b3] dark:text-[#64CCC5]"></i><span x-text="currentIndex+1"></span><span class="text-gray-300 dark:text-gray-600">/</span><span x-text="total"></span>
-                </span>
-            </div>
-            {{-- evenly-distributed progress rail (no year labels) --}}
-            <div class="relative h-5 flex items-center">
-                <div class="absolute inset-x-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-white/10"></div>
-                <div class="absolute start-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#0056b3] via-[#64CCC5] to-[#218838] transition-all duration-500 ease-out" :style="`width:calc((100% - 0.75rem) * ${total>1 ? currentIndex/(total-1) : 1})`"></div>
-                <div class="relative flex justify-between w-full">
-                    @foreach($journey as $m)
-                    @php($i = $loop->index)
-                    <button @click="goTo('{{ $m['anchor'] }}', {{ $i }})" type="button"
-                            :aria-current="currentIndex==={{ $i }} ? 'step' : false"
-                            aria-label="{{ __('seerah.public.milestone_chapter') }} {{ $m['order'] }}"
-                            title="{{ __('seerah.public.milestone_chapter') }} {{ $m['order'] }} — {{ $m['title'] }}"
-                            class="relative flex items-center justify-center w-5 h-5 -m-0.5 group">
-                        <span class="block rounded-full ring-2 ring-[#f5f7fc] dark:ring-[#0d1226] transition-all duration-300"
-                              :class="currentIndex==={{ $i }} ? 'w-4 h-4 bg-gradient-to-br {{ $m['gradient'] }} shadow-md' : ({{ $i }} < currentIndex ? 'w-2.5 h-2.5 bg-[#0056b3] dark:bg-[#64CCC5]' : 'w-2.5 h-2.5 bg-gray-300 dark:bg-white/25 group-hover:bg-gray-400 dark:group-hover:bg-white/40')"></span>
-                    </button>
-                    @endforeach
+                {{-- evenly-distributed progress rail (no year labels) --}}
+                <div class="relative flex h-5 items-center">
+                    <div class="absolute inset-x-1.5 h-1.5 rounded-full bg-[color:var(--sx-surface-2)]"></div>
+                    <div class="absolute start-1.5 h-1.5 rounded-full bg-[image:var(--sx-grad)] transition-all duration-500 ease-out"
+                         :style="`width:calc((100% - 0.75rem) * ${total>1 ? currentIndex/(total-1) : 1})`"></div>
+                    <div class="relative flex w-full justify-between">
+                        @foreach ($journey as $m)
+                        @php($i = $loop->index)
+                        <button @click="goTo('{{ $m['anchor'] }}', {{ $i }})" type="button"
+                                :aria-current="currentIndex==={{ $i }} ? 'step' : false"
+                                aria-label="{{ __('seerah.public.milestone_chapter') }} {{ $m['order'] }}"
+                                title="{{ __('seerah.public.milestone_chapter') }} {{ $m['order'] }} — {{ $m['title'] }}"
+                                class="group relative -m-0.5 flex h-5 w-5 items-center justify-center">
+                            <span class="block rounded-full ring-2 ring-[color:var(--sx-bg)] transition-all duration-300"
+                                  :class="currentIndex==={{ $i }} ? 'w-4 h-4 bg-[image:var(--sx-grad)]' : ({{ $i }} < currentIndex ? 'w-2.5 h-2.5 bg-[color:var(--sx-accent)]' : 'w-2.5 h-2.5 bg-[color:var(--sx-line-strong)]')"></span>
+                        </button>
+                        @endforeach
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     {{-- ───────── JOURNEY: vertical timeline spine, date-range eras ───────── --}}
-    <div x-show="mode==='journey'" x-cloak class="max-w-3xl mx-auto px-4 sm:px-6 pt-8 pb-10">
-        <div class="relative" id="seerah-journey">
-            {{-- spine track --}}
-            <div class="absolute top-3 bottom-12 start-[26px] sm:start-[30px] w-[3px] rounded-full bg-gradient-to-b from-gray-200 to-gray-200/40 dark:from-white/15 dark:to-white/[.04]"></div>
+    <div x-show="mode==='journey'" x-cloak id="seerah-panel-journey" role="tabpanel" aria-labelledby="seerah-tab-journey"
+         class="sx-wrap pb-10 pt-8">
+        <div class="relative mx-auto max-w-3xl" id="seerah-journey">
+            <div class="seerah-spine" aria-hidden="true"></div>
             {{-- spine progress fill — clip-path follows --jp (continuous scroll progress) --}}
-            <div class="seerah-spine-fill absolute top-3 bottom-12 start-[26px] sm:start-[30px] w-[3px] rounded-full bg-gradient-to-b from-[#0056b3] via-[#64CCC5] to-[#218838]"></div>
-            {{-- the traveler light riding the fill tip --}}
+            <div class="seerah-spine-fill" aria-hidden="true"></div>
+            {{-- the traveller light riding the fill tip --}}
             <div class="seerah-traveler" aria-hidden="true"></div>
 
-            @foreach($journey as $m)
+            @foreach ($journey as $m)
             @php($i = $loop->index)
-            <article id="{{ $m['anchor'] }}" data-milestone="{{ $m['slug'] }}" data-index="{{ $i }}"
-                     class="seerah-reveal scroll-mt-32 relative ps-16 sm:ps-[78px] pb-7 sm:pb-9">
+            <article id="{{ $m['anchor'] }}" data-milestone="{{ $m['slug'] }}" data-index="{{ $i }}" data-shown="false"
+                     class="sx-reveal relative scroll-mt-32 pb-7 ps-16 sm:pb-9 sm:ps-[78px]">
 
-                {{-- node on the spine --}}
+                {{-- node on the spine — the milestone's own gradient plate (admin content) --}}
                 <div class="absolute start-0 top-1">
-                    <div class="relative w-[54px] h-[54px] sm:w-[62px] sm:h-[62px] rounded-2xl bg-gradient-to-br {{ $m['gradient'] }} flex flex-col items-center justify-center text-white shadow-lg ring-4 ring-[#f5f7fc] dark:ring-[#0d1226] transition-all duration-300"
-                         :class="currentIndex==={{ $i }} ? 'seerah-current-chip seerah-anim scale-[1.07]' : ({{ $i }} > currentIndex ? 'opacity-80 saturate-[.85]' : 'seerah-node-lit')">
-                        <span class="text-lg sm:text-2xl font-black leading-none drop-shadow-sm">{{ $m['order'] }}</span>
-                        <i data-lucide="{{ $m['icon'] }}" class="w-3.5 h-3.5 mt-0.5 opacity-90"></i>
-                        <div x-show="{{ $i }} < currentIndex" x-cloak class="absolute -top-1.5 -end-1.5 w-5 h-5 rounded-full bg-emerald-500 ring-2 ring-[#f5f7fc] dark:ring-[#0d1226] flex items-center justify-center">
-                            <i data-lucide="check" class="w-3 h-3 text-white"></i>
+                    <div class="relative flex h-[54px] w-[54px] flex-col items-center justify-center rounded-2xl bg-gradient-to-br {{ $m['gradient'] }} text-white ring-4 ring-[color:var(--sx-bg)] transition-all duration-300 sm:h-[62px] sm:w-[62px]"
+                         :class="currentIndex==={{ $i }} ? 'scale-[1.07] seerah-node-lit' : ({{ $i }} > currentIndex ? 'opacity-80 saturate-[.85]' : 'seerah-node-lit')">
+                        <span class="text-lg font-extrabold leading-none tabular-nums sm:text-2xl">{{ $m['order'] }}</span>
+                        <i data-lucide="{{ $m['icon'] }}" aria-hidden="true" class="mt-0.5 h-3.5 w-3.5 opacity-90"></i>
+                        <div x-show="{{ $i }} < currentIndex" x-cloak
+                             class="absolute -end-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[color:var(--sx-green)] ring-2 ring-[color:var(--sx-bg)]">
+                            <i data-lucide="check" aria-hidden="true" class="h-3 w-3 text-white"></i>
                         </div>
                     </div>
                 </div>
 
                 {{-- era card --}}
-                <div class="rounded-3xl border border-gray-200/90 dark:border-white/[0.09] bg-white dark:bg-[#171f3c] shadow-[0_1px_3px_rgba(16,24,52,.06)] dark:shadow-[0_4px_24px_rgba(0,0,0,.35)] hover:shadow-lg dark:hover:border-white/20 transition-all overflow-hidden"
-                     :class="currentIndex==={{ $i }} ? 'ring-2 ring-[#64CCC5]/40 dark:ring-[#64CCC5]/35 seerah-card-aura' : ''">
+                <div class="sx-surface overflow-hidden" :class="currentIndex==={{ $i }} ? 'seerah-card-aura' : ''">
 
-                    {{-- date-range header (subtle era tint, big date) --}}
-                    <div class="relative px-5 sm:px-6 pt-4 pb-4 border-b border-gray-100 dark:border-white/[0.06]">
-                        <div class="absolute inset-0 opacity-[0.06] dark:opacity-[0.14] bg-gradient-to-l {{ $m['gradient'] }} pointer-events-none"></div>
+                    {{-- date-range header (faint era tint, big date) --}}
+                    <div class="relative border-b border-[color:var(--sx-line)] px-5 py-4 sm:px-6">
+                        <div class="pointer-events-none absolute inset-0 bg-gradient-to-l {{ $m['gradient'] }} opacity-[0.07] dark:opacity-[0.16]"></div>
                         <div class="relative flex flex-wrap items-center justify-between gap-2">
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-extrabold uppercase tracking-wide bg-white/80 dark:bg-white/10 text-[#0056b3] dark:text-[#64CCC5] ring-1 ring-black/5 dark:ring-white/10">
-                                    <i data-lucide="flag" class="w-3 h-3"></i>{{ __('seerah.public.milestone_chapter') }} {{ $m['order'] }}
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="sx-chip">
+                                    <i data-lucide="flag" aria-hidden="true"></i>{{ __('seerah.public.milestone_chapter') }} {{ $m['order'] }}
                                 </span>
-                                <span x-show="currentIndex==={{ $i }}" x-cloak class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-[#64CCC5]/20 text-[#0a7d77] dark:text-[#64CCC5]">
-                                    <i data-lucide="navigation" class="w-3 h-3"></i>{{ __('seerah.public.you_are_here') }}
+                                <span x-show="currentIndex==={{ $i }}" x-cloak class="sx-chip is-active">
+                                    <i data-lucide="navigation" aria-hidden="true"></i>{{ __('seerah.public.you_are_here') }}
                                 </span>
-                                <span x-show="{{ $i }} < currentIndex" x-cloak class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-                                    <i data-lucide="check" class="w-3 h-3"></i>{{ __('seerah.public.finish_label') }}
+                                <span x-show="{{ $i }} < currentIndex" x-cloak class="sx-chip">
+                                    <i data-lucide="check" aria-hidden="true"></i>{{ __('seerah.public.finish_label') }}
                                 </span>
                             </div>
-                            <span class="inline-flex items-center gap-1 text-[11px] font-bold text-gray-500 dark:text-gray-400"><i data-lucide="map-pin" class="w-3 h-3"></i>{{ $m['eventCount'] }} {{ __('seerah.public.stations_count') }}</span>
+                            <span class="sx-chip">
+                                <i data-lucide="map-pin" aria-hidden="true"></i><span class="tabular-nums">{{ $m['eventCount'] }}</span> {{ __('seerah.public.stations_count') }}
+                            </span>
                         </div>
                         {{-- the date range, the visual anchor of the era --}}
-                        <div class="relative mt-2.5 flex items-baseline gap-2 flex-wrap">
-                            <i data-lucide="calendar-range" class="w-5 h-5 self-center text-[#0056b3] dark:text-[#64CCC5] flex-shrink-0"></i>
-                            @if($m['hijriRange'])
-                            <span class="text-xl sm:text-3xl font-black text-gray-900 dark:text-white tabular-nums tracking-tight leading-none">{{ $m['hijriRange'] }}</span>
+                        <div class="relative mt-2.5 flex flex-wrap items-baseline gap-2">
+                            <i data-lucide="calendar-range" aria-hidden="true" class="h-5 w-5 flex-shrink-0 self-center text-[color:var(--sx-accent)]"></i>
+                            @if ($m['hijriRange'])
+                                <span class="text-xl font-extrabold leading-none tracking-tight tabular-nums text-[color:var(--sx-ink)] sm:text-3xl">{{ $m['hijriRange'] }}</span>
                             @endif
-                            @if($m['gregorianRange'])<span class="text-xs sm:text-sm font-semibold text-gray-400 dark:text-gray-500 tabular-nums">· {{ $m['gregorianRange'] }}</span>@endif
+                            @if ($m['gregorianRange'])
+                                <span class="text-xs font-semibold tabular-nums text-[color:var(--sx-muted)] sm:text-sm">· {{ $m['gregorianRange'] }}</span>
+                            @endif
                         </div>
                     </div>
 
                     {{-- body --}}
-                    <div class="px-5 sm:px-6 py-5">
-                        <h2 class="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white leading-snug">{{ $m['title'] }}</h2>
-                        @if($m['subtitle'])<p class="mt-1.5 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{{ $m['subtitle'] }}</p>@endif
-
-                        {{-- Per-era flag counts, each a link into the filtered directory. --}}
-                        @if(($m['disputedCount'] ?? 0) > 0)
-                        <div class="mt-3 flex flex-wrap gap-2">
-                            @if(($m['disputedCount'] ?? 0) > 0)
-                            <a href="{{ $m['disputedUrl'] }}"
-                               class="min-h-9 inline-flex items-center gap-1.5 px-2.5 rounded-full text-[11px] font-bold border border-red-500/30 text-red-700 dark:text-red-300 bg-red-500/10 hover:bg-red-500/20 transition-colors focus:outline-none focus:ring-2 focus:ring-[#64CCC5]">
-                                <i data-lucide="alert-triangle" class="w-3 h-3"></i>{{ $m['disputedCount'] }} {{ __('seerah.public.dispute_badge') }}
-                            </a>
-                            @endif
-                        </div>
+                    <div class="px-5 py-5 sm:px-6">
+                        <h2 class="sx-clamp-2 text-xl font-extrabold leading-snug text-[color:var(--sx-ink)] sm:text-2xl" title="{{ $m['title'] }}">{{ $m['title'] }}</h2>
+                        @if ($m['subtitle'])
+                            <p class="sx-clamp-2 mt-1.5 text-sm leading-relaxed text-[color:var(--sx-muted)]" title="{{ $m['subtitle'] }}">{{ $m['subtitle'] }}</p>
                         @endif
 
-                        {{-- events — lazy-loaded when the era scrolls into view, one station per row --}}
-                        <div class="mt-4 grid gap-2.5" data-events-grid></div>
+                        {{-- Per-era flag count, a link into the filtered directory. --}}
+                        @if (($m['disputedCount'] ?? 0) > 0)
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <a href="{{ $m['disputedUrl'] }}" class="sx-chip is-danger">
+                                    <i data-lucide="alert-triangle" aria-hidden="true"></i>{{ __('seerah.public.dispute_badge') }}
+                                    <span class="sx-count">{{ $m['disputedCount'] }}</span>
+                                </a>
+                            </div>
+                        @endif
+
+                        {{-- stations — lazy-loaded when the era scrolls into view, one per row --}}
+                        <div class="sx-tile-list mt-4" data-events-grid></div>
 
                         {{-- skeleton placeholders (reserve space, avoid CLS) --}}
                         <div x-show="sections['{{ $m['slug'] }}'] !== 'loaded' && sections['{{ $m['slug'] }}'] !== 'error'"
-                             class="mt-4 grid gap-2.5" aria-hidden="true">
-                            @for($s = 0; $s < min($m['eventCount'], 4); $s++)
-                            <div class="flex items-center gap-3 rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50/70 dark:bg-white/[.03] p-3 animate-pulse">
-                                <div class="w-10 h-10 rounded-xl bg-gray-200 dark:bg-white/10 flex-shrink-0"></div>
-                                <div class="flex-1 space-y-2">
-                                    <div class="h-3.5 rounded bg-gray-200 dark:bg-white/10 w-3/4"></div>
-                                    <div class="h-2.5 rounded bg-gray-200 dark:bg-white/10 w-1/2"></div>
+                             class="sx-tile-list mt-4" aria-hidden="true">
+                            @for ($s = 0; $s < min($m['eventCount'], 4); $s++)
+                                <div class="sx-tile">
+                                    <span class="sx-skeleton block h-10 w-10 !rounded-xl"></span>
+                                    <span class="grid gap-2">
+                                        <span class="sx-skeleton block h-3.5 w-3/4"></span>
+                                        <span class="sx-skeleton block h-2.5 w-1/2"></span>
+                                    </span>
+                                    <span></span>
                                 </div>
-                            </div>
                             @endfor
                         </div>
 
                         {{-- load failure + retry --}}
-                        <div x-show="sections['{{ $m['slug'] }}'] === 'error'" x-cloak
-                             class="mt-4 rounded-2xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-                            <p class="text-sm font-semibold text-red-700 dark:text-red-300 flex items-center gap-2">
-                                <i data-lucide="wifi-off" class="w-4 h-4 flex-shrink-0"></i>{{ __('seerah.public.load_failed') }}
-                            </p>
-                            <button type="button" @click="loadMilestone('{{ $m['slug'] }}', true)"
-                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow hover:opacity-90 transition-opacity">
-                                <i data-lucide="rotate-cw" class="w-4 h-4"></i>{{ __('seerah.public.retry') }}
-                            </button>
+                        <div x-show="sections['{{ $m['slug'] }}'] === 'error'" x-cloak role="alert"
+                             class="sx-note mt-4 items-center !bg-[color:var(--sx-danger-soft)] !text-[color:var(--sx-danger)]">
+                            <i data-lucide="wifi-off" aria-hidden="true" class="h-5 w-5 !text-[color:var(--sx-danger)]"></i>
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <p class="font-semibold">{{ __('seerah.public.load_failed') }}</p>
+                                <button type="button" @click="loadMilestone('{{ $m['slug'] }}', true)" class="sx-btn">
+                                    <i data-lucide="rotate-cw" aria-hidden="true"></i>{{ __('seerah.public.retry') }}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -354,52 +358,51 @@
             @endforeach
 
             {{-- finish node --}}
-            <div class="relative ps-16 sm:ps-[78px] min-h-[54px] sm:min-h-[62px] flex flex-col justify-center">
-                <div class="absolute start-0 top-0 w-[54px] h-[54px] sm:w-[62px] sm:h-[62px] rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-lg ring-4 ring-[#f5f7fc] dark:ring-[#0d1226]">
-                    <i data-lucide="trophy" class="w-6 h-6"></i>
+            <div class="relative flex min-h-[54px] flex-col justify-center ps-16 sm:min-h-[62px] sm:ps-[78px]">
+                <div class="absolute start-0 top-0 grid h-[54px] w-[54px] place-items-center rounded-2xl bg-[color:var(--sx-accent-soft)] text-[color:var(--sx-accent)] ring-4 ring-[color:var(--sx-bg)] sm:h-[62px] sm:w-[62px]">
+                    <i data-lucide="trophy" aria-hidden="true" class="h-6 w-6"></i>
                 </div>
-                <div class="font-extrabold text-gray-800 dark:text-gray-100 text-base">{{ __('seerah.public.finish_label') }}</div>
-                <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{{ __('seerah.public.finish_hint') }}</div>
+                <div class="text-base font-extrabold text-[color:var(--sx-ink)]">{{ __('seerah.public.finish_label') }}</div>
+                <div class="text-xs text-[color:var(--sx-muted)] sm:text-sm">{{ __('seerah.public.finish_hint') }}</div>
             </div>
         </div>
     </div>
 
     {{-- ───────────────────── ARTICLES MODE (lazy infinite feed) ───────────────────── --}}
-    <div x-show="mode==='articles'" x-cloak class="max-w-6xl mx-auto px-4 sm:px-6 py-9 sm:py-12">
-        <div class="flex items-center gap-2 mb-6 text-sm text-gray-500 dark:text-gray-400">
-            <i data-lucide="clock" class="w-4 h-4"></i>{{ __('seerah.public.articles_mode_hint') }}
-        </div>
-        <div id="articles-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5"></div>
+    <div x-show="mode==='articles'" x-cloak id="seerah-panel-articles" role="tabpanel" aria-labelledby="seerah-tab-articles"
+         class="sx-wrap py-9 sm:py-12">
+        <p class="mb-6 flex items-center gap-2 text-sm text-[color:var(--sx-muted)]">
+            <i data-lucide="clock" aria-hidden="true" class="h-4 w-4"></i>{{ __('seerah.public.articles_mode_hint') }}
+        </p>
+        <div id="articles-grid" class="sx-grid"></div>
 
         {{-- feed status: skeletons / error+retry / end --}}
-        <div x-show="articles.status === 'loading' || articles.status === 'idle'"
-             class="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5" aria-hidden="true">
-            @for($s = 0; $s < 6; $s++)
-            <div class="rounded-2xl overflow-hidden border border-gray-200 dark:border-white/10 bg-white dark:bg-[#161d38] animate-pulse">
-                <div class="h-1.5 bg-gray-200 dark:bg-white/10"></div>
-                <div class="p-5 space-y-3">
-                    <div class="h-5 rounded-full bg-gray-200 dark:bg-white/10 w-24"></div>
-                    <div class="h-4 rounded bg-gray-200 dark:bg-white/10 w-5/6"></div>
-                    <div class="h-3 rounded bg-gray-200 dark:bg-white/10 w-full"></div>
-                    <div class="h-3 rounded bg-gray-200 dark:bg-white/10 w-2/3"></div>
+        <div x-show="articles.status === 'loading' || articles.status === 'idle'" class="sx-grid mt-5" aria-hidden="true">
+            @for ($s = 0; $s < 6; $s++)
+                <div class="sx-card">
+                    <div class="sx-card-media sx-skeleton !bg-[color:var(--sx-surface-2)]"></div>
+                    <div class="sx-card-body">
+                        <div class="sx-skeleton h-5 w-3/4"></div>
+                        <div class="sx-skeleton h-4 w-full"></div>
+                        <div class="sx-skeleton h-4 w-1/2"></div>
+                    </div>
                 </div>
-            </div>
             @endfor
         </div>
 
-        <div x-show="articles.status === 'error'" x-cloak
-             class="mt-6 rounded-2xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 p-5 flex flex-col sm:flex-row items-center justify-center gap-4 text-center">
-            <p class="text-sm font-semibold text-red-700 dark:text-red-300 flex items-center gap-2">
-                <i data-lucide="wifi-off" class="w-4 h-4 flex-shrink-0"></i>{{ __('seerah.public.load_failed') }}
-            </p>
-            <button type="button" @click="loadArticles(true)"
-                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow hover:opacity-90 transition-opacity">
-                <i data-lucide="rotate-cw" class="w-4 h-4"></i>{{ __('seerah.public.retry') }}
-            </button>
+        <div x-show="articles.status === 'error'" x-cloak role="alert"
+             class="sx-note mt-6 items-center !bg-[color:var(--sx-danger-soft)] !text-[color:var(--sx-danger)]">
+            <i data-lucide="wifi-off" aria-hidden="true" class="h-5 w-5 !text-[color:var(--sx-danger)]"></i>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <p class="font-semibold">{{ __('seerah.public.load_failed') }}</p>
+                <button type="button" @click="loadArticles(true)" class="sx-btn">
+                    <i data-lucide="rotate-cw" aria-hidden="true"></i>{{ __('seerah.public.retry') }}
+                </button>
+            </div>
         </div>
 
-        <p x-show="articles.done" x-cloak class="mt-8 text-center text-sm font-semibold text-gray-400 dark:text-gray-500 flex items-center justify-center gap-2">
-            <i data-lucide="check-circle-2" class="w-4 h-4"></i>{{ __('seerah.public.articles_end') }}
+        <p x-show="articles.done" x-cloak class="mt-8 flex items-center justify-center gap-2 text-sm font-semibold text-[color:var(--sx-muted)]">
+            <i data-lucide="check-circle-2" aria-hidden="true" class="h-4 w-4"></i>{{ __('seerah.public.articles_end') }}
         </p>
 
         {{-- sentinel: when visible, the next page loads --}}
@@ -407,64 +410,42 @@
     </div>
 
     {{-- CTA --}}
-    <section class="max-w-4xl mx-auto px-4 sm:px-6 py-12">
-        <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0056b3] to-[#218838] text-white p-8 sm:p-10 text-center shadow-xl">
-            <div class="absolute -top-12 -start-12 w-44 h-44 rounded-full bg-white/10 blur-3xl"></div>
-            <h2 class="relative text-2xl sm:text-3xl font-bold">{{ __('seerah.public.cta_title') }}</h2>
-            <p class="relative mt-3 max-w-2xl mx-auto text-white/85">{{ __('seerah.public.cta_subtitle') }}</p>
+    <section class="sx-wrap mt-4 py-12">
+        <div class="sx-surface !border-transparent bg-[image:var(--sx-grad)] p-8 text-center text-white sm:p-10">
+            <h2 class="text-2xl font-extrabold sm:text-3xl">{{ __('seerah.public.cta_title') }}</h2>
+            <p class="mx-auto mt-3 max-w-2xl leading-relaxed text-white/85">{{ __('seerah.public.cta_subtitle') }}</p>
             {{-- The Shama'il section left the timeline for its own article series,
                  so this CTA is the path readers take to reach it. --}}
-            <a href="{{ route('public.series.show', 'shamail-an-nabi') }}" class="relative mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-[#0056b3] font-bold hover:scale-105 transition-transform">
-                <i data-lucide="sparkles" class="w-5 h-5"></i>{{ __('seerah.public.browse_shamail_series') }}
+            <a href="{{ route('public.series.show', 'shamail-an-nabi') }}" class="sx-btn is-light mt-6">
+                <i data-lucide="sparkles" aria-hidden="true"></i>{{ __('seerah.public.browse_shamail_series') }}
             </a>
         </div>
     </section>
     @endif
 </div>
 
-{{-- Client-side card templates for the lazy feeds. Data is injected via
-     textContent (never innerHTML) so titles/locations stay XSS-safe. --}}
+{{-- Client-side stencils for the lazy feeds. Data is injected via textContent
+     (never innerHTML) so titles/locations stay XSS-safe. --}}
 <template id="seerah-ev-tpl">
-    <a class="group flex items-center gap-3 rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50/70 dark:bg-white/[.03] p-3 hover:bg-white dark:hover:bg-white/[.07] hover:border-[#64CCC5]/50 hover:shadow-sm transition-all">
-        <div data-tpl="iconWrap" class="w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-            <i data-tpl="icon" class="w-5 h-5 text-white"></i>
-        </div>
-        <div class="flex-1 min-w-0">
-            <h3 data-tpl="title" class="font-bold text-[15px] text-gray-900 dark:text-white leading-snug line-clamp-2 group-hover:text-[#0056b3] dark:group-hover:text-[#64CCC5] transition-colors"></h3>
-            <div class="mt-1 flex items-center flex-wrap gap-x-1.5 gap-y-1 text-[11px] text-gray-400 dark:text-gray-500 min-w-0">
-                <span data-tpl="type" class="font-semibold text-[#0056b3]/70 dark:text-[#64CCC5]/80 flex-shrink-0"></span>
-                <span data-tpl="hijri" class="flex-shrink-0 tabular-nums"></span>
+    <a class="sx-tile">
+        <span class="sx-tile-icon"><i data-tpl="icon" aria-hidden="true"></i></span>
+        <span class="min-w-0">
+            <span data-tpl="title" class="sx-tile-title"></span>
+            <span class="sx-tile-sub mt-0.5 flex items-center gap-1.5">
+                <span data-tpl="type" class="font-semibold text-[color:var(--sx-accent)]"></span>
+                <span data-tpl="hijri" class="tabular-nums"></span>
                 <span data-tpl="location" class="truncate"></span>
-                <span data-tpl="dispute" class="inline-flex items-center gap-1 px-1.5 rounded-full flex-shrink-0 font-bold bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300">
-                    <i data-lucide="alert-triangle" class="w-3 h-3"></i>{{ __('seerah.public.dispute_badge') }}
+                <span data-tpl="dispute" class="inline-flex items-center gap-1 font-bold text-[color:var(--sx-danger)]">
+                    <i data-lucide="scale" aria-hidden="true" class="h-3 w-3 !text-[color:var(--sx-danger)]"></i>{{ __('seerah.public.dispute_badge') }}
                 </span>
-            </div>
-        </div>
-        <i data-lucide="chevron-left" class="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-[#64CCC5] ltr:rotate-180 flex-shrink-0 transition-colors"></i>
+            </span>
+        </span>
+        <i data-lucide="chevron-left" aria-hidden="true" class="h-4 w-4 flex-shrink-0 text-[color:var(--sx-muted)] ltr:rotate-180"></i>
     </a>
 </template>
 
 <template id="seerah-art-tpl">
-    <a class="group flex flex-col rounded-2xl overflow-hidden border border-gray-200 dark:border-white/10 bg-white dark:bg-[#161d38] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
-        <div data-tpl="bar" class="h-1.5 bg-gradient-to-r"></div>
-        <div class="p-4 sm:p-5 flex flex-col flex-1">
-            <div class="flex items-center gap-2 mb-2 flex-wrap">
-                <span data-tpl="badge" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold text-white bg-gradient-to-r">
-                    <i data-tpl="icon" class="w-3 h-3"></i><span data-tpl="type"></span>
-                </span>
-                <span data-tpl="hijri" class="text-[11px] font-bold text-gray-400 dark:text-gray-500 tabular-nums"></span>
-                <span data-tpl="dispute" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300">
-                    <i data-lucide="alert-triangle" class="w-3 h-3"></i>{{ __('seerah.public.dispute_badge') }}
-                </span>
-            </div>
-            <h3 data-tpl="title" class="font-bold text-base text-gray-900 dark:text-white group-hover:text-[#0056b3] dark:group-hover:text-[#64CCC5] transition-colors leading-snug line-clamp-2"></h3>
-            <p data-tpl="description" class="mt-1.5 text-sm text-gray-600 dark:text-gray-300 leading-relaxed line-clamp-3 flex-1"></p>
-            <div class="mt-3 pt-3 border-t border-gray-100 dark:border-white/5 flex items-center justify-between gap-2 text-xs">
-                <span data-tpl="locationWrap" class="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400 truncate"><i data-lucide="map-pin" class="w-3 h-3 flex-shrink-0"></i><span data-tpl="location" class="truncate"></span></span>
-                <span class="inline-flex items-center gap-1 text-[#0056b3] dark:text-[#64CCC5] font-semibold group-hover:gap-2 transition-all flex-shrink-0">{{ __('seerah.public.read_more') }}<i data-lucide="arrow-left" class="w-3.5 h-3.5 ltr:rotate-180"></i></span>
-            </div>
-        </div>
-    </a>
+    <x-public.seerah.event-card :event="$cardStencil" />
 </template>
 @endsection
 
@@ -493,7 +474,7 @@
                 this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
 
                 // Path of Light: continuous journey progress (--jp, 0→1) drives
-                // the spine fill and the traveler. One rAF-throttled listener,
+                // the spine fill and the traveller. One rAF-throttled listener,
                 // one layout read per frame.
                 this._journeyEl = document.getElementById('seerah-journey');
                 const onPathScroll = () => {
@@ -508,12 +489,12 @@
                 }
 
                 if (this._reduce) {
-                    document.querySelectorAll('.seerah-reveal').forEach(el => el.classList.add('is-visible'));
+                    this.revealAll();
                 } else {
                     const io = new IntersectionObserver((entries) => {
-                        entries.forEach(en => { if (en.isIntersecting) { en.target.classList.add('is-visible'); io.unobserve(en.target); } });
+                        entries.forEach(en => { if (en.isIntersecting) { en.target.dataset.shown = 'true'; io.unobserve(en.target); } });
                     }, { threshold: 0.08 });
-                    document.querySelectorAll('.seerah-reveal').forEach(el => io.observe(el));
+                    document.querySelectorAll('.sx-reveal').forEach(el => io.observe(el));
                 }
 
                 const spy = new IntersectionObserver((entries) => {
@@ -550,6 +531,10 @@
                 if (this.mode === 'articles') this.loadArticles();
             },
 
+            revealAll() {
+                document.querySelectorAll('.sx-reveal').forEach(el => { el.dataset.shown = 'true'; });
+            },
+
             updatePath() {
                 if (this.mode !== 'journey' || ! this._journeyEl) return;
                 const rect = this._journeyEl.getBoundingClientRect();
@@ -572,7 +557,7 @@
                     const res = await fetch(milestone.url, { headers: { 'Accept': 'application/json' } });
                     if (! res.ok) throw new Error(`HTTP ${res.status}`);
                     const data = await res.json();
-                    grid.replaceChildren(...(data.events ?? []).map(ev => this.buildEventCard(ev)));
+                    grid.replaceChildren(...(data.events ?? []).map(ev => this.buildEventTile(ev)));
                     this.sections[slug] = 'loaded';
                     if (window.lucide) lucide.createIcons();
                 } catch (e) {
@@ -616,10 +601,18 @@
                 if (el && ! keep) el.remove();
             },
 
-            buildEventCard(ev) {
+            // Replaces the trailing label of an "icon + text" element, keeping the icon.
+            _label(el, text) {
+                if (! el) return;
+                [...el.childNodes].forEach(n => { if (n.nodeType === Node.TEXT_NODE) n.remove(); });
+                el.append(' ' + text);
+            },
+
+            // A station in an era: one .sx-tile row.
+            buildEventTile(ev) {
                 const node = document.getElementById('seerah-ev-tpl').content.firstElementChild.cloneNode(true);
                 node.href = ev.url;
-                node.querySelector('[data-tpl="iconWrap"]').classList.add(...(ev.gradient || 'from-slate-400 to-slate-500').split(/\s+/));
+                node.title = ev.title;
                 node.querySelector('[data-tpl="icon"]').setAttribute('data-lucide', ev.icon || 'circle');
                 node.querySelector('[data-tpl="title"]').textContent = ev.title;
                 this._fill(node, 'type', ev.typeLabel);
@@ -629,31 +622,68 @@
                 return node;
             },
 
+            // The articles feed reuses the editorial card stencil rendered in Blade,
+            // so a fetched card is identical to a server-rendered one (morph included).
             buildArticleCard(ev) {
                 const node = document.getElementById('seerah-art-tpl').content.firstElementChild.cloneNode(true);
-                const gradient = (ev.gradient || 'from-slate-400 to-slate-500').split(/\s+/);
                 node.href = ev.url;
-                node.querySelector('[data-tpl="bar"]').classList.add(...gradient);
-                node.querySelector('[data-tpl="badge"]').classList.add(...gradient);
-                node.querySelector('[data-tpl="icon"]').setAttribute('data-lucide', ev.icon || 'circle');
-                node.querySelector('[data-tpl="type"]').textContent = ev.typeLabel || '';
-                node.querySelector('[data-tpl="title"]').textContent = ev.title;
-                this._fill(node, 'hijri', ev.hijriLabel);
-                this._fill(node, 'description', ev.description);
-                if (ev.location) {
-                    node.querySelector('[data-tpl="location"]').textContent = ev.location;
-                } else {
-                    node.querySelector('[data-tpl="locationWrap"]').remove();
+                node.title = ev.title;
+
+                // Every lookup is optional: the stencil is Blade-owned, so a prop
+                // change there must degrade a card, never throw mid-feed.
+                const set = (sel, text) => { const el = node.querySelector(sel); if (el) el.textContent = text; };
+                set('.sx-card-title', ev.title);
+
+                const media = node.querySelector('.sx-card-media');
+                if (media && ev.image) {
+                    const img = document.createElement('img');
+                    Object.assign(img, { src: ev.image, alt: '', width: 640, height: 400, loading: 'lazy', decoding: 'async' });
+                    img.onerror = () => img.remove();
+                    media.prepend(img);
                 }
-                this._toggle(node, 'dispute', ev.hasDispute);
+
+                node.querySelector('.sx-card-glyph i')?.setAttribute('data-lucide', ev.icon || 'circle');
+
+                const badge = node.querySelector('.sx-card-type .sx-glass-chip');
+                if (ev.typeLabel) {
+                    badge?.querySelector('i')?.setAttribute('data-lucide', ev.icon || 'circle');
+                    this._label(badge, ev.typeLabel);
+                } else {
+                    badge?.remove();
+                }
+
+                const year = node.querySelector('.sx-card-year');
+                if (ev.hijriYear === null || ev.hijriYear === undefined) {
+                    year?.remove();
+                } else if (year) {
+                    set('.sx-card-year strong', Math.abs(ev.hijriYear));
+                    set('.sx-card-year span', ev.hijriYear >= 0 ? config.suffix.hijri : config.suffix.beforeHijra);
+                }
+
+                if (ev.description) { set('.sx-card-desc', ev.description); } else { node.querySelector('.sx-card-desc')?.remove(); }
+
+                this._cardMeta(node, 'moon', ev.hijriDate);
+                this._cardMeta(node, 'calendar', ev.gregorianYear ? `${ev.gregorianYear} ${config.suffix.gregorian}` : null);
+                this._cardMeta(node, 'map-pin', ev.location);
+                this._cardMeta(node, 'scale', ev.hasDispute ? true : null);
                 return node;
+            },
+
+            // One .sx-card-meta entry, addressed by its icon so the stencil's order
+            // is not baked into this script. `true` keeps the pre-rendered label.
+            _cardMeta(node, icon, text) {
+                const entry = [...node.querySelectorAll('.sx-card-meta > span')]
+                    .find(span => span.querySelector(`[data-lucide="${icon}"]`));
+                if (! entry) return;
+                if (! text) { entry.remove(); return; }
+                if (text !== true) entry.querySelector('.sx-clamp-1').textContent = text;
             },
 
             setMode(m) {
                 this.mode = m;
                 localStorage.setItem('seerahMode', m);
                 this.$nextTick(() => {
-                    document.querySelectorAll('.seerah-reveal').forEach(el => el.classList.add('is-visible'));
+                    this.revealAll();
                     if (window.lucide) lucide.createIcons();
                 });
                 if (m === 'articles') this.loadArticles();

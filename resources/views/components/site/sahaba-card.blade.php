@@ -4,11 +4,13 @@
 
     Props:
         $sahabi      — Sahabi model instance with `translations` relation loaded
-        $color       — Tailwind gradient pair for the portrait header e.g. 'from-[#6f42c1] to-[#5a32a3]'
         $badge       — short honorific text e.g. 'الخليفة الأول'
         $badgeIcon   — lucide icon name for the corner accent e.g. 'star'
-        $badgeColor  — gradient for the corner badge circle e.g. 'from-yellow-400 to-yellow-600'
-        $accentColor — Tailwind text colour for the "read biography" link e.g. 'text-[#6f42c1]'
+
+    Colour comes from the design system, not from the caller: the portrait plate is
+    the brand gradient and the accent is --sx-accent, so a companion card looks the
+    same wherever it appears. ($color / $badgeColor / $accentColor are accepted and
+    ignored, for callers that still pass the old per-card palette.)
         $width       — outer width utilities. Carousel uses the fixed default so its
                        scroll-snap paging keeps working; the listing grid passes 'w-full'.
 
@@ -39,10 +41,7 @@
     // in which case the card falls back to the radi-Allah-anhu line.
     $kunyaBadge = ($kunya && $kunya !== $honor) ? $kunya : null;
 
-    $cardColor = $color ?? 'from-[#6f42c1] to-[#5a32a3]';
-    $icon      = $badgeIcon ?? 'star';
-    $ringColor = $badgeColor ?? 'from-yellow-400 to-yellow-600';
-    $accent    = $accentColor ?? 'text-[#6f42c1]';
+    $icon = $badgeIcon ?? 'star';
 
     // Calligraphic monogram — first grapheme of the display name. Falls back to a
     // neutral mark for empty names so the medallion never renders blank.
@@ -65,18 +64,15 @@
 
 <div class="flex-shrink-0 {{ $width }} h-full sahaba-card">
     <a href="{{ $href }}"
-       class="sahaba-medallion-card group flex h-full flex-col rounded-2xl overflow-hidden
-              bg-gradient-to-br from-white to-[#F8F9FA] dark:from-[#16213e] dark:to-[#1a1a2e]
-              shadow-[0_10px_30px_-12px_rgba(0,0,0,0.25)] hover:shadow-[0_28px_50px_-12px_rgba(0,0,0,0.35)]
-              border border-black/5 hover:border-black/10 dark:border-white/10 dark:hover:border-white/20
-              focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
-              focus-visible:ring-offset-transparent {{ str_replace('text-', 'focus-visible:ring-', $accent) }}">
+       class="sahaba-medallion-card sx-surface group flex h-full flex-col overflow-hidden
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--sx-accent)] focus-visible:ring-offset-2
+              focus-visible:ring-offset-[color:var(--sx-bg)]">
 
         {{-- Portrait header --}}
         {{-- Taller than the original h-36/h-40: the name scrim covers the lower
              third, and at the old height it crowded the medallion. --}}
-        <div class="sahaba-portrait relative h-44 sm:h-48 overflow-hidden bg-gradient-to-br {{ $cardColor }}
-                    flex items-center justify-center">
+        <div class="sahaba-portrait relative h-44 sm:h-48 overflow-hidden flex items-center justify-center"
+             style="background: var(--sx-grad)">
 
             {{-- Soft radial vignette adds depth under the medallion. --}}
             <div class="absolute inset-0 opacity-90"
@@ -84,7 +80,7 @@
 
             {{-- Honorific accent badge — top corner, clear of the monogram. --}}
             <div class="absolute top-2.5 end-2.5 z-[4] w-7 h-7 rounded-full flex items-center justify-center
-                        bg-gradient-to-br {{ $ringColor }} shadow-md ring-2 ring-white/60 dark:ring-white/20">
+                        bg-white/20 backdrop-blur-sm ring-1 ring-white/40">
                 <i class="w-4 h-4 text-white" data-lucide="{{ $icon }}"></i>
             </div>
 
@@ -142,8 +138,8 @@
              read-link lines up across cards whatever the name length. --}}
         <div class="relative mt-auto px-4 pb-3.5 pt-3">
             {{-- Hairline in the card's accent, brightest at the centre. --}}
-            <span class="absolute inset-x-4 top-0 h-px opacity-40 {{ $accent }}" aria-hidden="true"
-                  style="background:linear-gradient(90deg,transparent,currentColor,transparent);"></span>
+            <span class="absolute inset-x-4 top-0 h-px opacity-60" aria-hidden="true"
+                  style="background:linear-gradient(90deg,transparent,var(--sx-accent),transparent);"></span>
 
             {{-- One row, not two: the year is metadata and the read-link is the
                  affordance, so they read as a single footer line rather than a
@@ -151,7 +147,7 @@
             <div class="flex items-center justify-between gap-3">
                 @if($deathYear)
                     <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold
-                                 text-gray-500 dark:text-gray-400">
+                                 text-[color:var(--sx-muted)]">
                         <i class="h-3.5 w-3.5 shrink-0" data-lucide="calendar" aria-hidden="true"></i>
                         <span class="sr-only">{{ __('sahaba.death_year') }}:</span>
                         <span class="tabular-nums">{{ $deathYear }} {{ __('sahaba.year_hijri') }}</span>
@@ -160,7 +156,7 @@
                     <span></span>
                 @endif
 
-                <span class="inline-flex items-center gap-1.5 text-xs font-bold {{ $accent }}">
+                <span class="inline-flex items-center gap-1.5 text-xs font-bold text-[color:var(--sx-accent)]">
                     <span>{{ __('site.read_biography') }}</span>
                     <i class="sahaba-card-arrow h-4 w-4 shrink-0"
                        data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}" aria-hidden="true"></i>

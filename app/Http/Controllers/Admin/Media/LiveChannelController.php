@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Admin\Media;
 use App\Domain\Media\DTOs\CreateLiveChannelData;
 use App\Domain\Media\DTOs\UpdateLiveChannelData;
 use App\Domain\Media\Enums\LiveStatus;
+use App\Domain\Media\Enums\StreamType;
 use App\Domain\Media\Models\LiveChannel;
 use App\Domain\Media\Services\LiveChannelService;
 use App\Domain\Media\Services\MediaAttachmentService;
@@ -59,8 +60,9 @@ class LiveChannelController extends Controller
     public function create(): View
     {
         $statuses = LiveStatus::cases();
+        $streamTypes = StreamType::cases();
 
-        return view('admin.live-channels.create', compact('statuses'));
+        return view('admin.live-channels.create', compact('statuses', 'streamTypes'));
     }
 
     public function store(StoreLiveChannelRequest $request): RedirectResponse
@@ -110,8 +112,9 @@ class LiveChannelController extends Controller
 
         $channel->loadMissing(['translations', 'media']);
         $statuses = LiveStatus::cases();
+        $streamTypes = StreamType::cases();
 
-        return view('admin.live-channels.edit', compact('channel', 'statuses'));
+        return view('admin.live-channels.edit', compact('channel', 'statuses', 'streamTypes'));
     }
 
     public function update(UpdateLiveChannelRequest $request, int $id): RedirectResponse

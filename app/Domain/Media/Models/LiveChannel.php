@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Media\Models;
 
 use App\Domain\Media\Enums\LiveStatus;
+use App\Domain\Media\Enums\StreamType;
+use App\Domain\Media\Support\YouTubeUrl;
 use App\Domain\Shared\Traits\HasLocalizedContent;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,6 +26,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property int $id
  * @property string $slug
  * @property string|null $streaming_url
+ * @property StreamType|null $stream_type
  * @property LiveStatus $status
  * @property bool $is_published
  * @property int $display_order
@@ -40,6 +43,7 @@ class LiveChannel extends Model implements HasMedia
     protected $fillable = [
         'slug',
         'streaming_url',
+        'stream_type',
         'status',
         'is_published',
         'display_order',
@@ -48,6 +52,7 @@ class LiveChannel extends Model implements HasMedia
 
     protected $casts = [
         'status' => LiveStatus::class,
+        'stream_type' => StreamType::class,
         'is_published' => 'boolean',
         'display_order' => 'integer',
         'views_count' => 'integer',
@@ -101,6 +106,9 @@ class LiveChannel extends Model implements HasMedia
      * links become /embed/ URLs (a watch URL inside an iframe is refused by
      * YouTube); anything else passes through unchanged. Muted autoplay:
      * browsers block audible autoplay, so the visitor unmutes in the player.
+     *
+     * Only the `iframe` stream type still reaches for this — every other type
+     * is driven by the wrapped player through {@see getStreamSourceAttribute}.
      */
     public function getEmbedUrlAttribute(): ?string
     {
@@ -110,11 +118,45 @@ class LiveChannel extends Model implements HasMedia
             return null;
         }
 
-        if (preg_match('#(?:youtube\.com/(?:embed/|watch\?v=|live/)|youtu\.be/)([A-Za-z0-9_-]{11})#', $url, $m) === 1) {
-            return "https://www.youtube.com/embed/{$m[1]}?autoplay=1&mute=1";
+        $videoId = YouTubeUrl::videoId($url);
+
+        return $videoId !== null
+            ? YouTubeUrl::embedUrl($videoId).'?autoplay=1&mute=1'
+            : $url;
+    }
+
+    /**
+     * The stream type actually in force: the editor's explicit choice, or —
+     * when they left it on "auto" — whatever the URL says it is.
+     */
+    public function getResolvedStreamTypeAttribute(): StreamType
+    {
+        return $this->stream_type ?? StreamType::detect($this->streaming_url);
+    }
+
+    /**
+     * Everything the wrapped player needs to open this channel, in the shape
+     * its JS engine expects. Null when no stream URL has been set yet.
+     *
+     * @return array{type: string, engine: string, audio_only: bool, url: string|null, video_id: string|null}|null
+     */
+    public function getStreamSourceAttribute(): ?array
+    {
+        if ($this->streaming_url === null || trim($this->streaming_url) === '') {
+            return null;
         }
 
-        return $url;
+        $type = $this->resolved_stream_type;
+
+        return [
+            'type' => $type->value,
+            'engine' => $type->engine(),
+            'audio_only' => $type->isAudioOnly(),
+            // The iframe fallback wants the embeddable form; the media engines
+            // (hls/dash/file) want the manifest URL exactly as entered.
+            'url' => $type === StreamType::Iframe ? $this->embed_url : $this->streaming_url,
+            'video_id' => $type === StreamType::YouTube ? YouTubeUrl::videoId($this->streaming_url) : null,
+        ];
     }
 
     public function isLive(): bool

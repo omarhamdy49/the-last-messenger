@@ -17,6 +17,8 @@ final readonly class UpdateLiveChannelData
         public array $title,
         public array $description,
         public ?string $streamingUrl,
+        /** Null = auto-detect from the URL at read time. */
+        public ?string $streamType,
         public string $status,
         public bool $isPublished,
         public int $displayOrder,
@@ -33,6 +35,7 @@ final readonly class UpdateLiveChannelData
             title: $validated['title'] ?? [],
             description: $validated['description'] ?? [],
             streamingUrl: $validated['streaming_url'] ?? null,
+            streamType: filled($validated['stream_type'] ?? null) ? $validated['stream_type'] : null,
             status: $validated['status'] ?? 'offline',
             isPublished: $request->boolean('is_published'),
             displayOrder: (int) ($validated['display_order'] ?? 0),

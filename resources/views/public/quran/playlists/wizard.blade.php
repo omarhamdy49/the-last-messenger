@@ -3,17 +3,6 @@
 @section('title', ($playlist ? __('quran.playlists.edit_title') : __('quran.playlists.create_title')).' | '.__('quran.playlists.title'))
 @section('meta_description', __('quran.playlists.subtitle'))
 
-@push('head')
-<style>
-    .pl-row { animation: plRow .25s ease-out both; animation-delay: calc(var(--i, 0) * 20ms); }
-    @keyframes plRow { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-    @media (prefers-reduced-motion: reduce) { .pl-row { animation: none; } }
-    .pl-skeleton { background: linear-gradient(90deg, rgba(0,0,0,.05) 25%, rgba(0,0,0,.09) 37%, rgba(0,0,0,.05) 63%); background-size: 400% 100%; animation: plShimmer 1.4s ease infinite; }
-    .dark .pl-skeleton { background: linear-gradient(90deg, rgba(255,255,255,.06) 25%, rgba(255,255,255,.12) 37%, rgba(255,255,255,.06) 63%); background-size: 400% 100%; }
-    @keyframes plShimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
-</style>
-@endpush
-
 @section('content')
 @php
     $isRtl = in_array(app()->getLocale(), ['ar', 'ur'], true);
@@ -22,7 +11,8 @@
         'favoriteIds' => $favoriteIds,
         'surahs' => $surahs,
         'initial' => $initial,
-        'defaultName' => __('quran.playlists.name_default'),
+        // Numbered per user, so an untouched field still saves under a distinct name.
+        'defaultName' => __('quran.playlists.name_default', ['n' => app()->getLocale() === 'ar' ? arabic_digits($count + 1) : $count + 1]),
         'previewUrl' => route('public.quran.playlists.preview'),
         'storeUrl' => route('public.quran.playlists.store'),
         'updateUrl' => $playlist ? route('public.quran.playlists.update', $playlist->slug) : null,
@@ -35,103 +25,98 @@
     ];
 @endphp
 
-<div class="min-h-dvh font-['Cairo'] bg-gray-50 dark:bg-gray-950 transition-colors duration-300"
+<div class="sx min-h-[100dvh]"
      x-data="playlistWizard(@js($props))"
      x-init="init()"
      :style="$store.audioPlayer.track ? 'padding-bottom: 9rem' : 'padding-bottom: 5rem'">
-<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+<div class="sx-wrap">
 
     {{-- Breadcrumb --}}
-    <nav class="mb-6 text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2 flex-wrap" aria-label="breadcrumb">
-        <a href="{{ route('public.quran') }}" class="hover:text-primary transition-colors">{{ __('quran.public.page_title') }}</a>
-        <i data-lucide="{{ $isRtl ? 'chevron-left' : 'chevron-right' }}" class="w-4 h-4"></i>
-        <a href="{{ route('public.quran.playlists.index') }}" class="hover:text-primary transition-colors">{{ __('quran.playlists.title') }}</a>
-        <i data-lucide="{{ $isRtl ? 'chevron-left' : 'chevron-right' }}" class="w-4 h-4"></i>
-        <span class="text-zinc-900 dark:text-white font-semibold">{{ $playlist ? __('quran.playlists.edit_title') : __('quran.playlists.create_title') }}</span>
+    <nav class="flex flex-wrap items-center gap-2 pt-6 text-sm text-[color:var(--sx-muted)]" aria-label="breadcrumb">
+        <a href="{{ route('public.quran') }}" class="transition-colors hover:text-[color:var(--sx-accent)]">{{ __('quran.public.page_title') }}</a>
+        <i data-lucide="chevron-{{ $isRtl ? 'left' : 'right' }}" class="h-4 w-4" aria-hidden="true"></i>
+        <a href="{{ route('public.quran.playlists.index') }}" class="transition-colors hover:text-[color:var(--sx-accent)]">{{ __('quran.playlists.title') }}</a>
     </nav>
 
-    {{-- Header + progress rail --}}
-    <header class="grid lg:grid-cols-[1fr_minmax(280px,420px)] items-end gap-6 mb-8">
-        <div>
-            <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-zinc-900 dark:text-white text-start">
-                {{ $playlist ? __('quran.playlists.edit_title') : __('quran.playlists.create_title') }}
-            </h1>
-            <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">{{ __('quran.playlists.cap_hint', ['count' => $count, 'max' => $cap]) }}</p>
-        </div>
-        <ol class="grid grid-cols-3 gap-2" aria-label="steps">
-            @foreach (['step_reciters', 'step_scope', 'step_preview'] as $i => $key)
-                <li>
-                    <button type="button"
-                            @click="goTo({{ $i + 1 }})"
-                            :disabled="{{ $i + 1 }} > maxStep"
-                            :aria-current="step === {{ $i + 1 }} ? 'step' : null"
-                            class="w-full text-start disabled:cursor-not-allowed">
-                        <span class="block h-1.5 rounded-full transition-colors duration-300"
-                              :class="step >= {{ $i + 1 }} ? 'bg-gradient-to-r from-[#0056b3] to-[#218838]' : 'bg-zinc-200 dark:bg-zinc-800'"></span>
-                        <span class="mt-2 block text-xs font-semibold transition-colors"
-                              :class="step === {{ $i + 1 }} ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400'">
-                            <span class="tabular-nums">{{ $i + 1 }}.</span> {{ __('quran.playlists.'.$key) }}
-                        </span>
-                    </button>
-                </li>
-            @endforeach
-        </ol>
-    </header>
+    <x-public.editorial.page-hero
+        :title="$playlist ? __('quran.playlists.edit_title') : __('quran.playlists.create_title')"
+        :lead="__('quran.playlists.cap_hint', ['count' => $count, 'max' => $cap])" />
+
+    {{-- Step indicator: a step you have not reached yet is disabled, not hidden. --}}
+    <ol class="sx-tabs mb-8" aria-label="steps">
+        @foreach (['step_reciters', 'step_scope', 'step_preview'] as $i => $key)
+            <li>
+                <button type="button"
+                        @click="goTo({{ $i + 1 }})"
+                        :disabled="{{ $i + 1 }} > maxStep"
+                        :aria-current="step === {{ $i + 1 }} ? 'step' : null"
+                        class="sx-tab disabled:cursor-not-allowed disabled:opacity-45"
+                        :class="step === {{ $i + 1 }} ? 'text-[color:var(--sx-accent)] border-[color:var(--sx-accent)]' : ''">
+                    <span class="tabular-nums">{{ $i + 1 }}.</span> {{ __('quran.playlists.'.$key) }}
+                </button>
+            </li>
+        @endforeach
+    </ol>
 
     {{-- ============================ STEP 1: RECITERS ============================ --}}
     <section x-show="step === 1" x-cloak class="space-y-8">
-        <div class="grid md:grid-cols-2 gap-5">
-            <div>
-                <label for="pl-name" class="block text-sm font-semibold text-zinc-800 dark:text-zinc-100 mb-1.5">{{ __('quran.playlists.name') }} <span class="text-rose-500" aria-hidden="true">*</span></label>
-                <input id="pl-name" type="text" x-model="name" maxlength="80" required autocomplete="off"
-                       @input="dirty = true"
-                       :aria-invalid="!!errors.name"
-                       class="w-full h-12 px-4 rounded-xl border bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:ring-2 focus:ring-primary/20 transition"
-                       :class="errors.name ? 'border-rose-400' : 'border-zinc-200 dark:border-zinc-700 focus:border-primary'">
-                <p class="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400" x-show="!errors.name">{{ __('quran.playlists.name_help') }}</p>
-                <p class="mt-1.5 text-xs text-rose-600" x-show="errors.name" x-text="errors.name?.[0]" role="alert"></p>
+        <div class="sx-surface grid gap-4 p-4 sm:p-5">
+            <div class="grid gap-4 md:grid-cols-2">
+                <div>
+                    <label for="pl-name" class="sx-label">{{ __('quran.playlists.name') }} <span class="sx-req" aria-hidden="true">*</span></label>
+                    <input id="pl-name" type="text" x-model="name" maxlength="80" required autocomplete="off"
+                           @input="dirty = true"
+                           :aria-invalid="!!errors.name"
+                           class="sx-input"
+                           :class="errors.name ? '!border-[color:var(--sx-danger)]' : ''">
+                    <p class="mt-1.5 text-xs text-[color:var(--sx-muted)]" x-show="!errors.name">{{ __('quran.playlists.name_help') }}</p>
+                    <p class="sx-error" x-show="errors.name" x-text="errors.name?.[0]" role="alert"></p>
+                </div>
+                <div>
+                    <label for="pl-desc" class="sx-label">{{ __('quran.playlists.description') }}</label>
+                    <input id="pl-desc" type="text" x-model="description" maxlength="300" autocomplete="off"
+                           @input="dirty = true"
+                           class="sx-input"
+                           :class="errors.description ? '!border-[color:var(--sx-danger)]' : ''">
+                    <p class="sx-error" x-show="errors.description" x-text="errors.description?.[0]" role="alert"></p>
+                </div>
             </div>
-            <div>
-                <label for="pl-desc" class="block text-sm font-semibold text-zinc-800 dark:text-zinc-100 mb-1.5">{{ __('quran.playlists.description') }}</label>
-                <input id="pl-desc" type="text" x-model="description" maxlength="300" autocomplete="off"
-                       @input="dirty = true"
-                       class="w-full h-12 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition">
-                <p class="mt-1.5 text-xs text-rose-600" x-show="errors.description" x-text="errors.description?.[0]" role="alert"></p>
-            </div>
-        </div>
 
-        <div class="relative">
-            <label for="pl-reciter-search" class="sr-only">{{ __('quran.playlists.search_reciters') }}</label>
-            <i data-lucide="search" class="w-4 h-4 absolute top-1/2 -translate-y-1/2 start-3.5 text-zinc-400 pointer-events-none"></i>
-            <input id="pl-reciter-search" type="search" x-model="reciterSearch" placeholder="{{ __('quran.playlists.search_reciters') }}" autocomplete="off"
-                   class="w-full h-12 ps-10 pe-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition">
+            <div class="relative">
+                <label for="pl-reciter-search" class="sx-label">{{ __('quran.playlists.search_reciters') }}</label>
+                <i data-lucide="search" class="pointer-events-none absolute start-4 top-[2.4rem] h-5 w-5 text-[color:var(--sx-muted)]" aria-hidden="true"></i>
+                <input id="pl-reciter-search" type="search" x-model="reciterSearch" placeholder="{{ __('quran.playlists.search_reciters') }}"
+                       autocomplete="off" enterkeyhint="search" class="sx-input ps-12">
+            </div>
         </div>
 
         <template x-for="group in groups" :key="group.key">
             <div x-show="group.items.length">
-                <h2 class="flex items-center gap-2 text-sm font-bold text-zinc-700 dark:text-zinc-200 mb-3">
-                    <i :data-lucide="group.icon" class="w-4 h-4 text-primary"></i>
+                <h2 class="mb-3 flex items-center gap-2 text-sm font-bold text-[color:var(--sx-ink-2)]">
+                    <i :data-lucide="group.icon" class="h-4 w-4 text-[color:var(--sx-accent)]" aria-hidden="true"></i>
                     <span x-text="group.label"></span>
                 </h2>
-                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+                <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
                     <template x-for="p in group.items" :key="p.id">
                         <button type="button" role="checkbox"
                                 :aria-checked="selected.has(p.id)"
                                 @click="toggleProfile(p.id)"
-                                class="group relative text-start rounded-2xl border p-3 min-h-[44px] bg-white dark:bg-zinc-900 transition-[transform,border-color,box-shadow] duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-                                :class="selected.has(p.id) ? 'border-primary shadow-[0_0_0_3px_rgba(0,86,179,0.12)]' : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400'">
-                            <span class="absolute top-2.5 end-2.5 w-6 h-6 rounded-full flex items-center justify-center transition-colors"
-                                  :class="selected.has(p.id) ? 'bg-primary text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-transparent'">
-                                <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                :title="p.name"
+                                class="sx-panel relative p-3 text-start transition-[border-color,box-shadow,transform] duration-200 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--sx-teal)]"
+                                :class="selected.has(p.id) ? 'border-[color:var(--sx-accent)] shadow-[0_0_0_3px_var(--sx-accent-soft)]' : 'hover:border-[color:var(--sx-line-strong)]'">
+                            <span class="absolute top-2.5 end-2.5 flex h-6 w-6 items-center justify-center rounded-full transition-colors"
+                                  :class="selected.has(p.id) ? 'text-white' : 'bg-[color:var(--sx-surface)] text-transparent'"
+                                  :style="selected.has(p.id) ? 'background: var(--sx-grad)' : ''">
+                                <i data-lucide="check" class="h-3.5 w-3.5" aria-hidden="true"></i>
                             </span>
-                            <span class="block w-16 h-16 rounded-full overflow-hidden mx-auto mb-2 bg-zinc-100 dark:bg-zinc-800">
-                                <template x-if="p.image"><img :src="p.image" :alt="p.name" class="w-full h-full object-cover" loading="lazy" width="64" height="64"></template>
-                                <template x-if="!p.image"><span class="w-full h-full flex items-center justify-center text-center px-1.5 text-[11px] font-bold leading-tight text-white bg-gradient-to-br from-[#0056b3] to-[#218838]" :title="p.name"><span class="line-clamp-3 break-words" x-text="p.name"></span></span></template>
+                            <span class="sx-avatar mx-auto mb-2 h-16 w-16">
+                                <template x-if="p.image"><img :src="p.image" :alt="p.name" loading="lazy" width="64" height="64" onerror="this.remove()"></template>
+                                <template x-if="!p.image"><span class="sx-clamp-3 px-1.5 text-center text-[11px] font-bold leading-tight" x-text="p.name"></span></template>
                             </span>
-                            <span class="block text-center text-sm font-bold text-zinc-900 dark:text-white leading-snug line-clamp-2" x-text="p.name"></span>
-                            <span class="mt-1 flex items-center justify-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                            <span class="sx-clamp-2 block text-center text-sm font-bold leading-snug text-[color:var(--sx-ink)]" x-text="p.name"></span>
+                            <span class="mt-1 flex items-center justify-center gap-1 text-[11px] text-[color:var(--sx-muted)]">
                                 <span x-text="p.flag"></span>
-                                <span x-text="p.styles[0] || ''" class="truncate"></span>
+                                <span class="truncate" x-text="p.styles[0] || ''"></span>
                             </span>
                         </button>
                     </template>
@@ -139,25 +124,26 @@
             </div>
         </template>
 
-        <x-site.empty-state icon="mic-off" x-show="!groups.some(g => g.items.length)" x-cloak
-            :title="__('quran.playlists.empty_search')" :message="__('site.try_adjusting_filters')" />
+        <x-public.editorial.empty-state icon="mic-off" x-show="!groups.some(g => g.items.length)" x-cloak
+            :title="__('quran.playlists.empty_search')" :hint="__('site.try_adjusting_filters')" />
     </section>
 
     {{-- ============================ STEP 2: SCOPE ============================ --}}
     <section x-show="step === 2" x-cloak class="space-y-8">
-        <div class="grid sm:grid-cols-2 gap-4" role="radiogroup">
+        <div class="grid gap-4 sm:grid-cols-2" role="radiogroup" aria-label="{{ __('quran.playlists.step_scope') }}">
             <template x-for="opt in [{v:'full', icon:'book-open', title:@js(__('quran.playlists.scope_full')), help:@js(__('quran.playlists.scope_full_help'))},{v:'custom', icon:'list-checks', title:@js(__('quran.playlists.scope_custom')), help:@js(__('quran.playlists.scope_custom_help'))}]" :key="opt.v">
                 <button type="button" role="radio" :aria-checked="scope === opt.v" @click="setScope(opt.v)"
-                        class="text-start rounded-2xl border p-5 sm:p-6 bg-white dark:bg-zinc-900 transition-[border-color,box-shadow,transform] duration-200 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-                        :class="scope === opt.v ? 'border-primary shadow-[0_0_0_3px_rgba(0,86,179,0.12)]' : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400'">
+                        class="sx-panel p-5 text-start transition-[border-color,box-shadow,transform] duration-200 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--sx-teal)] sm:p-6"
+                        :class="scope === opt.v ? 'border-[color:var(--sx-accent)] shadow-[0_0_0_3px_var(--sx-accent-soft)]' : 'hover:border-[color:var(--sx-line-strong)]'">
                     <span class="flex items-start gap-4">
-                        <span class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors"
-                              :class="scope === opt.v ? 'bg-primary text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'">
-                            <i :data-lucide="opt.icon" class="w-6 h-6"></i>
+                        <span class="sx-tile-icon h-12 w-12 shrink-0 transition-colors"
+                              :class="scope === opt.v ? '!text-white' : ''"
+                              :style="scope === opt.v ? 'background: var(--sx-grad)' : ''">
+                            <i :data-lucide="opt.icon" class="h-6 w-6" aria-hidden="true"></i>
                         </span>
                         <span class="min-w-0">
-                            <span class="block text-lg font-bold text-zinc-900 dark:text-white" x-text="opt.title"></span>
-                            <span class="block mt-1 text-sm text-zinc-500 dark:text-zinc-400" x-text="opt.help"></span>
+                            <span class="block text-lg font-bold text-[color:var(--sx-ink)]" x-text="opt.title"></span>
+                            <span class="mt-1 block text-sm leading-relaxed text-[color:var(--sx-muted)]" x-text="opt.help"></span>
                         </span>
                     </span>
                 </button>
@@ -165,27 +151,27 @@
         </div>
 
         <div x-show="scope === 'custom'" x-collapse x-cloak class="space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-                <div class="relative flex-1">
-                    <label for="pl-surah-search" class="sr-only">{{ __('quran.playlists.search_surahs') }}</label>
-                    <i data-lucide="search" class="w-4 h-4 absolute top-1/2 -translate-y-1/2 start-3.5 text-zinc-400 pointer-events-none"></i>
-                    <input id="pl-surah-search" type="search" x-model="surahSearch" placeholder="{{ __('quran.playlists.search_surahs') }}" autocomplete="off"
-                           class="w-full h-11 ps-10 pe-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition">
-                </div>
-                <div class="flex flex-wrap gap-2">
-                    <template x-for="q in [{k:'amma', l:@js(__('quran.playlists.quick_juz_amma'))},{k:'mufassal', l:@js(__('quran.playlists.quick_mufassal'))},{k:'all', l:@js(__('quran.playlists.quick_all'))},{k:'clear', l:@js(__('quran.playlists.quick_clear'))}]" :key="q.k">
-                        <button type="button" @click="quick(q.k)"
-                                class="h-11 px-4 rounded-full text-sm font-semibold border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:border-zinc-400 active:scale-[0.98] transition"
-                                x-text="q.l"></button>
-                    </template>
+            <div class="sx-surface grid gap-4 p-4 sm:p-5">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+                    <div class="relative min-w-0 flex-1">
+                        <label for="pl-surah-search" class="sx-label">{{ __('quran.playlists.search_surahs') }}</label>
+                        <i data-lucide="search" class="pointer-events-none absolute start-4 top-[2.4rem] h-5 w-5 text-[color:var(--sx-muted)]" aria-hidden="true"></i>
+                        <input id="pl-surah-search" type="search" x-model="surahSearch" placeholder="{{ __('quran.playlists.search_surahs') }}"
+                               autocomplete="off" enterkeyhint="search" class="sx-input ps-12">
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <template x-for="q in [{k:'amma', l:@js(__('quran.playlists.quick_juz_amma'))},{k:'mufassal', l:@js(__('quran.playlists.quick_mufassal'))},{k:'all', l:@js(__('quran.playlists.quick_all'))},{k:'clear', l:@js(__('quran.playlists.quick_clear'))}]" :key="q.k">
+                            <button type="button" @click="quick(q.k)" class="sx-btn" x-text="q.l"></button>
+                        </template>
+                    </div>
                 </div>
             </div>
-            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+            <div class="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
                 <template x-for="s in surahs.filter(s => !surahSearch.trim() || s.name.includes(surahSearch.trim()) || String(s.id) === surahSearch.trim())" :key="s.id">
-                    <button type="button" :aria-pressed="surahIds.has(s.id)" @click="toggleSurah(s.id)"
-                            class="min-h-[44px] rounded-xl border px-2 py-2 text-sm font-semibold flex items-center gap-2 transition-colors active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-                            :class="surahIds.has(s.id) ? 'bg-primary text-white border-primary' : 'bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400'">
-                        <span class="tabular-nums text-xs opacity-70" x-text="fmt(s.id)"></span>
+                    <button type="button" :aria-pressed="surahIds.has(s.id)" @click="toggleSurah(s.id)" :title="s.name"
+                            class="sx-chip min-h-[44px] w-full active:scale-[0.98]"
+                            :class="surahIds.has(s.id) ? 'is-active' : ''">
+                        <span class="text-xs tabular-nums opacity-70" x-text="fmt(s.id)"></span>
                         <span class="truncate" x-text="s.name"></span>
                     </button>
                 </template>
@@ -195,55 +181,53 @@
 
     {{-- ============================ STEP 3: PREVIEW ============================ --}}
     <section x-show="step === 3" x-cloak class="space-y-5">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-100" x-text="coverageText()"></p>
-                <p class="text-xs text-zinc-500 dark:text-zinc-400" x-show="uncovered.length" x-text="`${fmt(uncovered.length)} ×`"></p>
+                <p class="font-semibold text-[color:var(--sx-ink)] tabular-nums" x-text="coverageText()"></p>
+                <p class="text-xs text-[color:var(--sx-warn)] tabular-nums" x-show="uncovered.length" x-text="`${fmt(uncovered.length)} ×`"></p>
             </div>
-            <button type="button" @click="preview(true)" :disabled="loading"
-                    class="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-full text-sm font-semibold border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 hover:border-zinc-400 active:scale-[0.98] disabled:opacity-50 transition">
-                <i data-lucide="shuffle" class="w-4 h-4" :class="loading ? 'animate-spin' : ''"></i>
+            <button type="button" @click="preview(true)" :disabled="loading" class="sx-btn disabled:opacity-50">
+                <i data-lucide="shuffle" :class="loading ? 'animate-spin' : ''" aria-hidden="true"></i>
                 {{ __('quran.playlists.reshuffle') }}
             </button>
         </div>
 
-        {{-- Skeleton --}}
-        <div x-show="loading" class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 divide-y divide-zinc-100 dark:divide-zinc-800" aria-hidden="true">
+        {{-- Skeleton: shaped like the rows it stands in for. --}}
+        <div x-show="loading" class="sx-surface overflow-hidden" aria-hidden="true">
             <template x-for="i in 8" :key="i">
-                <div class="grid grid-cols-[auto_1fr_auto] gap-4 items-center px-4 py-3.5">
-                    <span class="w-9 h-9 rounded-xl pl-skeleton"></span>
-                    <span class="h-4 w-40 rounded pl-skeleton"></span>
-                    <span class="h-10 w-48 rounded-lg pl-skeleton"></span>
+                <div class="grid grid-cols-[auto_1fr_auto] items-center gap-4 border-t border-[color:var(--sx-line)] px-4 py-3.5 first:border-t-0">
+                    <span class="sx-skeleton h-9 w-9 !rounded-xl"></span>
+                    <span class="sx-skeleton h-4 w-40"></span>
+                    <span class="sx-skeleton h-10 w-48"></span>
                 </div>
             </template>
         </div>
 
-        <ul x-show="!loading" class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 divide-y divide-zinc-100 dark:divide-zinc-800" role="list">
+        <ul x-show="!loading" class="sx-surface overflow-hidden" role="list">
             <template x-for="(s, i) in rows" :key="s.id">
-                <li class="pl-row grid grid-cols-[auto_1fr_auto] sm:grid-cols-[auto_1fr_minmax(220px,300px)_auto] gap-x-3 gap-y-2 items-center px-3 sm:px-4 py-3"
-                    :style="`--i:${i}`"
-                    :class="!items[s.id] ? 'bg-amber-50 dark:bg-amber-950/30' : ''">
-                    <span class="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold tabular-nums shrink-0"
-                          :class="items[s.id] ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200'"
+                <li class="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-2 border-t border-[color:var(--sx-line)] px-3 py-3 first:border-t-0 sm:grid-cols-[auto_1fr_minmax(220px,300px)_auto] sm:px-4"
+                    :class="!items[s.id] ? 'bg-[color:var(--sx-warn-soft)]' : ''">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold tabular-nums"
+                          :class="items[s.id] ? 'bg-[color:var(--sx-surface-2)] text-[color:var(--sx-ink-2)]' : 'bg-[color:var(--sx-warn-soft)] text-[color:var(--sx-warn)]'"
                           x-text="fmt(s.id)"></span>
                     <div class="min-w-0">
-                        <p class="font-bold text-zinc-900 dark:text-white truncate" x-text="s.name"></p>
-                        <p class="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums" x-text="versesText(s.verses)"></p>
+                        <p class="sx-clamp-1 font-bold text-[color:var(--sx-ink)]" :title="s.name" x-text="s.name"></p>
+                        <p class="text-xs tabular-nums text-[color:var(--sx-muted)]" x-text="versesText(s.verses)"></p>
                     </div>
 
                     {{-- Reciter (and recording) in one native select: one optgroup per person --}}
-                    <div class="col-span-3 sm:col-span-1 flex items-center gap-2">
-                        <span class="w-9 h-9 rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 shrink-0 hidden sm:block">
-                            <template x-if="profileFor(items[s.id])?.image"><img :src="profileFor(items[s.id]).image" alt="" class="w-full h-full object-cover" loading="lazy" width="36" height="36"></template>
-                            <template x-if="items[s.id] && !profileFor(items[s.id])?.image"><span class="w-full h-full flex items-center justify-center text-[8px] font-bold text-white bg-gradient-to-br from-[#0056b3] to-[#218838]" :title="profileFor(items[s.id])?.name"><span class="line-clamp-1 px-0.5" x-text="(profileFor(items[s.id])?.name || '').split(' ')[0]"></span></span></template>
+                    <div class="col-span-3 flex items-center gap-2 sm:col-span-1">
+                        <span class="sx-avatar is-square hidden h-9 w-9 sm:grid">
+                            <template x-if="profileFor(items[s.id])?.image"><img :src="profileFor(items[s.id]).image" alt="" loading="lazy" width="36" height="36" onerror="this.remove()"></template>
+                            <template x-if="items[s.id] && !profileFor(items[s.id])?.image"><span class="sx-clamp-1 px-0.5 text-[8px] font-bold" :title="profileFor(items[s.id])?.name" x-text="(profileFor(items[s.id])?.name || '').split(' ')[0]"></span></template>
                         </span>
                         <label :for="`pl-rec-${s.id}`" class="sr-only">{{ __('quran.playlists.reciter_select') }}</label>
                         <select :id="`pl-rec-${s.id}`"
                                 :value="items[s.id] ?? ''"
                                 @change="setRecording(s.id, $event.target.value ? +$event.target.value : null)"
                                 :disabled="!optionsFor(s.id).length"
-                                class="w-full h-11 rounded-xl border bg-white dark:bg-zinc-900 text-sm text-zinc-900 dark:text-white px-3 focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-60 transition"
-                                :class="errors[`items.${s.id}`] ? 'border-rose-400' : 'border-zinc-200 dark:border-zinc-700'">
+                                class="sx-input !min-h-[2.75rem] text-base disabled:opacity-60 sm:text-sm"
+                                :class="errors[`items.${s.id}`] ? '!border-[color:var(--sx-danger)]' : ''">
                             <option value="" x-show="!items[s.id]">{{ __('quran.playlists.needs_reciter') }}</option>
                             <template x-for="opt in optionsFor(s.id)" :key="opt.profile.id">
                                 <optgroup :label="opt.profile.name">
@@ -257,63 +241,64 @@
 
                     <div class="flex items-center gap-1 justify-self-end">
                         <button type="button" @click="previewPlay(s.id)" :disabled="!items[s.id]"
-                                class="w-11 h-11 rounded-full flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 transition active:scale-[0.95]"
-                                :aria-label="`{{ __('quran.playlists.preview_play') }} ${s.name}`">
-                            <i data-lucide="play" class="w-4 h-4 {{ $isRtl ? '-scale-x-100' : '' }}" x-show="!isPlaying(s.id)"></i>
-                            <i data-lucide="pause" class="w-4 h-4" x-show="isPlaying(s.id)" x-cloak></i>
+                                class="sx-btn w-11 px-0 disabled:opacity-30"
+                                :aria-label="`{{ __('quran.playlists.preview_play') }} ${s.name}`"
+                                :title="`{{ __('quran.playlists.preview_play') }} ${s.name}`">
+                            <i data-lucide="play" class="{{ $isRtl ? '-scale-x-100' : '' }}" x-show="!isPlaying(s.id)" aria-hidden="true"></i>
+                            <i data-lucide="pause" x-show="isPlaying(s.id)" x-cloak aria-hidden="true"></i>
                         </button>
                         <button type="button" @click="removeSurah(s.id)"
-                                class="w-11 h-11 rounded-full flex items-center justify-center text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition active:scale-[0.95]"
-                                aria-label="{{ __('quran.playlists.remove_surah') }}">
-                            <i data-lucide="x" class="w-4 h-4"></i>
+                                class="sx-btn w-11 px-0 hover:!border-[color:var(--sx-danger)] hover:!text-[color:var(--sx-danger)]"
+                                aria-label="{{ __('quran.playlists.remove_surah') }}" title="{{ __('quran.playlists.remove_surah') }}">
+                            <i data-lucide="x" aria-hidden="true"></i>
                         </button>
                     </div>
 
-                    <p class="col-span-3 sm:col-span-4 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-1.5" x-show="!items[s.id]" role="alert">
-                        <i data-lucide="alert-triangle" class="w-3.5 h-3.5 mt-0.5 shrink-0"></i>{{ __('quran.playlists.uncovered') }}
+                    <p class="col-span-3 flex items-start gap-1.5 text-xs font-semibold text-[color:var(--sx-danger)] sm:col-span-4" x-show="!items[s.id]" role="alert">
+                        <i data-lucide="alert-triangle" class="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true"></i>{{ __('quran.playlists.uncovered') }}
                     </p>
-                    <p class="col-span-3 sm:col-span-4 text-xs text-rose-600" x-show="errors[`items.${s.id}`]" x-text="errors[`items.${s.id}`]?.[0]" role="alert"></p>
+                    <p class="col-span-3 text-xs font-semibold text-[color:var(--sx-danger)] sm:col-span-4" x-show="errors[`items.${s.id}`]" x-text="errors[`items.${s.id}`]?.[0]" role="alert"></p>
                 </li>
             </template>
         </ul>
 
-        <p class="text-xs text-rose-600" x-show="errors.items" x-text="errors.items?.[0]" role="alert"></p>
+        <p class="text-xs font-semibold text-[color:var(--sx-danger)]" x-show="errors.items" x-text="errors.items?.[0]" role="alert"></p>
     </section>
 
     {{-- ============================ STICKY ACTION BAR ============================ --}}
-    <div class="fixed inset-x-0 z-30 border-t border-zinc-200/80 dark:border-zinc-800 bg-white/90 dark:bg-zinc-900/90 backdrop-blur supports-[backdrop-filter]:bg-white/75"
+    <div class="fixed inset-x-0 z-30 border-t border-[color:var(--sx-line)] bg-[color:var(--sx-surface)]"
          :style="$store.audioPlayer.track ? 'bottom: 4.5rem' : 'bottom: 0'">
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-[4.5rem] flex items-center justify-between gap-3">
-            <div class="min-w-0 text-sm text-zinc-600 dark:text-zinc-300 tabular-nums truncate">
+        <div class="sx-wrap flex h-16 items-center justify-between gap-3 sm:h-[4.5rem]">
+            <div class="min-w-0 truncate text-sm tabular-nums text-[color:var(--sx-ink-2)]">
                 <span x-show="step === 1" x-text="selectedText()"></span>
                 <span x-show="step === 2" x-text="surahsText()"></span>
-                <label x-show="step === 3" class="inline-flex items-center gap-3 cursor-pointer select-none">
+                <label x-show="step === 3" class="inline-flex cursor-pointer select-none items-center gap-3">
                     <button type="button" role="switch" :aria-checked="isPublic" @click="isPublic = !isPublic; dirty = true"
-                            class="relative w-12 h-7 rounded-full transition-colors shrink-0"
-                            :class="isPublic ? 'bg-secondary' : 'bg-zinc-300 dark:bg-zinc-700'">
-                        <span class="absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-transform"
+                            class="relative h-7 w-12 shrink-0 rounded-full transition-colors"
+                            :class="isPublic ? '' : 'bg-[color:var(--sx-line-strong)]'"
+                            :style="isPublic ? 'background: var(--sx-grad)' : ''">
+                        <span class="absolute top-1 h-5 w-5 rounded-full bg-[color:var(--sx-surface)] shadow transition-transform"
                               :class="isPublic ? '{{ $isRtl ? '-translate-x-6 end-1' : 'translate-x-6 start-1' }}' : '{{ $isRtl ? 'end-1' : 'start-1' }}'"></span>
                     </button>
                     <span class="flex flex-col leading-tight">
-                        <span class="font-semibold text-zinc-800 dark:text-zinc-100">{{ __('quran.playlists.public_toggle') }}</span>
-                        <span class="hidden sm:block text-xs text-zinc-500 dark:text-zinc-400">{{ __('quran.playlists.public_toggle_help') }}</span>
+                        <span class="font-semibold text-[color:var(--sx-ink)]">{{ __('quran.playlists.public_toggle') }}</span>
+                        <span class="hidden text-xs text-[color:var(--sx-muted)] sm:block">{{ __('quran.playlists.public_toggle_help') }}</span>
                     </span>
                 </label>
             </div>
-            <div class="flex items-center gap-2 shrink-0">
-                <button type="button" @click="back()" x-show="step > 1"
-                        class="h-11 px-4 rounded-xl text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition active:scale-[0.98]">
+            <div class="flex shrink-0 items-center gap-2">
+                <button type="button" @click="back()" x-show="step > 1" class="sx-btn">
                     {{ __('quran.playlists.back') }}
                 </button>
                 <button type="button" @click="next()" x-show="step < 3" :disabled="!canNext"
-                        class="inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] text-white text-sm font-bold shadow-sm transition active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed">
+                        class="sx-btn is-primary disabled:cursor-not-allowed disabled:opacity-40">
                     {{ __('quran.playlists.next') }}
-                    <i data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}" class="w-4 h-4"></i>
+                    <i data-lucide="arrow-{{ $isRtl ? 'left' : 'right' }}" aria-hidden="true"></i>
                 </button>
                 <button type="button" @click="save()" x-show="step === 3" :disabled="saving || loading || !canSave"
-                        class="inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] text-white text-sm font-bold shadow-sm transition active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed">
-                    <i data-lucide="loader-2" class="w-4 h-4 animate-spin" x-show="saving" x-cloak></i>
-                    <i data-lucide="check" class="w-4 h-4" x-show="!saving"></i>
+                        class="sx-btn is-primary disabled:cursor-not-allowed disabled:opacity-40">
+                    <i data-lucide="loader-2" class="animate-spin" x-show="saving" x-cloak aria-hidden="true"></i>
+                    <i data-lucide="check" x-show="!saving" aria-hidden="true"></i>
                     <span x-text="saving ? @js(__('quran.playlists.saving')) : @js(__('quran.playlists.save'))"></span>
                 </button>
             </div>

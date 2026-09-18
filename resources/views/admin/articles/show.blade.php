@@ -23,7 +23,7 @@
 
     $status = $article->status instanceof \BackedEnum ? $article->status->value : (string) $article->status;
     $published = $status === 'published';
-    $cover = $article->thumb ? asset('storage/'.$article->thumb) : null;
+    $cover = ($article->featured_image ?: $article->thumb) ? asset('storage/'.($article->featured_image ?: $article->thumb)) : null;
     $statistics = collect($article->statistics ?? [])->filter(fn ($row) => filled($row['name'] ?? null) || filled($row['value'] ?? null));
     $references = collect($article->references ?? [])->filter(fn ($row) => filled($row['name'] ?? null) || filled($row['url'] ?? null));
     $publicSlug = $locales->get('ar')?->slug ?? $locales->first()?->slug;

@@ -99,10 +99,16 @@
          If the PSI number needs winning back, regenerate a critical set that
          actually covers above-the-fold at BOTH mobile and desktop widths and
          re-test for flashes — do not restore the async link on its own. --}}
+    {{-- Cross-document view transitions must be declared before the navigation
+         starts, so this one rule is inline rather than waiting on the stylesheet
+         (which the dev server injects at runtime). The morph itself — the card
+         image travelling into the next page's hero — is styled in
+         resources/css/public/editorial.css. --}}
+    <style>@view-transition { navigation: auto; }</style>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('head')
 </head>
-<body class="antialiased bg-[#F8F9FA] text-[#212529] min-h-screen flex flex-col">
+<body class="sx antialiased min-h-screen flex flex-col">
 
     {{-- Pages that want a focused, full-screen app shell (e.g. the ChatGPT-style
          Quran inquiry) declare @section('hide_header') to suppress the site header. --}}
@@ -126,13 +132,13 @@
     <div class="fixed bottom-4 end-4 z-[100] space-y-2" aria-live="polite">
         <template x-for="t in $store.toast.items" :key="t.id">
             <div x-transition
-                 class="card-premium flex items-center gap-3 px-4 py-3 min-w-[16rem] shadow-2xl">
+                 class="sx-surface flex items-center gap-3 px-4 py-3 min-w-[16rem]">
                 <span class="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
                       :class="t.type === 'success' ? 'bg-secondary/15 text-secondary' : 'bg-red-100 text-red-600'">
                     <i :data-lucide="t.type === 'success' ? 'check' : 'alert-triangle'" class="w-4 h-4"></i>
                 </span>
                 <p class="text-sm font-semibold flex-1" x-text="t.message"></p>
-                <button @click="$store.toast.dismiss(t.id)" class="text-gray-400 hover:text-gray-600">
+                <button @click="$store.toast.dismiss(t.id)" class="text-[color:var(--sx-muted)] transition-colors hover:text-[color:var(--sx-ink)]">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>

@@ -19,7 +19,7 @@
 @endphp
 
 @if ($episodes !== [])
-    <x-public.seerah.section id="episodes" icon="list-video" :title="__('seerah.public.section_episodes')" :index="$episodesIndex ?? null">
+    <x-public.editorial.section id="episodes" icon="list-video" :title="__('seerah.public.section_episodes')" :index="$episodesIndex ?? null">
         <ol class="grid gap-3 sm:grid-cols-2">
             @foreach ($episodes as $index => $episode)
                 <li>
@@ -41,11 +41,11 @@
                 </li>
             @endforeach
         </ol>
-    </x-public.seerah.section>
+    </x-public.editorial.section>
 @endif
 
 @if ($linked !== [])
-    <x-public.seerah.section id="linked" icon="network" :title="__('seerah.public.section_linked')" :index="$linkedIndex ?? null">
+    <x-public.editorial.section id="linked" icon="network" :title="__('seerah.public.section_linked')" :index="$linkedIndex ?? null">
         <div class="grid gap-8">
             @foreach ($groups as $type => [$icon, $groupLabel])
                 @continue(empty($linked[$type]))
@@ -83,7 +83,7 @@
                 </div>
             @endforeach
         </div>
-    </x-public.seerah.section>
+    </x-public.editorial.section>
 @endif
 
 @if ($externalLinks->isNotEmpty() || $tags !== [])
