@@ -193,4 +193,7 @@ return [
     'view_source' => 'عرض المصدر',
     'view_expanded' => 'عرض موسّع',
     'view_normal' => 'عرض عادي',
+
+    // Tooltip on a Quran quotation inside a matn, linked to our reader.
+    'quran_citation' => 'اذهب إلى الآية :reference في المصحف',
 ];

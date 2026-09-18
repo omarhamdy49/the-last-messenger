@@ -156,7 +156,7 @@
         </div>
 
         <p class="leading-loose" dir="rtl" :class="darkMode ? 'text-gray-200' : 'text-gray-800'">
-            {{ Str::limit(strip_tags((string) ($hadith->text_ar ?: $hadith->text_en)), 320) }}
+            {{ Str::limit(strip_tags(\App\Domain\Hadith\Support\QuranCitation::strip($hadith->text_ar ?: $hadith->text_en)), 320) }}
         </p>
 
         @if($hadith->book || $hadith->chapter)

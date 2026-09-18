@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Site;
 use App\Domain\Content\Enums\HomeModuleCardPlacement;
 use App\Domain\Content\Services\HomeContentService;
 use App\Domain\Hadith\Models\Hadith;
+use App\Domain\Hadith\Support\QuranCitation;
 use App\Domain\People\DTOs\MuslimListFilters;
 use App\Domain\People\Models\Muslim;
 use App\Domain\People\Services\MuslimDirectoryService;
@@ -87,7 +88,10 @@ final class HomeController extends Controller
                 // rather than rendering an empty second line.
                 return [
                     'texts' => array_values(array_filter([
-                        ['locale' => 'ar', 'body' => $hadith->text_ar, 'narrated_by' => $hadith->narrated_by],
+                        // Markers stripped, not linked: the panel prints its body
+                        // as escaped text, and a day's hadith showing a raw
+                        // [quran ...] shortcode is the bug being fixed here.
+                        ['locale' => 'ar', 'body' => QuranCitation::strip($hadith->text_ar), 'narrated_by' => $hadith->narrated_by],
                         $hadith->text_en ? ['locale' => 'en', 'body' => $hadith->text_en] : null,
                     ])),
                     'display_grade' => $hadith->grade?->value,

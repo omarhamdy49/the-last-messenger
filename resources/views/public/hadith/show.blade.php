@@ -11,7 +11,12 @@
         'daif'  => 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300',
         'mawdu' => 'bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300',
     ];
-    $excerpt = \Illuminate\Support\Str::of((string) $hadith->text_ar)->limit(155);
+    // Three readings of the same matn: linked HTML for the page, and plain
+    // text wherever markup would be wrong (meta description, JSON-LD, and the
+    // buffer the copy button reads).
+    $matnHtml = \App\Domain\Hadith\Support\QuranCitation::toHtml($hadith->text_ar);
+    $matnPlain = \App\Domain\Hadith\Support\QuranCitation::strip($hadith->text_ar);
+    $excerpt = \Illuminate\Support\Str::of($matnPlain)->limit(155);
 @endphp
 
 @section('title', $hadith->displayReference($locale).' — '.$collectionTitle)
@@ -23,7 +28,7 @@
     '@context' => 'https://schema.org',
     '@type' => 'CreativeWork',
     'name' => $hadith->canonical_reference,
-    'text' => $hadith->text_ar,
+    'text' => $matnPlain,
     'inLanguage' => 'ar',
     'isPartOf' => ['@type' => 'Book', 'name' => $collectionTitle],
     'url' => url()->current(),
@@ -98,7 +103,7 @@
             {{-- Arabic matn --}}
             <div class="px-6 sm:px-8 py-7">
                 <p dir="rtl" class="font-arabic text-[21px] sm:text-[25px] leading-[2.3] text-gray-900 dark:text-gray-100">
-                    {{ $hadith->text_ar }}
+                    {!! $matnHtml !!}
                 </p>
             </div>
 
@@ -139,7 +144,7 @@
                         <i data-lucide="copy" class="w-3.5 h-3.5"></i>
                         <span x-text="copied ? @js(__('hadith.copied')) : @js(__('hadith.copy'))"></span>
                     </button>
-                    <span x-ref="matn" class="hidden">{{ $hadith->text_ar }}</span>
+                    <span x-ref="matn" class="hidden">{{ $matnPlain }}</span>
                 </div>
             </div>
         </article>

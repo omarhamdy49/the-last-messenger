@@ -193,4 +193,7 @@ return [
     'view_source' => 'View source',
     'view_expanded' => 'Expanded view',
     'view_normal' => 'Normal view',
+
+    // Tooltip on a Quran quotation inside a matn, linked to our reader.
+    'quran_citation' => 'Open ayah :reference in the Quran reader',
 ];

@@ -41,7 +41,7 @@
                     <x-admin.hadith-delete-button :action="route('admin.hadiths.destroy', $hadith)" :label="$hadith->reference_key" />
                 </div>
             </div>
-            <p class="leading-loose" dir="rtl">{{ Str::limit(strip_tags((string) ($hadith->text_ar ?: $hadith->text_en)), 320) }}</p>
+            <p class="leading-loose" dir="rtl">{{ Str::limit(strip_tags(\App\Domain\Hadith\Support\QuranCitation::strip($hadith->text_ar ?: $hadith->text_en)), 320) }}</p>
         </div>
     @empty
         <p class="py-12 text-center">{{ __('hadith_admin.no_results') }}</p>

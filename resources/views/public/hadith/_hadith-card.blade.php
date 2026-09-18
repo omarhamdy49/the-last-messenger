@@ -3,7 +3,11 @@
 @php
     $locale = app()->getLocale();
     $isRtl = in_array($locale, ['ar', 'ur'], true);
-    $text = $hadith->text($locale) ?: $hadith->text_ar;
+    // The matn carries Sunnah.com's [quran ...] markers. toHtml() escapes the
+    // text and turns each marker into a link to that ayah in our reader.
+    $text = \App\Domain\Hadith\Support\QuranCitation::toHtml(
+        $hadith->text($locale) ?: $hadith->text_ar
+    );
     $grade = $hadith->grade?->value ?? ($hadith->grade ?: null);
     // NULL grade is deliberate: SunnahGradeMapper refuses to guess when the
     // source is ambiguous, so render "غير مصنّف" rather than implying sahih.
@@ -48,7 +52,7 @@
 
     <a href="{{ route('public.hadith.show', $hadith->collection?->slug ? $hadith->collection->slug.':'.$hadith->reference_key : '#') }}" class="block">
         <p dir="rtl" class="font-arabic text-[17px] sm:text-[19px] leading-[2.1] text-gray-900 dark:text-gray-100 line-clamp-4 group-hover:text-[#0056b3] dark:group-hover:text-[#64CCC5] transition-colors">
-            {{ $text }}
+            {!! $text !!}
         </p>
     </a>
 
