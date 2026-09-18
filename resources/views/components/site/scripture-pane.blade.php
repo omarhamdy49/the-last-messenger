@@ -1,22 +1,17 @@
 {{--
     Scripture pane — the "paper" reading surface that sits inside a daily panel.
 
-    Replaces the previous flat `bg-white` slab, which stayed pure white in dark
-    mode and blew out against the dark shell. Both themes are defined here so
-    callers never have to remember the dark variant.
+    A flat `.sx-panel`: panels inside a surface are flat, so a card never nests
+    inside a card. Both themes come from the design tokens, so callers never
+    have to remember a dark variant.
 
     Props:
-        $tone — literal Tailwind text-* class for the ornamental rule; pass the
-                caller's AA-safe ink colour (the deep hue, not the light accent).
+        $tone — text-* class for the ornamental rule; defaults to the single
+                accent. Pass a token-based class, never a literal hue.
 --}}
-@props(['tone' => 'text-[#0f7c8c]'])
+@props(['tone' => 'text-[color:var(--sx-accent)]'])
 
-<div {{ $attributes->class([
-    'relative overflow-hidden rounded-2xl p-6 sm:p-7',
-    'bg-gradient-to-b from-white to-[#FBFAF6] dark:from-[#16213e] dark:to-[#131c33]',
-    'ring-1 ring-inset ring-black/5 dark:ring-white/10',
-    'shadow-[0_10px_30px_-12px_rgba(0,0,0,.35)]',
-]) }}>
+<div {{ $attributes->class('sx-panel relative overflow-hidden p-5 sm:p-7') }}>
     {{-- Manuscript head rule: two hairlines meeting a diamond. --}}
     <svg class="mx-auto mb-5 h-3 w-28 {{ $tone }}" viewBox="0 0 112 12" fill="none" aria-hidden="true">
         <path d="M2 6h38M72 6h38" stroke="currentColor" stroke-width="1" opacity=".35"/>

@@ -19,7 +19,14 @@
      @sx-loading.window="loading = true">
 
     <div class="sx-wrap">
-        <x-public.seerah.directory-hero :total="$totalEvents" :categories="max(0, count($categoryPills) - 1)" />
+        <x-public.editorial.page-hero
+            :eyebrow-url="route('public.seerah')" :eyebrow-label="__('seerah.public.breadcrumb_seerah')" eyebrow-icon="route"
+            :title="__('seerah.public.events_heading')" :lead="__('seerah.public.events_subheading')"
+            :stats="[
+                ['icon' => 'book-open', 'label' => __('seerah.public.results_count'), 'value' => number_format($totalEvents)],
+                ['icon' => 'layers', 'label' => __('seerah.public.categories_label'), 'value' => max(0, count($categoryPills) - 1)],
+                ['icon' => 'hourglass', 'label' => __('seerah.public.stat_span'), 'value' => __('seerah.public.events_span'), 'small' => true],
+            ]" />
 
         <x-public.seerah.filter-panel
             :filters="$filters" :search-query="$searchQuery"
@@ -62,7 +69,7 @@
 
         <div x-show="!loading">
             @if ($items->isEmpty())
-                <x-public.seerah.empty-state
+                <x-public.editorial.empty-state
                     :title="__('seerah.public.no_results_title')"
                     :hint="__('seerah.public.no_results_hint')"
                     :action-url="route('public.seerah.events')"
@@ -95,7 +102,7 @@
             @endif
 
             <div class="mt-12">
-                <x-public.seerah.pagination :paginator="$events" />
+                <x-public.editorial.pagination :paginator="$events" />
             </div>
         </div>
     </div>

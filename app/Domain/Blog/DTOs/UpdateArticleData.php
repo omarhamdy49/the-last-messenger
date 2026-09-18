@@ -61,6 +61,8 @@ final class UpdateArticleData
         public readonly ?array $series = null,
         /** @var array<int, array{media_id: int, file: UploadedFile}>|null Null means "gallery tab untouched". */
         public readonly ?array $galleryFiles = null,
+        // Hero/cover image (stored in articles.featured_image); the thumb stays the card image.
+        public readonly ?UploadedFile $cover = null,
     ) {}
 
     /**
@@ -75,6 +77,7 @@ final class UpdateArticleData
         Article $article,
         ?UploadedFile $thumbOverride = null,
         ?array $galleryFiles = null,
+        ?UploadedFile $coverOverride = null,
     ): self {
         $validated = $request->validated();
         $resolvedStatus = $validated['status'] ?? $article->status ?? 'draft';
@@ -83,6 +86,7 @@ final class UpdateArticleData
             // Override wins: the controller routes direct uploads through the
             // media library (optimized) and hands back the processed copy.
             thumb: $thumbOverride ?? ($request->hasFile('thumb') ? $request->file('thumb') : null),
+            cover: $coverOverride ?? ($request->hasFile('cover') ? $request->file('cover') : null),
             writerId: (int) ($validated['writer_id'] ?? $article->writer_id),
             readTime: (int) ($validated['read_time'] ?? $article->read_time),
             isFeatured: $request->boolean('is_featured'),

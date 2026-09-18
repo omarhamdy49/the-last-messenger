@@ -714,6 +714,16 @@ return [
     'live_channel_streaming' => 'اسٹریمنگ',
     'live_channel_streaming_url' => 'اسٹریمنگ یو آر ایل',
     'live_channel_streaming_hint' => 'یوٹیوب ایمبیڈ یو آر ایل یا iframe کے ذریعے ایمبیڈ ہونے والا کوئی بھی اسٹریم۔',
+    'live_channel_stream_type' => 'اسٹریم کی قسم',
+    'live_channel_stream_type_hint' => 'لنک سے خود پہچان کے لیے «خودکار» رہنے دیں۔ ریڈیو کے لیے «براہِ راست آڈیو» منتخب کریں، کیونکہ ریڈیو لنکس میں ایکسٹینشن نہیں ہوتی۔',
+    'stream_type_auto' => 'خودکار (لنک سے)',
+    'stream_type_youtube' => 'یوٹیوب',
+    'stream_type_hls' => 'HLS (.m3u8)',
+    'stream_type_dash' => 'DASH (.mpd)',
+    'stream_type_file' => 'ویڈیو فائل (MP4 / WebM)',
+    'stream_type_audio' => 'براہِ راست آڈیو (ریڈیو)',
+    'stream_type_iframe' => 'iframe ایمبیڈ',
+    'live_channel_preview_unavailable' => 'اس قسم کا پیش منظر یہاں دستیاب نہیں۔ پلیئر آزمانے کے لیے چینل کا صفحہ کھولیں۔',
     'live_channel_slug_auto_hint' => 'عنوان سے خودکار بنانے کے لیے خالی چھوڑ دیں۔',
 
     // YouTube import / sync

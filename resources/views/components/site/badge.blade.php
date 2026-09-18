@@ -1,24 +1,26 @@
 @props(['variant' => 'default', 'icon' => null, 'pulse' => false])
 
 @php
-    // Grading + Makki/Madani + featured + category variants per spec §13.2.
+    // Grading + Makki/Madani + featured + category variants per spec §13.2, on
+    // the design-system chip. The tint carries the meaning: the single accent
+    // for classification, amber for "notable", the plain chip for neutral.
     $variants = [
-        'default'   => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
-        'sahih'     => 'bg-secondary/15 text-secondary',
-        'hasan'     => 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-        'daif'      => 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
-        'makki'     => 'bg-primary/15 text-primary',
-        'madani'    => 'bg-secondary/15 text-secondary',
-        'featured'  => 'bg-gradient-to-l from-primary to-secondary text-white',
-        'accent'    => 'bg-accent/20 text-accent-700 dark:text-accent',
-        'trending'  => 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+        'default'   => '',
+        'sahih'     => '!text-[color:var(--sx-accent)] !bg-[color:var(--sx-accent-soft)]',
+        'hasan'     => '!text-amber-700 !bg-amber-500/15 dark:!text-amber-300',
+        'daif'      => '',
+        'makki'     => '!text-[color:var(--sx-accent)] !bg-[color:var(--sx-accent-soft)]',
+        'madani'    => '!text-[color:var(--sx-accent)] !bg-[color:var(--sx-accent-soft)]',
+        'featured'  => 'is-active',
+        'accent'    => '!text-[color:var(--sx-accent)] !bg-[color:var(--sx-accent-soft)]',
+        'trending'  => '!text-amber-700 !bg-amber-500/15 dark:!text-amber-300',
     ];
-    $classes = $variants[$variant] ?? $variants['default'];
+    $classes = 'sx-chip !min-h-0 !py-1 !text-xs !font-bold ' . ($variants[$variant] ?? $variants['default']);
 @endphp
 
-<span {{ $attributes->merge(['class' => "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold $classes" . ($pulse ? ' animate-pulse-glow' : '')]) }}>
+<span {{ $attributes->merge(['class' => $classes . ($pulse ? ' animate-pulse-glow' : '')]) }}>
     @if ($icon)
-        <i data-lucide="{{ $icon }}" class="w-3.5 h-3.5"></i>
+        <i data-lucide="{{ $icon }}" aria-hidden="true"></i>
     @endif
     {{ $slot }}
 </span>

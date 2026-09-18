@@ -79,3 +79,12 @@ Alpine.start();
 console.log('Admin dashboard initialized');
 console.log('Alpine.js version:', Alpine.version);
 console.log('Chart.js version:', Chart.version);
+
+/* ------------------------------------------------------ live stream player --- */
+/*
+ * The live-channel player engine (YouTube SDK / hls.js / dash.js), loaded only
+ * on pages that actually open a stream — same literal-import() reasoning as the
+ * genealogy tree above, and it keeps hls.js and dash.js out of app.js entirely.
+ */
+window.loadStreamEngine = () =>
+    import('../stream-player.js').then((m) => m.createStream);

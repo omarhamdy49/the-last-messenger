@@ -1,10 +1,10 @@
-{{-- Attached media files: video/audio inline, anything else as a download tile. @props media, index --}}
-@props(['media', 'index' => null])
+{{-- Attached media: video/audio inline, anything else as a download tile. @props id, title, items: list of {title,type,url}, index --}}
+@props(['id' => 'media', 'title', 'items', 'index' => null])
 
-@if (! empty($media))
-    <x-public.seerah.section id="media" icon="play-circle" :title="__('seerah.public.section_media')" :index="$index">
+@if (! empty($items))
+    <x-public.editorial.section :id="$id" icon="play-circle" :title="$title" :index="$index">
         <div class="grid gap-4">
-            @foreach ($media as $item)
+            @foreach ($items as $item)
                 @if ($item['type'] === 'video')
                     <video controls preload="metadata" class="w-full rounded-2xl bg-black" src="{{ $item['url'] }}" aria-label="{{ $item['title'] }}"></video>
                 @elseif ($item['type'] === 'audio')
@@ -21,5 +21,5 @@
                 @endif
             @endforeach
         </div>
-    </x-public.seerah.section>
+    </x-public.editorial.section>
 @endif

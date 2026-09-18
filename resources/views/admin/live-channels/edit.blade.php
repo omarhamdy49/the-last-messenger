@@ -19,5 +19,5 @@
 @endsection
 
 @section('content')
-@include('admin.live-channels._form', ['channel' => $channel, 'statuses' => $statuses])
+@include('admin.live-channels._form', ['channel' => $channel, 'statuses' => $statuses, 'streamTypes' => $streamTypes])
 @endsection

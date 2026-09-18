@@ -150,9 +150,7 @@
 }
 
 /* Progress bars */
-[dir="rtl"] .progress-bar {
-    right: 0;
-}
+
 
 /* Arabic font optimization */
 [dir="rtl"] {

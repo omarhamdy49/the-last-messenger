@@ -42,14 +42,16 @@ class CreateArticleAction
     public function execute(CreateArticleData $data, array $locales): Article
     {
         $thumbPath = null;
+        $coverPath = null;
         $galleryPaths = [];
 
         try {
             $thumbPath = $this->storeThumb($data);
+            $coverPath = $data->cover === null ? null : $this->thumbService->store($data->cover);
             $galleryPaths = $this->storeGallery($data);
 
-            return DB::transaction(function () use ($data, $locales, $thumbPath, $galleryPaths): Article {
-                $article = $this->createArticleRecord($data, $thumbPath);
+            return DB::transaction(function () use ($data, $locales, $thumbPath, $coverPath, $galleryPaths): Article {
+                $article = $this->createArticleRecord($data, $thumbPath, $coverPath);
 
                 $this->createLocales($article, $data, $locales);
                 $this->syncCategories($article, $data);
@@ -69,6 +71,7 @@ class CreateArticleAction
             });
         } catch (\Throwable $e) {
             $this->cleanupThumb($thumbPath);
+            $this->cleanupThumb($coverPath);
             $this->cleanupGallery($galleryPaths);
             throw $e;
         }
@@ -140,12 +143,13 @@ class CreateArticleAction
         }
     }
 
-    private function createArticleRecord(CreateArticleData $data, ?string $thumbPath): Article
+    private function createArticleRecord(CreateArticleData $data, ?string $thumbPath, ?string $coverPath = null): Article
     {
         $primaryContent = $data->contents['ar'] ?? reset($data->contents) ?: '';
 
         return Article::create([
             'thumb' => $thumbPath,
+            'featured_image' => $coverPath,
             'writer_id' => $data->writerId,
             'read_time' => $data->readTime ?? $this->readTimeCalculator->calculate($primaryContent),
             'views' => 0,

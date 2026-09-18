@@ -40,9 +40,9 @@
         display: inline-flex; align-items: center; gap: 0.25rem; margin: 0 0.15rem; padding: 0.05rem 0.45rem;
         border-radius: 9999px; font-size: 0.78em; font-weight: 700; text-decoration: none; vertical-align: middle;
         white-space: nowrap; background: linear-gradient(135deg, rgba(0,86,179,0.12), rgba(33,136,56,0.12));
-        color: #0056b3; border: 1px solid rgba(0,86,179,0.20); transition: all 0.18s ease;
+        color: var(--sx-accent); border: 1px solid var(--sx-line-strong); transition: all 0.18s ease;
     }
-    .qa-prose a.qa-verse:hover { background: linear-gradient(135deg, #0056b3, #218838); color: #fff; border-color: transparent; transform: translateY(-1px); }
+    .qa-prose a.qa-verse:hover { background: var(--sx-grad); color: #fff; border-color: transparent; transform: translateY(-1px); }
     .qa-prose a.qa-verse svg { width: 0.85em; height: 0.85em; }
     .qa-prose.qa-dark code { background: rgba(100,204,197,0.18); }
     .qa-prose.qa-dark a.qa-verse { color: #7fe0d9; background: rgba(100,204,197,0.12); border-color: rgba(100,204,197,0.30); }

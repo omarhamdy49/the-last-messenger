@@ -64,6 +64,8 @@ final class CreateArticleData
         public readonly ?array $additionalCategories,
         public readonly ?array $series = null,
         public readonly array $galleryFiles = [],
+        // Hero/cover image (stored in articles.featured_image); the thumb stays the card image.
+        public readonly ?UploadedFile $cover = null,
     ) {}
 
     /**
@@ -75,6 +77,7 @@ final class CreateArticleData
         StoreArticleRequest $request,
         ?UploadedFile $thumbOverride = null,
         array $galleryFiles = [],
+        ?UploadedFile $coverOverride = null,
     ): self {
         $validated = $request->validated();
 
@@ -82,6 +85,7 @@ final class CreateArticleData
             // Override wins: the controller routes direct uploads through the
             // media library (optimized) and hands back the processed copy.
             thumb: $thumbOverride ?? ($request->hasFile('thumb') ? $request->file('thumb') : null),
+            cover: $coverOverride ?? ($request->hasFile('cover') ? $request->file('cover') : null),
             writerId: (int) ($validated['writer_id'] ?? auth()->id()),
             readTime: isset($validated['read_time']) ? (int) $validated['read_time'] : null,
             isFeatured: $request->boolean('is_featured'),

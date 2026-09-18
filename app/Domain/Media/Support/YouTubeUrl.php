@@ -29,6 +29,9 @@ final class YouTubeUrl
         $patterns = [
             '#youtube\.com/embed/('.self::ID.')#',
             '#youtube\.com/shorts/('.self::ID.')#',
+            // /live/ is what "copy link" gives for a running broadcast; /v/ is legacy.
+            '#youtube\.com/live/('.self::ID.')#',
+            '#youtube\.com/v/('.self::ID.')#',
             '#youtube\.com/watch\?(?:.*&)?v=('.self::ID.')#',
             '#youtu\.be/('.self::ID.')#',
         ];

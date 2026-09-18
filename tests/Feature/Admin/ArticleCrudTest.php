@@ -210,6 +210,7 @@ class ArticleCrudTest extends TestCase
             'read_time' => 8,
             'hijri_date' => '1 ربيع الأول 1 هـ',
             'thumb' => UploadedFile::fake()->image('article-thumb.jpg', 1200, 630),
+            'cover' => UploadedFile::fake()->image('article-cover.jpg', 1920, 820),
         ];
 
         $this->post(route('admin.articles.store'), $createPayload)
@@ -240,6 +241,10 @@ class ArticleCrudTest extends TestCase
             'media_id' => $heroMedia->id,
         ]);
         Storage::disk('public')->assertExists($article->thumb);
+        // The cover is stored separately from the card thumb and fronts the public reader.
+        $this->assertNotNull($article->featured_image);
+        $this->assertNotSame($article->thumb, $article->featured_image);
+        Storage::disk('public')->assertExists($article->featured_image);
 
         $showResponse = $this->getJson(route('admin.articles.show', $article));
 

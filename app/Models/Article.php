@@ -264,15 +264,28 @@ class Article extends Model
      */
     public function thumbUrl(string $size): ?string
     {
-        if (! $this->thumb) {
+        return self::sizedImageUrl($this->thumb, $size);
+    }
+
+    /**
+     * Hero cover URL (stored in featured_image), sized like the thumb.
+     */
+    public function coverUrl(string $size = 'hero'): ?string
+    {
+        return self::sizedImageUrl($this->featured_image, $size);
+    }
+
+    private static function sizedImageUrl(?string $path, string $size): ?string
+    {
+        if (! $path) {
             return null;
         }
 
-        $derived = PublicImageService::derivedPath($this->thumb, $size);
+        $derived = PublicImageService::derivedPath($path, $size);
 
         return Storage::disk('public')->exists($derived)
             ? asset('storage/'.$derived)
-            : asset('storage/'.$this->thumb);
+            : asset('storage/'.$path);
     }
 
     /**

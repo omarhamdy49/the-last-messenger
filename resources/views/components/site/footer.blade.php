@@ -20,15 +20,17 @@
     };
 @endphp
 
-<footer class="relative bg-[#16181d] dark:bg-[#0a0a0a] text-[#DEE2E6] overflow-hidden">
+{{-- The footer is dark in both themes on purpose: it closes the page. Its three
+     values are declared here as tokens so nothing else has to know the hexes. --}}
+<footer class="relative overflow-hidden" style="--sx-footer-bg: #16181d; --sx-footer-ink: #dee2e6; background: var(--sx-footer-bg); color: var(--sx-footer-ink)">
     {{-- Brand gradient hairline --}}
-    <div class="h-px bg-gradient-to-r from-transparent via-[#0056b3] to-transparent"></div>
-    <div class="h-px bg-gradient-to-r from-[#0056b3]/0 via-[#218838]/60 to-[#64CCC5]/0 blur-[1px]"></div>
+    <div class="h-px opacity-80" style="background: var(--sx-grad)"></div>
+    <div class="h-px blur-[1px] opacity-50" style="background: var(--sx-grad)"></div>
 
     {{-- Soft brand glow behind the brand column --}}
     <div aria-hidden="true"
          class="pointer-events-none absolute -top-32 start-0 w-[28rem] h-[28rem] rounded-full opacity-[0.07]"
-         style="background: radial-gradient(circle, #0056b3 0%, #218838 45%, transparent 70%);"></div>
+         style="background: radial-gradient(circle, var(--sx-accent) 0%, var(--sx-green) 45%, transparent 70%);"></div>
 
     <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20 relative">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 mb-14">
@@ -44,7 +46,7 @@
                             <a href="{{ $social['url'] }}"
                                aria-label="{{ $social['label'] ?? $social['icon'] }}"
                                class="group w-10 h-10 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center
-                                      transition-all duration-300 hover:border-transparent hover:bg-gradient-to-br hover:from-[#0056b3] hover:to-[#218838] hover:shadow-lg hover:shadow-[#0056b3]/25 hover:-translate-y-0.5">
+                                      transition-all duration-300 hover:border-transparent hover:opacity-90">
                                 <i class="w-4.5 h-4.5 text-[#ADB5BD] group-hover:text-white transition-colors" data-lucide="{{ $social['icon'] }}"></i>
                             </a>
                         @endforeach
@@ -56,7 +58,7 @@
             @if (count($footerQuickMenu) > 0)
                 <div>
                     <h4 class="text-white font-bold mb-5 flex items-center gap-2">
-                        <span class="w-6 h-px bg-gradient-to-r from-[#0056b3] to-[#218838]"></span>
+                        <span class="w-6 h-px" style="background: var(--sx-grad)"></span>
                         {{ __('site.quick_links') }}
                     </h4>
                     <ul class="space-y-3.5 text-sm">
@@ -76,7 +78,7 @@
             @if (count($footerModulesMenu) > 0)
                 <div>
                     <h4 class="text-white font-bold mb-5 flex items-center gap-2">
-                        <span class="w-6 h-px bg-gradient-to-r from-[#0056b3] to-[#218838]"></span>
+                        <span class="w-6 h-px" style="background: var(--sx-grad)"></span>
                         {{ __('site.modules') }}
                     </h4>
                     <ul class="space-y-3.5 text-sm">
@@ -96,7 +98,7 @@
             @if (count($footerSocialLinks) > 0)
                 <div>
                     <h4 class="text-white font-bold mb-5 flex items-center gap-2">
-                        <span class="w-6 h-px bg-gradient-to-r from-[#0056b3] to-[#218838]"></span>
+                        <span class="w-6 h-px" style="background: var(--sx-grad)"></span>
                         {{ __('site.follow_us') }}
                     </h4>
                     <ul class="space-y-3.5 text-sm">

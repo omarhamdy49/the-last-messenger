@@ -6,8 +6,8 @@
                   failed to resolve (the panel then renders a skeleton)
         $title  — panel heading, DB-managed via home_sections
 
-    Ink contract: #1b6b2e is the AA-safe deep companion to the module's #218838
-    accent (5.9:1 on white, 6.5:1 for white text on the panel gradient).
+    Colour: everything comes from the public design tokens, the same as the
+    verse card beside it. Never reintroduce a per-card hue.
 --}}
 @props([
     'hadith' => null,
@@ -70,8 +70,7 @@
 
 <x-site.daily-panel
     :heading="$title ?? __('site.hadith_of_day')"
-    icon="message-square-quote"
-    gradient="from-[#1b6b2e] via-[#175c27] to-[#12401c]">
+    icon="message-square-quote">
 
     @if($hadith)
         {{-- Reference strip: source collection, hadith number, authentication.
@@ -79,41 +78,27 @@
              plain labels. --}}
         <div class="mb-5 flex flex-wrap items-center gap-2">
             @if($source)
-                {{-- Sized to match the labels beside it. `before:-inset-2` grows the
-                     tap area past those visual bounds so the small chip still clears
-                     the 44px touch target. --}}
-                <a href="{{ $collectionUrl }}"
-                   class="relative inline-flex max-w-full items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5
-                          text-xs font-bold text-white ring-1 ring-inset ring-white/25 backdrop-blur-sm transition
-                          before:absolute before:-inset-2 before:content-[''] hover:bg-white/25 hover:ring-white/40
-                          focus:outline-none focus-visible:ring-2 focus-visible:ring-white
-                          focus-visible:ring-offset-2 focus-visible:ring-offset-transparent">
-                    <i class="h-3.5 w-3.5 shrink-0" data-lucide="book-marked"></i>
-                    <span class="truncate">{{ $source }}</span>
-                    <i class="h-3 w-3 shrink-0 opacity-70"
-                       data-lucide="{{ $isRtl ? 'chevron-left' : 'chevron-right' }}"></i>
+                <a href="{{ $collectionUrl }}" class="sx-chip max-w-full" title="{{ $source }}">
+                    <i data-lucide="book-marked" aria-hidden="true"></i>
+                    <span class="sx-clamp-1 max-w-[12rem]">{{ $source }}</span>
+                    <i data-lucide="chevron-{{ $isRtl ? 'left' : 'right' }}" aria-hidden="true"></i>
                 </a>
             @endif
             @if($hadithNumber)
-                <span class="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold
-                             text-white/90 ring-1 ring-inset ring-white/15">
-                    #{{ $hadithNumber }}
-                </span>
+                <span class="sx-chip tabular-nums">#{{ $hadithNumber }}</span>
             @endif
             @if($gradeLabel)
                 {{-- Icon + text, never colour alone, so the grade survives a
                      colour-blind or monochrome read. --}}
-                <span class="inline-flex items-center gap-1.5 rounded-lg bg-[#64CCC5]/20 px-3 py-1.5 text-xs font-bold
-                             text-white ring-1 ring-inset ring-[#64CCC5]/40">
-                    <i class="h-3.5 w-3.5" data-lucide="badge-check"></i>
-                    {{ $gradeLabel }}
+                <span class="sx-chip is-active">
+                    <i data-lucide="badge-check" aria-hidden="true"></i>{{ $gradeLabel }}
                 </span>
             @endif
         </div>
 
-        <x-site.scripture-pane tone="text-[#1b6b2e]">
+        <x-site.scripture-pane>
             @if($narratedBy)
-                <p class="mb-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400">
+                <p class="mb-3 text-center text-xs font-semibold text-[color:var(--sx-muted)]">
                     {{ $narratedBy }}
                 </p>
             @endif
@@ -126,23 +111,21 @@
                     :lang="$mainLang"
                     :dir="$dirFor($mainLang)"
                     clamp="line-clamp-2"
-                    tone-class="text-[#1b6b2e] dark:text-[#64CCC5]"
                     :text-class="Arr::toCssClasses([
-                        'break-words text-center text-gray-900 dark:text-gray-50',
-                        'font-arabic text-xl leading-[2] sm:text-2xl' => $mainLang === 'ar',
+                        'break-words text-center text-[color:var(--sx-ink)]',
+                        'sx-scripture !text-[length:clamp(1.25rem,1.1rem+0.8vw,1.6rem)]' => $mainLang === 'ar',
                         'text-base font-semibold leading-relaxed sm:text-lg' => $mainLang !== 'ar',
                     ])">{{ $mainText }}</x-site.expandable-text>
             @endif
 
             @if($subText)
-                <div class="mt-5 border-t border-black/5 pt-5 dark:border-white/10">
+                <div class="mt-5 border-t border-[color:var(--sx-line)] pt-5">
                     <x-site.expandable-text
                         :lang="$subLang"
                         :dir="$dirFor($subLang)"
                         clamp="line-clamp-2"
-                        tone-class="text-[#1b6b2e] dark:text-[#64CCC5]"
                         :text-class="Arr::toCssClasses([
-                            'break-words text-center text-gray-600 dark:text-gray-300',
+                            'break-words text-center text-[color:var(--sx-ink-2)]',
                             'font-arabic text-base leading-[2]' => $subLang === 'ar',
                             'text-sm leading-relaxed' => $subLang !== 'ar',
                         ])">{{ $subText }}</x-site.expandable-text>
@@ -150,32 +133,25 @@
             @endif
         </x-site.scripture-pane>
     @else
-        <x-site.scripture-pane tone="text-[#1b6b2e]" role="status" aria-label="{{ __('site.loading') }}">
-            <div class="animate-pulse space-y-3">
-                <div class="mx-auto h-4 w-3/4 rounded bg-gray-200 dark:bg-white/10"></div>
-                <div class="mx-auto h-4 w-5/6 rounded bg-gray-200 dark:bg-white/10"></div>
-                <div class="mx-auto h-4 w-2/3 rounded bg-gray-200 dark:bg-white/10"></div>
+        <x-site.scripture-pane role="status" aria-label="{{ __('site.loading') }}">
+            <div class="grid gap-3">
+                <div class="sx-skeleton mx-auto h-4 w-3/4"></div>
+                <div class="sx-skeleton mx-auto h-4 w-5/6"></div>
+                <div class="sx-skeleton mx-auto h-4 w-2/3"></div>
             </div>
             <span class="sr-only">{{ __('site.loading') }}</span>
         </x-site.scripture-pane>
     @endif
 
     <x-slot:actions>
-        {{-- Ghost pill, sized to its label rather than the panel width: white
-             text on this gradient clears AA, so the CTA can read as refined
-             rather than as a full-bleed white slab. --}}
-        <a href="{{ $readUrl }}"
-           class="inline-flex h-11 items-center gap-2 rounded-full bg-white/15 px-5 text-sm font-bold text-white
-                  ring-1 ring-inset ring-white/30 backdrop-blur-sm transition hover:bg-white/25
-                  hover:ring-white/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white
-                  focus-visible:ring-offset-2 focus-visible:ring-offset-transparent">
-            <i class="h-4 w-4" data-lucide="book-open"></i>
+        <a href="{{ $readUrl }}" class="sx-btn is-primary">
+            <i data-lucide="book-open" aria-hidden="true"></i>
             <span>{{ __('site.read_explanation') }}</span>
-            <i class="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
-               data-lucide="{{ $isRtl ? 'arrow-left' : 'arrow-right' }}"></i>
+            <i data-lucide="arrow-{{ $isRtl ? 'left' : 'right' }}" aria-hidden="true"></i>
         </a>
 
         <x-site.share-button
+            variant="surface"
             :url="$readUrl"
             :title="$source ?? __('site.hadith_of_day')"
             :text="$mainText" />

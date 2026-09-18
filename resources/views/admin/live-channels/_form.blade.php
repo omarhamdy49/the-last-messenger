@@ -103,6 +103,28 @@
                        class="{{ $inputClasses }}"
                        :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
                 <p class="mt-1 text-xs" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">{{ __('admin.live_channel_streaming_hint') }}</p>
+
+                {{-- Stream type. Blank = auto, which reads the type off the URL
+                     extension. Radio mounts (radiojar/Icecast) carry no extension,
+                     so those must be set to "audio" by hand. --}}
+                <div class="mt-4">
+                    <label class="block text-sm font-medium mb-1" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                        {{ __('admin.live_channel_stream_type') }}
+                    </label>
+                    <select name="stream_type" class="{{ $inputClasses }}"
+                            :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'">
+                        <option value="" @selected(old('stream_type', $isEdit ? $channel->stream_type?->value : null) === null)>
+                            {{ __('admin.stream_type_auto') }}@if($isEdit && $channel->stream_type === null && $channel->streaming_url) — {{ __($channel->resolved_stream_type->labelKey()) }}@endif
+                        </option>
+                        @foreach($streamTypes as $type)
+                            <option value="{{ $type->value }}"
+                                @selected(old('stream_type', $isEdit ? $channel->stream_type?->value : null) === $type->value)>
+                                {{ __($type->labelKey()) }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="mt-1 text-xs" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">{{ __('admin.live_channel_stream_type_hint') }}</p>
+                </div>
             </section>
         </div>
 

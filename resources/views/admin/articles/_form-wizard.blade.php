@@ -24,7 +24,7 @@
     $stepDefs = [
         'basics' => ['file-text', ['title', 'slug', 'description', 'excerpt', 'is_ready']],
         'content' => ['layers', ['content', 'content_blocks', 'summary', 'toc']],
-        'classify' => ['folder-tree', ['thumb', 'thumb_id', 'status', 'scheduled_at', 'hijri_date', 'read_time', 'writer_id', 'category_id', 'additional_categories', 'tags', 'is_featured', 'is_pinned']],
+        'classify' => ['folder-tree', ['thumb', 'thumb_id', 'cover', 'cover_id', 'status', 'scheduled_at', 'hijri_date', 'read_time', 'writer_id', 'category_id', 'additional_categories', 'tags', 'is_featured', 'is_pinned']],
         'seo' => ['search', ['seo_title', 'seo_description']],
         'media' => ['images', ['gallery', 'media_items', 'episodes']],
         'details' => ['library', ['references', 'statistics']],
@@ -798,8 +798,8 @@
             <div class="wz-card wz-rail-card">
                 <p class="wz-rail-title"><i data-lucide="panel-top" aria-hidden="true"></i>{{ __('wizard.summary') }}</p>
                 <div class="wz-summary-media">
-                    <template x-if="thumbnailPreview"><img :src="thumbnailPreview" alt=""></template>
-                    <template x-if="!thumbnailPreview"><i data-lucide="image" class="w-8 h-8" aria-hidden="true"></i></template>
+                    <template x-if="coverPreview || thumbnailPreview"><img :src="coverPreview || thumbnailPreview" alt=""></template>
+                    <template x-if="!coverPreview && !thumbnailPreview"><i data-lucide="image" class="w-8 h-8" aria-hidden="true"></i></template>
                 </div>
                 <p class="mt-3 font-bold leading-snug break-words" :class="darkMode ? 'text-white' : 'text-slate-900'" x-text="formData.title.ar || @js(__('wizard.untitled'))"></p>
                 <dl class="wz-kv">
@@ -969,7 +969,7 @@ function articleForm(article, locales, wizard) {
             stepComplete: (form, key) => form.isStepComplete(key),
             beforeSave: (form) => locales.forEach((locale) => { form.syncAllBlockQuills(locale); form.syncContentBlocks(locale); }),
             // A library thumbnail is copied on save; don't copy it again on the next quick save.
-            afterSave: (form) => { form.formData.thumb_id = null; form.summaryTick++; },
+            afterSave: (form) => { form.formData.thumb_id = null; form.formData.cover_id = null; form.summaryTick++; },
         }),
         statusLabels: wizard.statusLabels,
         stepLabels: wizard.stepLabels,
@@ -979,12 +979,14 @@ function articleForm(article, locales, wizard) {
         darkMode: window.resolveDarkMode(),
         hasUnsavedChanges: false,
         thumbnailPreview: article?.thumb ? '{{ asset("storage") }}/' + article.thumb : null,
+        coverPreview: article?.cover ? '{{ asset("storage") }}/' + article.cover : null,
         manualSlugEdit: {},
         quillEditors: {},
         blockIdCounter: 0,
         contentBlocks: {},
         formData: {
             thumb_id: article?.thumb_id || null,
+            cover_id: null,
             writer_id: article?.writer_id || '',
             category_id: article?.category_id || '',
             is_featured: article?.is_featured || false,
@@ -1291,11 +1293,11 @@ function articleForm(article, locales, wizard) {
                 .toLowerCase();
         },
 
-        handleThumbnailUpload(event) {
+        previewUpload(event, previewKey) {
             const file = event.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = (e) => { this.thumbnailPreview = e.target.result; };
+                reader.onload = (e) => { this[previewKey] = e.target.result; };
                 reader.readAsDataURL(file);
                 this.hasUnsavedChanges = true;
             }
@@ -1306,6 +1308,9 @@ function articleForm(article, locales, wizard) {
             if (target === 'thumbnail') {
                 this.formData.thumb_id = media.id;
                 this.thumbnailPreview = media.url;
+            } else if (target === 'cover') {
+                this.formData.cover_id = media.id;
+                this.coverPreview = media.url;
             } else if (target === 'gallery') {
                 const items = multiple ? media : [media];
                 items.forEach(item => {

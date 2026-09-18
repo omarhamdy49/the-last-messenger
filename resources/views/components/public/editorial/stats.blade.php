@@ -1,13 +1,13 @@
 {{--
-    Event figures. Numeric values count up once when scrolled into view (seerahReader);
+    Event figures. Numeric values count up once when scrolled into view (editorialReader);
     the server-rendered final value is what no-JS and reduced-motion visitors see.
 
     @props statistics: label => value
 --}}
-@props(['statistics'])
+@props(['statistics', 'title' => null])
 
 @if (collect($statistics)->isNotEmpty())
-    <section id="event-stats" class="sx-section" aria-label="{{ __('seerah.public.event_stats_heading') }}">
+    <section id="event-stats" class="sx-section" aria-label="{{ $title ?? __('seerah.public.event_stats_heading') }}">
         <div class="sx-stats">
             @foreach ($statistics as $label => $value)
                 <div class="sx-surface sx-stat sx-reveal">

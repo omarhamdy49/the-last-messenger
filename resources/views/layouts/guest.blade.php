@@ -27,21 +27,20 @@
     @include('partials.theme-preference')
     <script>window.applyDarkMode();</script>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
-
+    {{-- Readex Pro / Cairo / Amiri are self-hosted in app.css — no Google Fonts. --}}
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('head')
 </head>
-<body class="min-h-dvh flex flex-col">
+{{-- `.sx` so the auth shell inherits the same ink, tokens and type as every
+     other public surface; the fixed auth background covers its page colour. --}}
+<body class="sx min-h-dvh flex flex-col">
 
     {{-- Full living-geometry gradient background (fixed behind everything) --}}
     <x-site.auth-bg />
 
     {{-- Minimal chrome: brand (returns home) + theme toggle --}}
     <header class="relative z-10" x-data="{}">
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-20">
+        <div class="sx-wrap flex items-center justify-between h-20">
             <a href="{{ route('public.home') }}"
                class="flex items-center gap-3 text-white hover:opacity-90 transition-opacity"
                aria-label="{{ $siteName }}">
@@ -52,8 +51,8 @@
             </a>
 
             <button @click="$store.theme.toggle()"
-                    class="p-2.5 rounded-full text-white hover:bg-white/15 transition-colors"
-                    aria-label="{{ __('site.toggle_theme') }}">
+                    class="grid h-11 w-11 place-items-center rounded-full text-white transition-colors hover:bg-white/15"
+                    aria-label="{{ __('site.toggle_theme') }}" title="{{ __('site.toggle_theme') }}">
                 <i x-show="!$store.theme.dark" data-lucide="moon" class="w-5 h-5"></i>
                 <i x-show="$store.theme.dark" data-lucide="sun" class="w-5 h-5" x-cloak></i>
             </button>
@@ -67,13 +66,13 @@
     {{-- Global toast region (login/register flash messages) --}}
     <div class="fixed bottom-4 end-4 z-[100] space-y-2" aria-live="polite">
         <template x-for="t in $store.toast.items" :key="t.id">
-            <div x-transition class="card-premium flex items-center gap-3 px-4 py-3 min-w-[16rem] shadow-2xl">
+            <div x-transition class="sx-surface flex items-center gap-3 px-4 py-3 min-w-[16rem] shadow-2xl">
                 <span class="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
                       :class="t.type === 'success' ? 'bg-secondary/15 text-secondary' : 'bg-red-100 text-red-600'">
                     <i :data-lucide="t.type === 'success' ? 'check' : 'alert-triangle'" class="w-4 h-4"></i>
                 </span>
                 <p class="text-sm font-semibold flex-1" x-text="t.message"></p>
-                <button @click="$store.toast.dismiss(t.id)" class="text-gray-400 hover:text-gray-600">
+                <button @click="$store.toast.dismiss(t.id)" class="text-[color:var(--sx-muted)] hover:text-[color:var(--sx-ink)]">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>

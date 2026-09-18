@@ -10,6 +10,12 @@
      after the head's @stack('head') has already output, so a push would be dropped.
      A <style> in the body is valid and applies globally. --}}
 <style>
+    /* The brand signature gradient straight from the tokens; in dark mode the
+       page ink is laid over it so the field reads as night, not daylight. */
+    .auth-fullbg { background: var(--sx-grad); }
+    .auth-fullbg::before { content: ""; position: absolute; inset: 0; background: var(--sx-bg); opacity: 0; }
+    .dark .auth-fullbg::before { opacity: 0.74; }
+
     .auth-fullbg .auth-girih { position: absolute; inset: -4rem; width: calc(100% + 8rem); height: calc(100% + 8rem); }
     .auth-glow {
         background:
@@ -43,9 +49,7 @@
 </style>
 @endonce
 
-<div class="auth-fullbg fixed inset-0 z-0 overflow-hidden pointer-events-none
-            bg-gradient-to-br from-[#0056b3] via-[#0a6aa6] to-[#218838]
-            dark:from-[#06243f] dark:via-[#0a2e3a] dark:to-[#0b3320]" aria-hidden="true">
+<div class="auth-fullbg fixed inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
 
     {{-- Islamic eight-point (khatam) girih tessellation --}}
     <svg class="auth-girih text-white" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">

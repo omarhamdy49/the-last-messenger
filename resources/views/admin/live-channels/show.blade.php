@@ -51,10 +51,35 @@
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2 space-y-6">
-        {{-- Player preview — streaming_url normalized to an embeddable URL by the model --}}
+        {{-- Player preview. Native elements only: the public wrapped player is
+             built on the sx design tokens, which the admin bundle does not ship.
+             HLS/DASH need a JS library to play outside Safari, so those send the
+             editor to the channel page instead of faking a broken box. --}}
+        @php $previewType = $channel->stream_source ? $channel->resolved_stream_type : null; @endphp
         <section class="rounded-2xl border overflow-hidden shadow-lg animate-fadeInUp" :class="darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'">
             <div class="relative aspect-video bg-black">
-                @if($channel->embed_url)
+                @if($previewType === \App\Domain\Media\Enums\StreamType::Audio)
+                    <div class="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6">
+                        <i data-lucide="radio" class="w-10 h-10 text-white/70"></i>
+                        <audio controls preload="none" src="{{ $channel->streaming_url }}" class="w-full max-w-md"></audio>
+                    </div>
+                @elseif($previewType === \App\Domain\Media\Enums\StreamType::File)
+                    <video controls preload="none" src="{{ $channel->streaming_url }}"
+                           @if($channel->thumbnail_url) poster="{{ $channel->thumbnail_url }}" @endif
+                           class="absolute inset-0 w-full h-full object-contain"></video>
+                @elseif($previewType && ! in_array($previewType, [\App\Domain\Media\Enums\StreamType::YouTube, \App\Domain\Media\Enums\StreamType::Iframe], true))
+                    <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
+                        @if($channel->thumbnail_url)
+                            <img src="{{ $channel->thumbnail_url }}" alt="" class="absolute inset-0 w-full h-full object-cover opacity-40">
+                        @endif
+                        <i data-lucide="monitor-play" class="relative w-10 h-10 text-white/70"></i>
+                        <p class="relative text-sm text-white/80 max-w-sm">{{ __('admin.live_channel_preview_unavailable') }}</p>
+                        <a href="{{ route('public.media.live', $channel->slug) }}" target="_blank" rel="noopener"
+                           class="relative px-4 py-1.5 rounded-full text-xs font-bold bg-white/15 text-white hover:bg-white/25">
+                            {{ __('admin.view') }}
+                        </a>
+                    </div>
+                @elseif($channel->embed_url)
                     <iframe src="{{ $channel->embed_url }}" class="absolute inset-0 w-full h-full" frameborder="0"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                 @elseif($channel->thumbnail_url)

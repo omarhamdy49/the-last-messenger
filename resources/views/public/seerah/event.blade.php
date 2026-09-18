@@ -98,17 +98,53 @@
         ->map(fn (int $position) => $position + 1)
         ->all();
     $chapterOf = fn (string $id): ?int => $isStory ? ($chapters[$id] ?? null) : null;
+
+    $sourceItems = $sources->map(fn ($s) => [
+        'title' => $s['title'],
+        'detail' => collect([$s['author'] ?? null, $s['reference'] ?? null])->filter()->implode(' — '),
+    ])->all();
+    $relatedTiles = collect($related ?? [])->map(fn ($r) => [
+        'title' => $r['title'], 'url' => $r['url'], 'image' => $r['image'] ?? null, 'icon' => $r['icon'] ?? 'circle', 'sub' => $r['hijriDate'] ?? null,
+    ])->all();
 @endphp
 
 @section('content')
-<div class="sx pb-28" x-data="seerahReader(@js($reader))">
+<div class="sx pb-28" x-data="editorialReader(@js($reader))">
 
-    <x-public.seerah.reader-dock
+    <x-public.editorial.reader-dock :navigator="true"
         :switch-url="$isStory ? $readingUrl : $storyUrl"
         :switch-label="$isStory ? __('seerah.public.read_as_article') : __('seerah.public.read_as_timeline')"
         :switch-icon="$isStory ? 'file-text' : 'git-commit-vertical'" />
 
-    <x-public.seerah.event-hero :event="$event" :variant="$variant" :reading-minutes="$readingMinutes">
+    <x-public.editorial.hero :image="$event['coverImage'] ?? null" :variant="$variant" :title="$event['title']"
+        :lead="! empty($event['description']) ? excerpt_sentence($event['description'], $isStory ? 220 : 180) : null">
+        <x-slot:top>@include('public.seerah._event-navigator')</x-slot:top>
+        <x-slot:chips>
+            @if ($event['typeLabel'])
+                <span class="sx-glass-chip"><i data-lucide="{{ $event['icon'] }}" aria-hidden="true"></i>{{ $event['typeLabel'] }}</span>
+            @endif
+            @if (! empty($event['eraLabel']))
+                <span class="sx-glass-chip"><i data-lucide="hourglass" aria-hidden="true"></i>{{ $event['eraLabel'] }}</span>
+            @endif
+            @if ($disputeNote)
+                {{-- Anchor, not decoration: jumps to the note itself. --}}
+                <a href="#dispute" class="sx-glass-chip is-danger"><i data-lucide="scale" aria-hidden="true"></i>{{ __('seerah.public.dispute_badge') }}</a>
+            @endif
+        </x-slot:chips>
+        <x-slot:meta>
+            @if ($event['hijriDate'])
+                <span class="sx-glass-chip"><i data-lucide="moon" aria-hidden="true"></i>{{ $event['hijriDate'] }}</span>
+            @endif
+            @if ($event['gregorianYear'])
+                <span class="sx-glass-chip"><i data-lucide="calendar" aria-hidden="true"></i>{{ $event['gregorianYear'] }} {{ __('seerah.public.gregorian_suffix') }}</span>
+            @endif
+            @if (! empty($event['place']['name']))
+                <span class="sx-glass-chip"><i data-lucide="map-pin" aria-hidden="true"></i>{{ $event['place']['name'] }}</span>
+            @endif
+            @if ($readingMinutes)
+                <span class="sx-glass-chip"><i data-lucide="clock" aria-hidden="true"></i>{{ __('seerah.public.reading_time', ['minutes' => $readingMinutes]) }}</span>
+            @endif
+        </x-slot:meta>
         <x-slot:actions>
             @if ($isStory)
                 <a href="#{{ $firstSection }}" class="sx-btn is-light"><i data-lucide="arrow-down" aria-hidden="true"></i>{{ __('seerah.public.explore_story') }}</a>
@@ -118,12 +154,12 @@
                 <a href="{{ $storyUrl }}" class="sx-btn is-glass"><i data-lucide="git-commit-vertical" aria-hidden="true"></i>{{ __('seerah.public.read_as_timeline') }}</a>
             @endif
         </x-slot:actions>
-    </x-public.seerah.event-hero>
+    </x-public.editorial.hero>
 
-    <x-public.seerah.fact-ribbon :facts="$facts" />
+    <x-public.editorial.fact-ribbon :facts="$facts" />
 
     <div class="sx-wrap mt-10 sm:mt-14 grid gap-10 sm:gap-14">
-        <x-public.seerah.stats :statistics="$statistics" />
+        <x-public.editorial.stats :statistics="$statistics" />
 
         @if ($isStory)
             {{-- ═══════ STORY ═══════ --}}
@@ -131,7 +167,7 @@
                 <x-public.seerah.dispute :note="$disputeNote" />
 
                 @if ($hasContent || $hasDescription)
-                    <x-public.seerah.section id="context" icon="scroll-text" :title="__('seerah.public.section_context')" :index="$chapterOf('context')">
+                    <x-public.editorial.section id="context" icon="scroll-text" :title="__('seerah.public.section_context')" :index="$chapterOf('context')">
                         {{-- Purified admin HTML (SanitizesRichText). The hero already shows the
                              description excerpt, so the full description repeats only when there is
                              no rich content. --}}
@@ -144,26 +180,26 @@
                                     : nl2br(e($event['description'])) !!}
                             </div>
                         @endif
-                    </x-public.seerah.section>
+                    </x-public.editorial.section>
                 @else
-                    <x-public.seerah.empty-state icon="file-question" :title="__('seerah.public.no_content')" />
+                    <x-public.editorial.empty-state icon="file-question" :title="__('seerah.public.no_content')" />
                 @endif
 
-                <x-public.seerah.details :details="$details" :index="$chapterOf('more-details')" />
-                <x-public.seerah.media :media="$media" :index="$chapterOf('media')" />
+                <x-public.editorial.details :title="__('seerah.public.section_more_details')" :items="$details" :index="$chapterOf('more-details')" />
+                <x-public.editorial.media :title="__('seerah.public.section_media')" :items="$media" :index="$chapterOf('media')" />
                 @include('public.seerah._linked-content', ['episodesIndex' => $chapterOf('episodes'), 'linkedIndex' => $chapterOf('linked')])
             </div>
 
-            <x-public.seerah.gallery :images="$gallery" :title="$event['title']" :index="$chapterOf('gallery')" />
+            <x-public.editorial.gallery :title="__('seerah.public.event_gallery')" :alt="$event['title']" :images="$gallery" :index="$chapterOf('gallery')" />
 
             <div class="mx-auto w-full max-w-4xl">
-                <x-public.seerah.sources :sources="$sources" :index="$chapterOf('sources')" />
+                <x-public.editorial.sources :title="__('seerah.public.section_sources')" :items="$sourceItems" :index="$chapterOf('sources')" />
             </div>
 
             @if (! empty($event['mapUrl']) || ! empty($related))
                 <div class="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] items-start">
                     <x-public.seerah.place-map :event="$event" />
-                    <x-public.seerah.related :related="$related" />
+                    <x-public.editorial.related :title="__('seerah.public.related_events')" :items="$relatedTiles" />
                 </div>
             @endif
         @else
@@ -171,43 +207,43 @@
             <div class="sx-reading">
                 <article class="sx-surface sx-article min-w-0 grid gap-10">
                     @if ($hasDescription)
-                        <x-public.seerah.section id="introduction" icon="info" :title="__('seerah.public.section_intro')">
+                        <x-public.editorial.section id="introduction" icon="info" :title="__('seerah.public.section_intro')">
                             <div class="sx-prose seerah-content">
                                 {!! str_contains($event['description'], '<')
                                     ? app(\App\Domain\Shared\Services\RichTextSanitizer::class)->clean($event['description'])
                                     : nl2br(e($event['description'])) !!}
                             </div>
-                        </x-public.seerah.section>
+                        </x-public.editorial.section>
                     @endif
 
                     <x-public.seerah.dispute :note="$disputeNote" />
 
                     @if ($hasContent)
-                        <x-public.seerah.section id="context" icon="scroll-text" :title="__('seerah.public.section_context')">
+                        <x-public.editorial.section id="context" icon="scroll-text" :title="__('seerah.public.section_context')">
                             <div class="sx-prose seerah-content">{!! $event['content'] !!}</div>
-                        </x-public.seerah.section>
+                        </x-public.editorial.section>
                     @endif
 
                     @if (! $hasDescription && ! $hasContent)
-                        <x-public.seerah.empty-state icon="file-question" :title="__('seerah.public.no_content')" class="!shadow-none" />
+                        <x-public.editorial.empty-state icon="file-question" :title="__('seerah.public.no_content')" class="!shadow-none" />
                     @endif
 
-                    <x-public.seerah.details :details="$details" />
-                    <x-public.seerah.media :media="$media" />
+                    <x-public.editorial.details :title="__('seerah.public.section_more_details')" :items="$details" />
+                    <x-public.editorial.media :title="__('seerah.public.section_media')" :items="$media" />
                     @include('public.seerah._linked-content')
-                    <x-public.seerah.gallery :images="$gallery" :title="$event['title']" />
-                    <x-public.seerah.sources :sources="$sources" />
+                    <x-public.editorial.gallery :title="__('seerah.public.event_gallery')" :alt="$event['title']" :images="$gallery" />
+                    <x-public.editorial.sources :title="__('seerah.public.section_sources')" :items="$sourceItems" />
                 </article>
 
                 <aside class="sx-aside">
-                    <x-public.seerah.toc :items="$toc" />
+                    <x-public.editorial.toc :items="$toc" />
                     <x-public.seerah.place-map :event="$event" />
-                    <x-public.seerah.related :related="$related" />
+                    <x-public.editorial.related :title="__('seerah.public.related_events')" :items="$relatedTiles" />
                 </aside>
             </div>
         @endif
 
-        <x-public.seerah.pager :prev="$prev" :next="$next" />
+        <x-public.editorial.pager :prev="$prev" :next="$next" />
     </div>
 </div>
 @endsection

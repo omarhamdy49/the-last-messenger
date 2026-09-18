@@ -13,14 +13,14 @@
                      line inside the RTL page would flip its punctuation.
         $clamp     — literal Tailwind line-clamp-* utility used while collapsed
         $textClass — typography classes for the passage
-        $toneClass — classes for the toggle button
+        $toneClass — classes for the toggle button (token-based, never a literal hue)
 --}}
 @props([
     'lang' => null,
     'dir' => 'ltr',
     'clamp' => 'line-clamp-6',
     'textClass' => '',
-    'toneClass' => 'text-[#0f7c8c] dark:text-[#64CCC5]',
+    'toneClass' => 'text-[color:var(--sx-accent)]',
 ])
 
 <div x-data="{
@@ -47,9 +47,9 @@
             x-show="expanded || overflowing"
             @click="expanded = ! expanded"
             :aria-expanded="expanded"
-            class="mx-auto mt-3 flex h-9 items-center gap-1 rounded-full px-3 text-xs font-bold
-                   transition hover:bg-black/5 focus:outline-none focus-visible:ring-2
-                   focus-visible:ring-current dark:hover:bg-white/10 {{ $toneClass }}">
+            class="mx-auto mt-3 flex min-h-11 items-center gap-1 rounded-full px-3 text-xs font-bold
+                   transition hover:bg-[color:var(--sx-surface)] focus:outline-none
+                   focus-visible:ring-2 focus-visible:ring-current {{ $toneClass }}">
         <span x-text="expanded ? @js(__('common.show_less')) : @js(__('common.show_more'))"></span>
         {{-- The rotation binds to this span, not the <i>: lucide swaps the <i>
              for an <svg> at boot and any binding on it would be lost. --}}
