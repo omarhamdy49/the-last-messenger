@@ -63,7 +63,16 @@
                     </summary>
                     <nav class="px-2 pb-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
                         @foreach ($chapters as $chapter)
-                            <a href="#chapter-{{ $chapter->chapter_number }}"
+                            @php
+                                // The anchor only exists in the DOM on the page the
+                                // chapter starts on, so a link to a chapter that is
+                                // not on this page has to carry `?page=` too.
+                                $anchor = '#chapter-'.$chapter->chapter_number;
+                                $href = ($chapter->page === null || $chapter->page === $hadiths->currentPage())
+                                    ? $anchor
+                                    : $hadiths->url($chapter->page).$anchor;
+                            @endphp
+                            <a href="{{ $href }}"
                                class="block px-3 py-2 rounded-lg text-[13px] leading-snug text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-[#0056b3] dark:hover:text-[#64CCC5] transition-colors">
                                 <span class="tabular-nums font-bold text-gray-400 dark:text-gray-600">{{ $chapter->chapter_number }}.</span>
                                 {{ $chapter->title_ar ?: $chapter->title_en }}

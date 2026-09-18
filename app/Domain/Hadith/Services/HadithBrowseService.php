@@ -25,6 +25,12 @@ final class HadithBrowseService
     /** Collections are static between imports, so the index is worth caching. */
     private const INDEX_TTL = 3600;
 
+    /**
+     * Hadiths per page of a book. Shared by bookHadiths() and chapters(): the
+     * chapter index computes page numbers from it, so the two must not drift.
+     */
+    private const BOOK_PER_PAGE = 20;
+
     public function __construct(private readonly ArabicNormalizer $normalizer) {}
 
     /** @return Collection<int, HadithCollection> */
@@ -87,17 +93,44 @@ final class HadithBrowseService
     }
 
     /** @return Collection<int, HadithChapter> */
-    public function chapters(HadithBook $book): Collection
+    public function chapters(HadithBook $book, int $perPage = self::BOOK_PER_PAGE): Collection
     {
-        return HadithChapter::query()
+        $chapters = HadithChapter::query()
             ->where('book_id', $book->id)
             ->where('is_published', true)
             ->orderBy('sort_order')
             ->get();
+
+        // The chapter index lists every chapter of the book, but the hadiths are
+        // paginated — so a `#chapter-N` anchor only exists in the DOM on the page
+        // its chapter starts on, and the other links scroll nowhere. Map each
+        // chapter to that page here, using the exact ordering bookHadiths() uses,
+        // so the index can link `?page=P#chapter-N`.
+        // ponytail: one indexed column for one book (778 rows at the worst book)
+        // is cheaper than a window-function query and needs no raw SQL.
+        $pages = [];
+
+        $chapterIds = Hadith::query()
+            ->publiclyVisible()
+            ->where('book_id', $book->id)
+            ->orderBy('sort_order')
+            ->pluck('chapter_id');
+
+        foreach ($chapterIds as $index => $chapterId) {
+            if ($chapterId !== null && ! isset($pages[$chapterId])) {
+                $pages[$chapterId] = intdiv($index, $perPage) + 1;
+            }
+        }
+
+        // Null for a chapter with no publicly visible hadith: it is rendered on
+        // no page at all, so there is no page to send the reader to.
+        $chapters->each(fn (HadithChapter $chapter) => $chapter->page = $pages[$chapter->id] ?? null);
+
+        return $chapters;
     }
 
     /** Hadiths of a book, paginated. */
-    public function bookHadiths(HadithBook $book, int $perPage = 20): LengthAwarePaginator
+    public function bookHadiths(HadithBook $book, int $perPage = self::BOOK_PER_PAGE): LengthAwarePaginator
     {
         return Hadith::query()
             ->publiclyVisible()
