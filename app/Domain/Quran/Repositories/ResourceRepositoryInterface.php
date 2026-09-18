@@ -6,6 +6,7 @@ namespace App\Domain\Quran\Repositories;
 
 use App\Domain\Quran\DTOs\ReciterData;
 use App\Domain\Quran\DTOs\ResourceData;
+use App\Domain\Quran\Enums\ExternalSource;
 use App\Domain\Quran\Enums\ResourceKind;
 use App\Domain\Quran\Models\QuranResource;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -32,6 +33,38 @@ interface ResourceRepositoryInterface
     public function activeByIds(ResourceKind $kind, array $ids): Collection;
 
     public function find(int $id): ?QuranResource;
+
+    /**
+     * Rows filed under a reciter as their recordings.
+     *
+     * @return Collection<int, QuranResource>
+     */
+    public function recordingsOf(int $parentId): Collection;
+
+    /**
+     * Reciters of a kind that stand on their own (candidates to file another under).
+     *
+     * @return Collection<int, QuranResource>
+     */
+    public function topLevel(ResourceKind $kind, int $exceptId): Collection;
+
+    /**
+     * File a reciter under another (or release it with null). Anything filed under the
+     * child follows it, so the tree never grows past one level.
+     */
+    public function setParent(int $childId, ?int $parentId): QuranResource;
+
+    /**
+     * Reciters already tied to a source, keyed by the source's own reference id.
+     *
+     * @return Collection<string, QuranResource>
+     */
+    public function linkedTo(ExternalSource $source): Collection;
+
+    /**
+     * Point an existing reciter at a source recording, so "Fetch" pulls from it.
+     */
+    public function linkSource(int $id, ExternalSource $source, string $refId): QuranResource;
 
     public function findOfKind(ResourceKind $kind, int $id): ?QuranResource;
 

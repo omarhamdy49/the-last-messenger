@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin\Quran;
 
+use App\Domain\Quran\Services\ChapterService;
 use App\Domain\Quran\Services\StructureService;
 use App\Http\Controllers\Admin\Quran\Concerns\QueuesQuranCommands;
 use App\Http\Controllers\Controller;
@@ -28,12 +29,17 @@ final class MushafController extends Controller
         return view('admin.quran.mushafs.index', ['mushafs' => $this->structure->mushafs()]);
     }
 
-    public function show(Request $request, int $mushaf): View
+    public function show(Request $request, int $mushaf, ChapterService $chapters): View
     {
         $model = $this->structure->mushaf($mushaf) ?? abort(404);
         $pageNumber = max(1, min($model->pages_count ?: 604, $request->integer('page', 1)));
 
-        return view('admin.quran.mushafs.show', ['mushaf' => $model, 'pageNumber' => $pageNumber] + $this->structure->mushafPage($mushaf, $pageNumber));
+        return view('admin.quran.mushafs.show', [
+            'mushaf' => $model,
+            'pageNumber' => $pageNumber,
+            // Surah names for the page's verse ranges (cached list, unpublished included).
+            'chapters' => $chapters->all(publishedOnly: false)->keyBy('id'),
+        ] + $this->structure->mushafPage($mushaf, $pageNumber));
     }
 
     public function update(UpdateMushafRequest $request, int $mushaf): RedirectResponse|JsonResponse

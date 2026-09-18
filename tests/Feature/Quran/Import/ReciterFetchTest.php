@@ -215,4 +215,50 @@ final class ReciterFetchTest extends TestCase
         $this->actingAs($this->createAdminUser(role: 'editor'), 'admin');
         $this->postJson(route('admin.quran.resources.fetch', $resource->id), ['audio' => true])->assertForbidden();
     }
+
+    public function test_mp3quran_catalogue_lists_imports_and_links_recordings(): void
+    {
+        $this->fakeSources();
+        Bus::fake();
+        $this->actingAs($this->createAdminUser(), 'admin');
+
+        $this->get(route('admin.quran.resources.mp3quran'))->assertOk()->assertSee(__('quran.manage.import_as_new', [], 'ar'));
+
+        // Import as a new reciter: inactive, tied to the recording, and fetched straight away.
+        $this->post(route('admin.quran.resources.mp3quran.import'), ['ref_id' => '1'])->assertRedirect();
+        $created = QuranResource::query()->where('external_source', 'mp3quran')->where('external_ref_id', '1')->firstOrFail();
+        $this->assertFalse($created->is_active);
+        $this->assertSame('mp3quran-1', $created->slug);
+        Bus::assertDispatched(FetchReciterFromSourceJob::class);
+
+        // Importing the same recording twice lands on the reciter that already has it.
+        $this->post(route('admin.quran.resources.mp3quran.import'), ['ref_id' => '1'])->assertRedirect(route('admin.quran.resources.show', $created->id));
+        $this->assertSame(1, QuranResource::query()->where('external_source', 'mp3quran')->count());
+
+        // An id mp3quran does not have never becomes a row.
+        $this->post(route('admin.quran.resources.mp3quran.import'), ['ref_id' => '424242'])->assertSessionHas('error');
+        $this->post(route('admin.quran.resources.mp3quran.import'), ['ref_id' => 'abc'])->assertSessionHasErrors('ref_id');
+    }
+
+    public function test_an_existing_reciter_can_be_linked_to_a_source(): void
+    {
+        $this->fakeSources();
+        $this->actingAs($this->createAdminUser(), 'admin');
+        $reciter = QuranResource::factory()->chapterReciter()->manual()->create();
+
+        $this->get(route('admin.quran.resources.show', $reciter->id))->assertOk()->assertSee(__('quran.manage.link_source_help', [], 'ar'));
+
+        $this->post(route('admin.quran.resources.link-source', $reciter->id), ['external_source' => 'mp3quran', 'external_ref_id' => '424242'])->assertSessionHas('error');
+        $this->assertNull($reciter->fresh()->external_source);
+
+        $this->post(route('admin.quran.resources.link-source', $reciter->id), ['external_source' => 'mp3quran', 'external_ref_id' => '1'])
+            ->assertRedirect(route('admin.quran.resources.show', $reciter->id));
+        $this->assertSame(ExternalSource::MP3QURAN, $reciter->fresh()->external_source);
+        $this->assertSame('1', $reciter->fresh()->external_ref_id);
+
+        // One recording feeds one reciter.
+        $other = QuranResource::factory()->chapterReciter()->manual()->create();
+        $this->post(route('admin.quran.resources.link-source', $other->id), ['external_source' => 'mp3quran', 'external_ref_id' => '1'])->assertSessionHas('error');
+        $this->assertNull($other->fresh()->external_source);
+    }
 }

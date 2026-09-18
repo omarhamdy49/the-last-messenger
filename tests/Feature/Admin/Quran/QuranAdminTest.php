@@ -15,6 +15,7 @@ use App\Domain\Quran\Models\Tafsir;
 use App\Domain\Quran\Models\Translation;
 use App\Domain\Quran\Models\Verse;
 use App\Domain\Quran\Models\Word;
+use App\Domain\Quran\Services\PublicReciterService;
 use App\Jobs\RunArtisanCommandJob;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -175,6 +176,44 @@ final class QuranAdminTest extends TestCase
         $this->get(route('admin.quran.resources.index', 'translations'))->assertOk()->assertSee('My translation');
         $this->get(route('admin.quran.resources.show', $resource->id))->assertOk();
         $this->get(route('admin.quran.resources.edit', $resource->id))->assertOk();
+    }
+
+    public function test_resource_image_can_be_an_external_url_and_the_wizard_renders(): void
+    {
+        $resource = QuranResource::factory()->translation()->manual()->create();
+        $payload = ['name' => 'Img', 'slug' => 'img', 'is_active' => '1', 'image_id' => '', 'remove_image' => '0'];
+
+        $this->put(route('admin.quran.resources.update', $resource->id), $payload + ['image_url' => 'https://cdn.example.com/r.webp'])->assertRedirect();
+        $this->assertSame('https://cdn.example.com/r.webp', $resource->refresh()->image);
+
+        // An untouched form re-posts the same URL; a bad scheme is refused.
+        $this->put(route('admin.quran.resources.update', $resource->id), $payload + ['image_url' => 'javascript:alert(1)'])->assertSessionHasErrors('image_url');
+        $this->put(route('admin.quran.resources.update', $resource->id), ['remove_image' => '1', 'image_url' => ''] + $payload)->assertRedirect();
+        $this->assertNull($resource->refresh()->image);
+
+        $this->get(route('admin.quran.resources.edit', $resource->id))->assertOk()->assertSee('name="image_url"', false)->assertSee('data-wysiwyg', false);
+        $this->get(route('admin.quran.resources.create', 'chapter_reciters'))->assertOk()->assertSee('data-wizard-step="source"', false);
+    }
+
+    public function test_resource_slug_is_generated_when_blank_and_always_slugified(): void
+    {
+        $store = fn (array $payload) => $this->postJson(route('admin.quran.resources.store', 'chapter_reciters'), $payload + ['is_active' => '1']);
+
+        // Blank: English name wins, then the base name, then the Arabic one; collisions get a suffix.
+        $store(['name' => 'قارئ', 'slug' => '', 'name_translations' => ['en' => 'Abdul Basit', 'ar' => 'عبد الباسط']])->assertCreated()->assertJsonPath('data.slug', 'abdul-basit');
+        $store(['name' => 'Abdul Basit', 'slug' => ''])->assertCreated()->assertJsonPath('data.slug', 'abdul-basit-1');
+        $store(['name' => '!!!', 'name_translations' => ['ar' => 'عبد الباسط']])->assertCreated()->assertJsonPath('data.slug', 'aabd-albast');
+        $store(['name' => '!!!', 'slug' => ''])->assertUnprocessable()->assertJsonValidationErrors('slug');
+
+        // Typed text is run through Str::slug(); a typed duplicate is still an error, not a silent suffix.
+        $store(['name' => 'X', 'slug' => ' My Réciter_Slug! '])->assertCreated()->assertJsonPath('data.slug', 'my-reciter-slug');
+        $store(['name' => 'Y', 'slug' => 'My Reciter Slug'])->assertUnprocessable()->assertJsonValidationErrors('slug');
+
+        // An untouched stored slug is kept verbatim (imported slugs carry underscores); clearing it regenerates.
+        $imported = QuranResource::factory()->create(['kind' => 'chapter_reciter', 'slug' => 'chapter_reciter-9', 'name' => 'Imported One']);
+        $update = fn (array $payload) => $this->putJson(route('admin.quran.resources.update', $imported->id), $payload + ['name' => 'Imported One', 'is_active' => '1']);
+        $update(['slug' => 'chapter_reciter-9'])->assertOk()->assertJsonPath('data.slug', 'chapter_reciter-9');
+        $update(['slug' => ''])->assertOk()->assertJsonPath('data.slug', 'imported-one');
     }
 
     public function test_reciter_fields_are_rejected_for_non_reciter_kinds(): void
@@ -365,5 +404,57 @@ final class QuranAdminTest extends TestCase
         $this->put(route('admin.quran.verses.update', $verse->id), ['text_uthmani' => 'x', 'chapter_id' => 2])->assertSessionHasErrors('unexpected_fields');
         $this->putJson(route('admin.quran.resources.update', $resource->id), ['name' => 'x', 'slug' => 'x', 'qf_id' => 5, 'kind' => 'tafsir'])
             ->assertUnprocessable()->assertJsonValidationErrors('unexpected_fields');
+    }
+
+    public function test_a_reciter_can_be_filed_under_another_as_a_recording_and_released(): void
+    {
+        $main = QuranResource::factory()->chapterReciter()->create(['name' => 'Abdul Basit', 'slug' => 'abdul-basit', 'is_active' => true]);
+        $mujawwad = QuranResource::factory()->chapterReciter()->create(['name' => 'Abdul Basit Mujawwad', 'slug' => 'abdul-basit-mujawwad', 'is_active' => true]);
+        $nested = QuranResource::factory()->chapterReciter()->create(['name' => 'Abdul Basit Warsh', 'slug' => 'abdul-basit-warsh', 'is_active' => true, 'parent_id' => $mujawwad->id]);
+        $ayah = QuranResource::factory()->recitation()->create();
+
+        $this->post(route('admin.quran.resources.merge', $mujawwad->id), ['into' => $main->id])
+            ->assertRedirect(route('admin.quran.resources.show', $main->id));
+
+        // Ids are untouched; what was filed under the child follows it, so the tree stays one level deep.
+        $this->assertSame($main->id, $mujawwad->fresh()->parent_id);
+        $this->assertSame($main->id, $nested->fresh()->parent_id);
+
+        $this->post(route('admin.quran.resources.merge', $main->id), ['into' => $main->id])->assertSessionHas('error');
+        $this->post(route('admin.quran.resources.merge', $ayah->id), ['into' => $main->id])->assertSessionHas('error');
+        $this->assertNull($ayah->fresh()->parent_id);
+
+        $this->get(route('admin.quran.resources.show', $main->id))->assertOk()->assertSee('Abdul Basit Mujawwad');
+        $this->get(route('admin.quran.resources.show', $mujawwad->id))->assertOk()->assertSee(__('quran.manage.recording_of', [], 'ar'));
+
+        // The public directory lists the reciter once; the recording is reached from their page.
+        $listing = app(PublicReciterService::class)->listing('en');
+        $this->assertSame(['abdul-basit'], array_column($listing['all'], 'slug'));
+        $this->assertSame(3, $listing['all'][0]['recordingsCount']);
+        $page = app(PublicReciterService::class)->show('abdul-basit-mujawwad', 'en');
+        $this->assertSame(['abdul-basit', 'abdul-basit-mujawwad', 'abdul-basit-warsh'], array_column($page['recordings'], 'slug'));
+
+        $this->post(route('admin.quran.resources.release', $mujawwad->id))->assertRedirect();
+        $this->assertNull($mujawwad->fresh()->parent_id);
+
+        // Grouping reciters is an edit: a role without `edit quran` cannot do it.
+        $this->actAsEditor();
+        $this->post(route('admin.quran.resources.merge', $mujawwad->id), ['into' => $main->id])->assertForbidden();
+        $this->assertNull($mujawwad->fresh()->parent_id);
+    }
+
+    public function test_the_audio_manager_renders_and_serves_timings_as_json(): void
+    {
+        $reciter = QuranResource::factory()->chapterReciter()->create();
+        $file = ChapterAudioFile::factory()->create(['resource_id' => $reciter->id, 'chapter_id' => 1, 'url' => 'https://audio.test/001.mp3']);
+
+        $this->get(route('admin.quran.resources.chapter-audio.index', ['resource' => $reciter->id, 'chapter' => 1]))
+            ->assertOk()->assertSee('https://audio.test/001.mp3')->assertSee('id="surah-1"', false);
+
+        $this->getJson(route('admin.quran.resources.chapter-audio.timestamps.edit', [$reciter->id, $file->id]))
+            ->assertOk()->assertJsonPath('success', true)->assertJsonPath('data', []);
+
+        // The reciter page plays the same files from its surah list.
+        $this->get(route('admin.quran.resources.show', $reciter->id))->assertOk()->assertSee('quran-track:toggle', false);
     }
 }

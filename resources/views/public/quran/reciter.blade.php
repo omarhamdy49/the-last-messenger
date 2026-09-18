@@ -92,6 +92,7 @@
                             {{ count($recitations) }} {{ __('quran.public.recording_unit') }}
                         </span>
                     </div>
+
                 </div>
             </div>
         </div>
@@ -111,13 +112,41 @@
             </section>
         @endif
 
-        <x-quran.recording-switcher :variants="$recordingVariants" :selected-id="$selectedRecordingId" :slug="$canonicalSlug" />
         {{-- Recitations --}}
-        <section>
-            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-3">
+        <section id="recitations" class="scroll-mt-24">
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white {{ empty($recordings) ? 'mb-6' : 'mb-4' }} flex items-center gap-3">
                 <span class="w-1 h-7 rounded-full bg-gradient-to-b from-[#0056b3] to-[#218838]"></span>
                 {{ __('quran.public.reciter_recitations') }}
             </h2>
+
+            {{-- One tab per recording of this reciter (murattal / mujawwad / another riwayah).
+                 Each recording is its own page, so the tabs are links: deep-linkable, no JS,
+                 and #recitations lands the reader back on the list they were switching. --}}
+            @if (! empty($recordings))
+                <nav class="mb-6 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto border-b border-gray-200 dark:border-gray-800 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                     aria-label="{{ __('quran.public.other_recordings') }}">
+                    <ul class="flex gap-1" role="list">
+                        @foreach ($recordings as $recording)
+                            <li class="shrink-0">
+                                <a href="{{ route('public.quran.reciter', $recording['slug']) }}#recitations" title="{{ $recording['name'] }}"
+                                   @if ($recording['current']) aria-current="page" @endif
+                                   class="relative -mb-px inline-flex min-h-[3rem] items-center gap-2 whitespace-nowrap border-b-2 px-4 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0056b3] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-950
+                                          {{ $recording['current']
+                                              ? 'border-[#0056b3] text-[#0056b3] dark:border-[#64CCC5] dark:text-[#64CCC5]'
+                                              : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 dark:text-gray-400 dark:hover:text-white dark:hover:border-gray-600' }}">
+                                    <i data-lucide="disc-3" class="w-4 h-4" aria-hidden="true"></i>
+                                    <span>{{ $recording['label'] }}</span>
+                                    {{-- `count` is absent from a page cached before it existed; the tab still works. --}}
+                                    @isset($recording['count'])
+                                        <span class="rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums
+                                                     {{ $recording['current'] ? 'bg-[#0056b3]/10 dark:bg-[#64CCC5]/10' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' }}">{{ $recording['count'] }}</span>
+                                    @endisset
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </nav>
+            @endif
 
             @if (empty($recitations))
                 <div class="rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 py-16 text-center">

@@ -6,6 +6,7 @@ namespace App\Domain\Quran\Repositories;
 
 use App\Domain\Quran\DTOs\ReciterData;
 use App\Domain\Quran\DTOs\ResourceData;
+use App\Domain\Quran\Enums\ExternalSource;
 use App\Domain\Quran\Enums\ResourceKind;
 use App\Domain\Quran\Enums\ResourceSource;
 use App\Domain\Quran\Models\QuranResource;
@@ -20,7 +21,7 @@ use InvalidArgumentException;
 final class EloquentResourceRepository implements ResourceRepositoryInterface
 {
     private const COLUMNS = [
-        'id', 'kind', 'qf_id', 'source', 'external_source', 'external_ref_id', 'slug', 'name', 'author_name', 'language_iso',
+        'id', 'kind', 'parent_id', 'qf_id', 'source', 'external_source', 'external_ref_id', 'slug', 'name', 'author_name', 'language_iso',
         'style', 'qirat', 'image', 'is_active', 'is_default', 'display_order', 'sync_enabled', 'store_audio_locally',
         'records_count', 'last_synced_at', 'last_fetched_at', 'metadata',
     ];
@@ -77,6 +78,63 @@ final class EloquentResourceRepository implements ResourceRepositoryInterface
     public function find(int $id): ?QuranResource
     {
         return QuranResource::query()->with('translations:id,resource_id,locale,name,description')->find($id);
+    }
+
+    public function recordingsOf(int $parentId): Collection
+    {
+        return QuranResource::query()
+            ->select(self::COLUMNS)
+            ->with('translations:id,resource_id,locale,name')
+            ->where('parent_id', $parentId)
+            ->orderBy('display_order')
+            ->orderBy('name')
+            ->get();
+    }
+
+    public function topLevel(ResourceKind $kind, int $exceptId): Collection
+    {
+        return QuranResource::query()
+            ->select(['id', 'kind', 'parent_id', 'name', 'slug', 'style', 'qirat', 'is_active'])
+            ->with('translations:id,resource_id,locale,name')
+            ->ofKind($kind)
+            ->whereNull('parent_id')
+            ->whereKeyNot($exceptId)
+            ->orderBy('name')
+            ->get();
+    }
+
+    public function setParent(int $childId, ?int $parentId): QuranResource
+    {
+        return DB::transaction(function () use ($childId, $parentId): QuranResource {
+            $child = QuranResource::query()->lockForUpdate()->findOrFail($childId);
+
+            if ($parentId !== null) {
+                // One level only: whatever was filed under the child moves up with it.
+                QuranResource::query()->where('parent_id', $child->id)->update(['parent_id' => $parentId]);
+            }
+
+            $child->forceFill(['parent_id' => $parentId])->save();
+
+            return $child;
+        });
+    }
+
+    public function linkedTo(ExternalSource $source): Collection
+    {
+        return QuranResource::query()
+            ->select(['id', 'kind', 'name', 'slug', 'external_source', 'external_ref_id', 'records_count', 'is_active'])
+            ->where('external_source', $source->value)
+            ->whereNotNull('external_ref_id')
+            ->get()
+            ->keyBy(static fn (QuranResource $r): string => (string) $r->external_ref_id);
+    }
+
+    public function linkSource(int $id, ExternalSource $source, string $refId): QuranResource
+    {
+        $resource = QuranResource::query()->findOrFail($id);
+        $resource->forceFill(['external_source' => $source->value, 'external_ref_id' => $refId])->save();
+
+        return $resource;
     }
 
     public function findOfKind(ResourceKind $kind, int $id): ?QuranResource

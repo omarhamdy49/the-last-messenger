@@ -33,8 +33,15 @@ final class PublicReciterService
             // reader seeks inside one gapless recording, so a verse-by-verse recitation
             // is never offered. Listing both also put the same person on the page
             // twice — which is what a reader reads as a duplicate.
-            $all = $this->resources->active(ResourceKind::CHAPTER_RECITER)
-                ->map(fn (QuranResource $r): array => $this->card($r, $locale))
+            $active = $this->resources->active(ResourceKind::CHAPTER_RECITER);
+            $ids = $active->pluck('id')->flip();
+            $recordings = $active->whereNotNull('parent_id')->countBy('parent_id');
+
+            // A recording filed under a reciter is reached from that reciter's page. It
+            // only stands alone here when its reciter is not listed (hidden or removed).
+            $all = $active
+                ->filter(static fn (QuranResource $r): bool => $r->parent_id === null || ! $ids->has($r->parent_id))
+                ->map(fn (QuranResource $r): array => ['recordingsCount' => 1 + (int) ($recordings[$r->id] ?? 0)] + $this->card($r, $locale))
                 ->values()->all();
 
             $all = ReciterLabeller::disambiguate($all, ['styleLabel', 'sourceHint', 'kindLabel']);
@@ -76,6 +83,7 @@ final class PublicReciterService
             }
 
             return [
+                'recordings' => $this->group($reciter, $locale),
                 'reciter' => $this->card($reciter, $locale) + [
                     'name' => $reciter->displayName($locale),
                     'image' => $this->imageUrl($reciter),
@@ -123,6 +131,33 @@ final class PublicReciterService
             'recordingsCount' => 1,
             'aliases' => implode(' ', array_unique([$r->slug, $nameAr, $nameEn])),
         ];
+    }
+
+    /**
+     * The reciter and everything filed under them, for the page's recording switcher.
+     * Empty when the reciter has a single recording — there is nothing to switch to.
+     *
+     * @return list<array{slug: string, name: string, label: string, count: int, current: bool}>
+     */
+    private function group(QuranResource $reciter, string $locale): array
+    {
+        $rootId = $reciter->parent_id ?? $reciter->id;
+        $members = $this->resources->active($reciter->kind)
+            ->filter(static fn (QuranResource $r): bool => $r->id === $rootId || $r->parent_id === $rootId)
+            ->sortBy(static fn (QuranResource $r): int => $r->id === $rootId ? 0 : 1)
+            ->values();
+
+        if ($members->count() < 2) {
+            return [];
+        }
+
+        return $members->map(static fn (QuranResource $r): array => [
+            'slug' => $r->slug,
+            'name' => $r->displayName($locale),
+            'label' => implode(' · ', array_filter([$r->style?->label($locale), $r->qirat])) ?: $r->displayName($locale),
+            'count' => (int) $r->records_count,
+            'current' => $r->id === $reciter->id,
+        ])->all();
     }
 
     private function imageUrl(QuranResource $r): ?string

@@ -936,3 +936,13 @@
 }
 
 .dark .overflow-x-auto { --admin-surface: #0b1120; }
+
+/* Sidebar: the current page's sub-item. Colour alone was too quiet to find in a
+   long group, so it also gets a tinted pill and a start-edge bar (RTL-safe). */
+aside nav .ms-6 > a[aria-current="page"] {
+  background: rgb(var(--color-accent) / 0.12);
+  box-shadow: inset 3px 0 0 rgb(var(--color-accent));
+}
+[dir="rtl"] aside nav .ms-6 > a[aria-current="page"] {
+  box-shadow: inset -3px 0 0 rgb(var(--color-accent));
+}

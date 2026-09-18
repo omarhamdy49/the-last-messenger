@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Domain\Quran\Services;
 
 use App\Domain\Quran\DTOs\ResourceData;
+use App\Domain\Quran\Enums\ExternalSource;
 use App\Domain\Quran\Enums\ResourceKind;
 use App\Domain\Quran\Import\QuranFoundation\Importers\CatalogueImporter;
 use App\Domain\Quran\Models\QuranResource;
 use App\Domain\Quran\Repositories\ResourceRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use InvalidArgumentException;
 use RuntimeException;
 
 /**
@@ -43,6 +45,59 @@ final class ResourceService
     public function find(int $id): ?QuranResource
     {
         return $this->resources->find($id);
+    }
+
+    /**
+     * @return Collection<int, QuranResource>
+     */
+    public function recordingsOf(QuranResource $reciter): Collection
+    {
+        return $this->resources->recordingsOf($reciter->id);
+    }
+
+    /**
+     * @return Collection<int, QuranResource>
+     */
+    public function mergeTargets(QuranResource $reciter): Collection
+    {
+        return $reciter->kind->isReciter() ? $this->resources->topLevel($reciter->kind, $reciter->id) : new Collection;
+    }
+
+    /**
+     * File `$reciter` under `$into` as one of their recordings. Ids do not change, so
+     * playlists, favourites and reader links to the recording keep working.
+     */
+    public function mergeAsRecording(QuranResource $reciter, QuranResource $into): QuranResource
+    {
+        // Filing under a recording means filing under that recording's reciter.
+        $target = $into->parent_id !== null ? ($this->resources->find($into->parent_id) ?? $into) : $into;
+
+        if (! $reciter->kind->isReciter() || $reciter->kind !== $target->kind) {
+            throw new InvalidArgumentException((string) __('quran.manage.merge_kind_mismatch'));
+        }
+        if ($reciter->id === $target->id) {
+            throw new InvalidArgumentException((string) __('quran.manage.merge_into_self'));
+        }
+
+        return $this->afterWrite($this->resources->setParent($reciter->id, $target->id));
+    }
+
+    public function releaseRecording(QuranResource $recording): QuranResource
+    {
+        return $this->afterWrite($this->resources->setParent($recording->id, null));
+    }
+
+    /**
+     * @return Collection<string, QuranResource>
+     */
+    public function linkedTo(ExternalSource $source): Collection
+    {
+        return $this->resources->linkedTo($source);
+    }
+
+    public function linkSource(int $id, ExternalSource $source, string $refId): QuranResource
+    {
+        return $this->afterWrite($this->resources->linkSource($id, $source, $refId));
     }
 
     public function findOfKind(ResourceKind $kind, int $id): ?QuranResource

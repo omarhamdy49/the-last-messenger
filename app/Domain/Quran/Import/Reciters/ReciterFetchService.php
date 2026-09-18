@@ -7,6 +7,7 @@ namespace App\Domain\Quran\Import\Reciters;
 use App\Domain\Quran\DTOs\AudioFileData;
 use App\Domain\Quran\DTOs\ImportReport;
 use App\Domain\Quran\DTOs\ReciterPreview;
+use App\Domain\Quran\DTOs\ResourceData;
 use App\Domain\Quran\Enums\ExternalSource;
 use App\Domain\Quran\Enums\ResourceKind;
 use App\Domain\Quran\Import\QuranFoundation\Exceptions\QfApiException;
@@ -15,6 +16,7 @@ use App\Domain\Quran\Repositories\AudioRepositoryInterface;
 use App\Domain\Quran\Repositories\ResourceRepositoryInterface;
 use App\Domain\Quran\Services\QuranCacheKeys;
 use Illuminate\Http\File;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
@@ -28,6 +30,8 @@ use Throwable;
  */
 final class ReciterFetchService
 {
+    private const MP3QURAN_CATALOGUE_KEY = 'quran:mp3quran:catalogue';
+
     public function __construct(
         private readonly ResourceRepositoryInterface $resources,
         private readonly AudioRepositoryInterface $audio,
@@ -39,6 +43,57 @@ final class ReciterFetchService
             ExternalSource::QF => app(QfReciterFetcher::class),
             ExternalSource::MP3QURAN => app(Mp3QuranReciterFetcher::class),
         };
+    }
+
+    /**
+     * mp3quran's recordings, for the admin picker. Cached: the list is ~1 MB, changes
+     * rarely, and the page is opened far more often than the source updates.
+     *
+     * @return list<array{ref_id: string, reciter: string, recording: string, files_count: int, style: ?string, qirat: ?string, has_timestamps: bool, sample_url: ?string}>
+     */
+    public function mp3QuranCatalogue(bool $fresh = false): array
+    {
+        if ($fresh) {
+            Cache::forget(self::MP3QURAN_CATALOGUE_KEY);
+        }
+
+        return Cache::remember(self::MP3QURAN_CATALOGUE_KEY, 3600, fn (): array => app(Mp3QuranReciterFetcher::class)->catalogue());
+    }
+
+    /**
+     * A new, inactive chapter reciter for one mp3quran recording, named from the source.
+     * It stays hidden until an admin has listened and switches it on.
+     */
+    public function createFromMp3Quran(string $refId): QuranResource
+    {
+        $refId = trim($refId);
+        $existing = $this->resources->linkedTo(ExternalSource::MP3QURAN)->get($refId);
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $data = $this->fetcher(ExternalSource::MP3QURAN)->data($refId, ResourceKind::CHAPTER_RECITER);
+
+        return $this->resources->create(ResourceKind::CHAPTER_RECITER, new ResourceData(
+            slug: 'mp3quran-'.$refId,
+            name: mb_substr($data->name, 0, 200),
+            nameTranslations: array_map(static fn (string $n): string => mb_substr($n, 0, 200), $data->names),
+            descriptionTranslations: [],
+            authorName: null,
+            languageIso: null,
+            style: $data->style,
+            qirat: $data->qirat === null ? null : mb_substr($data->qirat, 0, 40),
+            info: $data->info,
+            imagePath: null,
+            removeImage: false,
+            isActive: false,
+            isDefault: false,
+            syncEnabled: false,
+            displayOrder: 0,
+            externalSource: ExternalSource::MP3QURAN,
+            externalRefId: $refId,
+            storeAudioLocally: false,
+        ));
     }
 
     public function lookup(ExternalSource $source, string $refId, ResourceKind $kind): ReciterPreview

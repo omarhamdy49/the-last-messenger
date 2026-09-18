@@ -8,8 +8,11 @@ use App\Domain\Quran\DTOs\ResourceData;
 use App\Domain\Quran\Enums\ResourceKind;
 use App\Domain\Quran\Import\QuranFoundation\Exceptions\QfApiException;
 use App\Domain\Quran\Models\QuranResource;
+use App\Domain\Quran\Services\AudioService;
+use App\Domain\Quran\Services\ChapterService;
 use App\Domain\Quran\Services\ResourceService;
 use App\Domain\Quran\Services\StructureService;
+use App\Domain\Shared\Services\PublicImageService;
 use App\Http\Controllers\Admin\Quran\Concerns\QueuesQuranCommands;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Quran\ResourceRequest;
@@ -32,6 +35,7 @@ final class ResourceController extends Controller
     public function __construct(
         private readonly ResourceService $resources,
         private readonly StructureService $structure,
+        private readonly PublicImageService $images,
     ) {}
 
     public function index(Request $request, string $kind): View
@@ -66,11 +70,11 @@ final class ResourceController extends Controller
         $resource = $this->resources->create($resourceKind, $this->data($request));
 
         return $request->expectsJson()
-            ? response()->json(['success' => true, 'data' => ['id' => $resource->id]], 201)
+            ? response()->json(['success' => true, 'data' => ['id' => $resource->id, 'slug' => $resource->slug]], 201)
             : redirect()->route('admin.quran.resources.show', $resource->id)->with('success', __('quran.manage.saved'));
     }
 
-    public function show(int $resource): View
+    public function show(int $resource, ChapterService $chapters, AudioService $audio): View
     {
         $model = $this->resources->find($resource) ?? abort(404);
 
@@ -78,6 +82,16 @@ final class ResourceController extends Controller
             'resource' => $model,
             'kind' => $model->kind,
             'coverage' => $this->resources->coverage($model),
+            // Names and verse counts for the per-surah coverage list (cached, unpublished included).
+            'chapters' => $chapters->all(publishedOnly: false),
+            // Whole-surah files, so the coverage list can play them. Verse-by-verse
+            // recitations have no single track per surah.
+            'chapterFiles' => $model->kind === ResourceKind::CHAPTER_RECITER ? $audio->chapterFiles($model)->keyBy('chapter_id') : collect(),
+            // Reciter grouping: who this recording is filed under, what is filed under it,
+            // and who it could be filed under.
+            'parent' => $model->parent_id !== null ? $this->resources->find($model->parent_id) : null,
+            'recordings' => $model->kind->isReciter() ? $this->resources->recordingsOf($model) : collect(),
+            'mergeTargets' => $this->resources->mergeTargets($model),
         ]);
     }
 
@@ -98,7 +112,7 @@ final class ResourceController extends Controller
         $updated = $this->resources->update($resource, $this->data($request));
 
         return $request->expectsJson()
-            ? response()->json(['success' => true, 'data' => ['id' => $updated->id]])
+            ? response()->json(['success' => true, 'data' => ['id' => $updated->id, 'slug' => $updated->slug]])
             : redirect()->route('admin.quran.resources.show', $resource)->with('success', __('quran.manage.saved'));
     }
 
@@ -136,6 +150,36 @@ final class ResourceController extends Controller
         $this->resources->reorder($this->kindOf($kind), array_map('intval', $validated['ids']));
 
         return $request->expectsJson() ? response()->json(['success' => true]) : back()->with('success', __('quran.manage.saved'));
+    }
+
+    /**
+     * File this reciter under another as one of their recordings.
+     */
+    public function merge(Request $request, int $resource): RedirectResponse
+    {
+        $model = $this->resources->find($resource) ?? abort(404);
+        $validated = $request->validate(['into' => ['required', 'integer', 'min:1']]);
+        $into = $this->resources->find((int) $validated['into']) ?? abort(404);
+
+        try {
+            $this->resources->mergeAsRecording($model, $into);
+        } catch (InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('admin.quran.resources.show', $into->parent_id ?? $into->id)
+            ->with('success', __('quran.manage.merged_as_recording', ['name' => $model->displayName(), 'into' => $into->displayName()]));
+    }
+
+    /**
+     * Undo a merge: the recording becomes a reciter in its own right again.
+     */
+    public function release(int $resource): RedirectResponse
+    {
+        $model = $this->resources->find($resource) ?? abort(404);
+        $this->resources->releaseRecording($model);
+
+        return back()->with('success', __('quran.manage.recording_released', ['name' => $model->displayName()]));
     }
 
     public function catalogue(string $kind): View
@@ -208,9 +252,11 @@ final class ResourceController extends Controller
 
     private function data(ResourceRequest $request): ResourceData
     {
-        $image = $request->file('image')?->store('quran/resources', 'public');
+        // Upload wins, then a media-library pick, then an external URL.
+        $image = $this->images->store($request->file('image') ?? $request->integer('image_id'), 'quran/resources', 'quran')
+            ?? ($request->validated('image_url') ?: null);
 
-        return ResourceData::fromValidated($request->validated(), $image ?: null);
+        return ResourceData::fromValidated($request->validated(), $image);
     }
 
     private function kindOf(string $segment): ResourceKind

@@ -15,6 +15,8 @@ use App\Http\Requests\Admin\Quran\ReciterSourceRequest;
 use App\Jobs\FetchReciterFromSourceJob;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -29,6 +31,86 @@ final class ReciterSourceController extends Controller
         private readonly ResourceService $resources,
         private readonly QuranAdminCommands $commands,
     ) {}
+
+    /**
+     * Browse mp3quran by reciter name: import a recording as a new reciter, or point an
+     * existing reciter at it.
+     */
+    public function mp3quran(Request $request): View
+    {
+        $rows = [];
+        $error = null;
+
+        try {
+            $rows = $this->fetcher->mp3QuranCatalogue($request->boolean('refresh'));
+        } catch (RuntimeException $e) {
+            report($e);
+            $error = __('quran.manage.mp3quran_unavailable');
+        }
+
+        return view('admin.quran.resources.mp3quran', [
+            'rows' => $rows,
+            'error' => $error,
+            'linked' => $this->resources->linkedTo(ExternalSource::MP3QURAN),
+            'reciters' => $this->resources->adminIndex(ResourceKind::CHAPTER_RECITER, [], 500)->getCollection(),
+        ]);
+    }
+
+    public function importMp3quran(Request $request): RedirectResponse
+    {
+        $validated = $request->validate(['ref_id' => ['required', 'string', 'regex:/^\d{1,9}$/']]);
+
+        try {
+            $resource = $this->fetcher->createFromMp3Quran((string) $validated['ref_id']);
+        } catch (InvalidArgumentException $e) {
+            // An id mp3quran does not have is the admin's typo, not an incident.
+            return back()->with('error', $e->getMessage());
+        } catch (RuntimeException $e) {
+            report($e);
+
+            return back()->with('error', __('quran.manage.mp3quran_unavailable'));
+        }
+
+        // A reciter with no audio is an empty page: fetch its files and timings straight away.
+        if ($resource->wasRecentlyCreated) {
+            $run = $this->commands->startFetchRun($resource->id, $request->user()?->id);
+            FetchReciterFromSourceJob::dispatch($resource->id, $run->id, false, true, true, false);
+        }
+
+        return redirect()->route('admin.quran.resources.show', $resource->id)
+            ->with('success', $resource->wasRecentlyCreated ? __('quran.manage.mp3quran_imported') : __('quran.manage.source_already_linked', ['name' => $resource->displayName()]));
+    }
+
+    /**
+     * Tie an existing reciter to a QF / mp3quran recording so it can be fetched from there.
+     */
+    public function linkSource(ReciterSourceRequest $request, int $resource): RedirectResponse
+    {
+        $model = $this->resources->find($resource) ?? abort(404);
+        $validated = $request->validated();
+        $source = ExternalSource::from((string) $validated['external_source']);
+        $refId = trim((string) $validated['external_ref_id']);
+
+        if (! $model->kind->isReciter()) {
+            return back()->with('error', __('quran.manage.reciter_no_source'));
+        }
+
+        $owner = $this->resources->linkedTo($source)->get($refId);
+        if ($owner !== null && $owner->id !== $model->id) {
+            return back()->with('error', __('quran.manage.source_already_linked', ['name' => $owner->displayName()]));
+        }
+
+        try {
+            // Proves the id exists at the source (and suits this kind) before it is stored.
+            $this->fetcher->lookup($source, $refId, $model->kind);
+        } catch (InvalidArgumentException|RuntimeException|QfApiException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        $this->resources->linkSource($model->id, $source, $refId);
+
+        return redirect()->route('admin.quran.resources.show', $model->id)->with('success', __('quran.manage.source_linked', ['source' => $source->label()]));
+    }
 
     public function lookup(ReciterSourceRequest $request): JsonResponse
     {

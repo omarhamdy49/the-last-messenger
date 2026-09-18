@@ -217,4 +217,19 @@ return [
             'episodes' => 'Episodes',
         ],
     ],
+    'resource' => [
+        'eyebrow' => 'Quran resource',
+        'steps' => [
+            'identity' => ['label' => 'Identity', 'hint' => 'Name and slug', 'desc' => 'Name, slug, language and visibility.'],
+            'source' => ['label' => 'Reciter & source', 'hint' => 'Qirat and audio source', 'desc' => 'Recitation style and qirat, and the external source files are fetched from.'],
+            'profile' => ['label' => 'Image & translations', 'hint' => 'Image and names', 'desc' => 'The resource image, and its name and description in each language.'],
+            'about' => ['label' => 'About', 'hint' => 'Formatted intro', 'desc' => 'A formatted intro, shown when no translated description exists.'],
+        ],
+        'slug_help' => 'Leave blank to generate it from the English name, then the Arabic one. Anything you type is converted to Latin letters, digits and dashes.',
+        'visibility' => 'Visibility',
+        'image_help' => 'Upload an image, pick one from the library, or paste an external CDN URL.',
+        'description_help' => 'Plain text shown on the reciter page and used as the search description.',
+        'inactive' => 'Inactive',
+        'rail' => ['slug' => 'Slug', 'language' => 'Language', 'status' => 'Status', 'source' => 'Source'],
+    ],
 ];

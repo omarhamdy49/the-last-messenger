@@ -51,6 +51,40 @@ final class Mp3QuranReciterFetcher implements ReciterFetcher
             ->all();
     }
 
+    /**
+     * Every recording mp3quran publishes, one row per `moshaf` (the unit an admin
+     * imports), so a reciter can be picked by name instead of by a number nobody knows.
+     *
+     * @return list<array{ref_id: string, reciter: string, recording: string, files_count: int, style: ?string, qirat: ?string, has_timestamps: bool, sample_url: ?string}>
+     */
+    public function catalogue(): array
+    {
+        $rows = [];
+        foreach ((array) ($this->get('reciters', ['language' => 'ar'])['reciters'] ?? []) as $reciter) {
+            foreach ((array) ($reciter['moshaf'] ?? []) as $moshaf) {
+                if (! isset($moshaf['id'], $moshaf['server'])) {
+                    continue;
+                }
+                $chapters = $this->chapters($moshaf);
+                $recording = trim((string) ($moshaf['name'] ?? ''));
+                $rows[] = [
+                    'ref_id' => (string) (int) $moshaf['id'],
+                    'reciter' => trim((string) ($reciter['name'] ?? '')),
+                    'recording' => $recording,
+                    'files_count' => count($chapters),
+                    'style' => RecitationStyle::fromExternal($recording)?->value,
+                    'qirat' => $this->qirat($recording),
+                    'has_timestamps' => $this->readId($moshaf) !== null,
+                    'sample_url' => $chapters === [] ? null : $this->fileUrl($moshaf, $chapters[0]),
+                ];
+            }
+        }
+
+        usort($rows, static fn (array $a, array $b): int => [$a['reciter'], $a['recording']] <=> [$b['reciter'], $b['recording']]);
+
+        return $rows;
+    }
+
     public function lookup(string $refId, ResourceKind $kind): ReciterPreview
     {
         [$reciter, $moshaf] = $this->moshaf($refId, $kind, 'ar');

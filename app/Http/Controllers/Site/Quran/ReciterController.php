@@ -31,10 +31,6 @@ final class ReciterController extends Controller
         $user = auth()->user();
         $data['reciter']['isSaved'] = $user !== null && $favorites->isFavorited($user, FavorableType::RECITER, (int) $data['reciter']['id']);
 
-        return view('public.quran.reciter', $data + [
-            'recordingVariants' => collect(),
-            'selectedRecordingId' => $data['reciter']['id'],
-            'canonicalSlug' => $slug,
-        ]);
+        return view('public.quran.reciter', $data);
     }
 }

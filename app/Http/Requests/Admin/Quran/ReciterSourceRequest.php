@@ -18,12 +18,18 @@ final class ReciterSourceRequest extends QuranAdminRequest
      */
     public function rules(): array
     {
-        if (str_ends_with((string) $this->route()?->getName(), '.lookup')) {
-            return [
-                'external_source' => ['required', Rule::enum(ExternalSource::class)],
-                'external_ref_id' => ['required', 'string', 'max:50', 'regex:/^[0-9]+$/'],
-                'kind' => ['required', Rule::in([ResourceKind::RECITATION->value, ResourceKind::CHAPTER_RECITER->value])],
-            ];
+        $route = (string) $this->route()?->getName();
+        $source = [
+            'external_source' => ['required', Rule::enum(ExternalSource::class)],
+            'external_ref_id' => ['required', 'string', 'max:50', 'regex:/^[0-9]+$/'],
+        ];
+
+        // Linking reads the kind from the reciter in the URL; a lookup has no reciter yet.
+        if (str_ends_with($route, '.link-source')) {
+            return $source;
+        }
+        if (str_ends_with($route, '.lookup')) {
+            return $source + ['kind' => ['required', Rule::in([ResourceKind::RECITATION->value, ResourceKind::CHAPTER_RECITER->value])]];
         }
 
         return [

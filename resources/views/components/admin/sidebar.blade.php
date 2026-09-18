@@ -32,6 +32,21 @@
     if ($activeSegment === 'quran') {
         $area = $parts[1] ?? 'chapters';
         $kindSegment = $parts[2] ?? null;
+        // A resource's own pages (/quran/resources/{id}/…) carry no kind in the URL,
+        // so it is read from the row — otherwise show/edit/audio light up nothing.
+        // ponytail: one PK lookup per detail page; share the controller's model if it ever shows up in a profile.
+        if ($area === 'resources' && is_string($kindSegment) && ctype_digit($kindSegment)) {
+            $kindValue = \App\Domain\Quran\Models\QuranResource::query()->whereKey((int) $kindSegment)->value('kind');
+            $kindSegment = ($kindValue instanceof \App\Domain\Quran\Enums\ResourceKind
+                ? $kindValue
+                : \App\Domain\Quran\Enums\ResourceKind::tryFrom((string) $kindValue))?->routeSegment();
+        }
+
+        // The mp3quran picker only ever feeds whole-surah reciters.
+        if ($kindSegment === 'mp3quran-catalogue') {
+            $kindSegment = 'chapter_reciters';
+        }
+
         $activeSegment = $area === 'resources' && is_string($kindSegment) && ! ctype_digit($kindSegment)
             ? 'quran-resources-'.$kindSegment
             : 'quran-'.$area;
@@ -97,7 +112,7 @@
                 <x-site.brand-icon size="w-12 h-12" :eager="true" />
             </div>
             <div class="flex flex-col">
-                <span class="text-lg font-bold gradient-text">{{ config('app.name') }}</span>
+                <span class="text-lg font-bold gradient-text">{{ __('site.site_name') }}</span>
                 <span class="text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-500'">{{ __('admin.admin_panel') }}</span>
             </div>
         </a>
@@ -131,6 +146,25 @@
 
              toggleSubmenu(menu) {
                  this.openSubmenu = this.openSubmenu === menu ? null : menu;
+             },
+
+             // Long groups (Quran has 16 items) can leave the current page's link
+             // below the fold of the sidebar. Mark it for assistive tech and the
+             // CSS pill, and bring it into view — scrolling the nav only, never the page.
+             init() {
+                 // A macrotask, not $nextTick: the submenu's x-show has not run yet on
+                 // the first tick, so the link still measures as a 0×0 hidden box.
+                 setTimeout(() => {
+                     const current = [...this.$el.querySelectorAll('a[href]')]
+                         .find((a) => a.classList.contains('text-accent') || a.classList.contains('bg-gradient-primary'));
+                     if (!current) return;
+                     current.setAttribute('aria-current', 'page');
+                     const nav = this.$el.getBoundingClientRect();
+                     const link = current.getBoundingClientRect();
+                     if (link.top < nav.top || link.bottom > nav.bottom) {
+                         this.$el.scrollTop += link.top - nav.top - this.$el.clientHeight / 2;
+                     }
+                 }, 0);
              }
          }">
 

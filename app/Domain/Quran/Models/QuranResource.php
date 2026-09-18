@@ -13,6 +13,7 @@ use Database\Factories\Quran\ResourceFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
@@ -23,6 +24,7 @@ use Illuminate\Support\Carbon;
  *
  * @property int $id
  * @property ResourceKind $kind
+ * @property int|null $parent_id the reciter this row is filed under as one of their recordings
  * @property int|null $qf_id QF resource id (sync resource_id); null for manual rows
  * @property int|null $qf_content_id
  * @property ResourceSource $source
@@ -63,6 +65,7 @@ class QuranResource extends Model
 
     protected $casts = [
         'kind' => ResourceKind::class,
+        'parent_id' => 'integer',
         'qf_id' => 'integer',
         'qf_content_id' => 'integer',
         'source' => ResourceSource::class,
@@ -98,6 +101,26 @@ class QuranResource extends Model
     public function getTranslationForeignKey(): string
     {
         return 'resource_id';
+    }
+
+    /**
+     * The reciter this recording is filed under; null for a reciter in their own right.
+     *
+     * @return BelongsTo<QuranResource, $this>
+     */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    /**
+     * Other rows filed under this reciter as their recordings (one level only).
+     *
+     * @return HasMany<QuranResource, $this>
+     */
+    public function recordings(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id')->orderBy('display_order')->orderBy('name');
     }
 
     public function translationRows(): HasMany

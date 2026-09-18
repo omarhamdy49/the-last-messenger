@@ -84,11 +84,16 @@ final class ChapterAudioController extends Controller
             : back()->with('success', __('quran.manage.fill_summary', ['written' => $report->written, 'updated' => $report->updated, 'unchanged' => $report->unchanged]));
     }
 
-    public function timestamps(int $resource, int $file): View
+    public function timestamps(Request $request, int $resource, int $file): View|JsonResponse
     {
         $reciter = $this->reciter($resource);
         $model = $this->audio->findChapterFile($reciter, $file) ?? abort(404);
         $timings = $this->audio->timings($reciter->id, (int) $model->chapter_id);
+
+        // The audio manager's editor loads a surah's timings on demand.
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'data' => $timings]);
+        }
 
         return view('admin.quran.audio.timestamps', [
             'resource' => $reciter,

@@ -217,4 +217,19 @@ return [
         'writer' => 'Writer',
         'scheduled' => 'Scheduled for',
     ],
+    'resource' => [
+        'eyebrow' => 'Ressource coranique',
+        'steps' => [
+            'identity' => ['label' => 'Identité', 'hint' => 'Nom et identifiant', 'desc' => 'Nom, identifiant, langue et visibilité.'],
+            'source' => ['label' => 'Récitateur et source', 'hint' => 'Qirat et source audio', 'desc' => 'Style de récitation et qirat, et la source externe des fichiers.'],
+            'profile' => ['label' => 'Image et traductions', 'hint' => 'Image et noms', 'desc' => 'L’image de la ressource, son nom et sa description dans chaque langue.'],
+            'about' => ['label' => 'À propos', 'hint' => 'Présentation mise en forme', 'desc' => 'Présentation mise en forme, affichée en l’absence de description traduite.'],
+        ],
+        'slug_help' => 'Laissez vide pour le générer à partir du nom anglais, puis arabe. Tout texte saisi est converti en lettres latines, chiffres et tirets.',
+        'visibility' => 'Visibilité',
+        'image_help' => 'Téléversez une image, choisissez-la dans la bibliothèque ou collez une URL CDN externe.',
+        'description_help' => 'Texte brut affiché sur la page du récitateur et utilisé comme description pour les moteurs de recherche.',
+        'inactive' => 'Inactif',
+        'rail' => ['slug' => 'Identifiant', 'language' => 'Langue', 'status' => 'Statut', 'source' => 'Source'],
+    ],
 ];

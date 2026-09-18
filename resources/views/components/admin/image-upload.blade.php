@@ -77,6 +77,8 @@
             this.preview = url;
             this.source = source;
             this.removed = false;
+            // Library picks and accepted URLs fire no trusted input event; tell a host wizard.
+            this.$dispatch('wizard:dirty');
             if (source !== 'url') {
                 this.committedUrl = '';
                 this.urlState = 'idle';
@@ -138,6 +140,7 @@
             this.urlState = 'idle';
             this.removed = true;
             this.clearFile();
+            this.$dispatch('wizard:dirty');
         }
      }"
      x-init="$watch('urlOpen', open => open && $nextTick(() => $refs.urlInput?.focus()))"
@@ -149,7 +152,7 @@
           without sending a file or library id — the server-side fallback is
           expected to resolve the same URL. --}}
      @image-preview-set.window="if ($event.detail.name === '{{ $name }}') { mediaId = null; clearFile(); use($event.detail.url, 'current'); }"
-     class="space-y-3">
+     class="@container space-y-3">
 
     @if($label)
         <h3 class="text-sm font-semibold flex items-center gap-2"
@@ -220,7 +223,7 @@
         @if($mediaLibrary)
             <button type="button"
                     @click="$dispatch('open-media-library', { target: '{{ $uniqueId }}', multiple: false })"
-                    class="min-h-[40px] px-2 py-2 text-xs rounded-lg border transition-colors font-semibold flex items-center justify-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    class="min-h-[40px] px-2 py-2 text-xs whitespace-nowrap @max-[300px]:flex-col @max-[300px]:gap-1 @max-[300px]:px-1 @max-[300px]:text-[11px] rounded-lg border transition-colors font-semibold flex items-center justify-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     :class="source === 'library'
                         ? 'border-accent text-accent ' + (darkMode ? 'bg-gray-800' : 'bg-accent/5')
                         : (darkMode ? 'border-gray-600 hover:bg-gray-700 text-gray-300' : 'border-gray-300 hover:bg-gray-50 text-gray-700')">
@@ -229,7 +232,7 @@
             </button>
         @endif
 
-        <label class="min-h-[40px] px-2 py-2 text-xs rounded-lg border transition-colors cursor-pointer font-semibold flex items-center justify-center gap-1.5 focus-within:ring-2 focus-within:ring-accent"
+        <label class="min-h-[40px] px-2 py-2 text-xs whitespace-nowrap @max-[300px]:flex-col @max-[300px]:gap-1 @max-[300px]:px-1 @max-[300px]:text-[11px] rounded-lg border transition-colors cursor-pointer font-semibold flex items-center justify-center gap-1.5 focus-within:ring-2 focus-within:ring-accent"
                :class="source === 'file'
                    ? 'border-accent text-accent ' + (darkMode ? 'bg-gray-800' : 'bg-accent/5')
                    : (darkMode ? 'border-gray-600 hover:bg-gray-700 text-gray-300' : 'border-gray-300 hover:bg-gray-50 text-gray-700')">
@@ -248,7 +251,7 @@
                     @click="urlOpen = !urlOpen"
                     :aria-expanded="urlOpen.toString()"
                     aria-controls="{{ $uniqueId }}_url_panel"
-                    class="min-h-[40px] px-2 py-2 text-xs rounded-lg border transition-colors font-semibold flex items-center justify-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    class="min-h-[40px] px-2 py-2 text-xs whitespace-nowrap @max-[300px]:flex-col @max-[300px]:gap-1 @max-[300px]:px-1 @max-[300px]:text-[11px] rounded-lg border transition-colors font-semibold flex items-center justify-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     :class="urlOpen || source === 'url'
                         ? 'border-accent text-accent ' + (darkMode ? 'bg-gray-800' : 'bg-accent/5')
                         : (darkMode ? 'border-gray-600 hover:bg-gray-700 text-gray-300' : 'border-gray-300 hover:bg-gray-50 text-gray-700')">
@@ -264,7 +267,7 @@
                    :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
                 {{ __('common.image_input.url_label') }}
             </label>
-            <div class="flex gap-2">
+            <div class="flex gap-2 @max-[300px]:flex-col">
                 <input type="url" id="{{ $uniqueId }}_url" inputmode="url" dir="ltr" autocomplete="off"
                        x-ref="urlInput"
                        x-model="url"
@@ -273,13 +276,13 @@
                        placeholder="{{ __('common.image_input.url_placeholder') }}"
                        aria-describedby="{{ $uniqueId }}_url_msg"
                        :aria-invalid="(['invalid', 'error'].includes(urlState)).toString()"
-                       class="flex-1 min-w-0 px-3 py-2.5 rounded-xl border text-sm focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                       class="flex-1 min-w-0 @max-[300px]:flex-none px-3 py-2.5 rounded-xl border text-sm focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                        :class="['invalid', 'error'].includes(urlState)
                            ? 'border-red-400 ' + (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900')
                            : (darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900')">
                 <button type="button" @click="previewUrl()"
                         :disabled="!url.trim() || urlState === 'loading'"
-                        class="shrink-0 min-h-[40px] px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-[#0056b3] to-[#218838] shadow flex items-center gap-1.5 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+                        class="shrink-0 min-h-[40px] px-4 rounded-xl text-sm font-semibold text-white justify-center bg-gradient-to-r from-[#0056b3] to-[#218838] shadow flex items-center gap-1.5 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
                     <i data-lucide="eye" class="w-4 h-4" aria-hidden="true"></i>
                     {{ __('common.image_input.preview') }}
                 </button>

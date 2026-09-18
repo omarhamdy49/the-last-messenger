@@ -106,6 +106,8 @@ Route::prefix('quran')->name('admin.quran.')->group(function () use ($kinds, $ro
         Route::get('resources/{resource}/edit', [ResourceController::class, 'edit'])->whereNumber('resource')->name('resources.edit');
         Route::put('resources/{resource}', [ResourceController::class, 'update'])->whereNumber('resource')->name('resources.update');
         Route::delete('resources/{resource}', [ResourceController::class, 'destroy'])->whereNumber('resource')->name('resources.destroy');
+        Route::post('resources/{resource}/merge', [ResourceController::class, 'merge'])->whereNumber('resource')->name('resources.merge');
+        Route::post('resources/{resource}/release', [ResourceController::class, 'release'])->whereNumber('resource')->name('resources.release');
         Route::post('resources/{resource}/toggle/{field}', [ResourceController::class, 'toggle'])->whereNumber('resource')
             ->whereIn('field', ['is_active', 'is_default', 'sync_enabled'])->name('resources.toggle');
 
@@ -141,6 +143,9 @@ Route::prefix('quran')->name('admin.quran.')->group(function () use ($kinds, $ro
 
         // Source-backed reciters (US4): preview a QF / mp3quran id, fetch in the background.
         Route::post('resources/reciter-lookup', [ReciterSourceController::class, 'lookup'])->name('resources.lookup');
+        Route::get('resources/mp3quran-catalogue', [ReciterSourceController::class, 'mp3quran'])->name('resources.mp3quran');
+        Route::post('resources/mp3quran-catalogue/import', [ReciterSourceController::class, 'importMp3quran'])->name('resources.mp3quran.import');
+        Route::post('resources/{resource}/link-source', [ReciterSourceController::class, 'linkSource'])->whereNumber('resource')->name('resources.link-source');
         Route::post('resources/{resource}/fetch', [ReciterSourceController::class, 'fetch'])->whereNumber('resource')->name('resources.fetch');
         Route::get('resources/{resource}/fetch-status', [ReciterSourceController::class, 'status'])->whereNumber('resource')->name('resources.fetch-status');
 

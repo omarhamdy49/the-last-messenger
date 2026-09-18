@@ -217,4 +217,19 @@ return [
         'writer' => 'Writer',
         'scheduled' => 'Scheduled for',
     ],
+    'resource' => [
+        'eyebrow' => 'Kur’an kaynağı',
+        'steps' => [
+            'identity' => ['label' => 'Kimlik', 'hint' => 'Ad ve kısa ad', 'desc' => 'Ad, kısa ad, dil ve görünürlük.'],
+            'source' => ['label' => 'Kâri ve kaynak', 'hint' => 'Kıraat ve ses kaynağı', 'desc' => 'Tilavet tarzı ve kıraat ile dosyaların alındığı harici kaynak.'],
+            'profile' => ['label' => 'Görsel ve çeviriler', 'hint' => 'Görsel ve adlar', 'desc' => 'Kaynağın görseli ile her dildeki adı ve açıklaması.'],
+            'about' => ['label' => 'Hakkında', 'hint' => 'Biçimlendirilmiş tanıtım', 'desc' => 'Çevrilmiş açıklama yoksa gösterilen biçimlendirilmiş tanıtım.'],
+        ],
+        'slug_help' => 'Boş bırakırsanız önce İngilizce, sonra Arapça addan üretilir. Yazdığınız her metin Latin harflerine, rakamlara ve tirelere dönüştürülür.',
+        'visibility' => 'Görünürlük',
+        'image_help' => 'Bir görsel yükleyin, kütüphaneden seçin veya harici bir CDN bağlantısı yapıştırın.',
+        'description_help' => 'Kâri sayfasında gösterilen ve arama açıklaması olarak kullanılan düz metin.',
+        'inactive' => 'Pasif',
+        'rail' => ['slug' => 'Kısa ad', 'language' => 'Dil', 'status' => 'Durum', 'source' => 'Kaynak'],
+    ],
 ];

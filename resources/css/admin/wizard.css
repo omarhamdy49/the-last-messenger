@@ -70,11 +70,19 @@
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
 }
-@media (min-width: 1280px) {
+/* The rail shows when the wizard itself is wide enough, not the viewport: with the admin
+   sidebar open, a 1280px screen leaves ~900px here and the rail crushed the form column.
+   Note: a container traps position:fixed descendants, so modals stay outside .wz-root. */
+.wz-root { container: wz-root / inline-size; }
+@container wz-root (min-width: 1080px) {
   .wz-layout { grid-template-columns: minmax(0, 1fr) 21rem; }
   .wz-rail { position: sticky; top: 1.25rem; }
 }
 .wz-rail { display: grid; gap: 1rem; }
+/* Stacked under the form: lay the cards side by side instead of one giant full-width summary. */
+@container wz-root (min-width: 640px) and (max-width: 1079.98px) {
+  .wz-rail { grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); align-items: start; }
+}
 
 /* ── Hero ─────────────────────────────────────────────────── */
 .wz-hero {
@@ -406,7 +414,10 @@
   border: 1px solid var(--wz-line-strong);
   box-shadow: 0 22px 40px -24px rgb(15 40 80 / 0.45), var(--wz-inner);
 }
-@media (min-width: 900px) { .wz-commandbar { grid-template-columns: auto minmax(0, 1fr) auto; padding: 0.6rem 0.75rem; } }
+/* Sized by the column it sits in, not the viewport: an open sidebar plus the rail can
+   leave a 1440px screen with a ~700px bar, which squeezed the status down to one letter. */
+.wz-layout > :first-child { container: wz-main / inline-size; }
+@container wz-main (min-width: 820px) { .wz-commandbar { grid-template-columns: auto minmax(0, 1fr) auto; padding: 0.6rem 0.75rem; } }
 .wz-cb-group { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .wz-cb-count { font-size: 0.78rem; font-weight: 700; color: var(--wz-muted); font-variant-numeric: tabular-nums; padding-inline: 0.25rem; }
 .wz-status {
@@ -448,12 +459,14 @@
 }
 @keyframes wz-shimmer { to { background-position: -200% 0; } }
 
-@media (max-width: 899px) {
+@container wz-main (max-width: 819.98px) {
   .wz-commandbar { grid-template-columns: auto minmax(0, 1fr); gap: 0.45rem 0.5rem; bottom: 0.5rem; padding: 0.5rem; }
   .wz-status { grid-column: 1 / -1; order: -1; font-size: 0.72rem; padding-inline: 0.25rem; }
+  .wz-cb-group:last-child { flex-wrap: nowrap; }
+}
+@container wz-main (max-width: 599.98px) {
   .wz-cb-label, .wz-cb-count { display: none; }
   .wz-cb-group .wz-btn { min-height: 2.5rem; padding-inline: 0.7rem; }
-  .wz-cb-group:last-child { flex-wrap: nowrap; }
 }
 
 /* ── Rail ─────────────────────────────────────────────────── */

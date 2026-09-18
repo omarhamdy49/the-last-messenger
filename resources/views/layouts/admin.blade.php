@@ -37,7 +37,11 @@
         };
     </script>
 
-    <title>{{ config('app.name', 'The Last Messenger') }} - Admin</title>
+    <title>{{ __('site.site_name') }} — {{ __('admin.admin_panel') }}</title>
+
+    {{-- Same mark as the public site: the Seal of the Prophet ﷺ. --}}
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
