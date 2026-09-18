@@ -11,6 +11,20 @@
 
 @push('head')
     <style>
+        /* The player chrome lies directly on the video, so it is tinted with white
+           translucency instead of an sx surface token — the same reason
+           .sx-glass-chip exists. Page-scoped because nothing outside this embed
+           should reach for it.
+           .player-hit  — transparent control, tints on hover
+           .player-plate — statically tinted plate (tints further when interactive) */
+        .player-hit { transition: background-color .2s; }
+        .player-hit:hover { background-color: rgb(255 255 255 / 0.15); }
+        .player-plate { background-color: rgb(255 255 255 / 0.1); transition: background-color .2s; }
+        a.player-plate:hover, button.player-plate:hover { background-color: rgb(255 255 255 / 0.2); }
+        @media (prefers-reduced-motion: reduce) {
+            .player-hit, .player-plate { transition: none; }
+        }
+
         /* Seek (±10s) buttons: the arrow arc nudges in its travel direction; the number stays upright. */
         .seek-btn .seek-arc {
             transition: transform .25s cubic-bezier(.34, 1.56, .64, 1);
@@ -31,15 +45,14 @@
 @section('content')
 @php $isRtl = in_array(app()->getLocale(), ['ar', 'ur'], true); @endphp
 
-<div x-data="episodePlayer()" x-init="init()"
-     class="min-h-dvh font-['Cairo'] bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+<div class="sx min-h-[100dvh] pb-20" x-data="episodePlayer()" x-init="init()">
 
     {{-- ============================================================ --}}
     {{-- PLAYER — responsive 16:9 (or unavailable state)              --}}
     {{-- ============================================================ --}}
     <section class="bg-black">
-        <div class="container mx-auto lg:px-8">
-            <div class="relative w-full aspect-video max-h-[80vh] overflow-hidden">
+        <div class="sx-wrap !px-0 lg:!px-8">
+            <div class="relative aspect-video max-h-[80dvh] w-full overflow-hidden">
                 @if ($episode['has_video'] && $episode['video_id'])
                     {{-- Custom player: YouTube IFrame SDK behind a branded shell.
                          Nothing YouTube loads until the visitor presses play; while
@@ -64,22 +77,27 @@
                         </div>
 
                         {{-- Poster facade (pre-play): episode thumbnail + brand play button.
+                             It carries the hero view-transition name, so the card the
+                             visitor clicked morphs straight into the player picture.
                              thumbnail_hq is maxresdefault (1280px) when the thumbnail is a
                              CDN fallback; onerror drops back to hqdefault when maxres 404s. --}}
                         <div x-show="!started" class="absolute inset-0 z-20">
                             @if ($episode['thumbnail'])
                                 <img src="{{ $episode['thumbnail_hq'] ?? $episode['thumbnail'] }}" alt=""
                                      @if (! empty($episode['thumbnail_hq'])) onerror="this.onerror=null;this.src='{{ $episode['thumbnail'] }}'" @endif
-                                     class="absolute inset-0 w-full h-full object-cover">
+                                     style="view-transition-name: sx-hero"
+                                     class="absolute inset-0 h-full w-full object-cover">
                             @else
-                                <div class="absolute inset-0 bg-gradient-to-br {{ $program['gradient'] }}"></div>
+                                <div class="sx-hero-fallback"></div>
                             @endif
                             <div class="absolute inset-0 bg-black/40" aria-hidden="true"></div>
                             <button type="button" @click="startPlayback()"
                                     aria-label="{{ __('media.public.player_play') }}"
-                                    class="absolute inset-0 flex items-center justify-center group/start">
-                                <span class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-r from-[#0056b3] to-[#218838] shadow-2xl flex items-center justify-center group-hover/start:scale-110 motion-reduce:transform-none transition-transform duration-300">
-                                    <i data-lucide="play" class="w-8 h-8 sm:w-10 sm:h-10 text-white ms-1"></i>
+                                    title="{{ __('media.public.player_play') }}"
+                                    class="group/start absolute inset-0 flex items-center justify-center">
+                                <span class="flex h-16 w-16 items-center justify-center rounded-full shadow-2xl transition-transform duration-300 group-hover/start:scale-110 motion-reduce:transform-none sm:h-20 sm:w-20"
+                                      style="background: var(--sx-grad)">
+                                    <i data-lucide="play" class="ms-1 h-8 w-8 text-white sm:h-10 sm:w-10" aria-hidden="true"></i>
                                 </span>
                             </button>
                         </div>
@@ -90,38 +108,42 @@
                              @click="togglePlay()" @dblclick="toggleFullscreen()"
                              class="absolute inset-0 z-10 transition-colors duration-200"
                              :class="!playing && !buffering ? 'bg-black/60' : ''">
-                            <div x-show="buffering" class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <i data-lucide="loader-2" class="w-12 h-12 text-white animate-spin"></i>
+                            <div x-show="buffering" class="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                <i data-lucide="loader-2" class="h-12 w-12 animate-spin text-white" aria-hidden="true"></i>
                             </div>
-                            <div x-show="!playing && !buffering && !overlayVisible" class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <span class="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center shadow-2xl">
-                                    <i data-lucide="play" class="w-8 h-8 text-gray-900 ms-1"></i>
+                            <div x-show="!playing && !buffering && !overlayVisible" class="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                {{-- Same brand plate as the poster facade above, so pausing
+                                     and pressing play read as one control. --}}
+                                <span class="flex h-16 w-16 items-center justify-center rounded-full shadow-2xl"
+                                      style="background: var(--sx-grad)">
+                                    <i data-lucide="play" class="ms-1 h-8 w-8 text-white" aria-hidden="true"></i>
                                 </span>
                             </div>
-                            <div x-show="playerError" class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 pointer-events-none px-6 text-center">
-                                <i data-lucide="alert-triangle" class="w-8 h-8 text-amber-400"></i>
-                                <p class="text-sm text-gray-200">{{ __('media.public.player_error') }}</p>
+                            <div x-show="playerError" class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 px-6 text-center">
+                                <i data-lucide="alert-triangle" class="h-8 w-8 text-[color:var(--sx-teal)]" aria-hidden="true"></i>
+                                <p class="text-sm text-white/85">{{ __('media.public.player_error') }}</p>
                             </div>
                         </div>
 
                         {{-- Custom control bar --}}
                         <div x-show="started && !playerError" x-cloak dir="ltr"
-                             class="absolute inset-x-0 bottom-0 z-30 px-3 sm:px-4 pb-2 sm:pb-3 pt-12 bg-gradient-to-t from-black/90 via-black/50 to-transparent transition-opacity duration-200 motion-reduce:transition-none"
+                             class="absolute inset-x-0 bottom-0 z-30 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-3 pb-2 pt-12 transition-opacity duration-200 motion-reduce:transition-none sm:px-4 sm:pb-3"
                              :class="controlsVisible || !playing ? 'opacity-100' : 'opacity-0 pointer-events-none'">
 
                             {{-- Seek bar --}}
                             <input type="range" min="0" :max="duration || 0" step="0.5" :value="current"
                                    @input="seek($event.target.value)"
                                    aria-label="{{ __('media.public.player_seek') }}"
-                                   class="player-range w-full block"
+                                   class="player-range block w-full"
                                    :style="`--progress: ${duration ? (current / duration * 100) : 0}%`">
 
-                            <div class="flex items-center gap-1 sm:gap-2 mt-1.5 text-white">
+                            <div class="mt-1.5 flex items-center gap-1 text-white sm:gap-2">
                                 {{-- Rewind 10s --}}
                                 <button type="button" @click="skip(-10)"
                                         aria-label="{{ __('media.public.player_rewind') }}"
-                                        class="seek-btn w-11 h-11 sm:w-10 sm:h-10 rounded-full hover:bg-white/15 flex items-center justify-center transition-colors">
-                                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                        title="{{ __('media.public.player_rewind') }}"
+                                        class="player-hit seek-btn flex h-11 w-11 items-center justify-center rounded-full sm:h-10 sm:w-10">
+                                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                                          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                         <g class="seek-arc seek-arc-back">
                                             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
@@ -135,16 +157,18 @@
                                 {{-- Play / pause --}}
                                 <button type="button" @click="togglePlay()"
                                         :aria-label="playing ? @js(__('media.public.player_pause')) : @js(__('media.public.player_play'))"
-                                        class="w-11 h-11 sm:w-10 sm:h-10 rounded-full hover:bg-white/15 flex items-center justify-center transition-colors">
-                                    <i data-lucide="play" class="w-5 h-5 ms-0.5" x-show="!playing"></i>
-                                    <i data-lucide="pause" class="w-5 h-5" x-show="playing" x-cloak></i>
+                                        :title="playing ? @js(__('media.public.player_pause')) : @js(__('media.public.player_play'))"
+                                        class="player-hit flex h-11 w-11 items-center justify-center rounded-full sm:h-10 sm:w-10">
+                                    <i data-lucide="play" class="ms-0.5 h-5 w-5" x-show="!playing" aria-hidden="true"></i>
+                                    <i data-lucide="pause" class="h-5 w-5" x-show="playing" x-cloak aria-hidden="true"></i>
                                 </button>
 
                                 {{-- Forward 10s --}}
                                 <button type="button" @click="skip(10)"
                                         aria-label="{{ __('media.public.player_forward') }}"
-                                        class="seek-btn w-11 h-11 sm:w-10 sm:h-10 rounded-full hover:bg-white/15 flex items-center justify-center transition-colors">
-                                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                        title="{{ __('media.public.player_forward') }}"
+                                        class="player-hit seek-btn flex h-11 w-11 items-center justify-center rounded-full sm:h-10 sm:w-10">
+                                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                                          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                         <g class="seek-arc seek-arc-fwd">
                                             <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
@@ -158,22 +182,23 @@
                                 {{-- Mute + volume --}}
                                 <button type="button" @click="toggleMute()"
                                         :aria-label="muted ? @js(__('media.public.player_unmute')) : @js(__('media.public.player_mute'))"
-                                        class="w-11 h-11 sm:w-10 sm:h-10 rounded-full hover:bg-white/15 flex items-center justify-center transition-colors">
-                                    <i data-lucide="volume-2" class="w-5 h-5" x-show="!muted"></i>
-                                    <i data-lucide="volume-x" class="w-5 h-5" x-show="muted" x-cloak></i>
+                                        :title="muted ? @js(__('media.public.player_unmute')) : @js(__('media.public.player_mute'))"
+                                        class="player-hit flex h-11 w-11 items-center justify-center rounded-full sm:h-10 sm:w-10">
+                                    <i data-lucide="volume-2" class="h-5 w-5" x-show="!muted" aria-hidden="true"></i>
+                                    <i data-lucide="volume-x" class="h-5 w-5" x-show="muted" x-cloak aria-hidden="true"></i>
                                 </button>
                                 <input type="range" min="0" max="100" step="1" :value="muted ? 0 : volume"
                                        @input="setVolume($event.target.value)"
                                        aria-label="{{ __('media.public.player_volume') }}"
-                                       class="player-range hidden sm:block w-20"
+                                       class="player-range hidden w-20 sm:block"
                                        :style="`--progress: ${muted ? 0 : volume}%`">
 
                                 {{-- Time — total duration hidden on the narrowest screens:
                                      with hh:mm:ss durations the full "cur / total" readout
                                      pushes the fullscreen button off a 360-390px viewport --}}
-                                <span class="text-[11px] sm:text-xs font-medium tabular-nums text-gray-200 select-none whitespace-nowrap">
+                                <span class="select-none whitespace-nowrap text-[11px] font-medium tabular-nums text-white/85 sm:text-xs">
                                     <span x-text="fmt(current)">0:00</span>
-                                    <span class="text-gray-400 hidden min-[480px]:inline"> / </span>
+                                    <span class="hidden text-white/50 min-[480px]:inline"> / </span>
                                     <span x-text="fmt(duration)" class="hidden min-[480px]:inline">0:00</span>
                                 </span>
 
@@ -182,19 +207,20 @@
                                     <button type="button" @click="speedOpen = !speedOpen; refreshIcons()"
                                             :aria-expanded="speedOpen ? 'true' : 'false'"
                                             aria-label="{{ __('media.public.player_speed') }}"
-                                            class="h-11 sm:h-10 px-2.5 sm:px-3 rounded-full hover:bg-white/15 flex items-center justify-center gap-1 transition-colors">
-                                        <i data-lucide="gauge" class="w-4 h-4 hidden sm:block"></i>
+                                            title="{{ __('media.public.player_speed') }}"
+                                            class="player-hit flex h-11 items-center justify-center gap-1 rounded-full px-2.5 sm:h-10 sm:px-3">
+                                        <i data-lucide="gauge" class="hidden h-4 w-4 sm:block" aria-hidden="true"></i>
                                         <span class="text-xs font-bold tabular-nums" x-text="rate === 1 ? '1x' : rate + 'x'">1x</span>
                                     </button>
                                     <div x-show="speedOpen" x-cloak
                                          x-transition:enter="transition ease-out duration-150 motion-reduce:duration-0"
                                          x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
-                                         class="absolute bottom-full end-0 mb-2 w-36 rounded-xl bg-black/90 backdrop-blur-sm border border-white/10 py-1.5 shadow-2xl z-50">
-                                        <p class="px-3 py-1 text-[11px] font-semibold text-gray-400">{{ __('media.public.player_speed') }}</p>
+                                         class="absolute bottom-full end-0 z-50 mb-2 w-36 rounded-xl border border-white/10 bg-black/90 py-1.5 shadow-2xl backdrop-blur-sm">
+                                        <p class="px-3 py-1 text-[11px] font-semibold text-white/60">{{ __('media.public.player_speed') }}</p>
                                         <template x-for="option in [0.5, 0.75, 1, 1.25, 1.5, 2]" :key="option">
                                             <button type="button" @click="setRate(option)"
-                                                    class="w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold hover:bg-white/10 transition-colors"
-                                                    :class="rate === option ? 'text-[#64CCC5]' : 'text-gray-200'">
+                                                    class="player-hit flex w-full items-center justify-between px-3 py-1.5 text-xs font-semibold"
+                                                    :class="rate === option ? 'text-[color:var(--sx-teal)]' : 'text-white/85'">
                                                 <span x-text="option === 1 ? @js(__('media.public.player_speed_normal')) : option + 'x'"></span>
                                                 <span x-show="rate === option" aria-hidden="true">✓</span>
                                             </button>
@@ -205,9 +231,10 @@
                                 {{-- Fullscreen --}}
                                 <button type="button" @click="toggleFullscreen()"
                                         :aria-label="fullscreen ? @js(__('media.public.player_exit_fullscreen')) : @js(__('media.public.player_fullscreen'))"
-                                        class="w-11 h-11 sm:w-10 sm:h-10 rounded-full hover:bg-white/15 flex items-center justify-center transition-colors">
-                                    <i data-lucide="maximize" class="w-5 h-5" x-show="!fullscreen"></i>
-                                    <i data-lucide="minimize" class="w-5 h-5" x-show="fullscreen" x-cloak></i>
+                                        :title="fullscreen ? @js(__('media.public.player_exit_fullscreen')) : @js(__('media.public.player_fullscreen'))"
+                                        class="player-hit flex h-11 w-11 items-center justify-center rounded-full sm:h-10 sm:w-10">
+                                    <i data-lucide="maximize" class="h-5 w-5" x-show="!fullscreen" aria-hidden="true"></i>
+                                    <i data-lucide="minimize" class="h-5 w-5" x-show="fullscreen" x-cloak aria-hidden="true"></i>
                                 </button>
                             </div>
                         </div>
@@ -216,19 +243,20 @@
                     {{-- Non-YouTube URL — plain embed fallback --}}
                     <iframe src="{{ $episode['video_url'] }}"
                             title="{{ $episode['title'] }}"
-                            class="absolute inset-0 w-full h-full"
+                            class="absolute inset-0 h-full w-full"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                             allowfullscreen></iframe>
                 @else
                     {{-- Clean unavailable state --}}
-                    <div class="absolute inset-0 flex flex-col items-center justify-center text-center px-6 bg-gradient-to-br {{ $program['gradient'] }}">
+                    <div class="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
+                        <div class="sx-hero-fallback" aria-hidden="true"></div>
                         <div class="absolute inset-0 bg-black/60" aria-hidden="true"></div>
                         <div class="relative">
-                            <div class="w-16 h-16 mx-auto rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center mb-4">
-                                <i data-lucide="video-off" class="w-8 h-8 text-white"></i>
+                            <div class="player-plate mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full backdrop-blur-sm">
+                                <i data-lucide="video-off" class="h-8 w-8 text-white" aria-hidden="true"></i>
                             </div>
-                            <h2 class="text-xl md:text-2xl font-bold text-white mb-2">{{ __('media.public.video_unavailable_title') }}</h2>
-                            <p class="text-sm text-gray-300 max-w-md mx-auto">{{ __('media.public.video_unavailable_message') }}</p>
+                            <h2 class="mb-2 text-xl font-extrabold text-white md:text-2xl">{{ __('media.public.video_unavailable_title') }}</h2>
+                            <p class="mx-auto max-w-md text-sm text-white/80">{{ __('media.public.video_unavailable_message') }}</p>
                         </div>
                     </div>
                 @endif
@@ -238,19 +266,19 @@
                     <div x-show="overlayVisible" x-cloak
                          x-transition:enter="transition ease-out duration-300 motion-reduce:duration-0"
                          x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-                         class="absolute inset-0 z-40 bg-black/90 backdrop-blur-sm flex items-center justify-center">
+                         class="absolute inset-0 z-40 flex items-center justify-center bg-black/90 backdrop-blur-sm">
                         <button type="button" @click="cancelAutoplay()"
-                                aria-label="{{ __('media.public.cancel') }}"
-                                class="absolute top-4 end-4 w-10 h-10 glass rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-all">
-                            <i data-lucide="x" class="w-5 h-5"></i>
+                                aria-label="{{ __('media.public.cancel') }}" title="{{ __('media.public.cancel') }}"
+                                class="player-plate absolute top-4 end-4 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 text-white backdrop-blur-sm">
+                            <i data-lucide="x" class="h-5 w-5" aria-hidden="true"></i>
                         </button>
 
-                        <div class="max-w-md mx-auto px-6 text-center">
-                            <h3 class="text-xl md:text-2xl font-bold text-white mb-4">{{ __('media.public.up_next') }}</h3>
+                        <div class="mx-auto max-w-md px-6 text-center">
+                            <h3 class="mb-4 text-xl font-extrabold text-white md:text-2xl">{{ __('media.public.up_next') }}</h3>
 
                             <div class="mb-5 flex items-center justify-center" x-show="!reducedMotion">
-                                <div class="relative w-20 h-20">
-                                    <svg class="w-full h-full -rotate-90" viewBox="0 0 96 96" aria-hidden="true">
+                                <div class="relative h-20 w-20">
+                                    <svg class="h-full w-full -rotate-90" viewBox="0 0 96 96" aria-hidden="true">
                                         <circle cx="48" cy="48" r="44" stroke="rgba(255,255,255,0.15)" stroke-width="4" fill="none"/>
                                         <circle cx="48" cy="48" r="44" stroke="url(#countdown-gradient)" stroke-width="4" fill="none"
                                                 stroke-linecap="round" stroke-dasharray="276"
@@ -258,58 +286,53 @@
                                                 class="transition-all duration-1000"/>
                                         <defs>
                                             <linearGradient id="countdown-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                <stop offset="0%" style="stop-color:#0056b3"/>
-                                                <stop offset="100%" style="stop-color:#218838"/>
+                                                <stop offset="0%" style="stop-color: var(--sx-accent)"/>
+                                                <stop offset="100%" style="stop-color: var(--sx-green)"/>
                                             </linearGradient>
                                         </defs>
                                     </svg>
                                     <div class="absolute inset-0 flex items-center justify-center">
-                                        <span class="text-3xl font-black text-white" x-text="countdown"></span>
+                                        <span class="text-3xl font-black tabular-nums text-white" x-text="countdown"></span>
                                     </div>
                                 </div>
                             </div>
 
-                            <p class="text-sm text-gray-300 mb-5" x-show="!reducedMotion">{{ __('media.public.next_episode_starts_in') }}</p>
+                            <p class="mb-5 text-sm text-white/80" x-show="!reducedMotion">{{ __('media.public.next_episode_starts_in') }}</p>
 
-                            {{-- Next episode card (thumbnail + play), as in the premium prototype --}}
-                            <a href="{{ $nextEpisode['url'] }}"
-                               class="group/next block glass rounded-2xl overflow-hidden shadow-2xl mb-6 text-start">
+                            {{-- Next episode card (thumbnail + play) --}}
+                            <a href="{{ $nextEpisode['url'] }}" title="{{ $nextEpisode['title'] }}"
+                               class="player-plate group/next mb-6 block overflow-hidden rounded-2xl border border-white/15 text-start shadow-2xl backdrop-blur-sm">
                                 <div class="relative h-40 sm:h-44">
                                     @if ($nextEpisode['thumbnail'])
-                                        <img src="{{ $nextEpisode['thumbnail'] }}" alt="" loading="lazy"
-                                             class="absolute inset-0 w-full h-full object-cover">
+                                        <img src="{{ $nextEpisode['thumbnail'] }}" alt="" loading="lazy" decoding="async"
+                                             class="absolute inset-0 h-full w-full object-cover">
                                     @else
-                                        <div class="absolute inset-0 bg-gradient-to-br {{ $program['gradient'] }}"></div>
+                                        <div class="sx-hero-fallback"></div>
                                     @endif
                                     <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" aria-hidden="true"></div>
 
                                     <span class="absolute inset-0 flex items-center justify-center">
-                                        <span class="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-2xl group-hover/next:scale-110 motion-reduce:transform-none transition-transform duration-300">
-                                            <i data-lucide="play" class="w-7 h-7 text-gray-900 ms-1"></i>
+                                        <span class="flex h-14 w-14 items-center justify-center rounded-full shadow-2xl transition-transform duration-300 group-hover/next:scale-110 motion-reduce:transform-none"
+                                              style="background: var(--sx-grad)">
+                                            <i data-lucide="play" class="ms-1 h-7 w-7 text-white" aria-hidden="true"></i>
                                         </span>
                                     </span>
 
                                     <span class="absolute bottom-0 start-0 w-full p-4">
-                                        <span class="block text-base font-bold text-white mb-0.5 line-clamp-1">{{ $nextEpisode['title'] }}</span>
-                                        <span class="block text-xs text-gray-300 mb-1">{{ $program['title'] }} · {{ __('media.public.episode_label', ['number' => $nextEpisode['number']]) }}</span>
+                                        <span class="sx-clamp-1 mb-0.5 block text-base font-bold text-white">{{ $nextEpisode['title'] }}</span>
+                                        <span class="mb-1 block text-xs text-white/80">{{ $program['title'] }} · {{ __('media.public.episode_label', ['number' => $nextEpisode['number']]) }}</span>
                                         @if ($nextEpisode['duration'])
-                                            <span class="inline-flex items-center gap-1 text-xs text-gray-400">
-                                                <i data-lucide="clock" class="w-3.5 h-3.5"></i>{{ $nextEpisode['duration'] }}
+                                            <span class="inline-flex items-center gap-1 text-xs text-white/70">
+                                                <i data-lucide="clock" class="h-3.5 w-3.5" aria-hidden="true"></i><span dir="ltr" class="tabular-nums">{{ $nextEpisode['duration'] }}</span>
                                             </span>
                                         @endif
                                     </span>
                                 </div>
                             </a>
 
-                            <div class="flex flex-wrap gap-3 justify-center">
-                                <a href="{{ $nextEpisode['url'] }}"
-                                   class="inline-flex items-center gap-2 bg-gradient-to-r from-[#0056b3] to-[#218838] text-white font-bold px-7 py-3 rounded-full hover:scale-105 motion-reduce:transform-none transition-all shadow-lg">
-                                    <i data-lucide="play" class="w-4 h-4"></i>{{ __('media.public.play_next') }}
-                                </a>
-                                <button type="button" @click="cancelAutoplay()"
-                                        class="glass text-white font-bold px-7 py-3 rounded-full hover:bg-white/20 transition-all">
-                                    {{ __('media.public.cancel') }}
-                                </button>
+                            <div class="flex flex-wrap justify-center gap-3">
+                                <a href="{{ $nextEpisode['url'] }}" class="sx-btn is-primary"><i data-lucide="play" aria-hidden="true"></i>{{ __('media.public.play_next') }}</a>
+                                <button type="button" @click="cancelAutoplay()" class="sx-btn is-glass">{{ __('media.public.cancel') }}</button>
                             </div>
                         </div>
                     </div>
@@ -319,187 +342,156 @@
     </section>
 
     {{-- ============================================================ --}}
-    {{-- EPISODE INFO + SIDEBAR                                       --}}
+    {{-- EPISODE INFO + MORE EPISODES                                 --}}
     {{-- ============================================================ --}}
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-            <div class="lg:col-span-2 min-w-0">
-                {{-- Title & meta --}}
-                <nav class="mb-4" aria-label="breadcrumb">
-                    <ol class="inline-flex items-center gap-2 flex-wrap text-sm text-gray-600 dark:text-gray-400">
-                        <li>
-                            <a href="{{ route('public.media') }}" class="hover:text-[#0056b3] dark:hover:text-[#64CCC5] transition-colors">{{ __('media.public.page_title') }}</a>
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <i data-lucide="{{ $isRtl ? 'chevron-left' : 'chevron-right' }}" class="w-3.5 h-3.5" aria-hidden="true"></i>
-                            <a href="{{ $program['url'] }}" class="font-semibold text-[#0056b3] dark:text-[#64CCC5] hover:underline line-clamp-1">{{ $program['title'] }}</a>
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <i data-lucide="{{ $isRtl ? 'chevron-left' : 'chevron-right' }}" class="w-3.5 h-3.5" aria-hidden="true"></i>
-                            <span class="font-medium text-gray-900 dark:text-white">{{ __('media.public.episode_label', ['number' => $episode['number']]) }}</span>
-                        </li>
-                    </ol>
+    <div class="sx-wrap pt-8">
+        <div class="sx-reading">
+            <div class="min-w-0 grid gap-5 sx-rise">
+                <nav aria-label="breadcrumb" class="flex flex-wrap items-center gap-2">
+                    <a href="{{ route('public.media') }}" class="sx-chip"><i data-lucide="clapperboard" aria-hidden="true"></i>{{ __('media.public.page_title') }}</a>
+                    <a href="{{ $program['url'] }}" class="sx-chip sx-clamp-1" title="{{ $program['title'] }}">{{ $program['title'] }}</a>
+                    <span class="sx-chip is-active">{{ __('media.public.episode_label', ['number' => $episode['number']]) }}</span>
                 </nav>
 
-                {{-- Title (YouTube-style) --}}
-                <div class="opacity-0 animate-fade-in-up">
-                    <h1 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-1 break-words leading-snug">{{ $episode['title'] }}</h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                <div>
+                    <h1 class="sx-section-title">{{ $episode['title'] }}</h1>
+                    <p class="mt-1 text-sm text-[color:var(--sx-muted)]">
                         {{ __('media.public.episode_label', ['number' => $episode['number']]) }}
                         @if ($episode['season'] > 1) · {{ __('media.public.season_label', ['number' => $episode['season']]) }} @endif
                     </p>
                 </div>
 
-                {{-- Channel-style program row + actions (YouTube-style) --}}
-                <div class="flex flex-wrap items-center gap-x-4 gap-y-3 mb-5 opacity-0 animate-fade-in-up stagger-1">
-                    <a href="{{ $program['url'] }}" class="flex items-center gap-3 min-w-0 group">
-                        <span class="w-10 h-10 sm:w-11 sm:h-11 shrink-0 bg-gradient-to-br {{ $program['gradient'] }} rounded-full flex items-center justify-center overflow-hidden ring-1 ring-black/5 dark:ring-white/10">
+                {{-- Programme row + actions --}}
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-3">
+                    <a href="{{ $program['url'] }}" class="group flex min-w-0 items-center gap-3" title="{{ $program['title'] }}">
+                        <span class="sx-avatar !h-11 !w-11">
                             @if ($program['poster'])
-                                <img src="{{ $program['poster'] }}" alt="" class="w-full h-full object-cover">
-                            @else
-                                <i data-lucide="monitor-play" class="w-5 h-5 text-white"></i>
+                                <img src="{{ $program['poster'] }}" alt="" decoding="async" onerror="this.remove()">
                             @endif
+                            <i data-lucide="monitor-play" aria-hidden="true"></i>
                         </span>
                         <span class="min-w-0">
-                            <span class="block text-sm font-bold text-gray-900 dark:text-white truncate group-hover:text-[#0056b3] dark:group-hover:text-[#64CCC5] transition-colors">{{ $program['title'] }}</span>
-                            <span class="block text-xs text-gray-500 dark:text-gray-400 truncate">
+                            <span class="sx-clamp-1 block font-bold text-[color:var(--sx-ink)] transition-colors group-hover:text-[color:var(--sx-accent)]">{{ $program['title'] }}</span>
+                            <span class="sx-clamp-1 block text-xs text-[color:var(--sx-muted)]">
                                 {{ __('media.public.episodes_count', ['count' => $program['episodes_count']]) }}
                                 @if ($program['host']) · {{ $program['host'] }} @endif
                             </span>
                         </span>
                     </a>
 
-                    {{-- Save (My List) — subscribe-style pill --}}
-                    <button type="button" @click="toggleSave()" :aria-pressed="saved ? 'true' : 'false'"
-                            :disabled="savePending"
+                    {{-- Save (My List) --}}
+                    <button type="button" @click="toggleSave()" :aria-pressed="saved ? 'true' : 'false'" :disabled="savePending"
                             :title="isAuthenticated ? '' : @js(__('media.public.login_to_save'))"
-                            class="inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all disabled:opacity-60
-                                   bg-gray-900 text-white hover:bg-gray-700 dark:bg-[#ffffff] dark:text-gray-900 dark:hover:bg-gray-200">
-                        <i data-lucide="loader-2" class="w-4 h-4 animate-spin" x-show="savePending" x-cloak></i>
-                        <i data-lucide="bookmark" class="w-4 h-4" x-show="!savePending"></i>
+                            class="sx-btn is-primary disabled:opacity-60">
+                        <i data-lucide="loader-2" class="animate-spin" x-show="savePending" x-cloak aria-hidden="true"></i>
+                        <i data-lucide="bookmark" x-show="!savePending" aria-hidden="true"></i>
                         <span x-text="saved ? @js(__('media.public.saved')) : @js(__('media.public.save'))"></span>
                     </button>
 
                     <div class="flex flex-wrap items-center gap-2 ms-auto">
-                        <button type="button" @click="toggleLike()" :aria-pressed="liked ? 'true' : 'false'"
-                                class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 transition-colors">
-                            <i data-lucide="thumbs-up" class="w-4 h-4" :class="liked ? 'text-[#64CCC5]' : ''"></i>
+                        <button type="button" @click="toggleLike()" :aria-pressed="liked ? 'true' : 'false'" class="sx-btn">
+                            <i data-lucide="thumbs-up" :class="liked && 'text-[color:var(--sx-accent)]'" aria-hidden="true"></i>
                             <span x-text="liked ? @js(__('media.public.liked')) : @js(__('media.public.like'))"></span>
                         </button>
-                        <button type="button" @click="share()"
-                                class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 transition-colors">
-                            <i data-lucide="share-2" class="w-4 h-4"></i>
+                        <button type="button" @click="share()" class="sx-btn">
+                            <i data-lucide="share-2" aria-hidden="true"></i>
                             <span x-text="shareCopied ? @js(__('media.public.link_copied')) : @js(__('media.public.share'))"></span>
                         </button>
                     </div>
                 </div>
 
-                {{-- Description box (YouTube-style): views/meta line + collapsible text --}}
-                <div class="rounded-xl bg-gray-100 dark:bg-white/10 p-3 sm:p-4 mb-5 opacity-0 animate-fade-in-up stagger-2"
-                     :class="showMore ? '' : 'cursor-pointer hover:bg-gray-200/70 dark:hover:bg-white/15 transition-colors'"
+                {{-- Description: facts line + collapsible text --}}
+                <div class="sx-panel p-4"
+                     :class="showMore ? '' : 'cursor-pointer transition-colors hover:border-[color:var(--sx-line-strong)]'"
                      @click="if (!showMore) { showMore = true; }">
-                    <p class="text-sm font-semibold text-gray-900 dark:text-white mb-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                        <span>{{ number_format($episode['views_count']) }} {{ __('media.public.views') }}</span>
-                        @if ($program['year'])<span aria-hidden="true">·</span><span>{{ $program['year'] }}</span>@endif
-                        @if ($episode['duration'])<span aria-hidden="true">·</span><span>{{ $episode['duration'] }}</span>@endif
-                        <span aria-hidden="true">·</span><span>{{ $program['maturity_label'] }}</span>
-                        @if ($program['rating'] > 0)
-                            <span aria-hidden="true">·</span>
-                            <span class="inline-flex items-center gap-1"><i data-lucide="star" class="w-3.5 h-3.5 text-yellow-500"></i>{{ number_format($program['rating'], 1) }}</span>
+                    <div class="mb-3 flex flex-wrap items-center gap-2">
+                        <span class="sx-chip"><i data-lucide="eye" aria-hidden="true"></i><span class="tabular-nums">{{ number_format($episode['views_count']) }}</span> {{ __('media.public.views') }}</span>
+                        @if ($program['year'])
+                            <span class="sx-chip tabular-nums">{{ $program['year'] }}</span>
                         @endif
-                    </p>
+                        @if ($episode['duration'])
+                            <span class="sx-chip"><i data-lucide="clock" aria-hidden="true"></i><span dir="ltr" class="tabular-nums">{{ $episode['duration'] }}</span></span>
+                        @endif
+                        <span class="sx-chip">{{ $program['maturity_label'] }}</span>
+                        @if ($program['rating'] > 0)
+                            <span class="sx-chip"><i data-lucide="star" aria-hidden="true"></i><span class="tabular-nums">{{ number_format($program['rating'], 1) }}</span></span>
+                        @endif
+                    </div>
 
-                    <p class="text-sm leading-relaxed text-gray-700 dark:text-gray-300 break-words whitespace-pre-line"
-                       :class="showMore ? '' : 'line-clamp-2'">{{ $episode['description'] ?? $program['description'] ?? __('media.public.no_description') }}</p>
+                    <p class="whitespace-pre-line leading-loose text-[color:var(--sx-ink-2)]"
+                       :class="showMore ? '' : 'sx-clamp-2'">{{ $episode['description'] ?? $program['description'] ?? __('media.public.no_description') }}</p>
 
-                    <button type="button" @click.stop="showMore = !showMore"
-                            class="mt-2 text-sm font-semibold text-gray-900 dark:text-white hover:underline">
+                    <button type="button" @click.stop="showMore = !showMore" class="mt-2 text-sm font-bold text-[color:var(--sx-accent)] hover:underline">
                         <span x-text="showMore ? @js(__('media.public.show_less')) : @js(__('media.public.show_more'))"></span>
                     </button>
                 </div>
 
-                {{-- Transcript (YouTube-style, collapsible) --}}
+                {{-- Transcript (native disclosure, styled by the system) --}}
                 @if (! empty($episode['transcript']))
-                    <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm mb-6 opacity-0 animate-fade-in-up stagger-3">
-                        <button type="button" @click="transcriptOpen = !transcriptOpen; refreshIcons()"
-                                :aria-expanded="transcriptOpen ? 'true' : 'false'"
-                                class="w-full flex items-center justify-between gap-3 p-4 text-start">
-                            <span class="flex items-center gap-2 text-base font-bold text-gray-900 dark:text-white">
-                                <i data-lucide="align-left" class="w-5 h-5 text-[#0056b3] dark:text-[#64CCC5]"></i>
-                                {{ __('media.public.transcript') }}
-                            </span>
-                            <i data-lucide="chevron-down" class="w-5 h-5 text-gray-500 transition-transform duration-200 motion-reduce:transition-none"
-                               :class="transcriptOpen ? 'rotate-180' : ''"></i>
-                        </button>
-
-                        <div x-show="transcriptOpen" x-cloak
-                             x-transition:enter="transition ease-out duration-200 motion-reduce:duration-0"
-                             x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-                             class="px-4 pb-4 border-t border-gray-100 dark:border-gray-800">
-                            <div class="max-h-96 overflow-y-auto custom-scrollbar space-y-2.5 pt-4 pe-2">
-                                @foreach ($episode['transcript'] as $line)
-                                    <div class="flex items-start gap-3">
-                                        @if ($line['time'])
-                                            <span class="shrink-0 text-xs font-semibold tabular-nums text-[#0056b3] dark:text-[#64CCC5] bg-[#0056b3]/10 dark:bg-[#64CCC5]/10 px-2 py-0.5 rounded-md" dir="ltr">{{ $line['time'] }}</span>
-                                        @endif
-                                        <p class="text-sm leading-relaxed text-gray-700 dark:text-gray-300 break-words">{{ $line['text'] }}</p>
-                                    </div>
-                                @endforeach
-                            </div>
+                    <details class="sx-disclosure">
+                        <summary>
+                            <span class="flex items-center gap-2"><i data-lucide="align-left" aria-hidden="true"></i>{{ __('media.public.transcript') }}</span>
+                            <i data-lucide="chevron-down" class="sx-disclosure-chevron" aria-hidden="true"></i>
+                        </summary>
+                        <div class="custom-scrollbar max-h-96 space-y-2.5 overflow-y-auto overscroll-contain px-2 pb-3 pt-3">
+                            @foreach ($episode['transcript'] as $line)
+                                <div class="flex items-start gap-3">
+                                    @if ($line['time'])
+                                        <span class="sx-chip !min-h-0 !py-0.5 shrink-0 tabular-nums" dir="ltr">{{ $line['time'] }}</span>
+                                    @endif
+                                    <p class="leading-loose text-[color:var(--sx-ink-2)]">{{ $line['text'] }}</p>
+                                </div>
+                            @endforeach
                         </div>
-                    </div>
+                    </details>
                 @endif
             </div>
 
-            {{-- Sticky "more episodes" sidebar --}}
-            <aside class="lg:col-span-1">
-                <div class="rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm p-5 lg:sticky lg:top-20 opacity-0 animate-fade-in-up stagger-2">
-                    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                        <i data-lucide="list-video" class="w-5 h-5 text-[#0056b3] dark:text-[#64CCC5]"></i>
-                        {{ __('media.public.more_episodes') }}
-                    </h3>
+            {{-- Sticky "more episodes" queue --}}
+            <aside class="sx-aside">
+                <div class="sx-surface p-5">
+                    <h2 class="mb-4 flex items-center gap-2 font-extrabold text-[color:var(--sx-ink)]">
+                        <i data-lucide="list-video" class="h-5 w-5 text-[color:var(--sx-accent)]" aria-hidden="true"></i>{{ __('media.public.more_episodes') }}
+                    </h2>
 
                     @if (empty($moreEpisodes))
-                        <x-site.empty-state icon="list-video"
-                            :title="__('media.public.no_episodes_title')"
-                            :message="__('media.public.no_episodes_message')" class="!py-8" />
+                        <p class="text-sm text-[color:var(--sx-muted)]">{{ __('media.public.no_episodes_message') }}</p>
                     @else
-                        <div class="space-y-2 max-h-[600px] overflow-y-auto scrollbar-hide">
+                        <ol class="sx-video-queue" aria-label="{{ __('media.public.more_episodes') }}">
                             @foreach ($moreEpisodes as $other)
-                                <a href="{{ $other['url'] }}"
-                                   class="flex gap-3 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl p-2 transition-colors group">
-                                    <div class="relative w-2/5 shrink-0 rounded-lg overflow-hidden aspect-video bg-gradient-to-br {{ $program['gradient'] }}">
-                                        @if ($other['thumbnail'])
-                                            <img src="{{ $other['thumbnail'] }}" alt="" loading="lazy"
-                                                 class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 motion-reduce:transform-none transition-transform duration-300">
-                                        @else
-                                            <div class="absolute inset-0 flex items-center justify-center opacity-40">
-                                                <i data-lucide="video-off" class="w-5 h-5 text-white"></i>
-                                            </div>
-                                        @endif
-                                        @if ($other['duration'])
-                                            <span class="absolute bottom-1 end-1 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded">{{ $other['duration'] }}</span>
-                                        @endif
-                                        <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
-                                            <i data-lucide="play-circle" class="w-7 h-7 text-white"></i>
-                                        </div>
-                                        {{-- Watch progress (auth visitors with a saved position) --}}
-                                        @if (($other['progress_percent'] ?? 0) > 0)
-                                            <div class="absolute bottom-0 inset-x-0 h-0.5 bg-white/20">
-                                                <div class="h-full bg-gradient-to-r from-[#0056b3] to-[#218838]" style="width: {{ $other['progress_percent'] }}%"></div>
-                                            </div>
-                                        @endif
-                                    </div>
-                                    <div class="flex-1 min-w-0 py-0.5">
-                                        <h4 class="text-xs font-bold text-gray-900 dark:text-white line-clamp-2 mb-1 group-hover:text-[#0056b3] dark:group-hover:text-[#64CCC5] transition-colors">
-                                            {{ $other['title'] }}
-                                        </h4>
-                                        <p class="text-[11px] text-gray-500 dark:text-gray-300">{{ __('media.public.episode_label', ['number' => $other['number']]) }}</p>
-                                    </div>
-                                </a>
+                                <li>
+                                    <a href="{{ $other['url'] }}" title="{{ $other['title'] }}"
+                                       class="group grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 p-2.5 transition-colors hover:bg-[color:var(--sx-surface-2)]">
+                                        <span class="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg" style="background: var(--sx-grad)">
+                                            @if ($other['thumbnail'])
+                                                <img src="{{ $other['thumbnail'] }}" alt="" loading="lazy" decoding="async"
+                                                     class="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none">
+                                            @else
+                                                <span class="absolute inset-0 grid place-items-center opacity-70">
+                                                    <i data-lucide="video-off" class="h-5 w-5 text-white" aria-hidden="true"></i>
+                                                </span>
+                                            @endif
+                                            @if ($other['duration'])
+                                                <span class="absolute bottom-1 end-1 rounded bg-black/80 px-1.5 py-0.5 text-[10px] text-white">
+                                                    <span dir="ltr" class="tabular-nums">{{ $other['duration'] }}</span>
+                                                </span>
+                                            @endif
+                                            @if (($other['progress_percent'] ?? 0) > 0)
+                                                {{-- Track reads on any thumbnail; matches the duration pill above. --}}
+                                                <span class="absolute inset-x-0 bottom-0 h-0.5 bg-black/50"
+                                                      role="img" aria-label="{{ $other['progress_percent'] }}% {{ __('media.public.complete') }}">
+                                                    <span class="block h-full" style="width: {{ $other['progress_percent'] }}%; background: var(--sx-grad)"></span>
+                                                </span>
+                                            @endif
+                                        </span>
+                                        <span class="min-w-0">
+                                            <span class="block text-xs font-bold tabular-nums text-[color:var(--sx-muted)]">{{ __('media.public.episode_label', ['number' => $other['number']]) }}</span>
+                                            <span class="sx-clamp-2 block text-sm font-bold text-[color:var(--sx-ink)] transition-colors group-hover:text-[color:var(--sx-accent)]">{{ $other['title'] }}</span>
+                                        </span>
+                                    </a>
+                                </li>
                             @endforeach
-                        </div>
+                        </ol>
                     @endif
                 </div>
             </aside>
@@ -528,7 +520,6 @@
             savePending: false,
             shareCopied: false,
             showMore: false,
-            transcriptOpen: false,
             overlayVisible: false,
             // "Up next" opens during the closing seconds of playback; the countdown
             // follows the video clock, so pausing the video pauses the countdown too.

@@ -2,17 +2,19 @@
 
 @php $isRtl = in_array(app()->getLocale(), ['ar', 'ur'], true); @endphp
 
-<nav aria-label="Breadcrumb" {{ $attributes->merge(['class' => 'flex items-center flex-wrap gap-1.5 text-sm text-gray-500 dark:text-gray-400']) }}>
-    <a href="{{ route('public.home') }}" aria-label="{{ __('site.home') }}" class="hover:text-primary transition-colors flex items-center">
+<nav aria-label="Breadcrumb" {{ $attributes->merge(['class' => 'flex items-center flex-wrap gap-1.5 text-sm text-[color:var(--sx-muted)]']) }}>
+    <a href="{{ route('public.home') }}" aria-label="{{ __('site.home') }}" title="{{ __('site.home') }}"
+       class="flex items-center transition-colors hover:text-[color:var(--sx-accent)]">
         <i data-lucide="home" class="w-4 h-4" aria-hidden="true"></i>
         <span class="sr-only">{{ __('site.home') }}</span>
     </a>
     @foreach ($items as $item)
-        <i data-lucide="chevron-{{ $isRtl ? 'left' : 'right' }}" class="w-4 h-4 shrink-0 opacity-60"></i>
+        <i data-lucide="chevron-{{ $isRtl ? 'left' : 'right' }}" class="w-4 h-4 shrink-0 opacity-60" aria-hidden="true"></i>
         @if (! empty($item['url']) && ! $loop->last)
-            <a href="{{ $item['url'] }}" class="hover:text-primary transition-colors truncate max-w-[12rem]">{{ $item['label'] }}</a>
+            <a href="{{ $item['url'] }}" title="{{ $item['label'] }}"
+               class="sx-clamp-1 max-w-[12rem] transition-colors hover:text-[color:var(--sx-accent)]">{{ $item['label'] }}</a>
         @else
-            <span class="text-gray-900 dark:text-gray-100 font-semibold truncate max-w-[14rem]" aria-current="page">{{ $item['label'] }}</span>
+            <span class="sx-clamp-1 max-w-[14rem] font-bold text-[color:var(--sx-ink)]" title="{{ $item['label'] }}" aria-current="page">{{ $item['label'] }}</span>
         @endif
     @endforeach
 </nav>

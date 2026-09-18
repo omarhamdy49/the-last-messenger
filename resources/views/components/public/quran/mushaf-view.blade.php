@@ -15,7 +15,6 @@
     - fmtNum(n): number formatting function
     - openVerseMenu($event, verse?): opens the listen / tafsir menu for a tapped ayah
     - fontSize: current font size setting
-    - $store.theme.dark: boolean for dark mode
 --}}
 
 @props(['mushaf' => null, 'surah'])
@@ -23,9 +22,8 @@
 @if(! empty($mushaf))
 <div x-show="viewMode === 'reading'" x-cloak class="mb-12">
     {{-- Tapping any ayah (word or end medallion) opens its tafsir. --}}
-    <div class="verse-card mushaf-card rounded-2xl shadow-lg px-5 sm:px-8 py-8 mx-auto"
-         @click="openVerseMenu($event)"
-         :class="$store.theme.dark ? 'bg-gray-900' : 'bg-white'">
+    <div class="verse-card mushaf-card sx-surface mx-auto px-5 py-8 sm:px-8"
+         @click="openVerseMenu($event)">
         @include('public.quran._mushaf')
     </div>
 </div>
@@ -34,17 +32,16 @@
 <div x-show="viewMode === 'reading' && verses.length > 0" x-cloak class="space-y-6 mb-12">
     <template x-for="grp in versesByPage" :key="'rp' + grp.page">
     <div>
-        <div class="flex items-center gap-3 mb-3">
-            <div class="flex-1 h-px" :class="$store.theme.dark ? 'bg-gray-800' : 'bg-gray-200'"></div>
-            <span class="px-3 py-1 rounded-full text-xs font-semibold" :class="$store.theme.dark ? 'bg-gray-800 text-gray-300' : 'bg-gray-200 text-gray-600'">
+        <div class="mb-3 flex items-center gap-3">
+            <div class="h-px flex-1 bg-[color:var(--sx-line)]"></div>
+            <span class="sx-chip tabular-nums">
                 {{ __('quran.nav.page') }} <span x-text="fmtNum(grp.page)"></span>
             </span>
-            <div class="flex-1 h-px" :class="$store.theme.dark ? 'bg-gray-800' : 'bg-gray-200'"></div>
+            <div class="h-px flex-1 bg-[color:var(--sx-line)]"></div>
         </div>
-        <div class="verse-card rounded-2xl shadow-lg p-6 sm:p-8" :class="$store.theme.dark ? 'bg-gray-900' : 'bg-white'">
-            <p class="font-['Amiri'] leading-loose text-start" dir="rtl"
-               :class="$store.theme.dark ? 'text-white' : 'text-gray-900'"
-               :style="`font-size: ${fontSize}px`"><template x-for="verse in grp.items" :key="verse.id"><span class="cursor-pointer" @click="openVerseMenu($event, verse)"><span x-text="verse.arabic"></span><span class="inline-flex items-center justify-center align-middle mx-1 w-7 h-7 text-xs font-sans font-bold rounded-full" :class="$store.theme.dark ? 'bg-gray-800 text-[#64CCC5]' : 'bg-gray-100 text-[#0056b3]'" x-text="fmtNum(verse.number)"></span> </span></template></p>
+        <div class="verse-card sx-surface p-6 sm:p-8">
+            <p class="sx-scripture text-start" dir="rtl"
+               :style="`font-size: ${fontSize}px`"><template x-for="verse in grp.items" :key="verse.id"><span class="cursor-pointer" @click="openVerseMenu($event, verse)"><span x-text="verse.arabic"></span><span class="mx-1 inline-flex h-7 w-7 items-center justify-center rounded-full align-middle text-xs font-bold tabular-nums bg-[color:var(--sx-accent-soft)] text-[color:var(--sx-accent)]" x-text="fmtNum(verse.number)"></span> </span></template></p>
         </div>
     </div>
     </template>

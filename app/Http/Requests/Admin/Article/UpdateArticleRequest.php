@@ -93,6 +93,8 @@ class UpdateArticleRequest extends FormRequest
         // Media
         $rules['thumb'] = 'nullable|image|mimes:jpeg,jpg,png,webp|max:5120';
         $rules['thumb_id'] = 'nullable|integer|exists:media,id';
+        $rules['cover'] = 'nullable|image|mimes:jpeg,jpg,png,webp|max:10240';
+        $rules['cover_id'] = 'nullable|integer|exists:media,id';
         $rules['gallery'] = 'nullable|array';
         $rules['gallery.*'] = 'exists:media,id';
         $rules['media_items'] = 'nullable|array';

@@ -149,6 +149,16 @@
                         <span x-text="listPlaying ? @js(__('quran.public.pause')) : @js(__('quran.playlists.play_all'))"></span>
                     </button>
 
+                    {{-- Zip of every playable track; the route is auth + throttled. --}}
+                    @if ($playableCount)
+                        <a href="{{ route('public.quran.playlists.download', $playlist->slug) }}"
+                           title="{{ __('quran.playlists.download_hint', ['count' => $num($playableCount)]) }}"
+                           class="inline-flex items-center gap-1.5 h-11 px-3.5 rounded-xl pl-glass-btn text-sm font-semibold text-white transition-[background-color,transform] duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80">
+                            <i data-lucide="download" class="w-4 h-4" aria-hidden="true"></i>
+                            <span>{{ __('quran.playlists.download') }}</span>
+                        </a>
+                    @endif
+
                     @if ($playlist->is_public)
                         <x-site.share-button :url="$shareUrl" :title="$playlist->name" :text="$playlist->description" variant="glass" />
                     @endif

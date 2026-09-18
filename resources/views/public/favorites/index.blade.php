@@ -4,45 +4,42 @@
 @section('robots', 'noindex, nofollow')
 
 @section('content')
-<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
+<div class="sx min-h-[100dvh] pb-20">
+    <div class="sx-wrap">
+        <x-public.editorial.page-hero
+            :eyebrow-url="route('public.profile')" :eyebrow-label="__('profile.profile')" eyebrow-icon="user"
+            :title="__('profile.bookmarks_title')" :lead="__('profile.bookmarks_subtitle')"
+            :stats="$paginator->total() > 0 ? [
+                ['icon' => 'bookmark', 'label' => __('profile.bookmarks_title'), 'value' => number_format($paginator->total())],
+            ] : []" />
 
-    {{-- Header --}}
-    <div class="flex flex-col gap-2 mb-8">
-        <nav class="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
-            <a href="{{ route('public.profile') }}" class="hover:text-primary">{{ __('profile.profile') }}</a>
-            <i data-lucide="chevron-{{ in_array(app()->getLocale(), ['ar', 'ur'], true) ? 'left' : 'right' }}" class="w-4 h-4"></i>
-            <span>{{ __('profile.bookmarks_title') }}</span>
-        </nav>
-        <h1 class="text-3xl font-bold gradient-text">{{ __('profile.bookmarks_title') }}</h1>
-        <p class="text-gray-600 dark:text-gray-300">{{ __('profile.bookmarks_subtitle') }}</p>
-    </div>
-
-    {{-- Type filter pills --}}
-    <div class="mb-8">
-        <x-site.filter-pills :pills="$filterPills" :active="$activeType" />
-    </div>
-
-    @if ($bookmarks->isEmpty())
-        {{-- Empty state --}}
-        <x-site.empty-state
-            icon="bookmark"
-            :title="__('profile.no_bookmarks_title')"
-            :message="__('profile.no_bookmarks_message')">
-            <a href="{{ route('public.home') }}"
-               class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold text-white bg-gradient-to-l from-primary to-secondary hover:opacity-90 transition-opacity">
-                <i data-lucide="compass" class="w-4 h-4"></i>
-                {{ __('profile.browse_content') }}
-            </a>
-        </x-site.empty-state>
-    @else
-        {{-- Bookmarks grid --}}
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            @foreach ($bookmarks as $item)
-                <x-site.bookmark-card :item="$item" />
-            @endforeach
+        {{-- Type filter pills --}}
+        <div class="mb-8">
+            <x-site.filter-pills :pills="$filterPills" :active="$activeType" />
         </div>
 
-        <x-site.pagination :paginator="$paginator" />
-    @endif
+        @if ($bookmarks->isEmpty())
+            {{-- Empty state --}}
+            <x-site.empty-state
+                class="sx-surface"
+                icon="bookmark"
+                :title="__('profile.no_bookmarks_title')"
+                :message="__('profile.no_bookmarks_message')">
+                <a href="{{ route('public.home') }}" class="sx-btn is-primary mt-2">
+                    <i data-lucide="compass" aria-hidden="true"></i>
+                    {{ __('profile.browse_content') }}
+                </a>
+            </x-site.empty-state>
+        @else
+            {{-- Bookmarks grid --}}
+            <div class="sx-grid">
+                @foreach ($bookmarks as $item)
+                    <x-site.bookmark-card :item="$item" />
+                @endforeach
+            </div>
+
+            <x-site.pagination :paginator="$paginator" />
+        @endif
+    </div>
 </div>
 @endsection

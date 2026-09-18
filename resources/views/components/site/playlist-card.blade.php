@@ -28,7 +28,7 @@
 
 <a href="{{ $card['url'] }}"
    style="--i: {{ (int) $index }}"
-   {{ $attributes->merge(['class' => 'pl-card font-[\'Cairo\'] group relative flex '.($wide ? 'flex-col md:grid md:grid-cols-[2fr_3fr]' : 'flex-col').' overflow-hidden rounded-3xl border border-zinc-200/70 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-[transform,box-shadow] duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_24px_48px_-24px_rgba(0,86,179,0.35)] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2']) }}>
+   {{ $attributes->merge(['class' => 'pl-card sx-surface group relative flex '.($wide ? 'flex-col md:grid md:grid-cols-[2fr_3fr]' : 'flex-col').' overflow-hidden transition-[transform,box-shadow] duration-300 ease-out hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--sx-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--sx-bg)] active:scale-[0.99]']) }}>
 
     {{-- Cover --}}
     <div class="relative overflow-hidden {{ $wide ? 'aspect-[16/10] md:aspect-auto md:min-h-[260px]' : 'aspect-[16/10]' }}" style="background: {{ $cover }}">
@@ -42,12 +42,12 @@
         {{-- badges --}}
         <div class="absolute top-3 start-3 flex items-center gap-1.5">
             @if ($card['isFeatured'])
-                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold bg-white/90 text-amber-700 backdrop-blur-sm">
+                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold bg-white/90 text-amber-800 backdrop-blur-sm">
                     <i data-lucide="star" class="w-3 h-3 fill-current"></i>{{ __('quran.playlists.featured') }}
                 </span>
             @endif
             @if (! $card['isPublic'])
-                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold bg-white/90 text-zinc-700 backdrop-blur-sm">
+                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold bg-white/90 text-slate-800 backdrop-blur-sm">
                     <i data-lucide="lock" class="w-3 h-3"></i>{{ __('quran.playlists.private') }}
                 </span>
             @endif
@@ -70,38 +70,38 @@
         </div>
 
         {{-- play (always visible; grows on hover) --}}
-        <span class="absolute bottom-4 end-4 w-12 h-12 rounded-full bg-white text-primary flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110" aria-hidden="true">
+        <span class="absolute bottom-4 end-4 w-12 h-12 rounded-full bg-white text-[color:var(--sx-accent)] flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110" aria-hidden="true">
             <i data-lucide="play" class="w-5 h-5 fill-current {{ $isRtl ? '-scale-x-100' : '' }}"></i>
         </span>
     </div>
 
     {{-- Body --}}
     <div class="flex flex-col flex-1 {{ $wide ? 'p-6 md:p-8' : 'p-5' }}">
-        <h3 class="{{ $wide ? 'text-2xl md:text-3xl' : 'text-lg' }} font-bold text-zinc-900 dark:text-white leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+        <h3 class="{{ $wide ? 'text-2xl md:text-3xl' : 'text-lg' }} font-bold text-[color:var(--sx-ink)] leading-snug line-clamp-2 group-hover:text-[color:var(--sx-accent)] transition-colors">
             {{ $card['name'] }}
         </h3>
-        <p class="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400 tabular-nums">
+        <p class="mt-1.5 text-sm text-[color:var(--sx-muted)] tabular-nums">
             {{ __('quran.playlists.surahs_count', ['count' => $num($card['items'])]) }}
-            <span aria-hidden="true" class="mx-1.5 text-zinc-300 dark:text-zinc-600">|</span>
+            <span aria-hidden="true" class="mx-1.5 text-[color:var(--sx-line-strong)]">|</span>
             {{ __('quran.playlists.reciters_count', ['count' => $num(count($reciters))]) }}
         </p>
         @if ($wide && $card['description'])
-            <p class="mt-3 text-base text-zinc-600 dark:text-zinc-300 leading-relaxed max-w-[60ch] line-clamp-3">{{ $card['description'] }}</p>
+            <p class="mt-3 text-base text-[color:var(--sx-ink-2)] leading-relaxed max-w-[60ch] line-clamp-3">{{ $card['description'] }}</p>
         @endif
         @if ($wide && $reciters)
             <ul class="mt-4 flex flex-wrap gap-1.5" aria-label="{{ __('quran.public.reciters') }}">
                 @foreach (array_slice($reciters, 0, 4) as $r)
-                    <li class="px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-white/10 text-xs font-semibold text-zinc-700 dark:text-zinc-200">{{ $r['name'] }}</li>
+                    <li class="sx-chip !min-h-0 !py-1 text-xs font-semibold text-[color:var(--sx-ink-2)]">{{ $r['name'] }}</li>
                 @endforeach
             </ul>
         @endif
 
-        <div class="mt-auto pt-4 flex items-center justify-between gap-3 text-xs text-zinc-500 dark:text-zinc-400">
+        <div class="mt-auto pt-4 flex items-center justify-between gap-3 text-xs text-[color:var(--sx-muted)]">
             <span class="flex items-center gap-2 min-w-0">
                 @if ($card['owner']['avatar'])
                     <img src="{{ $card['owner']['avatar'] }}" alt="" width="24" height="24" loading="lazy" class="w-6 h-6 rounded-full object-cover">
                 @else
-                    <span class="w-6 h-6 rounded-full bg-zinc-200 dark:bg-zinc-700 text-[11px] font-bold text-zinc-600 dark:text-zinc-200 flex items-center justify-center">{{ mb_substr($card['owner']['name'] ?: '?', 0, 1) }}</span>
+                    <span class="w-6 h-6 rounded-full bg-[color:var(--sx-surface-2)] text-[11px] font-bold text-[color:var(--sx-ink-2)] flex items-center justify-center">{{ mb_substr($card['owner']['name'] ?: '?', 0, 1) }}</span>
                 @endif
                 <span class="truncate">{{ $card['owner']['name'] }}</span>
             </span>

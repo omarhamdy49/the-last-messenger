@@ -21,7 +21,7 @@
      x-on:open-login.window="open = true; $nextTick(() => window.lucide && window.lucide.createIcons())"
      x-on:keydown.escape.window="open = false"
      x-show="open" x-cloak
-     class="fixed inset-0 z-[70]" style="display:none" role="dialog" aria-modal="true">
+     class="sx fixed inset-0 z-[70]" style="display:none" role="dialog" aria-modal="true">
 
     {{-- Backdrop (fade) --}}
     <div x-show="open"
@@ -42,24 +42,24 @@
              x-transition:leave-start="opacity-100 scale-100"
              x-transition:leave-end="opacity-0 scale-95"
              @click.stop
-             class="relative w-full max-w-md rounded-2xl shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto
-                    bg-white text-gray-900 dark:bg-[#16213e] dark:text-white">
+             class="sx-surface relative w-full max-w-md p-6 sm:p-8 max-h-[90vh] overflow-y-auto">
 
             <button type="button" @click="open = false"
-                    class="absolute top-4 end-4 text-gray-400 hover:text-gray-600 dark:hover:text-white"
-                    aria-label="{{ __('common.close') }}">
+                    class="absolute top-3 end-3 grid h-11 w-11 place-items-center rounded-full text-[color:var(--sx-muted)] transition-colors hover:text-[color:var(--sx-ink)] hover:bg-[color:var(--sx-surface-2)]"
+                    aria-label="{{ __('common.close') }}" title="{{ __('common.close') }}">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
 
             <div class="text-center mb-6">
-                <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl mb-3 bg-gradient-to-br from-[#0056b3] to-[#218838] text-white">
+                <div class="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl text-white"
+                     style="background: var(--sx-grad)">
                     <i data-lucide="log-in" class="w-6 h-6"></i>
                 </div>
-                <h2 class="text-xl font-bold">{{ __('site.login') }}</h2>
+                <h2 class="text-xl font-extrabold text-[color:var(--sx-ink)]">{{ __('site.login') }}</h2>
             </div>
 
             @if ($autoOpen)
-                <div class="mb-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+                <div class="sx-note mb-4 !grid-cols-1 !bg-[color:var(--sx-danger-soft)] !text-[color:var(--sx-danger)]" role="alert">
                     {{ $errors->first('email') }}
                 </div>
             @endif
@@ -69,29 +69,31 @@
                 <input type="hidden" name="redirect" value="{{ $here }}">
 
                 <div>
-                    <label for="lm_email" class="block text-sm font-semibold mb-2">{{ __('auth_web.email') }}</label>
+                    <label for="lm_email" class="sx-label">{{ __('auth_web.email') }}</label>
                     <div class="relative">
-                        <span class="absolute inset-y-0 start-0 flex items-center ps-3 text-gray-400 pointer-events-none">
+                        <span class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3.5 text-[color:var(--sx-muted)]">
                             <i data-lucide="mail" class="w-5 h-5"></i>
                         </span>
                         <input id="lm_email" name="email" type="email" required autocomplete="email" value="{{ old('email') }}"
                                placeholder="{{ __('auth_web.email_placeholder') }}"
-                               class="w-full ps-11 pe-4 py-3 text-base sm:text-sm rounded-xl border border-gray-300 dark:border-[#0f3460] bg-white dark:bg-[#1a1a2e] focus:ring-2 focus:ring-[#0056b3] focus:border-transparent outline-none transition">
+                               class="sx-input ps-11 text-base sm:text-sm">
                     </div>
                 </div>
 
                 <div>
-                    <label for="lm_password" class="block text-sm font-semibold mb-2">{{ __('auth_web.password') }}</label>
+                    <label for="lm_password" class="sx-label">{{ __('auth_web.password') }}</label>
                     <div class="relative">
-                        <span class="absolute inset-y-0 start-0 flex items-center ps-3 text-gray-400 pointer-events-none">
+                        <span class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3.5 text-[color:var(--sx-muted)]">
                             <i data-lucide="lock" class="w-5 h-5"></i>
                         </span>
                         <input id="lm_password" name="password" required autocomplete="current-password"
                                :type="showPassword ? 'text' : 'password'"
                                placeholder="{{ __('auth_web.password_placeholder') }}"
-                               class="w-full ps-11 pe-11 py-3 text-base sm:text-sm rounded-xl border border-gray-300 dark:border-[#0f3460] bg-white dark:bg-[#1a1a2e] focus:ring-2 focus:ring-[#0056b3] focus:border-transparent outline-none transition">
+                               class="sx-input ps-11 pe-12 text-base sm:text-sm">
                         <button type="button" @click="showPassword = !showPassword"
-                                class="absolute inset-y-0 end-0 flex items-center pe-3 text-gray-400 hover:text-gray-600">
+                                class="absolute inset-y-0 end-0 flex items-center pe-3.5 text-[color:var(--sx-muted)] transition-colors hover:text-[color:var(--sx-ink)]"
+                                :aria-label="showPassword ? '{{ __('auth_web.hide_password') }}' : '{{ __('auth_web.show_password') }}'"
+                                :title="showPassword ? '{{ __('auth_web.hide_password') }}' : '{{ __('auth_web.show_password') }}'">
                             <i x-show="!showPassword" data-lucide="eye" class="w-5 h-5"></i>
                             <i x-show="showPassword" data-lucide="eye-off" class="w-5 h-5" x-cloak></i>
                         </button>
@@ -99,49 +101,48 @@
                 </div>
 
                 <div class="flex items-center justify-between flex-wrap gap-2">
-                    <label class="flex items-center gap-2 text-sm cursor-pointer">
-                        <input type="checkbox" name="remember" value="1" class="rounded border-gray-300 text-[#0056b3] focus:ring-[#0056b3]">
+                    <label class="flex cursor-pointer items-center gap-2 text-sm text-[color:var(--sx-ink-2)]">
+                        <input type="checkbox" name="remember" value="1"
+                               class="h-4 w-4 rounded border-[color:var(--sx-line-strong)] text-[color:var(--sx-accent)] focus:ring-[color:var(--sx-accent)]">
                         <span>{{ __('auth_web.remember_me') }}</span>
                     </label>
-                    <a href="{{ route('password.request') }}" class="text-sm font-semibold text-[#0056b3] hover:underline">
+                    <a href="{{ route('password.request') }}" class="text-sm font-bold text-[color:var(--sx-accent)] hover:underline underline-offset-4">
                         {{ __('auth_web.forgot_password') }}
                     </a>
                 </div>
 
-                <button type="submit" :disabled="loading"
-                        class="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white font-bold bg-gradient-to-br from-[#0056b3] to-[#218838] hover:opacity-90 disabled:opacity-60 transition">
+                <button type="submit" :disabled="loading" class="sx-btn is-primary w-full disabled:opacity-60">
+                    <i data-lucide="loader-2" class="animate-spin" x-show="loading" x-cloak></i>
                     <span x-show="!loading">{{ __('auth_web.login_cta') }}</span>
                     <span x-show="loading" x-cloak>{{ __('auth_web.submitting') }}</span>
                 </button>
             </form>
 
             @if (count($socialProviders) > 0)
-                <div class="my-5 flex items-center gap-3 text-gray-400 text-sm">
-                    <span class="flex-1 h-px bg-gray-200 dark:bg-[#0f3460]"></span>
+                <div class="my-5 flex items-center gap-3 text-sm text-[color:var(--sx-muted)]">
+                    <span class="sx-divider flex-1 !my-0"></span>
                     <span>{{ __('auth_web.or') }}</span>
-                    <span class="flex-1 h-px bg-gray-200 dark:bg-[#0f3460]"></span>
+                    <span class="sx-divider flex-1 !my-0"></span>
                 </div>
                 <div class="grid gap-3 {{ count($socialProviders) > 1 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1' }}">
                     @if (in_array('google', $socialProviders, true))
-                        <a href="{{ route('public.social.redirect', 'google') }}?redirect={{ urlencode($here) }}"
-                           class="flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-300 dark:border-[#0f3460] text-sm font-semibold hover:bg-gray-50 dark:hover:bg-[#0f3460]/40 transition">
+                        <a href="{{ route('public.social.redirect', 'google') }}?redirect={{ urlencode($here) }}" class="sx-btn">
                             <img src="{{ asset('images/site/google-g.svg') }}" alt="" aria-hidden="true" class="w-5 h-5">
-                            <span class="truncate">{{ __('auth_web.continue_with_google') }}</span>
+                            <span class="sx-clamp-1">{{ __('auth_web.continue_with_google') }}</span>
                         </a>
                     @endif
                     @if (in_array('facebook', $socialProviders, true))
-                        <a href="{{ route('public.social.redirect', 'facebook') }}?redirect={{ urlencode($here) }}"
-                           class="flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-300 dark:border-[#0f3460] text-sm font-semibold hover:bg-gray-50 dark:hover:bg-[#0f3460]/40 transition">
-                            <i data-lucide="facebook" class="w-5 h-5 text-[#1877F2]"></i>
-                            <span class="truncate">{{ __('auth_web.continue_with_facebook') }}</span>
+                        <a href="{{ route('public.social.redirect', 'facebook') }}?redirect={{ urlencode($here) }}" class="sx-btn">
+                            <i data-lucide="facebook" aria-hidden="true"></i>
+                            <span class="sx-clamp-1">{{ __('auth_web.continue_with_facebook') }}</span>
                         </a>
                     @endif
                 </div>
             @endif
 
-            <p class="mt-6 text-center text-sm text-gray-600 dark:text-gray-300">
+            <p class="mt-6 text-center text-sm text-[color:var(--sx-muted)]">
                 {{ __('auth_web.no_account') }}
-                <a href="{{ route('public.register') }}" class="font-semibold text-[#0056b3] hover:underline">
+                <a href="{{ route('public.register') }}" class="font-bold text-[color:var(--sx-accent)] hover:underline underline-offset-4">
                     {{ __('auth_web.create_account_link') }}
                 </a>
             </p>

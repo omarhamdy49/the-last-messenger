@@ -1,6 +1,10 @@
 /*
- * Seerah public surfaces: events directory + event story / reading views.
- * Used by resources/views/components/public/seerah/*.
+ * THE PUBLIC DESIGN SYSTEM (prefix: sx).
+ *
+ * One vocabulary for every public surface — home, Seerah, articles, series,
+ * hadith, Quran, media, people, topics, search, account. Tokens are declared on
+ * :root (so any page can use them without a wrapper); `.sx` additionally paints
+ * the page background and ink, and is what a converted page opts into.
  *
  * Brand: Readex Pro, brand blue #0056b3 as the single accent, green #218838 and teal
  * #64CCC5 only inside the brand gradient signature. Neutrals are one cool slate scale.
@@ -9,6 +13,7 @@
 
 /* Layered so Tailwind utilities on the same elements (ps-12, !mt-0…) still win. */
 @layer components {
+:root,
 .sx {
   --sx-accent: #0056b3;
   --sx-accent-soft: rgb(0 86 179 / 0.08);
@@ -16,6 +21,9 @@
   --sx-green: #218838;
   --sx-danger: #b91c1c;
   --sx-danger-soft: rgb(220 38 38 / 0.07);
+  /* Warn is not danger: an incomplete step, not a failure. */
+  --sx-warn: #92400e;
+  --sx-warn-soft: rgb(245 158 11 / 0.12);
   --sx-bg: #f5f7fb;
   --sx-surface: #ffffff;
   --sx-surface-2: #f1f4f9;
@@ -27,14 +35,22 @@
   --sx-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 22px 44px -26px rgb(0 40 90 / 0.28);
   --sx-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --sx-grad: linear-gradient(135deg, #0056b3 0%, #218838 100%);
+  --sx-grad-soft: linear-gradient(135deg, rgb(0 86 179 / 0.1) 0%, rgb(33 136 56 / 0.1) 100%);
+  --sx-header-h: 4.5rem;
+}
+
+.sx {
   background: var(--sx-bg);
   color: var(--sx-ink);
 }
+.dark,
 .dark .sx {
   --sx-accent: #7cc4ff;
   --sx-accent-soft: rgb(124 196 255 / 0.1);
   --sx-danger: #fca5a5;
   --sx-danger-soft: rgb(248 113 113 / 0.1);
+  --sx-warn: #fcd34d;
+  --sx-warn-soft: rgb(252 211 77 / 0.12);
   --sx-bg: #0b1020;
   --sx-surface: #121a30;
   --sx-surface-2: #172039;
@@ -72,6 +88,9 @@
 a.sx-chip:hover { border-color: var(--sx-line-strong); color: var(--sx-ink); }
 .sx-chip.is-active { color: #fff; background: var(--sx-grad); border-color: transparent; }
 .sx-chip.is-danger { color: var(--sx-danger); background: var(--sx-danger-soft); border-color: rgb(220 38 38 / 0.2); }
+.sx-chip.is-warn { color: var(--sx-warn); background: var(--sx-warn-soft); border-color: rgb(245 158 11 / 0.28); }
+.sx-note.is-warn { color: var(--sx-warn); background: var(--sx-warn-soft); }
+.sx-note.is-warn > svg, .sx-note.is-warn > i { color: var(--sx-warn); }
 .sx-chip .sx-count { padding: 0 0.4rem; border-radius: 999px; font-size: 0.7rem; font-variant-numeric: tabular-nums; background: rgb(15 23 42 / 0.06); }
 .dark .sx-chip .sx-count { background: rgb(255 255 255 / 0.08); }
 .sx-chip.is-active .sx-count { background: rgb(255 255 255 / 0.22); }
@@ -85,6 +104,7 @@ a.sx-chip:hover { border-color: var(--sx-line-strong); color: var(--sx-ink); }
   -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12);
 }
+a.sx-glass-chip:hover, button.sx-glass-chip:hover { background: rgb(255 255 255 / 0.22); }
 .sx-glass-chip svg { width: 0.9rem; height: 0.9rem; }
 .sx-glass-chip.is-danger { background: rgb(220 38 38 / 0.72); border-color: rgb(254 202 202 / 0.35); }
 
@@ -113,6 +133,24 @@ a.sx-chip:hover { border-color: var(--sx-line-strong); color: var(--sx-ink); }
 }
 .sx-input:focus { outline: none; border-color: var(--sx-accent); box-shadow: 0 0 0 4px var(--sx-accent-soft); }
 .sx-input::placeholder { color: var(--sx-muted); }
+/* Form states, so a converted page never has to invent them. */
+.sx-input:disabled, .sx-btn:disabled, .sx-btn[aria-disabled="true"], .sx-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.sx-input[readonly] { background: var(--sx-surface-2); }
+.sx-input[aria-invalid="true"] { border-color: var(--sx-danger); box-shadow: 0 0 0 4px var(--sx-danger-soft); }
+/* Required is marked in the label, not by colour alone. */
+.sx-label .sx-req { color: var(--sx-danger); margin-inline-start: 0.15rem; }
+.sx-hint { margin-top: 0.35rem; font-size: 0.8rem; line-height: 1.6; color: var(--sx-muted); }
+.sx-error { display: flex; align-items: center; gap: 0.35rem; margin-top: 0.35rem; font-size: 0.8rem; font-weight: 700; color: var(--sx-danger); }
+.sx-error svg { width: 0.95rem; height: 0.95rem; flex: none; }
+/* A button that is working says so, and keeps its size. */
+.sx-btn.is-busy { pointer-events: none; }
+.sx-btn.is-busy svg:first-child { animation: sx-spin 0.9s linear infinite; }
+@keyframes sx-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .sx-btn.is-busy svg:first-child { animation: none; } }
+
 .sx-label { display: block; margin-bottom: 0.4rem; font-size: 0.78rem; font-weight: 700; color: var(--sx-muted); }
 
 /* ── Directory hero ─────────────────────────────── */
@@ -182,11 +220,12 @@ a.sx-chip:hover { border-color: var(--sx-line-strong); color: var(--sx-ink); }
 @media (min-width: 768px) {
   .sx-year-list { padding-inline-start: 1.75rem; }
   .sx-year-list::before { content: ""; position: absolute; inset-block: 0.5rem; inset-inline-start: 0.35rem; width: 2px; border-radius: 2px; background: linear-gradient(to bottom, #0056b3, #64ccc5, #218838); opacity: 0.55; }
-  .sx-year-list > .sx-card::before {
+  .sx-year-list > .sx-card::before,
+  .sx-year-list > .sx-surface::before {
     content: ""; position: absolute; top: 1.6rem; inset-inline-start: -1.75rem; width: 0.8rem; height: 0.8rem; border-radius: 999px;
     background: var(--sx-surface); border: 3px solid var(--sx-accent); transform: translateX(var(--sx-dot-shift, 0));
   }
-  .sx-year-list > .sx-card { overflow: visible; }
+  .sx-year-list > .sx-card, .sx-year-list > .sx-surface { overflow: visible; }
 }
 .sx-card.is-row { grid-template-columns: minmax(0, 1fr); }
 @media (min-width: 640px) {
@@ -212,6 +251,22 @@ a.sx-chip:hover { border-color: var(--sx-line-strong); color: var(--sx-ink); }
 .sx-hero-media { position: absolute; inset: 0; z-index: -2; }
 .sx-hero-media img { width: 100%; height: 115%; object-fit: cover; will-change: transform; }
 .sx-hero-fallback { position: absolute; inset: 0; background: radial-gradient(120% 90% at 85% 0%, rgb(100 204 197 / 0.35), transparent 55%), linear-gradient(135deg, #003a78 0%, #0c4b2e 70%, #0a1a33 100%); }
+/* An imageless hero is not a blank gradient: a girih lattice, drawn in CSS and
+   faded out downward so the headline always sits on flat colour. It is identity,
+   not texture — the same plate appears on every hero that has no artwork. */
+.sx-hero-fallback::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.4;
+  background-image:
+    repeating-linear-gradient(45deg, rgb(255 255 255 / 0.12) 0 1px, transparent 1px 3.2rem),
+    repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.12) 0 1px, transparent 1px 3.2rem),
+    repeating-linear-gradient(0deg, rgb(100 204 197 / 0.1) 0 1px, transparent 1px 3.2rem),
+    repeating-linear-gradient(90deg, rgb(100 204 197 / 0.1) 0 1px, transparent 1px 3.2rem);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 72%);
+  mask-image: linear-gradient(to bottom, #000 0%, transparent 72%);
+}
 .sx-hero::after {
   content: ""; position: absolute; inset: 0; z-index: -1;
   background: linear-gradient(to top, rgb(7 12 26 / 0.96) 0%, rgb(7 12 26 / 0.7) 38%, rgb(7 12 26 / 0.2) 75%, rgb(7 12 26 / 0.35) 100%);
@@ -301,6 +356,7 @@ a.sx-tile:hover { border-color: rgb(0 86 179 / 0.35); transform: translateY(-1px
 .sx-tile-sub { font-size: 0.82rem; color: var(--sx-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Long titles clamp with an ellipsis; the full text is in the element's title tooltip. */
 .sx-clamp-1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sx-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .sx-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .sx-chip.sx-clamp-1 { display: inline-block; max-width: 16rem; line-height: 1.5rem; }
 
@@ -375,8 +431,157 @@ a.sx-tile:hover { border-color: rgb(0 86 179 / 0.35); transform: translateY(-1px
   .sx-card:hover { transform: none; }
   .sx-hero-media img { transform: none !important; }
 }
+/* ── Articles & series ── */
+.sx-disclosure { border: 1px solid var(--sx-line); border-radius: 1rem; padding: 0.35rem 0.5rem; }
+.sx-disclosure summary { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; min-height: 2.75rem; padding-inline: 0.5rem; font-weight: 800; color: var(--sx-ink); cursor: pointer; list-style: none; }
+.sx-disclosure summary::-webkit-details-marker { display: none; }
+.sx-disclosure summary svg { width: 1.1rem; height: 1.1rem; color: var(--sx-accent); }
+.sx-disclosure-chevron { transition: transform 0.25s ease; }
+.sx-disclosure[open] .sx-disclosure-chevron { transform: rotate(180deg); }
+
+.sx-summary { max-width: none; padding: 1.25rem 1.5rem; border-radius: 1.25rem; background: var(--sx-accent-soft); border: 1px solid var(--sx-line); }
+.sx-summary ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.4rem; }
+.sx-summary li { position: relative; padding-inline-start: 1.1rem; }
+.sx-summary li::before { content: ''; position: absolute; inset-inline-start: 0; top: 0.9em; width: 0.4rem; height: 0.4rem; border-radius: 999px; background: var(--sx-grad); }
+
+/* Slim scrollbar for panels that scroll inside a surface (contents list, video
+   queue, chip rails). Chrome drops ::-webkit- styling as soon as
+   scrollbar-width/-color are set, so the standard properties are gated to
+   engines without the -webkit- model (Firefox) rather than declared alongside. */
+.sx-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.sx-scroll::-webkit-scrollbar-track { background: transparent; }
+.sx-scroll::-webkit-scrollbar-thumb { background: var(--sx-line-strong); border-radius: 999px; }
+.sx-scroll::-webkit-scrollbar-thumb:hover { background: var(--sx-accent); }
+@supports not selector(::-webkit-scrollbar) {
+  .sx-scroll { scrollbar-width: thin; scrollbar-color: var(--sx-line-strong) transparent; }
+}
+
+.sx-video-queue { max-block-size: 22rem; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--sx-line); border-radius: 1rem; }
+@media (min-width: 1024px) { .sx-video-queue { max-block-size: min(30rem, 52vw); } }
+.sx-video-queue li + li { border-top: 1px solid var(--sx-line); }
+.sx-video-queue button { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.75rem; width: 100%; padding: 0.65rem; text-align: start; transition: background-color 0.2s ease; }
+.sx-video-queue button:hover { background: var(--sx-surface-2); }
+.sx-video-queue button[aria-current="true"] { background: var(--sx-accent-soft); }
+
+/* Series reading path: numbered stations down a rail, ending at a finish node. */
+.sx-path { position: relative; display: grid; gap: 1rem; padding-inline-start: 3.25rem; }
+.sx-path::before { content: ''; position: absolute; inset-block: 1.5rem; inset-inline-start: 1.2rem; width: 2px; background: linear-gradient(to bottom, var(--sx-accent), var(--sx-line)); }
+.sx-path > li { position: relative; }
+.sx-path-step { position: absolute; top: 1.1rem; inset-inline-start: -3.25rem; display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 999px; font-size: 0.85rem; font-weight: 800; font-variant-numeric: tabular-nums; color: #fff; background: var(--sx-grad); box-shadow: 0 0 0 5px var(--sx-bg); }
+.sx-path-finish .sx-path-step { background: var(--sx-surface-2); color: var(--sx-accent); border: 1px solid var(--sx-line); }
+.sx-path-finish .sx-path-step svg { width: 1.1rem; height: 1.1rem; }
+
+/* Spotlight: one featured story, wide. */
+.sx-spotlight { display: grid; overflow: hidden; }
+@media (min-width: 900px) { .sx-spotlight { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); } }
+.sx-spotlight-media { position: relative; min-height: 15rem; background: var(--sx-grad); }
+.sx-spotlight-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.sx-spotlight-body { display: grid; align-content: center; gap: 0.9rem; padding: 1.5rem; }
+@media (min-width: 900px) { .sx-spotlight-body { padding: 2.5rem; } }
+
+/* ─────────────────────────────────────────────────────────────
+   SHARED VOCABULARY — used by every module page.
+   ───────────────────────────────────────────────────────────── */
+
+/* One type family for the interface; Amiri is reserved for revealed text. */
+.sx, .sx-prose, .sx-input, .sx-btn, .sx-chip { font-family: "Readex Pro", "Cairo", system-ui, sans-serif; }
+.sx-scripture {
+  font-family: "Amiri", serif;
+  font-size: clamp(1.45rem, 1.2rem + 1.1vw, 2rem);
+  line-height: 2.35;
+  color: var(--sx-ink);
+  overflow-wrap: anywhere;
+}
+
+/* Flat surface: same paper as .sx-surface without the lift. Panels inside a
+   surface are flat, so cards never nest inside cards. */
+.sx-panel { background: var(--sx-surface-2); border: 1px solid var(--sx-line); border-radius: 1.15rem; }
+
+/* Avatar / poster: round or square media with the brand fallback underneath. */
+.sx-avatar {
+  position: relative; display: grid; place-items: center; overflow: hidden; flex: none;
+  width: 3.5rem; height: 3.5rem; border-radius: 999px; color: #fff; background: var(--sx-grad);
+}
+.sx-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.sx-avatar svg { width: 45%; height: 45%; }
+.sx-avatar.is-lg { width: 5.5rem; height: 5.5rem; }
+.sx-avatar.is-square { border-radius: 1.15rem; }
+
+/* Tabs: section switcher inside a page (collections, surah views, profile). */
+.sx-tabs { display: flex; gap: 0.35rem; overflow-x: auto; border-bottom: 1px solid var(--sx-line); scrollbar-width: none; }
+.sx-tabs::-webkit-scrollbar { display: none; }
+.sx-tab {
+  position: relative; display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap;
+  min-height: 2.75rem; padding-inline: 0.9rem; font-size: 0.9rem; font-weight: 700; color: var(--sx-muted);
+  border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.2s var(--sx-ease), border-color 0.2s var(--sx-ease);
+}
+.sx-tab svg { width: 1.05rem; height: 1.05rem; }
+.sx-tab:hover { color: var(--sx-ink); }
+.sx-tab[aria-selected="true"], .sx-tab[aria-current="page"] { color: var(--sx-accent); border-color: var(--sx-accent); }
+
+/* Callout: a note that is not an alert. The tint carries the meaning. */
+.sx-note {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.75rem; align-items: start;
+  padding: 1rem 1.15rem; border-radius: 1.15rem; border: 1px solid var(--sx-line);
+  background: var(--sx-accent-soft); color: var(--sx-ink-2); line-height: 1.85;
+}
+.sx-note > svg, .sx-note > i { color: var(--sx-accent); }
+
+/* Skeleton: shaped like the content it stands in for. */
+.sx-skeleton { background: var(--sx-surface-2); border-radius: 0.75rem; position: relative; overflow: hidden; }
+.sx-skeleton::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.35), transparent);
+  animation: sx-shimmer 1.6s infinite;
+}
+.dark .sx-skeleton::after { background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.06), transparent); }
+@keyframes sx-shimmer { to { transform: translateX(100%); } }
+
+/* Grid densities. */
+.sx-grid.is-tight { grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr)); }
+.sx-grid.is-wide { grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); }
+
+/* ── Site chrome: header and footer speak the same system ── */
+.sx-nav-link {
+  position: relative; display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap;
+  min-height: 2.5rem; padding-inline: 0.7rem; border-radius: 0.8rem;
+  font-size: 0.875rem; font-weight: 700; color: var(--sx-ink-2);
+  transition: color 0.2s var(--sx-ease), background-color 0.2s var(--sx-ease);
+}
+.sx-nav-link:hover { color: var(--sx-accent); background: var(--sx-accent-soft); }
+.sx-nav-link.is-active { color: var(--sx-accent); }
+/* The travelling indicator: one bar under the active item, shared by every page. */
+/* Scaled, not resized: the bar is 1px wide and stretched by transform, so the
+   slide never touches layout. */
+.sx-nav-indicator {
+  position: absolute; bottom: -0.35rem; inset-inline-start: 0; width: 1px; height: 3px;
+  border-radius: 3px; background: var(--sx-grad); transform-origin: left center;
+  transition: transform 0.45s var(--sx-ease), opacity 0.25s linear;
+  pointer-events: none; will-change: transform;
+}
+[dir="rtl"] .sx-nav-indicator { transform-origin: right center; }
+@media (prefers-reduced-motion: reduce) { .sx-nav-indicator { transition: none; } }
+
 @media print {
   .sx-dock, .sx-progress, .sx-filters { display: none !important; }
   .sx-hero { min-height: 0 !important; }
 }
+}
+
+/* ── Cinematic navigation ──
+   The card image the visitor clicked and the hero image it opens into are the
+   same object, so the browser morphs one into the other instead of cutting.
+   Names are assigned at click time (resources/js/app.js) because only one
+   element per document may carry a given view-transition-name. */
+@view-transition { navigation: auto; }
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-group(sx-hero) { animation-duration: 0.5s; animation-timing-function: var(--sx-ease); }
+  ::view-transition-old(sx-hero), ::view-transition-new(sx-hero) { animation-duration: 0.5s; mix-blend-mode: normal; }
+  ::view-transition-old(root) { animation: sx-fade-out 0.22s linear both; }
+  ::view-transition-new(root) { animation: sx-fade-in 0.28s linear both; }
+}
+@keyframes sx-fade-out { to { opacity: 0; } }
+@keyframes sx-fade-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }

@@ -1,15 +1,22 @@
+{{--
+    Empty state on the public design system.
+
+    Deliberately paints no surface of its own: most callers drop it *inside* a
+    `.sx-surface` panel, and a card inside a card is the one thing the system
+    forbids. A caller that needs the paper adds `class="sx-surface"`.
+--}}
 @props(['icon' => 'inbox', 'title' => null, 'message' => null, 'showReset' => false])
 
-<div {{ $attributes->merge(['class' => 'flex flex-col items-center justify-center text-center py-16 px-4']) }}>
-    <div class="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-[#0f3460] flex items-center justify-center text-gray-400 mb-4">
-        <i data-lucide="{{ $icon }}" class="w-8 h-8"></i>
-    </div>
-    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1.5">{{ $title ?? __('site.no_results') }}</h3>
-    <p class="text-sm text-gray-500 dark:text-gray-400 max-w-sm mb-5">{{ $message ?? __('site.try_adjusting_filters') }}</p>
+<div {{ $attributes->merge(['class' => 'sx-empty']) }}>
+    <span class="sx-empty-icon"><i data-lucide="{{ $icon }}" aria-hidden="true"></i></span>
+    <h3 class="text-lg font-extrabold text-[color:var(--sx-ink)]">{{ $title ?? __('site.no_results') }}</h3>
+    {{-- An explicit `message=""` drops the line; omitting it keeps the default. --}}
+    @if ($message !== '')
+        <p class="max-w-sm text-sm leading-relaxed text-[color:var(--sx-muted)]">{{ $message ?? __('site.try_adjusting_filters') }}</p>
+    @endif
     @if ($showReset)
-        <button type="button" {{ $attributes->only('@click') }}
-                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold text-primary border border-primary/30 hover:bg-primary/5 transition-colors">
-            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+        <button type="button" {{ $attributes->only('@click') }} class="sx-btn">
+            <i data-lucide="rotate-ccw" aria-hidden="true"></i>
             {{ __('site.reset_filters') }}
         </button>
     @endif

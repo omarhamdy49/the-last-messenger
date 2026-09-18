@@ -38,8 +38,9 @@ class UpdateArticleAction
     {
         return DB::transaction(function () use ($article, $data, $locales): Article {
             $thumbPath = $this->handleThumbReplacement($article, $data);
+            $coverPath = $this->handleCoverReplacement($article, $data);
 
-            $this->updateArticleRecord($article, $data, $thumbPath);
+            $this->updateArticleRecord($article, $data, $thumbPath, $coverPath);
             $this->upsertLocales($article, $data, $locales);
             $this->syncCategories($article, $data);
             $this->syncTags($article, $data);
@@ -81,10 +82,27 @@ class UpdateArticleAction
         return $this->thumbService->store($data->thumb);
     }
 
-    private function updateArticleRecord(Article $article, UpdateArticleData $data, ?string $newThumbPath): void
+    /**
+     * Same replacement rule as the thumb, for the hero cover (articles.featured_image).
+     */
+    private function handleCoverReplacement(Article $article, UpdateArticleData $data): ?string
+    {
+        if ($data->cover === null) {
+            return null;
+        }
+
+        if ($article->featured_image && ! Article::where('id', '!=', $article->id)->where('featured_image', $article->featured_image)->exists()) {
+            $this->thumbService->delete($article->featured_image);
+        }
+
+        return $this->thumbService->store($data->cover);
+    }
+
+    private function updateArticleRecord(Article $article, UpdateArticleData $data, ?string $newThumbPath, ?string $newCoverPath = null): void
     {
         $article->update([
             'thumb' => $newThumbPath ?? $article->thumb,
+            'featured_image' => $newCoverPath ?? $article->featured_image,
             'writer_id' => $data->writerId,
             'read_time' => $data->readTime,
             'is_featured' => $data->isFeatured,

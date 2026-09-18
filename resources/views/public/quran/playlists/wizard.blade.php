@@ -22,7 +22,8 @@
         'favoriteIds' => $favoriteIds,
         'surahs' => $surahs,
         'initial' => $initial,
-        'defaultName' => __('quran.playlists.name_default'),
+        // Numbered per user, so an untouched field still saves under a distinct name.
+        'defaultName' => __('quran.playlists.name_default', ['n' => app()->getLocale() === 'ar' ? arabic_digits($count + 1) : $count + 1]),
         'previewUrl' => route('public.quran.playlists.preview'),
         'storeUrl' => route('public.quran.playlists.store'),
         'updateUrl' => $playlist ? route('public.quran.playlists.update', $playlist->slug) : null,

@@ -1,6 +1,6 @@
 {{--
     Article "Classify & publish" wizard step (was the form sidebar).
-    Contains: Thumbnail, Publication Settings, Writer, Categories, Tags, Options
+    Contains: Thumbnail, Cover, Publication Settings, Writer, Categories, Tags, Options
 --}}
 
 @props([
@@ -18,19 +18,24 @@
 
 <div class="grid gap-4 md:grid-cols-2 items-start">
 
-    {{-- Thumbnail --}}
+    {{-- Thumbnail (cards) and cover (article hero) --}}
+    @foreach ([
+        ['field' => 'thumb', 'target' => 'thumbnail', 'preview' => 'thumbnailPreview', 'label' => __('articles.fields.thumb'), 'select' => __('articles.fields.select_thumbnail'), 'hint' => __('articles.fields.thumb_hint'), 'icon' => 'image'],
+        ['field' => 'cover', 'target' => 'cover', 'preview' => 'coverPreview', 'label' => __('articles.fields.cover'), 'select' => __('articles.fields.select_cover'), 'hint' => __('articles.fields.cover_hint'), 'icon' => 'rectangle-horizontal'],
+    ] as $picker)
     <div class="rounded-2xl p-4"
          :class="darkMode ? 'bg-white/[0.02] border border-white/10' : 'bg-slate-50/60 border border-slate-200'">
-        <h3 class="text-sm font-semibold mb-3 flex items-center gap-2"
+        <h3 class="text-sm font-semibold mb-1 flex items-center gap-2"
             :class="darkMode ? 'text-white' : 'text-gray-900'">
-            <i data-lucide="image" class="w-4 h-4 text-gray-400"></i>
-            {{ __('articles.fields.thumb') }}
+            <i data-lucide="{{ $picker['icon'] }}" class="w-4 h-4 text-gray-400"></i>
+            {{ $picker['label'] }}
         </h3>
-        <div class="relative aspect-video bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden mb-3">
-            <template x-if="thumbnailPreview">
-                <img :src="thumbnailPreview" class="w-full h-full object-cover" alt="Thumbnail">
+        <p class="text-xs mb-3" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">{{ $picker['hint'] }}</p>
+        <div @class(['relative bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden mb-3', 'aspect-video' => $picker['field'] === 'thumb', 'aspect-[21/9]' => $picker['field'] === 'cover'])>
+            <template x-if="{{ $picker['preview'] }}">
+                <img :src="{{ $picker['preview'] }}" class="w-full h-full object-cover" alt="">
             </template>
-            <template x-if="!thumbnailPreview">
+            <template x-if="!{{ $picker['preview'] }}">
                 <div class="flex items-center justify-center h-full text-gray-400">
                     <i data-lucide="image-plus" class="w-10 h-10"></i>
                 </div>
@@ -38,21 +43,22 @@
         </div>
         <div class="grid grid-cols-2 gap-2">
             <button type="button"
-                    @click="$dispatch('open-media-library', { target: 'thumbnail', multiple: false })"
+                    @click="$dispatch('open-media-library', { target: '{{ $picker['target'] }}', multiple: false })"
                     class="px-3 py-2 text-xs rounded-lg border transition-colors text-center"
                     :class="darkMode ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-50'">
                 <i data-lucide="folder-open" class="w-3.5 h-3.5 inline me-1"></i>
-                {{ __('articles.fields.select_thumbnail') }}
+                {{ $picker['select'] }}
             </button>
             <label class="px-3 py-2 text-xs rounded-lg border transition-colors cursor-pointer text-center"
                    :class="darkMode ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-50'">
                 <i data-lucide="upload" class="w-3.5 h-3.5 inline me-1"></i>
                 {{ __('common.upload') }}
-                <input type="file" name="thumb" accept="image/jpeg,image/png,image/webp" @change="handleThumbnailUpload" class="hidden">
+                <input type="file" name="{{ $picker['field'] }}" accept="image/jpeg,image/png,image/webp" @change="previewUpload($event, '{{ $picker['preview'] }}')" class="hidden">
             </label>
         </div>
-        <input type="hidden" name="thumb_id" x-model="formData.thumb_id">
+        <input type="hidden" name="{{ $picker['field'] }}_id" x-model="formData.{{ $picker['field'] }}_id">
     </div>
+    @endforeach
 
     {{-- Publication --}}
     <div class="rounded-2xl p-4 space-y-3"

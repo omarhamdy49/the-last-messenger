@@ -13,6 +13,7 @@ use App\Domain\Quran\Services\PlaylistService;
 use App\Jobs\RecordPlaylistPlayJob;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -305,5 +306,47 @@ final class QuranPlaylistTest extends TestCase
         $this->get(route('public.quran.playlists.audio', [1, $recA]))->assertRedirect('https://cdn.test/a/1.mp3');
         $this->getJson(route('public.quran.playlists.audio', [1, $recA]))->assertOk()->assertExactJson(['url' => 'https://cdn.test/a/1.mp3']);
         $this->getJson(route('public.quran.playlists.audio', [2, $recA]))->assertNotFound();
+    }
+
+    public function test_wizard_prefills_a_numbered_default_name_per_locale(): void
+    {
+        $this->surahs(1);
+        [, $recA] = $this->person('a', [1]);
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('public.quran.playlists.create'))->assertOk()->assertSee('قائمة #١', false);
+
+        $this->makePlaylist($user, [1 => $recA], false);
+        $this->actingAs($user)->get(route('public.quran.playlists.create'))->assertOk()->assertSee('قائمة #٢', false);
+
+        $this->actingAs($user)->withSession(['locale' => 'en'])
+            ->get(route('public.quran.playlists.create'))->assertOk()->assertSee('Playlist #2', false);
+    }
+
+    public function test_download_streams_a_zip_of_the_tracks_and_skips_dead_links(): void
+    {
+        $surahs = $this->surahs(2);
+        [, $recA] = $this->person('a', $surahs);
+        $owner = User::factory()->create();
+        $playlist = $this->makePlaylist($owner, [1 => $recA, 2 => $recA], true);
+
+        Http::fake([
+            '*cdn.test/a/1.mp3' => Http::response('AUDIO-ONE'),
+            '*cdn.test/a/2.mp3' => Http::response('', 404),
+        ]);
+
+        $this->get(route('public.quran.playlists.download', $playlist->slug))->assertRedirect(); // guests log in first
+
+        $response = $this->actingAs($owner)->get(route('public.quran.playlists.download', $playlist->slug))->assertOk();
+        $path = tempnam(sys_get_temp_dir(), 'pl').'.zip';
+        file_put_contents($path, $response->streamedContent());
+
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($path) === true);
+        $this->assertSame(1, $zip->numFiles, 'the 404 track is skipped, not zipped');
+        $this->assertSame('001 - س1 - قارئ a.mp3', $zip->getNameIndex(0));
+        $this->assertSame('AUDIO-ONE', $zip->getFromIndex(0));
+        $zip->close();
+        unlink($path);
     }
 }

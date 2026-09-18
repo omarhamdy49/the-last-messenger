@@ -6,7 +6,9 @@ namespace App\Http\Controllers\Site;
 
 use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Models\Tag;
+use App\Domain\Shared\Enums\FavorableType;
 use App\Domain\Shared\Models\Language;
+use App\Domain\Shared\Services\FavoriteService;
 use App\Http\Controllers\Controller;
 use App\Models\Article;
 use App\Models\ArticleLocale;
@@ -161,6 +163,9 @@ final class ArticleController extends Controller
             'related' => $payload['related'],
             'prev' => $payload['prev'] ?? null,
             'next' => $payload['next'] ?? null,
+            // Per visitor, so never part of the cached payload.
+            'isSaved' => auth()->check()
+                && app(FavoriteService::class)->isFavorited(auth()->user(), FavorableType::ARTICLE, (int) $payload['article']['id']),
             'hreflangAlternates' => array_intersect_key($payload['article']['alternates'] ?? [], array_flip(enabled_content_locales())),
         ]);
     }
@@ -239,6 +244,8 @@ final class ArticleController extends Controller
             'body' => $body,
             'toc' => $toc,
             'image' => $this->resolveImage($article, 'hero'),
+            // Hero banner: the dedicated cover, else the thumb at hero size.
+            'cover' => $article->coverUrl('hero') ?: $this->resolveImage($article, 'hero'),
             'category' => $this->resolveCategoryName($article, $locale),
             'tags' => $this->resolveTagNames($article, $locale),
             'author' => optional($article->writer)->name ?: __('articles.public.unknown_author'),

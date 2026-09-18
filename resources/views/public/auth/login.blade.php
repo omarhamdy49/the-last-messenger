@@ -4,21 +4,21 @@
 
 @section('content')
 <div class="w-full max-w-md">
-    <div class="rounded-3xl bg-white/95 dark:bg-[#16213e]/95 backdrop-blur-xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 p-8 sm:p-10 animate-fade-in-up motion-reduce:animate-none"
-         x-data="{ showPassword: false, loading: false }">
+    <div class="sx-surface p-7 sm:p-9" x-data="{ showPassword: false, loading: false }">
 
         {{-- Brand + heading --}}
-        <div class="text-center mb-8">
+        <div class="text-center mb-7">
             <x-site.brand-icon size="w-16 h-16" :eager="true" class="mx-auto mb-4" />
-            <h1 class="text-2xl font-bold font-amiri">{{ __('auth_web.login_heading') }}</h1>
-            <p class="text-sm text-gray-600 dark:text-gray-300 mt-1.5">{{ __('auth_web.login_subheading') }}</p>
+            <h1 class="text-2xl font-extrabold text-[color:var(--sx-ink)]">{{ __('auth_web.login_heading') }}</h1>
+            <p class="mt-1.5 text-sm text-[color:var(--sx-muted)]">{{ __('auth_web.login_subheading') }}</p>
         </div>
 
-        {{-- Validation errors --}}
+        {{-- Error summary (kept alongside the inline errors: throttle and
+             credential failures are not always tied to a rendered field). --}}
         @if ($errors->any())
-            <div class="mb-6 rounded-xl border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300"
-                 role="alert">
-                <ul class="space-y-1 list-disc list-inside">
+            <div class="sx-note mb-6 !bg-[color:var(--sx-danger-soft)] !text-[color:var(--sx-danger)]" role="alert">
+                <i data-lucide="alert-circle" class="w-5 h-5 mt-1 !text-[color:var(--sx-danger)]" aria-hidden="true"></i>
+                <ul class="space-y-1 list-disc list-inside text-sm">
                     @foreach ($errors->all() as $error)
                         <li>{{ $error }}</li>
                     @endforeach
@@ -32,60 +32,71 @@
 
             {{-- Email --}}
             <div>
-                <label for="email" class="block text-sm font-semibold mb-2">{{ __('auth_web.email') }}</label>
+                <label for="email" class="sx-label">{{ __('auth_web.email') }} <span class="sx-req" aria-hidden="true">*</span></label>
                 <div class="relative">
-                    <span class="absolute inset-y-0 start-0 flex items-center ps-3 text-gray-400 pointer-events-none">
+                    <span class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3.5 text-[color:var(--sx-muted)]">
                         <i data-lucide="mail" class="w-5 h-5"></i>
                     </span>
                     <input id="email" name="email" type="email" required autocomplete="email"
                            value="{{ old('email') }}"
                            placeholder="{{ __('auth_web.email_placeholder') }}"
-                           class="w-full ps-11 pe-4 py-3 text-base sm:text-sm rounded-xl border border-gray-300 dark:border-[#0f3460] bg-white dark:bg-[#1a1a2e] focus:ring-4 focus:ring-[#0056b3]/15 focus:border-[#0056b3] outline-none transition">
+                           @error('email') aria-invalid="true" aria-describedby="email-error" @enderror
+                           class="sx-input ps-11 text-base sm:text-sm">
                 </div>
+                @error('email')
+                    <p id="email-error" class="sx-error">{{ $message }}</p>
+                @enderror
             </div>
 
             {{-- Password --}}
             <div>
-                <label for="password" class="block text-sm font-semibold mb-2">{{ __('auth_web.password') }}</label>
+                <label for="password" class="sx-label">{{ __('auth_web.password') }} <span class="sx-req" aria-hidden="true">*</span></label>
                 <div class="relative">
-                    <span class="absolute inset-y-0 start-0 flex items-center ps-3 text-gray-400 pointer-events-none">
+                    <span class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3.5 text-[color:var(--sx-muted)]">
                         <i data-lucide="lock" class="w-5 h-5"></i>
                     </span>
                     <input id="password" name="password" required autocomplete="current-password"
                            :type="showPassword ? 'text' : 'password'"
                            placeholder="{{ __('auth_web.password_placeholder') }}"
-                           class="w-full ps-11 pe-11 py-3 text-base sm:text-sm rounded-xl border border-gray-300 dark:border-[#0f3460] bg-white dark:bg-[#1a1a2e] focus:ring-4 focus:ring-[#0056b3]/15 focus:border-[#0056b3] outline-none transition">
+                           @error('password') aria-invalid="true" aria-describedby="password-error" @enderror
+                           class="sx-input ps-11 pe-14 text-base sm:text-sm">
                     <button type="button" @click="showPassword = !showPassword"
-                            class="absolute inset-y-0 end-0 flex items-center pe-3 text-gray-400 hover:text-gray-600"
-                            :aria-label="showPassword ? '{{ __('auth_web.hide_password') }}' : '{{ __('auth_web.show_password') }}'">
+                            class="absolute end-1 top-1/2 -translate-y-1/2 grid h-11 w-11 place-items-center rounded-full text-[color:var(--sx-muted)] transition-colors hover:text-[color:var(--sx-accent)]"
+                            :aria-label="showPassword ? '{{ __('auth_web.hide_password') }}' : '{{ __('auth_web.show_password') }}'"
+                            :title="showPassword ? '{{ __('auth_web.hide_password') }}' : '{{ __('auth_web.show_password') }}'">
                         <i x-show="!showPassword" data-lucide="eye" class="w-5 h-5"></i>
                         <i x-show="showPassword" data-lucide="eye-off" class="w-5 h-5" x-cloak></i>
                     </button>
                 </div>
+                @error('password')
+                    <p id="password-error" class="sx-error">{{ $message }}</p>
+                @enderror
             </div>
 
             {{-- Remember + forgot --}}
-            <div class="flex items-center justify-between flex-wrap gap-2">
-                <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <label class="flex cursor-pointer items-center gap-2 text-sm text-[color:var(--sx-ink-2)]">
                     <input type="checkbox" name="remember" value="1" {{ old('remember') ? 'checked' : '' }}
-                           class="rounded border-gray-300 text-[#0056b3] focus:ring-[#0056b3]">
+                           class="h-4 w-4 rounded border-[color:var(--sx-line-strong)] accent-[color:var(--sx-accent)]">
                     <span>{{ __('auth_web.remember_me') }}</span>
                 </label>
                 <a href="{{ route('password.request') }}"
-                   class="text-sm font-semibold text-[#0056b3] hover:underline">
+                   class="inline-flex min-h-11 items-center text-sm font-bold text-[color:var(--sx-accent)] hover:underline">
                     {{ __('auth_web.forgot_password') }}
                 </a>
             </div>
 
             {{-- Submit --}}
             <button type="submit" :disabled="loading"
-                    class="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white font-bold bg-gradient-to-br from-[#0056b3] to-[#218838] hover:opacity-90 active:scale-[.99] disabled:opacity-60 disabled:cursor-not-allowed transition">
-                <svg x-show="loading" x-cloak class="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                </svg>
-                <span x-show="!loading">{{ __('auth_web.login_cta') }}</span>
-                <span x-show="loading" x-cloak>{{ __('auth_web.submitting') }}</span>
+                    class="sx-btn is-primary w-full disabled:cursor-not-allowed disabled:opacity-60">
+                <span x-show="!loading" class="inline-flex items-center gap-2">
+                    <i data-lucide="log-in" aria-hidden="true"></i>
+                    {{ __('auth_web.login_cta') }}
+                </span>
+                <span x-show="loading" x-cloak class="inline-flex items-center gap-2">
+                    <i data-lucide="loader-2" class="animate-spin" aria-hidden="true"></i>
+                    {{ __('auth_web.submitting') }}
+                </span>
             </button>
         </form>
 
@@ -97,32 +108,30 @@
             ]));
         @endphp
         @if (count($socialProviders) > 0)
-            <div class="my-6 flex items-center gap-3 text-gray-400 text-sm">
-                <span class="flex-1 h-px bg-gray-200 dark:bg-[#0f3460]"></span>
+            <div class="my-6 flex items-center gap-3 text-sm text-[color:var(--sx-muted)]">
+                <span class="h-px flex-1 bg-[color:var(--sx-line)]"></span>
                 <span>{{ __('auth_web.or') }}</span>
-                <span class="flex-1 h-px bg-gray-200 dark:bg-[#0f3460]"></span>
+                <span class="h-px flex-1 bg-[color:var(--sx-line)]"></span>
             </div>
             <div class="grid gap-3 {{ count($socialProviders) > 1 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1' }}">
                 @if (in_array('google', $socialProviders, true))
-                    <a href="{{ route('public.social.redirect', 'google') }}"
-                       class="flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-300 dark:border-[#0f3460] text-sm font-semibold hover:bg-gray-50 dark:hover:bg-[#0f3460]/40 transition">
+                    <a href="{{ route('public.social.redirect', 'google') }}" class="sx-btn w-full">
                         <img src="{{ asset('images/site/google-g.svg') }}" alt="" aria-hidden="true" class="w-5 h-5">
                         <span class="truncate">{{ __('auth_web.continue_with_google') }}</span>
                     </a>
                 @endif
                 @if (in_array('facebook', $socialProviders, true))
-                    <a href="{{ route('public.social.redirect', 'facebook') }}"
-                       class="flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-300 dark:border-[#0f3460] text-sm font-semibold hover:bg-gray-50 dark:hover:bg-[#0f3460]/40 transition">
-                        <i data-lucide="facebook" class="w-5 h-5 text-[#1877F2]"></i>
+                    <a href="{{ route('public.social.redirect', 'facebook') }}" class="sx-btn w-full">
+                        <i data-lucide="facebook" aria-hidden="true"></i>
                         <span class="truncate">{{ __('auth_web.continue_with_facebook') }}</span>
                     </a>
                 @endif
             </div>
         @endif
 
-        <p class="mt-8 text-center text-sm text-gray-600 dark:text-gray-300">
+        <p class="mt-8 text-center text-sm text-[color:var(--sx-muted)]">
             {{ __('auth_web.no_account') }}
-            <a href="{{ route('public.register') }}" class="font-semibold text-[#0056b3] hover:underline">
+            <a href="{{ route('public.register') }}" class="font-bold text-[color:var(--sx-accent)] hover:underline">
                 {{ __('auth_web.create_account_link') }}
             </a>
         </p>

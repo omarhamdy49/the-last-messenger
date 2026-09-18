@@ -806,7 +806,7 @@ class ArticleRepository
 
     /**
      * Force-delete an article and return its file paths for cleanup.
-     * Returns ['thumb' => string|null, 'gallery' => array<string>].
+     * Returns ['thumb' => string|null, 'cover' => string|null, 'gallery' => array<string>].
      *
      * @throws ModelNotFoundException
      */
@@ -815,11 +815,12 @@ class ArticleRepository
         $article = Article::withTrashed()->with('gallery')->findOrFail($id);
 
         $thumb = $article->thumb;
+        $cover = $article->featured_image;
         $gallery = $article->gallery->pluck('image')->filter()->values()->all();
 
         $article->forceDelete();
 
-        return compact('thumb', 'gallery');
+        return compact('thumb', 'cover', 'gallery');
     }
 
     /**

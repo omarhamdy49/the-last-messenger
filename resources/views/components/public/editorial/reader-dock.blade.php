@@ -1,24 +1,40 @@
 {{--
-    Reading progress bar + floating reader dock (stations navigator, switch layout, save, share, top).
-    Must render inside an element with x-data="seerahReader(...)"; the factory is pushed once below.
+    Reading progress bar + floating reader dock (optional navigator, optional layout switch,
+    optional font size, save, share, top). Must render inside x-data="editorialReader(...)";
+    the factory is pushed once below.
 
-    @props switchUrl, switchLabel, switchIcon
+    @props navigator (bool, Seerah stations), switchUrl, switchLabel, switchIcon, fontScale (bool), saveLabel, unsaveLabel
 --}}
-@props(['switchUrl', 'switchLabel', 'switchIcon' => 'file-text'])
+@props(['navigator' => false, 'switchUrl' => null, 'switchLabel' => null, 'switchIcon' => 'file-text', 'fontScale' => false, 'saveLabel' => null, 'unsaveLabel' => null])
+
+@php
+    $saveLabel ??= __('seerah.public.save_event');
+    $unsaveLabel ??= __('seerah.public.unsave_event');
+@endphp
 
 <div class="sx-progress" aria-hidden="true"><span :style="`transform: scaleX(${progress})`" style="transform: scaleX(0)"></span></div>
 
 <div class="sx-dock" :class="{ 'is-hidden': dockHidden }" role="toolbar" aria-label="{{ __('seerah.public.reading_tools') }}">
-    <button type="button" @click="$dispatch('seerah-navigator-open')" title="{{ __('seerah.public.navigator_open') }}">
-        <i data-lucide="map" aria-hidden="true"></i><span class="sx-dock-label">{{ __('seerah.public.navigator_open') }}</span>
-    </button>
-    <a href="{{ $switchUrl }}" title="{{ $switchLabel }}" aria-label="{{ $switchLabel }}">
-        <i data-lucide="{{ $switchIcon }}" aria-hidden="true"></i>
-    </a>
-    <span class="sx-dock-sep" aria-hidden="true"></span>
+    @if ($navigator)
+        <button type="button" @click="$dispatch('seerah-navigator-open')" title="{{ __('seerah.public.navigator_open') }}">
+            <i data-lucide="map" aria-hidden="true"></i><span class="sx-dock-label">{{ __('seerah.public.navigator_open') }}</span>
+        </button>
+    @endif
+    @if ($switchUrl)
+        <a href="{{ $switchUrl }}" title="{{ $switchLabel }}" aria-label="{{ $switchLabel }}">
+            <i data-lucide="{{ $switchIcon }}" aria-hidden="true"></i>
+        </a>
+    @endif
+    @if ($fontScale)
+        <button type="button" @click="scaleFont(-10)" :disabled="fontSize <= 80" aria-label="A-" title="A-" class="disabled:opacity-40"><i data-lucide="a-arrow-down" aria-hidden="true"></i></button>
+        <button type="button" @click="scaleFont(10)" :disabled="fontSize >= 150" aria-label="A+" title="A+" class="disabled:opacity-40"><i data-lucide="a-arrow-up" aria-hidden="true"></i></button>
+    @endif
+    @if ($navigator || $switchUrl || $fontScale)
+        <span class="sx-dock-sep" aria-hidden="true"></span>
+    @endif
     <button type="button" @click="toggleSave()" :class="{ 'is-on': saved }" :aria-pressed="saved.toString()" :disabled="savePending"
-            :aria-label="saved ? @js(__('seerah.public.unsave_event')) : @js(__('seerah.public.save_event'))"
-            :title="saved ? @js(__('seerah.public.unsave_event')) : @js(__('seerah.public.save_event'))">
+            :aria-label="saved ? @js($unsaveLabel) : @js($saveLabel)"
+            :title="saved ? @js($unsaveLabel) : @js($saveLabel)">
         <span x-show="!saved"><i data-lucide="bookmark" aria-hidden="true"></i></span>
         <span x-show="saved" x-cloak><i data-lucide="bookmark-check" aria-hidden="true"></i></span>
     </button>
@@ -42,12 +58,14 @@
 @push('scripts')
 <script>
     /**
-     * Shared behaviour for the Seerah event story and reading views: progress, dock visibility,
-     * scroll spy, hero parallax, section reveal, figure count-up, favourites and sharing.
-     * Everything degrades to the server-rendered page without JS or with reduced motion.
+     * Shared reader behaviour (Seerah events, articles): progress, dock visibility, scroll spy,
+     * hero parallax, section reveal, figure count-up, favourites, sharing, and — when configured —
+     * font scaling and async view counting. Degrades to the server-rendered page without JS.
      */
-    function seerahReader(config) {
+    function editorialReader(config) {
         return {
+            fontSize: 100,
+            views: config.views ?? null,
             progress: 0,
             dockHidden: config.hideDockOnHero ?? false,
             active: '',
@@ -68,6 +86,30 @@
                 this.update();
                 this.observeReveals();
                 this.observeCounts();
+
+                if (config.fontScale) {
+                    try { this.fontSize = Math.min(150, Math.max(80, parseInt(localStorage.getItem('readerFontSize') || '100', 10) || 100)); } catch (e) {}
+                }
+                if (config.viewUrl) this.recordView();
+            },
+
+            scaleFont(step) {
+                this.fontSize = Math.min(150, Math.max(80, this.fontSize + step));
+                try { localStorage.setItem('readerFontSize', String(this.fontSize)); } catch (e) {}
+            },
+
+            // Counted asynchronously so it still works while the page itself is cached.
+            recordView() {
+                fetch(config.viewUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                }).then((r) => (r.ok ? r.json() : null))
+                  .then((data) => { if (data && typeof data.views === 'number') this.views = data.views; })
+                  .catch(() => {});
             },
 
             update() {
@@ -138,7 +180,7 @@
                             Accept: 'application/json',
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
                         },
-                        body: JSON.stringify({ type: 'seerah', id: config.eventId }),
+                        body: JSON.stringify({ type: config.favoriteType ?? 'seerah', id: config.eventId }),
                     });
                     const payload = await response.json().catch(() => ({}));
                     if (!response.ok || payload.success === false) throw new Error('favorite_failed');
